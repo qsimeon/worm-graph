@@ -9,7 +9,7 @@ from numbers import Number
 import torch
 from torch.utils.data import Dataset, DataLoader
 import os
-os.add_dll_directory('C:\\Users\\Michael\\anaconda3\\lib\\site-packages\\dgl\\')
+# os.add_dll_directory('C:\\Users\\Michael\\anaconda3\\lib\\site-packages\\dgl\\')
 import dgl
 import pandas as pd
 import networkx as nx
