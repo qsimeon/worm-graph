@@ -33,7 +33,6 @@ Run `python generate_dataset.py` from `InitialWorkingExamples/CorrectedAndSimpli
 
 Change the `filename` parameter in the main function of `generate_dataset.py`
 to change where the data are saved. 
-**qsimeon 8/26/22:** "There is no variable named `filename` in `generate_dataset.py`."
 
 This script will save:
 1. The time series data as a npy file `{filename}.npy`
@@ -41,7 +40,7 @@ This script will save:
 of data formatted for input to AI Feynman
 
 See `VisualizeSimulation.ipynb` for visualization code.
-**qsimeon 8/26/22:** "There iexist no such notebook `VisualizeSimulation.ipynb`."
+**qsimeon 8/26/22:** "There exists no such notebook `VisualizeSimulation.ipynb`."
 
 ### Step 2: Perform symbolic regression
 
