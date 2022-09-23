@@ -64,7 +64,7 @@ Vth = compute_Vth()  # shape = (279,)
 
 
 def run_simulation(total_steps: int) -> np.array:
-    data = np.zeros((total_steps, 2 * n_neurons))
+    # data = np.zeros((total_steps, 2 * n_neurons))
     initial_voltages = np.random.uniform(-70, 30, size=n_neurons)
     initial_synaptic_activities = 10 ** (-2) * np.random.normal(size=n_neurons)
     initial_state = np.concatenate((initial_voltages, initial_synaptic_activities))
@@ -89,7 +89,7 @@ def run_simulation(total_steps: int) -> np.array:
 
     data = integrate.odeint(func=membrane_voltage_ode_rhs,
                             y0=initial_state,
-                            t=np.linspace(0, 1, 100),
+                            t=np.linspace(0, 1, total_steps),
                             tfirst=True,
                             printmessg=True)
 
