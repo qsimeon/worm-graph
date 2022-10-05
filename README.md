@@ -1,5 +1,5 @@
 # worm-graph
-Simulating worms with graph nets
+## Simulating worms with graph nets
 
 ```.
 ├── Data
@@ -26,8 +26,19 @@ Simulating worms with graph nets
 └── pipelineExplorer.ipynb: Notebook to run through the pipeline, with choices (e.g. data type, model type, etc) at each step.
  ```
  
+## Create the environment from the `environment.yml` file
+
+Using the terminal or an Anaconda Prompt: `conda env create -f environment.yml`
+   The first line of the `yml` file sets the new environment's name.
+
+Activate the new environment: `conda activate worm-graph`
+
+Verify that the new environment was installed correctly: `conda env list`
+   You can also use `conda info --envs`.
  
- Naming conventions
+With the `worm-graph` environment activated, install PyG: `conda install pyg -c pyg`
+
+ ## Naming conventions
  
  Folders, use lowercase letters with underscores to separate words.
  **Example:** `my_folder`.

@@ -1,0 +1,26 @@
+name: worm-graph
+channels:
+  - defaults
+dependencies:
+  - python=3.9
+  - pytorch
+  - torchvision
+  - torchaudio
+  - torch-scatter
+  - pytorch-sparse
+  - pytorch-cluster
+  - pytorch-spline-conv
+  - notebook
+  - jupyterlab
+  - tqdm
+  - matplotlib
+  - scikit-learn
+  - dgl
+  - scipy
+  - wget
+  - numpy
+  - psutil
+  - pandas
+  - ipywidgets
+  - seaborn
+  - networkx
