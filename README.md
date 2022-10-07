@@ -28,6 +28,7 @@
  
 ## Create the environment from the `environment.yml` file
 
+# TODO: This is not working for Robert, please fix
 Using the terminal or an Anaconda Prompt: `conda env create -f environment.yml`
    The first line of the `yml` file sets the new environment's name.
 
