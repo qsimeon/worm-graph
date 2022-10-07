@@ -10,6 +10,13 @@ from torch_geometric.utils import coalesce
 import torch_geometric.transforms as T
 import numpy as np
 import pandas as pd
+import torch_geometric.utils
+
+#Load the c. elegans connectome graph 
+from ..data.data_loader import CElegansGraph
+
+dataset = CElegansGraph()
+graph = dataset[0]
 
 #@title Investigate the C. elegans graph.
 print("Attributes:", "\n", graph.keys, "\n",
@@ -19,6 +26,7 @@ print(f"\tHas isolated nodes: {graph.has_isolated_nodes()}")
 print(f"\tHas self-loops: {graph.has_self_loops()}")
 print(f"\tIs undirected: {graph.is_undirected()}")
 print(f"\tIs directed: {graph.is_directed()}") 
+
 
 #@title Draw the graph of the C. elegans connectome
 G = torch_geometric.utils.to_networkx(graph)
@@ -38,7 +46,7 @@ nx.draw_networkx_nodes(G, pos, nodelist=sensory, node_color="tab:blue", **option
 nx.draw_networkx_nodes(G, pos, nodelist=inter, node_color="tab:red", **options);
 nx.draw_networkx_nodes(G, pos, nodelist=motor, node_color="tab:green", **options);
 
-labels = id_neuron
+labels = list(G.nodes)
 nx.draw_networkx_labels(G, pos, labels, font_size=8);
 
 junctions = [edge for i,edge in enumerate(G.edges) if graph.edge_attr[i,0]==0.]
@@ -60,7 +68,7 @@ df.head()
 assert len(neuron_names) < len(df.neuron)
 assert set(neuron_names).issubset(set(df.neuron.values))
 
-keys = id_neuron.keys()
+keys = labels
 values = list(df[df.neuron.isin(neuron_names)][['y', 'z']].values)
 my_pos = dict(zip(keys, values))
 
