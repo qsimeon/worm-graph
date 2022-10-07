@@ -28,7 +28,6 @@
  
 ## Create the environment from the `environment.yml` file
 
-# TODO: This is not working for Robert, please fix
 Using the terminal or an Anaconda Prompt: `conda env create -f environment.yml`
    The first line of the `yml` file sets the new environment's name.
 
@@ -37,7 +36,7 @@ Activate the new environment: `conda activate worm-graph`
 Verify that the new environment was installed correctly: `conda env list`
    You can also use `conda info --envs`.
  
-With the `worm-graph` environment activated, install PyG: `conda install pyg -c pyg`
+Activate the environment before working on the project: `conda activate worm-graph`
 
  ## Naming conventions
  

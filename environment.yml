@@ -1,26 +1,30 @@
-name: worm-graph
+name: worm-graph2
 channels:
   - defaults
+  - pytorch
+  - pyg
+  - anaconda
+  - conda-forge
 dependencies:
   - python=3.9
   - pytorch
-  - torchvision
-  - torchaudio
-  - torch-scatter
-  - pytorch-sparse
-  - pytorch-cluster
-  - pytorch-spline-conv
-  - notebook
-  - jupyterlab
-  - tqdm
-  - matplotlib
-  - scikit-learn
-  - dgl
-  - scipy
-  - wget
   - numpy
-  - psutil
-  - pandas
-  - ipywidgets
-  - seaborn
   - networkx
+  - pandas
+  - matplotlib
+  - seaborn
+  - scikit-learn
+  - scipy
+  - psutil
+  - tqdm
+  - wget
+  - jupyterlab
+  - notebook
+  - ipywidgets
+  - pip
+  - pip:
+    - torch-scatter -f https://data.pyg.org/whl/torch-1.12.1+cpu.html
+    - torch-sparse -f https://data.pyg.org/whl/torch-1.12.1+cpu.html
+    - torch-cluster -f https://data.pyg.org/whl/torch-1.12.1+cpu.html
+    - torch-spline-conv -f https://data.pyg.org/whl/torch-1.12.1+cpu.html
+    - torch-geometric
