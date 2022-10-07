@@ -3,7 +3,7 @@ import torch
 import torch.nn as nn
 from torch.utils.data import Dataset
 
-from torch_geometric.utils import erdos_renyi_graph, dense_to_sparse
+from torch_geometric.utils import coalesce
 from torch_geometric.data import InMemoryDataset, Data, download_url, extract_zip
 import torch_geometric.transforms as T
 
@@ -32,7 +32,7 @@ class CElegansGraph(InMemoryDataset):
         return ['data.pt']
 
     def download(self):
-        # Michi's dataset
+        # dataset adapted from from Cook et al. (2019) SI5
         url = 'https://github.com/metaconsciousgroup/worm-graph/raw/download/Herm_Nodes_Edges.zip' # base url
         filename = os.path.join('Herm_Nodes_Edges.zip')
         folder = os.path.join(self.raw_dir, 'datasets')
@@ -41,50 +41,84 @@ class CElegansGraph(InMemoryDataset):
         os.unlink(filename) # remove zip file
 
     def process(self):
-        # dataset adapted from from Cook et al. (2019) SI5
-        train_path = os.path.join(self.raw_dir, 'Dataset', 'train.csv')
-        test_path = os.path.join(self.raw_dir, 'Dataset', 'test.csv')
-        train_df = pd.read_csv(train_path)
-        test_df = pd.read_csv(test_path)
-        df = pd.concat([train_df, test_df], axis=0).reset_index(drop=True)
-        query = df.loc[:, df.columns != 'label']
-        xyz = np.expand_dims(query.to_numpy(), 0).reshape(len(df), -1, 3)
-        xyz = [t[t[:,-1] != -1, :] for t in xyz] # remove null values
-        xyz = [t / np.array([27, 27, 255]) for t in xyz] # normalize
-        n_points = [t.shape[0] for t in xyz]
-        df = pd.DataFrame({'xy': xyz, 'label': df.label, 'n_points': n_points})
-
-        # processing
-        data_list = []
-        ids_list = df.index.unique()
-        for g_idx in tqdm(ids_list):
-          # node features
-          n_points = df.iloc[g_idx].n_points
-          node_ids = np.arange(n_points)
-          x = torch.tensor(df.iloc[g_idx].xy, dtype=torch.float)
-          pos = x.clone() # node position matrix
-
-          # edges info
-          I_n = torch.eye(n_points)  # only self connections
-          edge_index, _ = dense_to_sparse(I_n)
-          if self.dense: # random connectivity
-            edge_index = erdos_renyi_graph(n_points, 0.1)
-          
-          # graph label
-          label = df.loc[g_idx].label
-          y = torch.tensor([label], dtype=torch.long)
-          
-          # construct graph as a Data object
-          graph = Data(x=x, edge_index=edge_index, edge_attr=None, y=y)
-          data_list.append(graph)
-            
-        # Apply the functions specified in pre_filter and pre_transform
-        if self.pre_filter is not None:
-            data_list = [data for data in data_list if self.pre_filter(data)]
-
-        if self.pre_transform is not None:
-            data_list = [self.pre_transform(data) for data in data_list]
-
-        # Store the processed data
+        # chemical synapse
+        GHermChem_Edges = pd.read_csv('GHermChem_Edges.csv') # edges
+        GHermChem_Nodes =  pd.read_csv('GHermChem_Nodes.csv') # nodes
+        # gap junctions
+        GHermElec_Sym_Edges = pd.read_csv('GHermElec_Sym_Edges.csv') # edges
+        GHermElec_Sym_Nodes =  pd.read_csv('GHermElec_Sym_Nodes.csv') # nodes
+        # neurons involved in gap junctions
+        df = GHermElec_Sym_Nodes
+        Ggap_nodes = df[df['Group'].str.contains("Neuron")].sort_values(by=['Name']).reset_index()
+        # neurons involved in chemical synapses
+        df = GHermChem_Nodes
+        Gsyn_nodes = df[df['Group'].str.contains("Neuron")].sort_values(by=['Name']).reset_index()
+        # gap junctions
+        df = GHermElec_Sym_Edges
+        inds = [i for i in GHermElec_Sym_Edges.index if 
+                df.iloc[i]['EndNodes_1'] in set(Ggap_nodes.Name) and 
+                df.iloc[i]['EndNodes_2'] in set(Ggap_nodes.Name)] # indices
+        Ggap_edges = df.iloc[inds].reset_index(drop=True)
+        # chemical synapses
+        df = GHermChem_Edges
+        inds = [i for i in GHermChem_Edges.index if 
+                df.iloc[i]['EndNodes_1'] in set(Gsyn_nodes.Name) and 
+                df.iloc[i]['EndNodes_2'] in set(Gsyn_nodes.Name)] # indices
+        Gsyn_edges = df.iloc[inds].reset_index(drop=True)
+        # map neuron names (IDs) to indices
+        neuron_id  = dict(zip(Gsyn_nodes.Name.values, Gsyn_nodes.index.values))
+        id_neuron = dict(zip(Gsyn_nodes.index.values, Gsyn_nodes.Name.values))
+        # edge_index for gap junctions
+        arr = Ggap_edges[['EndNodes_1', 'EndNodes_2']].values
+        ggap_edge_index = torch.empty(*arr.shape, dtype=torch.long) 
+        for i, row in enumerate(arr):
+            ggap_edge_index[i,:] = torch.tensor([neuron_id[x] for x in row], dtype=torch.long)
+        ggap_edge_index = ggap_edge_index.T # [2, num_edges]
+        # edge_index for chemical synapses
+        arr = Gsyn_edges[['EndNodes_1', 'EndNodes_2']].values
+        gsyn_edge_index = torch.empty(*arr.shape, dtype=torch.long) 
+        for i, row in enumerate(arr):
+            gsyn_edge_index[i,:] = torch.tensor([neuron_id[x] for x in row], dtype=torch.long)
+        gsyn_edge_index = gsyn_edge_index.T # [2, num_edges]
+        num_edge_features = 2
+        # edge_attr for gap junctions
+        num_edges = len(Ggap_edges)
+        ggap_edge_attr = torch.empty(num_edges, num_edge_features, 
+                                    dtype=torch.float) # [num_edges, num_edge_features]
+        for i, weight in enumerate(Ggap_edges.Weight.values):
+            ggap_edge_attr[i,:] = torch.tensor([weight, 0],cdtype=torch.float) # electrical synapse encoded as [1,0]
+        # edge_attr for chemical synapses
+        num_edges = len(Gsyn_edges)
+        gsyn_edge_attr = torch.empty(num_edges, num_edge_features, 
+                             dtype=torch.float) # [num_edges, num_edge_features]
+        for i, weight in enumerate(Gsyn_edges.Weight.values):
+            gsyn_edge_attr[i,:] = torch.tensor([0, weight], dtype=torch.float) # chemical synapse encoded as [0,1]
+        # data.x node feature matrix
+        num_nodes = len(Gsyn_nodes)
+        num_node_features = 1024
+        # generate random data
+        x = torch.rand(num_nodes, num_node_features, dtype=torch.float) # [num_nodes, num_node_features]
+        # data.y target to train against
+        le = preprocessing.LabelEncoder()
+        le.fit(Gsyn_nodes.Group.values)
+        y = torch.tensor(le.transform(Gsyn_nodes.Group.values), dtype=torch.float) # [num_nodes, 1]
+        # graph for electrical connectivity
+        electrical_graph = Data(x=x, edge_index=ggap_edge_index, edge_attr=ggap_edge_attr, y=y)
+        # graph for chemical connectivity
+        chemical_graph = Data(x=x, edge_index=gsyn_edge_index, edge_attr=gsyn_edge_attr, y=y)
+        # merge electrical and chemical graphs into a single connectome graph
+        edge_index = torch.hstack((electrical_graph.edge_index, chemical_graph.edge_index)) # features = [elec_wt, chem_wt]
+        edge_attr = torch.vstack((electrical_graph.edge_attr, chemical_graph.edge_attr)) 
+        edge_index, edge_attr = coalesce(edge_index, edge_attr, reduce="add")
+        assert all(chemical_graph.y == electrical_graph.y), "Node labels not matched!"
+        x = chemical_graph.x 
+        y = chemical_graph.y
+        graph = Data(x=x, edge_index=edge_index, edge_attr=edge_attr, y=y)
+        # add graph to datalist
+        data_list.append(graph)
+        # apply the functions specified in pre_filter and pre_transform
+        data_list = [data for data in data_list if self.pre_filter(data)]
+        data_list = [self.pre_transform(data) for data in data_list]
+        # store the processed data
         data, slices = self.collate(data_list)
         torch.save((data, slices), self.processed_paths[0])  
