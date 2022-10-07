@@ -1,4 +1,4 @@
-name: worm-graph2
+name: worm-graph
 channels:
   - defaults
   - pytorch
@@ -14,6 +14,7 @@ dependencies:
   - matplotlib
   - seaborn
   - scikit-learn
+  - scikit-learn-intelex
   - scipy
   - psutil
   - tqdm
