@@ -18,16 +18,15 @@ loader = WormNeuralDynamicsDataLoader.WormNeuralDynamicsDataLoader()
 dataset = loader.get_dataset()
 train_dataset, test_dataset = temporal_signal_split(dataset, train_ratio=0.2)
 
-
 # Create network
 model = RecurrentGCN(node_features=3)
-
 
 # Train
 optimizer = torch.optim.Adam(model.parameters(), lr=0.01)
 
 model = train(train_dataset, model)
 
+# Evaluation
 model.eval()
 cost = 0
 for time, snapshot in enumerate(test_dataset):
