@@ -42,6 +42,3 @@ With the `worm-graph` environment activated, install PyG: `conda install pyg -c 
  
  Folders, use lowercase letters with underscores to separate words.
  **Example:** `my_folder`.
- 
- If you would like folders to be ordered, prefix the folder name with `_#_` where `#` represents the desired rank of that folder.
- **Example:** `_1_chordata`, `_2_vertebrata`, `_3_mammals`
