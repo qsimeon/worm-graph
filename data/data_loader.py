@@ -33,7 +33,7 @@ class CElegansGraph(InMemoryDataset):
 
     def download(self):
         # dataset adapted from from Cook et al. (2019) SI5
-        url = 'https://github.com/metaconsciousgroup/worm-graph/raw/download/Herm_Nodes_Edges.zip' # base url
+        url = 'https://github.com/metaconsciousgroup/worm-graph/raw/main/data/raw_data.zip' # base url
         filename = os.path.join('Herm_Nodes_Edges.zip')
         folder = os.path.join(self.raw_dir, 'datasets')
         download_url(url=url, folder=folder, filename=filename, ) # download zip file 

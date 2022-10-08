@@ -1,10 +1,5 @@
 # Mac file
-<<<<<<< HEAD
 *.DS_Store
-=======
-.DS_Store
-.idea/
->>>>>>> a7435747b3d5eb0073ed20acf8e9f0cf5452f76f
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
