@@ -1,31 +1,23 @@
-#@title Define an MNIST PointCloud as subclass of InMemoryDataset
-import torch
-import torch.nn as nn
-from torch.utils.data import Dataset
-
-from torch_geometric.utils import coalesce
-from torch_geometric.data import InMemoryDataset, Data, download_url, extract_zip
-import torch_geometric.transforms as T
-
 import os
-import numpy as np
-import networkx as nx
+import torch
 import pandas as pd
-from tqdm import tqdm
+from torch_geometric.utils import coalesce
+from torch_geometric.data import InMemoryDataset, Data
+from torch_geometric.data import download_url, extract_zip
 from sklearn import preprocessing
-from scipy.io import loadmat
 
-class CElegansGraph(InMemoryDataset):
-    def __init__(self, root, transform=None, pre_transform=None, dense=False):
-        self.dense = dense
-        super(CElegansGraph, self).__init__(root, transform, pre_transform)
+class CElegansDataset(InMemoryDataset):
+    def __init__(self, root=os.getcwd(), transform=None, pre_transform=None, dense=False):
+        '''Defines CElegansGraph as a subclass of a PyG InMemoryDataset.'''
+        super(CElegansDataset, self).__init__(root, transform, pre_transform)
         self.data, self.slices = torch.load(self.processed_paths[0])   
         
     @property
     def raw_file_names(self):
-        ''' List of the raw files '''
-        return ['datasets/GHermChem_Edges.csv', 'datasets/GHermChem_Nodes.csv', 
-                'datasets/GHermElec_Sym_Edges.csv', 'datasets/GHermElec_Sym_Nodes.csv'] 
+        '''List of the raw files.'''
+        return ['raw/GHermChem_Edges.csv', 'raw/GHermChem_Nodes.csv', 
+                'raw/GHermElec_Sym_Edges.csv', 'raw/GHermElec_Sym_Nodes.csv',
+                'raw/LowResAtlasWithHighResHeadsAndTails.csv'] 
                
     @property
     def processed_file_names(self):
@@ -33,20 +25,20 @@ class CElegansGraph(InMemoryDataset):
 
     def download(self):
         # dataset adapted from from Cook et al. (2019) SI5
-        url = 'https://github.com/metaconsciousgroup/worm-graph/raw/main/data/raw_data.zip' # base url
-        filename = os.path.join('Herm_Nodes_Edges.zip')
-        folder = os.path.join(self.raw_dir, 'datasets')
-        download_url(url=url, folder=folder, filename=filename, ) # download zip file 
-        extract_zip(filename, folder=self.raw_dir) # extract zip file
+        url = 'https://www.dropbox.com/s/59yy9wjq2x7062o/raw_data.zip?dl=1' # base url
+        filename = os.path.join('raw_data.zip')
+        folder = os.path.join(self.raw_dir)
+        download_url(url=url, folder=os.getcwd(), filename=filename) # download zip file 
+        extract_zip(filename, folder=folder) # extract zip file
         os.unlink(filename) # remove zip file
 
     def process(self):
         # chemical synapse
-        GHermChem_Edges = pd.read_csv('GHermChem_Edges.csv') # edges
-        GHermChem_Nodes =  pd.read_csv('GHermChem_Nodes.csv') # nodes
+        GHermChem_Edges = pd.read_csv(os.path.join(self.raw_dir, 'GHermChem_Edges.csv')) # edges
+        GHermChem_Nodes =  pd.read_csv(os.path.join(self.raw_dir, 'GHermChem_Nodes.csv')) # nodes
         # gap junctions
-        GHermElec_Sym_Edges = pd.read_csv('GHermElec_Sym_Edges.csv') # edges
-        GHermElec_Sym_Nodes =  pd.read_csv('GHermElec_Sym_Nodes.csv') # nodes
+        GHermElec_Sym_Edges = pd.read_csv(os.path.join(self.raw_dir, 'GHermElec_Sym_Edges.csv')) # edges
+        GHermElec_Sym_Nodes =  pd.read_csv(os.path.join(self.raw_dir, 'GHermElec_Sym_Nodes.csv')) # nodes
         # neurons involved in gap junctions
         df = GHermElec_Sym_Nodes
         Ggap_nodes = df[df['Group'].str.contains("Neuron")].sort_values(by=['Name']).reset_index()
@@ -86,7 +78,7 @@ class CElegansGraph(InMemoryDataset):
         ggap_edge_attr = torch.empty(num_edges, num_edge_features, 
                                     dtype=torch.float) # [num_edges, num_edge_features]
         for i, weight in enumerate(Ggap_edges.Weight.values):
-            ggap_edge_attr[i,:] = torch.tensor([weight, 0],cdtype=torch.float) # electrical synapse encoded as [1,0]
+            ggap_edge_attr[i,:] = torch.tensor([weight, 0], dtype=torch.float) # electrical synapse encoded as [1,0]
         # edge_attr for chemical synapses
         num_edges = len(Gsyn_edges)
         gsyn_edge_attr = torch.empty(num_edges, num_edge_features, 
@@ -107,18 +99,37 @@ class CElegansGraph(InMemoryDataset):
         # graph for chemical connectivity
         chemical_graph = Data(x=x, edge_index=gsyn_edge_index, edge_attr=gsyn_edge_attr, y=y)
         # merge electrical and chemical graphs into a single connectome graph
-        edge_index = torch.hstack((electrical_graph.edge_index, chemical_graph.edge_index)) # features = [elec_wt, chem_wt]
+        edge_index = torch.hstack((electrical_graph.edge_index, chemical_graph.edge_index)) 
         edge_attr = torch.vstack((electrical_graph.edge_attr, chemical_graph.edge_attr)) 
-        edge_index, edge_attr = coalesce(edge_index, edge_attr, reduce="add")
+        edge_index, edge_attr = coalesce(edge_index, edge_attr, reduce="add") # features = [elec_wt, chem_wt]
         assert all(chemical_graph.y == electrical_graph.y), "Node labels not matched!"
         x = chemical_graph.x 
         y = chemical_graph.y
         graph = Data(x=x, edge_index=edge_index, edge_attr=edge_attr, y=y)
-        # add graph to datalist
-        data_list.append(graph)
+        # add some additional attributes to the graph
+        neuron_names = [v.replace('0','') if not v.endswith('0') else v for v in id_neuron.values()]
+        df = pd.read_csv(os.path.join(self.raw_dir, 'LowResAtlasWithHighResHeadsAndTails.csv'), 
+                                    header=None, names=['neuron', 'x', 'y', 'z'])
+        assert len(neuron_names) < len(df.neuron)
+        assert set(neuron_names).issubset(set(df.neuron.values))
+        keys = id_neuron.keys()
+        values = list(df[df.neuron.isin(neuron_names)][['y', 'z']].values)
+        pos = dict(zip(keys, values))
+        graph.id_neuron = id_neuron 
+        graph.pos = pos
         # apply the functions specified in pre_filter and pre_transform
-        data_list = [data for data in data_list if self.pre_filter(data)]
-        data_list = [self.pre_transform(data) for data in data_list]
+        data_list = [graph]
+        if self.pre_filter is not None:
+            data_list = [data for data in data_list if self.pre_filter(data)]
+        if self.pre_transform is not None:
+            data_list = [self.pre_transform(data) for data in data_list]
         # store the processed data
         data, slices = self.collate(data_list)
         torch.save((data, slices), self.processed_paths[0])  
+
+
+
+if __name__ == "__main__":
+    print("Hello, World!")
+    dataset = CElegansDataset()
+    graph = dataset[0]
