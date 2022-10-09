@@ -5,6 +5,7 @@ from torch_geometric.utils import coalesce
 from torch_geometric.data import InMemoryDataset, Data
 from torch_geometric.data import download_url, extract_zip
 from sklearn import preprocessing
+import sys; sys.path.append("..")
 
 class CElegansDataset(InMemoryDataset):
     def __init__(self, root=os.getcwd(), transform=None, pre_transform=None, dense=False):
@@ -15,9 +16,9 @@ class CElegansDataset(InMemoryDataset):
     @property
     def raw_file_names(self):
         '''List of the raw files.'''
-        return ['raw/GHermChem_Edges.csv', 'raw/GHermChem_Nodes.csv', 
-                'raw/GHermElec_Sym_Edges.csv', 'raw/GHermElec_Sym_Nodes.csv',
-                'raw/LowResAtlasWithHighResHeadsAndTails.csv'] 
+        return ['GHermChem_Edges.csv', 'GHermChem_Nodes.csv', 
+                'GHermElec_Sym_Edges.csv', 'GHermElec_Sym_Nodes.csv',
+                'LowResAtlasWithHighResHeadsAndTails.csv'] 
                
     @property
     def processed_file_names(self):
@@ -128,8 +129,7 @@ class CElegansDataset(InMemoryDataset):
         torch.save((data, slices), self.processed_paths[0])  
 
 
-
 if __name__ == "__main__":
-    print("Hello, World!")
     dataset = CElegansDataset()
     graph = dataset[0]
+    print("Loaded data successfully!")
