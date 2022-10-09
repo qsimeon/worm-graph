@@ -29,3 +29,4 @@ dependencies:
     - torch-cluster -f https://data.pyg.org/whl/torch-1.12.1+cpu.html
     - torch-spline-conv -f https://data.pyg.org/whl/torch-1.12.1+cpu.html
     - torch-geometric
+    - torch-geometric-temporal

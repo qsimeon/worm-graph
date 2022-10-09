@@ -1,6 +1,8 @@
+cd '..data/raw/'
+
 %% Saves as separate .csv tables the nodes and edges of chemical synsapse and gap junctins in the C.elegans hermaphrodite
-load("GHermChem.mat") % chemical synapses (directed graph)
-load("GHermElec_Sym.mat") % gap junctions (indirected graph)
+load('GHermChem.mat') % chemical synapses (directed graph)
+load('GHermElec_Sym.mat') % gap junctions (indirected graph)
 
 % Write as .csv in order to load as a Pandas dataframe in Python
 writetable(GHermChem.Edges, 'GHermChem_Edges.csv')
