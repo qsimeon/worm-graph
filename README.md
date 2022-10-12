@@ -27,15 +27,19 @@
  
 ## Create the environment from the `environment.yml` file
 
+`cd` into the `worm-graph` dirrectory on your local machine: `cd worm-graph`
+
 Using the terminal or an Anaconda Prompt: `conda env create -f environment.yml`
    The first line of the `yml` file sets the new environment's name.
 
 Activate the new environment: `conda activate worm-graph`
 
+Add the `worm-graph` root directory to Anaconda path: `conda develop .`
+
 Verify that the new environment was installed correctly: `conda env list`
    You can also use `conda info --envs`.
  
-Activate the environment before working on the project: `conda activate worm-graph`
+Always activate the environment before working on the project: `conda activate worm-graph`
 
  ## Naming conventions
  
