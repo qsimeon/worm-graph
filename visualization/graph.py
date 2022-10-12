@@ -1,4 +1,3 @@
-import sys; sys.path.append("..")
 from data.data_loader import CElegansDataset
 
 # Load the c. elegans connectome graph 
