@@ -8,13 +8,16 @@ from torch_geometric_temporal.nn.recurrent import EvolveGCNH, GConvGRU
 
 
 class ConvGNN(torch.nn.Module):
+    '''TODO: docstrings
+    Class to use for subclassing all convoultuional GNNs'''
     def __init__(self):
         super(ConvGNN, self).__init__()
 
 
-class ConvGNN_1(ConvGNN):
+class DeepGCNConv(ConvGNN):
+    '''TODO: want classes to be understandable from their names.'''
     def __init__(self, hidden_channels, num_node_features, num_classes):
-        super(ConvGNN, self).__init__()
+        super(DeepGCNConv, self).__init__()
         torch.manual_seed(12345)
         self.conv1 = GCNConv(num_node_features, hidden_channels)
         self.conv2 = GCNConv(hidden_channels, hidden_channels)
@@ -36,13 +39,13 @@ class ConvGNN_1(ConvGNN):
         return x
 
 
-class ConvGNN_2(ConvGNN):
+class DeepGATConv(ConvGNN):
     def __init__(self, hidden_channels, num_node_features, num_classes):
-        super(ConvGNN, self).__init__()
+        super(DeepGATConv, self).__init__()
         torch.manual_seed(12345)
-        self.conv1 = GATConv(num_node_features, hidden_channels)
-        self.conv2 = GATConv(hidden_channels, hidden_channels)
-        self.conv3 = GATConv(hidden_channels, hidden_channels)
+        self.conv1 = DeepGATConv(num_node_features, hidden_channels)
+        self.conv2 = DeepGATConv(hidden_channels, hidden_channels)
+        self.conv3 = DeepGATConv(hidden_channels, hidden_channels)
         self.lin = Linear(hidden_channels, num_classes)
 
     def forward(self, graph):
@@ -66,10 +69,10 @@ class RecurrentGCN(torch.nn.Module):
         super(RecurrentGCN, self).__init__()
 
 
-class RGCN_1(RecurrentGCN):
-    '''DCRNN'''
+class DeepRGCN(RecurrentGCN):
+    '''DCRNN: Deep Convolutional Recurrent Neural Network.'''
     def __init__(self, node_features):
-        super(RGCN_1, self).__init__()
+        super(DeepRGCN, self).__init__()
         self.recurrent = DCRNN(node_features, 32, 1)
         self.linear = torch.nn.Linear(32, 1)
 
@@ -80,10 +83,10 @@ class RGCN_1(RecurrentGCN):
         return h
 
 
-class RGCN_2(RecurrentGCN):
+class EvolveRCGN(RecurrentGCN):
     def __init__(self, node_count, node_features):
         '''EvolveGCNH'''
-        super(RGCN_2, self).__init__()
+        super(EvolveRCGN, self).__init__()
         self.recurrent = EvolveGCNH(node_count, node_features)
         self.linear = torch.nn.Linear(node_features, 1)
 
@@ -94,10 +97,10 @@ class RGCN_2(RecurrentGCN):
         return h
 
 
-class RGCN_3(RecurrentGCN):
+class GatedRGCN(RecurrentGCN):
     '''GConvGRU'''
     def __init__(self, node_features):
-        super(RGCN_3, self).__init__()
+        super(GatedRGCN, self).__init__()
         self.recurrent = GConvGRU(node_features, 32, 1)
         self.linear = torch.nn.Linear(32, 1)
 
