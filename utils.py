@@ -14,7 +14,7 @@ def sliding_windows(dataset, seq_length):
     '''
     x = []
     y = []
-    num_batches = dataset.shape[0]-seq_length-1
+    num_batches = dataset.shape[1]-seq_length-1
     for i in range(num_batches): # determines number of batches
         _x = dataset.T[i:(i+seq_length)] # time to regress on
         _y = dataset.T[i+seq_length] # next time-step(s)
