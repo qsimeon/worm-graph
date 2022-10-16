@@ -1,4 +1,7 @@
+import os
 import numpy as np
+
+ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
 
 def sliding_windows(data, seq_length, pred_length=1):
     '''
