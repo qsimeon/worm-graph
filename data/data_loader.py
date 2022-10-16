@@ -2,9 +2,9 @@ import os
 import torch
 from torch_geometric.data import InMemoryDataset, Data
 from torch_geometric.data import download_url, extract_zip
-# import sys; sys.path.append("..")
 from utils import ROOT_DIR
 from preprocessing.process_raw import preprocess
+
 class CElegansDataset(InMemoryDataset):
     def __init__(self, root=os.path.join(ROOT_DIR, 'data'), transform=None, pre_transform=None):
         '''Defines CElegansDataset as a subclass of a PyG InMemoryDataset.'''
@@ -13,16 +13,18 @@ class CElegansDataset(InMemoryDataset):
         
     @property
     def raw_file_names(self):
-        '''List of the raw files.'''
+        '''List of the raw files needed to proceed.'''
         return ['GHermChem_Edges.csv', 'GHermChem_Nodes.csv', 
                 'GHermElec_Sym_Edges.csv', 'GHermElec_Sym_Nodes.csv',
                 'LowResAtlasWithHighResHeadsAndTails.csv'] 
                
     @property
     def processed_file_names(self):
+        '''List of the processed files needed to proceed.'''
         return ['data.pt']
 
     def download(self):
+        '''Download the raw zip file if not already retrieved.'''
         # dataset adapted from from Cook et al. (2019) SI5
         url = 'https://www.dropbox.com/s/oouvpx1cupd4q01/raw_data.zip?dl=1' # base url
         filename = os.path.join('raw_data.zip')
@@ -32,6 +34,7 @@ class CElegansDataset(InMemoryDataset):
         os.unlink(filename) # remove zip file
 
     def process(self):
+        '''Process the raw files and return the dataset (i.e. graph).'''
         # fast preprocess here
         data_path = os.path.join(ROOT_DIR, 'preprocessing', 'graph_tensors.pt')
         if not os.path.exists(data_path):
@@ -51,7 +54,7 @@ class CElegansDataset(InMemoryDataset):
         # store the processed data
         data, slices = self.collate(data_list)
         torch.save((data, slices), self.processed_paths[0])  
-        
+
 if __name__ == "__main__":
     dataset = CElegansDataset()
     graph = dataset[0]
