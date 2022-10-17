@@ -75,6 +75,14 @@ class OneStepPrediction(GraphTask):
         return self.train_dataset, self.test_dataset
     
     @property
+    def node_count(self):
+        return self.graph.num_nodes
+
+    @property
+    def node_features(self):
+        return self.seq_length
+
+    @property
     def train_size(self):
         return self.train_dataset.snapshot_count
         
@@ -98,5 +106,3 @@ if __name__ == "__main__":
     task = OneStepPrediction(graph, dataset)
     task = OneStepPrediction(graph, dataset, max_time=1000, seq_length=7, train_ratio=0.3)
     print("Built one-step prediction task successfully!")
-
-    
