@@ -1,7 +1,9 @@
+import os
 import torch
 import copy
 import numpy as np
-from utils import sliding_windows
+from scipy.io import loadmat
+from utils import sliding_windows, ROOT_DIR
 from torch_geometric_temporal.signal import temporal_signal_split
 from torch_geometric_temporal.signal.static_graph_temporal_signal import StaticGraphTemporalSignal
 from data.data_loader import CElegansDataset
@@ -17,14 +19,9 @@ class GraphTask(object):
 
 class OneStepPrediction(GraphTask):
     '''
-    Returns a StaticGraphTemporalSignal data iterator.
+    Returns constructor for a StaticGraphTemporalSignal data iterator.
     StaticGraphTemporalSignalBatch is designed for temporal signals defined on a static graph.
     https://pytorch-geometric-temporal.readthedocs.io/en/latest/modules/signal.html#id1 
-    A data iterator object to contain a static graph with a dynamically changing constant time difference 
-    temporal feature set (multiple signals). The node labels (target) are also temporal. The iterator returns 
-    a single constant time difference temporal snapshot for a time period (e.g. day or week). This single temporal 
-    snapshot is a Pytorch Geometric Data object. Between two temporal snapshots the features and optionally passed 
-    attributes might change. However, the underlying graph is the same.
     '''
     def __init__(self, graph, dataset=None, max_time=None, seq_length=9, train_ratio=0.5):
         '''
@@ -35,21 +32,22 @@ class OneStepPrediction(GraphTask):
 
         # parse the dataset to impose on the graph
         if dataset is None:
-            self.dataset = copy.deepcopy(self.graph.x) # graphs initialized with random data
+            dataset = copy.deepcopy(self.graph.x) # graphs initialized with random data
         else:
             assert dataset.shape[0] < self.graph.num_nodes and dataset.shape[0] < dataset.shape[1],  "Reshape neural data as (neurons, time)!"
-            self.dataset = torch.tensor(dataset, dtype=torch.float)
-        num_neurons, len_time = self.dataset.shape
+            dataset = torch.tensor(dataset, dtype=torch.float)
+        num_neurons, len_time = dataset.shape
 
         # inject the data into the nodes of the graph
         new_graph = copy.deepcopy(graph) # don't modify original graph
-        if max_time is not None: # length of time series
-            self.max_time = min(max_time, len_time)
-        else:
+        if max_time is None: # length of time series
             self.max_time = len_time
-        new_graph.x = graph.x[:, :self.max_time]
-        inds = np.random.choice(self.graph.num_nodes, size=num_neurons, replace=False) # neuron indices
-        new_graph.x[inds, :] = self.dataset[:, :max_time]
+        else:
+            self.max_time = min(max_time, len_time)
+        new_graph.x = torch.rand(self.graph.num_nodes, self.max_time, dtype=torch.float)
+        if dataset is not None:
+            inds = np.random.choice(self.graph.num_nodes, size=num_neurons, replace=False) # neuron indices
+            new_graph.x[inds, :] = dataset[:, :max_time]
 
         # use the new graph
         self.graph = new_graph
@@ -68,13 +66,10 @@ class OneStepPrediction(GraphTask):
         # split into train and test sets
         self.train_ratio = train_ratio
         self.train_dataset, self.test_dataset = temporal_signal_split(self.temporal_dataset, train_ratio=self.train_ratio)
-        # self.train_size, self.test_size = self.train_dataset.snapshot_count, self.test_dataset.snapshot_count
-    
+
     def __call__(self):
+        ''''Returns instance of StaticGraphTemporalSignal.'''
         return self.temporal_dataset
-    
-    def get_dataset(self):
-        return self()
     
     def train_test_split(self):
         return self.train_dataset, self.test_dataset
@@ -89,8 +84,19 @@ class OneStepPrediction(GraphTask):
     
     @property 
     def data_size(self):
+        '''Returns the number of snapshots. 
+        Each snapshot is s a Pytorch Geometric Data object.'''
         return self.temporal_dataset.snapshot_count
         
 if __name__ == "__main__":
     graph = CElegansDataset()[0]
-    A = OneStepPrediction(graph)
+    task = OneStepPrediction(graph)
+    arr = loadmat(os.path.join(ROOT_DIR, 'data', 'raw', 'heatData_worm1.mat'))
+    Ratio2 = arr['Ratio2'] # the ratio signal is defined as normalized gPhotoCorr/rPhotoCorr
+    cgIdx = arr['cgIdx'].squeeze()  # ordered indices from heirarchically clustering correlation matrix
+    dataset = np.nan_to_num(Ratio2[cgIdx-1, :]) # shape (num_neurons, num_timesteps)
+    task = OneStepPrediction(graph, dataset)
+    task = OneStepPrediction(graph, dataset, max_time=1000, seq_length=7, train_ratio=0.3)
+    print("Built one-step prediction task successfully!")
+
+    

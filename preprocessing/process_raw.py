@@ -4,7 +4,6 @@ import pandas as pd
 from sklearn import preprocessing
 from torch_geometric.data import Data
 from torch_geometric.utils import coalesce
-# import sys; sys.path.append("..")
 from utils import ROOT_DIR
 
 def preprocess(raw_dir, raw_files):

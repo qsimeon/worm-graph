@@ -10,7 +10,7 @@ def sliding_windows(dataset, seq_length):
     Function for creating 1-timestep ahead 
     prediction datasets.
     data: array-like w/ shape (neurons, time)
-    seq_length: int: s | s < time, previous time to regress on
+    seq_length: int s | s < time, previous time to regress on
     '''
     x = []
     y = []
