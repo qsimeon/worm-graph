@@ -61,11 +61,11 @@ def optimize_model(task, model):
         optimizer.step()
         optimizer.zero_grad()
         # # validation
-        # test_loss = test(test_dataset, model)
+        test_loss = test(test_dataset, model)
         # logging
         log['epochs'].append(epoch)
         log['train_losses'].append(train_loss.item())
-        # log['test_losses'].append(test_loss.item())
+        log['test_losses'].append(test_loss.item())
     
     return model, log
 
@@ -78,7 +78,7 @@ def model_predict(task, model):
         preds: (neurons, time) np.ndarray, model predictions
     """
     dataset = task()
-    preds = np.empty(task.node_count, task.snapshot_count)
+    preds = np.empty((task.node_count, task.data_size))
     for time, snapshot in enumerate(dataset):
         y_hat = model(snapshot.x, snapshot.edge_index, snapshot.edge_attr)
         preds[:, [time]] = y_hat.clone().detach().numpy()
