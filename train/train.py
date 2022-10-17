@@ -10,6 +10,7 @@ def train(dataset, model):
 
     Returns:
          loss: training loss
+         model: trained model
     """
     model.train()
 
@@ -19,7 +20,7 @@ def train(dataset, model):
         loss = loss + torch.mean((y_hat - snapshot.y) ** 2)
     loss = loss / (time + 1)
 
-    return loss
+    return loss, model
 
 def test(dataset, model):
     """Evaluate a model on a given dataset.
@@ -54,17 +55,17 @@ def optimize_model(task, model):
 
     for epoch in tqdm(range(10)):
         # forward pass
-        train_loss = train(train_dataset, model)
+        train_loss, model = train(train_dataset, model)
         # backpropagation
         train_loss.backward()
         optimizer.step()
         optimizer.zero_grad()
-        # validation
-        test_loss = test(test_dataset, model)
+        # # validation
+        # test_loss = test(test_dataset, model)
         # logging
         log['epochs'].append(epoch)
         log['train_losses'].append(train_loss.item())
-        log['test_losses'].append(test_loss.item())
+        # log['test_losses'].append(test_loss.item())
     
     return model, log
 
