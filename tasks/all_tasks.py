@@ -2,8 +2,7 @@ import os
 import torch
 import copy
 import numpy as np
-from scipy.io import loadmat
-from utils import sliding_windows, ROOT_DIR
+from utils import sliding_windows
 from torch_geometric_temporal.signal import temporal_signal_split
 from torch_geometric_temporal.signal.static_graph_temporal_signal import StaticGraphTemporalSignal
 from data.data_loader import CElegansDataset
@@ -96,13 +95,11 @@ class OneStepPrediction(GraphTask):
         Each snapshot is s a Pytorch Geometric Data object.'''
         return self.temporal_dataset.snapshot_count
         
+
 if __name__ == "__main__":
+    # run some tasks
     graph = CElegansDataset()[0]
     task = OneStepPrediction(graph)
-    arr = loadmat(os.path.join(ROOT_DIR, 'data', 'raw', 'heatData_worm1.mat'))
-    Ratio2 = arr['Ratio2'] # the ratio signal is defined as normalized gPhotoCorr/rPhotoCorr
-    cgIdx = arr['cgIdx'].squeeze()  # ordered indices from heirarchically clustering correlation matrix
-    dataset = np.nan_to_num(Ratio2[cgIdx-1, :]) # shape (num_neurons, num_timesteps)
-    task = OneStepPrediction(graph, dataset)
-    task = OneStepPrediction(graph, dataset, max_time=1000, seq_length=7, train_ratio=0.3)
+    task = OneStepPrediction(graph, seq_length=3)
+    task = OneStepPrediction(graph, max_time=1000, train_ratio=0.3)
     print("Built one-step prediction task successfully!")

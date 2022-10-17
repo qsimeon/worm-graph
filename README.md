@@ -41,6 +41,10 @@ Verify that the new environment was installed correctly: `conda env list`
  
 Always activate the environment before working on the project: `conda activate worm-graph`
 
+## Get started with the pipeline in 1-line
+
+`python -i main.py`
+
  ## Naming conventions
  
  Folders, use lowercase letters with underscores to separate words.

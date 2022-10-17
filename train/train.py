@@ -2,6 +2,7 @@ import torch
 import numpy as np
 from tqdm import tqdm
 
+
 def train(dataset, model):
     """Train a model given a dataset.
     Args:
@@ -10,7 +11,6 @@ def train(dataset, model):
 
     Returns:
          loss: training loss
-         model: trained model
     """
     model.train()
 
@@ -20,7 +20,8 @@ def train(dataset, model):
         loss = loss + torch.mean((y_hat - snapshot.y) ** 2)
     loss = loss / (time + 1)
 
-    return loss, model
+    return loss
+
 
 def test(dataset, model):
     """Evaluate a model on a given dataset.
@@ -40,6 +41,7 @@ def test(dataset, model):
     
     return loss
 
+
 def optimize_model(task, model):
     """
     Args:
@@ -53,14 +55,14 @@ def optimize_model(task, model):
     log = log = {'epochs': [], 'test_losses': [], 'train_losses': []}
     train_dataset, test_dataset = task.train_test_split()
 
-    for epoch in tqdm(range(10)):
+    for epoch in tqdm(range(20)):
         # forward pass
-        train_loss, model = train(train_dataset, model)
+        train_loss = train(train_dataset, model)
         # backpropagation
         train_loss.backward()
         optimizer.step()
         optimizer.zero_grad()
-        # # validation
+        # validation
         test_loss = test(test_dataset, model)
         # logging
         log['epochs'].append(epoch)
@@ -68,6 +70,7 @@ def optimize_model(task, model):
         log['test_losses'].append(test_loss.item())
     
     return model, log
+
 
 def model_predict(task, model):
     """Ask the model to make predictions.
@@ -79,7 +82,9 @@ def model_predict(task, model):
     """
     dataset = task()
     preds = np.empty((task.node_count, task.data_size))
+
     for time, snapshot in enumerate(dataset):
         y_hat = model(snapshot.x, snapshot.edge_index, snapshot.edge_attr)
         preds[:, [time]] = y_hat.clone().detach().numpy()
+
     return preds

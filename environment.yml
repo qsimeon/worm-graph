@@ -7,23 +7,23 @@ channels:
   - conda-forge
 dependencies:
   - python=3.9
-  - freetype=2.10.4
   - pytorch
+  - pandas
+  - psutil
+  - pip
+  - freetype=2.10.4
+  - ipywidgets
+  - jupyterlab
+  - matplotlib
   - numpy
   - networkx
-  - pandas
-  - matplotlib
+  - notebook
   - seaborn
   - scikit-learn
   - scikit-learn-intelex
   - scipy
-  - psutil
   - tqdm
   - wget
-  - jupyterlab
-  - notebook
-  - ipywidgets
-  - pip
   - pip:
     - torch-scatter -f https://data.pyg.org/whl/torch-1.12.1+cpu.html
     - torch-sparse -f https://data.pyg.org/whl/torch-1.12.1+cpu.html
