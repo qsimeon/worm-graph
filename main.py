@@ -23,7 +23,7 @@ if __name__ == "__main__":
     model, log = optimize_model(task, model)
     preds = model_predict(task, model)
 
-    # TODO: put plotting code like this in a separte module / .py file
+    # TODO: put plotting code like this in a separte module file
     plt.figure()
     plt.plot(log['epochs'], log['train_losses'], label='train')
     plt.plot(log['epochs'], log['test_losses'], label='test')
