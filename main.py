@@ -13,7 +13,7 @@ if __name__ == "__main__":
     # load some real data, TODO: put loading of real data in a separate script/module
     arr = loadmat(os.path.join(ROOT_DIR, 'data', 'raw', 'heatData_worm1.mat'))
     Ratio2 = arr['Ratio2'] # the ratio signal is defined as normalized gPhotoCorr/rPhotoCorr
-    cgIdx = arr['cgIdx'].squeeze()  # ordered indices from heirarchically clustering correlation matrix
+    cgIdx = arr['cgIdx'].squeeze()  # ordered indices from hierarchically clustering correlation matrix
     dataset = np.nan_to_num(Ratio2[cgIdx-1, :]) # shape (num_neurons, num_timesteps)
 
     # build and train model
