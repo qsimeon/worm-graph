@@ -26,7 +26,7 @@ class CElegansDataset(InMemoryDataset):
     def download(self):
         '''Download the raw zip file if not already retrieved.'''
         # dataset adapted from from Cook et al. (2019) SI5
-        url = 'https://www.dropbox.com/s/oouvpx1cupd4q01/raw_data.zip?dl=1' # base url
+        url = 'https://www.dropbox.com/s/a7hnc3g9nxq4wwy/raw_data.zip?dl=1' # base url
         filename = os.path.join('raw_data.zip')
         folder = os.path.join(self.raw_dir)
         download_url(url=url, folder=os.getcwd(), filename=filename) # download zip file 
