@@ -23,6 +23,7 @@ dependencies:
   - scikit-learn-intelex
   - scipy
   - tqdm
+  - mat73
   - wget
   - pip:
     - torch-scatter -f https://data.pyg.org/whl/torch-1.12.1+cpu.html

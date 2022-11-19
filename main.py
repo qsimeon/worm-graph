@@ -1,4 +1,4 @@
-from data.data_loader import CElegansDataset
+from data.connectome_dataset import CElegansDataset
 from tasks.all_tasks import OneStepPrediction
 from models.gnn_models import EvolveRCGN
 from train.train import optimize_model, model_predict

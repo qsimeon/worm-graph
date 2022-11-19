@@ -56,6 +56,6 @@ class CElegansDataset(InMemoryDataset):
         torch.save((data, slices), self.processed_paths[0])  
 
 if __name__ == "__main__":
-    dataset = CElegansDataset()
-    graph = dataset[0]
-    print("Loaded data successfully!")
+    connectome = CElegansDataset()
+    graph = connectome[0]
+    print("Loaded connectome data successfully!")

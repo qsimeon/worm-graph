@@ -1,8 +1,12 @@
 import os
+import torch
 import numpy as np
 
 # defines `worm_graph` as the root directory
 ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
+
+# get GPU if available
+DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 # helper functions
 def sliding_windows(dataset, seq_length):
