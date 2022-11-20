@@ -12,6 +12,7 @@ dependencies:
   - pandas
   - psutil
   - pip
+  - pyg
   - freetype=2.10.4
   - ipywidgets
   - jupyterlab
@@ -26,10 +27,10 @@ dependencies:
   - tqdm
   - mat73
   - wget
-  - pip:
-    - torch-scatter -f https://data.pyg.org/whl/torch-1.12.1+cpu.html
-    - torch-sparse -f https://data.pyg.org/whl/torch-1.12.1+cpu.html
-    - torch-cluster -f https://data.pyg.org/whl/torch-1.12.1+cpu.html
-    - torch-spline-conv -f https://data.pyg.org/whl/torch-1.12.1+cpu.html
-    - torch-geometric
-    - torch-geometric-temporal
+  # - pip:
+  #   - torch-scatter -f https://data.pyg.org/whl/torch-1.12.1+cpu.html
+  #   - torch-sparse -f https://data.pyg.org/whl/torch-1.12.1+cpu.html
+  #   - torch-cluster -f https://data.pyg.org/whl/torch-1.12.1+cpu.html
+  #   - torch-spline-conv -f https://data.pyg.org/whl/torch-1.12.1+cpu.html
+  #   - torch-geometric
+  #   - torch-geometric-temporal
