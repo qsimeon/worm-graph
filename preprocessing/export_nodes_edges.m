@@ -1,6 +1,9 @@
+%% This script saves as separate .csv tables the nodes and edges of chemical synsapse and gap junctions in the C.elegans hermaphrodite
+
 cd '..data/raw/'
 
-%% Saves as separate .csv tables the nodes and edges of chemical synsapse and gap junctins in the C.elegans hermaphrodite
+
+% The input data is the Supplementary Information 5 of Cook et al., 2019. Excel connectivity tables in MATLAB-ready format.
 load('GHermChem.mat') % chemical synapses (directed graph)
 load('GHermElec_Sym.mat') % gap junctions (indirected graph)
 
