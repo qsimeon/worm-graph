@@ -7,37 +7,39 @@ class MapDataset(torch.utils.data.Dataset):
   A custom neural activity time-series prediction dataset.
   Using MapDataset will ensure that every sequence sample
   you generate is unique.
+  A map-style dataset is one that implements the __getitem__() and __len__() protocols, 
+  and represents a map from (possibly non-integral) indices/keys to data samples.
+  For example, such a dataset, when accessed with dataset[idx], could read the idx-th 
+  image and its corresponding label from a folder on the disk.
   '''
   def __init__(self, D, neurons=None, tau=1, seq_len=None, size=1000, 
-               increasing=False, feature_mask=None):
+               feature_mask=None, increasing=False):
     '''
-    Initialization.
     Args:
       D: torch.tensor, data w/ shape (max_time, num_neurons, num_features).
       neurons: int or array-like, index of neuron(s) to return data for.
       tau: int, 0 <= tau < max_time//2.
       size: int, number of (input, target) data pairs to generate.
-      seq_len: int or list, length of input/target sequences to generate.
-      increasing: bool, whether to sample shorter sequences first.
+      seq_len: None or int, if specified only generate sequences of this length.
       feature_mask: torch.tensor, what features to use.
+      increasing: bool, whether to sample shorter sequences first.
     Returns:
-      (X, Y, metadata): tuple, btach of data samples
+      (X, Y, meta): tuple, batch of data samples
         X: torch.tensor, input tensor w/ shape (batch_size, seq_len, num_neurons, num_features)
         Y: torch.tensor, target tensor w/ same shape as X
-        metadata: dict, dictionary with information about samples, keys: 'seq_len', 'start' index , 'end' index
+        meta: dict, metadata / information about samples, keys: 'seq_len', 'start' index , 'end' index
     '''
     super(MapDataset, self).__init__()
     self.seq_len = seq_len
     self.max_time, num_neurons, num_features = D.shape
     self.increasing = increasing
-
+    # feature checking
     if feature_mask is not None:
       assert len(feature_mask) == num_features, "`feature_mask` must have shape (%s, 1)."%num_features
       assert feature_mask.sum() > 0, "`feature_mask` must select at leat 1 feature."
       self.feature_mask = feature_mask  
     else:
       self.feature_mask = torch.tensor([1] + (num_features-1)*[0]).to(torch.bool)
-
     # enforce a constraint on using the neurons or signals as features
     if self.feature_mask.sum() == 1: # single signal
       if neurons is not None: 
@@ -50,12 +52,11 @@ class MapDataset(torch.utils.data.Dataset):
         self.neurons = np.array(neurons) # use the single neuron given
       else: 
         self.neurons = np.array([0]) # use the first neuron
-
     self.num_neurons = self.neurons.size
     # number of features equals: number of neurons if one signal; number of signals if multiple
     self.num_features = self.feature_mask.sum() if self.num_neurons == 1 else self.num_neurons
     self.D = D
-    assert 0 <= tau < max_time//2, "`tau` must be  0 <= tau < max_time//2"
+    assert 0 <= tau < self.max_time//2, "`tau` must be  0 <= tau < max_time//2"
     self.tau = tau
     self.size = size
     self.counter = 0 
@@ -79,8 +80,7 @@ class MapDataset(torch.utils.data.Dataset):
     T = self.max_time
     # iterate over all seqeunce lengths, L, if a fixed one was not given
     seq_lens = [self.seq_len] if self.seq_len is not None else (
-        range(1, T-self.tau+1) if self.increasing else range(T-self.tau, 0, -1)
-        )
+        range(1, T-self.tau+1) if self.increasing else range(T-self.tau, 0, -1))
     for L in seq_lens:
       # a batch contains all data of a certain length
       batch = []
@@ -108,5 +108,5 @@ class MapDataset(torch.utils.data.Dataset):
         break
     # size of dataset
     self.size = self.counter
-    
+    # return samples
     return data_samples, batch_indices

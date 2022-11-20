@@ -4,27 +4,31 @@ from utils import DEVICE as device
 
 class IterDataset(torch.utils.data.IterableDataset):
   '''
-  Custom neural activity time-series prediction dataset.
+  A custom neural activity time-series prediction dataset.
   Using IterDataset samples sequences randomly so samples may
   not be unique. However, IterDataset is faster than MapDatset.
-  Note that we can only use `batch_size=1` with this type of dataset.
+  An iterable-style dataset is an instance of a subclass of IterableDataset 
+  that implements the __iter__() protocol, and represents an iterable over data samples. 
+  This type of datasets is particularly suitable for cases where random reads are expensive 
+  or even improbable, and where the batch size depends on the fetched data.
+  For example, such a dataset, when called iter(dataset), could return a stream of data 
+  reading from a database, a remote server, or even logs generated in real time.
   '''
-  def __init__(self, D, neurons=None, tau=1, seq_len=None, size=100, 
+  def __init__(self, D, neurons=None, tau=1, seq_len=None, size=1000, 
                feature_mask=None):
     '''
-    Initialization.
     Args:
       D: torch.tensor, data w/ shape (max_time, num_neurons, num_features).
       neurons: int or array-like, index of neuron(s) to return data for.
       tau: int, 0 <= tau < max_time//2.
+      seq_len: None or int, if specified only generate sequences of this length.
       size: int, number of (input, target) data pairs to generate.
-      seq_len: None or int, if specified only generate sequences of length seq_len.
       feature_mask: torch.tensor, what features to use.
     Returns:
-      (X, Y, metadata): tuple, batch of data samples
+      (X, Y, meta): tuple, batch of data samples
         X: torch.tensor, input tensor w/ shape (batch_size, seq_len, num_neurons, num_features)
         Y: torch.tensor, target tensor w/ same shape as X
-        metadata: dict, dictionary with information about samples, keys: 'seq_len', 'start' index , 'end' index
+        meta: dict, metadata / information about samples, keys: 'seq_len', 'start' index , 'end' index
     '''
     super(IterDataset, self).__init__()
     self.seq_len = seq_len
@@ -61,6 +65,11 @@ class IterDataset(torch.utils.data.IterableDataset):
     '''Denotes the total number of samples.'''
     return self.size
 
+  def __iter__(self):
+    '''Must implement if the dataset represents an interable of data.'''
+    # return iterator over data samples
+    return self.data_generator()
+
   def data_generator(self):
     '''
     Helper function for creating a data iterator.
@@ -84,8 +93,3 @@ class IterDataset(torch.utils.data.IterableDataset):
       meta = {'seq_len': L, 'start': start, 'end': end, 'tau': tau}
       # yield a single data sample
       yield X_tau, Y_tau, meta
-
-  def __iter__(self):
-    '''Must implement if the dataset represents an interable of data.'''
-    # return iterator over data samples
-    return self.data_generator()

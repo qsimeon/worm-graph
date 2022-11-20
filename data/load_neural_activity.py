@@ -1,3 +1,6 @@
+import torch
+from map_dataset import MapDataset
+from batch_sampler import BatchSampler
 import os
 import pickle
 from utils import ROOT_DIR
@@ -44,14 +47,17 @@ def load_Uzel2022():
     
 
 if __name__=='__main__':
-    pass
-    # DATA, IDs = load_Uzel2022()
-    # max_time, num_neurons = DATA.shape  
-    # # data loader
-    # dataset = MapDataset(DATA, neurons=[0,1,2], tau=5, size=200, feature_mask=torch.tensor([1,1] + 8*[0]).to(torch.bool))
-    # print('size', dataset.size, 'feature', dataset.num_features)
-    # loader = torch.utils.data.DataLoader(dataset, batch_sampler=BatchSampler(dataset.batch_indices)) # shuffle and sampler must be None
-    # # testing our data-loader
-    # gen = iter(loader)
-    # X, Y, meta = next(gen) 
-    # print(X.shape, Y.shape, {k: meta[k][0] for k in meta}, list(map(lambda x: x.shape, meta.values()))) # each batch contains all samples of a fixed length
+    # load a recent dataset
+    Uzel2022 = load_Uzel2022()
+    # get data for one worm
+    single_worm_dataset = Uzel2022['worm1']
+    num_neurons = single_worm_dataset['num_neurons']
+    calcium_data = single_worm_dataset['data']
+    neuron_ids = single_worm_dataset['neuron_ids']
+    # create a dataset and data-loader
+    feature_mask = torch.tensor([1,1] + 8*[0]).to(torch.bool)
+    dataset = MapDataset(calcium_data, feature_mask=feature_mask)
+    print('size', dataset.size, 'feature', dataset.num_features, end='\n\n')
+    loader = torch.utils.data.DataLoader(dataset, batch_sampler=BatchSampler(dataset.batch_indices))
+    X, Y, meta = next(iter(loader)) 
+    print(X.shape, Y.shape, {k: meta[k][0] for k in meta}, list(map(lambda x: x.shape, meta.values())))
