@@ -3,6 +3,7 @@ from map_dataset import MapDataset
 from batch_sampler import BatchSampler
 import os
 import pickle
+import numpy as np
 from utils import ROOT_DIR
 
 def load_Nguyen2017():
@@ -43,21 +44,24 @@ def load_Uzel2022():
     # unpickle the data
     Uzel2022 = pickle.load(pickle_in)
     return Uzel2022
-
     
-
 if __name__=='__main__':
     # load a recent dataset
     Uzel2022 = load_Uzel2022()
     # get data for one worm
     single_worm_dataset = Uzel2022['worm1']
     num_neurons = single_worm_dataset['num_neurons']
-    calcium_data = single_worm_dataset['data']
     neuron_ids = single_worm_dataset['neuron_ids']
+    calcium_data = single_worm_dataset['data']
+    data = torch.nn.functional.pad(calcium_data, (0,9), 'constant', 0)  # pad feature dimension to 10D
     # create a dataset and data-loader
-    feature_mask = torch.tensor([1,1] + 8*[0]).to(torch.bool)
-    dataset = MapDataset(calcium_data, feature_mask=feature_mask)
-    print('size', dataset.size, 'feature', dataset.num_features, end='\n\n')
+    feature_mask = torch.tensor([1,1] + 8*[0]).to(torch.bool) # selects 2 features out of 10
+    dataset = MapDataset(data, feature_mask=feature_mask)
     loader = torch.utils.data.DataLoader(dataset, batch_sampler=BatchSampler(dataset.batch_indices))
     X, Y, meta = next(iter(loader)) 
+    # output properties of the dataset and data loader
+    print()
+    print('size', dataset.size, 'feature', dataset.num_features)
+    print()
     print(X.shape, Y.shape, {k: meta[k][0] for k in meta}, list(map(lambda x: x.shape, meta.values())))
+    print()
