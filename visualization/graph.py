@@ -1,4 +1,4 @@
-from data.connectome_dataset import CElegansDataset
+from data.load_connectome import CElegansDataset
 
 # Load the c. elegans connectome graph 
 dataset = CElegansDataset(root="../data/")

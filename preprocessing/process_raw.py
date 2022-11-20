@@ -67,6 +67,7 @@ def preprocess(raw_dir, raw_files):
     num_nodes = len(Gsyn_nodes)
     num_node_features = 1024
     # generate random data
+    # TODO: inject real data here istead of random data
     x = torch.rand(num_nodes, num_node_features, dtype=torch.float) # [num_nodes, num_node_features]
     # data.y target to train against
     le = preprocessing.LabelEncoder()
