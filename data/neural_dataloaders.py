@@ -105,8 +105,7 @@ if __name__=='__main__':
     # data loader
     dataset = MapDataset(DATA, neurons=[0,1,2], tau=5, size=200, feature_mask=torch.tensor([1,1] + 8*[0]).to(torch.bool))
     print('size', dataset.size, 'feature', dataset.num_features)
-    data_sampler = BatchSampler(dataset.batch_indices)
-    loader = torch.utils.data.DataLoader(dataset, batch_sampler=data_sampler) # shuffle and sampler must be None
+    loader = torch.utils.data.DataLoader(dataset, batch_sampler=BatchSampler(dataset.batch_indices)) # shuffle and sampler must be None
     # testing our data-loader
     gen = iter(loader)
     X, Y, meta = next(gen) 
