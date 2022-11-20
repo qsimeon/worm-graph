@@ -27,7 +27,7 @@
  
 ## Create the environment from the `environment.yml` file
 
-`cd` into the `worm-graph` dirrectory on your local machine: `cd worm-graph`
+`cd` into the `worm-graph` directory on your local machine: `cd worm-graph`
 
 Using the terminal or an Anaconda Prompt: `conda env create -f environment.yml`
    The first line of the `yml` file sets the new environment's name.
