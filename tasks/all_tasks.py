@@ -5,7 +5,7 @@ import numpy as np
 from utils import sliding_windows
 from torch_geometric_temporal.signal import temporal_signal_split
 from torch_geometric_temporal.signal.static_graph_temporal_signal import StaticGraphTemporalSignal
-from data.data_loader import CElegansDataset
+from data.connectome_dataset import CElegansDataset
 
 class GraphTask(object):
     '''This class takes in a graph in the form of a PyG Data object

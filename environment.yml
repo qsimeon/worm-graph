@@ -7,7 +7,8 @@ channels:
   - conda-forge
 dependencies:
   - python=3.9
-  - pytorch
+  - cpuonly
+  - pytorch==1.12.1
   - pandas
   - psutil
   - pip
@@ -23,6 +24,7 @@ dependencies:
   - scikit-learn-intelex
   - scipy
   - tqdm
+  - mat73
   - wget
   - pip:
     - torch-scatter -f https://data.pyg.org/whl/torch-1.12.1+cpu.html
