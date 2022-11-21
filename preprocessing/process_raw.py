@@ -1,5 +1,6 @@
 import os
 import torch
+from utils import ROOT_DIR
 import numpy as np
 import pandas as pd
 from sklearn import preprocessing
@@ -12,7 +13,7 @@ def preprocess(raw_dir, raw_files):
     # checking
     assert all([os.path.exists(os.path.join(raw_dir, rf)) for rf in raw_files])
     # list of names of all C. elegans neurons
-    neuron_names = set(pd.read_csv('neuron_names.txt', sep=' ', header=None, names=['neuron']).neuron)
+    neuron_names = set(pd.read_csv(os.path.join(raw_dir, 'neuron_names.txt'), sep=' ', header=None, names=['neuron']).neuron)
     # chemical synapses
     GHermChem_Edges = pd.read_csv(os.path.join(raw_dir, 'GHermChem_Edges.csv')) # edges
     GHermChem_Nodes =  pd.read_csv(os.path.join(raw_dir, 'GHermChem_Nodes.csv')) # nodes
@@ -99,7 +100,7 @@ def preprocess(raw_dir, raw_files):
     graph = Data(x=x, edge_index=edge_index, edge_attr=edge_attr, y=y)
     # add some additional attributes to the graph
     neuron_names = list(id_neuron.values())
-    df = pd.read_csv('LowResAtlasWithHighResHeadsAndTails.csv', 
+    df = pd.read_csv(os.path.join(raw_dir, 'LowResAtlasWithHighResHeadsAndTails.csv'), 
                     header=None, names=['neuron', 'x', 'y', 'z'])
     df = df[df.neuron.isin(neuron_names)]
     valids = set(df.neuron)
@@ -111,5 +112,5 @@ def preprocess(raw_dir, raw_files):
     # save the tensors to use as raw data in the future.
     graph_tensors = {'edge_index': edge_index, 'edge_attr': edge_attr, 'pos': pos,
                  'x': x, 'y':  y, 'id_neuron': id_neuron, 'node_type': node_type}
-    torch.save(graph_tensors, 'graph_tensors.pt')
+    torch.save(graph_tensors, os.path.join(ROOT_DIR, 'preprocessing', 'graph_tensors.pt'))
     

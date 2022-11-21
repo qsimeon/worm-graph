@@ -16,7 +16,7 @@ class CElegansDataset(InMemoryDataset):
         '''List of the raw files needed to proceed.'''
         return ['GHermChem_Edges.csv', 'GHermChem_Nodes.csv', 
                 'GHermElec_Sym_Edges.csv', 'GHermElec_Sym_Nodes.csv',
-                'LowResAtlasWithHighResHeadsAndTails.csv'] 
+                'LowResAtlasWithHighResHeadsAndTails.csv', 'neuron_names.txt'] 
                
     @property
     def processed_file_names(self):
