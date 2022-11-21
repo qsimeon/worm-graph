@@ -1,7 +1,9 @@
+from utils import ROOT_DIR
 from data.load_connectome import CElegansDataset
+import os
 
 # Load the c. elegans connectome graph 
-dataset = CElegansDataset(root="../data/")
+dataset = CElegansDataset(root=os.path.join(ROOT_DIR, 'data'))
 graph = dataset[0]
 
 if __name__ == "__main__":
@@ -9,8 +11,8 @@ if __name__ == "__main__":
       print()
       print("C. elegans connectome graph loaded successfully!")
       print("Attributes:", "\n", graph.keys, "\n",
-            f"Num. nodes {graph.num_nodes}, Num. edges {graph.num_edges}, " 
-            f"Num. node features {graph.num_node_features}", end="\n")
+      f"Num. nodes {graph.num_nodes}, Num. edges {graph.num_edges}, " 
+      f"Num. node features {graph.num_node_features}", end="\n")
       print(f"\tHas isolated nodes: {graph.has_isolated_nodes()}")
       print(f"\tHas self-loops: {graph.has_self_loops()}")
       print(f"\tIs undirected: {graph.is_undirected()}")

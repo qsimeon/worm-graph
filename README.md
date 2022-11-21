@@ -45,6 +45,7 @@ Using the terminal or an Anaconda Prompt: `conda env create -f environment.yml`
 Activate the new environment: `conda activate worm-graph`
 
 Add the `worm-graph` root directory to Anaconda path: `conda develop .`
+   *Important:* Do not skip the step above. Otherwise you will face a lot of `ModuleNotFoundError`s.
 
 Verify that the new environment was installed correctly: `conda env list`
    You can also use `conda info --envs`.
@@ -63,7 +64,7 @@ Always activate the environment before working on the project: `conda activate w
  ## Style conventions
  * Aim to make every script not significantly longer than 100 lines. If your code is getting longer than this, it probably is a 
    good idea to modularize things by putting certain functions or classes in separare files like `utils.py` or `models.py`, etc.
- * Always shape neural data matrices as `(time, neurons)`.
+ * Always shape neural data matrices as `(time, neurons, features)`.
 
 
  ## Organization: things to TODO.
@@ -75,5 +76,3 @@ Always activate the environment before working on the project: `conda activate w
    - predict the identity of the neuron given the trace (node prediction).
    - predict the behavior of the worm from its neural activity.
    - edge prediction: predict whether or not there exist an edge. 
-
-

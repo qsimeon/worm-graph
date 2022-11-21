@@ -1,10 +1,9 @@
 import torch
-from map_dataset import MapDataset
-from batch_sampler import BatchSampler
+from utils import ROOT_DIR
+from data.map_dataset import MapDataset
+from data.batch_sampler import BatchSampler
 import os
 import pickle
-import numpy as np
-from utils import ROOT_DIR
 
 def load_Nguyen2017():
     '''

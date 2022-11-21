@@ -113,4 +113,3 @@ def preprocess(raw_dir, raw_files):
     graph_tensors = {'edge_index': edge_index, 'edge_attr': edge_attr, 'pos': pos,
                  'x': x, 'y':  y, 'id_neuron': id_neuron, 'node_type': node_type}
     torch.save(graph_tensors, os.path.join(ROOT_DIR, 'preprocessing', 'graph_tensors.pt'))
-    
