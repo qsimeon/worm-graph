@@ -1,28 +1,38 @@
 # worm-graph
-## Simulating worms with graph nets
+## Simulating worms with graph nets.
 
 ```.
 ├── Data
-   ├── data_loader.py
+   ├── load_connectome.py
+   ├── load_neural_activity.py
+   ├── iter_dataset.py
+   ├── map_dataset.py
+   ├── batch_sampler.py
+   └── PlotRealData.ipynb
 ├── Preprocessing
-   ├── dataloader.py
-   └── RNNdataloader.py
+   ├── process_raw.py
+   ├── PickleNeuralData.ipynb
+   ├── export_nodes_edges.m
+   ├── graph_tensors.pt
+   ├── Nguyen2017.pickle
+   ├── Kaplan2020.pickle
+   └── Uzel2022.pickle
 ├── Models
    ├── RNN Models
    ├── GNN Models
-   ├── Hybrid Models
    └── Flexible Frameworks
 ├── Tasks
    ├── Time-series prediction
    ├── Structure prediction
    ├── Perturbation experiments
-   └── Supervised versus unsupervised tasks?
+   └── Self-supervised tasks
 ├── Visualizations
-   ├── Connection graph
-   ├── Existing voltage time series
-   ├── Loss
+   ├── Connectome graph
+      ├── DrawConnectome.ipynb
+   ├── Loss curves
    └── Time series predictions
-└── pipelineExplorer.ipynb: Notebook to run through the pipeline, with choices (e.g. data type, model type, etc) at each step.
+└── PipelineExplorer.ipynb: 
+   └── Notebook to run through the pipeline interactively.
  ```
  
 ## Create the environment from the `environment.yml` file
@@ -51,25 +61,19 @@ Always activate the environment before working on the project: `conda activate w
  **Example:** `my_folder`.
 
  ## Style conventions
- * Aim to make every script no more than 100 lines. If your code is getting longer than this, it probably is a good idea to modularize thnings by putting certain functions or classes in separare files like `utils.py` or `models.py`, etc.
- * Always shape neural data matrices as `(neurons, time)`.
+ * Aim to make every script not significantly longer than 100 lines. If your code is getting longer than this, it probably is a 
+   good idea to modularize things by putting certain functions or classes in separare files like `utils.py` or `models.py`, etc.
+ * Always shape neural data matrices as `(time, neurons)`.
 
 
  ## Organization: things to TODO.
-- ~~Move the load of the preprocessing to a separate preprocessing file rather than `data_loader.py.`~~
-- Add docstrings to the models files. Add docstrings to all modules (classes and functions) existing and those made in the future.
 - Do both: 
    - training on the first half of timesteps predicting the second half, and;
    - training on the second half of timesteps and the predicting the first half.
 - Look at how people structure language models (NLP). They are tested on predicting arbitrary future timesteps. 
-- How to structure the data code effectively? : 
-   - Instead of pre-slicing the data, just have a function that returns you a batch like `get_batch`, and then you can arbitrarily set the values.
-      - essentially you want a generator function.
-      - set the dataset as a queue.
-      - set one-step prediction as a special case of n-step prediction.
 - Various tasks to implement:
    - predict the identity of the neuron given the trace (node prediction).
-   - predict the behavior of the worm?, what is the action, what is the shape of the body?
-   - edge prediction, predict whether or not there exist an edge. if we know the identity of the neurons the we know the target.
+   - predict the behavior of the worm from its neural activity.
+   - edge prediction: predict whether or not there exist an edge. 
 
 

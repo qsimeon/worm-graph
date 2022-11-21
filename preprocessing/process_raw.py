@@ -5,11 +5,10 @@ import pandas as pd
 from sklearn import preprocessing
 from torch_geometric.data import Data
 from torch_geometric.utils import coalesce
-from utils import ROOT_DIR
 
 def preprocess(raw_dir, raw_files):
-    '''If the `graph_tensors.pt` file is not found, this function is called to create it
-    from the raw open source data.'''
+    '''If the `graph_tensors.pt` file is not found, this function gets 
+    called to create it from the raw open source connectome data.'''
     # checking
     assert all([os.path.exists(os.path.join(raw_dir, rf)) for rf in raw_files])
     # list of names of all C. elegans neurons
