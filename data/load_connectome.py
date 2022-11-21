@@ -1,8 +1,8 @@
 import os
 import torch
+from utils import ROOT_DIR
 from torch_geometric.data import InMemoryDataset, Data
 from torch_geometric.data import download_url, extract_zip
-from utils import ROOT_DIR
 from preprocessing.process_raw import preprocess
 
 class CElegansDataset(InMemoryDataset):
@@ -26,7 +26,7 @@ class CElegansDataset(InMemoryDataset):
     def download(self):
         '''Download the raw zip file if not already retrieved.'''
         # dataset adapted from from Cook et al. (2019) SI5
-        url = 'https://www.dropbox.com/s/t9l5s2ivi34vs2a/raw_data.zip?dl=1' # base url
+        url = 'https://www.dropbox.com/s/4ype457gswffhaf/raw_data.zip?dl=1' # base url
         filename = os.path.join('raw_data.zip')
         folder = os.path.join(self.raw_dir)
         download_url(url=url, folder=os.getcwd(), filename=filename) # download zip file 

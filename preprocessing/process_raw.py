@@ -1,5 +1,6 @@
 import os
 import torch
+import numpy as np
 import pandas as pd
 from sklearn import preprocessing
 from torch_geometric.data import Data
@@ -11,6 +12,8 @@ def preprocess(raw_dir, raw_files):
     from the raw open source data.'''
     # checking
     assert all([os.path.exists(os.path.join(raw_dir, rf)) for rf in raw_files])
+    # list of names of all C. elegans neurons
+    neuron_names = set(pd.read_csv('neuron_names.txt', sep=' ', header=None, names=['neuron']).neuron)
     # chemical synapses
     GHermChem_Edges = pd.read_csv(os.path.join(raw_dir, 'GHermChem_Edges.csv')) # edges
     GHermChem_Nodes =  pd.read_csv(os.path.join(raw_dir, 'GHermChem_Nodes.csv')) # nodes
@@ -19,18 +22,24 @@ def preprocess(raw_dir, raw_files):
     GHermElec_Sym_Nodes =  pd.read_csv(os.path.join(raw_dir, 'GHermElec_Sym_Nodes.csv')) # nodes
     # neurons involved in gap junctions
     df = GHermElec_Sym_Nodes
-    Ggap_nodes = df[df['Group'].str.contains("Neuron")].sort_values(by=['Name']).reset_index()
+    df['Name'] = [v.replace('0','') if not v.endswith('0') else v for v in df['Name']]
+    Ggap_nodes = df[df['Name'].isin(neuron_names)].sort_values(by=['Name']).reset_index()
     # neurons involved in chemical synapses
     df = GHermChem_Nodes
-    Gsyn_nodes = df[df['Group'].str.contains("Neuron")].sort_values(by=['Name']).reset_index()
+    df['Name'] = [v.replace('0','') if not v.endswith('0') else v for v in df['Name']]
+    Gsyn_nodes = df[df['Name'].isin(neuron_names)].sort_values(by=['Name']).reset_index()
     # gap junctions
     df = GHermElec_Sym_Edges
+    df['EndNodes_1'] = [v.replace('0','') if not v.endswith('0') else v for v in df['EndNodes_1']]
+    df['EndNodes_2'] = [v.replace('0','') if not v.endswith('0') else v for v in df['EndNodes_2']]
     inds = [i for i in GHermElec_Sym_Edges.index if 
             df.iloc[i]['EndNodes_1'] in set(Ggap_nodes.Name) and 
             df.iloc[i]['EndNodes_2'] in set(Ggap_nodes.Name)] # indices
     Ggap_edges = df.iloc[inds].reset_index(drop=True)
     # chemical synapses
     df = GHermChem_Edges
+    df['EndNodes_1'] = [v.replace('0','') if not v.endswith('0') else v for v in df['EndNodes_1']]
+    df['EndNodes_2'] = [v.replace('0','') if not v.endswith('0') else v for v in df['EndNodes_2']]
     inds = [i for i in GHermChem_Edges.index if 
             df.iloc[i]['EndNodes_1'] in set(Gsyn_nodes.Name) and 
             df.iloc[i]['EndNodes_2'] in set(Gsyn_nodes.Name)] # indices
@@ -50,6 +59,7 @@ def preprocess(raw_dir, raw_files):
     for i, row in enumerate(arr):
         gsyn_edge_index[i,:] = torch.tensor([neuron_id[x] for x in row], dtype=torch.long)
     gsyn_edge_index = gsyn_edge_index.T # [2, num_edges]
+    # edge attributes
     num_edge_features = 2
     # edge_attr for gap junctions
     num_edges = len(Ggap_edges)
@@ -66,13 +76,16 @@ def preprocess(raw_dir, raw_files):
     # data.x node feature matrix
     num_nodes = len(Gsyn_nodes)
     num_node_features = 1024
-    # generate random data
-    # TODO: inject real data here istead of random data
+    # generate random data TODO: inject real data istead !
     x = torch.rand(num_nodes, num_node_features, dtype=torch.float) # [num_nodes, num_node_features]
     # data.y target to train against
     le = preprocessing.LabelEncoder()
     le.fit(Gsyn_nodes.Group.values)
     y = torch.tensor(le.transform(Gsyn_nodes.Group.values), dtype=torch.float) # [num_nodes, 1]
+    # save the mapping of encodings to type of neuron
+    codes = np.unique(y)
+    types = np.unique(Gsyn_nodes.Group.values)
+    node_type = dict(zip(codes, types))
     # graph for electrical connectivity
     electrical_graph = Data(x=x, edge_index=ggap_edge_index, edge_attr=ggap_edge_attr, y=y)
     # graph for chemical connectivity
@@ -84,17 +97,20 @@ def preprocess(raw_dir, raw_files):
     assert all(chemical_graph.y == electrical_graph.y), "Node labels not matched!"
     x = chemical_graph.x 
     y = chemical_graph.y
+    graph = Data(x=x, edge_index=edge_index, edge_attr=edge_attr, y=y)
     # add some additional attributes to the graph
-    neuron_names = [v.replace('0','') if not v.endswith('0') else v for v in id_neuron.values()]
-    df = pd.read_csv(os.path.join(raw_dir, 'LowResAtlasWithHighResHeadsAndTails.csv'), 
-                                header=None, names=['neuron', 'x', 'y', 'z'])
-    assert len(neuron_names) < len(df.neuron)
-    assert set(neuron_names).issubset(set(df.neuron.values))
-    keys = id_neuron.keys()
-    values = list(df[df.neuron.isin(neuron_names)][['y', 'z']].values)
-    pos = dict(zip(keys, values))
+    neuron_names = list(id_neuron.values())
+    df = pd.read_csv('LowResAtlasWithHighResHeadsAndTails.csv', 
+                    header=None, names=['neuron', 'x', 'y', 'z'])
+    df = df[df.neuron.isin(neuron_names)]
+    valids = set(df.neuron)
+    keys = [k for k in id_neuron if id_neuron[k] in valids]
+    values = list(df[df.neuron.isin(valids)][['x', 'z']].values)
+    # initialize position dict then replace with atlas coordinates if available
+    pos = dict(zip(np.arange(graph.num_nodes), np.zeros(shape=(graph.num_nodes, 2))))
+    for k,v in zip(keys, values): pos[k] = v
     # save the tensors to use as raw data in the future.
-    graph_tensors = {'edge_index': edge_index, 'edge_attr': edge_attr, 
-                    'x': x, 'y':  y, 'id_neuron': id_neuron, 'pos': pos}
-    torch.save(graph_tensors, os.path.join(ROOT_DIR, 'preprocessing', 'graph_tensors.pt'))
+    graph_tensors = {'edge_index': edge_index, 'edge_attr': edge_attr, 'pos': pos,
+                 'x': x, 'y':  y, 'id_neuron': id_neuron, 'node_type': node_type}
+    torch.save(graph_tensors, 'graph_tensors.pt')
     
