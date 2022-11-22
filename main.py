@@ -4,6 +4,7 @@ from tasks.all_tasks import OneStepPrediction
 from models.gnn_models import EvolveRCGN
 from train.train import optimize_model
 from train.train import model_predict
+import matplotlib.pyplot as plt
 
 if __name__ == "__main__":
     # laod conectome
@@ -18,17 +19,16 @@ if __name__ == "__main__":
     # train the model
     model, log = optimize_model(task, model)
     preds = model_predict(task, model)
-
-    # # TODO: put plotting code like this in a separte module file
-    # plt.figure()
-    # plt.plot(log['epochs'], log['train_losses'], label='train')
-    # plt.plot(log['epochs'], log['test_losses'], label='test')
-    # plt.xlabel('Epoch')
-    # plt.ylabel('MSE')
-    # plt.title('EvolveRCGN loss curves')
-    # plt.legend()
-    # plt.show()
-
+    # TODO: put plotting code like this in a separate module file
+    plt.figure()
+    plt.plot(log['epochs'], log['train_losses'], label='train')
+    plt.plot(log['epochs'], log['test_losses'], label='test')
+    plt.xlabel('Epoch')
+    plt.ylabel('MSE')
+    plt.title('EvolveRCGN loss curves')
+    plt.legend()
+    plt.show()
+    # # plot prediction for a random neuron
     # plt.figure()
     # nid = np.random.choice(task.node_count)
     # sc = preprocessing.MinMaxScaler()

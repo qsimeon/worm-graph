@@ -50,12 +50,12 @@ class OneStepPrediction(GraphTask):
         self.graph.x = torch.rand(self.graph.num_nodes, dataset.shape[0], dtype=torch.float64)
         self.graph.x[inds, :] = dataset[:, inds].T
         # generate many/all sequences of length seq_len
-        __ = MapDataset(dataset.unsqueeze(-1), tau=1, seq_len=self.seq_len, size=5000, increasing=False)
+        __ = MapDataset(self.graph.x.T.unsqueeze(-1), tau=1, seq_len=self.seq_len, size=5000, increasing=False)
         loader = torch.utils.data.DataLoader(__, batch_sampler=BatchSampler(__.batch_indices))
         Xs, Ys, _ = next(iter(loader))
         # adapt node features and edge weights 
-        features = list(Xs)
-        targets = list(Ys.squeeze())
+        features = [arr.detach().numpy().T for arr in Xs]
+        targets = [arr.detach().numpy().T for arr in Ys.squeeze()]
         edge_index = self.graph.edge_index.clone().detach().numpy()
         edge_weight = self.graph.edge_attr.clone().detach().sum(axis=1).numpy()
         # create a StaticGraphTemporalSignal data iterator
