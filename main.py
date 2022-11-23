@@ -2,8 +2,8 @@ from data.load_connectome import CElegansDataset
 from data.load_neural_activity import load_Uzel2022
 from tasks.all_tasks import OneStepPrediction
 from models.gnn_models import EvolveRCGN
-from train.train import optimize_model
-from train.train import model_predict
+from train.train_gnn import optimize_model
+from train.train_gnn import model_predict
 import matplotlib.pyplot as plt
 
 if __name__ == "__main__":
