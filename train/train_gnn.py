@@ -45,7 +45,7 @@ def optimize_model(task, model):
         log: log of train and test
     """
     optimizer = torch.optim.Adam(model.parameters(), lr=0.01)
-    log = log = {'epochs': [], 'test_losses': [], 'train_losses': []}
+    log = {'epochs': [], 'test_losses': [], 'train_losses': []}
     train_dataset, test_dataset = task.train_test_split()
 
     for epoch in tqdm(range(20)):
