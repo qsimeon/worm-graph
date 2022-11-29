@@ -26,6 +26,6 @@ dependencies:
   - scipy
   - tqdm
   - mat73
-  - wget
   - pip:
     - torch-geometric-temporal
+    - wget
