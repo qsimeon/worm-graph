@@ -1,12 +1,11 @@
 import torch
-import copy
+from torch_geometric.data import Data
 from data.map_dataset import MapDataset
 from data.batch_sampler import BatchSampler
 from data.load_connectome import CElegansDataset
 from data.load_neural_activity import load_Uzel2022
 from torch_geometric_temporal.signal import temporal_signal_split
 from torch_geometric_temporal.signal.static_graph_temporal_signal import StaticGraphTemporalSignal
-
 
 class GraphTask(object):
     '''
@@ -35,9 +34,8 @@ class OneStepPrediction(GraphTask):
         dataset: torch.tensor, dataset of single signal to inject on graph w/ (time, neurons).
         neuron_ids: dict, mapping of neuron_names to indices of the dataset.
         '''
-        # don't modify original graph
-        new_graph = copy.deepcopy(graph) 
-        super(OneStepPrediction, self).__init__(new_graph)
+        
+        super(OneStepPrediction, self).__init__(graph)
         # parse the dataset to impose on the graph
         dataset = dataset.squeeze()
         # check input sizes
@@ -45,10 +43,14 @@ class OneStepPrediction(GraphTask):
             dataset.shape[1] <= self.graph.num_nodes, "Reshape neural data as (time, neurons)!"
         assert len(neuron_ids) <= dataset.shape[1]
         # find the graph nodes matching the neurons in the dataset 
-        inds = [k for k,v in self.graph.id_neuron.items() if v in neuron_ids] # node indices
+        graph_inds = [k-1 for k,v in graph.id_neuron.items() if v in set(neuron_ids.values())] # neuron indices in connectome
+        data_inds = [k_-1 for k_,v_ in neuron_ids.items() if v_ in set(graph.id_neuron.values())] # neuron indices in sparse dataset
         # inject the data into the nodes of the graph
-        self.graph.x = torch.rand(self.graph.num_nodes, dataset.shape[0], dtype=torch.float64)
-        self.graph.x[inds, :] = dataset[:, inds].T
+        new_x = torch.zeros(graph.num_nodes, dataset.shape[0], dtype=torch.float64)
+        new_x[graph_inds, :] = dataset[:, data_inds].T
+        # don't modify original graph
+        self.graph = Data(x=new_x, y=graph.y, edge_index=graph.edge_index, edge_attr=graph.edge_attr, 
+                        node_type=graph.node_type, pos=graph.pos, id_neuron=graph.id_neuron)
         # generate many/all sequences of length seq_len
         __ = MapDataset(self.graph.x.T.unsqueeze(-1), tau=1, seq_len=self.seq_len, size=5000, increasing=False)
         loader = torch.utils.data.DataLoader(__, batch_sampler=BatchSampler(__.batch_indices))
