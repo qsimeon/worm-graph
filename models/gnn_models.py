@@ -109,3 +109,25 @@ class GatedRGCN(RecurrentGCN):
         h = F.relu(h)
         h = self.linear(h)
         return h
+        
+class GraphNN(torch.nn.Module):
+  '''Predict the residual at the next time step, given a history of length L'''
+  def __init__(self, input_dim, hidden_dim, output_dim):
+    super(GraphNN, self).__init__()
+    # need a conv. layer for each type of synapse
+    self.elec_conv = GCNConv(in_channels=input_dim, 
+                             out_channels=hidden_dim, improved=True)
+    self.chem_conv = GCNConv(in_channels=input_dim, 
+                             out_channels=hidden_dim, improved=True)
+    # readout layer transforms node features to output
+    self.linear = torch.nn.Linear(in_features=2*hidden_dim, 
+                                  out_features=output_dim)
+  
+  def forward(self, x, edge_index, edge_attr):
+    elec_weight = edge_attr[:,0]
+    chem_weight = edge_attr[:,1]
+    elec_hid = self.elec_conv(x, edge_index, elec_weight)
+    chem_hid = self.chem_conv(x, edge_index, chem_weight)
+    hidden = torch.cat([elec_hid, chem_hid], dim=-1)
+    output = self.linear(hidden)
+    return output

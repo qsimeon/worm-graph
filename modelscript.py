@@ -52,6 +52,6 @@ if __name__ == "__main__":
                 #save a csv files named for the worm and modelName, containing model, log, and preds
                 #model.to_csv(worm+modelName.__name__+'model.csv')
                 x_df = pd.DataFrame(preds)
-                x_df.to_csv(wormSet.__name__+worm+modelName.__name__+'preds.csv')
+                x_df.to_csv(logs + '/' + wormSet.__name__+worm+modelName.__name__+'preds.csv')
                 x_df = pd.DataFrame(log)
-                x_df.to_csv(wormSet.__name__+worm+modelName.__name__+'log.csv')
+                x_df.to_csv(logs + '/' + wormSet.__name__+worm+modelName.__name__+'log.csv')

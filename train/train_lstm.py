@@ -15,22 +15,24 @@ def train(loader, model, optimizer, criterion=None):
           out, states = model(X, tau) # states=None at start of epoch
         states = tuple(map(lambda x: x.detach(), states))
         # Compute the baseline loss
-        base = criterion(X_train, Y_train)/(1 + tau) # loss for model that predicts y(t) for y(t+1)
+        base = criterion(X, y)/(1 + tau) # loss if model predicts y(t) for y(t+1)
         # Compute the training loss.
         loss = model.elbo_loss + criterion(out, y)/(1 + tau) 
         loss.backward()  # Derive gradients.
-        nn.utils.clip_grad_norm_(model.parameters(), 0.1) # TODO: figure out if I need this
+        # TODO: figure out if gradient clipping is necessary.
+        nn.utils.clip_grad_norm_(model.parameters(), 0.1) 
         optimizer.step()  # Update parameters based on gradients.
         optimizer.zero_grad()  # Clear gradients.
-        # Store losses
+        # Store train and baseline loss.
         base_loss += base.detach().item()
         train_loss += loss.detach().item()
-    # return losses
+    # return mean train and baseline losses
     return train_loss/(i+1), base_loss/(i+1)
 
 def test(loader, model, criterion=None):
     model.eval()
     criterion = model.loss_fn()
+    base_loss = 0
     val_loss = 0
     for i, data in enumerate(loader): # Iterate in batches over the training/test dataset.
         X, y, meta = data # meta is the metadata
@@ -41,6 +43,10 @@ def test(loader, model, criterion=None):
         except:
           out, states = model(X, tau) # states=None at start of epoch
         states = tuple(map(lambda x: x.detach(), states))
-        # Compute the validation loss.
+        # Compute the baseline loss.
+        base = criterion(X, y)/(1 + tau) # loss if model predicts y(t) for y(t+1)
+        # Store the validation and baseline loss.
+        base_loss += base.detach().item()
         val_loss += model.elbo_loss.detach().item() + criterion(out, y).detach().item()/(1 + tau.item()) 
-    return val_loss/(i+1)  # Return the mean validation loss.
+    # return mean validation and baseline losses
+    return val_loss/(i+1), base_loss/(i+1) # Return the mean validation loss.

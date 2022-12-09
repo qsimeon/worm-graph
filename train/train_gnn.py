@@ -2,38 +2,72 @@ import torch
 import numpy as np
 from tqdm import tqdm
 
-def train(dataset, model):
+def train(loader, model, graph, optimizer):
     """Train a model given a dataset.
     Args:
-        dataset: the training data
+        loader: training set dataloader
         model: instance of a Pytorch GNN model
-
+        graph: subgraph of connectome with labelled data
+        optimizer: gradient descent optimization
     Returns:
-         loss: training loss
+        train_loss, base_loss: traning loss and baseline
     """
     model.train()
-    loss = 0
-    for time, snapshot in enumerate(dataset):
-        y_hat = model(snapshot.x, snapshot.edge_index, snapshot.edge_attr)
-        loss = loss + torch.mean((y_hat - snapshot.y) ** 2)
-    loss = loss / (time + 1)
-    return loss
+    criterion = nn.MSELoss()
+    base_loss = 0
+    train_loss = 0
+    mask = graph.train_mask # training mask
+    graph = graph.subgraph(mask)
+    X, y, _ = next(iter(loader)) 
+    X, y = X[:,:,mask], y[:,:,mask]
+    B = X.shape[0]
+    for b in range(B): # Iterate in batches over the training dataset.
+        Xtr, ytr = X[b].T, y[b].T
+        # Perform a single forward pass.
+        out = model(Xtr, graph.edge_index, graph.edge_attr)
+        # Compute the baseline loss
+        base = criterion(Xtr, ytr) # loss if model predicts y(t) for y(t+1)
+        # Compute the training loss.
+        loss = criterion(out, ytr)
+        loss.backward()  # Derive gradients.
+        # TODO: figure out if gradient clipping is necessary.
+        nn.utils.clip_grad_norm_(model.parameters(), 0.01) 
+        optimizer.step()  # Update parameters based on gradients.
+        optimizer.zero_grad()  # Clear gradients.
+        # Store train and baseline loss.
+        base_loss += base.detach().item()
+        train_loss += loss.detach().item()
+    # return mean training and baseline losses
+    return train_loss/B, base_loss/B
 
-def test(dataset, model):
+def test(loader, model, graph):
     """Evaluate a model on a given dataset.
-    Args:
-        dataset: the test data
-        model: instance of a Pytorch model
+        loader: validation set dataloader
+        model: instance of a Pytorch GNN model
+        graph: subgraph of connectome with labelled data
     Returns:
-        loss: validation loss
+        val_loss, base_loss: validation loss and baseline
     """
     model.eval()
-    loss = 0
-    for time, snapshot in enumerate(dataset):
-        y_hat = model(snapshot.x, snapshot.edge_index, snapshot.edge_attr)
-        loss = loss + torch.mean((y_hat-snapshot.y)**2)  
-    loss = loss / (time+1)
-    return loss
+    criterion = nn.MSELoss()
+    base_loss = 0
+    val_loss = 0
+    mask = graph.val_mask # validation mask
+    graph = graph.subgraph(mask)
+    X, y, _ = next(iter(loader)) 
+    X, y = X[:,:,mask], y[:,:,mask]
+    B = X.shape[0]
+    for b in range(B): # Iterate in batches over the test dataset.
+        Xte, yte = X[b].T, y[b].T
+        # Perform a single forward pass.
+        out = model(Xte, graph.edge_index, graph.edge_attr)
+        # Compute the baseline loss.
+        base = criterion(Xte, yte)# loss if model predicts y(t) for y(t+1)
+        # Store the validation and baseline loss.
+        base_loss += base.detach().item()
+        val_loss += criterion(out, yte).detach().item()
+    # return mean validation and baseline losses
+    return val_loss/B, base_loss/B
 
 def optimize_model(task, model):
     """
