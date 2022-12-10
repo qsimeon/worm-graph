@@ -26,7 +26,7 @@ class CElegansDataset(InMemoryDataset):
     def download(self):
         '''Download the raw zip file if not already retrieved.'''
         # dataset adapted from from Cook et al. (2019) SI5
-        url = 'https://www.dropbox.com/s/p17yvtbn9k9xr4u/raw_data.zip?dl=1' # base url
+        url = 'https://www.dropbox.com/s/utwj011wrik7l1j/raw_data.zip?dl=1' # base url
         filename = os.path.join('raw_data.zip')
         folder = os.path.join(self.raw_dir)
         download_url(url=url, folder=os.getcwd(), filename=filename) # download zip file 
@@ -56,6 +56,17 @@ class CElegansDataset(InMemoryDataset):
         torch.save((data, slices), self.processed_paths[0])  
 
 if __name__ == "__main__":
-    connectome = CElegansDataset()
-    graph = connectome[0]
-    print("Loaded connectome data successfully!")
+    # Load the connectome data
+    dataset = CElegansDataset()
+    connectome = dataset[0]
+    # Investigate the C. elegans connectome graph
+    print()
+    print("C. elegans connectome graph loaded successfully!")
+    print("Attributes:", "\n", connectome.keys, "\n",
+    f"Num. nodes {connectome.num_nodes}, Num. edges {connectome.num_edges}, " 
+    f"Num. node features {connectome.num_node_features}", end="\n")
+    print(f"\tHas isolated nodes: {connectome.has_isolated_nodes()}")
+    print(f"\tHas self-loops: {connectome.has_self_loops()}")
+    print(f"\tIs undirected: {connectome.is_undirected()}")
+    print(f"\tIs directed: {connectome.is_directed()}") 
+    print()

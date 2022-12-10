@@ -18,7 +18,7 @@ def preprocess(raw_dir, raw_files):
     assert all([os.path.exists(os.path.join(raw_dir, rf)) for rf in raw_files])
     # list of names of all C. elegans neurons
     neuron_names = set(pd.read_csv(os.path.join(raw_dir, 'neuron_names.txt'), sep=' ', header=None, names=['neuron']).neuron)
-    #TODO: Use a better connectome! This one from Cook et al., 2019 is very inaccurate
+    #TODO: Use a better connectome! This one from Cook et al., 2019 is very inaccurate.
     # chemical synapses
     GHermChem_Edges = pd.read_csv(os.path.join(raw_dir, 'GHermChem_Edges.csv')) # edges
     GHermChem_Nodes =  pd.read_csv(os.path.join(raw_dir, 'GHermChem_Nodes.csv')) # nodes
