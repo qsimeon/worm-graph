@@ -33,6 +33,9 @@ class MapDataset(torch.utils.data.Dataset):
                                                     'start' index , 'end' index
     '''
     super(MapDataset, self).__init__()
+    # dataset checking
+    assert torch.is_tensor(D), "recast dataset as torch.tensor."
+    if D.ndim == 2: D = D.unsqueeze(-1) # expand to 3D if dataset given is 2D
     self.seq_len = seq_len
     self.max_time, num_neurons, num_features = D.shape
     self.increasing = increasing

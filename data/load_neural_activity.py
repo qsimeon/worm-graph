@@ -1,9 +1,64 @@
 import torch
-from utils import ROOT_DIR
+from utils import ROOT_DIR, VALID_DATASETS
 from data.map_dataset import MapDataset
 from data.batch_sampler import BatchSampler
 import os
 import pickle
+
+def pick_worm(dataset, wormid):
+    '''
+    Function for getting a single worm dataset.
+    dataset: str or dictm worm dataset to select a worm from.
+    wormid: str or int, 'worm{i}' or {i} where i indexes the worm.
+    '''
+    if isinstance(dataset, str): 
+        dataset = load_dataset(dataset)
+    else: 
+        assert isinstance(dataset, dict) and "worm1" in dataset.keys(), "Not a valid worm datset!"
+    avail_worms = set(dataset.keys())
+    if isinstance(wormid, str) and wormid.startswith('worm'):
+        wormid = wormid.strip('worm')
+        assert wormid.isnumeric() and int(wormid)<=len(avail_worms), "Choose a worm from: {}".format(avail_worms)
+        worm = 'worm'+wormid
+    else:
+        assert isinstance(worm, int) and worm<=len(avail_worms), "Choose a worm from: {}".format(avail_worms)
+        worm = 'worm'+str(wormid)
+    single_worm_dataset = dataset[worm]
+    return single_worm_dataset
+    
+def load_dataset(name):
+    '''
+    Loads the dataset with the specified name.
+    '''
+    assert name in VALID_DATASETS, "Unrecognized dataset! Please pick one from:\n{}".format(list(VALID_DATASETS))
+    loader = eval('load_'+name)
+    return loader()
+
+def load_Kato2015():
+    '''
+    Loads the worm neural activity datasets from Kato et al., Cell Reports 2015, 
+    Global Brain Dynamics Embed the Motor Command Sequence of Caenorhabditis elegans.
+    '''
+    # ensure the data has been preprocessed
+    file = os.path.join(ROOT_DIR, 'preprocessing', 'Kato2015.pickle')
+    assert os.path.exists(file)
+    pickle_in = open(file, "rb")
+    # unpickle the data
+    Kato2015 = pickle.load(pickle_in)
+    return Kato2015 
+
+def load_Nichols2017():
+    '''
+    Loads the worm neural activity datasets from Nichols et al., Science 2017, 
+    A global brain state underlies C. elegans sleep behavior.
+    '''
+    # ensure the data has been preprocessed
+    file = os.path.join(ROOT_DIR, 'preprocessing', 'Nichols2017.pickle')
+    assert os.path.exists(file)
+    pickle_in = open(file, "rb")
+    # unpickle the data
+    Nichols2017 = pickle.load(pickle_in)
+    return Nichols2017 
 
 def load_Nguyen2017():
     '''
@@ -17,6 +72,19 @@ def load_Nguyen2017():
     # unpickle the data
     Nguyen2017 = pickle.load(pickle_in)
     return Nguyen2017
+
+def load_Skora2018():
+    '''
+    Loads the worm neural activity datasets from Skora et al., Cell Reports 2018, 
+    Energy Scarcity Promotes a Brain-wide Sleep State Modulated by Insulin Signaling in C. elegans. 
+    '''
+    # ensure the data has been preprocessed
+    file = os.path.join(ROOT_DIR, 'preprocessing', 'Skora2018.pickle')
+    assert os.path.exists(file)
+    pickle_in = open(file, "rb")
+    # unpickle the data
+    Skora2018 = pickle.load(pickle_in)
+    return Skora2018 
 
 def load_Kaplan2020():
     '''
