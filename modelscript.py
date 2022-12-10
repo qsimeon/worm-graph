@@ -7,9 +7,7 @@ from data.load_connectome import CElegansDataset
 from tasks.all_tasks import OneStepPrediction
 from train.train_gnn import optimize_model
 from train.train_gnn import model_predict
-import matplotlib.pyplot as plt
 import pandas as pd
-import csv
 
 #loading all models
 from models.gnn_models import *
@@ -52,6 +50,6 @@ if __name__ == "__main__":
                 #save a csv files named for the worm and modelName, containing model, log, and preds
                 #model.to_csv(worm+modelName.__name__+'model.csv')
                 x_df = pd.DataFrame(preds)
-                x_df.to_csv(logs + '/' + wormSet.__name__+'.'+worm+'.'+modelName.__name__+'.'+'preds.csv')
+                x_df.to_csv('logs/' + wormSet.__name__+'.'+worm+'.'+modelName.__name__+'.'+'preds.csv')
                 x_df = pd.DataFrame(log)
-                x_df.to_csv(logs + '/' + wormSet.__name__+worm+modelName.__name__+'log.csv')
+                x_df.to_csv('logs/' + wormSet.__name__+worm+modelName.__name__+'log.csv')

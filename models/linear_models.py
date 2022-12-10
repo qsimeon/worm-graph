@@ -6,7 +6,7 @@ class LinearNN(torch.nn.Module):
     super(LinearNN, self).__init__()
     input_size = num_features
     output_size = input_size
-    lin_model = nn.Linear(input_size, output_size)
+    self.lin_model = nn.Linear(input_size, output_size)
   
   def forward(self, graph):
     x = graph.x

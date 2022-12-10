@@ -9,11 +9,16 @@ from torch_geometric.utils import coalesce
 
 def preprocess(raw_dir, raw_files):
     '''If the `graph_tensors.pt` file is not found, this function gets 
-    called to create it from the raw open source connectome data.'''
+    called to create it from the raw open source connectome data.
+    The connectom data useed here is from Cook et al., 2019  downloaded from 
+    https://wormwiring.org/matlab%20scripts/Premaratne%20MATLAB-ready%20files%20.zip.
+    The data in .mat files was processed into .csv files containing the chemical and electrical
+    connectivity for the adult hermaphrodite C. elegans.'''
     # checking
     assert all([os.path.exists(os.path.join(raw_dir, rf)) for rf in raw_files])
     # list of names of all C. elegans neurons
     neuron_names = set(pd.read_csv(os.path.join(raw_dir, 'neuron_names.txt'), sep=' ', header=None, names=['neuron']).neuron)
+    #TODO: Use a better connectome! This one from Cook et al., 2019 is very inaccurate
     # chemical synapses
     GHermChem_Edges = pd.read_csv(os.path.join(raw_dir, 'GHermChem_Edges.csv')) # edges
     GHermChem_Nodes =  pd.read_csv(os.path.join(raw_dir, 'GHermChem_Nodes.csv')) # nodes
@@ -97,6 +102,7 @@ def preprocess(raw_dir, raw_files):
     assert all(chemical_graph.y == electrical_graph.y), "Node labels not matched!"
     x = chemical_graph.x 
     y = chemical_graph.y
+    # basic attributes of PyG Data object
     graph = Data(x=x, edge_index=edge_index, edge_attr=edge_attr, y=y)
     # add some additional attributes to the graph
     neuron_names = list(id_neuron.values())
@@ -109,7 +115,9 @@ def preprocess(raw_dir, raw_files):
     # initialize position dict then replace with atlas coordinates if available
     pos = dict(zip(np.arange(graph.num_nodes), np.zeros(shape=(graph.num_nodes, 2))))
     for k,v in zip(keys, values): pos[k] = v
+    # assign each node its global node index
+    n_id = torch.arange(graph.num_nodes)
     # save the tensors to use as raw data in the future.
     graph_tensors = {'edge_index': edge_index, 'edge_attr': edge_attr, 'pos': pos,
-                 'x': x, 'y':  y, 'id_neuron': id_neuron, 'node_type': node_type}
+                 'x': x, 'y':  y, 'id_neuron': id_neuron, 'node_type': node_type, 'n_id': n_id}
     torch.save(graph_tensors, os.path.join(ROOT_DIR, 'preprocessing', 'graph_tensors.pt'))
