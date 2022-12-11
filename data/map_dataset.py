@@ -7,7 +7,12 @@ class MapDataset(torch.utils.data.Dataset):
   A custom neural activity time-series prediction dataset.
   Using MapDataset will ensure that sequences are generated 
   in a principled and deterministic way, and that every sample
-  generated is unique.
+  generated is unique. 
+  A map-style dataset is one that implements the `__getitem__()` and 
+  `__len__()` protocols, and represents a map from (possibly non-integral) 
+  indices/keys to data samples. Such a dataset, when accessed with 
+  `dataset[idx]`, could read the `idx`-th time-series and its corresponding 
+  target from a folder on the disk.
   '''
   def __init__(self, D, neurons=None, tau=1, seq_len=None, size=1000, 
                feature_mask=None, increasing=False, reverse=False):
