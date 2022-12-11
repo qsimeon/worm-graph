@@ -28,4 +28,5 @@ dependencies:
   - mat73
   - pip:
     - torch-geometric-temporal
+    - statsmodels
     - wget

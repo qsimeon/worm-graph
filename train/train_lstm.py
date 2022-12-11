@@ -1,5 +1,6 @@
-# Pytorch style train and test pipelines.
+import torch
 
+# Pytorch style train and test pipelines.
 def train(loader, model, optimizer, criterion=None):
     model.train()
     criterion = model.loss_fn()
@@ -20,7 +21,7 @@ def train(loader, model, optimizer, criterion=None):
         loss = model.elbo_loss + criterion(out, y)/(1 + tau) 
         loss.backward()  # Derive gradients.
         # TODO: figure out if gradient clipping is necessary.
-        nn.utils.clip_grad_norm_(model.parameters(), 0.1) 
+        torch.nn.utils.clip_grad_norm_(model.parameters(), 0.1) 
         optimizer.step()  # Update parameters based on gradients.
         optimizer.zero_grad()  # Clear gradients.
         # Store train and baseline loss.

@@ -13,7 +13,7 @@ def train(loader, model, graph, optimizer):
         train_loss, base_loss: traning loss and baseline
     """
     model.train()
-    criterion = nn.MSELoss()
+    criterion = torch.nn.MSELoss()
     base_loss = 0
     train_loss = 0
     mask = graph.train_mask # training mask
@@ -31,7 +31,7 @@ def train(loader, model, graph, optimizer):
         loss = criterion(out, ytr)
         loss.backward()  # Derive gradients.
         # TODO: figure out if gradient clipping is necessary.
-        nn.utils.clip_grad_norm_(model.parameters(), 0.01) 
+        torch.nn.utils.clip_grad_norm_(model.parameters(), 0.01) 
         optimizer.step()  # Update parameters based on gradients.
         optimizer.zero_grad()  # Clear gradients.
         # Store train and baseline loss.
@@ -49,7 +49,7 @@ def test(loader, model, graph):
         val_loss, base_loss: validation loss and baseline
     """
     model.eval()
-    criterion = nn.MSELoss()
+    criterion = torch.nn.MSELoss()
     base_loss = 0
     val_loss = 0
     mask = graph.val_mask # validation mask

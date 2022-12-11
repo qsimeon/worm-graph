@@ -23,14 +23,13 @@ class NetworkLSTM(nn.Module):
           self.proj_size = 0
         else: 
           self.proj_size = input_size
-        self.elbo_loss = torch.tensor(0)
         self.lstm = nn.LSTM(input_size=self.input_size, hidden_size=self.hidden_size,
                             num_layers=self.num_layers, proj_size=self.proj_size,
                             bias=False, batch_first=True)
         
     def loss_fn(self):
         '''
-        The loss function to be used for this model.
+        The loss function to be used with this model.
         '''
         return torch.nn.MSELoss()
 

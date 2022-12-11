@@ -1,14 +1,20 @@
 import torch
-import torch.nn as nn
 
 class LinearNN(torch.nn.Module):
-  def __init__(self, num_features):
+  def __init__(self, input_size):
+    '''
+    A simple linear regression model to use as a baseline.
+    The output will be the same shape as the input.
+    '''
     super(LinearNN, self).__init__()
-    input_size = num_features
-    output_size = input_size
-    self.lin_model = nn.Linear(input_size, output_size)
+    self.input_size = input_size
+    self.output_size  = input_size
+    self.linear = torch.nn.Linear(self.input_size, self.output_size)
   
-  def forward(self, graph):
-    x = graph.x
-    x = self.lin_model(x)
-    return x
+  def loss_fn(self):
+    '''The loss function to be used with this model.'''
+    return torch.nn.MSELoss()
+
+  def forward(self, input):
+    output = self.linear(input)
+    return output
