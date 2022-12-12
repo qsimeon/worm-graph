@@ -1,8 +1,8 @@
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 
 #TODO: Add a batch normalization layer.
-#TODO: Use LSTMCell instead of full LSTM.
 
 #LSTM network model.
 class NetworkLSTM(nn.Module):
@@ -13,37 +13,43 @@ class NetworkLSTM(nn.Module):
     that occurs $tau$ steps later.
     '''
     def __init__(self, input_size, hidden_size, num_layers=1):
+        '''
+        The output size will be the same as the input size.
+        '''
         super(NetworkLSTM, self).__init__()
-      
-        assert hidden_size >= input_size, "Model requires hidden_size >= input_size."
+        assert hidden_size>=input_size, "Model requires hidden_size >= input_size."
         self.input_size = input_size
         self.hidden_size = hidden_size
         self.num_layers = num_layers
-        if self.hidden_size == self.input_size:
-          self.proj_size = 0
-        else: 
-          self.proj_size = input_size
-        self.lstm = nn.LSTM(input_size=self.input_size, hidden_size=self.hidden_size,
-                            num_layers=self.num_layers, proj_size=self.proj_size,
+        # transform hidden state to output
+        self.lstm = nn.LSTM(input_size=self.input_size, 
+                            hidden_size=self.hidden_size,
+                            num_layers=self.num_layers, 
                             bias=False, batch_first=True)
+        self.linear = nn.Linear(self.hidden_size, self.input_size) 
         
     def loss_fn(self):
         '''
-        The loss function to be used with this model.
+        The loss function to be used for this model.
         '''
         return torch.nn.MSELoss()
 
-    def forward(self, x, tau, state=None):
+    def forward(self, input, tau=1):
         '''
-        x: batch of data
+        input: batch of data
         tau: singleton tensor of int
         '''
         # Propagate input through LSTM
-        lstm_out = x
+        # lstm_out is all of the hidden states throughout the sequence
+        lstm_out, self.hidden = self.lstm(input) 
         # Repeat for tau>0 offset target
-        for i in range(tau):
-          lstm_out, state = self.lstm(lstm_out, state) 
-        return lstm_out, state
+        for i in range(1,tau):
+          lstm_out, self.hidden = self.lstm(lstm_out, self.hidden) 
+        # Project the hidden states to the output vector
+        output = F.relu(self.linear(lstm_out))
+        # output = lstm_out
+        return output
+
 
 # Variational autoencoder LSTM model.
 class VAE_LSTM(nn.Module):

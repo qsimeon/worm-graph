@@ -1,7 +1,3 @@
-#@title Make a Pytorch-style train and test pipeline.
-#@markdown All models should include a method `loss_fn()` that specifies the
-#@markdown loss function to be used with the model.
-
 import torch
 from utils import DEVICE as device
 from data.map_dataset import MapDataset
@@ -10,12 +6,16 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 
+#@title Make a Pytorch-style train and test pipeline.
+#@markdown All models should include a method `loss_fn()` that specifies the
+#@markdown loss function to be used with the model.
+
 def train(loader, model, optimizer):
   """
   Train a model given a dataset for a single epoch.
     Args:
         loader: training set dataloader
-        model: instance of a Pytorch GNN model
+        model: instance of a LinearNN
         optimizer: gradient descent optimizer with model params on it
     Returns:
         losses: dict w/ keys train_loss and base_train_loss
@@ -26,11 +26,12 @@ def train(loader, model, optimizer):
   # Iterate in batches over the training dataset.
   for i, data in enumerate(loader): 
     X_train, Y_train, meta = data
+    tau = meta['tau'][0]
     # Baseline: loss if the model predicted the residual to be 0
-    base = criterion(torch.zeros_like(Y_train), Y_train-X_train)
+    base = criterion(torch.zeros_like(Y_train), Y_train-X_train)/(tau+1)
     # Train
     Y_tr = model(X_train) # Forward pass.
-    loss = criterion(Y_tr, Y_train-X_train) # Compute training loss.
+    loss = criterion(Y_tr, Y_train-X_train)/(tau+1) # Compute training loss.
     loss.backward()  # Derive gradients.
     optimizer.step()  # Update parameters based on gradients.
     optimizer.zero_grad()  # Clear gradients.
@@ -46,7 +47,7 @@ def test(loader, model):
   """
   Evaluate a model on a given dataset.
       loader: test/validation set dataloader
-      model: instance of a Pytorch GNN model
+      model: instance of a LinearNN
   Returns:
       losses: dict w/ keys test_loss and base_test_loss
   """
@@ -56,11 +57,12 @@ def test(loader, model):
   # Iterate in batches over the validation dataset.
   for i, data in enumerate(loader): 
     X_test, Y_test, meta = data
+    tau = meta['tau'][0]
     # Baseline: loss if the model predicted the residual to be 0
-    base = criterion(torch.zeros_like(Y_test), Y_test-X_test)
+    base = criterion(torch.zeros_like(Y_test), Y_test-X_test)/(tau+1)
     # Test
     Y_te = model(X_test) # Forward pass.
-    loss = criterion(Y_te, Y_test-X_test) # Compute the validation loss.
+    loss = criterion(Y_te, Y_test-X_test)/(tau+1) # Compute the validation loss.
     # Store test and baseline loss.
     base_loss += base.detach().item()
     test_loss += loss.detach().item()
@@ -82,10 +84,10 @@ def optimize_model(dataset, model, num_epochs):
   optimizer = torch.optim.Adam(model.parameters(), lr=0.01)
   # create MapDatasets
   max_time = len(dataset)
-  train_dataset = MapDataset(dataset[:max_time//2], tau=1, seq_len=1, 
-                           increasing=True, size=max_time)
-  test_dataset = MapDataset(dataset[max_time//2:], tau=1, seq_len=1, 
-                          increasing=True, size=max_time)
+  train_dataset = MapDataset(dataset[:max_time//2], tau=1, seq_len=range(1,101), 
+                           increasing=True, size=np.inf)
+  test_dataset = MapDataset(dataset[max_time//2:], tau=1, seq_len=range(1,101), 
+                          increasing=True, size=np.inf)
   # create train and test loaders
   train_sampler = BatchSampler(train_dataset.batch_indices)
   train_loader = torch.utils.data.DataLoader(train_dataset, 
@@ -103,7 +105,7 @@ def optimize_model(dataset, model, num_epochs):
     test_log = test(test_loader, model)
     base_train_loss, train_loss = train_log['base_train_loss'], train_log['train_loss']
     base_test_loss, test_loss = test_log['base_test_loss'], test_log['test_loss']
-    if epoch % (num_epochs//10) == 0:
+    if epoch % (num_epochs//100) == 0:
       print(f"Epoch: {epoch:03d}, Train Loss: {train_loss:.4f}, Val. Loss: {test_loss:.4f}")
       log['epochs'].append(epoch)
       log['base_train_losses'].append(base_train_loss)
@@ -112,23 +114,3 @@ def optimize_model(dataset, model, num_epochs):
       log['test_losses'].append(test_loss)
   # return optimized model
   return model, log
-
-
-def plot_loss_log(log):
-  """
-  Plot the loss cureves returned from `optimize_model`.
-  """
-  plt.figure()
-  plt.plot(log['epochs'], np.log10(log['train_losses']), 
-          label='train', color='r', linewidth=2)
-  plt.plot(log['epochs'], np.log10(log['test_losses']), 
-          label='test', color='b', linewidth=2)
-  plt.plot(log['epochs'], np.log10(log['base_train_losses']), 
-          label='train baseline', color='r', linestyle='--', linewidth=2)
-  plt.plot(log['epochs'], np.log10(log['base_test_losses']), 
-          label='test baseline', color='b', linestyle='--', linewidth=2)
-  plt.xlabel('Epoch')
-  plt.ylabel('log MSE')
-  plt.legend()
-  plt.title("Loss curves for linear model $Y_(t+1) = W^{\intercal} Y(t)$")
-  plt.show()

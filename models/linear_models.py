@@ -15,6 +15,11 @@ class LinearNN(torch.nn.Module):
     '''The loss function to be used with this model.'''
     return torch.nn.MSELoss()
 
-  def forward(self, input):
-    output = self.linear(input)
+  def forward(self, input, tau=1):
+    '''
+    input: batch of data
+    '''
+    # Repeat for tau>0 offset target
+    for i in range(tau):
+      output = self.linear(input)
     return output

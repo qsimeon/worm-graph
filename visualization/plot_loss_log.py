@@ -3,7 +3,7 @@ import numpy as np
 
 def plot_loss_log(log):
   """
-  Plot the loss cureves returned from `optimize_model`.
+  Plot the loss curves returned from `optimize_model`.
   """
   plt.figure()
   plt.plot(log['epochs'], np.log10(log['train_losses']), 
