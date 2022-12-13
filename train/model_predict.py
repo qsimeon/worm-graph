@@ -1,11 +1,11 @@
 from utils import DEVICE as device
 
+
 def model_predict(single_worm_dataset, model):
   """
   Makes predictions for all neurons in the given
   worm dataset using a trained model.
   """
-  model = model.to(device)
   calcium_data = single_worm_dataset['data']
   # model in/out
   input = calcium_data.squeeze().to(device)

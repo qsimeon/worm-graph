@@ -1,7 +1,8 @@
 import matplotlib.pyplot as plt
 import numpy as np
 
-def plot_loss_log(log):
+
+def plot_loss_log(log, plt_title=''):
   """
   Plot the loss curves returned from `optimize_model`.
   """
@@ -16,6 +17,6 @@ def plot_loss_log(log):
           label='test baseline', color='b', linestyle='--', linewidth=2)
   plt.xlabel('Epoch')
   plt.ylabel('log MSE')
-  plt.legend()
-  plt.title("Loss curves for linear model $Y_(t+1) = W^{\intercal} Y(t)$")
+  plt.legend(labelspacing=0)
+  plt.title(plt_title)
   plt.show()
