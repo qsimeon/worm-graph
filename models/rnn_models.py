@@ -5,7 +5,7 @@ import torch.nn.functional as F
 #TODO: Add a batch normalization layer.
 
 #LSTM network model.
-class NetworkLSTM(nn.Module):
+class NetworkLSTM(torch.nn.Module):
     '''
     A model of the C. elegans neural network using an LSTM.
     Given an input sequence of length $L$ and an offset $\tau$, 
@@ -21,12 +21,11 @@ class NetworkLSTM(nn.Module):
         self.input_size = input_size
         self.hidden_size = hidden_size
         self.num_layers = num_layers
-        # transform hidden state to output
-        self.lstm = nn.LSTM(input_size=self.input_size, 
+        self.lstm = torch.nn.LSTM(input_size=self.input_size, 
                             hidden_size=self.hidden_size,
                             num_layers=self.num_layers, 
                             bias=False, batch_first=True)
-        self.linear = nn.Linear(self.hidden_size, self.input_size) 
+        self.linear = torch.nn.Linear(self.hidden_size, self.input_size) 
         
     def loss_fn(self):
         '''
@@ -42,13 +41,11 @@ class NetworkLSTM(nn.Module):
         # Propagate input through LSTM
         # lstm_out is all of the hidden states throughout the sequence
         lstm_out, self.hidden = self.lstm(input) 
-        # Repeat for tau>0 offset target
+        lstm_out = torch.nn.functional.relu(self.linear(lstm_out))
         for i in range(1,tau):
           lstm_out, self.hidden = self.lstm(lstm_out, self.hidden) 
-        # Project the hidden states to the output vector
-        output = F.relu(self.linear(lstm_out))
-        # output = lstm_out
-        return output
+          lstm_out = torch.nn.functional.relu(self.linear(lstm_out))
+        return lstm_out
 
 
 # Variational autoencoder LSTM model.
