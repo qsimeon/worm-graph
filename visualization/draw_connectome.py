@@ -4,7 +4,7 @@ from matplotlib.lines import Line2D
 import torch_geometric
 
 
-def draw_connectome(network, pos=None, labels=None):
+def draw_connectome(network, pos=None, labels=None, plt_title='C. elegans connectome network'):
   """
   Args: 
     network: PyG Data object containing a C. elegans connectome graph.
@@ -58,5 +58,6 @@ def draw_connectome(network, pos=None, labels=None):
       Line2D([0], [0], color='b', label='gap junction', linewidth=2, alpha=0.5, markersize=10),
       Line2D([0], [0], color='r', label='synapse', linewidth=2, alpha=0.5, markersize=10),        
   ]
+  plt.title(plt_title)
   plt.legend(handles=legend_elements, loc='upper right')
   plt.show()
