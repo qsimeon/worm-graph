@@ -5,6 +5,7 @@ from torch_geometric.data import InMemoryDataset, Data
 from torch_geometric.data import download_url, extract_zip
 from preprocessing.process_raw import preprocess
 
+
 class CElegansDataset(InMemoryDataset):
     def __init__(self, root=os.path.join(ROOT_DIR, 'data'), transform=None, pre_transform=None):
         '''Defines CElegansDataset as a subclass of a PyG InMemoryDataset.'''

@@ -2,8 +2,6 @@ import torch
 from utils import DEVICE as device
 from data.map_dataset import MapDataset
 from data.batch_sampler import BatchSampler
-from models.rnn_models import NetworkLSTM
-import numpy as np
 
 
 #@title Make a Pytorch-style train and test pipeline.
@@ -51,6 +49,7 @@ def train(loader, model, optimizer, no_grad=False):
   return losses
 
 
+@torch.no_grad()
 def test(loader, model):
   """
   Evaluate a model on a given dataset.

@@ -2,6 +2,7 @@ import torch
 import numpy as np
 from tqdm import tqdm
 
+
 def train(loader, model, graph, optimizer):
     """Train a model given a dataset.
     Args:

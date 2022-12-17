@@ -1,6 +1,7 @@
 import torch
 from utils import DEVICE as device
 
+
 def add_train_val_mask(graph, train_ratio=0.7, train_mask=None):
     """
     Mutates a C. elegans connectome graph with injected data

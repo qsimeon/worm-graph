@@ -7,6 +7,7 @@ from sklearn import preprocessing
 from torch_geometric.data import Data
 from torch_geometric.utils import coalesce
 
+
 def preprocess(raw_dir, raw_files):
     '''If the `graph_tensors.pt` file is not found, this function gets 
     called to create it from the raw open source connectome data.
@@ -86,7 +87,8 @@ def preprocess(raw_dir, raw_files):
     # data.y target to train against
     le = preprocessing.LabelEncoder()
     le.fit(Gsyn_nodes.Group.values)
-    y = torch.tensor(le.transform(Gsyn_nodes.Group.values), dtype=torch.float) # [num_nodes, 1]
+    num_classes = len(le.classes_)
+    y = torch.tensor(le.transform(Gsyn_nodes.Group.values), dtype=torch.int32) # [num_nodes, 1]
     # save the mapping of encodings to type of neuron
     codes = np.unique(y)
     types = np.unique(Gsyn_nodes.Group.values)
@@ -118,6 +120,6 @@ def preprocess(raw_dir, raw_files):
     # assign each node its global node index
     n_id = torch.arange(graph.num_nodes)
     # save the tensors to use as raw data in the future.
-    graph_tensors = {'edge_index': edge_index, 'edge_attr': edge_attr, 'pos': pos,
-                 'x': x, 'y':  y, 'id_neuron': id_neuron, 'node_type': node_type, 'n_id': n_id}
+    graph_tensors = {'edge_index': edge_index, 'edge_attr': edge_attr, 'pos': pos, 'num_classes': num_classes, 
+    'x': x, 'y':  y, 'id_neuron': id_neuron, 'node_type': node_type, 'n_id': n_id}
     torch.save(graph_tensors, os.path.join(ROOT_DIR, 'preprocessing', 'graph_tensors.pt'))

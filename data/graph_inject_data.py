@@ -39,8 +39,8 @@ def graph_inject_data(single_worm_dataset, connectome_graph):
   subgraph = graph.subgraph(subgraph_mask)
   # reset neuron indices for labeling
   subgraph.id_neuron = {i: graph.id_neuron[k] for i,k 
-                    in enumerate(subgraph.n_id.numpy())}
-  subgraph.pos = {i: graph.pos[k] for i,k in enumerate(subgraph.n_id.numpy())}
+                    in enumerate(subgraph.n_id.cpu().numpy())}
+  subgraph.pos = {i: graph.pos[k] for i,k in enumerate(subgraph.n_id.cpu().numpy())}
   # check out the new attributes
   print("Attributes:", "\n", subgraph.keys, "\n",
       f"Num. nodes {subgraph.num_nodes}, Num. edges {subgraph.num_edges}, " 
