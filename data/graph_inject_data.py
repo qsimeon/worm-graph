@@ -20,16 +20,18 @@ def graph_inject_data(single_worm_dataset, connectome_graph):
   print("How much real data do we have?", dataset.shape) # (time, neurons)
   print("Current data on connectome graph:", graph.x.cpu().numpy().shape) # (neurons, time)
   # find the graph nodes matching the neurons in the dataset 
-  neuron_ids = single_worm_dataset['neuron_ids']
-  graph_inds = [k-1 for k,v in graph.id_neuron.items() if 
-                v in set(neuron_ids.values())] # neuron indices in connectome
-  data_inds = [k_-1 for k_,v_ in neuron_ids.items() if 
+  neuron_id = single_worm_dataset['neuron_id']
+  id_neuron = dict((v,k) for k,v in id_neuron.items())
+  graph_inds = [k for k,v in graph.id_neuron.items() if 
+                v in set(id_neuron.values())] # neuron indices in connectome
+  data_inds = [k_ for k_,v_ in id_neuron.items() if 
               v_ in set(graph.id_neuron.values())] # neuron indices in sparse dataset
   # 'inject' the data by creating a clone graph with the desired features
   new_x = torch.zeros(graph.num_nodes, max_time, dtype=torch.float64)
   new_x[graph_inds, :] = dataset[:, data_inds].T
   graph = Data(x=new_x, y=graph.y, edge_index=graph.edge_index, edge_attr=graph.edge_attr, 
-                  node_type=graph.node_type, pos=graph.pos, id_neuron=graph.id_neuron)
+                  node_type=graph.node_type, pos=graph.pos, num_classes=graph.num_classes, 
+                  id_neuron=graph.id_neuron)
   # assign each node its global node index
   graph.n_id = torch.arange(graph.num_nodes)
   # create the subgraph that has labelled neurons and data

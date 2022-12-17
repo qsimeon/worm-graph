@@ -2,6 +2,7 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
 
+
 def plot_worm_data(single_worm_dataset, worm_name):
     """
     Plot the neural activity traces for some neurons in a given worm.
@@ -11,13 +12,14 @@ def plot_worm_data(single_worm_dataset, worm_name):
     # get the calcium data and neuron labels
     calcium_data = single_worm_dataset['data']
     num_neurons = single_worm_dataset['num_neurons']
-    neuron_ids = single_worm_dataset['neuron_ids']
+    neuron_id = single_worm_dataset['neuron_id']
+    id_neuron = dict((v,k) for k,v in neuron_id.items())
     # filter for named neurons
-    named_neurons = [key for key,val in neuron_ids.items() if not val.isnumeric()]
-    if not named_neurons: named_neurons = list(neuron_ids.keys())
+    named_neurons = [key for key,val in id_neuron.items() if not val.isnumeric()]
+    if not named_neurons: named_neurons = list(id_neuron.keys())
     # randomly select 10 neurons to plot
-    inds = np.random.choice(named_neurons, 10)-1
-    labels = [neuron_ids[i] for i in named_neurons]
+    inds = np.random.choice(named_neurons, 10)
+    labels = [id_neuron[i] for i in named_neurons]
     # plot calcium activity traces
     color = plt.cm.tab20(range(10))
     mpl.rcParams['axes.prop_cycle'] = mpl.cycler(color=color)

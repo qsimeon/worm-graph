@@ -18,10 +18,11 @@ def plot_neuron_train_test_samples(single_worm_dataset, neuron_idx,
     tau: int, the amount the target series is shifted by.
   """
   calcium_data = single_worm_dataset['data']
-  neuron_ids = single_worm_dataset['neuron_ids']
+  neuron_id = single_worm_dataset['neuron_id']
+  id_neuron = dict((v,k) for k,v in neuron_id.items())
   max_time = single_worm_dataset['max_time']
   idx = neuron_idx
-  nid = neuron_ids[idx]
+  nid = id_neuron[idx]
   n_ex = num_samples
   yshifts = np.random.uniform(low=0.5, high=1.0, size=n_ex)
   eps = 0.05
