@@ -125,7 +125,7 @@ def optimize_model(dataset, model, num_epochs=100, seq_len=1, data_size=1000):
   # return optimized model
   return model, log
 
-def model_predict(new_calcium_data, mask, model):
+def model_predict(new_calcium_data, model):
   """
   Makes predictions for all neurons in the given
   worm dataset using a trained model.
@@ -133,8 +133,6 @@ def model_predict(new_calcium_data, mask, model):
   # model in/out
   input = new_calcium_data.squeeze().to(device)
   output = model(input)
-  input = input[:,mask]
-  output = output[:,mask]
   # tagets/preds
   targets = (input[1:] - input[:-1]).detach().cpu()
   predictions = output[:-1].detach().cpu()
