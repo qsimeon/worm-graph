@@ -28,5 +28,7 @@ dependencies:
   - mat73
   - pip:
     - torch-geometric-temporal
+    - hydra-core
+    - omegaconf
     - statsmodels
     - wget

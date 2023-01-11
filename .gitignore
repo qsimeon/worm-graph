@@ -7,6 +7,10 @@ __pycache__/
 *.py[cod]
 *$py.class
 
+# Hydra outputs
+outputs/ 
+multirun/
+
 # C extensions
 *.so
 

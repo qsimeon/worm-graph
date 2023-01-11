@@ -1,0 +1,22 @@
+defaults: # `model`, `training` and `env` are folders
+  - _self_
+  - model: model_conf.yaml 
+  - tranining: training_conf.yaml
+  - env: env_conf.yaml
+
+# the stuff below overwrites the defaults above
+dataset:
+  name: Skora2018
+
+model:
+  hidden_size: 20
+
+# the hydra part does the hyperparameter sweep 'looping over stuff'
+hydra:
+  mode: MULTIRUN
+  job:
+    chdir: true
+
+  sweeper:
+    params:
+      dataset.name: Skora2018, Kaplan2020, Kato2015, Nguyen2017, Nichols2017, Uzel2022

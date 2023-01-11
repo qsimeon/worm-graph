@@ -6,12 +6,15 @@ from visualization.plot_target_prediction import plot_target_prediction
 from models.linear_models import LinearNN
 from train.train_main import optimize_model
 from train.train_main import model_predict
+from omegaconf import OmegaConf
+import hydra
 import numpy as np
 
-if __name__ == "__main__":
+@hydra.main(config_path="configs/", config_name='sample_conf.yaml')
+def main(config):
     #@title Train a simple linear regression model.
     # choose your dataset
-    dataset_name = 'Skora2018'
+    dataset_name = config.dataset.name
     all_worms_dataset = load_dataset(dataset_name)
     print('Chosen dataset:', dataset_name)
     print()
@@ -25,8 +28,8 @@ if __name__ == "__main__":
     print('worm calcium-signal dataset:', calcium_data.shape)
     print()
     # get the neuron ids and length of the recording
-    neuron_ids = single_worm_dataset['neuron_ids']
-    neuron_idx = np.random.choice(list(neuron_ids.keys()))-1
+    neuron_id = single_worm_dataset['neuron_id']
+    neuron_idx = np.random.choice(list(neuron_id.keys()))-1
     max_time = single_worm_dataset['max_time']
     num_neurons = single_worm_dataset['num_neurons']
     # create the model and place on GPU
@@ -46,7 +49,7 @@ if __name__ == "__main__":
     # trained vs untrained weights
     plot_before_after_weights(untrained_weights, trained_weights, W_name='W')
     #@title Make predictions with the trained linear model.
-    nid = neuron_ids[neuron_idx]
+    nid = neuron_id[neuron_idx]
     targets, predictions = model_predict(single_worm_dataset, lin_model)
     # plot prediction for a single neuron
     plot_target_prediction(targets[:, neuron_idx], predictions[:, neuron_idx], 
@@ -58,3 +61,6 @@ if __name__ == "__main__":
                             plt_title="%s, %s neurons, data size %s, \n Linear "
                             "Model: Correlation of all neuron Ca2+ residuals"%(
                                 worm.upper(), num_neurons, log['data_size']))
+
+if __name__ == "__main__":
+    main()
