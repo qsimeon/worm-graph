@@ -88,7 +88,7 @@ def load_Skora2018():
 
 def load_Kaplan2020():
     '''
-    Args: Loads the worm neural activity datasets from Kaplan et al., Neuron 2020, 
+    Loads the worm neural activity datasets from Kaplan et al., Neuron 2020, 
     Nested Neuronal Dynamics Orchestrate a Behavioral Hierarchy across Timescales.
     '''
     # ensure the data has been preprocessed

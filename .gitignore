@@ -7,9 +7,15 @@ __pycache__/
 *.py[cod]
 *$py.class
 
-# Hydra outputs
-outputs/ 
-multirun/
+# Large files
+opensource_data.zip
+opensource_data/
+# worm_data_colab.zip
+# worm_data_colab/
+
+# # Hydra outputs
+# outputs/ 
+# multirun/
 
 # C extensions
 *.so

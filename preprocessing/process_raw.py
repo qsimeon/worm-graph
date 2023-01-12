@@ -7,11 +7,10 @@ from sklearn import preprocessing
 from torch_geometric.data import Data
 from torch_geometric.utils import coalesce
 
-
 def preprocess(raw_dir, raw_files):
     '''If the `graph_tensors.pt` file is not found, this function gets 
     called to create it from the raw open source connectome data.
-    The connectom data useed here is from Cook et al., 2019  downloaded from 
+    The connectome data useed here is from Cook et al., 2019  downloaded from 
     https://wormwiring.org/matlab%20scripts/Premaratne%20MATLAB-ready%20files%20.zip.
     The data in .mat files was processed into .csv files containing the chemical and electrical
     connectivity for the adult hermaphrodite C. elegans.'''

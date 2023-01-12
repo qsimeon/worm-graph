@@ -17,6 +17,7 @@ hydra:
   job:
     chdir: true
 
+# can specify which .yaml file you want to use
   sweeper:
     params:
       dataset.name: Skora2018, Kaplan2020, Kato2015, Nguyen2017, Nichols2017, Uzel2022
