@@ -1,8 +1,9 @@
-defaults: # `model`, `training` and `env` are folders
-  - _self_
-  - model: model_conf.yaml 
-  - tranining: training_conf.yaml
-  - env: env_conf.yaml
+defaults: # `model`, `train` are folders
+  - models: models.yaml 
+  - train: train.yaml
+  - tasks: tasks.yaml
+  - data: data.yaml
+  - preprocess: preprocess.yaml
 
 # the stuff below overwrites the defaults above
 dataset:

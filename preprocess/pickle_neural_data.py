@@ -7,8 +7,7 @@ import pickle
 import numpy as np
 from scipy.io import loadmat
 from utils import ROOT_DIR, VALID_DATASETS
-from sklearn.preprocessing import MinMaxScaler, QuantileTransformer, PowerTransformer
-
+from sklearn.preprocessing import MinMaxScaler, PowerTransformer
 
 def pickle_neural_data(url, zipfile, dataset="all", transform=MinMaxScaler(feature_range=(-1,1))):
     '''
@@ -23,7 +22,6 @@ def pickle_neural_data(url, zipfile, dataset="all", transform=MinMaxScaler(featu
     zip_path = os.path.join(root, zipfile)
     source_path = os.path.join(root, zipfile.strip('.zip'))
     processed_path = os.path.join(root, "data/processed/neural")
-    transform = PowerTransformer(standardize=False, method="yeo-johnson")
     # Download the curated open-source worm datasets from host server
     if not os.path.exists(source_path):
         # Downloading can take up to 8 minutes depending on your network speed!
@@ -71,7 +69,7 @@ def pickle_Kato2015(transform):
         num_named = len([k for k in neuron_ID.keys() if not k.isnumeric()]) # number of neurons that were ID'd
         print("len. Ca recording %s, total num. neurons %s, num. ID'd neurons %s"%(
             max_time, num_neurons, num_named))
-        sc = transform() # normalize data
+        sc = transform # normalize data
         real_data = sc.fit_transform(real_data[:, :num_neurons]) 
         real_data = np.expand_dims(real_data, axis=-1)
         real_data = torch.tensor(real_data, dtype=torch.float64) # add a feature dimension and convert to tensor
@@ -101,7 +99,7 @@ def pickle_Kato2015(transform):
         num_named = len([k for k in neuron_ID.keys() if not k.isnumeric()]) # number of neurons that were ID'd
         print("len. Ca recording %s, total num. neurons %s, num. ID'd neurons %s"%(
             max_time, num_neurons, num_named))
-        sc = MinMaxScaler() # normalize data
+        sc = transform # normalize data
         real_data = sc.fit_transform(real_data[:, :num_neurons]) 
         real_data = np.expand_dims(real_data, axis=-1)
         real_data = torch.tensor(real_data, dtype=torch.float64) # add a feature dimension and convert to tensor
@@ -119,7 +117,7 @@ def pickle_Kato2015(transform):
     print(Kato2015.keys())
     print()
 
-def pickle_Nichols2017():
+def pickle_Nichols2017(transform):
     '''
     Pickles the worm neural activity data from Nichols et al., Science 2017, 
     A global brain state underlies C. elegans sleep behavior.
@@ -149,7 +147,7 @@ def pickle_Nichols2017():
         num_named = len([k for k in neuron_ID.keys() if not k.isnumeric()]) # number of neurons that were ID'd
         print("len. Ca recording %s, total num. neurons %s, num. ID'd neurons %s"%(
             max_time, num_neurons, num_named))
-        sc = MinMaxScaler() # normalize data
+        sc = transform # normalize data
         real_data = sc.fit_transform(real_data[:, :num_neurons]) 
         real_data = np.expand_dims(real_data, axis=-1)
         real_data = torch.tensor(real_data, dtype=torch.float64) # add a feature dimension and convert to tensor
@@ -179,7 +177,7 @@ def pickle_Nichols2017():
         num_named = len([k for k in neuron_ID.keys() if not k.isnumeric()]) # number of neurons that were ID'd
         print("len. Ca recording %s, total num. neurons %s, num. ID'd neurons %s"%(
             max_time, num_neurons, num_named))
-        sc = MinMaxScaler() # normalize data
+        sc = transform # normalize data
         real_data = sc.fit_transform(real_data[:, :num_neurons]) 
         real_data = np.expand_dims(real_data, axis=-1)
         real_data = torch.tensor(real_data, dtype=torch.float64) # add a feature dimension and convert to tensor
@@ -209,7 +207,7 @@ def pickle_Nichols2017():
         num_named = len([k for k in neuron_ID.keys() if not k.isnumeric()]) # number of neurons that were ID'd
         print("len. Ca recording %s, total num. neurons %s, num. ID'd neurons %s"%(
             max_time, num_neurons, num_named))
-        sc = MinMaxScaler() # normalize data
+        sc = transform # normalize data
         real_data = sc.fit_transform(real_data[:, :num_neurons]) 
         real_data = np.expand_dims(real_data, axis=-1)
         real_data = torch.tensor(real_data, dtype=torch.float64) # add a feature dimension and convert to tensor
@@ -239,7 +237,7 @@ def pickle_Nichols2017():
         num_named = len([k for k in neuron_ID.keys() if not k.isnumeric()]) # number of neurons that were ID'd
         print("len. Ca recording %s, total num. neurons %s, num. ID'd neurons %s"%(
             max_time, num_neurons, num_named))
-        sc = MinMaxScaler() # normalize data
+        sc = transform # normalize data
         real_data = sc.fit_transform(real_data[:, :num_neurons]) 
         real_data = np.expand_dims(real_data, axis=-1)
         real_data = torch.tensor(real_data, dtype=torch.float64) # add a feature dimension and convert to tensor
@@ -257,7 +255,7 @@ def pickle_Nichols2017():
     print(Nichols2017.keys())
     print()
 
-def pickle_Nguyen2017():
+def pickle_Nguyen2017(transform):
     '''
     Pickles the worm neural activity data from Nguyen et al., PLOS CompBio 2017, 
     Automatically tracking neurons in a moving and deforming brain.
@@ -280,7 +278,7 @@ def pickle_Nguyen2017():
             max_time0, num_neurons0, num_named0))
     print()
     # normalize the data 
-    sc = MinMaxScaler()
+    sc = transform
     real_data0 = sc.fit_transform(real_data0[:, :num_neurons0]) 
     # add a feature dimension and convert to tensor
     real_data0 = np.expand_dims(real_data0, axis=-1)
@@ -303,7 +301,7 @@ def pickle_Nguyen2017():
             max_time1, num_neurons1, num_named1))
     print()
     # normalize the data 
-    sc = MinMaxScaler()
+    sc = transform
     real_data1 = sc.fit_transform(real_data1[:, :num_neurons1]) 
     # add a feature dimension and convert to tensor
     real_data1 = np.expand_dims(real_data1, axis=-1)
@@ -326,7 +324,7 @@ def pickle_Nguyen2017():
             max_time2, num_neurons2, num_named2))
     print()
     # normalize the data 
-    sc = MinMaxScaler()
+    sc = transform
     real_data2 = sc.fit_transform(real_data2[:, :num_neurons2]) 
     # add a feature dimension and convert to tensor
     real_data2 = np.expand_dims(real_data2, axis=-1)
@@ -349,7 +347,7 @@ def pickle_Nguyen2017():
     print(Nguyen2017.keys())
     print()
 
-def pickle_Skora2018():
+def pickle_Skora2018(transform):
     '''
     Pickles the worm neural activity data from Skora et al., Cell Reports 2018, 
     Energy Scarcity Promotes a Brain-wide Sleep State Modulated by Insulin Signaling in C. elegans. 
@@ -379,7 +377,7 @@ def pickle_Skora2018():
         num_named = len([k for k in neuron_ID.keys() if not k.isnumeric()]) # number of neurons that were ID'd
         print("len. Ca recording %s, total num. neurons %s, num. ID'd neurons %s"%(
             max_time, num_neurons, num_named))
-        sc = MinMaxScaler() # normalize data
+        sc = transform # normalize data
         real_data = sc.fit_transform(real_data[:, :num_neurons]) 
         real_data = np.expand_dims(real_data, axis=-1)
         real_data = torch.tensor(real_data, dtype=torch.float64) # add a feature dimension and convert to tensor
@@ -410,7 +408,7 @@ def pickle_Skora2018():
         num_named = len([k for k in neuron_ID.keys() if not k.isnumeric()]) # number of neurons that were ID'd
         print("len. Ca recording %s, total num. neurons %s, num. ID'd neurons %s"%(
             max_time, num_neurons, num_named))
-        sc = MinMaxScaler() # normalize data
+        sc = transform # normalize data
         real_data = sc.fit_transform(real_data[:, :num_neurons]) 
         real_data = np.expand_dims(real_data, axis=-1)
         real_data = torch.tensor(real_data, dtype=torch.float64) # add a feature dimension and convert to tensor
@@ -428,7 +426,7 @@ def pickle_Skora2018():
     print(Skora2018.keys())
     print()
 
-def pickle_Kaplan2020():
+def pickle_Kaplan2020(transform):
     '''
     Pickles the worm neural activity data from Kaplan et al., Neuron 2020, 
     Nested Neuronal Dynamics Orchestrate a Behavioral Hierarchy across Timescales.
@@ -456,7 +454,7 @@ def pickle_Kaplan2020():
         num_named = len([k for k in neuron_ID.keys() if not k.isnumeric()]) # number of neurons that were ID'd
         print("len. Ca recording %s, total num. neurons %s, num. ID'd neurons %s"%(
             max_time, num_neurons, num_named))
-        sc = MinMaxScaler() # normalize data
+        sc = transform # normalize data
         real_data = sc.fit_transform(real_data[:, :num_neurons]) 
         real_data = np.expand_dims(real_data, axis=-1)
         real_data = torch.tensor(real_data, dtype=torch.float64) # add a feature dimension and convert to tensor
@@ -486,7 +484,7 @@ def pickle_Kaplan2020():
         num_named = len([k for k in neuron_ID.keys() if not k.isnumeric()]) # number of neurons that were ID'd
         print("len. Ca recording %s, total num. neurons %s, num. ID'd neurons %s"%(
             max_time, num_neurons, num_named))
-        sc = MinMaxScaler() # normalize data
+        sc = transform # normalize data
         real_data = sc.fit_transform(real_data[:, :num_neurons]) 
         real_data = np.expand_dims(real_data, axis=-1)
         real_data = torch.tensor(real_data, dtype=torch.float64) # add a feature dimension and convert to tensor
@@ -516,7 +514,7 @@ def pickle_Kaplan2020():
         num_named = len([k for k in neuron_ID.keys() if not k.isnumeric()]) # number of neurons that were ID'd
         print("len. Ca recording %s, total num. neurons %s, num. ID'd neurons %s"%(
             max_time, num_neurons, num_named))
-        sc = MinMaxScaler() # normalize data
+        sc = transform # normalize data
         real_data = sc.fit_transform(real_data[:, :num_neurons]) 
         real_data = np.expand_dims(real_data, axis=-1)
         real_data = torch.tensor(real_data, dtype=torch.float64) # add a feature dimension and convert to tensor
@@ -535,7 +533,7 @@ def pickle_Kaplan2020():
     print(Kaplan2020.keys())
     print()
 
-def pickle_Uzel2022():
+def pickle_Uzel2022(transform):
     '''
     Pickles the worm neural activity data from Uzel et al 2022., Cell CurrBio 2022, 
     A set of hub neurons and non-local connectivity features support global brain dynamics in C. elegans.
@@ -563,7 +561,7 @@ def pickle_Uzel2022():
         num_named = len([k for k in neuron_ID.keys() if not k.isnumeric()]) # number of neurons that were ID'd
         print("len. Ca recording %s, total num. neurons %s, num. ID'd neurons %s"%(
             max_time, num_neurons, num_named))
-        sc = MinMaxScaler() # normalize data
+        sc = transform # normalize data
         real_data = sc.fit_transform(real_data[:, :num_neurons]) 
         real_data = np.expand_dims(real_data, axis=-1)
         real_data = torch.tensor(real_data, dtype=torch.float64) # add a feature dimension and convert to tensor
@@ -583,10 +581,11 @@ def pickle_Uzel2022():
 if __name__=='__main__':
     url = 'https://www.dropbox.com/s/l3pedwweqqsmd38/opensource_data.zip?dl=1'
     zipfile = 'opensource_data.zip'
-    # pickle a particular dataset
+    # pickle a particular dataset 
     dataset = 'Skora2018'
-    pickle_neural_data(url=url, zipfile=zipfile, dataset=dataset)
+    pickle_neural_data(url=url, zipfile=zipfile, dataset=dataset, # use the PowerTransformer
+                        transform=PowerTransformer(standardize=False, method="yeo-johnson"))
     # pickle all the datasets
-    pickle_neural_data(url=url, zipfile=zipfile, dataset="all")
+    pickle_neural_data(url=url, zipfile=zipfile, dataset="all") # uses the default MinMaxScaler
     # delete the downloaded raw datasets.
     shutil.rmtree(source_path) # files too large to push to GitHub
