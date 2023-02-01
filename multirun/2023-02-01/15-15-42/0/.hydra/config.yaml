@@ -1,0 +1,4 @@
+dataset:
+  name: Skora2018
+model:
+  hidden_size: 20

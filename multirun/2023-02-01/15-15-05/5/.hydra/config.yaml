@@ -1,0 +1,4 @@
+dataset:
+  name: Uzel2022
+model:
+  hidden_size: 20

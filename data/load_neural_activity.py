@@ -51,7 +51,7 @@ def load_Kato2015():
     Global Brain Dynamics Embed the Motor Command Sequence of Caenorhabditis elegans.
     """
     # ensure the data has been preprocessed
-    file = os.path.join(ROOT_DIR, "preprocessing", "Kato2015.pickle")
+    file = os.path.join(ROOT_DIR, "data",  "processed", "neural", "Kato2015.pickle")
     assert os.path.exists(file)
     pickle_in = open(file, "rb")
     # unpickle the data
@@ -65,7 +65,7 @@ def load_Nichols2017():
     A global brain state underlies C. elegans sleep behavior.
     """
     # ensure the data has been preprocessed
-    file = os.path.join(ROOT_DIR, "preprocessing", "Nichols2017.pickle")
+    file = os.path.join(ROOT_DIR, "data",  "processed", "neural", "Nichols2017.pickle")
     assert os.path.exists(file)
     pickle_in = open(file, "rb")
     # unpickle the data
@@ -78,8 +78,8 @@ def load_Nguyen2017():
     Loads the worm neural activity datasets from Nguyen et al., PLOS CompBio 2017,
     Automatically tracking neurons in a moving and deforming brain.
     """
-    # ensure the data has been preprocessed
-    file = os.path.join(ROOT_DIR, "preprocessing", "Nguyen2017.pickle")
+    # ensure the data has been preprocessedn
+    file = os.path.joi(ROOT_DIR, "data",  "processed", "neural", "Nguyen2017.pickle")
     assert os.path.exists(file)
     pickle_in = open(file, "rb")
     # unpickle the data
@@ -93,7 +93,7 @@ def load_Skora2018():
     Energy Scarcity Promotes a Brain-wide Sleep State Modulated by Insulin Signaling in C. elegans.
     """
     # ensure the data has been preprocessed
-    file = os.path.join(ROOT_DIR, "preprocessing", "Skora2018.pickle")
+    file = os.path.join(ROOT_DIR, "data",  "processed", "neural", "Skora2018.pickle")
     assert os.path.exists(file)
     pickle_in = open(file, "rb")
     # unpickle the data
@@ -107,7 +107,7 @@ def load_Kaplan2020():
     Nested Neuronal Dynamics Orchestrate a Behavioral Hierarchy across Timescales.
     """
     # ensure the data has been preprocessed
-    file = os.path.join(ROOT_DIR, "preprocessing", "Kaplan2020.pickle")
+    file = os.path.join(ROOT_DIR, "data",  "processed", "neural", "Kaplan2020.pickle")
     assert os.path.exists(file)
     pickle_in = open(file, "rb")
     # unpickle the data
@@ -121,7 +121,7 @@ def load_Uzel2022():
     A set of hub neurons and non-local connectivity features support global brain dynamics in C. elegans.
     """
     # ensure the data has been preprocessed
-    file = os.path.join(ROOT_DIR, "preprocessing", "Uzel2022.pickle")
+    file = os.path.join(ROOT_DIR, "data",  "processed", "neural", "Uzel2022.pickle")
     assert os.path.exists(file)
     pickle_in = open(file, "rb")
     # unpickle the data
@@ -150,13 +150,11 @@ if __name__ == "__main__":
     )
     X, Y, meta = next(iter(loader))
     # output properties of the dataset and data loader
-    print()
-    print("size", dataset.size, "feature", dataset.num_features)
-    print()
+    print("size", dataset.size, "feature", dataset.num_features, end="\n\n")
     print(
         X.shape,
         Y.shape,
         {k: meta[k][0] for k in meta},
         list(map(lambda x: x.shape, meta.values())),
+        end="\n\n",
     )
-    print()

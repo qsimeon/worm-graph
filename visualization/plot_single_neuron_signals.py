@@ -15,7 +15,8 @@ def plot_single_neuron_signals(single_worm_dataset, neuron_idx):
     max_time = single_worm_dataset["max_time"]
     # selecting a neuron to plot
     idx = neuron_idx
-    nid = id_neuron[idx]
+    nid = id_neuron[idx] 
+    print ("hello " ) 
     fig, axs = plt.subplots(1, 3, figsize=(20, 5))
     # plot the full Ca2+ recording of that neuron
     axs[0].plot(calcium_data[:, idx])
