@@ -68,7 +68,7 @@ Always activate the environment before working on the project: `conda activate w
  * Aim to make every script not significantly longer than 100 lines. If your code is getting longer than this, it probably is a 
    good idea to modularize things by putting certain functions or classes in separare files like `utils.py` or `models.py`, etc.
  * Always shape neural data matrices as `(time, neurons, features)`.
- * Use the [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black) code formatter (https://black.readthedocs.io/en/stable/index.html). Before a commit, run the command `black .` in the Terminal. 
+ * Use the [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)] code formatter. Before a commit, run the command `black .` in the Terminal to automatically reformat code according to the Black Code Style. 
 
  ## Organization: things to TODO.
 
