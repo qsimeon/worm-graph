@@ -28,6 +28,7 @@ dependencies:
   - mat73
   - pip:
     - torch-geometric-temporal
+    - "black[jupyter]"
     - hydra-core
     - omegaconf
     - statsmodels

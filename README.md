@@ -1,31 +1,30 @@
 # worm-graph
 ## Simulating worms with graph nets.
 
-```.
-├── Data
+```
+├── data
+   ├── batch_samler.py
+   ├── graph_inject_data.py
    ├── load_connectome.py
    ├── load_neural_activity.py
-   ├── iter_dataset.py
    ├── map_dataset.py
-   ├── batch_sampler.py
    └── PlotRealData.ipynb
-├── Preprocessing
-   ├── process_raw.py
-   ├── PickleNeuralData.ipynb
+├── preprocess
    ├── export_nodes_edges.m
-   ├── graph_tensors.pt
-   ├── Nguyen2017.pickle
-   ├── Kaplan2020.pickle
-   └── Uzel2022.pickle
-├── Models
-   ├── RNN Models
-   ├── GNN Models
-   └── Flexible Frameworks
-├── Tasks
-   ├── Time-series prediction
-   ├── Structure prediction
-   ├── Perturbation experiments
-   └── Self-supervised tasks
+   ├── pickle_neural_data.py
+   └── process_raw.py
+├── models
+   ├── gnn_models.py
+   ├── linear_models.py
+   └── rnn_models.py
+├── tasks
+   └── all_tasks.py
+├── train
+   ├── add_train_val_mask.py
+   ├── GNNLossCurves.ipynb
+   ├── LossBaselines.ipynb
+   ├── 
+   └── 
 ├── Visualizations
    ├── Connectome graph
       ├── DrawConnectome.ipynb
@@ -45,7 +44,7 @@ Using the terminal or an Anaconda Prompt: `conda env create -f environment.yml`
 Activate the new environment: `conda activate worm-graph`
 
 Add the `worm-graph` root directory to Anaconda path: `conda develop .`
-   *Important:* Do not skip the step above. Otherwise you will face a lot of `ModuleNotFoundError`s.
+   *Important:* Do not skip the step above. Otherwise you will be faced with a lot of `ModuleNotFoundError`s.
 
 Verify that the new environment was installed correctly: `conda env list`
    You can also use `conda info --envs`.
@@ -58,21 +57,26 @@ Always activate the environment before working on the project: `conda activate w
 
  ## Naming conventions
  
- Folders, use lowercase letters with underscores to separate words.
- **Example:** `my_folder`.
-
+ For folders and script files, use the `lower_case_with_underscores` naming style.
+ **Example:** `my_folder`, `my_script.py`.
+ 
+ For Jupyter notebooks, use the `UPPER_CASE_WITH_UNDERSCORES` naming style.
+ **Example:** `MyAnlysisNotebook.ipynb`.
+ 
  ## Style conventions
+
  * Aim to make every script not significantly longer than 100 lines. If your code is getting longer than this, it probably is a 
    good idea to modularize things by putting certain functions or classes in separare files like `utils.py` or `models.py`, etc.
  * Always shape neural data matrices as `(time, neurons, features)`.
 
 
  ## Organization: things to TODO.
+
 - Do both: 
    - training on the first half of timesteps predicting the second half, and;
    - training on the second half of timesteps and the predicting the first half.
 - Look at how people structure language models (NLP). They are tested on predicting arbitrary future timesteps. 
 - Various tasks to implement:
    - predict the identity of the neuron given the trace (node prediction).
+   - predict whether or not there exist an edge (edge prediction). 
    - predict the behavior of the worm from its neural activity.
-   - edge prediction: predict whether or not there exist an edge. 
