@@ -23,15 +23,23 @@
    ├── add_train_val_mask.py
    ├── GNNLossCurves.ipynb
    ├── LossBaselines.ipynb
-   ├── 
-   └── 
+   ├── lstm_hidden_size_experiment.py
+   ├── scaling_train.py
+   ├── train_gnn.py
+   └── train_main.py
 ├── Visualizations
-   ├── Connectome graph
-      ├── DrawConnectome.ipynb
-   ├── Loss curves
-   └── Time series predictions
-└── PipelineExplorer.ipynb: 
-   └── Notebook to run through the pipeline interactively.
+   ├── draw_connectome.py
+   ├── DrawConnectome.ipynb
+   ├── PipeLineExplorer.ipynb
+   ├── plot_before_after_weights.py
+   ├── plot_correlation_scatter.py
+   ├── plot_loss_log.py
+   ├── plot_more_data_losses.py
+   ├── plot_multi_worm_losses.py
+   ├── plot_neuron_train_test_samples.py
+   ├── plot_single_neuron_signals.py
+   ├── plot_target_prediction.py
+   └── plot_worm_data.py
  ```
  
 ## Create the environment from the `environment.yml` file

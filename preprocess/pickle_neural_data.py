@@ -1,6 +1,7 @@
 import torch
 from torch_geometric.data import download_url, extract_zip
 import os
+import subprocess
 import shutil
 import mat73
 import pickle
@@ -8,6 +9,8 @@ import numpy as np
 from scipy.io import loadmat
 from utils import ROOT_DIR, VALID_DATASETS
 from sklearn.preprocessing import MinMaxScaler, PowerTransformer
+from sklearn.impute import SimpleImputer
+from reshape_calcium_data import reshape_calcium_data
 
 
 def pickle_neural_data(
@@ -27,13 +30,26 @@ def pickle_neural_data(
     processed_path = os.path.join(root, "data/processed/neural")
     # Download the curated open-source worm datasets from host server
     if not os.path.exists(source_path):
-        # Downloading can take up to 8 minutes depending on your network speed!
+        # Downloading can take up to 8 minutes depending on your network speed.
         download_url(url=url, folder=root, filename=zipfile)
-        extract_zip(zip_path, folder=source_path)  # extract zip file
+        if dataset.lower() == "all":  # extract all the datasets
+            extract_zip(zip_path, folder=source_path)  # extract zip file
+        else:
+            bash_command = [
+                "unzip",
+                zip_path,
+                "{}/*".format(dataset),
+                "-d",
+                source_path,
+            ]
+            std_out = subprocess.run(bash_command, text=True)
+            print(std_out)
         os.unlink(zip_path)  # remove zip file
-    # Pickle all the datasets?
+    print()
+    # Pickle all the datasets ... OR
     if dataset is None or dataset.lower() == "all":
         for dataset in VALID_DATASETS:
+            print("Dataset:", dataset, end="\n\n")
             pickler = eval("pickle_" + dataset)
             pickler(transform)
     # (re)-Pickle a single dataset
@@ -43,6 +59,7 @@ def pickle_neural_data(
         ), "Invalid dataset requested! Please pick one from:\n{}".format(
             list(VALID_DATASETS)
         )
+        print("Dataset:", dataset, end="\n\n")
         pickler = eval("pickle_" + dataset)
         pickler(transform)
     return None
@@ -71,26 +88,29 @@ def pickle_Kato2015(transform):
             (str(_) if j is None or isinstance(j, np.ndarray) else str(j))
             for _, j in enumerate(i_IDs)
         ]
-        _, inds = np.unique(i_IDs, return_index=True)
+        _, inds = np.unique(
+            i_IDs, return_index=True
+        )  # only keep indices of unique neuron IDs
         i_IDs = [i_IDs[_] for _ in inds]
-        neuron_ID = {
+        real_data = real_data[:, inds.astype(int)]  # only get data for unique neurons
+        neuron_to_idx = {
             nid: (str(nid) if (j is None or isinstance(j, np.ndarray)) else str(j))
             for nid, j in enumerate(i_IDs)
         }
-        neuron_ID = {
+        neuron_to_idx = {
             nid: (
                 name.replace("0", "")
                 if not name.endswith("0") and not name.isnumeric()
                 else name
             )
-            for nid, name in neuron_ID.items()
+            for nid, name in neuron_to_idx.items()
         }
-        neuron_ID = dict(
-            (v, k) for k, v in neuron_ID.items()
+        neuron_to_idx = dict(
+            (v, k) for k, v in neuron_to_idx.items()
         )  # map should be neuron -> index
         max_time, num_neurons = real_data.shape
         num_named = len(
-            [k for k in neuron_ID.keys() if not k.isnumeric()]
+            [k for k in neuron_to_idx.keys() if not k.isnumeric()]
         )  # number of neurons that were ID'd
         print(
             "len. Ca recording %s, total num. neurons %s, num. ID'd neurons %s"
@@ -106,13 +126,17 @@ def pickle_Kato2015(transform):
             {
                 worm: {
                     "data": real_data,
-                    "neuron_id": neuron_ID,
+                    "neuron_to_idx": neuron_to_idx,
                     "max_time": max_time,
                     "num_neurons": num_neurons,
                     "num_named": num_named,
                 },
             }
         )
+        # standardize the shape of calcium data to 302 x time
+        new_data, neurons_mask = reshape_calcium_data(data_dict[worm])
+        # insert the included neurons mask and reshaped data
+        data_dict[worm].update({"data": new_data, "neurons_mask": neurons_mask})
     # 'WT_NoStim'
     # load the second .mat file
     arr = mat73.loadmat(os.path.join(source_path, "Kato2015", "WT_NoStim.mat"))[
@@ -134,24 +158,27 @@ def pickle_Kato2015(transform):
             (str(_) if j is None or isinstance(j, np.ndarray) else str(j))
             for _, j in enumerate(ii_IDs)
         ]
-        _, inds = np.unique(ii_IDs, return_index=True)
+        _, inds = np.unique(
+            ii_IDs, return_index=True
+        )  # only keep indices of unique neuron IDs
         ii_IDs = [ii_IDs[_] for _ in inds]
-        neuron_ID = {
+        real_data = real_data[:, inds.astype(int)]  # only get data for unique neurons
+        neuron_to_idx = {
             nid: (str(nid) if (j is None or isinstance(j, np.ndarray)) else str(j))
             for nid, j in enumerate(ii_IDs)
         }
-        neuron_ID = {
+        neuron_to_idx = {
             nid: (
                 name.replace("0", "")
                 if not name.endswith("0") and not name.isnumeric()
                 else name
             )
-            for nid, name in neuron_ID.items()
+            for nid, name in neuron_to_idx.items()
         }
-        neuron_ID = dict((v, k) for k, v in neuron_ID.items())
+        neuron_to_idx = dict((v, k) for k, v in neuron_to_idx.items())
         max_time, num_neurons = real_data.shape
         num_named = len(
-            [k for k in neuron_ID.keys() if not k.isnumeric()]
+            [k for k in neuron_to_idx.keys() if not k.isnumeric()]
         )  # number of neurons that were ID'd
         print(
             "len. Ca recording %s, total num. neurons %s, num. ID'd neurons %s"
@@ -167,13 +194,17 @@ def pickle_Kato2015(transform):
             {
                 worm: {
                     "data": real_data,
-                    "neuron_id": neuron_ID,
+                    "neuron_to_idx": neuron_to_idx,
                     "max_time": max_time,
                     "num_neurons": num_neurons,
                     "num_named": num_named,
                 },
             }
         )
+        # standardize the shape of calcium data to 302 x time
+        new_data, neurons_mask = reshape_calcium_data(data_dict[worm])
+        # insert the included neurons mask and reshaped data
+        data_dict[worm].update({"data": new_data, "neurons_mask": neurons_mask})
     # pickle the data
     file = os.path.join(processed_path, "Kato2015.pickle")
     pickle_out = open(file, "wb")
@@ -211,25 +242,27 @@ def pickle_Nichols2017(transform):
             (str(_) if j is None or isinstance(j, np.ndarray) else str(j))
             for _, j in enumerate(i_IDs)
         ]
-        _, inds = np.unique(i_IDs, return_index=True)
+        _, inds = np.unique(
+            i_IDs, return_index=True
+        )  # only keep indices of unique neuron IDs
         i_IDs = [i_IDs[_] for _ in inds]
-        real_data = real_data[:, inds.astype(int)]
-        neuron_ID = {
+        real_data = real_data[:, inds.astype(int)]  # only get data for unique neurons
+        neuron_to_idx = {
             nid: (str(nid) if (j is None or isinstance(j, np.ndarray)) else str(j))
             for nid, j in enumerate(i_IDs)
         }
-        neuron_ID = {
+        neuron_to_idx = {
             nid: (
                 name.replace("0", "")
                 if not name.endswith("0") and not name.isnumeric()
                 else name
             )
-            for nid, name in neuron_ID.items()
+            for nid, name in neuron_to_idx.items()
         }
-        neuron_ID = dict((v, k) for k, v in neuron_ID.items())
+        neuron_to_idx = dict((v, k) for k, v in neuron_to_idx.items())
         max_time, num_neurons = real_data.shape
         num_named = len(
-            [k for k in neuron_ID.keys() if not k.isnumeric()]
+            [k for k in neuron_to_idx.keys() if not k.isnumeric()]
         )  # number of neurons that were ID'd
         print(
             "len. Ca recording %s, total num. neurons %s, num. ID'd neurons %s"
@@ -245,13 +278,17 @@ def pickle_Nichols2017(transform):
             {
                 worm: {
                     "data": real_data,
-                    "neuron_id": neuron_ID,
+                    "neuron_to_idx": neuron_to_idx,
                     "max_time": max_time,
                     "num_neurons": num_neurons,
                     "num_named": num_named,
                 },
             }
         )
+        # standardize the shape of calcium data to 302 x time
+        new_data, neurons_mask = reshape_calcium_data(data_dict[worm])
+        # insert the included neurons mask and reshaped data
+        data_dict[worm].update({"data": new_data, "neurons_mask": neurons_mask})
     # 'n2_prelet'
     # load the second .mat file
     arr = mat73.loadmat(os.path.join(source_path, "Nichols2017", "n2_prelet.mat"))[
@@ -271,24 +308,27 @@ def pickle_Nichols2017(transform):
             (str(_) if j is None or isinstance(j, np.ndarray) else str(j))
             for _, j in enumerate(ii_IDs)
         ]
-        _, inds = np.unique(ii_IDs, return_index=True)
+        _, inds = np.unique(
+            ii_IDs, return_index=True
+        )  # only keep indices of unique neuron IDs
         ii_IDs = [ii_IDs[_] for _ in inds]
-        neuron_ID = {
+        real_data = real_data[:, inds.astype(int)]  # only get data for unique neurons
+        neuron_to_idx = {
             nid: (str(nid) if (j is None or isinstance(j, np.ndarray)) else str(j))
             for nid, j in enumerate(ii_IDs)
         }
-        neuron_ID = {
+        neuron_to_idx = {
             nid: (
                 name.replace("0", "")
                 if not name.endswith("0") and not name.isnumeric()
                 else name
             )
-            for nid, name in neuron_ID.items()
+            for nid, name in neuron_to_idx.items()
         }
-        neuron_ID = dict((v, k) for k, v in neuron_ID.items())
+        neuron_to_idx = dict((v, k) for k, v in neuron_to_idx.items())
         max_time, num_neurons = real_data.shape
         num_named = len(
-            [k for k in neuron_ID.keys() if not k.isnumeric()]
+            [k for k in neuron_to_idx.keys() if not k.isnumeric()]
         )  # number of neurons that were ID'd
         print(
             "len. Ca recording %s, total num. neurons %s, num. ID'd neurons %s"
@@ -304,13 +344,17 @@ def pickle_Nichols2017(transform):
             {
                 worm: {
                     "data": real_data,
-                    "neuron_id": neuron_ID,
+                    "neuron_to_idx": neuron_to_idx,
                     "max_time": max_time,
                     "num_neurons": num_neurons,
                     "num_named": num_named,
                 },
             }
         )
+        # standardize the shape of calcium data to 302 x time
+        new_data, neurons_mask = reshape_calcium_data(data_dict[worm])
+        # insert the included neurons mask and reshaped data
+        data_dict[worm].update({"data": new_data, "neurons_mask": neurons_mask})
     # 'npr1_let'
     # load the third .mat file
     arr = mat73.loadmat(os.path.join(source_path, "Nichols2017", "npr1_let.mat"))[
@@ -330,24 +374,27 @@ def pickle_Nichols2017(transform):
             (str(_) if j is None or isinstance(j, np.ndarray) else str(j))
             for _, j in enumerate(iii_IDs)
         ]
-        _, inds = np.unique(iii_IDs, return_index=True)
+        _, inds = np.unique(
+            iii_IDs, return_index=True
+        )  # only keep indices of unique neuron IDs
         iii_IDs = [iii_IDs[_] for _ in inds]
-        neuron_ID = {
+        real_data = real_data[:, inds.astype(int)]  # only get data for unique neurons
+        neuron_to_idx = {
             nid: (str(nid) if (j is None or isinstance(j, np.ndarray)) else str(j))
             for nid, j in enumerate(iii_IDs)
         }
-        neuron_ID = {
+        neuron_to_idx = {
             nid: (
                 name.replace("0", "")
                 if not name.endswith("0") and not name.isnumeric()
                 else name
             )
-            for nid, name in neuron_ID.items()
+            for nid, name in neuron_to_idx.items()
         }
-        neuron_ID = dict((v, k) for k, v in neuron_ID.items())
+        neuron_to_idx = dict((v, k) for k, v in neuron_to_idx.items())
         max_time, num_neurons = real_data.shape
         num_named = len(
-            [k for k in neuron_ID.keys() if not k.isnumeric()]
+            [k for k in neuron_to_idx.keys() if not k.isnumeric()]
         )  # number of neurons that were ID'd
         print(
             "len. Ca recording %s, total num. neurons %s, num. ID'd neurons %s"
@@ -363,13 +410,17 @@ def pickle_Nichols2017(transform):
             {
                 worm: {
                     "data": real_data,
-                    "neuron_id": neuron_ID,
+                    "neuron_to_idx": neuron_to_idx,
                     "max_time": max_time,
                     "num_neurons": num_neurons,
                     "num_named": num_named,
                 },
             }
         )
+        # standardize the shape of calcium data to 302 x time
+        new_data, neurons_mask = reshape_calcium_data(data_dict[worm])
+        # insert the included neurons mask and reshaped data
+        data_dict[worm].update({"data": new_data, "neurons_mask": neurons_mask})
     # 'npr1_prelet'
     # load the fourth .mat file
     arr = mat73.loadmat(os.path.join(source_path, "Nichols2017", "npr1_prelet.mat"))[
@@ -389,24 +440,27 @@ def pickle_Nichols2017(transform):
             (str(_) if j is None or isinstance(j, np.ndarray) else str(j))
             for _, j in enumerate(iv_IDs)
         ]
-        _, inds = np.unique(iv_IDs, return_index=True)
+        _, inds = np.unique(
+            iv_IDs, return_index=True
+        )  # only keep indices of unique neuron IDs
         iv_IDs = [iv_IDs[_] for _ in inds]
-        neuron_ID = {
+        real_data = real_data[:, inds.astype(int)]  # only get data for unique neurons
+        neuron_to_idx = {
             nid: (str(nid) if (j is None or isinstance(j, np.ndarray)) else str(j))
             for nid, j in enumerate(iv_IDs)
         }
-        neuron_ID = {
+        neuron_to_idx = {
             nid: (
                 name.replace("0", "")
                 if not name.endswith("0") and not name.isnumeric()
                 else name
             )
-            for nid, name in neuron_ID.items()
+            for nid, name in neuron_to_idx.items()
         }
-        neuron_ID = dict((v, k) for k, v in neuron_ID.items())
+        neuron_to_idx = dict((v, k) for k, v in neuron_to_idx.items())
         max_time, num_neurons = real_data.shape
         num_named = len(
-            [k for k in neuron_ID.keys() if not k.isnumeric()]
+            [k for k in neuron_to_idx.keys() if not k.isnumeric()]
         )  # number of neurons that were ID'd
         print(
             "len. Ca recording %s, total num. neurons %s, num. ID'd neurons %s"
@@ -422,13 +476,17 @@ def pickle_Nichols2017(transform):
             {
                 worm: {
                     "data": real_data,
-                    "neuron_id": neuron_ID,
+                    "neuron_to_idx": neuron_to_idx,
                     "max_time": max_time,
                     "num_neurons": num_neurons,
                     "num_named": num_named,
                 },
             }
         )
+        # standardize the shape of calcium data to 302 x time
+        new_data, neurons_mask = reshape_calcium_data(data_dict[worm])
+        # insert the included neurons mask and reshaped data
+        data_dict[worm].update({"data": new_data, "neurons_mask": neurons_mask})
     # pickle the data
     file = os.path.join(processed_path, "Nichols2017.pickle")
     pickle_out = open(file, "wb")
@@ -446,6 +504,7 @@ def pickle_Nguyen2017(transform):
     Pickles the worm neural activity data from Nguyen et al., PLOS CompBio 2017,
     Automatically tracking neurons in a moving and deforming brain.
     """
+    imputer = SimpleImputer(missing_values=np.nan, strategy="median")
     # WORM 0
     # load .mat file for  worm 0
     arr0 = loadmat(
@@ -461,7 +520,7 @@ def pickle_Nguyen2017(transform):
         "cgIdx"
     ].squeeze()  # ordered indices derived from heirarchically clustering the correlation matrix.
     real_data0 = G2[cgIdx - 1, :].T  # to show organized traces, use Ratio2(cgIdx,:)
-    real_data0 = np.nan_to_num(real_data0)  # replace NaNs
+    real_data0 = imputer.fit_transform(real_data0)  # impute missing values (i.e. NaNs)
     max_time0, num_neurons0 = real_data0.shape
     num_named0 = 0
     worm0_ID = {i: str(i) for i in range(num_neurons0)}
@@ -492,7 +551,7 @@ def pickle_Nguyen2017(transform):
         "cgIdx"
     ].squeeze()  # ordered indices derived from heirarchically clustering the correlation matrix.
     real_data1 = G2[cgIdx - 1, :].T  # to show organized traces, use Ratio2(cgIdx,:)
-    real_data1 = np.nan_to_num(real_data1)  # replace NaNs
+    real_data1 = imputer.fit_transform(real_data1)  # replace NaNs
     max_time1, num_neurons1 = real_data1.shape
     num_named1 = 0
     worm1_ID = {i: str(i) for i in range(num_neurons1)}
@@ -523,7 +582,7 @@ def pickle_Nguyen2017(transform):
         "cgIdx"
     ].squeeze()  # ordered indices derived from heirarchically clustering the correlation matrix.
     real_data2 = G2[cgIdx - 1, :].T  # to show organized traces, use Ratio2(cgIdx,:)
-    real_data2 = np.nan_to_num(real_data2)  # replace NaNs
+    real_data2 = imputer.fit_transform(real_data2)  # replace NaNs
     max_time2, num_neurons2 = real_data2.shape
     num_named2 = 0
     worm2_ID = {i: str(i) for i in range(num_neurons2)}
@@ -543,26 +602,31 @@ def pickle_Nguyen2017(transform):
     data_dict = {
         "worm0": {
             "data": real_data0,
-            "neuron_id": worm0_ID,
+            "neuron_to_idx": worm0_ID,
             "max_time": max_time0,
             "num_neurons": num_neurons0,
             "num_named": num_named0,
         },
         "worm1": {
             "data": real_data1,
-            "neuron_id": worm1_ID,
+            "neuron_to_idx": worm1_ID,
             "max_time": max_time1,
             "num_neurons": num_neurons1,
             "num_named": num_named1,
         },
         "worm2": {
             "data": real_data2,
-            "neuron_id": worm2_ID,
+            "neuron_to_idx": worm2_ID,
             "max_time": max_time2,
             "num_neurons": num_neurons2,
             "num_named": num_named2,
         },
     }
+    for worm in data_dict.keys():
+        # standardize the shape of calcium data to 302 x time
+        new_data, neurons_mask = reshape_calcium_data(data_dict[worm])
+        # insert the included neurons mask and reshaped data
+        data_dict[worm].update({"data": new_data, "neurons_mask": neurons_mask})
     file = os.path.join(processed_path, "Nguyen2017.pickle")
     pickle_out = open(file, "wb")
     pickle.dump(data_dict, pickle_out)
@@ -598,25 +662,27 @@ def pickle_Skora2018(transform):
             (str(_) if j is None or isinstance(j, np.ndarray) else str(j))
             for _, j in enumerate(i_IDs)
         ]
-        _, inds = np.unique(i_IDs, return_index=True)
+        _, inds = np.unique(
+            i_IDs, return_index=True
+        )  # only keep indices of unique neuron IDs
         i_IDs = [i_IDs[_] for _ in inds]
-        real_data = real_data[:, inds.astype(int)]
-        neuron_ID = {
+        real_data = real_data[:, inds.astype(int)]  # only get data for unique neurons
+        neuron_to_idx = {
             nid: (str(nid) if (j is None or isinstance(j, np.ndarray)) else str(j))
             for nid, j in enumerate(i_IDs)
         }
-        neuron_ID = {
+        neuron_to_idx = {
             nid: (
                 name.replace("0", "")
                 if not name.endswith("0") and not name.isnumeric()
                 else name
             )
-            for nid, name in neuron_ID.items()
+            for nid, name in neuron_to_idx.items()
         }
-        neuron_ID = dict((v, k) for k, v in neuron_ID.items())
+        neuron_to_idx = dict((v, k) for k, v in neuron_to_idx.items())
         max_time, num_neurons = real_data.shape
         num_named = len(
-            [k for k in neuron_ID.keys() if not k.isnumeric()]
+            [k for k in neuron_to_idx.keys() if not k.isnumeric()]
         )  # number of neurons that were ID'd
         print(
             "len. Ca recording %s, total num. neurons %s, num. ID'd neurons %s"
@@ -632,13 +698,17 @@ def pickle_Skora2018(transform):
             {
                 worm: {
                     "data": real_data,
-                    "neuron_id": neuron_ID,
+                    "neuron_to_idx": neuron_to_idx,
                     "max_time": max_time,
                     "num_neurons": num_neurons,
                     "num_named": num_named,
                 },
             }
         )
+        # standardize the shape of calcium data to 302 x time
+        new_data, neurons_mask = reshape_calcium_data(data_dict[worm])
+        # insert the included neurons mask and reshaped data
+        data_dict[worm].update({"data": new_data, "neurons_mask": neurons_mask})
     # 'WT_starved'
     # load the second .mat file
     arr = mat73.loadmat(os.path.join(source_path, "Skora2018", "WT_starved.mat"))[
@@ -658,25 +728,27 @@ def pickle_Skora2018(transform):
             (str(_) if j is None or isinstance(j, np.ndarray) else str(j))
             for _, j in enumerate(ii_IDs)
         ]
-        _, inds = np.unique(ii_IDs, return_index=True)
+        _, inds = np.unique(
+            ii_IDs, return_index=True
+        )  # only keep indices of unique neuron IDs
         ii_IDs = [ii_IDs[_] for _ in inds]
-        real_data = real_data[:, inds.astype(int)]
-        neuron_ID = {
+        real_data = real_data[:, inds.astype(int)]  # only get data for unique neurons
+        neuron_to_idx = {
             nid: (str(nid) if (j is None or isinstance(j, np.ndarray)) else str(j))
             for nid, j in enumerate(ii_IDs)
         }
-        neuron_ID = {
+        neuron_to_idx = {
             nid: (
                 name.replace("0", "")
                 if not name.endswith("0") and not name.isnumeric()
                 else name
             )
-            for nid, name in neuron_ID.items()
+            for nid, name in neuron_to_idx.items()
         }
-        neuron_ID = dict((v, k) for k, v in neuron_ID.items())
+        neuron_to_idx = dict((v, k) for k, v in neuron_to_idx.items())
         max_time, num_neurons = real_data.shape
         num_named = len(
-            [k for k in neuron_ID.keys() if not k.isnumeric()]
+            [k for k in neuron_to_idx.keys() if not k.isnumeric()]
         )  # number of neurons that were ID'd
         print(
             "len. Ca recording %s, total num. neurons %s, num. ID'd neurons %s"
@@ -692,13 +764,17 @@ def pickle_Skora2018(transform):
             {
                 worm: {
                     "data": real_data,
-                    "neuron_id": neuron_ID,
+                    "neuron_to_idx": neuron_to_idx,
                     "max_time": max_time,
                     "num_neurons": num_neurons,
                     "num_named": num_named,
                 },
             }
         )
+        # standardize the shape of calcium data to 302 x time
+        new_data, neurons_mask = reshape_calcium_data(data_dict[worm])
+        # insert the included neurons mask and reshaped data
+        data_dict[worm].update({"data": new_data, "neurons_mask": neurons_mask})
     # pickle the data
     file = os.path.join(processed_path, "Skora2018.pickle")
     pickle_out = open(file, "wb")
@@ -737,20 +813,20 @@ def pickle_Kaplan2020(transform):
             all_IDs[i], return_index=True
         )  # only keep indices of unique neuron IDs
         all_IDs[i] = [all_IDs[i][_] for _ in inds]
-        real_data = real_data[:, inds.astype(int)]
-        neuron_ID = {nid: str(j) for nid, j in enumerate(all_IDs[i])}
-        neuron_ID = {
+        real_data = real_data[:, inds.astype(int)]  # only get data for unique neurons
+        neuron_to_idx = {nid: str(j) for nid, j in enumerate(all_IDs[i])}
+        neuron_to_idx = {
             nid: (
                 name.replace("0", "")
                 if not name.endswith("0") and not name.isnumeric()
                 else name
             )
-            for nid, name in neuron_ID.items()
+            for nid, name in neuron_to_idx.items()
         }
-        neuron_ID = dict((v, k) for k, v in neuron_ID.items())
+        neuron_to_idx = dict((v, k) for k, v in neuron_to_idx.items())
         max_time, num_neurons = real_data.shape
         num_named = len(
-            [k for k in neuron_ID.keys() if not k.isnumeric()]
+            [k for k in neuron_to_idx.keys() if not k.isnumeric()]
         )  # number of neurons that were ID'd
         print(
             "len. Ca recording %s, total num. neurons %s, num. ID'd neurons %s"
@@ -766,13 +842,17 @@ def pickle_Kaplan2020(transform):
             {
                 worm: {
                     "data": real_data,
-                    "neuron_id": neuron_ID,
+                    "neuron_to_idx": neuron_to_idx,
                     "max_time": max_time,
                     "num_neurons": num_neurons,
                     "num_named": num_named,
                 },
             }
         )
+        # standardize the shape of calcium data to 302 x time
+        new_data, neurons_mask = reshape_calcium_data(data_dict[worm])
+        # insert the included neurons mask and reshaped data
+        data_dict[worm].update({"data": new_data, "neurons_mask": neurons_mask})
     # 'MNhisCl_RIShisCl_Neuron2019'
     # load the second .mat file
     arr = mat73.loadmat(
@@ -793,20 +873,20 @@ def pickle_Kaplan2020(transform):
             all_IDs[ii], return_index=True
         )  # only keep indices of unique neuron IDs
         all_IDs[ii] = [all_IDs[ii][_] for _ in inds]
-        real_data = real_data[:, inds.astype(int)]
-        neuron_ID = {nid: str(j) for nid, j in enumerate(all_IDs[ii])}
-        neuron_ID = {
+        real_data = real_data[:, inds.astype(int)]  # only get data for unique neurons
+        neuron_to_idx = {nid: str(j) for nid, j in enumerate(all_IDs[ii])}
+        neuron_to_idx = {
             nid: (
                 name.replace("0", "")
                 if not name.endswith("0") and not name.isnumeric()
                 else name
             )
-            for nid, name in neuron_ID.items()
+            for nid, name in neuron_to_idx.items()
         }
-        neuron_ID = dict((v, k) for k, v in neuron_ID.items())
+        neuron_to_idx = dict((v, k) for k, v in neuron_to_idx.items())
         max_time, num_neurons = real_data.shape
         num_named = len(
-            [k for k in neuron_ID.keys() if not k.isnumeric()]
+            [k for k in neuron_to_idx.keys() if not k.isnumeric()]
         )  # number of neurons that were ID'd
         print(
             "len. Ca recording %s, total num. neurons %s, num. ID'd neurons %s"
@@ -822,13 +902,17 @@ def pickle_Kaplan2020(transform):
             {
                 worm: {
                     "data": real_data,
-                    "neuron_id": neuron_ID,
+                    "neuron_to_idx": neuron_to_idx,
                     "max_time": max_time,
                     "num_neurons": num_neurons,
                     "num_named": num_named,
                 },
             }
         )
+        # standardize the shape of calcium data to 302 x time
+        new_data, neurons_mask = reshape_calcium_data(data_dict[worm])
+        # insert the included neurons mask and reshaped data
+        data_dict[worm].update({"data": new_data, "neurons_mask": neurons_mask})
     # 'MNhisCl_RIShisCl_Neuron2019'
     # load the third .mat file
     arr = mat73.loadmat(
@@ -849,20 +933,20 @@ def pickle_Kaplan2020(transform):
             all_IDs[iii], return_index=True
         )  # only keep indices of unique neuron IDs
         all_IDs[iii] = [all_IDs[iii][_] for _ in inds]
-        real_data = real_data[:, inds.astype(int)]
-        neuron_ID = {nid: str(j) for nid, j in enumerate(all_IDs[iii])}
-        neuron_ID = {
+        real_data = real_data[:, inds.astype(int)]  # only get data for unique neurons
+        neuron_to_idx = {nid: str(j) for nid, j in enumerate(all_IDs[iii])}
+        neuron_to_idx = {
             nid: (
                 name.replace("0", "")
                 if not name.endswith("0") and not name.isnumeric()
                 else name
             )
-            for nid, name in neuron_ID.items()
+            for nid, name in neuron_to_idx.items()
         }
-        neuron_ID = dict((v, k) for k, v in neuron_ID.items())
+        neuron_to_idx = dict((v, k) for k, v in neuron_to_idx.items())
         max_time, num_neurons = real_data.shape
         num_named = len(
-            [k for k in neuron_ID.keys() if not k.isnumeric()]
+            [k for k in neuron_to_idx.keys() if not k.isnumeric()]
         )  # number of neurons that were ID'd
         print(
             "len. Ca recording %s, total num. neurons %s, num. ID'd neurons %s"
@@ -878,13 +962,17 @@ def pickle_Kaplan2020(transform):
             {
                 worm: {
                     "data": real_data,
-                    "neuron_id": neuron_ID,
+                    "neuron_to_idx": neuron_to_idx,
                     "max_time": max_time,
                     "num_neurons": num_neurons,
                     "num_named": num_named,
                 },
             }
         )
+        # standardize the shape of calcium data to 302 x time
+        new_data, neurons_mask = reshape_calcium_data(data_dict[worm])
+        # insert the included neurons mask and reshaped data
+        data_dict[worm].update({"data": new_data, "neurons_mask": neurons_mask})
     # pickle the data
     file = os.path.join(processed_path, "Kaplan2020.pickle")
     pickle_out = open(file, "wb")
@@ -921,22 +1009,22 @@ def pickle_Uzel2022(transform):
             i_IDs, return_index=True
         )  # only keep indices of unique neuron IDs
         i_IDs = [i_IDs[_] for _ in inds]
-        real_data = real_data[:, inds.astype(int)]
-        neuron_ID = {
+        real_data = real_data[:, inds.astype(int)]  # only get data for unique neurons
+        neuron_to_idx = {
             nid: (str(int(j)) if type(j) != str else j) for nid, j in enumerate(i_IDs)
         }
-        neuron_ID = {
+        neuron_to_idx = {
             nid: (
                 name.replace("0", "")
                 if not name.endswith("0") and not name.isnumeric()
                 else name
             )
-            for nid, name in neuron_ID.items()
+            for nid, name in neuron_to_idx.items()
         }
-        neuron_ID = dict((v, k) for k, v in neuron_ID.items())
+        neuron_to_idx = dict((v, k) for k, v in neuron_to_idx.items())
         max_time, num_neurons = real_data.shape
         num_named = len(
-            [k for k in neuron_ID.keys() if not k.isnumeric()]
+            [k for k in neuron_to_idx.keys() if not k.isnumeric()]
         )  # number of neurons that were ID'd
         print(
             "len. Ca recording %s, total num. neurons %s, num. ID'd neurons %s"
@@ -952,13 +1040,17 @@ def pickle_Uzel2022(transform):
             {
                 worm: {
                     "data": real_data,
-                    "neuron_id": neuron_ID,
+                    "neuron_to_idx": neuron_to_idx,
                     "max_time": max_time,
                     "num_neurons": num_neurons,
                     "num_named": num_named,
                 },
             }
         )
+        # standardize the shape of calcium data to 302 x time
+        new_data, neurons_mask = reshape_calcium_data(data_dict[worm])
+        # insert the included neurons mask and reshaped data
+        data_dict[worm].update({"data": new_data, "neurons_mask": neurons_mask})
     # pickle the data
     file = os.path.join(processed_path, "Uzel2022.pickle")
     pickle_out = open(file, "wb")
@@ -971,19 +1063,24 @@ def pickle_Uzel2022(transform):
 
 
 if __name__ == "__main__":
-    url = "https://www.dropbox.com/s/l3pedwweqqsmd38/opensource_data.zip?dl=1"
+    url = "https://www.dropbox.com/s/j1td63yi5zfraxe/opensource_data.zip?dl=1"
     zipfile = "opensource_data.zip"
-    # pickle a particular dataset
-    dataset = "Skora2018"
+    # pickle all the datasets
     pickle_neural_data(
         url=url,
         zipfile=zipfile,
-        dataset=dataset,  # use the PowerTransformer
+        dataset="all",
         transform=PowerTransformer(standardize=False, method="yeo-johnson"),
+        # use the PowerTransformer
     )
-    # pickle all the datasets
-    pickle_neural_data(
-        url=url, zipfile=zipfile, dataset="all"
-    )  # uses the default MinMaxScaler
     # delete the downloaded raw datasets.
     shutil.rmtree(source_path)  # files too large to push to GitHub
+    # # pickle a particular dataset
+    # dataset = "Skora2018"
+    # pickle_neural_data(
+    #     url=url,
+    #     zipfile=zipfile,
+    #     dataset=dataset,
+    #     # uses the MinMaxScaler by default
+    # )
+    # shutil.rmtree(source_path)

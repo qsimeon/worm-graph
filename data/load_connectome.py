@@ -3,7 +3,7 @@ import torch
 from utils import ROOT_DIR
 from torch_geometric.data import InMemoryDataset, Data
 from torch_geometric.data import download_url, extract_zip
-from preprocessing.process_raw import preprocess
+from preprocess.process_raw import preprocess
 
 
 class CElegansDataset(InMemoryDataset):
@@ -23,18 +23,18 @@ class CElegansDataset(InMemoryDataset):
             "GHermElec_Sym_Edges.csv",
             "GHermElec_Sym_Nodes.csv",
             "LowResAtlasWithHighResHeadsAndTails.csv",
-            "neuron_names.txt",
+            "neurons_302.txt",
         ]
 
     @property
     def processed_file_names(self):
         """List of the processed files needed to proceed."""
-        return ["data.pt"]
+        return ["connectome/graph_tensors.pt"]
 
     def download(self):
         """Download the raw zip file if not already retrieved."""
         # dataset adapted from from Cook et al. (2019) SI5
-        url = "https://www.dropbox.com/s/utwj011wrik7l1j/raw_data.zip?dl=1"  # base url
+        url = "https://www.dropbox.com/s/45yqpvtsncx4095/raw_data.zip?dl=1"  # base url
         filename = os.path.join("raw_data.zip")
         folder = os.path.join(self.raw_dir)
         download_url(
@@ -46,7 +46,7 @@ class CElegansDataset(InMemoryDataset):
     def process(self):
         """Process the raw files and return the dataset (i.e. graph)."""
         # fast preprocess here
-        data_path = os.path.join(ROOT_DIR, "preprocessing", "graph_tensors.pt")
+        data_path = os.path.join(self.processed_dir, "connectome", "graph_tensors.pt")
         if not os.path.exists(data_path):
             print("Building from raw...")
             preprocess(raw_dir=self.raw_dir, raw_files=self.raw_file_names)

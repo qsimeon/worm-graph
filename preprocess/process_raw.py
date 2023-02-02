@@ -18,9 +18,9 @@ def preprocess(raw_dir, raw_files):
     # checking
     assert all([os.path.exists(os.path.join(raw_dir, rf)) for rf in raw_files])
     # list of names of all C. elegans neurons
-    neuron_names = set(
+    neurons_all = set(
         pd.read_csv(
-            os.path.join(raw_dir, "neuron_names.txt"),
+            os.path.join(raw_dir, "neurons_302.txt"),
             sep=" ",
             header=None,
             names=["neuron"],
@@ -40,15 +40,11 @@ def preprocess(raw_dir, raw_files):
     # neurons involved in gap junctions
     df = GHermElec_Sym_Nodes
     df["Name"] = [v.replace("0", "") if not v.endswith("0") else v for v in df["Name"]]
-    Ggap_nodes = (
-        df[df["Name"].isin(neuron_names)].sort_values(by=["Name"]).reset_index()
-    )
+    Ggap_nodes = df[df["Name"].isin(neurons_all)].sort_values(by=["Name"]).reset_index()
     # neurons involved in chemical synapses
     df = GHermChem_Nodes
     df["Name"] = [v.replace("0", "") if not v.endswith("0") else v for v in df["Name"]]
-    Gsyn_nodes = (
-        df[df["Name"].isin(neuron_names)].sort_values(by=["Name"]).reset_index()
-    )
+    Gsyn_nodes = df[df["Name"].isin(neurons_all)].sort_values(by=["Name"]).reset_index()
     # gap junctions
     df = GHermElec_Sym_Edges
     df["EndNodes_1"] = [
@@ -80,14 +76,14 @@ def preprocess(raw_dir, raw_files):
     ]  # indices
     Gsyn_edges = df.iloc[inds].reset_index(drop=True)
     # map neuron names (IDs) to indices
-    neuron_id = dict(zip(Gsyn_nodes.Name.values, Gsyn_nodes.index.values))
-    id_neuron = dict(zip(Gsyn_nodes.index.values, Gsyn_nodes.Name.values))
+    neuron_to_idx = dict(zip(Gsyn_nodes.Name.values, Gsyn_nodes.index.values))
+    idx_to_neuron = dict(zip(Gsyn_nodes.index.values, Gsyn_nodes.Name.values))
     # edge_index for gap junctions
     arr = Ggap_edges[["EndNodes_1", "EndNodes_2"]].values
     ggap_edge_index = torch.empty(*arr.shape, dtype=torch.long)
     for i, row in enumerate(arr):
         ggap_edge_index[i, :] = torch.tensor(
-            [neuron_id[x] for x in row], dtype=torch.long
+            [neuron_to_idx[x] for x in row], dtype=torch.long
         )
     ggap_edge_index = ggap_edge_index.T  # [2, num_edges]
     # edge_index for chemical synapses
@@ -95,7 +91,7 @@ def preprocess(raw_dir, raw_files):
     gsyn_edge_index = torch.empty(*arr.shape, dtype=torch.long)
     for i, row in enumerate(arr):
         gsyn_edge_index[i, :] = torch.tensor(
-            [neuron_id[x] for x in row], dtype=torch.long
+            [neuron_to_idx[x] for x in row], dtype=torch.long
         )
     gsyn_edge_index = gsyn_edge_index.T  # [2, num_edges]
     # edge attributes
@@ -156,15 +152,15 @@ def preprocess(raw_dir, raw_files):
     # basic attributes of PyG Data object
     graph = Data(x=x, edge_index=edge_index, edge_attr=edge_attr, y=y)
     # add some additional attributes to the graph
-    neuron_names = list(id_neuron.values())
+    neurons_all = list(idx_to_neuron.values())
     df = pd.read_csv(
         os.path.join(raw_dir, "LowResAtlasWithHighResHeadsAndTails.csv"),
         header=None,
         names=["neuron", "x", "y", "z"],
     )
-    df = df[df.neuron.isin(neuron_names)]
+    df = df[df.neuron.isin(neurons_all)]
     valids = set(df.neuron)
-    keys = [k for k in id_neuron if id_neuron[k] in valids]
+    keys = [k for k in idx_to_neuron if idx_to_neuron[k] in valids]
     values = list(df[df.neuron.isin(valids)][["x", "z"]].values)
     # initialize position dict then replace with atlas coordinates if available
     pos = dict(zip(np.arange(graph.num_nodes), np.zeros(shape=(graph.num_nodes, 2))))
@@ -180,10 +176,10 @@ def preprocess(raw_dir, raw_files):
         "num_classes": num_classes,
         "x": x,
         "y": y,
-        "id_neuron": id_neuron,
+        "idx_to_neuron": idx_to_neuron,
         "node_type": node_type,
         "n_id": n_id,
     }
     torch.save(
-        graph_tensors, os.path.join(ROOT_DIR, "preprocessing", "graph_tensors.pt")
+        graph_tensors, os.path.join(ROOT_DIR, "data", "processed", "connectome", "graph_tensors.pt")
     )
