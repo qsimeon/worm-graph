@@ -11,5 +11,4 @@ hydra:
     chdir: true
   sweeper:
     params:
-      dataset.name: Skora2018 
-      # , Kaplan2020, Kato2015, Nguyen2017, Nichols2017, Uzel2022
+      dataset.name: Skora2018, Kaplan2020, Kato2015, Nguyen2017, Nichols2017, Uzel2022

@@ -39,21 +39,25 @@
 `cd` into the `worm-graph` directory on your local machine: `cd worm-graph`
 
 Using the terminal or an Anaconda Prompt: `conda env create -f environment.yml`
-   The first line of the `yml` file sets the new environment's name.
+   <br>The first line of the `yml` file sets the new environment's name.
 
 Activate the new environment: `conda activate worm-graph`
 
 Add the `worm-graph` root directory to Anaconda path: `conda develop .`
-   *Important:* Do not skip the step above. Otherwise you will be faced with a lot of `ModuleNotFoundError`s.
+   <br>*Important:* Do not skip this step step! Otherwise you will be faced with several `ModuleNotFoundError`s.
 
 Verify that the new environment was installed correctly: `conda env list`
-   You can also use `conda info --envs`.
+   <br>You can also use `conda info --envs`.
  
 Always activate the environment before working on the project: `conda activate worm-graph`
 
 ## Get started with the pipeline in 1-line
 
 `python -i main.py`
+   <br> For each of several multi-worm calcium imaging datasets, this pipeline will:
+      1. Load the preprocessed calcium data for all worms in the dataset.
+      2. Train a neural network model to predict future calcium activity from previous activity.
+      3. Plot the train and validation loss curves for the model and its predictions on test data.
 
  ## Naming conventions
  
