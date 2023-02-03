@@ -18,12 +18,14 @@ def plot_neuron_train_test_samples(
       seq_len: int, the length of the input (or target) time series.
       tau: int, the amount the target series is shifted by.
     """
-    calcium_data = single_worm_dataset["data"]
-    neuron_id = single_worm_dataset["neuron_id"]
-    id_neuron = dict((v, k) for k, v in neuron_id.items())
+    neuron_to_idx = single_worm_dataset["named_neuron_to_idx"]
+    calcium_data = single_worm_dataset["named_data"]
+    if len(neuron_to_idx) == 0:
+        neuron_to_idx = single_worm_dataset["all_neuron_to_idx"]
+        calcium_data = single_worm_dataset["all_data"]
+    idx_to_neuron = dict((v, k) for k, v in neuron_to_idx.items())
     max_time = single_worm_dataset["max_time"]
-    idx = neuron_idx
-    nid = id_neuron[idx]
+    neuron = idx_to_neuron[neuron_idx]
     n_ex = num_samples
     yshifts = np.random.uniform(low=0.5, high=1.0, size=n_ex)
     eps = 0.05
@@ -65,7 +67,7 @@ def plot_neuron_train_test_samples(
         # input sequence
         axs[0].plot(
             range(metadata["start"][batch_idx], metadata["end"][batch_idx]),
-            yshift + trainX[batch_idx, :, idx].cpu(),
+            yshift + trainX[batch_idx, :, neuron_idx].cpu(),
             linewidth=2,
         )
         # target sequence
@@ -74,7 +76,7 @@ def plot_neuron_train_test_samples(
                 metadata["start"][batch_idx] + metadata["tau"][batch_idx],
                 metadata["end"][batch_idx] + metadata["tau"][batch_idx],
             ),
-            eps + yshift + trainY[batch_idx, :, idx].cpu(),
+            eps + yshift + trainY[batch_idx, :, neuron_idx].cpu(),
             linewidth=1,
         )
     axs[0].axvline(x=train_dataset.max_time, c="k", linestyle="--")
@@ -97,7 +99,7 @@ def plot_neuron_train_test_samples(
                 train_dataset.max_time + metadata["start"][batch_idx],
                 train_dataset.max_time + metadata["end"][batch_idx],
             ),
-            yshift + testX[batch_idx, :, idx].cpu(),
+            yshift + testX[batch_idx, :, neuron_idx].cpu(),
             linewidth=2,
         )
         axs[1].plot(
@@ -109,7 +111,7 @@ def plot_neuron_train_test_samples(
                 + metadata["end"][batch_idx]
                 + metadata["tau"][batch_idx],
             ),
-            eps + yshift + testY[batch_idx, :, idx].cpu(),
+            eps + yshift + testY[batch_idx, :, neuron_idx].cpu(),
             linewidth=1,
         )
     axs[1].axvline(x=train_dataset.max_time, c="k", linestyle="--")
@@ -123,6 +125,6 @@ def plot_neuron_train_test_samples(
     axs[1].set_ylim([miny, maxy])
     plt.suptitle(
         "%s Example Samples of the Ca2+ Signal "
-        "from Neuron %s, $L$ = %s, τ = %s" % (n_ex, nid, seq_len, tau)
+        "from Neuron %s, $L$ = %s, τ = %s" % (n_ex, neuron, seq_len, tau)
     )
     plt.show()

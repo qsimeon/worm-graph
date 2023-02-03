@@ -27,13 +27,12 @@ def main(config):
     single_worm_dataset = pick_worm(all_worms_dataset, worm)
     print("Picked:", worm, end="\n\n")
     # get the calcium data for this worm
-    # TODO: add reshaping calcium data to standard 302 x time to neural data pre-processing step
-    calcium_data = single_worm_dataset["data"]
+    calcium_data = single_worm_dataset["all_data"]
     print("worm calcium-signal dataset:", calcium_data.shape, end="\n\n")
     # get the neuron ids and length of the recording
-    neuron_to_idx = single_worm_dataset["neuron_to_idx"]
+    neuron_to_idx = single_worm_dataset["all_neuron_to_idx"]
     idx_to_neuron = dict((v, k) for k, v in neuron_to_idx.items())
-    neuron_to_idxx = np.random.choice(list(neuron_to_idx.values()))
+    neuron_idx = np.random.choice(list(neuron_to_idx.values()))
     max_time = single_worm_dataset["max_time"]
     num_neurons = single_worm_dataset["num_neurons"]
     # create the model and place on GPU
@@ -50,12 +49,12 @@ def main(config):
         "curves" % (worm.upper(), num_neurons, log["data_size"], log["seq_len"]),
     )
     # make predictions with the trained linear model.
-    neuron = idx_to_neuron[neuron_to_idxx]
+    neuron = idx_to_neuron[neuron_idx]
     targets, predictions = model_predict(calcium_data, lin_model)
     # plot prediction for a single neuron
     plot_target_prediction(
-        targets[:, neuron_to_idxx],
-        predictions[:, neuron_to_idxx],
+        targets[:, neuron_idx],
+        predictions[:, neuron_idx],
         plt_title="%s, neuron %s, data size %s, seq. len %s \n "
         "Linear model: Ca2+ residuals prediction"
         % (worm.upper(), neuron, log["data_size"], log["seq_len"]),
@@ -68,6 +67,7 @@ def main(config):
         "Model: Correlation of all neuron Ca2+ residuals"
         % (worm.upper(), num_neurons, log["data_size"]),
     )
+    return None
 
 
 if __name__ == "__main__":

@@ -5,11 +5,24 @@ from data.batch_sampler import BatchSampler
 import os
 import pickle
 
+def find_reliable_neurons(multi_worm_dataset):
+    intersection = set()
+    for i, worm in enumerate(multi_worm_dataset):
+      single_worm_dataset = pick_worm(multi_worm_dataset, worm)
+      neuron_to_idx = single_worm_dataset["named_neuron_to_idx"]
+      curr_set = set(neuron for neuron in neuron_to_idx if 
+                    not neuron.isnumeric())
+      if i == 0:
+        intersection |= curr_set
+      else:
+        intersection &= curr_set
+    intersection = sorted(intersection)
+    return intersection
 
 def pick_worm(dataset, wormid):
     """
     Function for getting a single worm dataset.
-    dataset: str or dictm worm dataset to select a worm from.
+    dataset: str or dict worm dataset to select a worm from.
     wormid: str or int, 'worm{i}' or {i} where i indexes the worm.
     """
     if isinstance(dataset, str):
@@ -79,7 +92,7 @@ def load_Nguyen2017():
     Automatically tracking neurons in a moving and deforming brain.
     """
     # ensure the data has been preprocessedn
-    file = os.path.joi(ROOT_DIR, "data", "processed", "neural", "Nguyen2017.pickle")
+    file = os.path.join(ROOT_DIR, "data", "processed", "neural", "Nguyen2017.pickle")
     assert os.path.exists(file)
     pickle_in = open(file, "rb")
     # unpickle the data

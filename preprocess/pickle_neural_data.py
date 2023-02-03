@@ -125,8 +125,8 @@ def pickle_Kato2015(transform):
         data_dict.update(
             {
                 worm: {
-                    "data": real_data,
-                    "neuron_to_idx": neuron_to_idx,
+                    "all_data": real_data,
+                    "all_neuron_to_idx": neuron_to_idx,
                     "max_time": max_time,
                     "num_neurons": num_neurons,
                     "num_named": num_named,
@@ -134,9 +134,17 @@ def pickle_Kato2015(transform):
             }
         )
         # standardize the shape of calcium data to 302 x time
-        new_data, neurons_mask = reshape_calcium_data(data_dict[worm])
+        new_data, neurons_mask, named_neuron_to_idx = reshape_calcium_data(
+            data_dict[worm]
+        )
         # insert the included neurons mask and reshaped data
-        data_dict[worm].update({"data": new_data, "neurons_mask": neurons_mask})
+        data_dict[worm].update(
+            {
+                "named_data": new_data,
+                "neurons_mask": neurons_mask,
+                "named_neuron_to_idx": named_neuron_to_idx,
+            }
+        )
     # 'WT_NoStim'
     # load the second .mat file
     arr = mat73.loadmat(os.path.join(source_path, "Kato2015", "WT_NoStim.mat"))[
@@ -193,8 +201,8 @@ def pickle_Kato2015(transform):
         data_dict.update(
             {
                 worm: {
-                    "data": real_data,
-                    "neuron_to_idx": neuron_to_idx,
+                    "all_data": real_data,
+                    "all_neuron_to_idx": neuron_to_idx,
                     "max_time": max_time,
                     "num_neurons": num_neurons,
                     "num_named": num_named,
@@ -202,9 +210,17 @@ def pickle_Kato2015(transform):
             }
         )
         # standardize the shape of calcium data to 302 x time
-        new_data, neurons_mask = reshape_calcium_data(data_dict[worm])
+        new_data, neurons_mask, named_neuron_to_idx = reshape_calcium_data(
+            data_dict[worm]
+        )
         # insert the included neurons mask and reshaped data
-        data_dict[worm].update({"data": new_data, "neurons_mask": neurons_mask})
+        data_dict[worm].update(
+            {
+                "named_data": new_data,
+                "neurons_mask": neurons_mask,
+                "named_neuron_to_idx": named_neuron_to_idx,
+            }
+        )
     # pickle the data
     file = os.path.join(processed_path, "Kato2015.pickle")
     pickle_out = open(file, "wb")
@@ -277,8 +293,8 @@ def pickle_Nichols2017(transform):
         data_dict.update(
             {
                 worm: {
-                    "data": real_data,
-                    "neuron_to_idx": neuron_to_idx,
+                    "all_data": real_data,
+                    "all_neuron_to_idx": neuron_to_idx,
                     "max_time": max_time,
                     "num_neurons": num_neurons,
                     "num_named": num_named,
@@ -286,9 +302,17 @@ def pickle_Nichols2017(transform):
             }
         )
         # standardize the shape of calcium data to 302 x time
-        new_data, neurons_mask = reshape_calcium_data(data_dict[worm])
+        new_data, neurons_mask, named_neuron_to_idx = reshape_calcium_data(
+            data_dict[worm]
+        )
         # insert the included neurons mask and reshaped data
-        data_dict[worm].update({"data": new_data, "neurons_mask": neurons_mask})
+        data_dict[worm].update(
+            {
+                "named_data": new_data,
+                "neurons_mask": neurons_mask,
+                "named_neuron_to_idx": named_neuron_to_idx,
+            }
+        )
     # 'n2_prelet'
     # load the second .mat file
     arr = mat73.loadmat(os.path.join(source_path, "Nichols2017", "n2_prelet.mat"))[
@@ -343,8 +367,8 @@ def pickle_Nichols2017(transform):
         data_dict.update(
             {
                 worm: {
-                    "data": real_data,
-                    "neuron_to_idx": neuron_to_idx,
+                    "all_data": real_data,
+                    "all_neuron_to_idx": neuron_to_idx,
                     "max_time": max_time,
                     "num_neurons": num_neurons,
                     "num_named": num_named,
@@ -352,9 +376,17 @@ def pickle_Nichols2017(transform):
             }
         )
         # standardize the shape of calcium data to 302 x time
-        new_data, neurons_mask = reshape_calcium_data(data_dict[worm])
+        new_data, neurons_mask, named_neuron_to_idx = reshape_calcium_data(
+            data_dict[worm]
+        )
         # insert the included neurons mask and reshaped data
-        data_dict[worm].update({"data": new_data, "neurons_mask": neurons_mask})
+        data_dict[worm].update(
+            {
+                "named_data": new_data,
+                "neurons_mask": neurons_mask,
+                "named_neuron_to_idx": named_neuron_to_idx,
+            }
+        )
     # 'npr1_let'
     # load the third .mat file
     arr = mat73.loadmat(os.path.join(source_path, "Nichols2017", "npr1_let.mat"))[
@@ -409,8 +441,8 @@ def pickle_Nichols2017(transform):
         data_dict.update(
             {
                 worm: {
-                    "data": real_data,
-                    "neuron_to_idx": neuron_to_idx,
+                    "all_data": real_data,
+                    "all_neuron_to_idx": neuron_to_idx,
                     "max_time": max_time,
                     "num_neurons": num_neurons,
                     "num_named": num_named,
@@ -418,9 +450,17 @@ def pickle_Nichols2017(transform):
             }
         )
         # standardize the shape of calcium data to 302 x time
-        new_data, neurons_mask = reshape_calcium_data(data_dict[worm])
+        new_data, neurons_mask, named_neuron_to_idx = reshape_calcium_data(
+            data_dict[worm]
+        )
         # insert the included neurons mask and reshaped data
-        data_dict[worm].update({"data": new_data, "neurons_mask": neurons_mask})
+        data_dict[worm].update(
+            {
+                "named_data": new_data,
+                "neurons_mask": neurons_mask,
+                "named_neuron_to_idx": named_neuron_to_idx,
+            }
+        )
     # 'npr1_prelet'
     # load the fourth .mat file
     arr = mat73.loadmat(os.path.join(source_path, "Nichols2017", "npr1_prelet.mat"))[
@@ -475,8 +515,8 @@ def pickle_Nichols2017(transform):
         data_dict.update(
             {
                 worm: {
-                    "data": real_data,
-                    "neuron_to_idx": neuron_to_idx,
+                    "all_data": real_data,
+                    "all_neuron_to_idx": neuron_to_idx,
                     "max_time": max_time,
                     "num_neurons": num_neurons,
                     "num_named": num_named,
@@ -484,9 +524,17 @@ def pickle_Nichols2017(transform):
             }
         )
         # standardize the shape of calcium data to 302 x time
-        new_data, neurons_mask = reshape_calcium_data(data_dict[worm])
+        new_data, neurons_mask, named_neuron_to_idx = reshape_calcium_data(
+            data_dict[worm]
+        )
         # insert the included neurons mask and reshaped data
-        data_dict[worm].update({"data": new_data, "neurons_mask": neurons_mask})
+        data_dict[worm].update(
+            {
+                "named_data": new_data,
+                "neurons_mask": neurons_mask,
+                "named_neuron_to_idx": named_neuron_to_idx,
+            }
+        )
     # pickle the data
     file = os.path.join(processed_path, "Nichols2017.pickle")
     pickle_out = open(file, "wb")
@@ -601,22 +649,22 @@ def pickle_Nguyen2017(transform):
     # pickle the data
     data_dict = {
         "worm0": {
-            "data": real_data0,
-            "neuron_to_idx": worm0_ID,
+            "all_data": real_data0,
+            "all_neuron_to_idx": worm0_ID,
             "max_time": max_time0,
             "num_neurons": num_neurons0,
             "num_named": num_named0,
         },
         "worm1": {
-            "data": real_data1,
-            "neuron_to_idx": worm1_ID,
+            "all_data": real_data1,
+            "all_neuron_to_idx": worm1_ID,
             "max_time": max_time1,
             "num_neurons": num_neurons1,
             "num_named": num_named1,
         },
         "worm2": {
-            "data": real_data2,
-            "neuron_to_idx": worm2_ID,
+            "all_data": real_data2,
+            "all_neuron_to_idx": worm2_ID,
             "max_time": max_time2,
             "num_neurons": num_neurons2,
             "num_named": num_named2,
@@ -624,9 +672,17 @@ def pickle_Nguyen2017(transform):
     }
     for worm in data_dict.keys():
         # standardize the shape of calcium data to 302 x time
-        new_data, neurons_mask = reshape_calcium_data(data_dict[worm])
+        new_data, neurons_mask, named_neuron_to_idx = reshape_calcium_data(
+            data_dict[worm]
+        )
         # insert the included neurons mask and reshaped data
-        data_dict[worm].update({"data": new_data, "neurons_mask": neurons_mask})
+        data_dict[worm].update(
+            {
+                "named_data": new_data,
+                "neurons_mask": neurons_mask,
+                "named_neuron_to_idx": named_neuron_to_idx,
+            }
+        )
     file = os.path.join(processed_path, "Nguyen2017.pickle")
     pickle_out = open(file, "wb")
     pickle.dump(data_dict, pickle_out)
@@ -697,8 +753,8 @@ def pickle_Skora2018(transform):
         data_dict.update(
             {
                 worm: {
-                    "data": real_data,
-                    "neuron_to_idx": neuron_to_idx,
+                    "all_data": real_data,
+                    "all_neuron_to_idx": neuron_to_idx,
                     "max_time": max_time,
                     "num_neurons": num_neurons,
                     "num_named": num_named,
@@ -706,9 +762,17 @@ def pickle_Skora2018(transform):
             }
         )
         # standardize the shape of calcium data to 302 x time
-        new_data, neurons_mask = reshape_calcium_data(data_dict[worm])
+        new_data, neurons_mask, named_neuron_to_idx = reshape_calcium_data(
+            data_dict[worm]
+        )
         # insert the included neurons mask and reshaped data
-        data_dict[worm].update({"data": new_data, "neurons_mask": neurons_mask})
+        data_dict[worm].update(
+            {
+                "named_data": new_data,
+                "neurons_mask": neurons_mask,
+                "named_neuron_to_idx": named_neuron_to_idx,
+            }
+        )
     # 'WT_starved'
     # load the second .mat file
     arr = mat73.loadmat(os.path.join(source_path, "Skora2018", "WT_starved.mat"))[
@@ -763,8 +827,8 @@ def pickle_Skora2018(transform):
         data_dict.update(
             {
                 worm: {
-                    "data": real_data,
-                    "neuron_to_idx": neuron_to_idx,
+                    "all_data": real_data,
+                    "all_neuron_to_idx": neuron_to_idx,
                     "max_time": max_time,
                     "num_neurons": num_neurons,
                     "num_named": num_named,
@@ -772,9 +836,17 @@ def pickle_Skora2018(transform):
             }
         )
         # standardize the shape of calcium data to 302 x time
-        new_data, neurons_mask = reshape_calcium_data(data_dict[worm])
+        new_data, neurons_mask, named_neuron_to_idx = reshape_calcium_data(
+            data_dict[worm]
+        )
         # insert the included neurons mask and reshaped data
-        data_dict[worm].update({"data": new_data, "neurons_mask": neurons_mask})
+        data_dict[worm].update(
+            {
+                "named_data": new_data,
+                "neurons_mask": neurons_mask,
+                "named_neuron_to_idx": named_neuron_to_idx,
+            }
+        )
     # pickle the data
     file = os.path.join(processed_path, "Skora2018.pickle")
     pickle_out = open(file, "wb")
@@ -841,8 +913,8 @@ def pickle_Kaplan2020(transform):
         data_dict.update(
             {
                 worm: {
-                    "data": real_data,
-                    "neuron_to_idx": neuron_to_idx,
+                    "all_data": real_data,
+                    "all_neuron_to_idx": neuron_to_idx,
                     "max_time": max_time,
                     "num_neurons": num_neurons,
                     "num_named": num_named,
@@ -850,9 +922,17 @@ def pickle_Kaplan2020(transform):
             }
         )
         # standardize the shape of calcium data to 302 x time
-        new_data, neurons_mask = reshape_calcium_data(data_dict[worm])
+        new_data, neurons_mask, named_neuron_to_idx = reshape_calcium_data(
+            data_dict[worm]
+        )
         # insert the included neurons mask and reshaped data
-        data_dict[worm].update({"data": new_data, "neurons_mask": neurons_mask})
+        data_dict[worm].update(
+            {
+                "named_data": new_data,
+                "neurons_mask": neurons_mask,
+                "named_neuron_to_idx": named_neuron_to_idx,
+            }
+        )
     # 'MNhisCl_RIShisCl_Neuron2019'
     # load the second .mat file
     arr = mat73.loadmat(
@@ -901,8 +981,8 @@ def pickle_Kaplan2020(transform):
         data_dict.update(
             {
                 worm: {
-                    "data": real_data,
-                    "neuron_to_idx": neuron_to_idx,
+                    "all_data": real_data,
+                    "all_neuron_to_idx": neuron_to_idx,
                     "max_time": max_time,
                     "num_neurons": num_neurons,
                     "num_named": num_named,
@@ -910,9 +990,17 @@ def pickle_Kaplan2020(transform):
             }
         )
         # standardize the shape of calcium data to 302 x time
-        new_data, neurons_mask = reshape_calcium_data(data_dict[worm])
+        new_data, neurons_mask, named_neuron_to_idx = reshape_calcium_data(
+            data_dict[worm]
+        )
         # insert the included neurons mask and reshaped data
-        data_dict[worm].update({"data": new_data, "neurons_mask": neurons_mask})
+        data_dict[worm].update(
+            {
+                "named_data": new_data,
+                "neurons_mask": neurons_mask,
+                "named_neuron_to_idx": named_neuron_to_idx,
+            }
+        )
     # 'MNhisCl_RIShisCl_Neuron2019'
     # load the third .mat file
     arr = mat73.loadmat(
@@ -961,8 +1049,8 @@ def pickle_Kaplan2020(transform):
         data_dict.update(
             {
                 worm: {
-                    "data": real_data,
-                    "neuron_to_idx": neuron_to_idx,
+                    "all_data": real_data,
+                    "all_neuron_to_idx": neuron_to_idx,
                     "max_time": max_time,
                     "num_neurons": num_neurons,
                     "num_named": num_named,
@@ -970,9 +1058,17 @@ def pickle_Kaplan2020(transform):
             }
         )
         # standardize the shape of calcium data to 302 x time
-        new_data, neurons_mask = reshape_calcium_data(data_dict[worm])
+        new_data, neurons_mask, named_neuron_to_idx = reshape_calcium_data(
+            data_dict[worm]
+        )
         # insert the included neurons mask and reshaped data
-        data_dict[worm].update({"data": new_data, "neurons_mask": neurons_mask})
+        data_dict[worm].update(
+            {
+                "named_data": new_data,
+                "neurons_mask": neurons_mask,
+                "named_neuron_to_idx": named_neuron_to_idx,
+            }
+        )
     # pickle the data
     file = os.path.join(processed_path, "Kaplan2020.pickle")
     pickle_out = open(file, "wb")
@@ -1039,8 +1135,8 @@ def pickle_Uzel2022(transform):
         data_dict.update(
             {
                 worm: {
-                    "data": real_data,
-                    "neuron_to_idx": neuron_to_idx,
+                    "all_data": real_data,
+                    "all_neuron_to_idx": neuron_to_idx,
                     "max_time": max_time,
                     "num_neurons": num_neurons,
                     "num_named": num_named,
@@ -1048,9 +1144,17 @@ def pickle_Uzel2022(transform):
             }
         )
         # standardize the shape of calcium data to 302 x time
-        new_data, neurons_mask = reshape_calcium_data(data_dict[worm])
+        new_data, neurons_mask, named_neuron_to_idx = reshape_calcium_data(
+            data_dict[worm]
+        )
         # insert the included neurons mask and reshaped data
-        data_dict[worm].update({"data": new_data, "neurons_mask": neurons_mask})
+        data_dict[worm].update(
+            {
+                "named_data": new_data,
+                "neurons_mask": neurons_mask,
+                "named_neuron_to_idx": named_neuron_to_idx,
+            }
+        )
     # pickle the data
     file = os.path.join(processed_path, "Uzel2022.pickle")
     pickle_out = open(file, "wb")
@@ -1070,17 +1174,8 @@ if __name__ == "__main__":
         url=url,
         zipfile=zipfile,
         dataset="all",
-        transform=PowerTransformer(standardize=False, method="yeo-johnson"),
+        # transform=PowerTransformer(standardize=False, method="yeo-johnson"),
         # use the PowerTransformer
     )
     # delete the downloaded raw datasets.
     shutil.rmtree(source_path)  # files too large to push to GitHub
-    # # pickle a particular dataset
-    # dataset = "Skora2018"
-    # pickle_neural_data(
-    #     url=url,
-    #     zipfile=zipfile,
-    #     dataset=dataset,
-    #     # uses the MinMaxScaler by default
-    # )
-    # shutil.rmtree(source_path)
