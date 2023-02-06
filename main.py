@@ -16,7 +16,11 @@ def main(config):
     Trains a simple linear regression model.
     config params:
         dataset.name: Name of a dataset of worms.
-
+    Function:
+        get_dataset: dataset.yaml
+        get_model: model.yaml
+        train (dataset, model): train.yaml
+        [optional] analysis: analysis.yaml
     """
     # choose your dataset
     dataset_name = config.dataset.name
