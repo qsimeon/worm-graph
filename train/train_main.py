@@ -3,48 +3,47 @@ from utils import DEVICE as device
 from data.map_dataset import MapDataset
 from data.batch_sampler import BatchSampler
 
-
 # @title Make a Pytorch-style train and test pipeline.
 # @markdown This pipeline will be used by all models.
 # @markdown All models should include a method `loss_fn()` that specifies the
 # @markdown loss function to be used with the model.
 
 
-def train(loader, model, optimizer, no_grad=False):
+def train(loader, model, mask, optimizer, no_grad=False):
     """
     Train a model given a dataset for a single epoch.
       Args:
           loader: training set dataloader
           model: instance of a NetworkLSTM
+          mask: mask which neurons in the dataset have real data
           optimizer: gradient descent optimizer with model params on it
-          no_grad: bool, flag whether to turn of gradient computations
       Returns:
           losses: dict w/ keys train_loss and base_train_loss
     """
+    # set model to train
     model.train()
     criterion = model.loss_fn()
     base_loss, train_loss = 0, 0
     # Iterate in batches over the training dataset.
     for i, data in enumerate(loader):
-        X_train, Y_train, meta = data
+        X_train, Y_train, meta = data  # (batch_size, seq_len, num_neurons)
         tau = meta["tau"][0]
-        # Baseline: loss if the model predicted the residual to be 0
-        base = criterion(torch.zeros_like(Y_train), Y_train - X_train) / (tau + 1)
-        # Train
-        if no_grad:
-            with torch.no_grad():
-                Y_tr = model(X_train)  # Forward pass.
-                loss = criterion(Y_tr, Y_train - X_train) / (
-                    tau + 1
-                )  # Compute training loss.
-        else:
-            Y_tr = model(X_train)  # Forward pass.
-            loss = criterion(Y_tr, Y_train - X_train) / (
-                tau + 1
-            )  # Compute training loss.
-            loss.backward()  # Derive gradients.
-        optimizer.step()  # Update parameters based on gradients.
         optimizer.zero_grad()  # Clear gradients.
+        # Baseline: loss if the model predicted the residual to be 0
+        base = criterion(
+            torch.zeros_like(Y_train[:, :, mask]), (Y_train - X_train)[:, :, mask]
+        ) / (tau + 1)
+        # Train
+        Y_tr = model(X_train)  # Forward pass.
+        Y_tr.retain_grad()
+        Y_tr.register_hook(lambda grad: grad * mask.double())
+        loss = criterion(Y_tr[:, :, mask], (Y_train - X_train)[:, :, mask]) / (
+            tau + 1
+        )  # Compute training loss.
+        loss.backward()  # Derive gradients.
+        if no_grad:
+            optimizer.zero_grad()
+        optimizer.step()  # Update parameters based on gradients.
         # Store train and baseline loss.
         base_loss += base.detach().item()
         train_loss += loss.detach().item()
@@ -58,11 +57,12 @@ def train(loader, model, optimizer, no_grad=False):
 
 
 @torch.no_grad()
-def test(loader, model):
+def test(loader, model, mask):
     """
     Evaluate a model on a given dataset.
         loader: test/validation set dataloader
         model: instance of a NetworkLSTM
+        mask: mask which neurons in the dataset have real data
     Returns:
         losses: dict w/ keys test_loss and base_test_loss
     """
@@ -71,16 +71,17 @@ def test(loader, model):
     base_loss, test_loss = 0, 0
     # Iterate in batches over the validation dataset.
     for i, data in enumerate(loader):
-        X_test, Y_test, meta = data
+        X_test, Y_test, meta = data  # (batch_size, seq_len, num_neurons)
         tau = meta["tau"][0]
         # Baseline: loss if the model predicted the residual to be 0
-        base = criterion(torch.zeros_like(Y_test), Y_test - X_test) / (tau + 1)
+        base = criterion(
+            torch.zeros_like(Y_test[:, :, mask]), (Y_test - X_test)[:, :, mask]
+        ) / (tau + 1)
         # Test
-        with torch.no_grad():
-            Y_te = model(X_test)  # Forward pass.
-            loss = criterion(Y_te, Y_test - X_test) / (
-                tau + 1
-            )  # Compute the validation loss.
+        Y_te = model(X_test)  # Forward pass.
+        loss = criterion(Y_te[:, :, mask], (Y_test - X_test)[:, :, mask]) / (
+            tau + 1
+        )  # Compute the validation loss.
         # Store test and baseline loss.
         base_loss += base.detach().item()
         test_loss += loss.detach().item()
@@ -89,17 +90,26 @@ def test(loader, model):
     return losses
 
 
-def optimize_model(dataset, model, num_epochs=100, seq_len=1, data_size=1000):
+def optimize_model(
+    dataset, model, mask=None, optimizer=None, num_epochs=100, seq_len=1, data_size=1000
+):
     """
     Creates train and test loaders given a task/dataset.
     Creates the optimizer given the model.
     Trains and validates the model for specified number of epochs.
     Returns a dict of epochs, and train, test and baseline losses.
     """
+    # create the mask
+    if mask is None:
+        mask = torch.ones(302, dtype=torch.bool)
+    assert mask.size(0) == 302 and mask.dtype == torch.bool
+    mask.requires_grad = False
+    mask = mask.to(device)
     # put model on device
     model = model.to(device)
     # create optimizer
-    optimizer = torch.optim.Adam(model.parameters(), lr=0.01)
+    if optimizer is None:
+        optimizer = torch.optim.Adam(model.parameters(), lr=0.1)
     # create MapDatasets
     max_time = len(dataset)
     train_dataset = MapDataset(
@@ -117,7 +127,7 @@ def optimize_model(dataset, model, num_epochs=100, seq_len=1, data_size=1000):
         increasing=False,
         reverse=True,
         size=2048,
-    )  # fixed test dataset size
+    )  # fix test size
     # create train and test loaders
     train_sampler = BatchSampler(train_dataset.batch_indices)
     train_loader = torch.utils.data.DataLoader(
@@ -136,16 +146,15 @@ def optimize_model(dataset, model, num_epochs=100, seq_len=1, data_size=1000):
     log.update({"data_size": train_dataset.size, "seq_len": seq_len})
     # iterate over the training data multiple times
     for epoch in range(num_epochs + 1):
-        is_zeroth_epoch = epoch == 0  # don't compute gradient for first pass
         # train the model
-        train_log = train(train_loader, model, optimizer, no_grad=is_zeroth_epoch)
-        test_log = test(test_loader, model)
+        train_log = train(train_loader, model, mask, optimizer, no_grad=(epoch == 0))
+        test_log = test(test_loader, model, mask)
         base_train_loss, train_loss = (
             train_log["base_train_loss"],
             train_log["train_loss"],
         )
         base_test_loss, test_loss = test_log["base_test_loss"], test_log["test_loss"]
-        if epoch % (num_epochs // 10) == 0:
+        if epoch % (num_epochs // 100) == 0:
             print(
                 f"Epoch: {epoch:03d}, Train Loss: {train_loss:.4f}, Val. Loss: {test_loss:.4f}"
             )
@@ -158,15 +167,15 @@ def optimize_model(dataset, model, num_epochs=100, seq_len=1, data_size=1000):
     return model, log
 
 
-def model_predict(new_calcium_data, model):
+def model_predict(named_calcium_data, model):
     """
     Makes predictions for all neurons in the given
     worm dataset using a trained model.
     """
     # model in/out
-    input = new_calcium_data.squeeze().to(device)
+    input = named_calcium_data.squeeze().to(device)
     output = model(input)
-    # tagets/preds
+    # targets/preds
     targets = (input[1:] - input[:-1]).detach().cpu()
     predictions = output[:-1].detach().cpu()
     return targets, predictions
