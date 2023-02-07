@@ -6,7 +6,7 @@ def add_train_val_mask(graph, train_ratio=0.7, train_mask=None):
     """
     Mutates a C. elegans connectome graph with injected data
     to include a training and validation mask.
-    Retruns the graph with `train_mask` and `val_mask` masks added
+    Returns the graph with `train_mask` and `val_mask` masks added
     as attributes.
     """
     # create the train and validation masks

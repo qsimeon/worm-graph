@@ -1,6 +1,6 @@
 import torch
 import numpy as np
-from utils import DEVICE as device
+from utils import DEVICE as DEVICE
 
 
 class MapDataset(torch.utils.data.Dataset):
@@ -137,12 +137,12 @@ class MapDataset(torch.utils.data.Dataset):
                 # define an end index
                 end = start + L
                 # data samples: input, X_tau and target, Y_tau
-                X_tau = self.D[start:end, self.neurons, self.feature_mask].to(device)
+                X_tau = self.D[start:end, self.neurons, self.feature_mask].to(DEVICE)
                 Y_tau = self.D[
                     start + self.tau : end + self.tau, self.neurons, self.feature_mask
-                ].to(device)
+                ].to(DEVICE)
                 # store metadata about the sample
-                tau = torch.tensor(self.tau).to(device)
+                tau = torch.tensor(self.tau).to(DEVICE)
                 meta = {"seq_len": L, "start": start, "end": end, "tau": tau}
                 # append to data samples
                 data_samples.append((X_tau, Y_tau, meta))

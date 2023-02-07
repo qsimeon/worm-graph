@@ -1,0 +1,440 @@
+from _pkg import *
+
+
+class BatchSampler(torch.utils.data.Sampler):
+    def __init__(self, data_source):
+        super(BatchSampler, self).__init__(data_source)
+        self.data_source = data_source
+
+    def __len__(self):
+        return len(self.data_source)
+
+    def __iter__(self):
+        return iter(self.data_source)
+
+
+class MapDataset(torch.utils.data.Dataset):
+    """
+    A custom neural activity time-series prediction dataset.
+    Using MapDataset will ensure that sequences are generated
+    in a principled and deterministic way, and that every sample
+    generated is unique.
+    A map-style dataset is one that implements the `__getitem__()` and
+    `__len__()` protocols, and represents a map from (possibly non-integral)
+    indices/keys to data samples. Such a dataset, when accessed with
+    `dataset[idx]`, could read the `idx`-th time-series and its corresponding
+    target from a folder on the disk.
+    """
+
+    def __init__(
+        self,
+        D,
+        neurons=None,
+        tau=1,
+        seq_len=None,
+        size=1000,
+        feature_mask=None,
+        increasing=False,
+        reverse=False,
+    ):
+        """
+        Args:
+          D: torch.tensor, data w/ shape (max_time, num_neurons, num_features).
+          neurons: None int or array-like, index of neuron(s) to return data for.
+                  Uses data for all neurons if None.
+          tau: int, 0 <= tau < max_time//2.
+          size: int, number of (input, target) data pairs to generate.
+          seq_len: None or int or array-like. If specified, generate all sequences
+                    of the singular length `seq_len`:int, or all seqeunces of every
+                    length in `seq_len`:array.
+          feature_mask: torch.tensor, what features to use.
+          increasing: bool, whether to sample shorter sequences first.
+          reverse: bool, whether to sample sequences backward from end of the data.
+        Returns:
+          (X, Y, meta): tuple, batch of data samples
+            X: torch.tensor, input tensor w/ shape (batch_size, seq_len,
+                                                  num_neurons, num_features)
+            Y: torch.tensor, target tensor w/ same shape as X
+            meta: dict, metadata / information about samples, keys: 'seq_len',
+                                                        'start' index , 'end' index
+        """
+        super(MapDataset, self).__init__()
+        # dataset checking
+        assert torch.is_tensor(D), "recast dataset as torch.tensor."
+        if D.ndim == 2:
+            D = D.unsqueeze(-1)  # expand to 3D if dataset given is 2D
+        self.seq_len = seq_len
+        self.max_time, num_neurons, num_features = D.shape
+        self.increasing = increasing
+        self.reverse = reverse
+        # feature checking
+        if feature_mask is not None:
+            assert len(feature_mask) == num_features, (
+                "`feature_mask` must have shape (%s, 1)." % num_features
+            )
+            assert (
+                feature_mask.sum() > 0
+            ), "`feature_mask` must select at leat 1 feature."
+            self.feature_mask = feature_mask
+        else:
+            self.feature_mask = torch.tensor([1] + (num_features - 1) * [0]).to(
+                torch.bool
+            )
+        # enforce a constraint on using the neurons or signals as features
+        if self.feature_mask.sum() == 1:  # single signal
+            if neurons is not None:
+                self.neurons = np.array(neurons)  # use the subset of neurons given
+            else:  # neurons is None
+                self.neurons = np.arange(num_neurons)  # use all the neurons
+        else:  # multiple signals
+            if neurons is not None:
+                assert (
+                    np.array(neurons).size == 1
+                ), "only select 1 neuron when > 1 signals as features."
+                self.neurons = np.array(neurons)  # use the single neuron given
+            else:
+                self.neurons = np.array([0])  # use the first neuron
+        self.num_neurons = self.neurons.size
+        # number of features equals: number of neurons if one signal; number of signals if multiple
+        self.num_features = (
+            self.feature_mask.sum() if self.num_neurons == 1 else self.num_neurons
+        )
+        self.D = D
+        assert 0 <= tau < self.max_time // 2, "`tau` must be  0 <= tau < max_time//2"
+        self.tau = tau
+        self.size = size
+        self.counter = 0
+        self.data_samples, self.batch_indices = self.__data_generator()
+
+    def __len__(self):
+        """Denotes the total number of samples."""
+        return len(self.data_samples)
+
+    def __getitem__(self, index):
+        """Generates one sample of data."""
+        return self.data_samples[index]
+
+    def __data_generator(self):
+        """
+        Private method for generating all possible/requested data samples.
+        """
+        data_samples = []
+        batch_indices = []
+        # define length of time
+        T = self.max_time
+        # iterate over all seqeunce lengths, L, if a fixed one was not given
+        if self.seq_len is not None:
+            if isinstance(self.seq_len, int):
+                seq_lens = [self.seq_len]
+            else:  # seq_len is of array type
+                seq_lens = sorted(list(self.seq_len), reverse=not self.increasing)
+        else:  # generate all possible sequences
+            seq_lens = (
+                range(1, T - self.tau + 1)
+                if self.increasing
+                else range(T - self.tau, 0, -1)
+            )
+        for L in seq_lens:
+            # a batch contains all data of a certain length
+            batch = []
+            # iterate over all start indices
+            start_range = (
+                range(0, T - L - self.tau + 1)
+                if not self.reverse
+                else range(T - L - self.tau, -1, -1)
+            )
+            for start in start_range:
+                # define an end index
+                end = start + L
+                # data samples: input, X_tau and target, Y_tau
+                X_tau = self.D[start:end, self.neurons, self.feature_mask].to(DEVICE)
+                Y_tau = self.D[
+                    start + self.tau : end + self.tau, self.neurons, self.feature_mask
+                ].to(DEVICE)
+                # store metadata about the sample
+                tau = torch.tensor(self.tau).to(DEVICE)
+                meta = {"seq_len": L, "start": start, "end": end, "tau": tau}
+                # append to data samples
+                data_samples.append((X_tau, Y_tau, meta))
+                # append index to batch
+                batch.append(self.counter)
+                self.counter += 1
+                # we only want a number of samples up to self.size
+                if self.counter >= self.size:
+                    break
+            batch_indices.append(batch)
+            # we only want a number of samples up to self.size
+            if self.counter >= self.size:
+                break
+        # size of dataset
+        self.size = self.counter
+        # return samples
+        return data_samples, batch_indices
+
+
+class CElegansDataset(InMemoryDataset):
+    def __init__(
+        self, root=os.path.join(ROOT_DIR, "data"), transform=None, pre_transform=None
+    ):
+        """Defines CElegansDataset as a subclass of a PyG InMemoryDataset."""
+        super(CElegansDataset, self).__init__(root, transform, pre_transform)
+        self.data, self.slices = torch.load(self.processed_paths[0])
+
+    @property
+    def raw_file_names(self):
+        """List of the raw files needed to proceed."""
+        return [
+            "GHermChem_Edges.csv",
+            "GHermChem_Nodes.csv",
+            "GHermElec_Sym_Edges.csv",
+            "GHermElec_Sym_Nodes.csv",
+            "LowResAtlasWithHighResHeadsAndTails.csv",
+            "neurons_302.txt",
+        ]
+
+    @property
+    def processed_file_names(self):
+        """List of the processed files needed to proceed."""
+        return ["connectome/graph_tensors.pt"]
+
+    def download(self):
+        """Download the raw zip file if not already retrieved."""
+        # dataset adapted from from Cook et al. (2019) SI5
+        url = "https://www.dropbox.com/s/45yqpvtsncx4095/raw_data.zip?dl=1"  # base url
+        filename = os.path.join("raw_data.zip")
+        folder = os.path.join(self.raw_dir)
+        download_url(
+            url=url, folder=os.getcwd(), filename=filename
+        )  # download zip file
+        extract_zip(filename, folder=folder)  # unzip data into raw directory
+        os.unlink(filename)  # remove zip file
+
+    def process(self):
+        """Process the raw files and return the dataset (i.e. graph)."""
+        # fast preprocess here
+        data_path = os.path.join(self.processed_dir, "connectome", "graph_tensors.pt")
+        if not os.path.exists(data_path):
+            print("Building from raw...")
+            preprocess(raw_dir=self.raw_dir, raw_files=self.raw_file_names)
+        # load the raw data
+        print("Loading from preprocess...")
+        graph_tensors = torch.load(data_path)
+        # make the graph
+        graph = Data(**graph_tensors)
+        # apply the functions specified in pre_filter and pre_transform
+        data_list = [graph]
+        if self.pre_filter is not None:
+            data_list = [data for data in data_list if self.pre_filter(data)]
+        if self.pre_transform is not None:
+            data_list = [self.pre_transform(data) for data in data_list]
+        # store the processed data
+        data, slices = self.collate(data_list)
+        torch.save((data, slices), self.processed_paths[0])
+
+
+def find_reliable_neurons(multi_worm_dataset):
+    intersection = set()
+    for i, worm in enumerate(multi_worm_dataset):
+        single_worm_dataset = pick_worm(multi_worm_dataset, worm)
+        neuron_to_idx = single_worm_dataset["named_neuron_to_idx"]
+        curr_set = set(neuron for neuron in neuron_to_idx if not neuron.isnumeric())
+        if i == 0:
+            intersection |= curr_set
+        else:
+            intersection &= curr_set
+    intersection = sorted(intersection)
+    return intersection
+
+
+def pick_worm(dataset, wormid):
+    """
+    Function for getting a single worm dataset.
+    dataset: str or dict worm dataset to select a worm from.
+    wormid: str or int, 'worm{i}' or {i} where i indexes the worm.
+    """
+    if isinstance(dataset, str):
+        dataset = load_dataset(dataset)
+    else:
+        assert (
+            isinstance(dataset, dict) and "worm1" in dataset.keys()
+        ), "Not a valid worm datset!"
+    avail_worms = set(dataset.keys())
+    if isinstance(wormid, str) and wormid.startswith("worm"):
+        wormid = wormid.strip("worm")
+        assert wormid.isnumeric() and int(wormid) <= len(
+            avail_worms
+        ), "Choose a worm from: {}".format(avail_worms)
+        worm = "worm" + wormid
+    else:
+        assert isinstance(worm, int) and worm <= len(
+            avail_worms
+        ), "Choose a worm from: {}".format(avail_worms)
+        worm = "worm" + str(wormid)
+    single_worm_dataset = dataset[worm]
+    return single_worm_dataset
+
+
+def load_dataset(name):
+    """
+    Loads the dataset with the specified name.
+    """
+    assert (
+        name in VALID_DATASETS
+    ), "Unrecognized dataset! Please pick one from:\n{}".format(list(VALID_DATASETS))
+    loader = eval("load_" + name)
+    return loader()
+
+
+def load_Kato2015():
+    """
+    Loads the worm neural activity datasets from Kato et al., Cell Reports 2015,
+    Global Brain Dynamics Embed the Motor Command Sequence of Caenorhabditis elegans.
+    """
+    # ensure the data has been preprocessed
+    file = os.path.join(ROOT_DIR, "data", "processed", "neural", "Kato2015.pickle")
+    assert os.path.exists(file)
+    pickle_in = open(file, "rb")
+    # unpickle the data
+    Kato2015 = pickle.load(pickle_in)
+    return Kato2015
+
+
+def load_Nichols2017():
+    """
+    Loads the worm neural activity datasets from Nichols et al., Science 2017,
+    A global brain state underlies C. elegans sleep behavior.
+    """
+    # ensure the data has been preprocessed
+    file = os.path.join(ROOT_DIR, "data", "processed", "neural", "Nichols2017.pickle")
+    assert os.path.exists(file)
+    pickle_in = open(file, "rb")
+    # unpickle the data
+    Nichols2017 = pickle.load(pickle_in)
+    return Nichols2017
+
+
+def load_Nguyen2017():
+    """
+    Loads the worm neural activity datasets from Nguyen et al., PLOS CompBio 2017,
+    Automatically tracking neurons in a moving and deforming brain.
+    """
+    # ensure the data has been preprocessedn
+    file = os.path.join(ROOT_DIR, "data", "processed", "neural", "Nguyen2017.pickle")
+    assert os.path.exists(file)
+    pickle_in = open(file, "rb")
+    # unpickle the data
+    Nguyen2017 = pickle.load(pickle_in)
+    return Nguyen2017
+
+
+def load_Skora2018():
+    """
+    Loads the worm neural activity datasets from Skora et al., Cell Reports 2018,
+    Energy Scarcity Promotes a Brain-wide Sleep State Modulated by Insulin Signaling in C. elegans.
+    """
+    # ensure the data has been preprocessed
+    file = os.path.join(ROOT_DIR, "data", "processed", "neural", "Skora2018.pickle")
+    assert os.path.exists(file)
+    pickle_in = open(file, "rb")
+    # unpickle the data
+    Skora2018 = pickle.load(pickle_in)
+    return Skora2018
+
+
+def load_Kaplan2020():
+    """
+    Loads the worm neural activity datasets from Kaplan et al., Neuron 2020,
+    Nested Neuronal Dynamics Orchestrate a Behavioral Hierarchy across Timescales.
+    """
+    # ensure the data has been preprocessed
+    file = os.path.join(ROOT_DIR, "data", "processed", "neural", "Kaplan2020.pickle")
+    assert os.path.exists(file)
+    pickle_in = open(file, "rb")
+    # unpickle the data
+    Kaplan2020 = pickle.load(pickle_in)
+    return Kaplan2020
+
+
+def load_Uzel2022():
+    """
+    Loads the worm neural activity datasets from Uzel et al 2022., Cell CurrBio 2022,
+    A set of hub neurons and non-local connectivity features support global brain dynamics in C. elegans.
+    """
+    # ensure the data has been preprocessed
+    file = os.path.join(ROOT_DIR, "data", "processed", "neural", "Uzel2022.pickle")
+    assert os.path.exists(file)
+    pickle_in = open(file, "rb")
+    # unpickle the data
+    Uzel2022 = pickle.load(pickle_in)
+    return Uzel2022
+
+
+def graph_inject_data(single_worm_dataset, connectome_graph):
+    """
+    Find the nodes on the connecotme corresponding to labelled
+    neurons in the provided single worm dataset and place the data
+    on the connectome graph.
+    Returns the full graph with 0s on unlabelled neurons,
+    the subgraph with only labelled neurons, the subgraph mask.
+    """
+    calcium_data = single_worm_dataset["data"]
+    graph = connectome_graph
+    # get the calcium data for this worm
+    dataset = calcium_data.squeeze()
+    max_time, num_neurons = dataset.shape
+    assert max_time == single_worm_dataset["max_time"]
+    assert num_neurons == single_worm_dataset["num_neurons"]
+    print("How much real data do we have?", dataset.shape)  # (time, neurons)
+    print(
+        "Current data on connectome graph:", graph.x.cpu().numpy().shape
+    )  # (neurons, time)
+    # find the graph nodes matching the neurons in the dataset
+    neuron_id = single_worm_dataset["neuron_id"]
+    id_neuron = dict((v, k) for k, v in id_neuron.items())
+    graph_inds = [
+        k for k, v in graph.id_neuron.items() if v in set(id_neuron.values())
+    ]  # neuron indices in connectome
+    data_inds = [
+        k_ for k_, v_ in id_neuron.items() if v_ in set(graph.id_neuron.values())
+    ]  # neuron indices in sparse dataset
+    # 'inject' the data by creating a clone graph with the desired features
+    new_x = torch.zeros(graph.num_nodes, max_time, dtype=torch.float64)
+    new_x[graph_inds, :] = dataset[:, data_inds].T
+    graph = Data(
+        x=new_x,
+        y=graph.y,
+        edge_index=graph.edge_index,
+        edge_attr=graph.edge_attr,
+        node_type=graph.node_type,
+        pos=graph.pos,
+        num_classes=graph.num_classes,
+        id_neuron=graph.id_neuron,
+    )
+    # assign each node its global node index
+    graph.n_id = torch.arange(graph.num_nodes)
+    # create the subgraph that has labelled neurons and data
+    subgraph_mask = torch.zeros(graph.num_nodes, dtype=torch.bool)
+    subgraph_mask.index_fill_(0, torch.tensor(graph_inds).long(), 1).bool()
+    # extract out the subgraph
+    subgraph = graph.subgraph(subgraph_mask)
+    # reset neuron indices for labeling
+    subgraph.id_neuron = {
+        i: graph.id_neuron[k] for i, k in enumerate(subgraph.n_id.cpu().numpy())
+    }
+    subgraph.pos = {i: graph.pos[k] for i, k in enumerate(subgraph.n_id.cpu().numpy())}
+    # check out the new attributes
+    print(
+        "Attributes:",
+        "\n",
+        subgraph.keys,
+        "\n",
+        f"Num. nodes {subgraph.num_nodes}, Num. edges {subgraph.num_edges}, "
+        f"Num. node features {subgraph.num_node_features}",
+        end="\n",
+    )
+    print(f"\tHas isolated nodes: {subgraph.has_isolated_nodes()}")
+    print(f"\tHas self-loops: {subgraph.has_self_loops()}")
+    print(f"\tIs undirected: {subgraph.is_undirected()}")
+    print(f"\tIs directed: {subgraph.is_directed()}")
+    # return the graph, subgraph and mask
+    return graph, subgraph, subgraph_mask
