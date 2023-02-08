@@ -9,4 +9,5 @@ from models._utils import LinearNN
 from train.train_main import optimize_model
 from train.train_main import model_predict
 from data._main import get_dataset
+from models._main import get_model
 

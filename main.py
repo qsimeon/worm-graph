@@ -2,7 +2,7 @@ from pkg import *
 
 
 @hydra.main(version_base=None, config_path=".", config_name="main")
-def main(config):
+def pipeline(config):
     """
     Trains a simple linear regression model.
     config params:
@@ -14,7 +14,7 @@ def main(config):
         [optional] analysis: analysis.yaml
     """
     dataset = get_dataset()
-    
+
     # # get the calcium data for this worm
     # calcium_data = single_worm_dataset["all_data"]
     # print("worm calcium-signal dataset:", calcium_data.shape, end="\n\n")
@@ -25,7 +25,10 @@ def main(config):
     # max_time = single_worm_dataset["max_time"]
     # num_neurons = single_worm_dataset["num_neurons"]
 
-    
+    model = get_model()
+
+    model = train(model, dataset)
+
     # optimize the model (use default settings)
     lin_model, log = optimize_model(
         dataset=dataset["calcium_data"],
@@ -64,4 +67,4 @@ def main(config):
 
 
 if __name__ == "__main__":
-    main()
+    pipeline()
