@@ -1,10 +1,18 @@
 defaults:
   - data: dataset
   - models: model
-# hydra:
-#   mode: MUTIRUN
-#   job:
-#     chdir: true
-#   sweeper:
-#     params:
-#       dataset.name: Kaplan2020, Kato2015, Nguyen2017, Nichols2017, Skora2018, Uzel2022
+  - _self_
+# If you want your primary config to override the values of configs
+# from the Defaults List, append _self_ to the end of the Defaults List
+
+other:
+  param1: None
+  param2: None
+
+hydra:
+  mode: MUTIRUN
+  job:
+    chdir: true
+  sweeper:
+    params:
+      data.name: Nichols2017, Kaplan2020, Uzel2022

@@ -246,9 +246,6 @@ def reshape_calcium_data(single_worm_dataset):
             ),
         }
     )
-    # print the new dataset
-    for key, val in single_worm_dataset.items():
-        print("{}:\t{}".format(key, val))
     return single_worm_dataset
 
 
