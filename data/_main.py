@@ -13,9 +13,9 @@ def get_dataset(config: DictConfig):
         "Chosen dataset: {}\nWorms: {}".format(dataset_name, list(all_worms_dataset)),
         end="\n\n",
     )
-    # return generator for single worm datasets
     single_worm_gen = iter(all_worms_dataset.items())
-    return single_worm_gen
+    # return generator for single worm datasets
+    yield from single_worm_gen
 
 
 if __name__ == "__main__":

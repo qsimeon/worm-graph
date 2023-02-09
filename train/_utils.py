@@ -83,13 +83,20 @@ def test(loader, model, mask):
 
 
 def optimize_model(
-    dataset, model, mask=None, optimizer=None, num_epochs=100, seq_len=1, data_size=1000
+    dataset,
+    model,
+    mask=None,
+    optimizer=None,
+    num_epochs=100,
+    seq_len=1,
+    dataset_size=1000,
+    learn_rate=0.01,
 ):
     """
-    Creates train and test loaders given a task/dataset.
-    Creates the optimizer given the model.
-    Trains and validates the model for specified number of epochs.
-    Returns a dict of epochs, and train, test and baseline losses.
+    Creates train and test loaders from the given a dataset
+    and an optimizer given the model. Trains and validates the
+    model for specified number of epochs. Returns the trained model
+    and a dict of train, test and baseline losses.
     """
     # create the mask
     if mask is None:
@@ -101,18 +108,18 @@ def optimize_model(
     model = model.to(DEVICE)
     # create optimizer
     if optimizer is None:
-        optimizer = torch.optim.Adam(model.parameters(), lr=0.1)
-    # create MapDatasets
+        optimizer = torch.optim.Adam(model.parameters(), lr=learn_rate)
+    # create neural activity train and test datasets
     max_time = len(dataset)
-    train_dataset = MapDataset(
+    train_dataset = NeuralActivityDataset(
         dataset[: max_time // 2],
         tau=1,
         seq_len=seq_len,
         increasing=False,
         reverse=True,
-        size=data_size,
+        size=dataset_size,
     )
-    test_dataset = MapDataset(
+    test_dataset = NeuralActivityDataset(
         dataset[max_time // 2 :],
         tau=1,
         seq_len=seq_len,
@@ -135,7 +142,7 @@ def optimize_model(
         "test_losses": [],
         "epochs": [],
     }
-    log.update({"data_size": train_dataset.size, "seq_len": seq_len})
+    log.update({"dataset_size": train_dataset.size, "seq_len": seq_len})
     # iterate over the training data multiple times
     for epoch in range(num_epochs + 1):
         # train the model
@@ -262,9 +269,9 @@ def more_data_training(
     # iterate over different dataset sizes
     data_sizes = np.logspace(5, np.floor(np.log2(max_time // 2)), 10, base=2, dtype=int)
     print("Training dataset sizes we will try:", data_sizes.tolist())
-    for data_size in data_sizes:
+    for dataset_size in data_sizes:
         print()
-        print("Dataset size", data_size)
+        print("Dataset size", dataset_size)
         # initialize model
         model = model_class(input_size=302).double()
         # train the model on this amount of data
@@ -274,7 +281,7 @@ def more_data_training(
             mask,
             num_epochs=num_epochs,
             seq_len=seq_len,
-            data_size=data_size,
+            dataset_size=dataset_size,
         )
         # put the worm and neuron in log
         log["worm"] = worm
@@ -282,7 +289,7 @@ def more_data_training(
         log["neuron"] = neuron
         log["num_neurons"] = num_neurons
         # true dataset size
-        size = log["data_size"]
+        size = log["dataset_size"]
         # predict with the model
         targets, predictions = model_predict(new_calcium_data, model)
         # log targets and predictions
@@ -372,7 +379,7 @@ def leave_one_worm_out_training(
     log["num_neurons"] = num_neurons
     log["targets"] = targets
     log["predictions"] = predictions
-    size = train_log["data_size"]
+    size = train_log["dataset_size"]
     # test the model on the left out worm
     if plotting:
         # plot final loss curve
@@ -446,7 +453,7 @@ def multi_worm_training(
             model,
             mask,
             optimizer,
-            data_size=2048,
+            dataset_size=2048,
             num_epochs=num_epochs,
             seq_len=seq_len,
         )
@@ -456,7 +463,7 @@ def multi_worm_training(
         log["neuron"] = neuron
         log["num_neurons"] = num_neurons
         # true dataset size
-        size = log["data_size"]
+        size = log["dataset_size"]
         # predict with the model
         targets, predictions = model_predict(new_calcium_data, model)
         # log targets and predictions
@@ -600,7 +607,7 @@ def gnn_model_predict(task, model):
         preds: (neurons, time) np.ndarray, model predictions
     """
     dataset = task()
-    preds = np.empty((task.node_count, task.data_size))
+    preds = np.empty((task.node_count, task.dataset_size))
     for time, snapshot in enumerate(dataset):
         y_hat = model(snapshot.x, snapshot.edge_index, snapshot.edge_attr)
         preds[:, [time]] = y_hat.clone().detach().numpy()

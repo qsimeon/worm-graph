@@ -13,3 +13,5 @@ from visualization._utils import (
     plot_target_prediction,
     plot_correlation_scatter,
 )
+from data._main import get_dataset
+from models._main import get_model
