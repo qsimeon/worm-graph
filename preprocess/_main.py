@@ -8,6 +8,9 @@ def process_data(config):
         zipfile=config.zipfile,
         dataset=config.dataset,
     )
+    print("C. elegans neural data has been pickled!", end="\n\n")
+    preprocess_connectome(raw_dir=config.raw_dir, raw_files=RAW_FILES)
+    print("C. elegans connectome has been preprocessed!", end="\n\n")
     return None
 
 

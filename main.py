@@ -4,22 +4,23 @@ from pkg import *
 @hydra.main(version_base=None, config_path=".", config_name="main")
 def pipeline(config):
     """
-    Trains a simple linear regression model.
-    config params:
-        dataset.name: Name of a dataset of worms.
-    Function:
+    Runs a complete pipeline using params in main.yaml.
+    Sub-functions and corresponding config files
+        process_data: preprocess.yaml
         get_dataset: dataset.yaml
         get_model: model.yaml
-        train (dataset, model): train.yaml
-        [optional] analysis: analysis.yaml
+        train_model: train.yaml
+        analyze_outputs: analysis.yaml
     """
-    dataset, loaders = get_dataset()
+    process_data()
+
+    dataset = get_dataset()
 
     model = get_model()
 
-    model, logs = train_and_test(model, dataset)
+    model, logs = train_model(model, dataset)
 
-    _ = plot_figures(logs)
+    plot_figures(logs)
 
     # # optimize the model (use default settings)
     # lin_model, log = optimize_model(

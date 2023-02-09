@@ -1,7 +1,7 @@
 from _pkg import *
 
 
-def preprocess(raw_dir, raw_files):
+def preprocess_connectome(raw_dir, raw_files):
     """
     If the `graph_tensors.pt` file is not found, this function gets
     called to create it from the raw open source connectome data.
@@ -171,6 +171,7 @@ def preprocess(raw_dir, raw_files):
         graph_tensors,
         os.path.join(ROOT_DIR, "data", "processed", "connectome", "graph_tensors.pt"),
     )
+    return None
 
 
 def reshape_calcium_data(single_worm_dataset):

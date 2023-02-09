@@ -2,7 +2,7 @@ from _utils import *
 
 
 @hydra.main(version_base=None, config_path=".", config_name="train")
-def train_and_test():
+def train_model():
     return None
 
 

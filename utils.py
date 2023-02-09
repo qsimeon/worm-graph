@@ -2,7 +2,15 @@ import os
 import torch
 import pandas as pd
 
-# defines `worm_graph` as the root directory
+RAW_FILES = [
+    "GHermChem_Edges.csv",
+    "GHermChem_Nodes.csv",
+    "GHermElec_Sym_Edges.csv",
+    "GHermElec_Sym_Nodes.csv",
+    "LowResAtlasWithHighResHeadsAndTails.csv",
+    "neurons_302.txt",
+]
+
 ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
 
 # get GPU if available
@@ -20,10 +28,10 @@ VALID_DATASETS = {
 
 # list of all 302 hermaphrodite neurons
 NEURONS_302 = sorted(
-        pd.read_csv(
-            os.path.join(ROOT_DIR, "data", "raw", "neurons_302.txt"),
-            sep=" ",
-            header=None,
-            names=["neuron"],
-        ).neuron
-    )
+    pd.read_csv(
+        os.path.join(ROOT_DIR, "data", "raw", "neurons_302.txt"),
+        sep=" ",
+        header=None,
+        names=["neuron"],
+    ).neuron
+)

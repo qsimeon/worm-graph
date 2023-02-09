@@ -17,9 +17,9 @@ def get_model(config):
             input_size=config.input_size,
             hidden_size=config.hidden_size,
         ).double()
-    else:
+    else:  # "linear" model
         model = LinearNN(input_size=config.input_size).double()
-    print(model)
+    print("Model:", model, end="\n\n")
     return model
 
 

@@ -5,7 +5,7 @@ class LinearNN(torch.nn.Module):
     def __init__(self, input_size):
         """
         A simple linear regression model to use as a baseline.
-        The output will be the same shape as the input.
+        The output shape will be the same shape as that of the input.
         """
         super(LinearNN, self).__init__()
         self.input_size = input_size
@@ -19,6 +19,7 @@ class LinearNN(torch.nn.Module):
     def forward(self, input, tau=1):
         """
         input: batch of data
+        tau: time offset of target
         """
         # Repeat for tau>0 offset target
         for i in range(tau):
@@ -40,10 +41,10 @@ class NetworkLSTM(torch.nn.Module):
         The output size will be the same as the input size.
         """
         super(NetworkLSTM, self).__init__()
-        assert hidden_size >= input_size, "Model requires hidden_size >= input_size."
         self.input_size = input_size
         self.hidden_size = hidden_size
         self.num_layers = num_layers
+        # LSTM
         self.lstm = torch.nn.LSTM(
             input_size=self.input_size,
             hidden_size=self.hidden_size,
@@ -51,6 +52,7 @@ class NetworkLSTM(torch.nn.Module):
             bias=False,
             batch_first=True,
         )
+        # Readout
         self.linear = torch.nn.Linear(self.hidden_size, self.input_size)
 
     def loss_fn(self):
@@ -61,58 +63,52 @@ class NetworkLSTM(torch.nn.Module):
 
     def forward(self, input, tau=1):
         """
+        Propagate input through the LSTM.
         input: batch of data
-        tau: singleton tensor of int
+        tau: time offset of target
         """
-        # Propagate input through LSTM
         # lstm_out is all of the hidden states throughout the sequence
         lstm_out, self.hidden = self.lstm(input)
-        lstm_out = torch.nn.functional.relu(self.linear(lstm_out))
+        readout = self.linear(lstm_out)
+        lstm_out = torch.nn.functional.sigmoid(readout)
         for i in range(1, tau):
             lstm_out, self.hidden = self.lstm(lstm_out, self.hidden)
-            lstm_out = torch.nn.functional.relu(self.linear(lstm_out))
+            readout = self.linear(lstm_out)
+            lstm_out = torch.nn.functional.sigmoid(readout)
         return lstm_out
 
 
 # Variational autoencoder LSTM model.
-class VAE_LSTM(nn.Module):
+class VAENetworkLSTM(nn.Module):
     """
-    The NetworkLSTM model with self-supervised VAE loss.
-    The VAE loss regularizes the model by encouraging the
-    network to learn cell states that can reliably reproduce
-    the inputs.
+    Same as the NetworkLSTM model but with an added
+    self-supervised VAE loss. The VAE loss regularizes
+    the model by encouraging the network to learn cell states
+    that can reliably reproduce the inputs.
     """
 
     def __init__(self, input_size, hidden_size, num_layers=1):
-        super(VAE_LSTM, self).__init__()
-        # checking sizes
-        assert hidden_size >= input_size, "Model requires hidden_size >= input_size."
+        super(VAENetworkLSTM, self).__init__()
         self.input_size = input_size
         self.hidden_size = hidden_size
         self.num_layers = num_layers
-        if self.hidden_size == self.input_size:
-            self.proj_size = 0
-        else:
-            self.proj_size = input_size
         # LSTM
-        self.lstm = nn.LSTM(
+        self.lstm = torch.nn.LSTM(
             input_size=self.input_size,
             hidden_size=self.hidden_size,
             num_layers=self.num_layers,
-            proj_size=self.proj_size,
             bias=False,
             batch_first=True,
         )
+        # readout
+        self.linear = torch.nn.Linear(self.hidden_size, self.input_size)
         # variational autoencoder (VAE)
         self.elbo_loss = 0
-        latent_dim = hidden_size
-        enc_out_dim = hidden_size
-        # TODO: use the cell state c_n as the encoding!
-        self.encoder = nn.Linear(input_size, enc_out_dim)  # output hyperparameters
-        self.decoder = nn.Linear(latent_dim, input_size)  # logits
+        # logits
+        self.decoder = nn.Linear(hidden_size, input_size)
         # distribution parameters
-        self.fc_mu = nn.Linear(enc_out_dim, latent_dim)
-        self.fc_var = nn.Linear(enc_out_dim, latent_dim)
+        self.fc_mu = nn.Linear(hidden_size, hidden_size)
+        self.fc_var = nn.Linear(hidden_size, hidden_size)
         # for the gaussian likelihood
         self.log_scale = nn.Parameter(torch.Tensor([0.0]))
 
@@ -134,27 +130,29 @@ class VAE_LSTM(nn.Module):
         # 2. get the probabilities from the equation
         log_qzx = q.log_prob(z)
         log_pz = p.log_prob(z)
-        # kl
+        # 3. kl divergence calculation
         kl = log_qzx - log_pz
         kl = kl.sum(dim=(1, 2))
         return kl
 
-    def forward(self, x, tau, state=None):
+    def forward(self, input, tau=1, state=None):
         """
-        x: batch of data
-        tau: singleton tensor of int
+        input: batch of data
+        tau: time offset of target
         """
         # LSTM part
         # Propagate input through LSTM
-        lstm_out = x
+        lstm_out, self.hidden = self.lstm(input)
+        readout = self.linear(lstm_out)
+        lstm_out = torch.nn.functional.sigmoid(readout)
         # Repeat for tau>0 offset target
         for i in range(tau):
-            lstm_out, state = self.lstm(lstm_out, state)
+            lstm_out, self.hidden = self.lstm(lstm_out, self.hidden)
+            readout = self.linear(lstm_out)
+            lstm_out = torch.nn.functional.sigmoid(readout)
         # VAE part
         # encode x to get the mu and variance parameters
-        # TODO: use the cell state c_n as the encoding!
-        print(x.shape, state[-1].shape)
-        x_encoded = self.encoder(x)
+        x_encoded = self.hidden[0][0] # first layer hidden state
         mu, log_var = self.fc_mu(x_encoded), self.fc_var(x_encoded)
         # sample z from q
         std = torch.exp(log_var / 2)
@@ -163,80 +161,26 @@ class VAE_LSTM(nn.Module):
         # decoded
         x_hat = self.decoder(z)
         # reconstruction loss
-        recon_loss = self.gaussian_likelihood(x_hat, self.log_scale, x)
+        recon_loss = self.gaussian_likelihood(x_hat, self.log_scale, input)
         # kl
         kl = self.kl_divergence(z, mu, std)
         # elbo
         elbo = kl - recon_loss
         elbo = elbo.mean()
         self.elbo_loss = elbo
-        return lstm_out, state
-
-
-class ConvGNN(torch.nn.Module):
-    """TODO: docstrings
-    Class to use for subclassing all convoultuional GNNs"""
-
-    def __init__(self):
-        super(ConvGNN, self).__init__()
-
-
-class DeepGCNConv(ConvGNN):
-    """TODO: want classes to be understandable from their names."""
-
-    def __init__(self, hidden_channels, num_node_features, num_classes):
-        super(DeepGCNConv, self).__init__()
-        torch.manual_seed(12345)
-        self.conv1 = GCNConv(num_node_features, hidden_channels)
-        self.conv2 = GCNConv(hidden_channels, hidden_channels)
-        self.conv3 = GCNConv(hidden_channels, hidden_channels)
-        self.lin = Linear(hidden_channels, num_classes)
-
-    def forward(self, graph):
-        x = graph.x
-        edge_index = graph.edge_index
-        batch = graph.batch
-        x = self.conv1(x, edge_index)
-        x = x.relu()
-        x = self.conv2(x, edge_index)
-        x = x.relu()
-        x = self.conv3(x, edge_index)
-        x = global_mean_pool(x, batch)
-        x = F.dropout(x, p=0.5, training=self.training)
-        x = self.lin(x)
-        return x
-
-
-class DeepGATConv(ConvGNN):
-    def __init__(self, hidden_channels, num_node_features, num_classes):
-        super(DeepGATConv, self).__init__()
-        torch.manual_seed(12345)
-        self.conv1 = DeepGATConv(num_node_features, hidden_channels)
-        self.conv2 = DeepGATConv(hidden_channels, hidden_channels)
-        self.conv3 = DeepGATConv(hidden_channels, hidden_channels)
-        self.lin = Linear(hidden_channels, num_classes)
-
-    def forward(self, graph):
-        x = graph.x
-        edge_index = graph.edge_index
-        batch = graph.batch
-        x = self.conv1(x, edge_index)
-        x = x.relu()
-        x = self.conv2(x, edge_index)
-        x = x.relu()
-        x = self.conv3(x, edge_index)
-        x = global_mean_pool(x, batch)
-        x = F.dropout(x, p=0.5, training=self.training)
-        x = self.lin(x)
-        return x
+        return lstm_out
 
 
 class GraphNN(torch.nn.Module):
-    """Predict the residual at the next time step, given a history of length L"""
+    """
+    Applies a single graph convolutional layer separately to the
+    two graphs induced by using only chemical synapses or
+    gap junctions, respectively, as the edges.
+    """
 
     def __init__(self, input_dim, hidden_dim, output_dim):
         super(GraphNN, self).__init__()
-        # need a conv. layer for each type of synapse
+        # a separte learnable conv. layer for each type of synapse
         self.elec_conv = GCNConv(
             in_channels=input_dim, out_channels=hidden_dim, improved=True
         )
@@ -245,7 +189,7 @@ class GraphNN(torch.nn.Module):
         )
         # readout layer transforms node features to output
         self.linear = torch.nn.Linear(
-            in_features=2 * hidden_dim, out_features=output_dim
+            in_features=2*hidden_dim, out_features=output_dim
         )
 
     def forward(self, x, edge_index, edge_attr):

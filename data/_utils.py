@@ -13,17 +13,15 @@ class BatchSampler(torch.utils.data.Sampler):
         return iter(self.data_source)
 
 
-class MapDataset(torch.utils.data.Dataset):
+class NeuralActivityDataset(torch.utils.data.Dataset):
     """
     A custom neural activity time-series prediction dataset.
-    Using MapDataset will ensure that sequences are generated
+    Using NeuralActivityDataset will ensure that sequences are generated
     in a principled and deterministic way, and that every sample
-    generated is unique.
-    A map-style dataset is one that implements the `__getitem__()` and
-    `__len__()` protocols, and represents a map from (possibly non-integral)
-    indices/keys to data samples. Such a dataset, when accessed with
-    `dataset[idx]`, could read the `idx`-th time-series and its corresponding
-    target from a folder on the disk.
+    generated is unique. A map-style dataset implements the `__getitem__()`
+    and `__len__()` protocols, and represents a map from indices/keys to
+    data samples. Accesing with `dataset[idx]` reads the `idx`-th time-series
+    and the corresponding target from memory.
     """
 
     def __init__(
@@ -40,14 +38,14 @@ class MapDataset(torch.utils.data.Dataset):
         """
         Args:
           D: torch.tensor, data w/ shape (max_time, num_neurons, num_features).
-          neurons: None int or array-like, index of neuron(s) to return data for.
-                  Uses data for all neurons if None.
-          tau: int, 0 <= tau < max_time//2.
+          neurons: None, int or array-like. Index of neuron(s) to return data for.
+                  Returns data for all neurons if None.
+          tau: int, 0 <= tau < max_time//2. Forward time offset of target sequence.
           size: int, number of (input, target) data pairs to generate.
           seq_len: None or int or array-like. If specified, generate all sequences
-                    of the singular length `seq_len`:int, or all seqeunces of every
+                    of the singular length `seq_len`:int, or all sequences of every
                     length in `seq_len`:array.
-          feature_mask: torch.tensor, what features to use.
+          feature_mask: torch.tensor, what features to select for generating dataset.
           increasing: bool, whether to sample shorter sequences first.
           reverse: bool, whether to sample sequences backward from end of the data.
         Returns:
@@ -55,10 +53,10 @@ class MapDataset(torch.utils.data.Dataset):
             X: torch.tensor, input tensor w/ shape (batch_size, seq_len,
                                                   num_neurons, num_features)
             Y: torch.tensor, target tensor w/ same shape as X
-            meta: dict, metadata / information about samples, keys: 'seq_len',
-                                                        'start' index , 'end' index
+            meta: dict. Metadata information about samples.
+                        keys: 'seq_len', 'start' index , 'end' index
         """
-        super(MapDataset, self).__init__()
+        super(NeuralActivityDataset, self).__init__()
         # dataset checking
         assert torch.is_tensor(D), "recast dataset as torch.tensor."
         if D.ndim == 2:
@@ -147,12 +145,12 @@ class MapDataset(torch.utils.data.Dataset):
                 # define an end index
                 end = start + L
                 # data samples: input, X_tau and target, Y_tau
-                X_tau = self.D[start:end, self.neurons, self.feature_mask].to(DEVICE)
+                X_tau = self.D[start:end, self.neurons, self.feature_mask]
                 Y_tau = self.D[
                     start + self.tau : end + self.tau, self.neurons, self.feature_mask
-                ].to(DEVICE)
+                ]
                 # store metadata about the sample
-                tau = torch.tensor(self.tau).to(DEVICE)
+                tau = torch.tensor(self.tau)
                 meta = {"seq_len": L, "start": start, "end": end, "tau": tau}
                 # append to data samples
                 data_samples.append((X_tau, Y_tau, meta))
@@ -172,25 +170,18 @@ class MapDataset(torch.utils.data.Dataset):
         return data_samples, batch_indices
 
 
-class CElegansDataset(InMemoryDataset):
+class CElegansConnectome(InMemoryDataset):
     def __init__(
         self, root=os.path.join(ROOT_DIR, "data"), transform=None, pre_transform=None
     ):
-        """Defines CElegansDataset as a subclass of a PyG InMemoryDataset."""
-        super(CElegansDataset, self).__init__(root, transform, pre_transform)
+        """Defines CElegansConnectome as a subclass of a PyG InMemoryDataset."""
+        super(CElegansConnectome, self).__init__(root, transform, pre_transform)
         self.data, self.slices = torch.load(self.processed_paths[0])
 
     @property
     def raw_file_names(self):
         """List of the raw files needed to proceed."""
-        return [
-            "GHermChem_Edges.csv",
-            "GHermChem_Nodes.csv",
-            "GHermElec_Sym_Edges.csv",
-            "GHermElec_Sym_Nodes.csv",
-            "LowResAtlasWithHighResHeadsAndTails.csv",
-            "neurons_302.txt",
-        ]
+        return RAW_FILES
 
     @property
     def processed_file_names(self):
@@ -211,11 +202,13 @@ class CElegansDataset(InMemoryDataset):
 
     def process(self):
         """Process the raw files and return the dataset (i.e. graph)."""
-        # fast preprocess here
+        # preprocessing necessary
         data_path = os.path.join(self.processed_dir, "connectome", "graph_tensors.pt")
-        if not os.path.exists(data_path):
-            print("Building from raw...")
-            preprocess(raw_dir=self.raw_dir, raw_files=self.raw_file_names)
+        if not os.path.exists(data_path):  # fun fast preprocess
+            subprocess.run("python -u ../preprocess/_main.py", text=True)
+        assert os.path.exists(
+            data_path
+        ), "Must first call `python -u preprocess/_main.py`"
         # load the raw data
         print("Loading from preprocess...")
         graph_tensors = torch.load(data_path)
