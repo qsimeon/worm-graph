@@ -1,4 +1,4 @@
-from _pkg import *
+from models._pkg import *
 
 
 class LinearNN(torch.nn.Module):
@@ -152,7 +152,7 @@ class VAENetworkLSTM(nn.Module):
             lstm_out = torch.nn.functional.sigmoid(readout)
         # VAE part
         # encode x to get the mu and variance parameters
-        x_encoded = self.hidden[0][0] # first layer hidden state
+        x_encoded = self.hidden[0][0]  # first layer hidden state
         mu, log_var = self.fc_mu(x_encoded), self.fc_var(x_encoded)
         # sample z from q
         std = torch.exp(log_var / 2)
@@ -189,7 +189,7 @@ class GraphNN(torch.nn.Module):
         )
         # readout layer transforms node features to output
         self.linear = torch.nn.Linear(
-            in_features=2*hidden_dim, out_features=output_dim
+            in_features=2 * hidden_dim, out_features=output_dim
         )
 
     def forward(self, x, edge_index, edge_attr):

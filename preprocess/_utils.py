@@ -1,4 +1,4 @@
-from _pkg import *
+from preprocess._pkg import *
 
 
 def preprocess_connectome(raw_dir, raw_files):

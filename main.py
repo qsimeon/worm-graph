@@ -1,8 +1,8 @@
 from pkg import *
 
 
-@hydra.main(version_base=None, config_path=".", config_name="main")
-def pipeline(config):
+@hydra.main(version_base=None, config_path="conf", config_name="main")
+def pipeline(config: DictConfig) -> None:
     """
     Runs a complete pipeline using params in main.yaml.
     Sub-functions and corresponding config files
@@ -12,15 +12,18 @@ def pipeline(config):
         train_model: train.yaml
         analyze_outputs: analysis.yaml
     """
-    process_data()
+    print(OmegaConf.to_yaml(config), end="\n\n")
 
-    dataset = get_dataset()
+    # process_data(config) # skip if already preprocessed
 
-    model = get_model()
+    # `dataset` is a generator
+    dataset = get_dataset(config) 
 
-    model, logs = train_model(model, dataset)
+    model = get_model(config)
 
-    plot_figures(logs)
+    # model, logs = train_model(config)
+
+    # plot_figures(logs)
 
     # # optimize the model (use default settings)
     # lin_model, log = optimize_model(

@@ -1,8 +1,9 @@
-from _utils import *
+from visualization._utils import *
 
-@hydra.main(version_base=None, config_path=".", config_name="visualize")
-def plot_figures(config): 
+
+def plot_figures(config: DictConfig) -> None:
     return None
-    
+
+
 if __name__ == "__main__":
-    plot_figures()
+    plot_figures(OmegaConf.load("conf/dataset.yaml"))

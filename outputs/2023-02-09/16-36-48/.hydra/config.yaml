@@ -1,0 +1,12 @@
+conf:
+  other:
+    param1: None
+    param2: None
+  name: Kato2015
+  type: linear
+  input_size: 302
+  hidden_size: 1024
+  url: https://www.dropbox.com/s/j1td63yi5zfraxe/opensource_data.zip?dl=1
+  zipfile: opensource_data.zip
+  dataset: all
+  raw_dir: data/raw

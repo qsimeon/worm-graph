@@ -1,4 +1,4 @@
-from _pkg import *
+from data._pkg import *
 
 
 class BatchSampler(torch.utils.data.Sampler):

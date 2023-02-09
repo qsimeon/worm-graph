@@ -8,6 +8,8 @@ import subprocess
 import numpy as np
 import pandas as pd
 from scipy.io import loadmat
+from omegaconf import DictConfig
+from omegaconf import OmegaConf
 from utils import ROOT_DIR, RAW_FILES, NEURONS_302, VALID_DATASETS
 from sklearn import preprocessing
 from sklearn.impute import SimpleImputer

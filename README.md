@@ -88,6 +88,11 @@ Always activate the environment before working on the project: `conda activate w
    - training on the first half of timesteps predicting the second half, and;
    - training on the second half of timesteps and the predicting the first half.
 - Look at how people structure language models (NLP). They are tested on predicting arbitrary future timesteps. 
+- Use something search based for logging.
+- Think about canconical plots that you always want to make, e.g.:
+      - a bunch of curves where I hold all else constant except for 1 config item
+      - each different config line a different color.
+- Add unit tests for each config.
 - Various tasks to implement:
    - predict the identity of the neuron given the trace (node prediction).
    - predict whether or not there exist an edge (edge prediction). 

@@ -1,4 +1,4 @@
-from _pkg import *
+from visualization._pkg import *
 
 
 def draw_connectome(

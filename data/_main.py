@@ -1,7 +1,6 @@
-from _utils import *
+from data._utils import *
 
 
-@hydra.main(version_base=None, config_path=".", config_name="dataset")
 def get_dataset(config: DictConfig):
     """
     Returns a generator object that yields single worm data objects (dict)
@@ -20,4 +19,4 @@ def get_dataset(config: DictConfig):
 
 
 if __name__ == "__main__":
-    get_dataset()
+    get_dataset(OmegaConf.load("conf/dataset.yaml"))

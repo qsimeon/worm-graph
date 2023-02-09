@@ -1,15 +1,9 @@
-from _utils import *
+from models._utils import *
 
 
-@hydra.main(version_base=None, config_path=".", config_name="model")
-def get_model(config):
+def get_model(config: DictConfig) -> torch.nn.Module:
     """
-    Use something search based for logging.
-    Think about canconical plots that you always want to make:
-        - e.g. bunch of curves where I hold all else constant except
-            1 config item
-        - each different config line a different color.
-    Add unit tests for each config.
+    Returns a new model of the type and size specified in 'model.yaml'.
     """
     # create the model
     if config.type == "lstm":
@@ -24,4 +18,4 @@ def get_model(config):
 
 
 if __name__ == "__main__":
-    get_model()
+    get_model(OmegaConf.load("conf/model.yaml"))

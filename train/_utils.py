@@ -1,4 +1,4 @@
-from _pkg import *
+from train._pkg import *
 
 
 def train(loader, model, mask, optimizer, no_grad=False):
