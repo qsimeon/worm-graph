@@ -1,9 +1,0 @@
-data:
-  name: Kato2015
-models:
-  type: linear
-  input_size: 302
-  hidden_size: 1024
-other:
-  param1: None
-  param2: None

@@ -30,6 +30,8 @@ dependencies:
       - torch-geometric-temporal
       - "black[jupyter]"
       - hydra-core
+      - tensorboard
+      - wandb
       - omegaconf
       - statsmodels
       - pyEDM

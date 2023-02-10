@@ -88,6 +88,7 @@ def optimize_model(
     mask=None,
     optimizer=None,
     num_epochs=100,
+    start_epoch=1,
     seq_len=1,
     dataset_size=1000,
     learn_rate=0.01,
@@ -144,7 +145,7 @@ def optimize_model(
     }
     log.update({"dataset_size": train_dataset.size, "seq_len": seq_len})
     # iterate over the training data multiple times
-    for epoch in range(num_epochs + 1):
+    for epoch in range(start_epoch, num_epochs + start_epoch):
         # train the model
         train_log = train(train_loader, model, mask, optimizer, no_grad=(epoch == 0))
         test_log = test(test_loader, model, mask)
@@ -153,7 +154,7 @@ def optimize_model(
             train_log["train_loss"],
         )
         base_test_loss, test_loss = test_log["base_test_loss"], test_log["test_loss"]
-        if epoch % (num_epochs // 100) == 0:
+        if epoch % (num_epochs // 10) == 0:
             print(
                 f"Epoch: {epoch:03d}, Train Loss: {train_loss:.4f}, Val. Loss: {test_loss:.4f}"
             )
@@ -166,15 +167,20 @@ def optimize_model(
     return model, log
 
 
-def model_predict(named_calcium_data, model):
+def model_predict(calcium_data, model):
     """
-    Makes predictions for all neurons in the given
-    worm dataset using a trained model.
+    Makes predictions for all neurons in the
+    calcium dataset using a trained model.
     """
+    model.eval()
     # model in/out
-    input = named_calcium_data.squeeze().to(DEVICE)
+    calcium_data = calcium_data.squeeze()
+    assert (
+        calcium_data.ndim == 2 and calcium_data.size(0) == 302
+    ), "Calcium data has incorrect shape!"
+    input = calcium_data.to(DEVICE)
     output = model(input)
-    # targets/preds
+    # targets/predictions
     targets = (input[1:] - input[:-1]).detach().cpu()
     predictions = output[:-1].detach().cpu()
     return targets, predictions
@@ -226,8 +232,7 @@ def lstm_hidden_size_experiment(
     for hidden_size in input_size * hid_mult:
         hidden_size = int(hidden_size)
         print()
-        print("Hidden size: %d" % hidden_size)
-        print("~~~~~~~~~~~~~~~")
+        print("Hidden size: %d\n"+"~~~"*10 % hidden_size, end="\n\n")
         # initialize model, optimizer and loss function
         lstm_model = NetworkLSTM(input_size, hidden_size, num_layers).double()
         # optimize the model
@@ -599,7 +604,8 @@ def gnn_optimize_model(task, model):
 
 
 def gnn_model_predict(task, model):
-    """Ask the model to make predictions.
+    """
+    Have the GNN model to make predictions.
     Args:
         task: instance of GraphTask containing full dataset
         model: instance of a trained Pytorch model

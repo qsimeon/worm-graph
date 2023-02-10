@@ -13,6 +13,8 @@ RAW_FILES = [
 
 ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
 
+LOGS_DIR = os.path.join(ROOT_DIR, "logs")
+
 # get GPU if available
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 

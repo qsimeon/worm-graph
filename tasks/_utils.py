@@ -1,13 +1,4 @@
-import torch
-from torch_geometric.data import Data
-from data.map_dataset import MapDataset
-from data.batch_sampler import BatchSampler
-from data.load_connectome import CElegansDataset
-from data.load_neural_activity import load_Uzel2022
-from torch_geometric_temporal.signal import temporal_signal_split
-from torch_geometric_temporal.signal.static_graph_temporal_signal import (
-    StaticGraphTemporalSignal,
-)
+from _pkg import *
 
 
 class GraphTask(object):
@@ -16,7 +7,7 @@ class GraphTask(object):
     and returns an an iterator that has the required features and
     targets for the particular self-supervised task.
     Args:
-        graph: CElegansDataset, a single worm graph.
+        graph: CElegansConnectome, a single worm graph.
         seq_len: int, the length of input, target sequences to use.
     """
 
@@ -74,7 +65,7 @@ class OneStepPrediction(GraphTask):
             id_neuron=graph.id_neuron,
         )
         # generate many/all sequences of length seq_len
-        __ = MapDataset(
+        __ = NeuralActivityDataset(
             self.graph.x.T.unsqueeze(-1),
             tau=1,
             seq_len=self.seq_len,
@@ -131,9 +122,10 @@ class OneStepPrediction(GraphTask):
 
 if __name__ == "__main__":
     # run one-step-prediction task
-    graph = CElegansDataset()[0]
+    graph = CElegansConnectome()[0]
     Uzel2022 = load_Uzel2022()
     single_worm_dataset = Uzel2022["worm1"]
-    dataset, neuron_ids = single_worm_dataset["data"], single_worm_dataset["neuron_ids"]
-    task = OneStepPrediction(graph, dataset, neuron_ids)
+    calcium_dataset = single_worm_dataset["calcium_data"]
+    neuron_to_idx = single_worm_dataset["neuron_to_idx"]
+    task = OneStepPrediction(graph, calcium_dataset, neuron_to_idx)
     print("Built one-step prediction task successfully!")

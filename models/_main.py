@@ -6,13 +6,13 @@ def get_model(config: DictConfig) -> torch.nn.Module:
     Returns a new model of the type and size specified in 'model.yaml'.
     """
     # create the model
-    if config.type == "lstm":
+    if config.model.type == "lstm":
         model = NetworkLSTM(
-            input_size=config.input_size,
-            hidden_size=config.hidden_size,
+            input_size=config.model.input_size,
+            hidden_size=config.model.hidden_size,
         ).double()
     else:  # "linear" model
-        model = LinearNN(input_size=config.input_size).double()
+        model = LinearNN(input_size=config.model.input_size).double()
     print("Model:", model, end="\n\n")
     return model
 

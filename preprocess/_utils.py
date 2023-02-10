@@ -430,6 +430,7 @@ def pickle_Kato2015(transform):
         data_dict.update(
             {
                 worm: {
+                    "dataset": "Kato2015",
                     "worm": worm,
                     "calcium_data": real_data,
                     "neuron_to_idx": neuron_to_idx,
@@ -514,6 +515,7 @@ def pickle_Nichols2017(transform):
         data_dict.update(
             {
                 worm: {
+                    "dataset": "Nichols2017",
                     "worm": worm,
                     "calcium_data": real_data,
                     "neuron_to_idx": neuron_to_idx,
@@ -580,6 +582,7 @@ def pickle_Nichols2017(transform):
         data_dict.update(
             {
                 worm: {
+                    "dataset": "Nichols2017",
                     "worm": worm,
                     "calcium_data": real_data,
                     "neuron_to_idx": neuron_to_idx,
@@ -646,6 +649,7 @@ def pickle_Nichols2017(transform):
         data_dict.update(
             {
                 worm: {
+                    "dataset": "Nichols2017",
                     "worm": worm,
                     "calcium_data": real_data,
                     "neuron_to_idx": neuron_to_idx,
@@ -712,6 +716,7 @@ def pickle_Nichols2017(transform):
         data_dict.update(
             {
                 worm: {
+                    "dataset": "Nichols2017",
                     "worm": worm,
                     "calcium_data": real_data,
                     "neuron_to_idx": neuron_to_idx,
@@ -833,6 +838,7 @@ def pickle_Nguyen2017(transform):
     # pickle the data
     data_dict = {
         "worm0": {
+            "dataset": "Nguyen2017",
             "worm": "worm0",
             "calcium_data": real_data0,
             "neuron_to_idx": worm0_ID,
@@ -843,6 +849,7 @@ def pickle_Nguyen2017(transform):
             "num_unknown_neurons": num_neurons0 - num_named0,
         },
         "worm1": {
+            "dataset": "Nguyen2017",
             "worm": "worm1",
             "calcium_data": real_data1,
             "neuron_to_idx": worm1_ID,
@@ -853,6 +860,7 @@ def pickle_Nguyen2017(transform):
             "num_unknown_neurons": num_neurons1 - num_named1,
         },
         "worm2": {
+            "dataset": "Nguyen2017",
             "worm": "worm2",
             "calcium_data": real_data2,
             "neuron_to_idx": worm2_ID,
@@ -935,6 +943,7 @@ def pickle_Skora2018(transform):
         data_dict.update(
             {
                 worm: {
+                    "dataset": "Skora2018",
                     "worm": worm,
                     "calcium_data": real_data,
                     "neuron_to_idx": neuron_to_idx,
@@ -1001,6 +1010,7 @@ def pickle_Skora2018(transform):
         data_dict.update(
             {
                 worm: {
+                    "dataset": "Skora2018",
                     "worm": worm,
                     "calcium_data": real_data,
                     "neuron_to_idx": neuron_to_idx,
@@ -1079,6 +1089,7 @@ def pickle_Kaplan2020(transform):
         data_dict.update(
             {
                 worm: {
+                    "dataset": "Kaplan2020",
                     "worm": worm,
                     "calcium_data": real_data,
                     "neuron_to_idx": neuron_to_idx,
@@ -1139,6 +1150,7 @@ def pickle_Kaplan2020(transform):
         data_dict.update(
             {
                 worm: {
+                    "dataset": "Kaplan2020",
                     "worm": worm,
                     "calcium_data": real_data,
                     "neuron_to_idx": neuron_to_idx,
@@ -1199,6 +1211,7 @@ def pickle_Kaplan2020(transform):
         data_dict.update(
             {
                 worm: {
+                    "dataset": "Kaplan2020",
                     "worm": worm,
                     "calcium_data": real_data,
                     "neuron_to_idx": neuron_to_idx,
@@ -1277,6 +1290,7 @@ def pickle_Uzel2022(transform):
         data_dict.update(
             {
                 worm: {
+                    "dataset": "Uzel2022",
                     "worm": worm,
                     "calcium_data": real_data,
                     "neuron_to_idx": neuron_to_idx,

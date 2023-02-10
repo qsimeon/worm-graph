@@ -7,7 +7,7 @@ def get_dataset(config: DictConfig):
     from the multi-worm dataset specified by the `name` param in 'dataset.yaml'.
     """
     # load the dataset
-    dataset_name = config.name
+    dataset_name = config.dataset.name
     all_worms_dataset = load_dataset(dataset_name)
     print(
         "Chosen dataset: {}\nWorms: {}".format(dataset_name, list(all_worms_dataset)),

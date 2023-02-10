@@ -10,10 +10,16 @@ defaults:
 other:
   param1: None
   param2: None
-# hydra:
-#   mode: MULTIRUN
-#   job:
-#     chdir: true
-#   sweeper:
-#     params:
-#       data.name: Nichols2017, Kaplan2020, Uzel2022
+
+hydra:
+  run:
+    dir: logs/${now:%Y-%m-%d_%H-%M}
+  sweep:
+    dir: logs/multirun/${now:%Y-%m-%d_%H-%M}
+    subdir: ${hydra.job.num}
+  mode: RUN
+  job:
+    chdir: true
+  sweeper:
+    params:
+      dataset.name: Nichols2017, Kaplan2020, Uzel2022

@@ -1,3 +1,4 @@
-type: linear
-input_size: 302
-hidden_size: 1024
+model:
+  type: linear
+  input_size: 302
+  hidden_size: 1024

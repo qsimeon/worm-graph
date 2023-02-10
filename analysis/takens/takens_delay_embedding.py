@@ -1,24 +1,25 @@
 """
-Python 3, requires the library matplotlib and a csv file with evenly sampled data.
+This script requires the `matplotlib` and a CSV file with evenly sampled data.
 """
 FILENAME = "henon_a14b03.csv"
 COLUMN = 0  ## Which column of csv file to use, 0 means leftmost.
-POINTS = -1  ## Number of points to use, more can be slower to render.
-## -1 if all(but last).
+POINTS = (
+    -1
+)  ## Number of points to use, more can be slower to render. -1 if all(but last).
 
 E_DIMENSION = 3  ## Number of dimensions in embedding space -- 2 or 3.
 TAU = 1  ## Delay, integer
 
 
+import os
 import csv
-
 import matplotlib.pyplot as plt  ## pip install matplotlib
 from mpl_toolkits.mplot3d import Axes3D
 
 
 if __name__ == "__main__":
     ## Read Data
-    with open(FILENAME, "r") as file:
+    with open(os.path.join("analysis/takens", FILENAME), "r") as file:
         time_series = [float(row[COLUMN]) for row in csv.reader(file)][:POINTS]
 
     ## Process Data
