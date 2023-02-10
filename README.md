@@ -73,7 +73,7 @@ Always activate the environment before working on the project: `conda activate w
  **Example:** `my_folder`, `my_script.py`.
  
  For Jupyter notebooks, use the `UPPER_CASE_WITH_UNDERSCORES` naming style.
- **Example:** `MyAnlysisNotebook.ipynb`.
+ **Example:** `MyAnalysisNotebook.ipynb`.
  
  ## Style conventions
 
@@ -87,13 +87,23 @@ Always activate the environment before working on the project: `conda activate w
 - Do both: 
    - training on the first half of timesteps predicting the second half, and;
    - training on the second half of timesteps and the predicting the first half.
-- Look at how people structure language models (NLP). They are tested on predicting arbitrary future timesteps. 
+- Look at how people structure language models (NLP). They are tested on predicting   arbitrary future timesteps. 
 - Use something search based for logging.
-- Think about canconical plots that you always want to make, e.g.:
-      - a bunch of curves where I hold all else constant except for 1 config item
+- Think about canonical plots that you always want to make, e.g.:
+      - a bunch of curves where I hold all else constant except for 1 config item.
       - each different config line a different color.
 - Add unit tests for each config.
 - Various tasks to implement:
    - predict the identity of the neuron given the trace (node prediction).
    - predict whether or not there exist an edge (edge prediction). 
    - predict the behavior of the worm from its neural activity.
+- Goals for next week + future:
+   - still don't have networks that surpass the baseline.
+   - see whether we can do better with a GNN with/without connectome constraint.
+    - do we need additional biological information.
+   - scaling laws:
+      - varying dataset sizes.
+      - difference between training one one worm versus many worms.
+      - change how long the dataset you use from each worm.
+- tangible goal for next week
+   - scaling law plots!

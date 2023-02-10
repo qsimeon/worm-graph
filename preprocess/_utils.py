@@ -225,12 +225,17 @@ def reshape_calcium_data(single_worm_dataset):
         idx = unknown_neuron_to_idx[neuron]
         standard_calcium_data[:, slot] = origin_calcium_data[:, idx]
         unknown_neurons_mask[slot] = True
+    # combined slot to neuron mapping
+    slot_to_neuron = dict()
+    slot_to_neuron.update(slot_to_named_neuron)
+    slot_to_neuron.update(slot_to_unknown_neuron)
     # modify the worm dataset to with new attributes
     single_worm_dataset.update(
         {
             "calcium_data": standard_calcium_data,
             "named_neurons_mask": named_neurons_mask,
             "unknown_neurons_mask": unknown_neurons_mask,
+            "neurons_mask": named_neurons_mask | unknown_neurons_mask,
             "named_neuron_to_idx": named_neuron_to_idx,
             "idx_to_named_neuron": dict((v, k) for k, v in named_neuron_to_idx.items()),
             "unknown_neuron_to_idx": unknown_neuron_to_idx,
@@ -245,6 +250,8 @@ def reshape_calcium_data(single_worm_dataset):
             "unknown_neuron_to_slot": dict(
                 (v, k) for k, v in slot_to_unknown_neuron.items()
             ),
+            "slot_to_neuron": slot_to_neuron,
+            "neuron_to_slot": dict((v, k) for k, v in slot_to_neuron.items()),
         }
     )
     return single_worm_dataset
@@ -297,8 +304,10 @@ def pickle_neural_data(
         print("Dataset:", dataset, end="\n\n")
         pickler = eval("pickle_" + dataset)
         pickler(transform)
-    # delete the downloaded raw datasets.
+    # delete the downloaded raw datasets
     shutil.rmtree(source_path)  # files too large to push to GitHub
+    # create a file the indicates preprocessing succesful
+    open(".processed", "a").close()
     return None
 
 

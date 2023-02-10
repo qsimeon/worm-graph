@@ -6,7 +6,7 @@ def process_data(config: DictConfig) -> None:
     Preprocesses the raw neural and connectmoe data
     needed for downstream modeling and analysis.
     """
-    if not os.path.exists("data/processed/neural"):
+    if not os.path.exists("data/processed/neural/.processed"):
         pickle_neural_data(
             url=config.preprocess.url,
             zipfile=config.preprocess.zipfile,

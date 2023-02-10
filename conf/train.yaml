@@ -3,4 +3,3 @@ train:
   seq_len: 17
   dataset_size: 1000
   learn_rate: 0.01
-  log_dir: logs

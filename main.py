@@ -26,6 +26,7 @@ def pipeline(config: DictConfig) -> None:
     model, logs = train_model(model, dataset, config)
 
     # plot_figures(logs)
+    # analysis
     return None
 
 

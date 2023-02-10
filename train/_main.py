@@ -24,7 +24,7 @@ def train_model(model: torch.nn.Module, dataset, config: DictConfig):
 
     # save trained model weights and optimizer as checkpoint
     save_path = os.path.join(
-        config.train.log_dir,
+        LOGS_DIR,
         datetime.now().strftime("%Y_%m_%d_%H_%M_%S") + ".pt",
     )
     torch.save(
@@ -48,8 +48,10 @@ def train_model(model: torch.nn.Module, dataset, config: DictConfig):
             }
         )
         print(logs[worm], end="\n\n")
-        
+
     # save logs as Pandas dataframe(s)
+    for worm, single_worm_dataset in dataset:
+        pass
     print(logs, end="\n\n")
     return model, logs
 
