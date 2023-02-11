@@ -2,6 +2,8 @@ import os
 import torch
 import pandas as pd
 
+NUM_NEURONS = 302
+
 RAW_FILES = [
     "GHermChem_Edges.csv",
     "GHermChem_Nodes.csv",

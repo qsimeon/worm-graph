@@ -307,7 +307,7 @@ def pickle_neural_data(
     # delete the downloaded raw datasets
     shutil.rmtree(source_path)  # files too large to push to GitHub
     # create a file the indicates preprocessing succesful
-    open(".processed", "a").close()
+    open(os.path.join(processed_path, ".processed"), "a").close()
     return None
 
 
@@ -320,13 +320,11 @@ def pickle_Kato2015(transform):
     # 'WT_Stim'
     # load the first .mat file
     arr = mat73.loadmat(os.path.join(source_path, "Kato2015", "WT_Stim.mat"))["WT_Stim"]
-    print(list(arr.keys()))
-    print()
+    print(list(arr.keys()), end="\n\n")
     # get data for all worms
     all_IDs = arr["IDs"]  # identified neuron IDs (only subset have neuron names)
     all_traces = arr["traces"]  # neural activity traces corrected for bleaching
-    print("num. worms:", len(all_IDs))
-    print()
+    print("num. worms:", len(all_IDs), end="\n\n")
     for i, real_data in enumerate(all_traces):
         worm = "worm" + str(i)
         i_IDs = [(j[0] if isinstance(j, list) else j) for j in all_IDs[i]]
@@ -360,7 +358,8 @@ def pickle_Kato2015(transform):
         )  # number of neurons that were ID'd
         print(
             "len. Ca recording %s, total num. neurons %s, num. ID'd neurons %s"
-            % (max_time, num_neurons, num_named)
+            % (max_time, num_neurons, num_named),
+            end="\n\n",
         )
         sc = transform  # normalize data
         real_data = sc.fit_transform(real_data[:, :num_neurons])
@@ -389,15 +388,13 @@ def pickle_Kato2015(transform):
     arr = mat73.loadmat(os.path.join(source_path, "Kato2015", "WT_NoStim.mat"))[
         "WT_NoStim"
     ]
-    print(list(arr.keys()))
-    print()
+    print(list(arr.keys()), end="\n\n")
     # get data for all worms
     all_IDs = arr[
         "NeuronNames"
     ]  # identified neuron IDs (only subset have neuron names)
     all_traces = arr["deltaFOverF_bc"]  # neural activity traces corrected for bleaching
-    print("num. worms:", len(all_IDs))
-    print()
+    print("num. worms:", len(all_IDs), end="\n\n")
     for ii, real_data in enumerate(all_traces):
         worm = "worm" + str(ii + i + 1)
         ii_IDs = [(j[0] if isinstance(j, list) else j) for j in all_IDs[ii]]
@@ -429,7 +426,8 @@ def pickle_Kato2015(transform):
         )  # number of neurons that were ID'd
         print(
             "len. Ca recording %s, total num. neurons %s, num. ID'd neurons %s"
-            % (max_time, num_neurons, num_named)
+            % (max_time, num_neurons, num_named),
+            end="\n\n",
         )
         sc = transform  # normalize data
         real_data = sc.fit_transform(real_data[:, :num_neurons])
@@ -456,13 +454,16 @@ def pickle_Kato2015(transform):
     # pickle the data
     file = os.path.join(processed_path, "Kato2015.pickle")
     pickle_out = open(file, "wb")
-    pickle.dump(data_dict, pickle_out)
+    dataset_object = {
+        "name": "Kato2015",
+        "num_worms": len(data_dict),
+        "generator": iter(data_dict.items()),
+    }
+    pickle.dump(dataset_object, pickle_out)
     pickle_out.close()
     pickle_in = open(file, "rb")
     Kato2015 = pickle.load(pickle_in)
-    print()
-    print(Kato2015.keys())
-    print()
+    print(Kato2015.items(), end="\n\n")
 
 
 def pickle_Nichols2017(transform):
@@ -476,13 +477,11 @@ def pickle_Nichols2017(transform):
     arr = mat73.loadmat(os.path.join(source_path, "Nichols2017", "n2_let.mat"))[
         "n2_let"
     ]
-    print(list(arr.keys()))
-    print()
+    print(list(arr.keys()), end="\n\n")
     # get data for all worms
     all_IDs = arr["IDs"]  # identified neuron IDs (only subset have neuron names)
     all_traces = arr["traces"]  # neural activity traces corrected for bleaching
-    print("num. worms:", len(all_IDs))
-    print()
+    print("num. worms:", len(all_IDs), end="\n\n")
     for i, real_data in enumerate(all_traces):
         worm = "worm" + str(i)
         i_IDs = [(j[0] if isinstance(j, list) else j) for j in all_IDs[i]]
@@ -514,7 +513,8 @@ def pickle_Nichols2017(transform):
         )  # number of neurons that were ID'd
         print(
             "len. Ca recording %s, total num. neurons %s, num. ID'd neurons %s"
-            % (max_time, num_neurons, num_named)
+            % (max_time, num_neurons, num_named),
+            end="\n\n",
         )
         sc = transform  # normalize data
         real_data = sc.fit_transform(real_data[:, :num_neurons])
@@ -543,13 +543,11 @@ def pickle_Nichols2017(transform):
     arr = mat73.loadmat(os.path.join(source_path, "Nichols2017", "n2_prelet.mat"))[
         "n2_prelet"
     ]
-    print(list(arr.keys()))
-    print()
+    print(list(arr.keys()), end="\n\n")
     # get data for all worms
     all_IDs = arr["IDs"]  # identified neuron IDs (only subset have neuron names)
     all_traces = arr["traces"]  # neural activity traces corrected for bleaching
-    print("num. worms:", len(all_IDs))
-    print()
+    print("num. worms:", len(all_IDs), end="\n\n")
     for ii, real_data in enumerate(all_traces):
         worm = "worm" + str(ii + i + 1)
         ii_IDs = [(j[0] if isinstance(j, list) else j) for j in all_IDs[ii]]
@@ -581,7 +579,8 @@ def pickle_Nichols2017(transform):
         )  # number of neurons that were ID'd
         print(
             "len. Ca recording %s, total num. neurons %s, num. ID'd neurons %s"
-            % (max_time, num_neurons, num_named)
+            % (max_time, num_neurons, num_named),
+            end="\n\n",
         )
         sc = transform  # normalize data
         real_data = sc.fit_transform(real_data[:, :num_neurons])
@@ -610,13 +609,11 @@ def pickle_Nichols2017(transform):
     arr = mat73.loadmat(os.path.join(source_path, "Nichols2017", "npr1_let.mat"))[
         "npr1_let"
     ]
-    print(list(arr.keys()))
-    print()
+    print(list(arr.keys()), end="\n\n")
     # get data for all worms
     all_IDs = arr["IDs"]  # identified neuron IDs (only subset have neuron names)
     all_traces = arr["traces"]  # neural activity traces corrected for bleaching
-    print("num. worms:", len(all_IDs))
-    print()
+    print("num. worms:", len(all_IDs), end="\n\n")
     for iii, real_data in enumerate(all_traces):
         worm = "worm" + str(iii + ii + 1 + i + 1)
         iii_IDs = [(j[0] if isinstance(j, list) else j) for j in all_IDs[iii]]
@@ -648,7 +645,8 @@ def pickle_Nichols2017(transform):
         )  # number of neurons that were ID'd
         print(
             "len. Ca recording %s, total num. neurons %s, num. ID'd neurons %s"
-            % (max_time, num_neurons, num_named)
+            % (max_time, num_neurons, num_named),
+            end="\n\n",
         )
         sc = transform  # normalize data
         real_data = sc.fit_transform(real_data[:, :num_neurons])
@@ -677,13 +675,11 @@ def pickle_Nichols2017(transform):
     arr = mat73.loadmat(os.path.join(source_path, "Nichols2017", "npr1_prelet.mat"))[
         "npr1_prelet"
     ]
-    print(list(arr.keys()))
-    print()
+    print(list(arr.keys()), end="\n\n")
     # get data for all worms
     all_IDs = arr["IDs"]  # identified neuron IDs (only subset have neuron names)
     all_traces = arr["traces"]  # neural activity traces corrected for bleaching
-    print("num. worms:", len(all_IDs))
-    print()
+    print("num. worms:", len(all_IDs), end="\n\n")
     for iv, real_data in enumerate(all_traces):
         worm = "worm" + str(iv + iii + 1 + ii + 1 + i + 1)
         iv_IDs = [(j[0] if isinstance(j, list) else j) for j in all_IDs[iv]]
@@ -715,7 +711,8 @@ def pickle_Nichols2017(transform):
         )  # number of neurons that were ID'd
         print(
             "len. Ca recording %s, total num. neurons %s, num. ID'd neurons %s"
-            % (max_time, num_neurons, num_named)
+            % (max_time, num_neurons, num_named),
+            end="\n\n",
         )
         sc = transform  # normalize data
         real_data = sc.fit_transform(real_data[:, :num_neurons])
@@ -742,13 +739,16 @@ def pickle_Nichols2017(transform):
     # pickle the data
     file = os.path.join(processed_path, "Nichols2017.pickle")
     pickle_out = open(file, "wb")
-    pickle.dump(data_dict, pickle_out)
+    dataset_object = {
+        "name": "Nichols2017",
+        "num_worms": len(data_dict),
+        "generator": iter(data_dict.items()),
+    }
+    pickle.dump(dataset_object, pickle_out)
     pickle_out.close()
     pickle_in = open(file, "rb")
     Nichols2017 = pickle.load(pickle_in)
-    print()
-    print(Nichols2017.keys())
-    print()
+    print(Nichols2017.items(), end="\n\n")
 
 
 def pickle_Nguyen2017(transform):
@@ -762,8 +762,7 @@ def pickle_Nguyen2017(transform):
     arr0 = loadmat(
         os.path.join(source_path, "Nguyen2017", "heatData_worm0.mat")
     )  # load .mat file
-    print(list(arr0.keys()))
-    print()
+    print(list(arr0.keys()), end="\n\n")
     # get data for worm 1
     G2 = arr0[
         "G2"
@@ -779,9 +778,9 @@ def pickle_Nguyen2017(transform):
     worm0_ID = dict((v, k) for k, v in worm0_ID.items())
     print(
         "len. Ca recording %s, total num. neurons %s, num. ID'd neurons %s"
-        % (max_time0, num_neurons0, num_named0)
+        % (max_time0, num_neurons0, num_named0),
+        end="\n\n",
     )
-    print()
     # normalize the data
     sc = transform
     real_data0 = sc.fit_transform(real_data0[:, :num_neurons0])
@@ -791,8 +790,7 @@ def pickle_Nguyen2017(transform):
     arr1 = loadmat(
         os.path.join(source_path, "Nguyen2017", "heatData_worm1.mat")
     )  # load .mat file
-    print(list(arr1.keys()))
-    print()
+    print(list(arr1.keys()), end="\n\n")
     # get data for worm 1
     G2 = arr1[
         "G2"
@@ -808,9 +806,9 @@ def pickle_Nguyen2017(transform):
     worm1_ID = dict((v, k) for k, v in worm1_ID.items())
     print(
         "len. Ca recording %s, total num. neurons %s, num. ID'd neurons %s"
-        % (max_time1, num_neurons1, num_named1)
+        % (max_time1, num_neurons1, num_named1),
+        end="\n\n",
     )
-    print()
     # normalize the data
     sc = transform
     real_data1 = sc.fit_transform(real_data1[:, :num_neurons1])
@@ -820,8 +818,7 @@ def pickle_Nguyen2017(transform):
     arr2 = loadmat(
         os.path.join(source_path, "Nguyen2017", "heatData_worm2.mat")
     )  # load .mat file
-    print(list(arr2.keys()))
-    print()
+    print(list(arr2.keys()), end="\n\n")
     # get data for worm 2
     G2 = arr2[
         "G2"
@@ -837,9 +834,9 @@ def pickle_Nguyen2017(transform):
     worm2_ID = dict((v, k) for k, v in worm2_ID.items())
     print(
         "len. Ca recording %s, total num. neurons %s, num. ID'd neurons %s"
-        % (max_time2, num_neurons2, num_named2)
+        % (max_time2, num_neurons2, num_named2),
+        end="\n\n",
     )
-    print()
     # normalize the data
     sc = transform
     real_data2 = sc.fit_transform(real_data2[:, :num_neurons2])
@@ -885,12 +882,16 @@ def pickle_Nguyen2017(transform):
         data_dict[worm] = reshape_calcium_data(data_dict[worm])
     file = os.path.join(processed_path, "Nguyen2017.pickle")
     pickle_out = open(file, "wb")
-    pickle.dump(data_dict, pickle_out)
+    dataset_object = {
+        "name": "Nguyen2017",
+        "num_worms": len(data_dict),
+        "generator": iter(data_dict.items()),
+    }
+    pickle.dump(dataset_object, pickle_out)
     pickle_out.close()
     pickle_in = open(file, "rb")
     Nguyen2017 = pickle.load(pickle_in)
-    print(Nguyen2017.keys())
-    print()
+    print(Nguyen2017.items(), end="\n\n")
 
 
 def pickle_Skora2018(transform):
@@ -904,13 +905,11 @@ def pickle_Skora2018(transform):
     arr = mat73.loadmat(os.path.join(source_path, "Skora2018", "WT_fasted.mat"))[
         "WT_fasted"
     ]
-    print(list(arr.keys()))
-    print()
+    print(list(arr.keys()), end="\n\n")
     # get data for all worms
     all_IDs = arr["IDs"]  # identified neuron IDs (only subset have neuron names)
     all_traces = arr["traces"]  # neural activity traces corrected for bleaching
-    print("num. worms:", len(all_IDs))
-    print()
+    print("num. worms:", len(all_IDs), end="\n\n")
     for i, real_data in enumerate(all_traces):
         worm = "worm" + str(i)
         i_IDs = [(j[0] if isinstance(j, list) else j) for j in all_IDs[i]]
@@ -942,7 +941,8 @@ def pickle_Skora2018(transform):
         )  # number of neurons that were ID'd
         print(
             "len. Ca recording %s, total num. neurons %s, num. ID'd neurons %s"
-            % (max_time, num_neurons, num_named)
+            % (max_time, num_neurons, num_named),
+            end="\n\n",
         )
         sc = transform  # normalize data
         real_data = sc.fit_transform(real_data[:, :num_neurons])
@@ -971,13 +971,11 @@ def pickle_Skora2018(transform):
     arr = mat73.loadmat(os.path.join(source_path, "Skora2018", "WT_starved.mat"))[
         "WT_starved"
     ]
-    print(list(arr.keys()))
-    print()
+    print(list(arr.keys()), end="\n\n")
     # get data for all worms
     all_IDs = arr["IDs"]  # identified neuron IDs (only subset have neuron names)
     all_traces = arr["traces"]  # neural activity traces corrected for bleaching
-    print("num. worms:", len(all_IDs))
-    print()
+    print("num. worms:", len(all_IDs), end="\n\n")
     for ii, real_data in enumerate(all_traces):
         worm = "worm" + str(ii + i + 1)
         ii_IDs = [(j[0] if isinstance(j, list) else j) for j in all_IDs[ii]]
@@ -1009,7 +1007,8 @@ def pickle_Skora2018(transform):
         )  # number of neurons that were ID'd
         print(
             "len. Ca recording %s, total num. neurons %s, num. ID'd neurons %s"
-            % (max_time, num_neurons, num_named)
+            % (max_time, num_neurons, num_named),
+            end="\n\n",
         )
         sc = transform  # normalize data
         real_data = sc.fit_transform(real_data[:, :num_neurons])
@@ -1036,13 +1035,16 @@ def pickle_Skora2018(transform):
     # pickle the data
     file = os.path.join(processed_path, "Skora2018.pickle")
     pickle_out = open(file, "wb")
-    pickle.dump(data_dict, pickle_out)
+    dataset_object = {
+        "name": "Skora2018",
+        "num_worms": len(data_dict),
+        "generator": iter(data_dict.items()),
+    }
+    pickle.dump(dataset_object, pickle_out)
     pickle_out.close()
     pickle_in = open(file, "rb")
     Skora2018 = pickle.load(pickle_in)
-    print()
-    print(Skora2018.keys())
-    print()
+    print(Skora2018.items(), end="\n\n")
 
 
 def pickle_Kaplan2020(transform):
@@ -1056,15 +1058,13 @@ def pickle_Kaplan2020(transform):
     arr = mat73.loadmat(
         os.path.join(source_path, "Kaplan2020", "Neuron2019_Data_RIShisCl.mat")
     )["RIShisCl_Neuron2019"]
-    print(list(arr.keys()))
-    print()
+    print(list(arr.keys()), end="\n\n")
     # get data for all worms
     all_IDs = arr["neuron_ID"]  # identified neuron IDs (only subset have neuron names)
     all_traces = arr[
         "traces_bleach_corrected"
     ]  # neural activity traces corrected for bleaching
-    print("num. worms:", len(all_IDs))
-    print()
+    print("num. worms:", len(all_IDs), end="\n\n")
     for i, real_data in enumerate(all_traces):
         worm = "worm" + str(i)
         _, inds = np.unique(
@@ -1088,7 +1088,8 @@ def pickle_Kaplan2020(transform):
         )  # number of neurons that were ID'd
         print(
             "len. Ca recording %s, total num. neurons %s, num. ID'd neurons %s"
-            % (max_time, num_neurons, num_named)
+            % (max_time, num_neurons, num_named),
+            end="\n\n",
         )
         sc = transform  # normalize data
         real_data = sc.fit_transform(real_data[:, :num_neurons])
@@ -1117,15 +1118,13 @@ def pickle_Kaplan2020(transform):
     arr = mat73.loadmat(
         os.path.join(source_path, "Kaplan2020", "Neuron2019_Data_MNhisCl_RIShisCl.mat")
     )["MNhisCl_RIShisCl_Neuron2019"]
-    print(list(arr.keys()))
-    print()
+    print(list(arr.keys()), end="\n\n")
     # get data for all worms
     all_IDs = arr["neuron_ID"]  # identified neuron IDs (only subset have neuron names)
     all_traces = arr[
         "traces_bleach_corrected"
     ]  # neural activity traces corrected for bleaching
-    print("num. worms:", len(all_IDs))
-    print()
+    print("num. worms:", len(all_IDs), end="\n\n")
     for ii, real_data in enumerate(all_traces):
         worm = "worm" + str(ii + i + 1)
         _, inds = np.unique(
@@ -1149,7 +1148,8 @@ def pickle_Kaplan2020(transform):
         )  # number of neurons that were ID'd
         print(
             "len. Ca recording %s, total num. neurons %s, num. ID'd neurons %s"
-            % (max_time, num_neurons, num_named)
+            % (max_time, num_neurons, num_named),
+            end="\n\n",
         )
         sc = transform  # normalize data
         real_data = sc.fit_transform(real_data[:, :num_neurons])
@@ -1178,15 +1178,13 @@ def pickle_Kaplan2020(transform):
     arr = mat73.loadmat(
         os.path.join(source_path, "Kaplan2020", "Neuron2019_Data_SMDhisCl_RIShisCl.mat")
     )["SMDhisCl_RIShisCl_Neuron2019"]
-    print(list(arr.keys()))
-    print()
+    print(list(arr.keys()), end="\n\n")
     # get data for all worms
     all_IDs = arr["neuron_ID"]  # identified neuron IDs (only subset have neuron names)
     all_traces = arr[
         "traces_bleach_corrected"
     ]  # neural activity traces corrected for bleaching
-    print("num. worms:", len(all_IDs))
-    print()
+    print("num. worms:", len(all_IDs), end="\n\n")
     for iii, real_data in enumerate(all_traces):
         worm = "worm" + str(iii + ii + 1 + i + 1)
         _, inds = np.unique(
@@ -1210,7 +1208,8 @@ def pickle_Kaplan2020(transform):
         )  # number of neurons that were ID'd
         print(
             "len. Ca recording %s, total num. neurons %s, num. ID'd neurons %s"
-            % (max_time, num_neurons, num_named)
+            % (max_time, num_neurons, num_named),
+            end="\n\n",
         )
         sc = transform  # normalize data
         real_data = sc.fit_transform(real_data[:, :num_neurons])
@@ -1237,13 +1236,16 @@ def pickle_Kaplan2020(transform):
     # pickle the data
     file = os.path.join(processed_path, "Kaplan2020.pickle")
     pickle_out = open(file, "wb")
-    pickle.dump(data_dict, pickle_out)
+    dataset_object = {
+        "name": "Kaplan2020",
+        "num_worms": len(data_dict),
+        "generator": iter(data_dict.items()),
+    }
+    pickle.dump(dataset_object, pickle_out)
     pickle_out.close()
     pickle_in = open(file, "rb")
     Kaplan2020 = pickle.load(pickle_in)
-    print()
-    print(Kaplan2020.keys())
-    print()
+    print(Kaplan2020.items(), end="\n\n")
 
 
 def pickle_Uzel2022(transform):
@@ -1256,13 +1258,11 @@ def pickle_Uzel2022(transform):
     arr = mat73.loadmat(os.path.join(source_path, "Uzel2022", "Uzel_WT.mat"))[
         "Uzel_WT"
     ]  # load .mat file
-    print(list(arr.keys()))
-    print()
+    print(list(arr.keys()), end="\n\n")
     # get data for all worms
     all_IDs = arr["IDs"]  # identified neuron IDs (only subset have neuron names)
     all_traces = arr["traces"]  # neural activity traces corrected for bleaching
-    print("num. worms:", len(all_IDs))
-    print()
+    print("num. worms:", len(all_IDs), end="\n\n")
     for i, real_data in enumerate(all_traces):
         worm = "worm" + str(i)
         i_IDs = [np.array(j).item() for j in all_IDs[i]]
@@ -1289,7 +1289,8 @@ def pickle_Uzel2022(transform):
         )  # number of neurons that were ID'd
         print(
             "len. Ca recording %s, total num. neurons %s, num. ID'd neurons %s"
-            % (max_time, num_neurons, num_named)
+            % (max_time, num_neurons, num_named),
+            end="\n\n",
         )
         sc = transform  # normalize data
         real_data = sc.fit_transform(real_data[:, :num_neurons])
@@ -1316,9 +1317,13 @@ def pickle_Uzel2022(transform):
     # pickle the data
     file = os.path.join(processed_path, "Uzel2022.pickle")
     pickle_out = open(file, "wb")
-    pickle.dump(data_dict, pickle_out)
+    dataset_object = {
+        "name": "Uzel2022",
+        "num_worms": len(data_dict),
+        "generator": iter(data_dict.items()),
+    }
+    pickle.dump(dataset_object, pickle_out)
     pickle_out.close()
     pickle_in = open(file, "rb")
     Uzel2022 = pickle.load(pickle_in)
-    print(Uzel2022.keys())
-    print()
+    print(Uzel2022.items(), end="\n\n")

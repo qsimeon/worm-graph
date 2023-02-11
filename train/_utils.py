@@ -3,11 +3,12 @@ from train._pkg import *
 
 def train(loader, model, mask, optimizer, no_grad=False):
     """
-    Train a model given a dataset for a single epoch.
+    Train (for 1 epoch) a model to predict the residual neural
+    activity given a dataset of neural activity for 1 epoch.
       Args:
           loader: training set dataloader
           model: instance of a NetworkLSTM
-          mask: mask which neurons in the dataset have real data
+          mask: selects indices of neurons in the dataset with data
           optimizer: gradient descent optimizer with model params on it
       Returns:
           losses: dict w/ keys train_loss and base_train_loss
@@ -87,25 +88,25 @@ def optimize_model(
     model,
     mask=None,
     optimizer=None,
-    num_epochs=100,
-    start_epoch=1,
     seq_len=1,
-    dataset_size=1000,
+    start_epoch=1,
     learn_rate=0.01,
+    num_epochs=100,
+    dataset_size=1000,
 ):
     """
-    Creates train and test loaders from the given a dataset
+    Creates train and test data loaders from the given dataset
     and an optimizer given the model. Trains and validates the
-    model for specified number of epochs. Returns the trained model
-    and a dict of train, test and baseline losses.
+    model for specified number of epochs. Returns the trained
+    model and a dict of train, test and baseline losses.
     """
     # create the mask
     if mask is None:
-        mask = torch.ones(302, dtype=torch.bool)
-    assert mask.size(0) == 302 and mask.dtype == torch.bool
+        mask = torch.ones(NUM_NEURONS, dtype=torch.bool)
+    assert mask.size(0) == NUM_NEURONS and mask.dtype == torch.bool
     mask.requires_grad = False
     mask = mask.to(DEVICE)
-    # put model on DEVICE
+    # put model on device
     model = model.to(DEVICE)
     # create optimizer
     if optimizer is None:
@@ -127,21 +128,23 @@ def optimize_model(
         increasing=False,
         reverse=True,
         size=2048,
-    )  # fix test size
+    )  # fixed test size
     # create train and test loaders
-    train_sampler = BatchSampler(train_dataset.batch_indices)
     train_loader = torch.utils.data.DataLoader(
-        train_dataset, batch_sampler=train_sampler
+        train_dataset, batch_sampler=train_dataset.batch_sampler
     )
-    test_sampler = BatchSampler(test_dataset.batch_indices)
-    test_loader = torch.utils.data.DataLoader(test_dataset, batch_sampler=test_sampler)
+    test_loader = torch.utils.data.DataLoader(
+        test_dataset, batch_sampler=test_dataset.batch_sampler
+    )
     # create log dictionary to return
     log = {
+        "epochs": [],
         "base_train_losses": [],
         "base_test_losses": [],
         "train_losses": [],
         "test_losses": [],
-        "epochs": [],
+        "model_state_dicts": [],
+        "optimizer_state_dicts": [],
     }
     log.update({"dataset_size": train_dataset.size, "seq_len": seq_len})
     # iterate over the training data multiple times
@@ -158,11 +161,16 @@ def optimize_model(
             print(
                 f"Epoch: {epoch:03d}, Train Loss: {train_loss:.4f}, Val. Loss: {test_loss:.4f}"
             )
+            # saves epochs
             log["epochs"].append(epoch)
+            # save losses
             log["base_train_losses"].append(base_train_loss)
             log["base_test_losses"].append(base_test_loss)
             log["train_losses"].append(train_loss)
             log["test_losses"].append(test_loss)
+            # save checkpoints
+            log["model_state_dicts"].append(model.state_dict())
+            log["optimizer_state_dicts"].append(optimizer.state_dict())
     # return optimized model
     return model, log
 
@@ -186,7 +194,7 @@ def model_predict(calcium_data, model):
     return targets, predictions
 
 
-def add_train_val_mask(graph, train_ratio=0.7, train_mask=None):
+def gnn_train_val_mask(graph, train_ratio=0.7, train_mask=None):
     """
     Mutates a C. elegans connectome graph with injected data
     to include a training and validation mask.
@@ -232,7 +240,7 @@ def lstm_hidden_size_experiment(
     for hidden_size in input_size * hid_mult:
         hidden_size = int(hidden_size)
         print()
-        print("Hidden size: %d\n"+"~~~"*10 % hidden_size, end="\n\n")
+        print("Hidden size: %d\n" + "~~~" * 10 % hidden_size, end="\n\n")
         # initialize model, optimizer and loss function
         lstm_model = NetworkLSTM(input_size, hidden_size, num_layers).double()
         # optimize the model
@@ -290,7 +298,7 @@ def more_data_training(
         )
         # put the worm and neuron in log
         log["worm"] = worm
-        log["neuron_idx"] = neuron_idx
+        log["neuron_to_idx"] = neuron_to_idx
         log["neuron"] = neuron
         log["num_neurons"] = num_neurons
         # true dataset size
@@ -363,7 +371,7 @@ def leave_one_worm_out_training(
     model, train_log = train_results[-1]
     # get the calcium data for left out worm
     new_calcium_data = test_worm_dataset["named_data"]
-    mask = test_worm_dataset["neurons_mask"]
+    mask = test_worm_dataset["named_neurons_mask"]
     # get the neuron to idx map
     neuron_to_idx = test_worm_dataset["named_neuron_to_idx"]
     idx_to_neuron = dict((v, k) for k, v in neuron_to_idx.items())
@@ -379,7 +387,7 @@ def leave_one_worm_out_training(
     log = dict()
     log.update(train_log)
     log["worm"] = leaveOut_worm
-    log["neuron_idx"] = neuron_idx
+    log["neuron_to_idx"] = neuron_to_idx
     log["neuron"] = neuron
     log["num_neurons"] = num_neurons
     log["targets"] = targets
@@ -439,7 +447,7 @@ def multi_worm_training(
         single_worm_dataset = pick_worm(multi_worms_dataset, worm)
         # get the calcium data for this worm
         new_calcium_data = single_worm_dataset["named_data"]
-        mask = single_worm_dataset["neurons_mask"]
+        mask = single_worm_dataset["named_neurons_mask"]
         # get the neuron to idx map
         neuron_to_idx = single_worm_dataset["named_neuron_to_idx"]
         idx_to_neuron = dict((v, k) for k, v in neuron_to_idx.items())
@@ -464,7 +472,7 @@ def multi_worm_training(
         )
         # put the worm and neuron in log
         log["worm"] = worm
-        log["neuron_idx"] = neuron_idx
+        log["neuron_to_idx"] = neuron_to_idx
         log["neuron"] = neuron
         log["num_neurons"] = num_neurons
         # true dataset size

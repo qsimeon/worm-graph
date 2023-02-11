@@ -15,7 +15,7 @@ def process_data(config: DictConfig) -> None:
         print("C. elegans neural data has been pickled!", end="\n\n")
     else:
         print("Neural data already pickled.", end="\n\n")
-    if not os.path.exists("data/processed/connectome"):
+    if not os.path.exists("data/processed/connectome/graph_tensors.pt"):
         preprocess_connectome(raw_dir=config.preprocess.raw_dir, raw_files=RAW_FILES)
         print("C. elegans connectome has been preprocessed!", end="\n\n")
     else:

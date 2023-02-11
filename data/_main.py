@@ -8,14 +8,16 @@ def get_dataset(config: DictConfig):
     """
     # load the dataset
     dataset_name = config.dataset.name
-    all_worms_dataset = load_dataset(dataset_name)
+    dataset = load_dataset(dataset_name)
     print(
-        "Chosen dataset: {}\nWorms: {}".format(dataset_name, list(all_worms_dataset)),
+        "Chosen dataset: {}\nNum. worms: {}\Generator: {}".format(
+            dataset["dataset_name"],
+            dataset["num_worms"],
+            dataset["dataset_generator"],
+        ),
         end="\n\n",
     )
-    single_worm_gen = iter(all_worms_dataset.items())
-    # return generator for single worm datasets
-    yield from single_worm_gen
+    return dataset
 
 
 if __name__ == "__main__":

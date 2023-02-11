@@ -23,7 +23,7 @@ def pipeline(config: DictConfig) -> None:
 
     model = get_model(config)
 
-    model, logs = train_model(model, dataset, config)
+    model, logs = train_model(model, dataset, config, optimizer=None)
 
     # plot_figures(logs)
     # analysis

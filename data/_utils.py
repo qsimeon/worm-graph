@@ -37,7 +37,7 @@ class NeuralActivityDataset(torch.utils.data.Dataset):
     ):
         """
         Args:
-          D: torch.tensor, data w/ shape (max_time, num_neurons, num_features).
+          D: torch.tensor. Data w/ shape (max_time, num_neurons, num_features).
           neurons: None, int or array-like. Index of neuron(s) to return data for.
                   Returns data for all neurons if None.
           tau: int, 0 <= tau < max_time//2. Forward time offset of target sequence.
@@ -45,20 +45,20 @@ class NeuralActivityDataset(torch.utils.data.Dataset):
           seq_len: None or int or array-like. If specified, generate all sequences
                     of the singular length `seq_len`:int, or all sequences of every
                     length in `seq_len`:array.
-          feature_mask: torch.tensor, what features to select for generating dataset.
-          increasing: bool, whether to sample shorter sequences first.
-          reverse: bool, whether to sample sequences backward from end of the data.
+          feature_mask: torch.tensor. What features to select for generating dataset.
+          increasing: bool. Whether to sample shorter sequences first.
+          reverse: bool. Whether to sample sequences backward from end of the data.
         Returns:
-          (X, Y, meta): tuple, batch of data samples
-            X: torch.tensor, input tensor w/ shape (batch_size, seq_len,
+          (X, Y, meta): tuple. Batch of data samples
+            X: torch.tensor. Input tensor w/ shape (batch_size, seq_len,
                                                   num_neurons, num_features)
-            Y: torch.tensor, target tensor w/ same shape as X
+            Y: torch.tensor. Target tensor w/ same shape as X
             meta: dict. Metadata information about samples.
                         keys: 'seq_len', 'start' index , 'end' index
         """
         super(NeuralActivityDataset, self).__init__()
         # dataset checking
-        assert torch.is_tensor(D), "recast dataset as torch.tensor."
+        assert torch.is_tensor(D), "Recast the dataset as `torch.tensor`."
         if D.ndim == 2:
             D = D.unsqueeze(-1)  # expand to 3D if dataset given is 2D
         self.seq_len = seq_len
@@ -72,7 +72,7 @@ class NeuralActivityDataset(torch.utils.data.Dataset):
             )
             assert (
                 feature_mask.sum() > 0
-            ), "`feature_mask` must select at leat 1 feature."
+            ), "`feature_mask` must select at least 1 feature."
             self.feature_mask = feature_mask
         else:
             self.feature_mask = torch.tensor([1] + (num_features - 1) * [0]).to(
@@ -88,7 +88,7 @@ class NeuralActivityDataset(torch.utils.data.Dataset):
             if neurons is not None:
                 assert (
                     np.array(neurons).size == 1
-                ), "only select 1 neuron when > 1 signals as features."
+                ), "Only select 1 neuron when using > 1 signals as features."
                 self.neurons = np.array(neurons)  # use the single neuron given
             else:
                 self.neurons = np.array([0])  # use the first neuron
@@ -102,7 +102,7 @@ class NeuralActivityDataset(torch.utils.data.Dataset):
         self.tau = tau
         self.size = size
         self.counter = 0
-        self.data_samples, self.batch_indices = self.__data_generator()
+        self.data_samples, self.batch_sampler = self.__data_generator()
 
     def __len__(self):
         """Denotes the total number of samples."""
@@ -166,8 +166,10 @@ class NeuralActivityDataset(torch.utils.data.Dataset):
                 break
         # size of dataset
         self.size = self.counter
-        # return samples
-        return data_samples, batch_indices
+        # create a batch sampler
+        batch_sampler = BatchSampler(batch_indices)
+        # return samples and batch_sampler
+        return data_samples, batch_sampler
 
 
 class CElegansConnectome(InMemoryDataset):
@@ -249,9 +251,11 @@ def pick_worm(dataset, wormid):
         dataset = load_dataset(dataset)
     else:
         assert (
-            isinstance(dataset, dict) and "worm1" in dataset.keys()
+            isinstance(dataset, dict)
+            and ("name" in dataset.keys())
+            and ("worm0" in set(dataset["generator"]))
         ), "Not a valid worm datset!"
-    avail_worms = set(dataset.keys())
+    avail_worms = set(dataset["generator"])
     if isinstance(wormid, str) and wormid.startswith("worm"):
         wormid = wormid.strip("worm")
         assert wormid.isnumeric() and int(wormid) <= len(
@@ -263,7 +267,7 @@ def pick_worm(dataset, wormid):
             avail_worms
         ), "Choose a worm from: {}".format(avail_worms)
         worm = "worm" + str(wormid)
-    single_worm_dataset = dataset[worm]
+    single_worm_dataset = dict(dataset["generator"])[worm]
     return single_worm_dataset
 
 
