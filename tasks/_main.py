@@ -7,4 +7,6 @@ def create_task(config: DictConfig) -> None:
 
 
 if __name__ == "__main__":
-    create_task(OmegaConf.load("conf/task.yaml"))
+    config = OmegaConf.load("conf/task.yaml")
+    print("config:", OmegaConf.to_yaml(config), end="\n\n")
+    create_task(config)

@@ -159,7 +159,8 @@ def optimize_model(
         base_test_loss, test_loss = test_log["base_test_loss"], test_log["test_loss"]
         if epoch % (num_epochs // 10) == 0:
             print(
-                f"Epoch: {epoch:03d}, Train Loss: {train_loss:.4f}, Val. Loss: {test_loss:.4f}"
+                f"Epoch: {epoch:03d}, Train Loss: {train_loss:.4f}, Val. Loss: {test_loss:.4f}",
+                end="\n\n",
             )
             # saves epochs
             log["epochs"].append(epoch)
@@ -184,7 +185,7 @@ def model_predict(calcium_data, model):
     # model in/out
     calcium_data = calcium_data.squeeze()
     assert (
-        calcium_data.ndim == 2 and calcium_data.size(0) == 302
+        calcium_data.ndim == 2 and calcium_data.size(1) == NUM_NEURONS
     ), "Calcium data has incorrect shape!"
     input = calcium_data.to(DEVICE)
     output = model(input)
@@ -239,7 +240,6 @@ def lstm_hidden_size_experiment(
     # we experiment with different hidden sizes
     for hidden_size in input_size * hid_mult:
         hidden_size = int(hidden_size)
-        print()
         print("Hidden size: %d\n" + "~~~" * 10 % hidden_size, end="\n\n")
         # initialize model, optimizer and loss function
         lstm_model = NetworkLSTM(input_size, hidden_size, num_layers).double()

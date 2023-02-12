@@ -18,4 +18,6 @@ def get_model(config: DictConfig) -> torch.nn.Module:
 
 
 if __name__ == "__main__":
-    get_model(OmegaConf.load("conf/model.yaml"))
+    config = OmegaConf.load("conf/model.yaml")
+    print("config:", OmegaConf.to_yaml(config), end="\n\n")
+    get_model(config)

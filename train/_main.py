@@ -2,62 +2,97 @@ from train._utils import *
 
 
 def train_model(
-    model: torch.nn.Module, dataset: dict, config: DictConfig, optimizer=None
+    model: torch.nn.Module,
+    dataset: dict,
+    config: DictConfig,
+    optimizer=None,
 ):
     """
-    Trains the
+    Trains a model on a multi-worm dataset. Returns the trained model
+    and a path to the directory with training and evaluation logs.
     """
-    assert ("name" in dataset) and (
-        "generator" in dataset
-    ), "Not a valid dataset object."
+    assert "worm0" in dataset, "Not a valid dataset object."
     # initialize
-    logs = dict(
-        dataset_name=dataset["name"],
-        model_class_name=model.__class__.__name__,
-        timestamp=datetime.now().strftime("%Y_%m_%d_%H_%M_%S"),
-    )
+    logs = dict()
+    dataset_name = dataset["worm0"]["dataset"]
+    model_class_name = model.__class__.__name__
+    timestamp = datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
     log_dir = os.path.join(
-        LOGS_DIR,
-        "{}-{}-{}".format(logs["dataset_name"], logs["model_name"], logs["timestamp"]),
+        LOGS_DIR, "{}-{}-{}".format(dataset_name, model_class_name, timestamp)
     )
-    os.makedirs(path=log_dir, exist_ok=True)
-    data_gen = dataset["generator"]
+    os.makedirs(log_dir, exist_ok=True)
     # instantiate the optimizer
     if optimizer is not None:
         optimizer = optimizer
     else:
         optimizer = torch.optim.Adam(model.parameters(), lr=config.train.learn_rate)
-    # train the model
-    epoch = 1
-    for worm, single_worm_dataset in data_gen:
+    # train the model and accumulate the log metrics
+    columns = [
+        "epochs",
+        "base_train_losses",
+        "base_test_losses",
+        "train_losses",
+        "test_losses",
+    ]
+    data = {
+        "worms_trained_on": [],
+        "num_worms_trained_on": [],
+        "epochs": [],
+        "base_train_losses": [],
+        "base_test_losses": [],
+        "train_losses": [],
+        "test_losses": [],
+    }
+    reset_epoch = 1
+    for worm, single_worm_dataset in dataset.items():
         model, log = optimize_model(
             dataset=single_worm_dataset["calcium_data"],
             model=model,
             mask=single_worm_dataset["named_neurons_mask"],
             optimizer=optimizer,
-            start_epoch=epoch,
+            start_epoch=reset_epoch,
             num_epochs=config.train.epochs,
             seq_len=config.train.seq_len,
             dataset_size=config.train.dataset_size,
         )
         logs[worm] = log
-        epoch = log["epochs"][-1] + 1
+        reset_epoch = log["epochs"][-1] + 1
+    # TODO: put this second loop in a helper function
     # make predicitons with trained model and save logs
-    for worm, single_worm_dataset in data_gen:
+    for worm, single_worm_dataset in dataset.items():
+        os.makedirs(os.path.join(log_dir, worm), exist_ok=True)
+        # make predictions with final model
         targets, predictions = model_predict(single_worm_dataset["calcium_data"], model)
-        logs[worm].update(
-            {
-                "neurons_mask": single_worm_dataset["neurons_mask"],
-                "calcium_data": single_worm_dataset["calcium_data"],
-                "slot_to_neuron": single_worm_dataset["slot_to_neuron"],
-                "target_ca_residual": targets,
-                "predicted_ca_residual": predictions,
-            }
+        # get data to save
+        named_neuron_to_idx = single_worm_dataset["named_neuron_to_idx"]
+        calcium_data = single_worm_dataset["calcium_data"]
+        named_neurons_mask = single_worm_dataset["named_neurons_mask"]
+        # save training curves
+
+        # save dataframes and model checkpoints
+        columns = list(named_neuron_to_idx)
+        data = calcium_data[:, named_neurons_mask].numpy()
+        pd.DataFrame(data=data, columns=columns).to_csv(
+            os.path.join(log_dir, worm, "ca_activity.csv"),
+            index=True,
+            header=True,
         )
-        # save logs as Pandas dataframes
-        os.makedirs(path=os.path.join(log_dir, worm), exist_ok=True)
-        # df = pd.DataFrame(, columns=["neuron", ], index=logs[worm]["slot_to_neuron"].keys())
-        # df.to_csv(file, mode='a', index=True, columns=columns, header=header)
+        data = torch.nn.functional.pad(
+            targets[:, named_neurons_mask], (0, 0, 1, 0)
+        ).numpy()
+        pd.DataFrame(data=data, columns=columns).to_csv(
+            os.path.join(log_dir, worm, "target_ca_residual.csv"),
+            index=True,
+            header=True,
+        )
+        data = torch.nn.functional.pad(
+            predictions[:, named_neurons_mask], (0, 0, 0, 1)
+        ).numpy()
+        pd.DataFrame(data=data, columns=columns).to_csv(
+            os.path.join(log_dir, worm, "predicted_ca_residual.csv"),
+            index=True,
+            header=True,
+        )
 
     # returned trained model and path to log directory
     return model, log_dir

@@ -24,4 +24,6 @@ def process_data(config: DictConfig) -> None:
 
 
 if __name__ == "__main__":
-    process_data(OmegaConf.load("conf/preprocess.yaml"))
+    config = OmegaConf.load("conf/preprocess.yaml")
+    print("config:", OmegaConf.to_yaml(config), end="\n\n")
+    process_data(config)

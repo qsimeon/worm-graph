@@ -8,17 +8,19 @@ def get_dataset(config: DictConfig):
     """
     # load the dataset
     dataset_name = config.dataset.name
-    dataset = load_dataset(dataset_name)
+    multi_worms_dataset = load_dataset(dataset_name)
     print(
-        "Chosen dataset: {}\nNum. worms: {}\Generator: {}".format(
-            dataset["dataset_name"],
-            dataset["num_worms"],
-            dataset["dataset_generator"],
+        "Chosen dataset: {}\nNum. worms: {}\nWorm names: {}".format(
+            dataset_name,
+            len(multi_worms_dataset),
+            multi_worms_dataset.keys(),
         ),
         end="\n\n",
     )
-    return dataset
+    return multi_worms_dataset
 
 
 if __name__ == "__main__":
-    get_dataset(OmegaConf.load("conf/dataset.yaml"))
+    config = OmegaConf.load("conf/dataset.yaml")
+    print("config:", OmegaConf.to_yaml(config), end="\n\n")
+    dataset = get_dataset(config)

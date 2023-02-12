@@ -373,10 +373,10 @@ def pickle_Kato2015(transform):
                     "calcium_data": real_data,
                     "neuron_to_idx": neuron_to_idx,
                     "idx_to_neuron": dict((v, k) for k, v in neuron_to_idx.items()),
-                    "max_time": max_time,
-                    "num_neurons": num_neurons,
+                    "max_time": int(max_time),
+                    "num_neurons": int(num_neurons),
                     "num_named_neurons": num_named,
-                    "num_unknown_neurons": num_neurons - num_named,
+                    "num_unknown_neurons": int(num_neurons) - num_named,
                 },
             }
         )
@@ -442,10 +442,10 @@ def pickle_Kato2015(transform):
                     "calcium_data": real_data,
                     "neuron_to_idx": neuron_to_idx,
                     "idx_to_neuron": dict((v, k) for k, v in neuron_to_idx.items()),
-                    "max_time": max_time,
-                    "num_neurons": num_neurons,
+                    "max_time": int(max_time),
+                    "num_neurons": int(num_neurons),
                     "num_named_neurons": num_named,
-                    "num_unknown_neurons": num_neurons - num_named,
+                    "num_unknown_neurons": int(num_neurons) - num_named,
                 },
             }
         )
@@ -454,16 +454,11 @@ def pickle_Kato2015(transform):
     # pickle the data
     file = os.path.join(processed_path, "Kato2015.pickle")
     pickle_out = open(file, "wb")
-    dataset_object = {
-        "name": "Kato2015",
-        "num_worms": len(data_dict),
-        "generator": iter(data_dict.items()),
-    }
-    pickle.dump(dataset_object, pickle_out)
+    pickle.dump(data_dict, pickle_out)
     pickle_out.close()
     pickle_in = open(file, "rb")
     Kato2015 = pickle.load(pickle_in)
-    print(Kato2015.items(), end="\n\n")
+    print(Kato2015.keys(), end="\n\n")
 
 
 def pickle_Nichols2017(transform):
@@ -529,10 +524,10 @@ def pickle_Nichols2017(transform):
                     "calcium_data": real_data,
                     "neuron_to_idx": neuron_to_idx,
                     "idx_to_neuron": dict((v, k) for k, v in neuron_to_idx.items()),
-                    "max_time": max_time,
-                    "num_neurons": num_neurons,
+                    "max_time": int(max_time),
+                    "num_neurons": int(num_neurons),
                     "num_named_neurons": num_named,
-                    "num_unknown_neurons": num_neurons - num_named,
+                    "num_unknown_neurons": int(num_neurons) - num_named,
                 },
             }
         )
@@ -595,10 +590,10 @@ def pickle_Nichols2017(transform):
                     "calcium_data": real_data,
                     "neuron_to_idx": neuron_to_idx,
                     "idx_to_neuron": dict((v, k) for k, v in neuron_to_idx.items()),
-                    "max_time": max_time,
-                    "num_neurons": num_neurons,
+                    "max_time": int(max_time),
+                    "num_neurons": int(num_neurons),
                     "num_named_neurons": num_named,
-                    "num_unknown_neurons": num_neurons - num_named,
+                    "num_unknown_neurons": int(num_neurons) - num_named,
                 },
             }
         )
@@ -661,10 +656,10 @@ def pickle_Nichols2017(transform):
                     "calcium_data": real_data,
                     "neuron_to_idx": neuron_to_idx,
                     "idx_to_neuron": dict((v, k) for k, v in neuron_to_idx.items()),
-                    "max_time": max_time,
-                    "num_neurons": num_neurons,
+                    "max_time": int(max_time),
+                    "num_neurons": int(num_neurons),
                     "num_named_neurons": num_named,
-                    "num_unknown_neurons": num_neurons - num_named,
+                    "num_unknown_neurons": int(num_neurons) - num_named,
                 },
             }
         )
@@ -727,10 +722,10 @@ def pickle_Nichols2017(transform):
                     "calcium_data": real_data,
                     "neuron_to_idx": neuron_to_idx,
                     "idx_to_neuron": dict((v, k) for k, v in neuron_to_idx.items()),
-                    "max_time": max_time,
-                    "num_neurons": num_neurons,
+                    "max_time": int(max_time),
+                    "num_neurons": int(num_neurons),
                     "num_named_neurons": num_named,
-                    "num_unknown_neurons": num_neurons - num_named,
+                    "num_unknown_neurons": int(num_neurons) - num_named,
                 },
             }
         )
@@ -739,16 +734,11 @@ def pickle_Nichols2017(transform):
     # pickle the data
     file = os.path.join(processed_path, "Nichols2017.pickle")
     pickle_out = open(file, "wb")
-    dataset_object = {
-        "name": "Nichols2017",
-        "num_worms": len(data_dict),
-        "generator": iter(data_dict.items()),
-    }
-    pickle.dump(dataset_object, pickle_out)
+    pickle.dump(data_dict, pickle_out)
     pickle_out.close()
     pickle_in = open(file, "rb")
     Nichols2017 = pickle.load(pickle_in)
-    print(Nichols2017.items(), end="\n\n")
+    print(Nichols2017.keys(), end="\n\n")
 
 
 def pickle_Nguyen2017(transform):
@@ -882,16 +872,11 @@ def pickle_Nguyen2017(transform):
         data_dict[worm] = reshape_calcium_data(data_dict[worm])
     file = os.path.join(processed_path, "Nguyen2017.pickle")
     pickle_out = open(file, "wb")
-    dataset_object = {
-        "name": "Nguyen2017",
-        "num_worms": len(data_dict),
-        "generator": iter(data_dict.items()),
-    }
-    pickle.dump(dataset_object, pickle_out)
+    pickle.dump(data_dict, pickle_out)
     pickle_out.close()
     pickle_in = open(file, "rb")
     Nguyen2017 = pickle.load(pickle_in)
-    print(Nguyen2017.items(), end="\n\n")
+    print(Nguyen2017.keys(), end="\n\n")
 
 
 def pickle_Skora2018(transform):
@@ -957,10 +942,10 @@ def pickle_Skora2018(transform):
                     "calcium_data": real_data,
                     "neuron_to_idx": neuron_to_idx,
                     "idx_to_neuron": dict((v, k) for k, v in neuron_to_idx.items()),
-                    "max_time": max_time,
-                    "num_neurons": num_neurons,
+                    "max_time": int(max_time),
+                    "num_neurons": int(num_neurons),
                     "num_named_neurons": num_named,
-                    "num_unknown_neurons": num_neurons - num_named,
+                    "num_unknown_neurons": int(num_neurons) - num_named,
                 },
             }
         )
@@ -1023,10 +1008,10 @@ def pickle_Skora2018(transform):
                     "calcium_data": real_data,
                     "neuron_to_idx": neuron_to_idx,
                     "idx_to_neuron": dict((v, k) for k, v in neuron_to_idx.items()),
-                    "max_time": max_time,
-                    "num_neurons": num_neurons,
+                    "max_time": int(max_time),
+                    "num_neurons": int(num_neurons),
                     "num_named_neurons": num_named,
-                    "num_unknown_neurons": num_neurons - num_named,
+                    "num_unknown_neurons": int(num_neurons) - num_named,
                 },
             }
         )
@@ -1035,16 +1020,11 @@ def pickle_Skora2018(transform):
     # pickle the data
     file = os.path.join(processed_path, "Skora2018.pickle")
     pickle_out = open(file, "wb")
-    dataset_object = {
-        "name": "Skora2018",
-        "num_worms": len(data_dict),
-        "generator": iter(data_dict.items()),
-    }
-    pickle.dump(dataset_object, pickle_out)
+    pickle.dump(data_dict, pickle_out)
     pickle_out.close()
     pickle_in = open(file, "rb")
     Skora2018 = pickle.load(pickle_in)
-    print(Skora2018.items(), end="\n\n")
+    print(Skora2018.keys(), end="\n\n")
 
 
 def pickle_Kaplan2020(transform):
@@ -1104,10 +1084,10 @@ def pickle_Kaplan2020(transform):
                     "calcium_data": real_data,
                     "neuron_to_idx": neuron_to_idx,
                     "idx_to_neuron": dict((v, k) for k, v in neuron_to_idx.items()),
-                    "max_time": max_time,
-                    "num_neurons": num_neurons,
+                    "max_time": int(max_time),
+                    "num_neurons": int(num_neurons),
                     "num_named_neurons": num_named,
-                    "num_unknown_neurons": num_neurons - num_named,
+                    "num_unknown_neurons": int(num_neurons) - num_named,
                 },
             }
         )
@@ -1164,10 +1144,10 @@ def pickle_Kaplan2020(transform):
                     "calcium_data": real_data,
                     "neuron_to_idx": neuron_to_idx,
                     "idx_to_neuron": dict((v, k) for k, v in neuron_to_idx.items()),
-                    "max_time": max_time,
-                    "num_neurons": num_neurons,
+                    "max_time": int(max_time),
+                    "num_neurons": int(num_neurons),
                     "num_named_neurons": num_named,
-                    "num_unknown_neurons": num_neurons - num_named,
+                    "num_unknown_neurons": int(num_neurons) - num_named,
                 },
             }
         )
@@ -1224,10 +1204,10 @@ def pickle_Kaplan2020(transform):
                     "calcium_data": real_data,
                     "neuron_to_idx": neuron_to_idx,
                     "idx_to_neuron": dict((v, k) for k, v in neuron_to_idx.items()),
-                    "max_time": max_time,
-                    "num_neurons": num_neurons,
+                    "max_time": int(max_time),
+                    "num_neurons": int(num_neurons),
                     "num_named_neurons": num_named,
-                    "num_unknown_neurons": num_neurons - num_named,
+                    "num_unknown_neurons": int(num_neurons) - num_named,
                 },
             }
         )
@@ -1236,16 +1216,11 @@ def pickle_Kaplan2020(transform):
     # pickle the data
     file = os.path.join(processed_path, "Kaplan2020.pickle")
     pickle_out = open(file, "wb")
-    dataset_object = {
-        "name": "Kaplan2020",
-        "num_worms": len(data_dict),
-        "generator": iter(data_dict.items()),
-    }
-    pickle.dump(dataset_object, pickle_out)
+    pickle.dump(data_dict, pickle_out)
     pickle_out.close()
     pickle_in = open(file, "rb")
     Kaplan2020 = pickle.load(pickle_in)
-    print(Kaplan2020.items(), end="\n\n")
+    print(Kaplan2020.keys(), end="\n\n")
 
 
 def pickle_Uzel2022(transform):
@@ -1305,10 +1280,10 @@ def pickle_Uzel2022(transform):
                     "calcium_data": real_data,
                     "neuron_to_idx": neuron_to_idx,
                     "idx_to_neuron": dict((v, k) for k, v in neuron_to_idx.items()),
-                    "max_time": max_time,
-                    "num_neurons": num_neurons,
+                    "max_time": int(max_time),
+                    "num_neurons": int(num_neurons),
                     "num_named_neurons": num_named,
-                    "num_unknown_neurons": num_neurons - num_named,
+                    "num_unknown_neurons": int(num_neurons) - num_named,
                 },
             }
         )
@@ -1317,13 +1292,8 @@ def pickle_Uzel2022(transform):
     # pickle the data
     file = os.path.join(processed_path, "Uzel2022.pickle")
     pickle_out = open(file, "wb")
-    dataset_object = {
-        "name": "Uzel2022",
-        "num_worms": len(data_dict),
-        "generator": iter(data_dict.items()),
-    }
-    pickle.dump(dataset_object, pickle_out)
+    pickle.dump(data_dict, pickle_out)
     pickle_out.close()
     pickle_in = open(file, "rb")
     Uzel2022 = pickle.load(pickle_in)
-    print(Uzel2022.items(), end="\n\n")
+    print(Uzel2022.keys(), end="\n\n")
