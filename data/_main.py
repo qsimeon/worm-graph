@@ -13,7 +13,7 @@ def get_dataset(config: DictConfig):
         "Chosen dataset: {}\nNum. worms: {}\nWorm names: {}".format(
             dataset_name,
             len(multi_worms_dataset),
-            multi_worms_dataset.keys(),
+            list(multi_worms_dataset.keys()),
         ),
         end="\n\n",
     )

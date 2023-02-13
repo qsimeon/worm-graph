@@ -1,2 +1,3 @@
 visualize:
+  default_log_dir: logs/Uzel2022-LinearNN-2023_02_12_23_08_05
   param: None

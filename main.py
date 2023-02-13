@@ -15,14 +15,14 @@ def pipeline(config: DictConfig) -> None:
     # skips if data already preprocessed
     process_data(config)
 
-    # # returns a generator of single worm datasets
-    # dataset = get_dataset(config)
+    # returns a generator of single worm datasets
+    dataset = get_dataset(config)
 
-    # model = get_model(config)
+    model = get_model(config)
 
-    # model, log_dir = train_model(model, dataset, config, shuffle=True, optimizer=None)
+    model, log_dir = train_model(model, dataset, config, shuffle=True, optimizer=None)
 
-    # # plot_figures(log_dir)
+    plot_figures(config, log_dir)
     # # analysis
     return None
 

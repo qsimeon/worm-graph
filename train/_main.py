@@ -14,7 +14,6 @@ def train_model(
     """
     assert "worm0" in dataset, "Not a valid dataset object."
     # initialize
-    logs = dict()
     dataset_name = dataset["worm0"]["dataset"]
     model_class_name = model.__class__.__name__
     timestamp = datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
@@ -54,7 +53,7 @@ def train_model(
             seq_len=config.train.seq_len,
             dataset_size=config.train.dataset_size,
         )
-        print("num. worms trained on:", i + 1, "\ncurrent worm:", worm, end="\n\n")
+        print("num. worms trained on:", i + 1, "\nprevious worm:", worm, end="\n\n")
         # retrieve losses
         data["epochs"].extend(log["epochs"])
         data["train_losses"].extend(log["train_losses"])
@@ -93,8 +92,8 @@ def train_model(
 
 
 if __name__ == "__main__":
-    model = get_model(OmegaConf.load("conf/model.yaml"))
-    dataset = get_dataset(OmegaConf.load("conf/dataset.yaml"))
     config = OmegaConf.load("conf/train.yaml")
     print("config:", OmegaConf.to_yaml(config), end="\n\n")
+    model = get_model(OmegaConf.load("conf/model.yaml"))
+    dataset = get_dataset(OmegaConf.load("conf/dataset.yaml"))
     model, log_dir = train_model(model, dataset, config)

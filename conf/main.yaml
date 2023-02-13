@@ -19,7 +19,7 @@ hydra:
     subdir: ${hydra.job.num}
   mode: RUN
   job:
-    chdir: true
+    chdir: false
   sweeper:
     params:
       dataset.name: Nichols2017, Kaplan2020, Uzel2022

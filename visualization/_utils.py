@@ -145,7 +145,7 @@ def plot_before_after_weights(before_weights, after_weights, W_name=""):
     plt.show()
 
 
-def plot_correlation_scatter(targets, predictions, plt_title=""):
+def plot_correlation_scatterplot(targets, predictions, plt_title=""):
     """
     Create a scatterpot of the target and predicted residuals.
     """
@@ -227,44 +227,24 @@ def plot_hidden_experiment(hidden_experiment):
     plt.show()
 
 
-def plot_loss_log(log, plt_title=""):
+def plot_loss_curves(log_dir, plt_title=""):
     """
-    Plot the loss curves returned from `optimize_model`.
+    Plot the loss curves stored in the given log directory.
     """
+    # process the log folder name
+    dataset_name, model_name, timestamp = str.split(log_dir, "-")
+    # load the loss datframe
+    loss_df = pd.read_csv(os.path.join(log_dir, "loss_curves.csv"), index_col=0)
     plt.figure()
-    plt.plot(
-        log["epochs"],
-        np.log10(log["train_losses"]),
-        label="train",
-        color="r",
-        linewidth=2,
+    sns.lineplot(x="epochs", y="train_losses", data=loss_df, label="train")
+    sns.lineplot(x="epochs", y="test_losses", data=loss_df, label="test")
+    sns.lineplot(
+        x="epochs", y="base_train_losses", data=loss_df, label="train basleine"
     )
-    plt.plot(
-        log["epochs"],
-        np.log10(log["test_losses"]),
-        label="test",
-        color="b",
-        linewidth=2,
-    )
-    plt.plot(
-        log["epochs"],
-        np.log10(log["base_train_losses"]),
-        label="train baseline",
-        color="r",
-        linestyle="--",
-        linewidth=2,
-    )
-    plt.plot(
-        log["epochs"],
-        np.log10(log["base_test_losses"]),
-        label="test baseline",
-        color="b",
-        linestyle="--",
-        linewidth=2,
-    )
+    sns.lineplot(x="epochs", y="base_test_losses", data=loss_df, label="test baseline")
     plt.xlabel("Epoch")
-    plt.ylabel("log MSE")
-    plt.legend(labelspacing=0)
+    plt.ylabel("Loss")
+    plt.legend()
     plt.title(plt_title)
     plt.show()
 
@@ -431,7 +411,7 @@ def plot_neuron_train_test_samples(
     yshifts = np.random.uniform(low=0.5, high=1.0, size=n_ex)
     eps = 0.05
     # datasets (only for visualizing)
-    train_dataset = MapDataset(
+    train_dataset = NeuralActivityDataset(
         calcium_data[: max_time // 2],
         tau=tau,
         seq_len=seq_len,
@@ -439,7 +419,7 @@ def plot_neuron_train_test_samples(
         increasing=True,
         reverse=True,
     )
-    test_dataset = MapDataset(
+    test_dataset = NeuralActivityDataset(
         calcium_data[max_time // 2 :],
         tau=tau,
         seq_len=seq_len,
@@ -574,20 +554,26 @@ def plot_single_neuron_signals(single_worm_dataset, neuron_idx):
     plt.show()
 
 
-def plot_target_prediction(target, prediction, plt_title=""):
+def plot_targets_predictions(log_dir):
     """
-    Make a plot of prediction versus target for the full trace
-    of a single neuron.
+    Plot of target Ca2+ residual time series overlayed
+    with predicted Ca2+ residual time series.
     """
-    max_time = len(target)
+    # process the log folder name
+    dataset_name, model_name, timestamp = str.split(log_dir, "-")
+    # load predictions dataframe
+    predictions_df = pd.read_csv(
+        os.path.join(log_dir, "worm0", "predicted_ca_residual.csv"), index_col=0
+    )
+    # load targets dataframe
+    targets_df = pd.read_csv(
+        os.path.join(log_dir, "worm0", "target_ca_residual.csv"), index_col=0
+    )
     plt.figure()
-    plt.plot(target, linestyle="-", label="target", linewidth=2)
-    plt.plot(prediction, linestyle=":", label="prediction", linewidth=3)
-    plt.axvline(x=max_time // 2, c="r", linestyle="--", linewidth=4)
+
     plt.legend()
     plt.xlabel("Time")
-    plt.ylabel("Residual $\Delta F/F$")
-    plt.title(plt_title)
+    plt.ylabel("$Ca^{2+}$ Residual $\Delta F/F$")
     plt.show()
 
 
