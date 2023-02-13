@@ -169,14 +169,51 @@ def optimize_model(
             log["base_test_losses"].append(base_test_loss)
             log["train_losses"].append(train_loss)
             log["test_losses"].append(test_loss)
-            # save checkpoints
-            log["model_state_dicts"].append(model.state_dict())
-            log["optimizer_state_dicts"].append(optimizer.state_dict())
     # return optimized model
     return model, log
 
 
-def model_predict(calcium_data, model):
+def make_predictions(model, dataset, log_dir):
+    """
+    Make predicitons with trained model and save CSV files
+    inside given log directory.
+    """
+    for worm, single_worm_dataset in dataset.items():
+        os.makedirs(os.path.join(log_dir, worm), exist_ok=True)
+        # make predictions with final model
+        targets, predictions = model_predict(model, single_worm_dataset["calcium_data"])
+        # get data to save
+        named_neuron_to_idx = single_worm_dataset["named_neuron_to_idx"]
+        calcium_data = single_worm_dataset["calcium_data"]
+        named_neurons_mask = single_worm_dataset["named_neurons_mask"]
+        # save dataframes
+        columns = list(named_neuron_to_idx)
+        data = calcium_data[:, named_neurons_mask].numpy()
+        pd.DataFrame(data=data, columns=columns).to_csv(
+            os.path.join(log_dir, worm, "ca_activity.csv"),
+            index=True,
+            header=True,
+        )
+        data = torch.nn.functional.pad(
+            targets[:, named_neurons_mask], (0, 0, 1, 0)
+        ).numpy()
+        pd.DataFrame(data=data, columns=columns).to_csv(
+            os.path.join(log_dir, worm, "target_ca_residual.csv"),
+            index=True,
+            header=True,
+        )
+        data = torch.nn.functional.pad(
+            predictions[:, named_neurons_mask], (0, 0, 0, 1)
+        ).numpy()
+        pd.DataFrame(data=data, columns=columns).to_csv(
+            os.path.join(log_dir, worm, "predicted_ca_residual.csv"),
+            index=True,
+            header=True,
+        )
+    return None
+
+
+def model_predict(model, calcium_data):
     """
     Makes predictions for all neurons in the
     calcium dataset using a trained model.
