@@ -145,34 +145,36 @@ def plot_before_after_weights(before_weights, after_weights, W_name=""):
     plt.show()
 
 
-def plot_correlation_scatterplot(targets, predictions, plt_title=""):
+def plot_correlation_scatterplot(log_dir, worm, neuron):
     """
-    Create a scatterpot of the target and predicted residuals.
+    Create a scatterpot of the target and predicted Ca2+
+    residuals colored by train and test sample.
     """
-    max_time = len(targets)
-    xx_tr = targets[: max_time // 2, :]
-    yy_tr = predictions[: max_time // 2, :]
-    xx_te = targets[max_time // 2 :, :]
-    yy_te = predictions[max_time // 2 :, :]
-    # print model test results
-    print()
-    print("model test performance:", ((yy_te - xx_te) ** 2).mean())
-    print()
-    print("signs flipped:", ((-1 * yy_te - xx_te) ** 2).mean())
-    print()
-    print("baseline:", ((0 * yy_te - xx_te) ** 2).mean())
-    # plot figures
-    fig, axs = plt.subplots(1, 1)
-    axs.scatter(xx_tr, yy_tr, c="m", alpha=0.7, label="train")
-    axs.scatter(xx_te, yy_te, c="c", alpha=0.2, label="test")
-    axs.axis("equal")
-    axs.set_title(plt_title)
-    axs.set_xlim([-1, 1])
-    axs.set_ylim([-1, 1])
-    axs.set_xlabel(r"True residual $\Delta F / F$")
-    axs.set_ylabel(r"Predicted residual $\Delta F / F$")
-    axs.legend()
+    dataset_name, model_name, timestamp = str.split(log_dir, "-")
+    plt_title = "Scatterplot of predicted vs target residuals\nworm: {}, neuron: {}\nmodel: {}, dataset: {}\ntime: {}".format(
+        worm, neuron, model_name, dataset_name, timestamp
+    )
+    # load predictions dataframe
+    predictions_df = pd.read_csv(
+        os.path.join(log_dir, worm, "predicted_ca_residual.csv"), index_col=0
+    )
+    # load targets dataframe
+    targets_df = pd.read_csv(
+        os.path.join(log_dir, worm, "target_ca_residual.csv"), index_col=0
+    )
+    # TODO: make the train/test labels a column in the dataframe
+    label = np.where(np.arange(len(targets_df)) > len(targets_df) // 2, 1, 0)
+    data = np.vstack(
+        (targets_df[neuron].to_numpy(), predictions_df[neuron].to_numpy(), label)
+    ).T
+    df = pd.DataFrame(data=data, columns=["x", "y", "label"], dtype=float)
+    sns.lmplot(data=df, x="x", y="y", hue="label", legend=False)
+    plt.legend(labels=["train", None, None, "test", None, None])
+    plt.suptitle(plt_title)
+    plt.xlabel("Target residual $\Delta F / F$")
+    plt.ylabel("Predicted residual $\Delta F / F$")
     plt.show()
+    return None
 
 
 def plot_hidden_experiment(hidden_experiment):
@@ -222,18 +224,20 @@ def plot_hidden_experiment(hidden_experiment):
     axs[1].set_yticks(axs[0].get_yticks())
     axs[1].legend(loc="upper right", borderpad=0, labelspacing=0)
     axs[1].set_title("Validation")
-
     fig.suptitle("LSTM network model loss curves with various hidden units")
     plt.show()
 
 
-def plot_loss_curves(log_dir, plt_title=""):
+def plot_loss_curves(log_dir):
     """
     Plot the loss curves stored in the given log directory.
     """
     # process the log folder name
     dataset_name, model_name, timestamp = str.split(log_dir, "-")
-    # load the loss datframe
+    plt_title = "Loss curves\nmodel: {}, dataset: {}\ntime: {}".format(
+        model_name, dataset_name, timestamp
+    )
+    # load the loss dataframe
     loss_df = pd.read_csv(os.path.join(log_dir, "loss_curves.csv"), index_col=0)
     plt.figure()
     sns.lineplot(x="epochs", y="train_losses", data=loss_df, label="train")
@@ -242,11 +246,12 @@ def plot_loss_curves(log_dir, plt_title=""):
         x="epochs", y="base_train_losses", data=loss_df, label="train basleine"
     )
     sns.lineplot(x="epochs", y="base_test_losses", data=loss_df, label="test baseline")
-    plt.xlabel("Epoch")
-    plt.ylabel("Loss")
     plt.legend()
     plt.title(plt_title)
+    plt.xlabel("Epoch")
+    plt.ylabel("Loss")
     plt.show()
+    return None
 
 
 def plot_more_data_losses(results, plt_title=""):
@@ -511,56 +516,49 @@ def plot_neuron_train_test_samples(
     plt.show()
 
 
-def plot_single_neuron_signals(single_worm_dataset, neuron_idx):
+def plot_single_neuron_signals(log_dir, worm, neuron, n_lags=20):
     """
-    Visualizes the full Ca2+ recording, the residual of the former,
-    and the 20-lag partial autocorrelation function of the specified
-    neuron in the worm.
-    """
-    neuron_to_idx = single_worm_dataset["named_neuron_to_idx"]
-    calcium_data = single_worm_dataset["named_data"]
-    if len(neuron_to_idx) == 0:
-        neuron_to_idx = single_worm_dataset["all_neuron_to_idx"]
-        calcium_data = single_worm_dataset["all_data"]
-    idx_to_neuron = dict((v, k) for k, v in neuron_to_idx.items())
-    max_time = single_worm_dataset["max_time"]
-    neuron = idx_to_neuron[neuron_idx]
-    # plot the full Ca2+ recording of that neuron
-    fig, axs = plt.subplots(1, 3, figsize=(20, 5))
-    axs[0].plot(calcium_data[:, neuron_idx])
-    axs[0].set_xlabel("time")
-    axs[0].set_ylabel("normalized $\Delta F/F$")
-    axs[0].set_title(
-        "Signal: Calcium activity, \nNeuron %s, Recording time: %s" % (neuron, max_time)
-    )
-    # plot the residuals for the full time series
-    residuals = torch.diff(
-        calcium_data[:, neuron_idx].squeeze(), prepend=calcium_data[0, neuron_idx]
-    )
-    mean = residuals.mean().item()
-    print("mean residual:", mean)
-    print()
-    axs[1].plot(residuals)
-    axs[1].axhline(mean, color="k", linewidth=3, label="mean")
-    axs[1].set_xlabel("Time $t$")
-    axs[1].set_ylabel("residual")
-    axs[1].set_title("Residuals of Ca2+ signal of neuron %s" % neuron)
-    axs[1].legend()
-    # plot the autocorrelation function of that neuron's Ca2+ signal
-    tsaplots.plot_pacf(calcium_data[:, neuron_idx].squeeze(), ax=axs[2], lags=20)
-    axs[2].set_title("Partial autocorrelation of neuron %s" % neuron)
-    axs[2].set_xlabel("Lag at tau τ")
-    axs[2].set_ylabel("correlation coefficient")
-    plt.show()
-
-
-def plot_targets_predictions(log_dir):
-    """
-    Plot of target Ca2+ residual time series overlayed
-    with predicted Ca2+ residual time series.
+    Visualizes the Ca2+ neural activity time series, the first difference
+    (i.e. residual) of the former, and the partial autocorrelation function
+    of the specified neuron in the given worm.
     """
     # process the log folder name
-    dataset_name, model_name, timestamp = str.split(log_dir, "-")
+    dataset_name, model_name, timestamp = str.split(os.path.split(log_dir)[-1], "-")
+    plt_title = "Neural activity and partial autocorrelation\nworm: {}, neuron: {}\nmodel: {}, dataset: {}\ntime: {}".format(
+        worm, neuron, model_name, dataset_name, timestamp
+    )
+    # load calcium activity dataframe
+    calcium_df = pd.read_csv(
+        os.path.join(log_dir, worm, "ca_activity.csv"), index_col=0
+    )
+    # plot the full Ca2+ recording
+    plt.figure()
+    fig, axs = plt.subplots(1, 2)
+    sns.lineplot(ax=axs[0], data=calcium_df, x=calcium_df.index, y=calcium_df[neuron])
+    axs[0].set_title("Neural activty as measured by change in Ca2+ signal")
+    axs[0].set_xlabel("Time")
+    axs[0].set_ylabel("GCaMP fluorescence ($\Delta F / F$)")
+    # plot the autocorrelation function
+    tsaplots.plot_pacf(calcium_df[neuron], ax=axs[1], lags=n_lags)
+    axs[1].set_title("Partial autocorrelation function (first %s lags)" % n_lags)
+    axs[1].set_xlabel("Lag ($\{tau}$)")
+    axs[1].set_ylabel("correlation coefficient")
+    plt.suptitle(plt_title)
+    plt.show()
+    return None
+
+
+def plot_targets_predictions(log_dir, worm, neuron):
+    """
+    Plot of the target Ca2+ residual time series overlayed
+    with the predicted Ca2+ residual time series of a single
+    neuron in a given worm.
+    """
+    # process the log folder name
+    dataset_name, model_name, timestamp = str.split(os.path.split(log_dir)[-1], "-")
+    plt_title = "Residual neural activity\nworm: {}, neuron: {}\nmodel: {}, dataset: {}\ntime: {}".format(
+        worm, neuron, model_name, dataset_name, timestamp
+    )
     # load predictions dataframe
     predictions_df = pd.read_csv(
         os.path.join(log_dir, "worm0", "predicted_ca_residual.csv"), index_col=0
@@ -570,10 +568,19 @@ def plot_targets_predictions(log_dir):
         os.path.join(log_dir, "worm0", "target_ca_residual.csv"), index_col=0
     )
     plt.figure()
-
+    sns.lineplot(
+        data=targets_df, x=targets_df.index, y=targets_df.columns[0], label="target"
+    )
+    sns.lineplot(
+        data=predictions_df,
+        x=predictions_df.index,
+        y=predictions_df.columns[0],
+        label="predicted",
+    )
     plt.legend()
+    plt.title(plt_title)
     plt.xlabel("Time")
-    plt.ylabel("$Ca^{2+}$ Residual $\Delta F/F$")
+    plt.ylabel("$Ca^{2+}$ Residual ($\Delta F / F$)")
     plt.show()
 
 
@@ -615,3 +622,4 @@ def plot_worm_data(single_worm_dataset, worm_name):
         "{}: Calcium traces (first 200 timesteps) of 10 neurons".format(worm_name)
     )
     plt.show()
+    return None

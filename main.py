@@ -4,12 +4,14 @@ from pkg import *
 @hydra.main(version_base=None, config_path="conf", config_name="main")
 def pipeline(config: DictConfig) -> None:
     """
-    Runs a complete pipeline using params in main.yaml.
-    Subroutines and corresponding their config files:
+    Runs a complete pipeline using the parameters in main.yaml.
+    Calls the below subroutines with parameters in their
+    corresponding config files:
         process_data: preprocess.yaml
         get_dataset: dataset.yaml
         get_model: model.yaml
         train_model: train.yaml
+        plot_figures: visualize.yaml
         analyze_outputs: analysis.yaml
     """
     # skips if data already preprocessed

@@ -1,16 +1,32 @@
 from visualization._utils import *
 
 
-def plot_figures(config: DictConfig, log_dir: str = None) -> None:
+def plot_figures(
+    config: DictConfig,
+    log_dir: str = None,
+    worm: str = None,
+    neuron: str = None,
+) -> None:
+    """
+    Plots the loss curves and other basic plots from the results of traininig
+    a model on a worm neural activity dataset. Does not save figures automatically.
+    """
+    # get default hyperparams for plotting
     if log_dir is None:
         log_dir = config.visualize.default_log_dir
+    if worm is None:
+        worm = config.visualize.default_worm
+    if neuron is None:
+        neuron = config.visualize.default_neuron
+
     # loss curves
     plot_loss_curves(log_dir)
-    # calcium residuals
-    # plot_targets_predictions(log_dir)
 
-    # plot scatterplot of all neuron predictions
-    # plot_correlation_scatterplot(log_dir)
+    # calcium residuals
+    plot_targets_predictions(log_dir, worm, neuron)
+
+    # scatterplot of model-neuron activity
+    plot_correlation_scatterplot(log_dir, worm, neuron)
 
     return None
 
