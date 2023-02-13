@@ -18,6 +18,7 @@ dependencies:
   - jupyterlab
   - matplotlib
   - numpy
+  - nomkl
   - networkx
   - notebook
   - seaborn

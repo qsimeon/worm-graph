@@ -12,21 +12,18 @@ def pipeline(config: DictConfig) -> None:
         train_model: train.yaml
         analyze_outputs: analysis.yaml
     """
-    # access the Hydra config:
-    print(HydraConfig.get().job, end="\n\n")
-
     # skips if data already preprocessed
     process_data(config)
 
-    # returns a generator  of single worm datatsets
-    dataset = get_dataset(config)
+    # # returns a generator of single worm datasets
+    # dataset = get_dataset(config)
 
-    model = get_model(config)
+    # model = get_model(config)
 
-    model, logs = train_model(model, dataset, config, optimizer=None)
+    # model, log_dir = train_model(model, dataset, config, shuffle=True, optimizer=None)
 
-    # plot_figures(logs)
-    # analysis
+    # # plot_figures(log_dir)
+    # # analysis
     return None
 
 
