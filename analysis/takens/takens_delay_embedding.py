@@ -1,7 +1,7 @@
 """
 This script requires the `matplotlib` and a CSV file with evenly sampled data.
 """
-FILENAME = "henon_a14b03.csv"
+FILENAME = "logistic_r39.csv"
 COLUMN = 0  ## Which column of csv file to use, 0 means leftmost.
 POINTS = (
     -1
