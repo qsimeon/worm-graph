@@ -97,7 +97,7 @@ Always activate the environment before working on the project: `conda activate w
    - predict the identity of the neuron given the trace (node prediction).
    - predict whether or not there exist an edge (edge prediction). 
    - predict the behavior of the worm from its neural activity.
-- Goals for next week + future:
+- Goals for the future:
    - still don't have networks that surpass the baseline.
    - see whether we can do better with a GNN with/without connectome constraint.
     - do we need additional biological information.
@@ -105,5 +105,5 @@ Always activate the environment before working on the project: `conda activate w
       - varying dataset sizes.
       - difference between training one one worm versus many worms.
       - change how long the dataset you use from each worm.
-- tangible goal for next week
+- Tangible goal for next week
    - scaling law plots!

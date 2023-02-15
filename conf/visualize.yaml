@@ -1,5 +1,5 @@
 visualize:
-  default_log_dir: logs/Uzel2022-LinearNN-2023_02_14_17_08
+  default_log_dir: logs/Uzel2022-LinearNN-2023_02_15_13_28
   default_worm: worm0
   default_neuron: AVAL
   param: None

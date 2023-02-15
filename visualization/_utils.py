@@ -150,7 +150,7 @@ def plot_correlation_scatterplot(log_dir, worm, neuron):
     Create a scatterpot of the target and predicted Ca2+
     residuals colored by train and test sample.
     """
-    dataset_name, model_name, timestamp = str.split(log_dir, "-")
+    dataset_name, model_name, timestamp = str.split(os.path.split(log_dir)[-1], "-")
     plt_title = "Scatterplot of predicted vs target residuals\nworm: {}, neuron: {}\nmodel: {}, dataset: {}\ntime: {}".format(
         worm, neuron, model_name, dataset_name, timestamp
     )
@@ -233,7 +233,7 @@ def plot_loss_curves(log_dir):
     Plot the loss curves stored in the given log directory.
     """
     # process the log folder name
-    dataset_name, model_name, timestamp = str.split(log_dir, "-")
+    dataset_name, model_name, timestamp = str.split(os.path.split(log_dir)[-1], "-")
     plt_title = "Loss curves\nmodel: {}, dataset: {}\ntime: {}".format(
         model_name, dataset_name, timestamp
     )
@@ -242,15 +242,11 @@ def plot_loss_curves(log_dir):
     plt.figure()
     sns.lineplot(x="epochs", y="centered_train_losses", data=loss_df, label="train")
     sns.lineplot(x="epochs", y="centered_test_losses", data=loss_df, label="test")
-    # sns.lineplot(
-    #     x="epochs", y="base_train_losses", data=loss_df, label="train basleine"
-    # )
-    # sns.lineplot(x="epochs", y="base_test_losses", data=loss_df, label="test baseline")
-    plt.yscale('log')
+    # plt.yscale("log")
     plt.legend()
     plt.title(plt_title)
     plt.xlabel("Epoch")
-    plt.ylabel("Loss")
+    plt.ylabel("Loss - Baseline")
     plt.show()
     return None
 

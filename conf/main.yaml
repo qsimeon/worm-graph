@@ -1,7 +1,8 @@
 defaults:
+  - preprocess
   - dataset
   - model
-  - preprocess
+  - visualize
   - train
   - _self_
 # If you want your primary config to override the values of configs

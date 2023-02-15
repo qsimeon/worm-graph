@@ -17,6 +17,12 @@ def get_model(config: DictConfig) -> torch.nn.Module:
             hidden_size=config.model.hidden_size,
             num_layers=1,
         ).double()
+    elif config.model.type == "neural_cfc":
+        model = NeuralCFC(
+            input_size=config.model.input_size,
+            hidden_size=config.model.hidden_size,
+            num_layers=1,
+        ).double()
     else:  # "linear" model
         model = LinearNN(
             input_size=config.model.input_size, 

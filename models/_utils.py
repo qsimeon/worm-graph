@@ -13,13 +13,17 @@ class LinearNN(torch.nn.Module):
         self.hidden_size = hidden_size
         self.num_layers = num_layers
         # Linear model
-        self.input_hidden = torch.nn.Linear(self.input_size, self.hidden_size)
+        self.input_hidden = (
+            torch.nn.Linear(self.input_size, self.hidden_size),
+            torch.nn.ReLU(),
+        )
         self.hidden_hidden = (self.num_layers - 1) * (
             torch.nn.Linear(self.hidden_size, self.hidden_size),
+            torch.nn.ReLU(),
         )
-        self.hidden_output = torch.nn.Linear(self.hidden_size, self.output_size)
+        self.hidden_output = (torch.nn.Linear(self.hidden_size, self.output_size),)
         self.model = nn.Sequential(
-            self.input_hidden, *self.hidden_hidden, self.hidden_output
+            *self.input_hidden, *self.hidden_hidden, *self.hidden_output
         )
 
     def loss_fn(self):
@@ -31,10 +35,71 @@ class LinearNN(torch.nn.Module):
         input: batch of data
         tau: time offset of target
         """
-        # Repeat for tau>0 offset target
-        for i in range(tau):
-            output = self.model(input)
+        readout = self.model(input)
+        output = readout
+        # repeat for tau>0 offset target
+        for i in range(1, tau):
+            readout = self.model(input)
+            output = readout
         return output
+
+
+class NeuralLTC(torch.nn.Module):
+    """
+    Neural Circuit Policy (NCP) Liquid time-constant (LTC) model.
+    """
+
+    pass
+
+
+class DenseCFC(torch.nn.Module):
+    """
+    Fully Connected (FC) Closed-form continuous time (CfC) model.
+    """
+
+    pass
+
+
+class NeuralCFC(torch.nn.Module):
+    """
+    Neural Circuit Policy (NCP) Closed-form continuous time (CfC) model.
+    """
+
+    def __init__(self, input_size, hidden_size, num_layers=1):
+        """
+        The output size will be the same as the input size.
+        """
+        super(NeuralCFC, self).__init__()
+        self.input_size = input_size
+        self.output_size = input_size
+        self.hidden_size = hidden_size
+        self.num_layers = num_layers
+        # CfC
+        from ncps.torch import CfC
+        from ncps.wirings import AutoNCP
+
+        self.wiring = AutoNCP(
+            max(self.output_size*2, self.hidden_size), self.output_size
+        )
+        self.rnn = CfC(self.input_size, self.wiring)
+
+    def loss_fn(self):
+        """
+        The loss function to be used with this model.
+        """
+        return torch.nn.MSELoss()
+
+    def forward(self, input, tau=1):
+        """
+        Propagate input through the continuous time NN.
+        input: batch of data
+        tau: time offset of target
+        """
+        # lstm_out is all of the hidden states throughout the sequence
+        lstm_out, self.hidden = self.rnn(input)
+        for i in range(1, tau):
+            lstm_out, self.hidden = self.rnn(lstm_out, self.hidden)
+        return lstm_out
 
 
 class NetworkLSTM(torch.nn.Module):
@@ -80,11 +145,11 @@ class NetworkLSTM(torch.nn.Module):
         # lstm_out is all of the hidden states throughout the sequence
         lstm_out, self.hidden = self.lstm(input)
         readout = self.linear(lstm_out)
-        lstm_out = torch.sigmoid(readout)
+        lstm_out = readout
         for i in range(1, tau):
             lstm_out, self.hidden = self.lstm(lstm_out, self.hidden)
             readout = self.linear(lstm_out)
-            lstm_out = torch.sigmoid(readout)
+            lstm_out = readout
         return lstm_out
 
 
@@ -100,6 +165,7 @@ class VAELSTM(nn.Module):
     def __init__(self, input_size, hidden_size, num_layers=1):
         super(VAELSTM, self).__init__()
         self.input_size = input_size
+        self.output_size = input_size
         self.hidden_size = hidden_size
         self.num_layers = num_layers
         # LSTM
@@ -111,16 +177,16 @@ class VAELSTM(nn.Module):
             batch_first=True,
         )
         # readout
-        self.linear = torch.nn.Linear(self.hidden_size, self.input_size)
+        self.linear = torch.nn.Linear(self.hidden_size, self.output_size)
         # variational autoencoder (VAE)
         self.elbo_loss = 0
         # logits
-        self.decoder = nn.Linear(hidden_size, input_size)
+        self.decoder = torch.nn.Linear(self.hidden_size, self.output_size)
         # distribution parameters
-        self.fc_mu = nn.Linear(hidden_size, hidden_size)
-        self.fc_var = nn.Linear(hidden_size, hidden_size)
+        self.fc_mu = torch.nn.Linear(hidden_size, hidden_size)
+        self.fc_var = torch.nn.Linear(hidden_size, hidden_size)
         # for the gaussian likelihood
-        self.log_scale = nn.Parameter(torch.Tensor([0.0]))
+        self.log_scale = torch.nn.Parameter(torch.Tensor([0.0]))  # var = exp(0) = 1
 
     def loss_fn(self):
         """
@@ -128,11 +194,17 @@ class VAELSTM(nn.Module):
         """
 
         def func(input, target, **kwargs):
-            return self.elbo_loss + torch.nn.MSELoss(**kwargs)(input, target)
+            alpha = 0.3
+            return alpha * self.elbo_loss + (1 - alpha) * torch.nn.MSELoss(**kwargs)(
+                input, target
+            )
 
         return func
 
     def gaussian_likelihood(self, mean, logscale, sample):
+        """
+        Gaussian likelihood computation.
+        """
         scale = torch.exp(logscale)
         dist = torch.distributions.Normal(mean, scale)
         log_pxz = dist.log_prob(sample)
@@ -153,7 +225,7 @@ class VAELSTM(nn.Module):
         kl = kl.sum(dim=(1, 2))
         return kl
 
-    def forward(self, input, tau=1, state=None):
+    def forward(self, input, tau=1):
         """
         input: batch of data
         tau: time offset of target
@@ -162,15 +234,14 @@ class VAELSTM(nn.Module):
         # Propagate input through LSTM
         lstm_out, self.hidden = self.lstm(input)
         readout = self.linear(lstm_out)
-        lstm_out = torch.sigmoid(readout)
+        lstm_out = readout
         # Repeat for tau>0 offset target
         for i in range(tau):
             lstm_out, self.hidden = self.lstm(lstm_out, self.hidden)
             readout = self.linear(lstm_out)
-            lstm_out = torch.sigmoid(readout)
+            lstm_out = readout
         # VAE part
-        # encode x to get the mu and variance parameters
-        # self.hidden[-1][-1] last cell state (batch_size x hidden_size)
+        # use last cell state as encoded x to get the mu and variance parameters
         h_final, c_final = self.hidden
         x_encoded = c_final[-1].unsqueeze(1).repeat(1, input.size(1), 1)
         mu, log_var = self.fc_mu(x_encoded), self.fc_var(x_encoded)

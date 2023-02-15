@@ -2,6 +2,8 @@ from models._utils import NetworkLSTM
 
 from models._utils import VAELSTM
 
+from models._utils import NeuralCFC
+
 from train._utils import model_predict
 
 from omegaconf import OmegaConf
@@ -16,7 +18,7 @@ single_worm_dataset = dataset["worm0"]
 
 calcium_data = single_worm_dataset["calcium_data"]
 
-model = VAELSTM(302, 64).double()
+model = NeuralCFC(302, 64).double()
 
 targets, predictions = model_predict(model, calcium_data)
 

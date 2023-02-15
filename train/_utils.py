@@ -471,33 +471,6 @@ def multi_worm_training(
         # log targets and predictions
         log["targets"] = targets
         log["predictions"] = predictions
-        # plot figures
-        if plotting:
-            # plot loss curves
-            plot_loss_log(
-                log,
-                plt_title="%s, %s neurons, data size %s, seq. len %s "
-                "\n %s Model: Loss curves"
-                % (worm.upper(), num_neurons, size, seq_len, model_name),
-            )
-            # plot prediction for a single neuron
-            plot_target_prediction(
-                targets[:, neuron_idx],
-                predictions[:, neuron_idx],
-                plt_title="%s, neuron %s, data size %s, seq. len "
-                "%s \n %s Model: Ca2+ residuals prediction"
-                % (worm.upper(), neuron, size, seq_len, model_name),
-            )
-            # plot scatterplot of all neuron predictions
-            plot_correlation_scatter(
-                targets[:, mask],
-                predictions[:, mask],
-                plt_title="%s, %s neurons,"
-                " data size %s, seq. len %s \n %s Model: Correlation of all neuron Ca2+ "
-                "residuals" % (worm.upper(), num_neurons, size, seq_len, model_name),
-            )
-            print("~~~~~~~~~~~~~~~~~~~~~~~~~~")
-            # add to results
         results_list.append((model, log))
     return results_list
 
