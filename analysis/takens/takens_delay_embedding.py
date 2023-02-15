@@ -1,14 +1,14 @@
 """
 This script requires the `matplotlib` and a CSV file with evenly sampled data.
 """
-FILENAME = "logistic_r39.csv"
-COLUMN = 0  ## Which column of csv file to use, 0 means leftmost.
+FILENAME = "../input/ca_activity.csv"
+COLUMN = -1  ## Which column of csv file to use, 0 means leftmost.
 POINTS = (
     -1
 )  ## Number of points to use, more can be slower to render. -1 if all(but last).
 
 E_DIMENSION = 3  ## Number of dimensions in embedding space -- 2 or 3.
-TAU = 1  ## Delay, integer
+TAU = 207  ## Delay, integer
 
 
 import os
@@ -20,7 +20,9 @@ from mpl_toolkits.mplot3d import Axes3D
 if __name__ == "__main__":
     ## Read Data
     with open(os.path.join("analysis/takens", FILENAME), "r") as file:
-        time_series = [float(row[COLUMN]) for row in csv.reader(file)][:POINTS]
+        time_series = [
+            float(row[COLUMN]) for i, row in enumerate(csv.reader(file)) if i > 0
+        ][:POINTS]
 
     ## Process Data
     if E_DIMENSION == 2:
@@ -42,7 +44,7 @@ if __name__ == "__main__":
 
     # Raw time series data
     ax = fig.add_subplot(211)
-    ax.scatter(range(len(time_series[:100])), time_series[:100])
+    ax.scatter(range(len(time_series[:1000])), time_series[:1000])
     ax.set_title("Discrete Time Series")
     ax.set_xlabel("t")
     ax.set_ylabel("x(t)")

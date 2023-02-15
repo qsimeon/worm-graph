@@ -34,6 +34,4 @@ def plot_figures(
 if __name__ == "__main__":
     config = OmegaConf.load("conf/visualize.yaml")
     print("config:", OmegaConf.to_yaml(config), end="\n\n")
-    plot_figures(
-        config, log_dir=os.path.join("logs", "Uzel2022-LinearNN-2023_02_12_23_08_05")
-    )
+    plot_figures(config)

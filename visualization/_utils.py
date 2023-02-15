@@ -246,6 +246,7 @@ def plot_loss_curves(log_dir):
         x="epochs", y="base_train_losses", data=loss_df, label="train basleine"
     )
     sns.lineplot(x="epochs", y="base_test_losses", data=loss_df, label="test baseline")
+    plt.yscale('log')
     plt.legend()
     plt.title(plt_title)
     plt.xlabel("Epoch")

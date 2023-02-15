@@ -2,7 +2,7 @@ from models._pkg import *
 
 
 class LinearNN(torch.nn.Module):
-    def __init__(self, input_size):
+    def __init__(self, input_size, hidden_size, num_layers=1):
         """
         A simple linear regression model to use as a baseline.
         The output shape will be the same shape as that of the input.
@@ -10,7 +10,17 @@ class LinearNN(torch.nn.Module):
         super(LinearNN, self).__init__()
         self.input_size = input_size
         self.output_size = input_size
-        self.linear = torch.nn.Linear(self.input_size, self.output_size)
+        self.hidden_size = hidden_size
+        self.num_layers = num_layers
+        # Linear model
+        self.input_hidden = torch.nn.Linear(self.input_size, self.hidden_size)
+        self.hidden_hidden = (self.num_layers - 1) * (
+            torch.nn.Linear(self.hidden_size, self.hidden_size),
+        )
+        self.hidden_output = torch.nn.Linear(self.hidden_size, self.output_size)
+        self.model = nn.Sequential(
+            self.input_hidden, *self.hidden_hidden, self.hidden_output
+        )
 
     def loss_fn(self):
         """The loss function to be used with this model."""
@@ -23,7 +33,7 @@ class LinearNN(torch.nn.Module):
         """
         # Repeat for tau>0 offset target
         for i in range(tau):
-            output = self.linear(input)
+            output = self.model(input)
         return output
 
 
@@ -42,6 +52,7 @@ class NetworkLSTM(torch.nn.Module):
         """
         super(NetworkLSTM, self).__init__()
         self.input_size = input_size
+        self.output_size = input_size
         self.hidden_size = hidden_size
         self.num_layers = num_layers
         # LSTM
@@ -53,11 +64,11 @@ class NetworkLSTM(torch.nn.Module):
             batch_first=True,
         )
         # Readout
-        self.linear = torch.nn.Linear(self.hidden_size, self.input_size)
+        self.linear = torch.nn.Linear(self.hidden_size, self.output_size)
 
     def loss_fn(self):
         """
-        The loss function to be used for this model.
+        The loss function to be used with this model.
         """
         return torch.nn.MSELoss()
 
@@ -70,16 +81,16 @@ class NetworkLSTM(torch.nn.Module):
         # lstm_out is all of the hidden states throughout the sequence
         lstm_out, self.hidden = self.lstm(input)
         readout = self.linear(lstm_out)
-        lstm_out = torch.nn.functional.sigmoid(readout)
+        lstm_out = torch.sigmoid(readout)
         for i in range(1, tau):
             lstm_out, self.hidden = self.lstm(lstm_out, self.hidden)
             readout = self.linear(lstm_out)
-            lstm_out = torch.nn.functional.sigmoid(readout)
+            lstm_out = torch.sigmoid(readout)
         return lstm_out
 
 
 # Variational autoencoder LSTM model.
-class VAENetworkLSTM(nn.Module):
+class VAELSTM(nn.Module):
     """
     Same as the NetworkLSTM model but with an added
     self-supervised VAE loss. The VAE loss regularizes
@@ -88,7 +99,7 @@ class VAENetworkLSTM(nn.Module):
     """
 
     def __init__(self, input_size, hidden_size, num_layers=1):
-        super(VAENetworkLSTM, self).__init__()
+        super(VAELSTM, self).__init__()
         self.input_size = input_size
         self.hidden_size = hidden_size
         self.num_layers = num_layers
@@ -113,8 +124,14 @@ class VAENetworkLSTM(nn.Module):
         self.log_scale = nn.Parameter(torch.Tensor([0.0]))
 
     def loss_fn(self):
-        """The loss function to be used for this model."""
-        return torch.nn.MSELoss()
+        """
+        The loss function to be used with this model.
+        """
+
+        def func(input, target, **kwargs):
+            return self.elbo_loss + torch.nn.MSELoss(**kwargs)(input, target)
+
+        return func
 
     def gaussian_likelihood(self, mean, logscale, sample):
         scale = torch.exp(logscale)
@@ -123,7 +140,9 @@ class VAENetworkLSTM(nn.Module):
         return log_pxz.sum(dim=(1, 2))
 
     def kl_divergence(self, z, mu, std):
-        """Monte carlo KL divergence computation."""
+        """
+        Monte-Carlo KL divergence computation.
+        """
         # 1. define the first two probabilities (in this case Normal for both)
         p = torch.distributions.Normal(torch.zeros_like(mu), torch.ones_like(std))
         q = torch.distributions.Normal(mu, std)
@@ -144,22 +163,24 @@ class VAENetworkLSTM(nn.Module):
         # Propagate input through LSTM
         lstm_out, self.hidden = self.lstm(input)
         readout = self.linear(lstm_out)
-        lstm_out = torch.nn.functional.sigmoid(readout)
+        lstm_out = torch.sigmoid(readout)
         # Repeat for tau>0 offset target
         for i in range(tau):
             lstm_out, self.hidden = self.lstm(lstm_out, self.hidden)
             readout = self.linear(lstm_out)
-            lstm_out = torch.nn.functional.sigmoid(readout)
+            lstm_out = torch.sigmoid(readout)
         # VAE part
         # encode x to get the mu and variance parameters
-        x_encoded = self.hidden[0][0]  # first layer hidden state
+        # self.hidden[-1][-1] last cell state (batch_size x hidden_size)
+        h_final, c_final = self.hidden
+        x_encoded = c_final[-1].unsqueeze(1).repeat(1, input.size(1), 1)
         mu, log_var = self.fc_mu(x_encoded), self.fc_var(x_encoded)
         # sample z from q
         std = torch.exp(log_var / 2)
         q = torch.distributions.Normal(mu, std)
-        z = q.rsample()
+        z = q.rsample()  # batch_size x hidden_size
         # decoded
-        x_hat = self.decoder(z)
+        x_hat = self.decoder(z)  # batch_size x input size
         # reconstruction loss
         recon_loss = self.gaussian_likelihood(x_hat, self.log_scale, input)
         # kl

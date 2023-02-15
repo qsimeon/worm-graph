@@ -11,8 +11,18 @@ def get_model(config: DictConfig) -> torch.nn.Module:
             input_size=config.model.input_size,
             hidden_size=config.model.hidden_size,
         ).double()
+    elif config.model.type == "vae_lstm":
+        model = VAELSTM(
+            input_size=config.model.input_size,
+            hidden_size=config.model.hidden_size,
+            num_layers=1,
+        ).double()
     else:  # "linear" model
-        model = LinearNN(input_size=config.model.input_size).double()
+        model = LinearNN(
+            input_size=config.model.input_size, 
+            hidden_size=config.model.hidden_size,
+            num_layers=config.model.num_layers,
+        ).double()
     print("Model:", model, end="\n\n")
     return model
 

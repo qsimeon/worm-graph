@@ -13,7 +13,7 @@ other:
 
 hydra:
   run:
-    dir: ${now:%Y-%m-%d_%H-%M}
+    dir: logs/${now:%Y-%m-%d_%H-%M}
   sweep:
     dir: logs/multirun/${now:%Y-%m-%d_%H-%M}
     subdir: ${hydra.job.num}
