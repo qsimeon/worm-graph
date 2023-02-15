@@ -43,7 +43,6 @@ class NetworkLSTM(torch.nn.Module):
     Given an input sequence of length $L$ and an offset $\tau$,
     this model is trained to output the sequence of length $L$
     that occurs $tau$ steps later.
-    TODO: Add a batch normalization layer.
     """
 
     def __init__(self, input_size, hidden_size, num_layers=1):
@@ -89,9 +88,9 @@ class NetworkLSTM(torch.nn.Module):
         return lstm_out
 
 
-# Variational autoencoder LSTM model.
 class VAELSTM(nn.Module):
     """
+    Variational autoencoder LSTM model.
     Same as the NetworkLSTM model but with an added
     self-supervised VAE loss. The VAE loss regularizes
     the model by encouraging the network to learn cell states

@@ -39,6 +39,8 @@ def train_model(
         "base_test_losses": [],
         "train_losses": [],
         "test_losses": [],
+        "centered_train_losses": [],
+        "centered_test_losses": [],
     }
     # train the model
     reset_epoch = 1
@@ -60,6 +62,8 @@ def train_model(
         data["test_losses"].extend(log["test_losses"])
         data["base_train_losses"].extend(log["base_train_losses"])
         data["base_test_losses"].extend(log["base_test_losses"])
+        data["centered_train_losses"].extend(log["centered_train_losses"])
+        data["centered_test_losses"].extend(log["centered_test_losses"])
         reset_epoch = log["epochs"][-1] + 1
         # save model checkpoints
         chkpt_name = "{}_epochs_{}_worms.pt".format(reset_epoch - 1, i + 1)
@@ -73,14 +77,7 @@ def train_model(
             os.path.join(log_dir, "checkpoints", chkpt_name),
         )
     # save loss curves
-    columns = [
-        "epochs",
-        "base_train_losses",
-        "base_test_losses",
-        "train_losses",
-        "test_losses",
-    ]
-    pd.DataFrame(data=data, columns=columns).to_csv(
+    pd.DataFrame(data=data).to_csv(
         os.path.join(log_dir, "loss_curves.csv"),
         index=True,
         header=True,

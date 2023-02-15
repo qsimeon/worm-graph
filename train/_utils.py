@@ -143,6 +143,8 @@ def optimize_model(
         "base_test_losses": [],
         "train_losses": [],
         "test_losses": [],
+        "centered_train_losses": [],
+        "centered_test_losses": [],
         "model_state_dicts": [],
         "optimizer_state_dicts": [],
     }
@@ -157,6 +159,8 @@ def optimize_model(
             train_log["train_loss"],
         )
         base_test_loss, test_loss = test_log["base_test_loss"], test_log["test_loss"]
+        centered_train_loss = train_loss - base_train_loss
+        centered_test_loss = test_loss - base_test_loss
         if epoch % (num_epochs // 10) == 0:
             print(
                 f"Epoch: {epoch:03d}, Train Loss: {train_loss:.4f}, Val. Loss: {test_loss:.4f}",
@@ -169,6 +173,8 @@ def optimize_model(
             log["base_test_losses"].append(base_test_loss)
             log["train_losses"].append(train_loss)
             log["test_losses"].append(test_loss)
+            log["centered_train_losses"].append(centered_train_loss)
+            log["centered_test_losses"].append(centered_test_loss)
     # return optimized model
     return model, log
 
@@ -218,6 +224,7 @@ def model_predict(model, calcium_data):
     Makes predictions for all neurons in the
     calcium dataset using a trained model.
     """
+    model = model.double()
     model.eval()
     # model in/out
     calcium_data = calcium_data.squeeze()
@@ -225,7 +232,8 @@ def model_predict(model, calcium_data):
         calcium_data.ndim == 2 and calcium_data.size(1) == NUM_NEURONS
     ), "Calcium data has incorrect shape!"
     input = calcium_data.to(DEVICE)
-    output = model(input)
+    # add batch dimension
+    output = model(input.unsqueeze(0)).squeeze()
     # targets/predictions
     targets = (input[1:] - input[:-1]).detach().cpu()
     predictions = output[:-1].detach().cpu()
@@ -296,7 +304,6 @@ def more_data_training(
     worm="worm**",
     model_name="",
     seq_len=1,
-    plotting=False,
 ):
     """
     A function to investigate the effect of the amount of data
@@ -345,31 +352,6 @@ def more_data_training(
         # log targets and predictions
         log["targets"] = targets
         log["predictions"] = predictions
-        if plotting:
-            # plot loss curves
-            plot_loss_log(
-                log,
-                plt_title="%s, %s neurons, data size %s, seq. len %s "
-                "\n %s Model: Loss curves"
-                % (worm.upper(), num_neurons, size, seq_len, model_name),
-            )
-            # plot prediction for a single neuron
-            plot_target_prediction(
-                targets[:, neuron_idx],
-                predictions[:, neuron_idx],
-                plt_title="%s, neuron %s, data size %s, seq. len %s"
-                " \n %s Model: Ca2+ residuals prediction"
-                % (worm.upper(), neuron, size, seq_len, model_name),
-            )
-            # plot scatterplot of all predictions
-            plot_correlation_scatter(
-                targets,
-                predictions,
-                plt_title="%s, %s neurons,"
-                " data size %s, seq. len %s \n %s Model: Correlation of all neuron Ca2+ "
-                "residuals" % (worm.upper(), num_neurons, size, seq_len, model_name),
-            )
-        print("~~~~~~~~~~~~~~~~~~~~~~~~~~")
         # add to results
         results_list.append((model, log))
     return results_list
@@ -381,7 +363,6 @@ def leave_one_worm_out_training(
     num_epochs=100,
     model_name="",
     seq_len=1,
-    plotting=True,
 ):
     """
     Train on all but one worm in a dataset
@@ -403,7 +384,6 @@ def leave_one_worm_out_training(
         num_epochs,
         model_name,
         seq_len,
-        plotting=False,
     )
     model, train_log = train_results[-1]
     # get the calcium data for left out worm
@@ -429,34 +409,6 @@ def leave_one_worm_out_training(
     log["num_neurons"] = num_neurons
     log["targets"] = targets
     log["predictions"] = predictions
-    size = train_log["dataset_size"]
-    # test the model on the left out worm
-    if plotting:
-        # plot final loss curve
-        plot_loss_log(
-            log,
-            plt_title="%s, data size %s, seq. len %s "
-            "\n %s Model: Loss curves"
-            % (set(w.upper() for w in train_worms_dataset), size, seq_len, model_name),
-        )
-        # plot prediction for a single neuron
-        plot_target_prediction(
-            targets[:, neuron_idx],
-            predictions[:, neuron_idx],
-            plt_title="%s, neuron %s, data size %s, seq. len "
-            "%s \n %s Model: Ca2+ residuals prediction"
-            % (leaveOut_worm.upper(), neuron, size, seq_len, model_name),
-        )
-        # plot scatterplot of all neuron predictions
-        plot_correlation_scatter(
-            targets[:, mask],
-            predictions[:, mask],
-            plt_title="%s, %s neurons,"
-            " data size %s, seq. len %s \n %s Model: Correlation of all neuron Ca2+ "
-            "residuals"
-            % (leaveOut_worm.upper(), num_neurons, size, seq_len, model_name),
-        )
-        print("~~~~~~~~~~~~~~~~~~~~~~~~~~")
     return log
 
 

@@ -240,12 +240,12 @@ def plot_loss_curves(log_dir):
     # load the loss dataframe
     loss_df = pd.read_csv(os.path.join(log_dir, "loss_curves.csv"), index_col=0)
     plt.figure()
-    sns.lineplot(x="epochs", y="train_losses", data=loss_df, label="train")
-    sns.lineplot(x="epochs", y="test_losses", data=loss_df, label="test")
-    sns.lineplot(
-        x="epochs", y="base_train_losses", data=loss_df, label="train basleine"
-    )
-    sns.lineplot(x="epochs", y="base_test_losses", data=loss_df, label="test baseline")
+    sns.lineplot(x="epochs", y="centered_train_losses", data=loss_df, label="train")
+    sns.lineplot(x="epochs", y="centered_test_losses", data=loss_df, label="test")
+    # sns.lineplot(
+    #     x="epochs", y="base_train_losses", data=loss_df, label="train basleine"
+    # )
+    # sns.lineplot(x="epochs", y="base_test_losses", data=loss_df, label="test baseline")
     plt.yscale('log')
     plt.legend()
     plt.title(plt_title)
