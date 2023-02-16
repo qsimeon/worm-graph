@@ -22,11 +22,11 @@ def train_model(
     )
     os.makedirs(log_dir, exist_ok=True)
     os.makedirs(os.path.join(log_dir, "checkpoints"), exist_ok=True)
-    # whether to shuffle the dataset
+    # create a cycle of the dataset
+    dataset_items = list(dataset.items()) * config.train.cycles
+    # whether to shuffle the dataset (without replacement)
     if shuffle == True:
-        dataset_items = random.sample(list(dataset.items()), k=len(dataset))
-    else:
-        dataset_items = dataset.items()
+        dataset_items = random.sample(dataset_items, k=len(dataset_items))
     # instantiate the optimizer
     if optimizer is not None:
         optimizer = optimizer
@@ -55,7 +55,6 @@ def train_model(
             seq_len=config.train.seq_len,
             dataset_size=config.train.dataset_size,
         )
-        print("num. worms trained on:", i + 1, "\nprevious worm:", worm, end="\n\n")
         # retrieve losses
         data["epochs"].extend(log["epochs"])
         data["train_losses"].extend(log["train_losses"])
@@ -65,17 +64,21 @@ def train_model(
         data["centered_train_losses"].extend(log["centered_train_losses"])
         data["centered_test_losses"].extend(log["centered_test_losses"])
         reset_epoch = log["epochs"][-1] + 1
-        # save model checkpoints
-        chkpt_name = "{}_epochs_{}_worms.pt".format(reset_epoch - 1, i + 1)
-        torch.save(
-            {
-                "epoch": reset_epoch - 1,
-                "num_worms": i + 1,
-                "model_state_dict": model.state_dict(),
-                "optimizer_state_dict": optimizer.state_dict(),
-            },
-            os.path.join(log_dir, "checkpoints", chkpt_name),
-        )
+        # print and save every cycle
+        if (i % config.train.cycles) == 0:
+            # display progress
+            print("num. worms trained on:", i + 1, "\nprevious worm:", worm, end="\n\n")
+            # save model checkpoints
+            chkpt_name = "{}_epochs_{}_worms.pt".format(reset_epoch - 1, i + 1)
+            torch.save(
+                {
+                    "epoch": reset_epoch - 1,
+                    "num_worms": i + 1,
+                    "model_state_dict": model.state_dict(),
+                    "optimizer_state_dict": optimizer.state_dict(),
+                },
+                os.path.join(log_dir, "checkpoints", chkpt_name),
+            )
     # save loss curves
     pd.DataFrame(data=data).to_csv(
         os.path.join(log_dir, "loss_curves.csv"),
@@ -84,6 +87,7 @@ def train_model(
     )
     # make predictions with final trained model
     make_predictions(model, dataset, log_dir)
+    # TODO: simulate activity; create a function for simulating from the trained model
     # returned trained model and path to log directory
     return model, log_dir
 

@@ -14,13 +14,13 @@ other:
 
 hydra:
   run:
-    dir: logs/${now:%Y-%m-%d_%H-%M}
+    dir: logs/run/${now:%Y-%m-%d_%H-%M}
   sweep:
     dir: logs/multirun/${now:%Y-%m-%d_%H-%M}
     subdir: ${hydra.job.num}
-  mode: RUN
+  mode: MULTIRUN
   job:
     chdir: false
   sweeper:
     params:
-      dataset.name: Nichols2017, Kaplan2020, Uzel2022
+      dataset.name: Kato2015, Nichols2017, Skora2018, Kaplan2020, Uzel2022

@@ -369,6 +369,7 @@ def pickle_Kato2015(transform):
         data_dict.update(
             {
                 worm: {
+                    "dataset": "Kato2015",
                     "worm": worm,
                     "calcium_data": real_data,
                     "neuron_to_idx": neuron_to_idx,

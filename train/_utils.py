@@ -161,7 +161,7 @@ def optimize_model(
         base_test_loss, test_loss = test_log["base_test_loss"], test_log["test_loss"]
         centered_train_loss = train_loss - base_train_loss
         centered_test_loss = test_loss - base_test_loss
-        if epoch % (num_epochs // 10) == 0:
+        if (num_epochs < 10) or (epoch % (num_epochs // 10) == 0):
             print(
                 f"Epoch: {epoch:03d}, Train Loss: {train_loss:.4f}, Val. Loss: {test_loss:.4f}",
                 end="\n\n",

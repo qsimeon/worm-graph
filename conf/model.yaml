@@ -1,5 +1,5 @@
 model:
-  type: linear
+  type: vae_lstm
   input_size: 302
   hidden_size: 64
   num_layers: 1

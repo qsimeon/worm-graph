@@ -1,5 +1,6 @@
 train:
-  epochs: 10
-  seq_len: 17
+  cycles: 10 # passes through multi-worm dataset
+  epochs: 1 # passes through single worm dataset per cycle
+  seq_len: 13
   dataset_size: 1000
   learn_rate: 0.01
