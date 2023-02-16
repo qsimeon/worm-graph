@@ -10,7 +10,7 @@ def get_dataset(config: DictConfig):
     if isinstance(config.dataset.name, str):
         dataset_names = [config.dataset.name]
     else:
-        dataset_names = list(config.dataset.name)
+        dataset_names = sorted(list(config.dataset.name))
     # load the dataset(s)
     combined_dataset = dict()
     for dataset_name in dataset_names:
