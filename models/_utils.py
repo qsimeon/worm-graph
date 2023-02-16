@@ -221,10 +221,7 @@ class VariationalLSTM(nn.Module):
         """
 
         def func(input, target, **kwargs):
-            alpha = 0.3
-            return alpha * self.elbo_loss + (1 - alpha) * torch.nn.MSELoss(**kwargs)(
-                input, target
-            )
+            return self.elbo_loss + torch.nn.MSELoss(**kwargs)(input, target)
 
         return func
 
