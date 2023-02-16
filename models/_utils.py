@@ -44,20 +44,46 @@ class LinearNN(torch.nn.Module):
         return output
 
 
-class NeuralLTC(torch.nn.Module):
-    """
-    Neural Circuit Policy (NCP) Liquid time-constant (LTC) model.
-    """
-
-    pass
-
-
 class DenseCFC(torch.nn.Module):
     """
     Fully Connected (FC) Closed-form continuous time (CfC) model.
     """
 
-    pass
+    def __init__(self, input_size, hidden_size, num_layers=1):
+        """
+        The output size will be the same as the input size.
+        """
+        super(DenseCFC, self).__init__()
+        self.input_size = input_size
+        self.output_size = input_size
+        self.hidden_size = hidden_size
+        self.num_layers = num_layers
+        # Fully-connected CfC
+        self.rnn = CfC(input_size=self.input_size, units=self.hidden_size)
+        # Readout
+        self.linear = torch.nn.Linear(self.hidden_size, self.output_size)
+
+    def loss_fn(self):
+        """
+        The loss function to be used with this model.
+        """
+        return torch.nn.MSELoss()
+
+    def forward(self, input, tau=1):
+        """
+        Propagate input through the continuous time NN.
+        input: batch of data
+        tau: time offset of target
+        """
+        # lstm_out is all of the hidden states throughout the sequence
+        lstm_out, self.hidden = self.rnn(input)
+        readout = self.linear(lstm_out)
+        lstm_out = readout
+        for i in range(1, tau):
+            lstm_out, self.hidden = self.rnn(lstm_out, self.hidden)
+            readout = self.linear(lstm_out)
+            lstm_out = readout
+        return lstm_out
 
 
 class NeuralCFC(torch.nn.Module):
@@ -74,14 +100,11 @@ class NeuralCFC(torch.nn.Module):
         self.output_size = input_size
         self.hidden_size = hidden_size
         self.num_layers = num_layers
-        # CfC
-        from ncps.torch import CfC
-        from ncps.wirings import AutoNCP
-
-        self.wiring = AutoNCP(
-            max(self.output_size*2, self.hidden_size), self.output_size
-        )
+        # NCP wired CfC
+        self.wiring = AutoNCP(self.hidden_size * 2, self.hidden_size)
         self.rnn = CfC(self.input_size, self.wiring)
+        # Readout
+        self.linear = torch.nn.Linear(self.hidden_size, self.output_size)
 
     def loss_fn(self):
         """
@@ -97,8 +120,12 @@ class NeuralCFC(torch.nn.Module):
         """
         # lstm_out is all of the hidden states throughout the sequence
         lstm_out, self.hidden = self.rnn(input)
+        readout = self.linear(lstm_out)
+        lstm_out = readout
         for i in range(1, tau):
             lstm_out, self.hidden = self.rnn(lstm_out, self.hidden)
+            readout = self.linear(lstm_out)
+            lstm_out = readout
         return lstm_out
 
 
@@ -124,7 +151,7 @@ class NetworkLSTM(torch.nn.Module):
             input_size=self.input_size,
             hidden_size=self.hidden_size,
             num_layers=self.num_layers,
-            bias=False,
+            bias=True,
             batch_first=True,
         )
         # Readout
@@ -153,7 +180,7 @@ class NetworkLSTM(torch.nn.Module):
         return lstm_out
 
 
-class VAELSTM(nn.Module):
+class VariationalLSTM(nn.Module):
     """
     Variational autoencoder LSTM model.
     Same as the NetworkLSTM model but with an added
@@ -163,7 +190,7 @@ class VAELSTM(nn.Module):
     """
 
     def __init__(self, input_size, hidden_size, num_layers=1):
-        super(VAELSTM, self).__init__()
+        super(VariationalLSTM, self).__init__()
         self.input_size = input_size
         self.output_size = input_size
         self.hidden_size = hidden_size
@@ -173,7 +200,7 @@ class VAELSTM(nn.Module):
             input_size=self.input_size,
             hidden_size=self.hidden_size,
             num_layers=self.num_layers,
-            bias=False,
+            bias=True,
             batch_first=True,
         )
         # readout

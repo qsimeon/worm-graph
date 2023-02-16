@@ -162,18 +162,83 @@ def plot_correlation_scatterplot(log_dir, worm, neuron):
     targets_df = pd.read_csv(
         os.path.join(log_dir, worm, "target_ca_residual.csv"), index_col=0
     )
-    # TODO: make the train/test labels a column in the dataframe
-    label = np.where(np.arange(len(targets_df)) > len(targets_df) // 2, 1, 0)
-    data = np.vstack(
-        (targets_df[neuron].to_numpy(), predictions_df[neuron].to_numpy(), label)
-    ).T
-    df = pd.DataFrame(data=data, columns=["x", "y", "label"], dtype=float)
-    sns.lmplot(data=df, x="x", y="y", hue="label", legend=False)
-    plt.legend(labels=["train", None, None, "test", None, None])
+    data = {
+        "target": targets_df[neuron].tolist(),
+        "prediction": predictions_df[neuron].tolist(),
+        "label": predictions_df["train_test_label"].tolist(),
+    }
+    df = pd.DataFrame(data=data)
+    sns.lmplot(data=df, x="target", y="prediction", hue="label", legend=True)
     plt.suptitle(plt_title)
+    plt.axis("square")
     plt.xlabel("Target residual $\Delta F / F$")
     plt.ylabel("Predicted residual $\Delta F / F$")
-    plt.show()
+    plt.savefig(os.path.join(log_dir, worm, "%s_correlation.png" % neuron))
+    plt.close()
+    return None
+
+
+def plot_loss_curves(log_dir):
+    """
+    Plot the loss curves stored in the given log directory.
+    """
+    # process the log folder name
+    dataset_name, model_name, timestamp = str.split(os.path.split(log_dir)[-1], "-")
+    plt_title = "Loss curves\nmodel: {}, dataset: {}\ntime: {}".format(
+        model_name, dataset_name, timestamp
+    )
+    # load the loss dataframe
+    loss_df = pd.read_csv(os.path.join(log_dir, "loss_curves.csv"), index_col=0)
+    plt.figure()
+    sns.lineplot(x="epochs", y="centered_train_losses", data=loss_df, label="train")
+    sns.lineplot(x="epochs", y="centered_test_losses", data=loss_df, label="test")
+    plt.legend()
+    plt.title(plt_title)
+    plt.xlabel("Epoch")
+    plt.ylabel("Loss - Baseline")
+    plt.savefig(os.path.join(log_dir, "loss_curves.png"))
+    plt.close()
+    return None
+
+
+def plot_targets_predictions(log_dir, worm, neuron):
+    """
+    Plot of the target Ca2+ residual time series overlayed
+    with the predicted Ca2+ residual time series of a single
+    neuron in a given worm.
+    """
+    # process the log folder name
+    dataset_name, model_name, timestamp = str.split(os.path.split(log_dir)[-1], "-")
+    plt_title = "Residual neural activity\nworm: {}, neuron: {}\nmodel: {}, dataset: {}\ntime: {}".format(
+        worm, neuron, model_name, dataset_name, timestamp
+    )
+    # load predictions dataframe
+    predictions_df = pd.read_csv(
+        os.path.join(log_dir, "worm0", "predicted_ca_residual.csv"), index_col=0
+    )
+    # load targets dataframe
+    targets_df = pd.read_csv(
+        os.path.join(log_dir, "worm0", "target_ca_residual.csv"), index_col=0
+    )
+    plt.figure()
+    sns.lineplot(
+        data=targets_df,
+        x=targets_df.index,
+        y=targets_df[neuron],
+        label="target",
+    )
+    sns.lineplot(
+        data=predictions_df,
+        x=predictions_df.index,
+        y=predictions_df[neuron],
+        label="predicted",
+    )
+    plt.legend()
+    plt.title(plt_title)
+    plt.xlabel("Time")
+    plt.ylabel("$Ca^{2+}$ Residual ($\Delta F / F$)")
+    plt.savefig(os.path.join(log_dir, worm, "%s_residuals.png" % neuron))
+    plt.close()
     return None
 
 
@@ -226,29 +291,6 @@ def plot_hidden_experiment(hidden_experiment):
     axs[1].set_title("Validation")
     fig.suptitle("LSTM network model loss curves with various hidden units")
     plt.show()
-
-
-def plot_loss_curves(log_dir):
-    """
-    Plot the loss curves stored in the given log directory.
-    """
-    # process the log folder name
-    dataset_name, model_name, timestamp = str.split(os.path.split(log_dir)[-1], "-")
-    plt_title = "Loss curves\nmodel: {}, dataset: {}\ntime: {}".format(
-        model_name, dataset_name, timestamp
-    )
-    # load the loss dataframe
-    loss_df = pd.read_csv(os.path.join(log_dir, "loss_curves.csv"), index_col=0)
-    plt.figure()
-    sns.lineplot(x="epochs", y="centered_train_losses", data=loss_df, label="train")
-    sns.lineplot(x="epochs", y="centered_test_losses", data=loss_df, label="test")
-    # plt.yscale("log")
-    plt.legend()
-    plt.title(plt_title)
-    plt.xlabel("Epoch")
-    plt.ylabel("Loss - Baseline")
-    plt.show()
-    return None
 
 
 def plot_more_data_losses(results, plt_title=""):
@@ -543,42 +585,6 @@ def plot_single_neuron_signals(log_dir, worm, neuron, n_lags=20):
     plt.suptitle(plt_title)
     plt.show()
     return None
-
-
-def plot_targets_predictions(log_dir, worm, neuron):
-    """
-    Plot of the target Ca2+ residual time series overlayed
-    with the predicted Ca2+ residual time series of a single
-    neuron in a given worm.
-    """
-    # process the log folder name
-    dataset_name, model_name, timestamp = str.split(os.path.split(log_dir)[-1], "-")
-    plt_title = "Residual neural activity\nworm: {}, neuron: {}\nmodel: {}, dataset: {}\ntime: {}".format(
-        worm, neuron, model_name, dataset_name, timestamp
-    )
-    # load predictions dataframe
-    predictions_df = pd.read_csv(
-        os.path.join(log_dir, "worm0", "predicted_ca_residual.csv"), index_col=0
-    )
-    # load targets dataframe
-    targets_df = pd.read_csv(
-        os.path.join(log_dir, "worm0", "target_ca_residual.csv"), index_col=0
-    )
-    plt.figure()
-    sns.lineplot(
-        data=targets_df, x=targets_df.index, y=targets_df.columns[0], label="target"
-    )
-    sns.lineplot(
-        data=predictions_df,
-        x=predictions_df.index,
-        y=predictions_df.columns[0],
-        label="predicted",
-    )
-    plt.legend()
-    plt.title(plt_title)
-    plt.xlabel("Time")
-    plt.ylabel("$Ca^{2+}$ Residual ($\Delta F / F$)")
-    plt.show()
 
 
 def plot_worm_data(single_worm_dataset, worm_name):

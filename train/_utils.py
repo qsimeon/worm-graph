@@ -192,9 +192,18 @@ def make_predictions(model, dataset, log_dir):
         named_neuron_to_idx = single_worm_dataset["named_neuron_to_idx"]
         calcium_data = single_worm_dataset["calcium_data"]
         named_neurons_mask = single_worm_dataset["named_neurons_mask"]
+        labels = np.expand_dims(
+            np.where(
+                np.arange(calcium_data.size(0)) > calcium_data.size(0) // 2,
+                "test",
+                "train",
+            ),
+            axis=-1,
+        )
+        columns = list(named_neuron_to_idx) + ["train_test_label"]
         # save dataframes
-        columns = list(named_neuron_to_idx)
         data = calcium_data[:, named_neurons_mask].numpy()
+        data = np.hstack((data, labels))
         pd.DataFrame(data=data, columns=columns).to_csv(
             os.path.join(log_dir, worm, "ca_activity.csv"),
             index=True,
@@ -203,6 +212,7 @@ def make_predictions(model, dataset, log_dir):
         data = torch.nn.functional.pad(
             targets[:, named_neurons_mask], (0, 0, 1, 0)
         ).numpy()
+        data = np.hstack((data, labels))
         pd.DataFrame(data=data, columns=columns).to_csv(
             os.path.join(log_dir, worm, "target_ca_residual.csv"),
             index=True,
@@ -211,6 +221,7 @@ def make_predictions(model, dataset, log_dir):
         data = torch.nn.functional.pad(
             predictions[:, named_neurons_mask], (0, 0, 0, 1)
         ).numpy()
+        data = np.hstack((data, labels))
         pd.DataFrame(data=data, columns=columns).to_csv(
             os.path.join(log_dir, worm, "predicted_ca_residual.csv"),
             index=True,

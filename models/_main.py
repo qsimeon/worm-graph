@@ -12,7 +12,7 @@ def get_model(config: DictConfig) -> torch.nn.Module:
             hidden_size=config.model.hidden_size,
         ).double()
     elif config.model.type == "vae_lstm":
-        model = VAELSTM(
+        model = VariationalLSTM(
             input_size=config.model.input_size,
             hidden_size=config.model.hidden_size,
             num_layers=1,
@@ -23,9 +23,15 @@ def get_model(config: DictConfig) -> torch.nn.Module:
             hidden_size=config.model.hidden_size,
             num_layers=1,
         ).double()
+    elif config.model.type == "dense_cfc":
+        model = DenseCFC(
+            input_size=config.model.input_size,
+            hidden_size=config.model.hidden_size,
+            num_layers=1,
+        ).double()
     else:  # "linear" model
         model = LinearNN(
-            input_size=config.model.input_size, 
+            input_size=config.model.input_size,
             hidden_size=config.model.hidden_size,
             num_layers=config.model.num_layers,
         ).double()

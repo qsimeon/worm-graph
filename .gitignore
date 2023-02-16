@@ -17,9 +17,8 @@ worm_data_colab/
 raw_data.zip
 raw_data/
 
-# # Hydra outputs
-# outputs/ 
-# multirun/
+# Logs
+logs/
 
 # C extensions
 *.so
