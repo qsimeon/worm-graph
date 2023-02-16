@@ -52,7 +52,7 @@ Using the terminal or an Anaconda Prompt: `conda env create -f environment.yml`
 Activate the new environment: `conda activate worm-graph`
 
 Add the `worm-graph` root directory to Anaconda path: `conda develop .`
-   <br>*Important:* Do not skip this step step! Otherwise you will be faced with several `ModuleNotFoundError`s.
+   <br>*Important:* Do not skip this step step! Otherwise you will be faced with several `ModuleNotFoundError`.
 
 Verify that the new environment was installed correctly: `conda env list`
    <br>You can also use `conda info --envs`.
@@ -63,9 +63,9 @@ Always activate the environment before working on the project: `conda activate w
 
 `python -i main.py`
    <br> For each of several multi-worm calcium imaging datasets, this pipeline will:
-      1. Load the preprocessed calcium data for all worms in the dataset.
-      2. Train a neural network model to predict future calcium activity from previous activity.
-      3. Plot the train and validation loss curves for the model and its predictions on test data.
+      <li> 1. Load the preprocessed calcium data for all worms in the dataset.
+      <li> 2. Train a neural network model to predict future calcium activity from previous activity.
+      <li> 3. Plot the train and validation loss curves for the model and its predictions on test data.
 
  ## Naming conventions
  
@@ -80,7 +80,7 @@ Always activate the environment before working on the project: `conda activate w
  * Aim to make every script not significantly longer than 100 lines. If your code is getting longer than this, it probably is a 
    good idea to modularize things by putting certain functions or classes in separare files like `utils.py` or `models.py`, etc.
  * Always shape neural data matrices as `(time, neurons, features)`.
- * Use the [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black) code formatter. Before a commit, run the command `black .` in the Terminal to automatically reformat code according to the Black Code Style. 
+ * Use the [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black) formatter. Before a commit, run the command `black .` in the Terminal from the repository's root directory `worm-graph`. This will automatically reformat all code according to the Black Code Style. 
 
  ## Organization: things to TODO.
 
