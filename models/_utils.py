@@ -145,9 +145,9 @@ class NeuralCFC(torch.nn.Module):
         input: batch of data
         tau: time offset of target
         """
-        lstm_out, self.hidden = self.rnn(input)
-        readout = self.linear(lstm_out)  # projection
-        lstm_out = readout
+        rnn_out, self.hidden = self.rnn(input)
+        readout = self.linear(rnn_out)  # projection
+        rnn_out = readout
         # repeat for target with tau>0 offset
         for i in range(1, tau):
             rnn_out, self.hidden = self.rnn(rnn_out, self.hidden)
