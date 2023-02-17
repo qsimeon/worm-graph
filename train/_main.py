@@ -42,7 +42,7 @@ def train_model(
         "centered_train_losses": [],
         "centered_test_losses": [],
     }
-    # train the model
+    # train the model for multiple cyles
     reset_epoch = 1
     for i, (worm, single_worm_dataset) in enumerate(dataset_items):
         model, log = optimize_model(
@@ -53,7 +53,9 @@ def train_model(
             start_epoch=reset_epoch,
             num_epochs=config.train.epochs,
             seq_len=config.train.seq_len,
-            dataset_size=config.train.dataset_size,
+            k_splits=config.train.k_splits,
+            train_size=config.train.train_size,
+            test_size=config.train.test_size,
         )
         # retrieve losses
         data["epochs"].extend(log["epochs"])
@@ -64,6 +66,8 @@ def train_model(
         data["centered_train_losses"].extend(log["centered_train_losses"])
         data["centered_test_losses"].extend(log["centered_test_losses"])
         reset_epoch = log["epochs"][-1] + 1
+        # save the train mask for this worm returned in the log
+        dataset[worm]["train_mask"] = log["train_mask"]
         # print and save every cycle
         if (i % config.train.cycles) == 0:
             # display progress

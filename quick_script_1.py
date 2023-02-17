@@ -1,7 +1,3 @@
-from models._utils import NetworkLSTM
-
-from models._utils import VAELSTM
-
 from models._utils import NeuralCFC
 
 from train._utils import model_predict

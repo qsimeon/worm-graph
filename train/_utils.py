@@ -92,13 +92,15 @@ def optimize_model(
     start_epoch=1,
     learn_rate=0.01,
     num_epochs=100,
-    dataset_size=1000,
+    k_splits=2,
+    train_size=1024,
+    test_size=1024,
 ):
     """
     Creates train and test data loaders from the given dataset
     and an optimizer given the model. Trains and validates the
     model for specified number of epochs. Returns the trained
-    model and a dict of train, test and baseline losses.
+    model and a dictionary with log information including losses.
     """
     # create the mask
     if mask is None:
@@ -112,30 +114,63 @@ def optimize_model(
     if optimizer is None:
         optimizer = torch.optim.Adam(model.parameters(), lr=learn_rate)
     # create neural activity train and test datasets
-    max_time = len(dataset)
-    train_dataset = NeuralActivityDataset(
-        dataset[: max_time // 2],
-        tau=1,
-        seq_len=seq_len,
-        increasing=False,
-        reverse=True,
-        size=dataset_size,
+    max_time = len(dataset)  # len of a tensor is always the 0th dimension
+    ### new approach
+    k = k_splits
+    l1 = (k - 1) * [max_time // k]
+    l2 = [max_time - sum(l1)]
+    sections = l1 + l2
+    train_mask = torch.cat(
+        [
+            (True if i % 2 == 0 else False) * torch.ones(size, dtype=torch.bool)
+            for i, size in enumerate(sections)
+        ]
     )
-    test_dataset = NeuralActivityDataset(
-        dataset[max_time // 2 :],
-        tau=1,
-        seq_len=seq_len,
-        increasing=False,
-        reverse=True,
-        size=2048,
-    )  # fixed test size
-    # create train and test loaders
-    train_loader = torch.utils.data.DataLoader(
-        train_dataset, batch_sampler=train_dataset.batch_sampler
+    split_datasets = torch.split(dataset, sections)  # len k_splits tensor
+    train_datasets = [
+        NeuralActivityDataset(
+            dset,
+            tau=1,
+            seq_len=seq_len,
+            increasing=False,
+            reverse=True,
+            size=2 * train_size // k,
+        )
+        for dset in split_datasets[::2]
+    ]
+    test_datasets = [
+        NeuralActivityDataset(
+            dset,
+            tau=1,
+            seq_len=seq_len,
+            increasing=False,
+            reverse=True,
+            size=2 * test_size // k,
+        )
+        for dset in split_datasets[1::2]
+    ]
+    train_indices = []
+    test_indices = []
+    for dset in train_datasets:
+        train_indices.extend(dset.batch_indices)
+    for dset in test_datasets:
+        test_indices.extend(dset.batch_indices)
+    # create the combined train and test datasets, samplers and data loaders
+    train_dataset = ConcatDataset(train_datasets)
+    train_sampler = BatchSampler(train_indices)
+    train_loader = DataLoader(
+        train_dataset,
+        batch_sampler=train_sampler,
+        pin_memory=True,
     )
-    test_loader = torch.utils.data.DataLoader(
-        test_dataset, batch_sampler=test_dataset.batch_sampler
+    test_dataset = ConcatDataset(test_datasets)
+    test_sampler = BatchSampler(test_indices)
+    test_loader = DataLoader(
+        test_dataset,
+        batch_sampler=test_sampler,
+        pin_memory=True,
     )
+    ###
     # create log dictionary to return
     log = {
         "epochs": [],
@@ -147,8 +182,8 @@ def optimize_model(
         "centered_test_losses": [],
         "model_state_dicts": [],
         "optimizer_state_dicts": [],
+        "train_mask": train_mask,
     }
-    log.update({"dataset_size": train_dataset.size, "seq_len": seq_len})
     # iterate over the training data multiple times
     for epoch in range(start_epoch, num_epochs + start_epoch):
         # train the model
@@ -192,14 +227,8 @@ def make_predictions(model, dataset, log_dir):
         named_neuron_to_idx = single_worm_dataset["named_neuron_to_idx"]
         calcium_data = single_worm_dataset["calcium_data"]
         named_neurons_mask = single_worm_dataset["named_neurons_mask"]
-        labels = np.expand_dims(
-            np.where(
-                np.arange(calcium_data.size(0)) > calcium_data.size(0) // 2,
-                "test",
-                "train",
-            ),
-            axis=-1,
-        )
+        train_mask = single_worm_dataset["train_mask"]
+        labels = np.expand_dims(np.where(train_mask, "train", "test"), axis=-1)
         columns = list(named_neuron_to_idx) + ["train_test_label"]
         # save dataframes
         data = calcium_data[:, named_neurons_mask].numpy()

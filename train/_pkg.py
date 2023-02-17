@@ -11,7 +11,8 @@ from omegaconf import DictConfig
 from omegaconf import OmegaConf
 from utils import DEVICE, LOGS_DIR, NUM_NEURONS
 from tqdm import tqdm
-from torch.utils.tensorboard import SummaryWriter
+from torch.utils.data.dataloader import default_collate
+from torch.utils.data import ConcatDataset, DataLoader
 from models._utils import NetworkLSTM
 from data._utils import NeuralActivityDataset, BatchSampler, pick_worm
 from data._main import get_dataset

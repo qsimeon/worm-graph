@@ -166,8 +166,10 @@ class NeuralActivityDataset(torch.utils.data.Dataset):
                 break
         # size of dataset
         self.size = self.counter
+        # save batch indices as attribute
+        self.batch_indices = batch_indices
         # create a batch sampler
-        batch_sampler = BatchSampler(batch_indices)
+        batch_sampler = BatchSampler(self.batch_indices)
         # return samples and batch_sampler
         return data_samples, batch_sampler
 

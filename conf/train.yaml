@@ -2,5 +2,8 @@ train:
   cycles: 10 # passes through multi-worm dataset
   epochs: 1 # passes through single worm dataset per cycle
   seq_len: 13
-  dataset_size: 1000
   learn_rate: 0.01
+  k_splits: 7 # number of splits for interleaving train and test
+  train_size: 2048 # total size of the training dataset
+  test_size: 2048 # total size of the training dataset
+
