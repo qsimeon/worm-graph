@@ -7,20 +7,17 @@ channels:
   - conda-forge
 dependencies:
   - python=3.9
-  - cpuonly
-  - pytorch==1.12.1
+  - pytorch=1.12.1
+  - freetype=2.10.4
   - pandas
   - psutil
-  - pip
-  - pyg
-  - freetype=2.10.4
   - ipywidgets
   - jupyterlab
   - matplotlib
+  - notebook
   - numpy
   - nomkl
   - networkx
-  - notebook
   - seaborn
   - scikit-learn
   - scikit-learn-intelex
