@@ -134,7 +134,6 @@ def optimize_model(
             dset,
             tau=1,
             seq_len=seq_len,
-            increasing=False,
             reverse=True,
             size=2 * train_size // k,
         )
@@ -145,7 +144,6 @@ def optimize_model(
             dset,
             tau=1,
             seq_len=seq_len,
-            increasing=False,
             reverse=True,
             size=2 * test_size // k,
         )

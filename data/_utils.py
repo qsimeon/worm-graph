@@ -29,10 +29,9 @@ class NeuralActivityDataset(torch.utils.data.Dataset):
         D,
         neurons=None,
         tau=1,
-        seq_len=None,
+        seq_len=17,
         size=1000,
         feature_mask=None,
-        increasing=False,
         reverse=False,
     ):
         """
@@ -41,12 +40,10 @@ class NeuralActivityDataset(torch.utils.data.Dataset):
           neurons: None, int or array-like. Index of neuron(s) to return data for.
                   Returns data for all neurons if None.
           tau: int, 0 <= tau < max_time//2. Forward time offset of target sequence.
-          size: int, number of (input, target) data pairs to generate.
-          seq_len: None or int or array-like. If specified, generate all sequences
-                    of the singular length `seq_len`:int, or all sequences of every
-                    length in `seq_len`:array.
+          size: int, 0 < size <= max_time. Number of (input, target) data pairs to generate.
+          seq_len: int. Sequences of length `seq_len` are generated until the dataset `size`
+                    is achieved.
           feature_mask: torch.tensor. What features to select for generating dataset.
-          increasing: bool. Whether to sample shorter sequences first.
           reverse: bool. Whether to sample sequences backward from end of the data.
         Returns:
           (X, Y, meta): tuple. Batch of data samples
@@ -61,9 +58,9 @@ class NeuralActivityDataset(torch.utils.data.Dataset):
         assert torch.is_tensor(D), "Recast the dataset as `torch.tensor`."
         if D.ndim == 2:
             D = D.unsqueeze(-1)  # expand to 3D if dataset given is 2D
+        assert isinstance(seq_len, int), "Enter an integer sequence length `seq_len`."
         self.seq_len = seq_len
         self.max_time, num_neurons, num_features = D.shape
-        self.increasing = increasing
         self.reverse = reverse
         # feature checking
         if feature_mask is not None:
@@ -120,50 +117,36 @@ class NeuralActivityDataset(torch.utils.data.Dataset):
         batch_indices = []
         # define length of time
         T = self.max_time
-        # iterate over all seqeunce lengths, L, if a fixed one was not given
-        if self.seq_len is not None:
-            if isinstance(self.seq_len, int):
-                seq_lens = [self.seq_len]
-            else:  # seq_len is of array type
-                seq_lens = sorted(list(self.seq_len), reverse=not self.increasing)
-        else:  # generate all possible sequences
-            seq_lens = (
-                range(1, T - self.tau + 1)
-                if self.increasing
-                else range(T - self.tau, 0, -1)
-            )
-        for L in seq_lens:
-            # a batch contains all data of a certain length
-            batch = []
-            # iterate over all start indices
-            start_range = (
-                range(0, T - L - self.tau + 1)
-                if not self.reverse
-                else range(T - L - self.tau, -1, -1)
-            )
-            for start in start_range:
-                # define an end index
-                end = start + L
-                # data samples: input, X_tau and target, Y_tau
-                X_tau = self.D[start:end, self.neurons, self.feature_mask]
-                Y_tau = self.D[
-                    start + self.tau : end + self.tau, self.neurons, self.feature_mask
-                ]
-                # store metadata about the sample
-                tau = torch.tensor(self.tau)
-                meta = {"seq_len": L, "start": start, "end": end, "tau": tau}
-                # append to data samples
-                data_samples.append((X_tau, Y_tau, meta))
-                # append index to batch
-                batch.append(self.counter)
-                self.counter += 1
-                # we only want a number of samples up to self.size
-                if self.counter >= self.size:
-                    break
-            batch_indices.append(batch)
+        # iterate over all sequences of length eq_len
+        L = self.seq_len
+        # a batch contains all data of a certain length
+        batch = []
+        # iterate over all start indices
+        start_range = (
+            range(0, T - L - self.tau + 1)
+            if not self.reverse
+            else range(T - L - self.tau, -1, -1)
+        )
+        for start in start_range:
+            # define an end index
+            end = start + L
+            # data samples: input, X_tau and target, Y_tau
+            X_tau = self.D[start:end, self.neurons, self.feature_mask]
+            Y_tau = self.D[
+                start + self.tau : end + self.tau, self.neurons, self.feature_mask
+            ]
+            # store metadata about the sample
+            tau = torch.tensor(self.tau)
+            meta = {"seq_len": L, "start": start, "end": end, "tau": tau}
+            # append to data samples
+            data_samples.append((X_tau, Y_tau, meta))
+            # append index to batch
+            batch.append(self.counter)
+            self.counter += 1
             # we only want a number of samples up to self.size
             if self.counter >= self.size:
                 break
+        batch_indices.append(batch)
         # size of dataset
         self.size = self.counter
         # save batch indices as attribute
@@ -180,7 +163,11 @@ class CElegansConnectome(InMemoryDataset):
     ):
         """Defines CElegansConnectome as a subclass of a PyG InMemoryDataset."""
         super(CElegansConnectome, self).__init__(root, transform, pre_transform)
-        self.data, self.slices = torch.load(self.processed_paths[0])
+        self.graph_tensors = torch.load(self.processed_paths[0])
+
+    def __call__(self):
+        connectome = Data(**self.graph_tensors)
+        return connectome
 
     @property
     def raw_file_names(self):
@@ -225,8 +212,8 @@ class CElegansConnectome(InMemoryDataset):
         if self.pre_transform is not None:
             data_list = [self.pre_transform(data) for data in data_list]
         # store the processed data
-        data, slices = self.collate(data_list)
-        torch.save((data, slices), self.processed_paths[0])
+        torch.save(self.collate(data_list), self.processed_paths[0])
+        return graph
 
 
 def find_reliable_neurons(multi_worm_dataset):
@@ -271,6 +258,14 @@ def pick_worm(dataset, wormid):
         worm = "worm" + str(wormid)
     single_worm_dataset = dict(dataset["generator"])[worm]
     return single_worm_dataset
+
+
+def load_connectome():
+    """
+    Returns the whole nervous system C. elegans connectome.
+    TODO
+    """
+    return CElegansConnectome()
 
 
 def load_dataset(name):

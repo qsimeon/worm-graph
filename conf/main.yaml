@@ -8,10 +8,6 @@ defaults:
 # If you want your primary config to override the values of configs
 # from the Defaults List, append _self_ to the end of the Defaults List
 
-other:
-  param1: None
-  param2: None
-
 hydra:
   run:
     dir: logs/run/${now:%Y-%m-%d_%H-%M}

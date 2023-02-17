@@ -94,7 +94,6 @@ def train_model(
     )
     # make predictions with final trained model
     make_predictions(model, dataset, log_dir)
-    # TODO: simulate activity; create a function for simulating from the trained model
     # returned trained model and path to log directory
     return model, log_dir
 
