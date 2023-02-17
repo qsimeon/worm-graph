@@ -145,39 +145,6 @@ def plot_before_after_weights(before_weights, after_weights, W_name=""):
     plt.show()
 
 
-def plot_correlation_scatterplot(log_dir, worm, neuron):
-    """
-    Create a scatterpot of the target and predicted Ca2+
-    residuals colored by train and test sample.
-    """
-    dataset_name, model_name, timestamp = str.split(os.path.split(log_dir)[-1], "-")
-    plt_title = "Scatterplot of predicted vs target residuals\nworm: {}, neuron: {}\nmodel: {}, dataset: {}\ntime: {}".format(
-        worm, neuron, model_name, dataset_name, timestamp
-    )
-    # load predictions dataframe
-    predictions_df = pd.read_csv(
-        os.path.join(log_dir, worm, "predicted_ca_residual.csv"), index_col=0
-    )
-    # load targets dataframe
-    targets_df = pd.read_csv(
-        os.path.join(log_dir, worm, "target_ca_residual.csv"), index_col=0
-    )
-    data = {
-        "target": targets_df[neuron].tolist(),
-        "prediction": predictions_df[neuron].tolist(),
-        "label": predictions_df["train_test_label"].tolist(),
-    }
-    df = pd.DataFrame(data=data)
-    sns.lmplot(data=df, x="target", y="prediction", hue="label", legend=True)
-    plt.suptitle(plt_title)
-    plt.axis("square")
-    plt.xlabel("Target residual $\Delta F / F$")
-    plt.ylabel("Predicted residual $\Delta F / F$")
-    plt.savefig(os.path.join(log_dir, worm, "%s_correlation.png" % neuron))
-    plt.close()
-    return None
-
-
 def plot_loss_curves(log_dir):
     """
     Plot the loss curves stored in the given log directory.
@@ -226,18 +193,53 @@ def plot_targets_predictions(log_dir, worm, neuron):
         x=targets_df.index,
         y=targets_df[neuron],
         label="target",
+        style="train_test_label",
     )
     sns.lineplot(
         data=predictions_df,
         x=predictions_df.index,
         y=predictions_df[neuron],
         label="predicted",
+        style="train_test_label",
     )
     plt.legend()
     plt.title(plt_title)
     plt.xlabel("Time")
     plt.ylabel("$Ca^{2+}$ Residual ($\Delta F / F$)")
     plt.savefig(os.path.join(log_dir, worm, "%s_residuals.png" % neuron))
+    plt.close()
+    return None
+
+
+def plot_correlation_scatterplot(log_dir, worm, neuron):
+    """
+    Create a scatterpot of the target and predicted Ca2+
+    residuals colored by train and test sample.
+    """
+    dataset_name, model_name, timestamp = str.split(os.path.split(log_dir)[-1], "-")
+    plt_title = "Scatterplot of predicted vs target residuals\nworm: {}, neuron: {}\nmodel: {}, dataset: {}\ntime: {}".format(
+        worm, neuron, model_name, dataset_name, timestamp
+    )
+    # load predictions dataframe
+    predictions_df = pd.read_csv(
+        os.path.join(log_dir, worm, "predicted_ca_residual.csv"), index_col=0
+    )
+    # load targets dataframe
+    targets_df = pd.read_csv(
+        os.path.join(log_dir, worm, "target_ca_residual.csv"), index_col=0
+    )
+    data_dict = {
+        "target": targets_df[neuron].tolist(),
+        "prediction": predictions_df[neuron].tolist(),
+        "label": predictions_df["train_test_label"].tolist(),
+    }
+    data_df = pd.DataFrame(data=data_dict)
+    sns.lmplot(data=data_df, x="target", y="prediction", hue="label", legend=True)
+    plt.suptitle(plt_title)
+    plt.axis("square")
+    plt.xlabel("Target residual $\Delta F / F$")
+    plt.ylabel("Predicted residual $\Delta F / F$")
+    plt.savefig(os.path.join(log_dir, worm, "%s_correlation.png" % neuron))
     plt.close()
     return None
 

@@ -2,4 +2,3 @@ visualize:
   default_log_dir: logs/Kato2015-LinearNN-2023_02_15_22_14
   default_worm: worm0
   default_neuron: AVAL
-  param: None

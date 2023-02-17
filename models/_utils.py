@@ -5,14 +5,30 @@ class LinearNN(torch.nn.Module):
     def __init__(self, input_size, hidden_size, num_layers=1):
         """
         A simple linear regression model to use as a baseline.
-        The output shape will be the same shape as that of the input.
+        For all our models:
+            1. The output will be the same shape as the input.
+            2. A method called `loss_fn` that specifies the specific
+                loss function to be used by the model. The default
+                loss function we use is `torch.nn.MSELoss()`.
+            3. A readout layer is implemented and will always be
+                called `self.linear`.
+            4. There is at least 1 hidden layer. The value of the
+                argument `num_layers` specifies the number of hidden layers.
+            5. When it is possible for a model to be multi-layered,
+                the `num_layers` is used to create the desired number of
+                layers. Otherwise `num_layers` is implied to be 1.
+            6. TODO: A method called `sample` should be implemented to allow
+                sampling spontaneous neural activity from the network.
+                Need to read the literature on generative, score-based and energy-based
+                models to figure out to implement this.
         """
         super(LinearNN, self).__init__()
+        # Setup
         self.input_size = input_size
         self.output_size = input_size
         self.hidden_size = hidden_size
         self.num_layers = num_layers
-        # Linear model
+        # Input and hidden layers
         self.input_hidden = (
             torch.nn.Linear(self.input_size, self.hidden_size),
             torch.nn.ReLU(),
@@ -21,13 +37,20 @@ class LinearNN(torch.nn.Module):
             torch.nn.Linear(self.hidden_size, self.hidden_size),
             torch.nn.ReLU(),
         )
-        self.hidden_output = (torch.nn.Linear(self.hidden_size, self.output_size),)
+        # Readout
+        self.linear = torch.nn.Linear(self.hidden_size, self.output_size)
+        # Full model
         self.model = nn.Sequential(
-            *self.input_hidden, *self.hidden_hidden, *self.hidden_output
+            *self.input_hidden,
+            *self.hidden_hidden,
+            self.linear,
         )
 
+    @classmethod
     def loss_fn(self):
-        """The loss function to be used with this model."""
+        """
+        The loss function to be used with this model.
+        """
         return torch.nn.MSELoss()
 
     def forward(self, input, tau=1):
@@ -37,7 +60,7 @@ class LinearNN(torch.nn.Module):
         """
         readout = self.model(input)
         output = readout
-        # repeat for tau>0 offset target
+        # repeat for target with tau>0 offset
         for i in range(1, tau):
             readout = self.model(input)
             output = readout
@@ -54,6 +77,7 @@ class DenseCFC(torch.nn.Module):
         The output size will be the same as the input size.
         """
         super(DenseCFC, self).__init__()
+        # Setup
         self.input_size = input_size
         self.output_size = input_size
         self.hidden_size = hidden_size
@@ -63,6 +87,7 @@ class DenseCFC(torch.nn.Module):
         # Readout
         self.linear = torch.nn.Linear(self.hidden_size, self.output_size)
 
+    @classmethod
     def loss_fn(self):
         """
         The loss function to be used with this model.
@@ -75,15 +100,15 @@ class DenseCFC(torch.nn.Module):
         input: batch of data
         tau: time offset of target
         """
-        # lstm_out is all of the hidden states throughout the sequence
-        lstm_out, self.hidden = self.rnn(input)
-        readout = self.linear(lstm_out)
-        lstm_out = readout
+        rnn_out, self.hidden = self.rnn(input)
+        readout = self.linear(rnn_out)  # projection
+        rnn_out = readout
+        # repeat for target with tau>0 offset
         for i in range(1, tau):
-            lstm_out, self.hidden = self.rnn(lstm_out, self.hidden)
-            readout = self.linear(lstm_out)
-            lstm_out = readout
-        return lstm_out
+            rnn_out, self.hidden = self.rnn(rnn_out, self.hidden)
+            readout = self.linear(rnn_out)
+            rnn_out = readout
+        return rnn_out
 
 
 class NeuralCFC(torch.nn.Module):
@@ -96,6 +121,7 @@ class NeuralCFC(torch.nn.Module):
         The output size will be the same as the input size.
         """
         super(NeuralCFC, self).__init__()
+        # Setup
         self.input_size = input_size
         self.output_size = input_size
         self.hidden_size = hidden_size
@@ -106,6 +132,7 @@ class NeuralCFC(torch.nn.Module):
         # Readout
         self.linear = torch.nn.Linear(self.hidden_size, self.output_size)
 
+    @classmethod
     def loss_fn(self):
         """
         The loss function to be used with this model.
@@ -118,15 +145,15 @@ class NeuralCFC(torch.nn.Module):
         input: batch of data
         tau: time offset of target
         """
-        # lstm_out is all of the hidden states throughout the sequence
         lstm_out, self.hidden = self.rnn(input)
-        readout = self.linear(lstm_out)
+        readout = self.linear(lstm_out)  # projection
         lstm_out = readout
+        # repeat for target with tau>0 offset
         for i in range(1, tau):
-            lstm_out, self.hidden = self.rnn(lstm_out, self.hidden)
-            readout = self.linear(lstm_out)
-            lstm_out = readout
-        return lstm_out
+            rnn_out, self.hidden = self.rnn(rnn_out, self.hidden)
+            readout = self.linear(rnn_out)
+            rnn_out = readout
+        return rnn_out
 
 
 class NetworkLSTM(torch.nn.Module):
@@ -142,6 +169,7 @@ class NetworkLSTM(torch.nn.Module):
         The output size will be the same as the input size.
         """
         super(NetworkLSTM, self).__init__()
+        # Setup
         self.input_size = input_size
         self.output_size = input_size
         self.hidden_size = hidden_size
@@ -157,6 +185,7 @@ class NetworkLSTM(torch.nn.Module):
         # Readout
         self.linear = torch.nn.Linear(self.hidden_size, self.output_size)
 
+    @classmethod
     def loss_fn(self):
         """
         The loss function to be used with this model.
@@ -169,10 +198,10 @@ class NetworkLSTM(torch.nn.Module):
         input: batch of data
         tau: time offset of target
         """
-        # lstm_out is all of the hidden states throughout the sequence
         lstm_out, self.hidden = self.lstm(input)
-        readout = self.linear(lstm_out)
+        readout = self.linear(lstm_out)  # projection
         lstm_out = readout
+        # repeat for target with tau>0 offset
         for i in range(1, tau):
             lstm_out, self.hidden = self.lstm(lstm_out, self.hidden)
             readout = self.linear(lstm_out)
@@ -184,13 +213,14 @@ class VariationalLSTM(nn.Module):
     """
     Variational autoencoder LSTM model.
     Same as the NetworkLSTM model but with an added
-    self-supervised VAE loss. The VAE loss regularizes
-    the model by encouraging the network to learn cell states
-    that can reliably reproduce the inputs.
+    self-supervised VAE loss. The goal of the VAE loss is to
+    encourage the network to learn cell states that encode the
+    input sequences reliably enough to reproduce them.
     """
 
     def __init__(self, input_size, hidden_size, num_layers=1):
         super(VariationalLSTM, self).__init__()
+        # Setup
         self.input_size = input_size
         self.output_size = input_size
         self.hidden_size = hidden_size
@@ -203,18 +233,22 @@ class VariationalLSTM(nn.Module):
             bias=True,
             batch_first=True,
         )
-        # readout
-        self.linear = torch.nn.Linear(self.hidden_size, self.output_size)
-        # variational autoencoder (VAE)
+        # Variational Autoencoder (VAE)
         self.elbo_loss = 0
-        # logits
-        self.decoder = torch.nn.Linear(self.hidden_size, self.output_size)
-        # distribution parameters
-        self.fc_mu = torch.nn.Linear(hidden_size, hidden_size)
-        self.fc_var = torch.nn.Linear(hidden_size, hidden_size)
-        # for the gaussian likelihood
-        self.log_scale = torch.nn.Parameter(torch.Tensor([0.0]))  # var = exp(0) = 1
+        self.decoder = torch.nn.Linear(self.hidden_size, self.output_size)  # logits
+        self.fc_mu = torch.nn.Linear(
+            self.hidden_size, self.hidden_size
+        )  # distribution ...
+        self.fc_var = torch.nn.Linear(
+            self.hidden_size, self.hidden_size
+        )  # ... parameters
+        self.log_scale = torch.nn.Parameter(
+            torch.Tensor([0.0])
+        )  # for Gaussian likelihood (var=exp(0)=1)
+        # Readout
+        self.linear = torch.nn.Linear(self.hidden_size, self.output_size)
 
+    @classmethod
     def loss_fn(self):
         """
         The loss function to be used with this model.
@@ -246,8 +280,7 @@ class VariationalLSTM(nn.Module):
         log_pz = p.log_prob(z)
         # 3. kl divergence calculation
         kl = log_qzx - log_pz
-        kl = kl.sum(dim=(1, 2))
-        return kl
+        return kl.sum(dim=(1, 2))
 
     def forward(self, input, tau=1):
         """
@@ -257,9 +290,9 @@ class VariationalLSTM(nn.Module):
         # LSTM part
         # Propagate input through LSTM
         lstm_out, self.hidden = self.lstm(input)
-        readout = self.linear(lstm_out)
+        readout = self.linear(lstm_out)  # projection
         lstm_out = readout
-        # Repeat for tau>0 offset target
+        # repeat for target with tau>0 offset
         for i in range(tau):
             lstm_out, self.hidden = self.lstm(lstm_out, self.hidden)
             readout = self.linear(lstm_out)
