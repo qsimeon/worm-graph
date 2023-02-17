@@ -1,10 +1,18 @@
+import os
+
+import torch
+
 from data._main import get_dataset
 
 from omegaconf import OmegaConf
 
 from train._utils import optimize_model
 
+from train._main import train_model
+
 from models._utils import LinearNN
+
+from visualization._utils import plot_before_after_weights
 
 import matplotlib.pyplot as plt
 
@@ -20,4 +28,16 @@ plt.figure()
 
 plt.plot(log["train_mask"].to(float).numpy())
 
+plt.title("Train mask")
+
+plt.xlabel("Time")
+
+plt.ylabel("Test (0) / Train (1)")
+
 plt.show()
+
+config = OmegaConf.load("conf/train.yaml")
+
+model, log_dir = train_model(model, dataset, config, shuffle=True)
+
+plot_before_after_weights(log_dir)

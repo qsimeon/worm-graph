@@ -24,3 +24,9 @@ hydra:
   sweeper:
     params:
       dataset.name: Kato2015, Nichols2017, Skora2018, Kaplan2020, Uzel2022
+      # model.type: linear, lstm, vae_lstm, neural_cfc, dense_cfc
+      # model.hidden_size: 64, 128, 512
+      # train.cycles: 5, 10, 20
+      # train.k_splits: 2, 5, 10
+      # train.train_size: 512, 1024, 2048
+      # train.seq_len: 13, 25, 101

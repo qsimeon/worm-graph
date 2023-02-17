@@ -32,4 +32,4 @@ plt.show()
 
 targets, predictions = model_predict(model, calcium_data)
 
-print("Targets:", targets.shape, "\nPredictions:", predictions.shape)
+print("Targets:", targets.shape, "\nPredictions:", predictions.shape, end="\n\n")

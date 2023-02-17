@@ -13,3 +13,4 @@ from omegaconf import DictConfig
 from omegaconf import OmegaConf
 from matplotlib.lines import Line2D
 from data._utils import NeuralActivityDataset, BatchSampler
+from models._utils import *

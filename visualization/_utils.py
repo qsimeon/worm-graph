@@ -132,17 +132,39 @@ def draw_connectome(
     plt.show()
 
 
-def plot_before_after_weights(before_weights, after_weights, W_name=""):
+def plot_before_after_weights(log_dir):
     """
-    Plot side-by-side the pair of weights from
+    Plot the model's readout weigths from
     before and after training.
     """
+    # process the log folder name
+    dataset_name, model_name, timestamp = str.split(os.path.split(log_dir)[-1], "-")
+    plt_title = "Model readout weights\nmodel: {}, dataset: {}\ntime: {}".format(
+        model_name, dataset_name, timestamp
+    )
+    # load the first model checkpoint
+    chkpt_dir = os.path.join(log_dir, "checkpoints")
+    chkpts = sorted(os.listdir(chkpt_dir), key=lambda x: int(x.split("_")[0]))
+    first_chkpt = torch.load(os.path.join(chkpt_dir, chkpts[0]))
+    last_chkpt = torch.load(os.path.join(chkpt_dir, chkpts[-1]))
+    input_size, hidden_size = first_chkpt["input_size"], first_chkpt["hidden_size"]
+    model = eval(model_name)(input_size, hidden_size)
+    # plot the readout weights
     fig, axs = plt.subplots(1, 2)
-    axs[0].imshow(before_weights)
-    axs[0].set_title("Initial weights " + W_name)
-    axs[1].imshow(after_weights)
-    axs[1].set_title("Trained weights " + W_name)
-    plt.show()
+    # before training
+    model.load_state_dict(first_chkpt["model_state_dict"])
+    axs[0].imshow(model.linear.weight.detach().cpu().T)
+    axs[0].set_title("Initialized")
+    axs[0].set_ylabel("Hidden size")
+    axs[0].set_xlabel("Output size")
+    # after training
+    model.load_state_dict(last_chkpt["model_state_dict"])
+    axs[1].imshow(model.linear.weight.detach().cpu().T)
+    axs[1].set_title("Trained")
+    axs[1].set_xlabel("Output size")
+    plt.suptitle(plt_title)
+    plt.savefig(os.path.join(log_dir, "readout_weights.png"))
+    plt.close()
 
 
 def plot_loss_curves(log_dir):
@@ -188,19 +210,20 @@ def plot_targets_predictions(log_dir, worm, neuron):
         os.path.join(log_dir, "worm0", "target_ca_residual.csv"), index_col=0
     )
     plt.figure()
+    # TODO: overlay shading on the train and test slices
     sns.lineplot(
         data=targets_df,
         x=targets_df.index,
         y=targets_df[neuron],
         label="target",
-        style="train_test_label",
+        # style="train_test_label",
     )
     sns.lineplot(
         data=predictions_df,
         x=predictions_df.index,
         y=predictions_df[neuron],
         label="predicted",
-        style="train_test_label",
+        # style="train_test_label",
     )
     plt.legend()
     plt.title(plt_title)

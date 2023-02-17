@@ -53,6 +53,12 @@ class LinearNN(torch.nn.Module):
         """
         return torch.nn.MSELoss()
 
+    def get_input_size(self):
+        return self.input_size
+
+    def get_hidden_size(self):
+        return self.hidden_size
+
     def forward(self, input, tau=1):
         """
         input: batch of data
@@ -93,6 +99,12 @@ class DenseCFC(torch.nn.Module):
         The loss function to be used with this model.
         """
         return torch.nn.MSELoss()
+
+    def get_input_size(self):
+        return self.input_size
+
+    def get_hidden_size(self):
+        return self.hidden_size
 
     def forward(self, input, tau=1):
         """
@@ -138,6 +150,12 @@ class NeuralCFC(torch.nn.Module):
         The loss function to be used with this model.
         """
         return torch.nn.MSELoss()
+
+    def get_input_size(self):
+        return self.input_size
+
+    def get_hidden_size(self):
+        return self.hidden_size
 
     def forward(self, input, tau=1):
         """
@@ -191,6 +209,12 @@ class NetworkLSTM(torch.nn.Module):
         The loss function to be used with this model.
         """
         return torch.nn.MSELoss()
+
+    def get_input_size(self):
+        return self.input_size
+
+    def get_hidden_size(self):
+        return self.hidden_size
 
     def forward(self, input, tau=1):
         """
@@ -258,6 +282,12 @@ class VariationalLSTM(nn.Module):
             return self.elbo_loss + torch.nn.MSELoss(**kwargs)(input, target)
 
         return func
+
+    def get_input_size(self):
+        return self.input_size
+
+    def get_hidden_size(self):
+        return self.hidden_size
 
     def gaussian_likelihood(self, mean, logscale, sample):
         """

@@ -22,6 +22,9 @@ def plot_figures(
     # loss curves
     plot_loss_curves(log_dir)
 
+    # plot model weights
+    plot_before_after_weights(log_dir)
+
     # calcium residuals
     plot_targets_predictions(log_dir, worm, neuron)
 

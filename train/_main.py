@@ -77,6 +77,9 @@ def train_model(
             torch.save(
                 {
                     "epoch": reset_epoch - 1,
+                    "model_name": model_class_name,
+                    "input_size": model.get_input_size(),
+                    "hidden_size": model.get_hidden_size(),
                     "num_worms": i + 1,
                     "model_state_dict": model.state_dict(),
                     "optimizer_state_dict": optimizer.state_dict(),

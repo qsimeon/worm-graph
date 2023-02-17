@@ -9,29 +9,24 @@ dependencies:
   - python=3.9
   - pytorch=1.12.1
   - freetype=2.10.4
-  - pandas
-  - psutil
+  - scikit-learn-intelex
+  - scikit-learn
   - ipywidgets
   - jupyterlab
   - matplotlib
   - notebook
-  - numpy
-  - nomkl
   - networkx
   - seaborn
-  - scikit-learn
-  - scikit-learn-intelex
+  - pandas
+  - numpy
+  - nomkl
   - scipy
-  - tqdm
   - mat73
+  - tqdm
   - pip:
-      - torch-geometric-temporal
-      - "black[jupyter]"
+      - black[jupyter]
       - hydra-core
-      - tensorboard
-      - wandb
       - omegaconf
-      - statsmodels
       - pyEDM
       - wget
       - ncps

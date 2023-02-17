@@ -20,6 +20,7 @@ def train(loader, model, mask, optimizer, no_grad=False):
     # Iterate in batches over the training dataset.
     for i, data in enumerate(loader):
         X_train, Y_train, meta = data  # (batch_size, seq_len, num_neurons)
+        X_train, Y_train = X_train.to(DEVICE), Y_train.to(DEVICE)
         tau = meta["tau"][0]
         optimizer.zero_grad()  # Clear gradients.
         # Baseline: loss if the model predicted the residual to be 0
@@ -65,6 +66,7 @@ def test(loader, model, mask):
     # Iterate in batches over the validation dataset.
     for i, data in enumerate(loader):
         X_test, Y_test, meta = data  # (batch_size, seq_len, num_neurons)
+        X_test, Y_test = X_test.to(DEVICE), Y_test.to(DEVICE)
         tau = meta["tau"][0]
         # Baseline: loss if the model predicted the residual to be 0
         base = criterion(
