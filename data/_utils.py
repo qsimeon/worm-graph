@@ -159,15 +159,19 @@ class NeuralActivityDataset(torch.utils.data.Dataset):
 
 class CElegansConnectome(InMemoryDataset):
     def __init__(
-        self, root=os.path.join(ROOT_DIR, "data"), transform=None, pre_transform=None
+        self,
+        root=os.path.join(ROOT_DIR, "data"),
+        transform=None,
+        pre_transform=None,
+        pre_filter=None,
     ):
-        """Defines CElegansConnectome as a subclass of a PyG InMemoryDataset."""
-        super(CElegansConnectome, self).__init__(root, transform, pre_transform)
-        self.graph_tensors = torch.load(self.processed_paths[0])
-
-    def __call__(self):
-        connectome = Data(**self.graph_tensors)
-        return connectome
+        """
+        Defines CElegansConnectome as a subclass of a PyG InMemoryDataset.
+        """
+        super(CElegansConnectome, self).__init__(
+            root, transform, pre_transform, pre_filter
+        )
+        self.data, self.slices = torch.load(self.processed_paths[-1])
 
     @property
     def raw_file_names(self):
@@ -177,7 +181,7 @@ class CElegansConnectome(InMemoryDataset):
     @property
     def processed_file_names(self):
         """List of the processed files needed to proceed."""
-        return ["connectome/graph_tensors.pt"]
+        return ["connectome/graph_tensors.pt", "connectome/data.pt"]
 
     def download(self):
         """Download the raw zip file if not already retrieved."""
@@ -192,9 +196,12 @@ class CElegansConnectome(InMemoryDataset):
         os.unlink(filename)  # remove zip file
 
     def process(self):
-        """Process the raw files and return the dataset (i.e. graph)."""
+        """
+        Process the raw files and return the dataset (i.e. the connectome graph).
+        """
         # preprocessing necessary
         data_path = os.path.join(self.processed_dir, "connectome", "graph_tensors.pt")
+        # create a simple dict for loading the connectome
         if not os.path.exists(data_path):  # fun fast preprocess
             subprocess.run("python -u ../preprocess/_main.py", text=True)
         assert os.path.exists(
@@ -204,16 +211,17 @@ class CElegansConnectome(InMemoryDataset):
         print("Loading from preprocess...")
         graph_tensors = torch.load(data_path)
         # make the graph
-        graph = Data(**graph_tensors)
-        # apply the functions specified in pre_filter and pre_transform
-        data_list = [graph]
+        connectome = Data(**graph_tensors)
+        # make a dataset with one Data object
+        data_list = [connectome]
+        # applied specified transforms and filters
         if self.pre_filter is not None:
             data_list = [data for data in data_list if self.pre_filter(data)]
         if self.pre_transform is not None:
             data_list = [self.pre_transform(data) for data in data_list]
-        # store the processed data
-        torch.save(self.collate(data_list), self.processed_paths[0])
-        return graph
+        data, slices = self.collate(data_list)
+        # save the dataset
+        torch.save((data, slices), self.processed_paths[-1])
 
 
 def find_reliable_neurons(multi_worm_dataset):
@@ -263,9 +271,8 @@ def pick_worm(dataset, wormid):
 def load_connectome():
     """
     Returns the whole nervous system C. elegans connectome.
-    TODO
     """
-    return CElegansConnectome()
+    return CElegansConnectome()[0]
 
 
 def load_dataset(name):
