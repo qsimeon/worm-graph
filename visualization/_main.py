@@ -28,8 +28,9 @@ def plot_figures(
     # calcium residuals
     plot_targets_predictions(log_dir, worm, neuron)
 
-    # scatterplot of modelled v. real neuron activity
+    # scatterplot of modelled vs. real neuron activity
     plot_correlation_scatterplot(log_dir, worm, neuron)
+
     # TODO add more figures
 
     return None

@@ -6,15 +6,16 @@ channels:
   - anaconda
   - conda-forge
 dependencies:
-  - python=3.9
-  - pytorch=1.12.1
-  - freetype=2.10.4
+  - python=3.11
+  - pytorch=1.13
   - scikit-learn-intelex
   - scikit-learn
   - ipywidgets
   - jupyterlab
   - matplotlib
+  - pynamical
   - notebook
+  - freetype
   - networkx
   - seaborn
   - pandas

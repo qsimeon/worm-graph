@@ -203,11 +203,11 @@ def plot_targets_predictions(log_dir, worm, neuron):
     )
     # load predictions dataframe
     predictions_df = pd.read_csv(
-        os.path.join(log_dir, "worm0", "predicted_ca_residual.csv"), index_col=0
+        os.path.join(log_dir, worm, "predicted_ca_residual.csv"), index_col=0
     )
     # load targets dataframe
     targets_df = pd.read_csv(
-        os.path.join(log_dir, "worm0", "target_ca_residual.csv"), index_col=0
+        os.path.join(log_dir, worm, "target_ca_residual.csv"), index_col=0
     )
     plt.figure()
     # TODO: overlay shading on the train and test slices

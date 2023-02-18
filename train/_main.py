@@ -43,32 +43,33 @@ def train_model(
         "centered_test_losses": [],
     }
     # train the model for multiple cyles
+    kwargs = dict(
+        optimizer=optimizer,
+        num_epochs=config.train.epochs,
+        seq_len=config.train.seq_len,
+        k_splits=config.train.k_splits,
+        train_size=config.train.train_size,
+        test_size=config.train.test_size,
+        tau=1,
+        reverse=True,
+    )
     reset_epoch = 1
     for i, (worm, single_worm_dataset) in enumerate(dataset_items):
         model, log = optimize_model(
-            dataset=single_worm_dataset["calcium_data"],
+            data=single_worm_dataset["calcium_data"],
             model=model,
             mask=single_worm_dataset["named_neurons_mask"],
-            optimizer=optimizer,
             start_epoch=reset_epoch,
-            num_epochs=config.train.epochs,
-            seq_len=config.train.seq_len,
-            k_splits=config.train.k_splits,
-            train_size=config.train.train_size,
-            test_size=config.train.test_size,
+            **kwargs,
         )
         # retrieve losses
-        data["epochs"].extend(log["epochs"])
-        data["train_losses"].extend(log["train_losses"])
-        data["test_losses"].extend(log["test_losses"])
-        data["base_train_losses"].extend(log["base_train_losses"])
-        data["base_test_losses"].extend(log["base_test_losses"])
-        data["centered_train_losses"].extend(log["centered_train_losses"])
-        data["centered_test_losses"].extend(log["centered_test_losses"])
-        reset_epoch = log["epochs"][-1] + 1
-        # save the train mask for this worm returned in the log
+        [data[key].extend(log[key]) for key in data]
+        # mutate the dataset for this worm with the train and test masks
         dataset[worm]["train_mask"] = log["train_mask"]
-        # print and save every cycle
+        dataset[worm]["test_mask"] = log["test_mask"]
+        # set to next epoch
+        reset_epoch = log["epochs"][-1] + 1
+        # outputs
         if (i % config.train.cycles) == 0:
             # display progress
             print("num. worms trained on:", i + 1, "\nprevious worm:", worm, end="\n\n")

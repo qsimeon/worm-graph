@@ -1,4 +1,4 @@
 visualize:
-  default_log_dir: logs/Kato2015-NeuralCFC-2023_02_17_13_32
-  default_worm: worm0
+  default_log_dir: logs/Kaplan2020_Kato2015_Skora2018_Uzel2022-NeuralCFC-2023_02_17_20_37
+  default_worm: worm1
   default_neuron: AVAL

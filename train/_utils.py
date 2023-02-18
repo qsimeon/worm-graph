@@ -85,39 +85,19 @@ def test(loader, model, mask):
     return losses
 
 
-def optimize_model(
-    dataset,
-    model,
-    mask=None,
-    optimizer=None,
-    seq_len=1,
-    start_epoch=1,
-    learn_rate=0.01,
-    num_epochs=100,
-    k_splits=2,
-    train_size=1024,
-    test_size=1024,
+def split_train_test(
+    data: torch.tensor,
+    seq_len: int,
+    k_splits: int,
+    train_size: int,
+    test_size: int,
+    tau=1,
+    reverse=True,
 ):
     """
-    Creates train and test data loaders from the given dataset
-    and an optimizer given the model. Trains and validates the
-    model for specified number of epochs. Returns the trained
-    model and a dictionary with log information including losses.
+    Create neural activity train and test datasets.
     """
-    # create the mask
-    if mask is None:
-        mask = torch.ones(NUM_NEURONS, dtype=torch.bool)
-    assert mask.size(0) == NUM_NEURONS and mask.dtype == torch.bool
-    mask.requires_grad = False
-    mask = mask.to(DEVICE)
-    # put model on device
-    model = model.to(DEVICE)
-    # create optimizer
-    if optimizer is None:
-        optimizer = torch.optim.Adam(model.parameters(), lr=learn_rate)
-    # create neural activity train and test datasets
-    max_time = len(dataset)  # len of a tensor is always the 0th dimension
-    ### new approach
+    max_time = len(data)  # len of a tensor is always the 0th dimension
     k = k_splits
     l1 = (k - 1) * [max_time // k]
     l2 = [max_time - sum(l1)]
@@ -128,13 +108,14 @@ def optimize_model(
             for i, size in enumerate(sections)
         ]
     )
-    split_datasets = torch.split(dataset, sections)  # len k_splits tensor
+    test_mask = ~train_mask
+    split_datasets = torch.split(data, sections)  # len k_splits tensor
     train_datasets = [
         NeuralActivityDataset(
             dset,
-            tau=1,
+            tau=tau,
             seq_len=seq_len,
-            reverse=True,
+            reverse=reverse,
             size=2 * train_size // k,
         )
         for dset in split_datasets[::2]
@@ -142,9 +123,9 @@ def optimize_model(
     test_datasets = [
         NeuralActivityDataset(
             dset,
-            tau=1,
+            tau=tau,
             seq_len=seq_len,
-            reverse=True,
+            reverse=reverse,
             size=2 * test_size // k,
         )
         for dset in split_datasets[1::2]
@@ -170,7 +151,48 @@ def optimize_model(
         batch_sampler=test_sampler,
         pin_memory=True,
     )
-    ###
+    return train_loader, test_loader, train_mask, test_mask
+
+
+def optimize_model(
+    data: torch.tensor,
+    model: torch.nn.Module,
+    mask=None,
+    optimizer=None,
+    seq_len=1,
+    start_epoch=1,
+    learn_rate=0.01,
+    num_epochs=100,
+    **kwargs,
+):
+    """
+    Creates train and test data loaders from the given dataset
+    and an optimizer given the model. Trains and validates the
+    model for specified number of epochs. Returns the trained
+    model and a dictionary with log information including losses.
+    kwargs:  {
+                k_splits: int,
+                train_size: int,
+                test_size: int,
+                tau: int,
+                reverse: bool,
+            }
+    """
+    # create the feature mask
+    if mask is None:
+        mask = torch.ones(NUM_NEURONS, dtype=torch.bool)
+    assert mask.size(0) == NUM_NEURONS and mask.dtype == torch.bool
+    mask.requires_grad = False
+    mask = mask.to(DEVICE)
+    # put model on device
+    model = model.to(DEVICE)
+    # create optimizer
+    if optimizer is None:
+        optimizer = torch.optim.Adam(model.parameters(), lr=learn_rate)
+    # create data loaders and train/test masks
+    train_loader, test_loader, train_mask, test_mask = split_train_test(
+        data, seq_len, **kwargs
+    )
     # create log dictionary to return
     log = {
         "epochs": [],
@@ -183,6 +205,7 @@ def optimize_model(
         "model_state_dicts": [],
         "optimizer_state_dicts": [],
         "train_mask": train_mask,
+        "test_mask": test_mask,
     }
     # iterate over the training data multiple times
     for epoch in range(start_epoch, num_epochs + start_epoch):
@@ -201,7 +224,7 @@ def optimize_model(
                 f"Epoch: {epoch:03d}, Train Loss: {train_loss:.4f}, Val. Loss: {test_loss:.4f}",
                 end="\n\n",
             )
-            # saves epochs
+            # save epochs
             log["epochs"].append(epoch)
             # save losses
             log["base_train_losses"].append(base_train_loss)
@@ -262,7 +285,7 @@ def make_predictions(model, dataset, log_dir):
 def model_predict(model, calcium_data):
     """
     Makes predictions for all neurons in the
-    calcium dataset using a trained model.
+    calcium data tensor using a trained model.
     """
     model = model.double()
     model.eval()
