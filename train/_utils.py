@@ -126,7 +126,6 @@ def split_train_test(
         split_datasets = split_datasets[:-1]
     train_splits = split_datasets[::2]
     test_splits = split_datasets[1::2]
-
     # make datasets
     train_div = len(seq_len) * len(train_splits)
     train_datasets = [

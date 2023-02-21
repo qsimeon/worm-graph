@@ -1,10 +1,9 @@
 train:
-  cycles: 10 # passes through eash multi-worm dataset
-  epochs: 1 # passes per cylce through each single worm dataset
+  learn_rate: 0.01 # learning rate
   seq_len: # length(s) of sequences to train on
     - 101
-  learn_rate: 0.01 # learning rate
   k_splits: 5 # number of splits for interleaving train and test
-  train_size: 1024 # total size of the training dataset
-  test_size: 1024 # total size of the training dataset
-
+  cycles: 10 # passes through eash multi-worm dataset
+  epochs: 1 # passes per cylce through each single worm dataset
+  train_size: 1024 # size (num. batches) per cycle of training dataset
+  test_size: 1024 # size (num. batches) per cycle of training dataset

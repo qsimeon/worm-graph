@@ -7,22 +7,22 @@ defaults:
   - _self_
 # If you want your primary config to override the values of configs
 # from the Defaults List, append _self_ to the end of the Defaults List
-
 hydra:
   run:
-    dir: logs/run/${now:%Y-%m-%d_%H-%M}
+    dir: logs/run/${now:%Y_%m_%d_%H_%M}
   sweep:
-    dir: logs/multirun/${now:%Y-%m-%d_%H-%M}
+    dir: logs/multirun/${now:%Y_%m_%d_%H_%M}
     subdir: ${hydra.job.num}
   mode: MULTIRUN
   job:
     chdir: false
   sweeper:
     params:
-      # dataset.name: Kato2015, Nichols2017, Skora2018, Kaplan2020, Uzel2022
-      model.type: linear, lstm, neural_cfc
-      # model.hidden_size: 64, 128
-      # train.cycles: 10, 20
-      # train.k_splits: 2, 5, 8
-      # train.train_size: 1024, 2048
-      # train.seq_len: 13, 25, 101
+      # train.seq_len: 7, [7, 17], [7, 17, 43], [7, 17, 43, 101]
+      # train.k_splits: 2, 5, 8, 10
+      # train.train_size: 1024, 2048, 4096, 8192
+      # dataset.name: Uzel2022, [Uzel2022, Kato2015], [Uzel2022, Kato2015, Kaplan2020]
+      train.cycles: 10, 30, 50
+      # model.type: dense_cfc, neural_cfc, lstm, vae_lstm, linear
+      # model.hidden_size: 64
+      # train.test_size: 1024

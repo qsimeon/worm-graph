@@ -121,7 +121,6 @@ class NeuralActivityDataset(torch.utils.data.Dataset):
         T = self.max_time
         # iterate over all sequences of length eq_len
         L = self.seq_len
-        # batch = []
         # iterate over all start indices
         start_range = (
             range(0, T - L - self.tau + 1)  # generate from start to end
@@ -147,7 +146,6 @@ class NeuralActivityDataset(torch.utils.data.Dataset):
             # we only want a number of samples up to self.size
             if self.counter >= self.size:
                 break
-        # batch_indices.append(torch.tensor(batch))
         batch_indices = torch.tensor(batch_indices)
         # size of dataset
         self.size = self.counter
