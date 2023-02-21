@@ -742,6 +742,33 @@ def pickle_Nichols2017(transform):
     print(Nichols2017.keys(), end="\n\n")
 
 
+def pickle_Flavell2023(transform):
+    """
+    Pickles the worm neural activity data from Flavell et al., bioRxiv 2023,
+    Brain-wide representations of behavior spanning multiple timescales and states in C. elegans.
+    """
+    data_dict = dict()
+    # WORM 0: 2022-06-14-01_neuropal
+    # load the first .h5 file (single worm)
+    h5 = h5py.File("2022-06-14-01_neuropal.h5", "r")
+    print(list(h5.keys()), end="\n\n")
+    # get data for all worms
+    neurons = np.array(
+        h5["neuropal_label"], dtype=str
+    )  # list of full labels (if neuron wasn't labeled the entry is "missing")
+    named_inds = np.where(neurons != "missing")[0]
+    num_named0 = len(named_inds)
+    traces = np.array(
+        h5["trace_array_F20"], dtype=float
+    )  # GCaMP neural activity traced normalized by 20th percentile
+    max_time0, num_neurons = traces.shape
+    neuron_to_idx = {
+        (neuron if idx in named_inds else str(idx)): idx
+        for idx, neuron in enumerate(neurons)
+    }
+    return None
+
+
 def pickle_Nguyen2017(transform):
     """
     Pickles the worm neural activity data from Nguyen et al., PLOS CompBio 2017,

@@ -3,6 +3,7 @@ import os
 import hydra
 import mat73
 import pickle
+import h5py
 import shutil
 import subprocess
 import numpy as np

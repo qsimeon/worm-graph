@@ -31,7 +31,7 @@ def plot_figures(
     # scatterplot of modelled vs. real neuron activity
     plot_correlation_scatterplot(log_dir, worm, neuron)
 
-    # TODO add more figures
+    # TODO add more plotting functions for different figures
 
     return None
 

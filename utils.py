@@ -30,6 +30,7 @@ VALID_DATASETS = {
     "Kaplan2020",
     "Uzel2022",
     "Kato2015",
+    "Flavell2023",
 }  # TODO: set an option for pooling all datasets
 
 # list of all 302 hermaphrodite neurons

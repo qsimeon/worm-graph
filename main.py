@@ -12,7 +12,7 @@ def pipeline(config: DictConfig) -> None:
         get_model: model.yaml
         train_model: train.yaml
         plot_figures: visualize.yaml
-        analyze_outputs: analysis.yaml
+        TODO: analyze_outputs: analysis.yaml
     """
     # skips if data already preprocessed
     process_data(config)

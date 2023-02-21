@@ -46,7 +46,7 @@ class LinearNN(torch.nn.Module):
             self.linear,
         )
 
-    @classmethod
+    # @classmethod
     def loss_fn(self):
         """
         The loss function to be used with this model.
@@ -93,7 +93,7 @@ class DenseCFC(torch.nn.Module):
         # Readout
         self.linear = torch.nn.Linear(self.hidden_size, self.output_size)
 
-    @classmethod
+    # @classmethod
     def loss_fn(self):
         """
         The loss function to be used with this model.
@@ -144,7 +144,7 @@ class NeuralCFC(torch.nn.Module):
         # Readout
         self.linear = torch.nn.Linear(self.hidden_size, self.output_size)
 
-    @classmethod
+    # @classmethod
     def loss_fn(self):
         """
         The loss function to be used with this model.
@@ -203,7 +203,7 @@ class NetworkLSTM(torch.nn.Module):
         # Readout
         self.linear = torch.nn.Linear(self.hidden_size, self.output_size)
 
-    @classmethod
+    # @classmethod
     def loss_fn(self):
         """
         The loss function to be used with this model.
@@ -272,7 +272,7 @@ class VariationalLSTM(nn.Module):
         # Readout
         self.linear = torch.nn.Linear(self.hidden_size, self.output_size)
 
-    @classmethod
+    # @classmethod
     def loss_fn(self):
         """
         The loss function to be used with this model.
@@ -328,9 +328,9 @@ class VariationalLSTM(nn.Module):
             readout = self.linear(lstm_out)
             lstm_out = readout
         # VAE part
-        # use last cell state as encoded x to get the mu and variance parameters
+        # use last state as encoded x to get the mu and variance parameters
         h_final, c_final = self.hidden
-        x_encoded = c_final[-1].unsqueeze(1).repeat(1, input.size(1), 1)
+        x_encoded = h_final[-1].unsqueeze(1).repeat(1, input.size(1), 1)
         mu, log_var = self.fc_mu(x_encoded), self.fc_var(x_encoded)
         # sample z from q
         std = torch.exp(log_var / 2)

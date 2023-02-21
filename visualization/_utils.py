@@ -132,13 +132,36 @@ def draw_connectome(
     plt.show()
 
 
+def plot_loss_curves(log_dir):
+    """
+    Plot the loss curves stored in the given log directory.
+    """
+    # process the log folder name
+    timestamp, dataset_name, model_name = str.split(os.path.split(log_dir)[-1], "-")
+    plt_title = "Loss curves\nmodel: {}, dataset: {}\ntime: {}".format(
+        model_name, dataset_name, timestamp
+    )
+    # load the loss dataframe
+    loss_df = pd.read_csv(os.path.join(log_dir, "loss_curves.csv"), index_col=0)
+    plt.figure()
+    sns.lineplot(x="epochs", y="centered_train_losses", data=loss_df, label="train")
+    sns.lineplot(x="epochs", y="centered_test_losses", data=loss_df, label="test")
+    plt.legend()
+    plt.title(plt_title)
+    plt.xlabel("Epoch")
+    plt.ylabel("Loss - Baseline")
+    plt.savefig(os.path.join(log_dir, "loss_curves.png"))
+    plt.close()
+    return None
+
+
 def plot_before_after_weights(log_dir):
     """
     Plot the model's readout weigths from
     before and after training.
     """
     # process the log folder name
-    dataset_name, model_name, timestamp = str.split(os.path.split(log_dir)[-1], "-")
+    timestamp, dataset_name, model_name = str.split(os.path.split(log_dir)[-1], "-")
     plt_title = "Model readout weights\nmodel: {}, dataset: {}\ntime: {}".format(
         model_name, dataset_name, timestamp
     )
@@ -167,29 +190,6 @@ def plot_before_after_weights(log_dir):
     plt.close()
 
 
-def plot_loss_curves(log_dir):
-    """
-    Plot the loss curves stored in the given log directory.
-    """
-    # process the log folder name
-    dataset_name, model_name, timestamp = str.split(os.path.split(log_dir)[-1], "-")
-    plt_title = "Loss curves\nmodel: {}, dataset: {}\ntime: {}".format(
-        model_name, dataset_name, timestamp
-    )
-    # load the loss dataframe
-    loss_df = pd.read_csv(os.path.join(log_dir, "loss_curves.csv"), index_col=0)
-    plt.figure()
-    sns.lineplot(x="epochs", y="centered_train_losses", data=loss_df, label="train")
-    sns.lineplot(x="epochs", y="centered_test_losses", data=loss_df, label="test")
-    plt.legend()
-    plt.title(plt_title)
-    plt.xlabel("Epoch")
-    plt.ylabel("Loss - Baseline")
-    plt.savefig(os.path.join(log_dir, "loss_curves.png"))
-    plt.close()
-    return None
-
-
 def plot_targets_predictions(log_dir, worm, neuron):
     """
     Plot of the target Ca2+ residual time series overlayed
@@ -197,7 +197,7 @@ def plot_targets_predictions(log_dir, worm, neuron):
     neuron in a given worm.
     """
     # process the log folder name
-    dataset_name, model_name, timestamp = str.split(os.path.split(log_dir)[-1], "-")
+    timestamp, dataset_name, model_name = str.split(os.path.split(log_dir)[-1], "-")
     plt_title = "Residual neural activity\nworm: {}, neuron: {}\nmodel: {}, dataset: {}\ntime: {}".format(
         worm, neuron, model_name, dataset_name, timestamp
     )
@@ -239,7 +239,7 @@ def plot_correlation_scatterplot(log_dir, worm, neuron):
     Create a scatterpot of the target and predicted Ca2+
     residuals colored by train and test sample.
     """
-    dataset_name, model_name, timestamp = str.split(os.path.split(log_dir)[-1], "-")
+    timestamp, dataset_name, model_name = str.split(os.path.split(log_dir)[-1], "-")
     plt_title = "Scatterplot of predicted vs target residuals\nworm: {}, neuron: {}\nmodel: {}, dataset: {}\ntime: {}".format(
         worm, neuron, model_name, dataset_name, timestamp
     )

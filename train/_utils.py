@@ -89,8 +89,8 @@ def split_train_test(
     data: torch.tensor,
     k_splits: int = 2,
     seq_len: Union[int, list] = 101,
-    train_size: int = 1,
-    test_size: int = 1,
+    train_size: int = 1024,
+    test_size: int = 1024,
     tau: int = 1,
     shuffle: bool = True,
     reverse: bool = True,
@@ -98,8 +98,6 @@ def split_train_test(
     """
     Create neural activity train and test datasets.
     Returns train and test data loaders and masks.
-    TODO: Allow `split_train_test` to work with a list for `seq_len` to allow
-    multiscale training.
     """
     # argument checking
     assert isinstance(k_splits, int) and k_splits > 1, "Ensure that k_splits > 1."
@@ -112,8 +110,8 @@ def split_train_test(
         shuffle = False
     # split dataset into train and test sections
     chunk_size = len(data) // k_splits
-    split_datasets = torch.split(data, chunk_size, dim=0)  # len k_splits tensor
-    # create train and test masks. it is important that this is before dropping last split
+    split_datasets = torch.split(data, chunk_size, dim=0)  # length k_splits tuple
+    # create train and test masks. important that this is before dropping last split
     train_mask = torch.cat(
         [
             (True if i % 2 == 0 else False) * torch.ones(len(section), dtype=torch.bool)
@@ -121,7 +119,7 @@ def split_train_test(
         ]
     )
     test_mask = ~train_mask
-    # drop last split if too small. important that this is after making train mask
+    # drop last split if too small. important that this is after making train/test masks
     if (2 * tau >= len(split_datasets[-1])) or (len(split_datasets[-1]) < min(seq_len)):
         split_datasets = split_datasets[:-1]
     train_splits = split_datasets[::2]
@@ -134,6 +132,7 @@ def split_train_test(
             tau=tau,
             seq_len=seq,
             reverse=reverse,
+            # keep total train size constant and dataset balanced
             size=train_size // train_div,
         )
         for seq in seq_len
@@ -146,6 +145,7 @@ def split_train_test(
             tau=tau,
             seq_len=seq,
             reverse=reverse,
+            # keep total test size constant and dataset balanced
             size=test_size // test_div,
         )
         for seq in seq_len
@@ -195,13 +195,13 @@ def split_train_test(
 def optimize_model(
     data: torch.tensor,
     model: torch.nn.Module,
-    mask=None,
-    optimizer=None,
-    start_epoch=1,
-    learn_rate=0.01,
-    num_epochs=100,
+    mask: Union[torch.tensor, None] = None,
+    optimizer: Union[torch.optim.Optimizer, None] = None,
+    start_epoch: int = 1,
+    learn_rate: float = 0.01,
+    num_epochs: int = 100,
     **kwargs,
-):
+) -> tuple[torch.nn.Module, dict]:
     """
     Creates train and test data loaders from the given dataset
     and an optimizer given the model. Trains and validates the

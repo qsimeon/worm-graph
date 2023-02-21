@@ -5,9 +5,9 @@ def train_model(
     model: torch.nn.Module,
     dataset: dict,
     config: DictConfig,
-    optimizer=None,
-    shuffle=True,
-):
+    optimizer: Union[torch.optim.Optimizer, None] = None,
+    shuffle: bool = True,
+) -> tuple[torch.nn.Module, str]:
     """
     Trains a model on a multi-worm dataset. Returns the trained model
     and a path to the directory with training and evaluation logs.
@@ -18,13 +18,13 @@ def train_model(
     model_class_name = model.__class__.__name__
     timestamp = datetime.now().strftime("%Y_%m_%d_%H_%M")
     log_dir = os.path.join(
-        "logs", "{}-{}-{}".format(dataset_name, model_class_name, timestamp)
+        "logs", "{}-{}-{}".format(timestamp, dataset_name, model_class_name)
     )
     os.makedirs(log_dir, exist_ok=True)
     os.makedirs(os.path.join(log_dir, "checkpoints"), exist_ok=True)
-    # create a cycle of the dataset
+    # create cycles of the dataset
     dataset_items = list(dataset.items()) * config.train.cycles
-    # whether to shuffle the dataset (without replacement)
+    # shuffle the dataset (without replacement)
     if shuffle == True:
         dataset_items = random.sample(dataset_items, k=len(dataset_items))
     # instantiate the optimizer
@@ -32,7 +32,7 @@ def train_model(
         optimizer = optimizer
     else:
         optimizer = torch.optim.Adam(model.parameters(), lr=config.train.learn_rate)
-    # train/test metrics
+    # train/test loss metrics
     data = {
         "epochs": [],
         "base_train_losses": [],
@@ -48,12 +48,14 @@ def train_model(
         num_epochs=config.train.epochs,
         k_splits=config.train.k_splits,
         seq_len=config.train.seq_len,
-        train_size=config.train.train_size,
-        test_size=config.train.test_size,
+        # hold the total train and test size constant
+        train_size=config.train.train_size // len(dataset_items),
+        test_size=config.train.test_size // len(dataset_items),
         tau=1,
         shuffle=True,
         reverse=True,
     )
+    # train for multiple cycles
     reset_epoch = 1
     for i, (worm, single_worm_dataset) in enumerate(dataset_items):
         model, log = optimize_model(

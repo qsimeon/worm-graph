@@ -23,6 +23,7 @@ dependencies:
   - nomkl
   - scipy
   - mat73
+  - h5py
   - tqdm
   - pip:
       - black[jupyter]
