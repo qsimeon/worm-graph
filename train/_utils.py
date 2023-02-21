@@ -4,7 +4,7 @@ from train._pkg import *
 def train(loader, model, mask, optimizer, no_grad=False):
     """
     Train (for 1 epoch) a model to predict the residual neural
-    activity given a dataset of neural activity for 1 epoch.
+    activity given a data-loader of neural activity for 1 epoch.
       Args:
           loader: training set dataloader
           model: instance of a NetworkLSTM
@@ -19,9 +19,9 @@ def train(loader, model, mask, optimizer, no_grad=False):
     base_loss, train_loss = 0, 0
     # Iterate in batches over the training dataset.
     for i, data in enumerate(loader):
-        X_train, Y_train, meta = data  # (batch_size, seq_len, num_neurons)
+        X_train, Y_train, meta = data  # X, Y: (batch_size, seq_len, num_neurons)
         X_train, Y_train = X_train.to(DEVICE), Y_train.to(DEVICE)
-        tau = meta["tau"][0]
+        tau = meta["tau"][0]  # num. timesteps the target sequence is right shifted by
         optimizer.zero_grad()  # Clear gradients.
         # Baseline: loss if the model predicted the residual to be 0
         base = criterion(
@@ -65,9 +65,9 @@ def test(loader, model, mask):
     base_loss, test_loss = 0, 0
     # Iterate in batches over the validation dataset.
     for i, data in enumerate(loader):
-        X_test, Y_test, meta = data  # (batch_size, seq_len, num_neurons)
+        X_test, Y_test, meta = data  # X, Y: (batch_size, seq_len, num_neurons)
         X_test, Y_test = X_test.to(DEVICE), Y_test.to(DEVICE)
-        tau = meta["tau"][0]
+        tau = meta["tau"][0]  # num. timesteps the target sequence is right shifted by
         # Baseline: loss if the model predicted the residual to be 0
         base = criterion(
             torch.zeros_like(Y_test[:, :, mask]), (Y_test - X_test)[:, :, mask]
@@ -274,10 +274,26 @@ def optimize_model(
     return model, log
 
 
-def make_predictions(model, dataset, log_dir):
-    """
-    Make predicitons with trained model and save CSV files
-    inside given log directory.
+def make_predictions(
+    model: torch.nn.Module,
+    dataset: dict,
+    log_dir: str,
+) -> None:
+    """Make predicitons on a dataset with a trained model.
+
+    Saves in the provdied log directory a .csv file for each of the following:
+        * calcium neural activty
+        * target calcium residuals
+        * predicted calcium residuals
+    Each .csv file has a column for each named neuron in the dataset plus two
+    additional columns for the train mask and test mask respectively.
+
+    Args:
+        model: torch.nn.Module, Trained model.
+        dataset: dict, Multi-worm dataset.
+
+    Returns:
+        None.
     """
     for worm, single_worm_dataset in dataset.items():
         os.makedirs(os.path.join(log_dir, worm), exist_ok=True)

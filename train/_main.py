@@ -63,7 +63,7 @@ def train_model(
             model=model,
             mask=single_worm_dataset["named_neurons_mask"],
             start_epoch=reset_epoch,
-            **kwargs,
+            **kwargs, # args to `split_train_test
         )
         # retrieve losses
         [data[key].extend(log[key]) for key in data]
@@ -96,9 +96,9 @@ def train_model(
         index=True,
         header=True,
     )
-    # make predictions with final trained model
+    # make predictions with last saved model
     make_predictions(model, dataset, log_dir)
-    # returned trained model and path to log directory
+    # returned trained model and a path to log directory
     return model, log_dir
 
 

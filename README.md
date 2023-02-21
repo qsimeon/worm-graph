@@ -85,26 +85,29 @@ For each of several multi-worm calcium imaging datasets, this pipeline will:
 
  ## Organization: things to TODO.
 
-- Do both: 
-   - training on the first half of timesteps predicting the second half, and;
-   - training on the second half of timesteps and the predicting the first half.
-- Look at how people structure language models (NLP). They are tested on predicting   arbitrary future timesteps. 
-- Use something search based for logging.
-- Think about canonical plots that you always want to make, e.g.:
-      - a bunch of curves where I hold all else constant except for 1 config item.
-      - each different config line a different color.
-- Add unit tests for each config.
+- Urgent TODO: 
+   - scaling law plots.
+   - search-based approach to logging .
+- Less urgent TODOs: 
+   - investigate the how large language models for NLP are structure to allow prediction of arbitrary future timesteps.
+- Think about canonical plots to always make:
+      - hold all else constant except for a single parameter / config item.
+      - color lines by values of the varied parameter / config item.
 - Various tasks to implement:
    - predict the identity of the neuron given the trace (node prediction).
    - predict whether or not there exist an edge (edge prediction). 
    - predict the behavior of the worm from its neural activity.
 - Goals for the future:
-   - still don't have networks that surpass the baseline.
-   - see whether we can do better with a GNN with/without connectome constraint.
-    - do we need additional biological information.
-   - scaling laws:
-      - varying dataset sizes.
-      - difference between training one one worm versus many worms.
-      - change how long the dataset you use from each worm.
-- Tangible goal for next week
-   - scaling law plots!
+   - get networks to perform better than the baseline.
+   - better documentation:
+      - add a description of project-specific terminology to this README
+      - add unit tests for each submodule.
+      - add docstrings to all functions using Google Python Style Guide.
+   - implement graph neural network (GNN models):
+      - with connectome constraint.
+      - without connectome constraint.
+      - is additional biological data needed?
+   - perform scaling experiments:
+      - varying the (train) dataset size.
+      - training on a single worm vs. multiple worms.
+
