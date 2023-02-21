@@ -22,7 +22,9 @@ calcium_data = dataset["worm0"]["calcium_data"]
 
 model = LinearNN(302, 64).double()
 
-model, log = optimize_model(calcium_data, model, k_splits=7)
+kwargs = dict(train_size=1000, test_size=1000, tau=1, seq_len=7, reverse=True)
+
+model, log = optimize_model(calcium_data, model, k_splits=7, **kwargs)
 
 plt.figure()
 

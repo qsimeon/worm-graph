@@ -87,55 +87,94 @@ def test(loader, model, mask):
 
 def split_train_test(
     data: torch.tensor,
-    seq_len: int,
-    k_splits: int,
-    train_size: int,
-    test_size: int,
-    tau=1,
-    reverse=True,
+    k_splits: int = 2,
+    seq_len: Union[int, list] = 101,
+    train_size: int = 1,
+    test_size: int = 1,
+    tau: int = 1,
+    shuffle: bool = True,
+    reverse: bool = True,
 ):
     """
     Create neural activity train and test datasets.
+    Returns train and test data loaders and masks.
+    TODO: Allow `split_train_test` to work with a list for `seq_len` to allow
+    multiscale training.
     """
-    max_time = len(data)  # len of a tensor is always the 0th dimension
-    k = k_splits
-    l1 = (k - 1) * [max_time // k]
-    l2 = [max_time - sum(l1)]
-    sections = l1 + l2
+    # argument checking
+    assert isinstance(k_splits, int) and k_splits > 1, "Ensure that k_splits > 1."
+    # allow multi-scale sequence lengths
+    if isinstance(seq_len, int):
+        seq_len = [seq_len]
+    seq_len = list(seq_len)
+    # cannot shuffle if multi-scaling
+    if len(seq_len) > 1:
+        shuffle = False
+    # split dataset into train and test sections
+    chunk_size = len(data) // k_splits
+    split_datasets = torch.split(data, chunk_size, dim=0)  # len k_splits tensor
+    # create train and test masks. it is important that this is before dropping last split
     train_mask = torch.cat(
         [
-            (True if i % 2 == 0 else False) * torch.ones(size, dtype=torch.bool)
-            for i, size in enumerate(sections)
+            (True if i % 2 == 0 else False) * torch.ones(len(section), dtype=torch.bool)
+            for i, section in enumerate(split_datasets)
         ]
     )
     test_mask = ~train_mask
-    split_datasets = torch.split(data, sections)  # len k_splits tensor
+    # drop last split if too small. important that this is after making train mask
+    if (2 * tau >= len(split_datasets[-1])) or (len(split_datasets[-1]) < min(seq_len)):
+        split_datasets = split_datasets[:-1]
+    train_splits = split_datasets[::2]
+    test_splits = split_datasets[1::2]
+
+    # make datasets
+    train_div = len(seq_len) * len(train_splits)
     train_datasets = [
         NeuralActivityDataset(
             dset,
             tau=tau,
-            seq_len=seq_len,
+            seq_len=seq,
             reverse=reverse,
-            size=2 * train_size // k,
+            size=train_size // train_div,
         )
-        for dset in split_datasets[::2]
+        for seq in seq_len
+        for dset in train_splits
     ]
+    test_div = len(seq_len) * len(test_splits)
     test_datasets = [
         NeuralActivityDataset(
             dset,
             tau=tau,
-            seq_len=seq_len,
+            seq_len=seq,
             reverse=reverse,
-            size=2 * test_size // k,
+            size=test_size // test_div,
         )
-        for dset in split_datasets[1::2]
+        for seq in seq_len
+        for dset in test_splits
     ]
+    # batch indices
     train_indices = []
     test_indices = []
+    prev_bn = 0
     for dset in train_datasets:
-        train_indices.extend(dset.batch_indices)
+        train_indices.append(dset.batch_indices + prev_bn)
+        prev_bn += dset.batch_indices[-1] + 1
+    prev_bn = 0
     for dset in test_datasets:
-        test_indices.extend(dset.batch_indices)
+        test_indices.append(dset.batch_indices + prev_bn)
+        prev_bn += dset.batch_indices[-1] + 1
+    # shuffle data
+    if shuffle == True:
+        train_shuffle_inds = random.sample(
+            range(len(train_datasets)), k=len(train_datasets)
+        )
+        test_shuffle_inds = random.sample(
+            range(len(test_datasets)), k=len(test_datasets)
+        )
+        train_datasets = [train_datasets[idx] for idx in train_shuffle_inds]
+        test_datasets = [test_datasets[idx] for idx in test_shuffle_inds]
+        train_indices = [train_indices[idx] for idx in train_shuffle_inds]
+        test_indices = [test_indices[idx] for idx in test_shuffle_inds]
     # create the combined train and test datasets, samplers and data loaders
     train_dataset = ConcatDataset(train_datasets)
     train_sampler = BatchSampler(train_indices)
@@ -159,7 +198,6 @@ def optimize_model(
     model: torch.nn.Module,
     mask=None,
     optimizer=None,
-    seq_len=1,
     start_epoch=1,
     learn_rate=0.01,
     num_epochs=100,
@@ -172,9 +210,11 @@ def optimize_model(
     model and a dictionary with log information including losses.
     kwargs:  {
                 k_splits: int,
+                seq_len: int
                 train_size: int,
                 test_size: int,
                 tau: int,
+                shuffle: bool,
                 reverse: bool,
             }
     """
@@ -190,9 +230,7 @@ def optimize_model(
     if optimizer is None:
         optimizer = torch.optim.Adam(model.parameters(), lr=learn_rate)
     # create data loaders and train/test masks
-    train_loader, test_loader, train_mask, test_mask = split_train_test(
-        data, seq_len, **kwargs
-    )
+    train_loader, test_loader, train_mask, test_mask = split_train_test(data, **kwargs)
     # create log dictionary to return
     log = {
         "epochs": [],
@@ -244,8 +282,6 @@ def make_predictions(model, dataset, log_dir):
     """
     for worm, single_worm_dataset in dataset.items():
         os.makedirs(os.path.join(log_dir, worm), exist_ok=True)
-        # make predictions with final model
-        targets, predictions = model_predict(model, single_worm_dataset["calcium_data"])
         # get data to save
         named_neuron_to_idx = single_worm_dataset["named_neuron_to_idx"]
         calcium_data = single_worm_dataset["calcium_data"]
@@ -253,6 +289,8 @@ def make_predictions(model, dataset, log_dir):
         train_mask = single_worm_dataset["train_mask"]
         labels = np.expand_dims(np.where(train_mask, "train", "test"), axis=-1)
         columns = list(named_neuron_to_idx) + ["train_test_label"]
+        # make predictions with final model
+        targets, predictions = model_predict(model, calcium_data)
         # save dataframes
         data = calcium_data[:, named_neurons_mask].numpy()
         data = np.hstack((data, labels))
@@ -327,217 +365,6 @@ def gnn_train_val_mask(graph, train_ratio=0.7, train_mask=None):
     return graph
 
 
-def lstm_hidden_size_experiment(
-    dataset,
-    num_epochs,
-    input_size,
-    num_layers=1,
-    hid_mult=np.array([3, 2]),
-    seq_len=range(1, 11, 1),
-):
-    """
-    Helper function to experiment with different input sizes for the LSTM model.
-    dataset: the dataset to train on.
-    num_epochs: number of epochs to train for.
-    input_size: number of input features (neurons).
-    num_layers: number of hidden layers to use in the LSTM.
-    hid_mult: np.array of integers to multiple input_size by.
-    seq_len: array of sequnce lengths to train on.
-    """
-    hidden_experiment = dict()
-    # we experiment with different hidden sizes
-    for hidden_size in input_size * hid_mult:
-        hidden_size = int(hidden_size)
-        print("Hidden size: %d\n" + "~~~" * 10 % hidden_size, end="\n\n")
-        # initialize model, optimizer and loss function
-        lstm_model = NetworkLSTM(input_size, hidden_size, num_layers).double()
-        # optimize the model
-        lstm_model, log = optimize_model(
-            dataset=dataset, model=lstm_model, num_epochs=num_epochs, seq_len=seq_len
-        )
-        # log results of this experiment
-        hidden_experiment[hidden_size] = log
-    return hidden_experiment
-
-
-def more_data_training(
-    model_class,
-    single_worm_dataset,
-    num_epochs=100,
-    worm="worm**",
-    model_name="",
-    seq_len=1,
-):
-    """
-    A function to investigate the effect of the amount of data
-    (sequence length fixed) on the training and generalization of a model.
-    """
-    results_list = []
-    # parse worm dataset
-    # get the calcium data for this worm
-    new_calcium_data = single_worm_dataset["named_data"]
-    mask = single_worm_dataset["neurons_mask"]
-    # get the neuron to idx map
-    neuron_to_idx = single_worm_dataset["named_neuron_to_idx"]
-    idx_to_neuron = dict((v, k) for k, v in neuron_to_idx.items())
-    # pick a neuron
-    neuron_idx = np.random.choice(list(neuron_to_idx.keys())) - 1
-    neuron = neuron_to_idx[neuron_idx]
-    # get max time and number of neurons
-    max_time = single_worm_dataset["max_time"]
-    num_neurons = single_worm_dataset["num_neurons"]
-    # iterate over different dataset sizes
-    data_sizes = np.logspace(5, np.floor(np.log2(max_time // 2)), 10, base=2, dtype=int)
-    print("Training dataset sizes we will try:", data_sizes.tolist())
-    for dataset_size in data_sizes:
-        print()
-        print("Dataset size", dataset_size)
-        # initialize model
-        model = model_class(input_size=302).double()
-        # train the model on this amount of data
-        model, log = optimize_model(
-            new_calcium_data,
-            model,
-            mask,
-            num_epochs=num_epochs,
-            seq_len=seq_len,
-            dataset_size=dataset_size,
-        )
-        # put the worm and neuron in log
-        log["worm"] = worm
-        log["neuron_to_idx"] = neuron_to_idx
-        log["neuron"] = neuron
-        log["num_neurons"] = num_neurons
-        # true dataset size
-        size = log["dataset_size"]
-        # predict with the model
-        targets, predictions = model_predict(new_calcium_data, model)
-        # log targets and predictions
-        log["targets"] = targets
-        log["predictions"] = predictions
-        # add to results
-        results_list.append((model, log))
-    return results_list
-
-
-def leave_one_worm_out_training(
-    model_class,
-    multi_worms_dataset,
-    num_epochs=100,
-    model_name="",
-    seq_len=1,
-):
-    """
-    Train on all but one worm in a dataset
-    and test on that one worm.
-    """
-    leaveOut_worm = np.random.choice(list(multi_worms_dataset))
-    test_worm_dataset = multi_worms_dataset[leaveOut_worm]
-    train_worms_dataset = {
-        worm: dataset
-        for worm, dataset in multi_worms_dataset.items()
-        if worm != leaveOut_worm
-    }
-    # initialize the model
-    model = model_class(input_size=302).double()
-    # train the model sequentially on many worms
-    train_results = multi_worm_training(
-        model_class,
-        train_worms_dataset,
-        num_epochs,
-        model_name,
-        seq_len,
-    )
-    model, train_log = train_results[-1]
-    # get the calcium data for left out worm
-    new_calcium_data = test_worm_dataset["named_data"]
-    mask = test_worm_dataset["named_neurons_mask"]
-    # get the neuron to idx map
-    neuron_to_idx = test_worm_dataset["named_neuron_to_idx"]
-    idx_to_neuron = dict((v, k) for k, v in neuron_to_idx.items())
-    # pick a neuron
-    neuron_idx = np.random.choice(list(neuron_to_idx.keys())) - 1
-    neuron = neuron_to_idx[neuron_idx]
-    # get max time and number of neurons
-    max_time = test_worm_dataset["max_time"]
-    num_neurons = test_worm_dataset["num_neurons"]
-    # predict with the model
-    targets, predictions = model_predict(new_calcium_data, model)
-    # create a log for this evaluation
-    log = dict()
-    log.update(train_log)
-    log["worm"] = leaveOut_worm
-    log["neuron_to_idx"] = neuron_to_idx
-    log["neuron"] = neuron
-    log["num_neurons"] = num_neurons
-    log["targets"] = targets
-    log["predictions"] = predictions
-    return log
-
-
-def multi_worm_training(
-    model_class,
-    multi_worms_dataset,
-    num_epochs=100,
-    model_name="",
-    seq_len=1,
-    plotting=False,
-):
-    """
-    A helper function to investigate the effect of training a model
-    on increasingly more worms.
-    """
-    print("Number of worms in this dataset:", len(multi_worms_dataset))
-    results_list = []
-    worms_seen = set()
-    for worm in multi_worms_dataset:
-        print()
-        print("Trained so far on", sorted(worms_seen))
-        print("Currently training on", worm)
-        worms_seen.add(worm)
-        # parse worm dataset
-        single_worm_dataset = pick_worm(multi_worms_dataset, worm)
-        # get the calcium data for this worm
-        new_calcium_data = single_worm_dataset["named_data"]
-        mask = single_worm_dataset["named_neurons_mask"]
-        # get the neuron to idx map
-        neuron_to_idx = single_worm_dataset["named_neuron_to_idx"]
-        idx_to_neuron = dict((v, k) for k, v in neuron_to_idx.items())
-        # pick a neuron
-        neuron_idx = np.random.choice(list(neuron_to_idx.keys())) - 1
-        neuron = neuron_to_idx[neuron_idx]
-        # get max time and number of neurons
-        max_time = single_worm_dataset["max_time"]
-        num_neurons = single_worm_dataset["num_neurons"]
-        # initialize model and an optimizer
-        model = model_class(input_size=302).double()
-        optimizer = torch.optim.Adam(model.parameters(), lr=0.01)
-        # train the model on this worm's  data
-        model, log = optimize_model(
-            new_calcium_data,
-            model,
-            mask,
-            optimizer,
-            dataset_size=2048,
-            num_epochs=num_epochs,
-            seq_len=seq_len,
-        )
-        # put the worm and neuron in log
-        log["worm"] = worm
-        log["neuron_to_idx"] = neuron_to_idx
-        log["neuron"] = neuron
-        log["num_neurons"] = num_neurons
-        # true dataset size
-        size = log["dataset_size"]
-        # predict with the model
-        targets, predictions = model_predict(new_calcium_data, model)
-        # log targets and predictions
-        log["targets"] = targets
-        log["predictions"] = predictions
-        results_list.append((model, log))
-    return results_list
-
-
 def gnn_train(loader, model, graph, optimizer):
     """Train a model given a dataset.
     Args:
@@ -566,8 +393,6 @@ def gnn_train(loader, model, graph, optimizer):
         # Compute the training loss.
         loss = criterion(out, ytr)
         loss.backward()  # Derive gradients.
-        # TODO: figure out if gradient clipping is necessary.
-        torch.nn.utils.clip_grad_norm_(model.parameters(), 0.01)
         optimizer.step()  # Update parameters based on gradients.
         optimizer.zero_grad()  # Clear gradients.
         # Store train and baseline loss.

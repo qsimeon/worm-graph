@@ -46,11 +46,12 @@ def train_model(
     kwargs = dict(
         optimizer=optimizer,
         num_epochs=config.train.epochs,
-        seq_len=config.train.seq_len,
         k_splits=config.train.k_splits,
+        seq_len=config.train.seq_len,
         train_size=config.train.train_size,
         test_size=config.train.test_size,
         tau=1,
+        shuffle=True,
         reverse=True,
     )
     reset_epoch = 1

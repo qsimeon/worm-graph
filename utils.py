@@ -4,6 +4,8 @@ import pandas as pd
 
 NUM_NEURONS = 302
 
+RAW_DATA_URL = "https://www.dropbox.com/s/45yqpvtsncx4095/raw_data.zip?dl=1"
+
 RAW_FILES = [
     "GHermChem_Edges.csv",
     "GHermChem_Nodes.csv",

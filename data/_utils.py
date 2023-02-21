@@ -40,13 +40,14 @@ class NeuralActivityDataset(torch.utils.data.Dataset):
           neurons: None, int or array-like. Index of neuron(s) to return data for.
                   Returns data for all neurons if None.
           tau: int, 0 <= tau < max_time//2. Forward time offset of target sequence.
-          size: int, 0 < size <= max_time. Number of (input, target) data pairs to generate.
+          size: int, 0 < size <= max_time. Batch size. i.e. Number of (input, target)
+                                            data pairs to generate.
           seq_len: int. Sequences of length `seq_len` are generated until the dataset `size`
                     is achieved.
           feature_mask: torch.tensor. What features to select for generating dataset.
           reverse: bool. Whether to sample sequences backward from end of the data.
         Returns:
-          (X, Y, meta): tuple. Batch of data samples
+          (X, Y, meta): tuple. Batch of data samples.
             X: torch.tensor. Input tensor w/ shape (batch_size, seq_len,
                                                   num_neurons, num_features)
             Y: torch.tensor. Target tensor w/ same shape as X
@@ -114,18 +115,18 @@ class NeuralActivityDataset(torch.utils.data.Dataset):
         Private method for generating all possible/requested data samples.
         """
         data_samples = []
+        # a batch contains all data of a certain length
         batch_indices = []
         # define length of time
         T = self.max_time
         # iterate over all sequences of length eq_len
         L = self.seq_len
-        # a batch contains all data of a certain length
-        batch = []
+        # batch = []
         # iterate over all start indices
         start_range = (
-            range(0, T - L - self.tau + 1)
+            range(0, T - L - self.tau + 1)  # generate from start to end
             if not self.reverse
-            else range(T - L - self.tau, -1, -1)
+            else range(T - L - self.tau, -1, -1)  # generate from end to start
         )
         for start in start_range:
             # define an end index
@@ -141,18 +142,19 @@ class NeuralActivityDataset(torch.utils.data.Dataset):
             # append to data samples
             data_samples.append((X_tau, Y_tau, meta))
             # append index to batch
-            batch.append(self.counter)
+            batch_indices.append(self.counter)
             self.counter += 1
             # we only want a number of samples up to self.size
             if self.counter >= self.size:
                 break
-        batch_indices.append(batch)
+        # batch_indices.append(torch.tensor(batch))
+        batch_indices = torch.tensor(batch_indices)
         # size of dataset
         self.size = self.counter
         # save batch indices as attribute
         self.batch_indices = batch_indices
         # create a batch sampler
-        batch_sampler = BatchSampler(self.batch_indices)
+        batch_sampler = BatchSampler([self.batch_indices])
         # return samples and batch_sampler
         return data_samples, batch_sampler
 
@@ -186,7 +188,7 @@ class CElegansConnectome(InMemoryDataset):
     def download(self):
         """Download the raw zip file if not already retrieved."""
         # dataset adapted from from Cook et al. (2019) SI5
-        url = "https://www.dropbox.com/s/45yqpvtsncx4095/raw_data.zip?dl=1"  # base url
+        url = RAW_DATA_URL  # base url
         filename = os.path.join("raw_data.zip")
         folder = os.path.join(self.raw_dir)
         download_url(

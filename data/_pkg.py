@@ -8,4 +8,4 @@ import numpy as np
 from omegaconf import DictConfig
 from omegaconf import OmegaConf
 from torch_geometric.data import Data, InMemoryDataset, download_url, extract_zip
-from utils import ROOT_DIR, RAW_FILES, VALID_DATASETS
+from utils import ROOT_DIR, RAW_FILES, RAW_DATA_URL, VALID_DATASETS
