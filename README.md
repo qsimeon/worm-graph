@@ -91,8 +91,8 @@ For each of several multi-worm calcium imaging datasets, this pipeline will:
 - Less urgent TODOs: 
    - investigate the how large language models for NLP are structure to allow prediction of arbitrary future timesteps.
 - Think about canonical plots to always make:
-      - hold all else constant except for a single parameter / config item.
-      - color lines by values of the varied parameter / config item.
+   - hold all else constant except for a single parameter / config item.
+   - color lines by values of the varied parameter / config item.
 - Various tasks to implement:
    - predict the identity of the neuron given the trace (node prediction).
    - predict whether or not there exist an edge (edge prediction). 
