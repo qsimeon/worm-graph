@@ -104,10 +104,10 @@ Aim to make every runnable script (e.g. Python files with a `if __name__ == "__m
 
 Note the orgaization structure of this project. Each self-contained (sub-)module is in its own folder with `_main.py`, `_utils.py` and `_pkg.py`. `_main.py` holds the main code that module executes, typically as a single function that gets called in `if __name__ == "__main__":` part. `_pkg.py` is exclusively for placing all package imports that the module needs. `_utils.py` is the bulk of the module's code as it contains the definitions for all custom classes and helper functions to be used by the module.
 
-Use the [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black) formatter. Before a commit, run the command `black .` in the Terminal from the repository's root directory `worm-graph`. This will automatically reformat all code according to the Black Code Style. 
+Use the [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black) formatter. Before a commit, run the command `black .` in the Terminal from the repository's root directory `worm-graph`. This will automatically reformat all code according to the [Black Code Style](https://github.com/psf/black). 
 
 Use the [Google Python Style Guide](https://google.github.io/styleguide/pyguide.html) for comments, documentation strings and unit testing
-When in doubt about anything else style related that's not addressed by the previous two points, reference the Python Enhancement Protocols (PEP8): https://peps.python.org/pep-0008/.
+When in doubt about anything else style related that's not addressed by the previous two points, reference the [Python Enhancement Protocols (PEP8)](https://peps.python.org/pep-0008/).
 
 Always shape neural data matrices as `(time, neurons, [features])`. The braces `[]` indicate that the last `features` dimension is optional, as the `neurons` currently serve as the features for our models. 
 
