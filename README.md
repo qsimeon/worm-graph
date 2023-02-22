@@ -114,7 +114,7 @@ When in doubt about anything else style related that's not addressed by the prev
 
 Always shape neural data matrices as `(time, neurons, [features])`. The braces `[]` indicate that the last `features` dimension is optional, as the `neurons` currently serve as the features for our models. 
 
-## Organization: things to TODO.
+## Things to TODO.
 
 - Urgent TODOs: 
    - scaling law plots.
