@@ -15,8 +15,7 @@
    ├── simulate.yaml
    ├── task.yaml
    ├── train.yaml
-   ├── visualize.yaml
-   └── PlotRealData.ipynb
+   └── visualize.yaml
 ├── data/
    ├── processes/
    ├── raw/
@@ -63,7 +62,6 @@
 ├── quick_script_4.py
 ├── README.md
 └── FuturePredictionCElegansNNs.ipynb
-
  ```
  
 ## Create the environment from the `environment.yml` file
