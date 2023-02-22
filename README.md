@@ -106,9 +106,10 @@ Note the orgaization structure of this project. Each self-contained (sub-)module
 
 Use the [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black) formatter. Before a commit, run the command `black .` in the Terminal from the repository's root directory `worm-graph`. This will automatically reformat all code according to the Black Code Style. 
 
-When in doubt about anything else style related not addressed by the previous two points, reference the Python Enhancement Protocols (PEP8): https://peps.python.org/pep-0008/.
+Use the [Google Python Style Guide](https://google.github.io/styleguide/pyguide.html) for comments, documentation strings and unit testing
+When in doubt about anything else style related that's not addressed by the previous two points, reference the Python Enhancement Protocols (PEP8): https://peps.python.org/pep-0008/.
 
-Always shape neural data matrices as `(time, neurons, features])`. The braces `[]` indicate that the last `features` dimension is optional, as `neurons` currently serve as the features for the present models. 
+Always shape neural data matrices as `(time, neurons, [features])`. The braces `[]` indicate that the last `features` dimension is optional, as the `neurons` currently serve as the features for our models. 
 
 ## Organization: things to TODO.
 
