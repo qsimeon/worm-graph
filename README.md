@@ -2,44 +2,68 @@
 ## Simulating worms with graph nets.
 
 ```
-├── data
-   ├── batch_samler.py
-   ├── graph_inject_data.py
-   ├── load_connectome.py
-   ├── load_neural_activity.py
-   ├── map_dataset.py
+├── analysis/
+   ├── jpyEDM/
+   ├── takens/
+   ├── MPNsNeurogym.ipynb
+├── conf/
+   ├── analysis.yaml
+   ├── dataset.yaml
+   ├── main.yaml
+   ├── model.yaml.py
+   ├── preprocess.yaml
+   ├── simulate.yaml
+   ├── task.yaml
+   ├── train.yaml
+   ├── visualize.yaml
    └── PlotRealData.ipynb
-├── preprocess
-   ├── export_nodes_edges.m
-   ├── pickle_neural_data.py
-   └── process_raw.py
+├── data/
+   ├── processes/
+   ├── raw/
+   ├── _main.py
+   ├── _pkg.py
+   ├── _utils.py
+   └── PlotRealData.ipynb
+├── logs/
+   ├── multirun/
+   └── run/
 ├── models
-   ├── gnn_models.py
-   ├── linear_models.py
-   └── rnn_models.py
+   ├── _main.py
+   ├── _pkg.py
+   └── _utils.py
+├── preprocess
+   ├── _main.py
+   ├── _pkg.py
+   ├── _utils.py
+   └── export_nodes_edges.m
 ├── tasks
-   └── all_tasks.py
+   ├── _main.py
+   ├── _pkg.py
+   └── _utils.py
 ├── train
-   ├── add_train_val_mask.py
+   ├── _main.py
+   ├── _pkg.py
+   ├── _utils.py
    ├── GNNLossCurves.ipynb
-   ├── LossBaselines.ipynb
-   ├── lstm_hidden_size_experiment.py
-   ├── scaling_train.py
-   ├── train_gnn.py
-   └── train_main.py
-├── Visualizations
-   ├── draw_connectome.py
+   └── LossBaselines.ipynb
+├── visualization
+   ├── _main.py
+   ├── _pkg.py
+   ├── _utils.py
    ├── DrawConnectome.ipynb
-   ├── PipeLineExplorer.ipynb
-   ├── plot_before_after_weights.py
-   ├── plot_correlation_scatter.py
-   ├── plot_loss_log.py
-   ├── plot_more_data_losses.py
-   ├── plot_multi_worm_losses.py
-   ├── plot_neuron_train_test_samples.py
-   ├── plot_single_neuron_signals.py
-   ├── plot_target_prediction.py
-   └── plot_worm_data.py
+   └── PipeLineExplorer.ipynb
+├── __init__.py
+├── main.py
+├── pkg.py
+├── main.py
+├── utils.py
+├── quick_script_1.py
+├── quick_script_2.py
+├── quick_script_3.py
+├── quick_script_4.py
+├── README.md
+└── FuturePredictionCElegansNNs.ipynb
+
  ```
  
 ## Create the environment from the `environment.yml` file
@@ -85,7 +109,7 @@ For each of several multi-worm calcium imaging datasets, this pipeline will:
 
  ## Organization: things to TODO.
 
-- Urgent TODO: 
+- Urgent TODOs: 
    - scaling law plots.
    - search-based approach to logging .
 - Less urgent TODOs: 
