@@ -90,22 +90,27 @@ For each of several multi-worm calcium imaging datasets, this pipeline will:
 2. Train a neural network model to predict future calcium activity from previous activity.
 3. Plot the train and validation loss curves for the model and its predictions on test data.
 
- ## Naming conventions
- 
- For folders and script files, use the `lower_case_with_underscores` naming style.
- **Example:** `my_folder`, `my_script.py`.
- 
- For Jupyter notebooks, use the `UPPER_CASE_WITH_UNDERSCORES` naming style.
- **Example:** `MyAnalysisNotebook.ipynb`.
- 
- ## Style conventions
+## Naming conventions
 
- * Aim to make every script not significantly longer than 100 lines. If your code is getting longer than this, it probably is a 
-   good idea to modularize things by putting certain functions or classes in separare files like `utils.py` or `models.py`, etc.
- * Always shape neural data matrices as `(time, neurons, features)`.
- * Use the [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black) formatter. Before a commit, run the command `black .` in the Terminal from the repository's root directory `worm-graph`. This will automatically reformat all code according to the Black Code Style. 
+For folders and script files, use the `lower_case_with_underscores` naming style.
+**Example:** `my_folder`, `my_script.py`.
 
- ## Organization: things to TODO.
+For Jupyter notebooks, use the `UPPER_CASE_WITH_UNDERSCORES` naming style.
+**Example:** `MyAnalysisNotebook.ipynb`.
+
+## Style conventions
+
+Aim to make every runnable script (e.g. Python files with a `if __name__ == "__main__":` section) not significantly longer than 100 lines. If your code is getting longer than this, it probably is a good idea to modularize things by encapsulating certain processes in helper functions and moving those to a separare file like `_utils.py`. 
+
+Note the orgaization structure of this project. Each self-contained (sub-)module is in its own folder with `_main.py`, `_utils.py` and `_pkg.py`. `_main.py` holds the main code that module executes, typically as a single function that gets called in `if __name__ == "__main__":` part. `_pkg.py` is exclusively for placing all package imports that the module needs. `_utils.py` is the bulk of the module's code as it contains the definitions for all custom classes and helper functions to be used by the module.
+
+Use the [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black) formatter. Before a commit, run the command `black .` in the Terminal from the repository's root directory `worm-graph`. This will automatically reformat all code according to the Black Code Style. 
+
+When in doubt about anything else style related not addressed by the previous two points, reference the Python Enhancement Protocols (PEP8): https://peps.python.org/pep-0008/.
+
+Always shape neural data matrices as `(time, neurons, features])`. The braces `[]` indicate that the last `features` dimension is optional, as `neurons` currently serve as the features for the present models. 
+
+## Organization: things to TODO.
 
 - Urgent TODOs: 
    - scaling law plots.
