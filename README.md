@@ -85,7 +85,7 @@ Always activate the environment before working on the project: `conda activate w
 
 `python -i main.py`
 
-For a single multi-worm calcium imaging datasets, this pipeline will:
+For one multi-worm dataset of neural activity, this pipeline will:
 1. Load the preprocessed calcium data for all worms in the dataset.
 2. Train a neural network model to predict future calcium activity from previous activity.
 3. Plot the train and validation loss curves for the model and its predictions on test data.
