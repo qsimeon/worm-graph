@@ -85,7 +85,7 @@ Always activate the environment before working on the project: `conda activate w
 
 `python -i main.py`
 
-For each of several multi-worm calcium imaging datasets, this pipeline will:
+For a single multi-worm calcium imaging datasets, this pipeline will:
 1. Load the preprocessed calcium data for all worms in the dataset.
 2. Train a neural network model to predict future calcium activity from previous activity.
 3. Plot the train and validation loss curves for the model and its predictions on test data.
@@ -109,7 +109,8 @@ Note the orgaization structure of this project. Each self-contained (sub-)module
 
 Use the [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black) formatter. Before a commit, run the command `black .` in the Terminal from the repository's root directory `worm-graph`. This will automatically reformat all code according to the [Black Code Style](https://github.com/psf/black). 
 
-Use the [Google Python Style Guide](https://google.github.io/styleguide/pyguide.html) for comments, documentation strings and unit testing
+Use the [Google Python Style Guide](https://google.github.io/styleguide/pyguide.html) for comments, documentation strings and unit tests.
+
 When in doubt about anything else style related that's not addressed by the previous two points, reference the [Python Enhancement Protocols (PEP8)](https://peps.python.org/pep-0008/).
 
 Always shape neural data matrices as `(time, neurons, [features])`. The braces `[]` indicate that the last `features` dimension is optional, as the `neurons` currently serve as the features for our models. 
@@ -141,4 +142,3 @@ Always shape neural data matrices as `(time, neurons, [features])`. The braces `
    - perform scaling experiments:
       - varying the (train) dataset size.
       - training on a single worm vs. multiple worms.
-
