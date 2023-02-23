@@ -1,6 +1,0 @@
-black[jupyter]
-hydra-core
-omegaconf
-pyEDM
-wget
-ncps
