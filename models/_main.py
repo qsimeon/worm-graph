@@ -6,35 +6,24 @@ def get_model(config: DictConfig) -> torch.nn.Module:
     Returns a new model of the type and size specified in 'model.yaml'.
     """
     # create the model
+    args = dict(
+        input_size=config.model.input_size,
+        hidden_size=config.model.hidden_size,
+        num_layers=1,
+        loss=config.model.loss,
+    )
     if config.model.type == "lstm":
-        model = NetworkLSTM(
-            input_size=config.model.input_size,
-            hidden_size=config.model.hidden_size,
-        ).double()
+        model = NetworkLSTM(**args).double()
     elif config.model.type == "vae_lstm":
-        model = VariationalLSTM(
-            input_size=config.model.input_size,
-            hidden_size=config.model.hidden_size,
-            num_layers=1,
-        ).double()
+        model = VariationalLSTM(**args).double()
     elif config.model.type == "neural_cfc":
-        model = NeuralCFC(
-            input_size=config.model.input_size,
-            hidden_size=config.model.hidden_size,
-            num_layers=1,
-        ).double()
+        model = NeuralCFC(**args).double()
     elif config.model.type == "dense_cfc":
-        model = DenseCFC(
-            input_size=config.model.input_size,
-            hidden_size=config.model.hidden_size,
-            num_layers=1,
-        ).double()
-    else:  # "linear" model
-        model = LinearNN(
-            input_size=config.model.input_size,
-            hidden_size=config.model.hidden_size,
-            num_layers=config.model.num_layers,
-        ).double()
+        model = DenseCFC(**args).double()
+    elif config.model.type == "dense_cfc":
+        model = LinearNN(**args).double()
+    else:  # default to "linear" model
+        model = LinearNN(**args).double()
     print("Model:", model, end="\n\n")
     return model
 

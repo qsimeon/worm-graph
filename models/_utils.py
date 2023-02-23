@@ -2,29 +2,37 @@ from models._pkg import *
 
 
 class LinearNN(torch.nn.Module):
+    """
+    A simple linear regression model to use as a baseline.
+    For all our models:
+        1. The output will be the same shape as the input.
+        2. A method called `loss_fn` that specifies the specific
+            loss function to be used by the model. The default
+            loss function we use is `torch.nn.MSELoss()`.
+        3. A readout layer is implemented and will always be
+            called `self.linear`.
+        4. There is at least 1 hidden layer. The value of the
+            argument `num_layers` specifies the number of hidden layers.
+        5. When it is possible for a model to be multi-layered,
+            the `num_layers` is used to create the desired number of
+            layers. Otherwise `num_layers` is implied to be 1.
+        6. TODO: A method called `sample` should be implemented to allow
+            sampling spontaneous neural activity from the network.
+            Need to read the literature on generative, score-based and energy-based
+            models to figure out to implement this.
+    """
+
     def __init__(self, input_size, hidden_size, num_layers=1, loss=None):
-        """
-        A simple linear regression model to use as a baseline.
-        For all our models:
-            1. The output will be the same shape as the input.
-            2. A method called `loss_fn` that specifies the specific
-                loss function to be used by the model. The default
-                loss function we use is `torch.nn.MSELoss()`.
-            3. A readout layer is implemented and will always be
-                called `self.linear`.
-            4. There is at least 1 hidden layer. The value of the
-                argument `num_layers` specifies the number of hidden layers.
-            5. When it is possible for a model to be multi-layered,
-                the `num_layers` is used to create the desired number of
-                layers. Otherwise `num_layers` is implied to be 1.
-            6. TODO: A method called `sample` should be implemented to allow
-                sampling spontaneous neural activity from the network.
-                Need to read the literature on generative, score-based and energy-based
-                models to figure out to implement this.
-        """
         super(LinearNN, self).__init__()
         # Loss function
-        if (loss is None) or (loss.lower() == "MSE"):
+        if (loss is None) or (loss.lower() == "L1"):
+            self.loss = torch.nn.L1Loss
+        elif loss.lower() == "MSE":
+            self.loss = torch.nn.MSELoss
+        elif loss.lower() == "Huber":
+            self.loss == torch.nn.HuberLoss
+        else:
+            self.loss = torch.nn.L1Loss
         # Setup
         self.input_size = input_size
         self.output_size = input_size
@@ -48,13 +56,11 @@ class LinearNN(torch.nn.Module):
             self.linear,
         )
 
-    # @classmethod
     def loss_fn(self):
         """
         The loss function to be used with this model.
         """
-        # return torch.nn.L1Loss()
-        return torch.nn.MSELoss()
+        return self.loss()
 
     def get_input_size(self):
         return self.input_size
@@ -81,11 +87,26 @@ class DenseCFC(torch.nn.Module):
     Fully Connected (FC) Closed-form continuous time (CfC) model.
     """
 
-    def __init__(self, input_size, hidden_size, num_layers=1):
+    def __init__(
+        self,
+        input_size: int,
+        hidden_size: int,
+        num_layers: int = 1,
+        loss: Callable = None,
+    ):
         """
         The output size will be the same as the input size.
         """
         super(DenseCFC, self).__init__()
+        # Loss function
+        if (loss is None) or (loss.lower() == "L1"):
+            self.loss = torch.nn.L1Loss
+        elif loss.lower() == "MSE":
+            self.loss = torch.nn.MSELoss
+        elif loss.lower() == "Huber":
+            self.loss == torch.nn.HuberLoss
+        else:
+            self.loss = torch.nn.L1Loss
         # Setup
         self.input_size = input_size
         self.output_size = input_size
@@ -96,13 +117,11 @@ class DenseCFC(torch.nn.Module):
         # Readout
         self.linear = torch.nn.Linear(self.hidden_size, self.output_size)
 
-    # @classmethod
     def loss_fn(self):
         """
         The loss function to be used with this model.
         """
-        # return torch.nn.L1Loss()
-        return torch.nn.MSELoss()
+        return self.loss()
 
     def get_input_size(self):
         return self.input_size
@@ -132,11 +151,26 @@ class NeuralCFC(torch.nn.Module):
     Neural Circuit Policy (NCP) Closed-form continuous time (CfC) model.
     """
 
-    def __init__(self, input_size, hidden_size, num_layers=1):
+    def __init__(
+        self,
+        input_size: int,
+        hidden_size: int,
+        num_layers: int = 1,
+        loss: Callable = None,
+    ):
         """
         The output size will be the same as the input size.
         """
         super(NeuralCFC, self).__init__()
+        # Loss function
+        if (loss is None) or (loss.lower() == "L1"):
+            self.loss = torch.nn.L1Loss
+        elif loss.lower() == "MSE":
+            self.loss = torch.nn.MSELoss
+        elif loss.lower() == "Huber":
+            self.loss == torch.nn.HuberLoss
+        else:
+            self.loss = torch.nn.L1Loss
         # Setup
         self.input_size = input_size
         self.output_size = input_size
@@ -148,13 +182,11 @@ class NeuralCFC(torch.nn.Module):
         # Readout
         self.linear = torch.nn.Linear(self.hidden_size, self.output_size)
 
-    # @classmethod
     def loss_fn(self):
         """
         The loss function to be used with this model.
         """
-        # return torch.nn.L1Loss()
-        return torch.nn.MSELoss()
+        return self.loss()
 
     def get_input_size(self):
         return self.input_size
@@ -187,11 +219,26 @@ class NetworkLSTM(torch.nn.Module):
     that occurs $tau$ steps later.
     """
 
-    def __init__(self, input_size, hidden_size, num_layers=1):
+    def __init__(
+        self,
+        input_size: int,
+        hidden_size: int,
+        num_layers: int = 1,
+        loss: Callable = None,
+    ):
         """
         The output size will be the same as the input size.
         """
         super(NetworkLSTM, self).__init__()
+        # Loss function
+        if (loss is None) or (loss.lower() == "L1"):
+            self.loss = torch.nn.L1Loss
+        elif loss.lower() == "MSE":
+            self.loss = torch.nn.MSELoss
+        elif loss.lower() == "Huber":
+            self.loss == torch.nn.HuberLoss
+        else:
+            self.loss = torch.nn.L1Loss
         # Setup
         self.input_size = input_size
         self.output_size = input_size
@@ -208,13 +255,11 @@ class NetworkLSTM(torch.nn.Module):
         # Readout
         self.linear = torch.nn.Linear(self.hidden_size, self.output_size)
 
-    # @classmethod
     def loss_fn(self):
         """
         The loss function to be used with this model.
         """
-        return torch.nn.L1Loss()
-        # return torch.nn.MSELoss()
+        return self.loss()
 
     def get_input_size(self):
         return self.input_size
@@ -222,7 +267,7 @@ class NetworkLSTM(torch.nn.Module):
     def get_hidden_size(self):
         return self.hidden_size
 
-    def forward(self, input, tau=1):
+    def forward(self, input: torch.Tensor, tau: int = 1):
         """
         Propagate input through the LSTM.
         input: batch of data
@@ -239,7 +284,7 @@ class NetworkLSTM(torch.nn.Module):
         return lstm_out
 
 
-class VariationalLSTM(nn.Module):
+class VariationalLSTM(torch.nn.Module):
     """
     Variational autoencoder LSTM model.
     Same as the NetworkLSTM model but with an added
@@ -248,8 +293,23 @@ class VariationalLSTM(nn.Module):
     input sequences reliably enough to reproduce them.
     """
 
-    def __init__(self, input_size, hidden_size, num_layers=1):
+    def __init__(
+        self,
+        input_size: int,
+        hidden_size: int,
+        num_layers: int = 1,
+        loss: Callable = None,
+    ):
         super(VariationalLSTM, self).__init__()
+        # Loss function
+        if (loss is None) or (loss.lower() == "L1"):
+            self.loss = torch.nn.L1Loss
+        elif loss.lower() == "MSE":
+            self.loss = torch.nn.MSELoss
+        elif loss.lower() == "Huber":
+            self.loss == torch.nn.HuberLoss
+        else:
+            self.loss = torch.nn.L1Loss
         # Setup
         self.input_size = input_size
         self.output_size = input_size
@@ -278,15 +338,13 @@ class VariationalLSTM(nn.Module):
         # Readout
         self.linear = torch.nn.Linear(self.hidden_size, self.output_size)
 
-    # @classmethod
     def loss_fn(self):
         """
         The loss function to be used with this model.
         """
 
         def func(input, target, **kwargs):
-            # return self.elbo_loss + torch.nn.L1Loss(**kwargs)(input, target)
-            return self.elbo_loss + torch.nn.MSELoss(**kwargs)(input, target)
+            return self.elbo_loss + self.loss(**kwargs)(input, target)
 
         return func
 
@@ -319,7 +377,7 @@ class VariationalLSTM(nn.Module):
         kl = log_qzx - log_pz
         return kl.sum(dim=(1, 2))
 
-    def forward(self, input, tau=1):
+    def forward(self, input: torch.Tensor, tau: int = 1):
         """
         input: batch of data
         tau: time offset of target
