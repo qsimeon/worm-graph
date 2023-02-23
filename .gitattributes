@@ -1,1 +1,2 @@
 *.pickle filter=lfs diff=lfs merge=lfs -text
+data/processed/** filter=lfs diff=lfs merge=lfs -text
