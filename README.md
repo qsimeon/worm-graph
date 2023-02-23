@@ -127,9 +127,9 @@ Always shape neural data matrices as `(time, neurons, [features])`. The braces `
    - hold all else constant except for a single parameter / config item.
    - color lines by values of the varied parameter / config item.
 - Various tasks to implement:
-   - predict the identity of the neuron given the trace (node prediction).
-   - predict whether or not there exist an edge (edge prediction). 
-   - predict the behavior of the worm from its neural activity.
+   - predict the identity of a neuron given neural activity (node prediction).
+   - predict whether or not a pair of neurons are connected (edge prediction). 
+   - predict the instantaneous behavior of a worm given its current and recent neural activity.
 - Goals for the future:
    - get networks to perform better than the baseline.
    - better documentation:
