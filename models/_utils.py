@@ -151,8 +151,8 @@ class NeuralCFC(torch.nn.Module):
         """
         The loss function to be used with this model.
         """
-        return torch.nn.L1Loss()
-        # return torch.nn.MSELoss()
+        # return torch.nn.L1Loss()
+        return torch.nn.MSELoss()
 
     def get_input_size(self):
         return self.input_size

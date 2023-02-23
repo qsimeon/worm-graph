@@ -370,6 +370,20 @@ def load_Uzel2022():
     return Uzel2022
 
 
+def load_Flavell2023():
+    """
+    Loads the worm neural activity datasets from from Flavell et al., bioRxiv 2023,
+    Brain-wide representations of behavior spanning multiple timescales and states in C. elegans.
+    """
+    # ensure the data has been preprocessed
+    file = os.path.join(ROOT_DIR, "data", "processed", "neural", "Flavell2023.pickle")
+    assert os.path.exists(file)
+    pickle_in = open(file, "rb")
+    # unpickle the data
+    Flavell2023 = pickle.load(pickle_in)
+    return Flavell2023
+
+
 def graph_inject_data(single_worm_dataset, connectome_graph):
     """
     Find the nodes on the connecotme corresponding to labelled

@@ -3,3 +3,4 @@ model:
   input_size: 302
   hidden_size: 64
   num_layers: 1
+  # TODO: make the loss function a hyperparam

@@ -12,10 +12,10 @@ import matplotlib.pyplot as plt
 
 # Multi-scale training: Training on multiple sequence lengths
 log_folders = [
-    "Uzel2022-NeuralCFC-2023_02_20_22_21",
-    "Uzel2022-NeuralCFC-2023_02_20_22_22",
-    "Uzel2022-NeuralCFC-2023_02_20_22_23",
-    "Uzel2022-NeuralCFC-2023_02_20_22_28",
+    # "Uzel2022-NeuralCFC-2023_02_20_22_21",
+    # "Uzel2022-NeuralCFC-2023_02_20_22_22",
+    # "Uzel2022-NeuralCFC-2023_02_20_22_23",
+    # "Uzel2022-NeuralCFC-2023_02_20_22_28",
 ]
 
 for folder in log_folders:
