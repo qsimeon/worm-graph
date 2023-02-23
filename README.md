@@ -121,7 +121,7 @@ Always shape neural data matrices as `(time, neurons, [features])`. The braces `
    - scaling law plots.
    - search-based approach to logging .
 - Less urgent TODOs: 
-   - investigate the how large language models for NLP are structure to allow prediction of arbitrary future timesteps.
+   - investigate the how large language models for NLP are structured to allow prediction of arbitrary future timesteps.
 - Think about canonical plots to always make:
    - hold all else constant except for a single parameter / config item.
    - color lines by values of the varied parameter / config item.
