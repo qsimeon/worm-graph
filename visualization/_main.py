@@ -13,11 +13,11 @@ def plot_figures(
     """
     # get default hyperparams for plotting
     if log_dir is None:
-        log_dir = config.visualize.default_log_dir
+        log_dir = config.visualize.log_dir
     if worm is None:
-        worm = config.visualize.default_worm
+        worm = config.visualize.worm
     if neuron is None:
-        neuron = config.visualize.default_neuron
+        neuron = config.visualize.neuron
 
     # loss curves
     plot_loss_curves(log_dir)

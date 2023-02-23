@@ -1,5 +1,5 @@
 # worm-graph
-## Simulating worms with graph nets.
+## Simulating the _C. elegans_ whole brain with neural networks.
 
 ```
 ├── analysis/

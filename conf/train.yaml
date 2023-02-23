@@ -7,7 +7,7 @@ train:
     - 97
     - 131
   k_splits: 5 # num. interleaved train/test splits per single worm dataset
-  cycles: 10 # num. passes through each multi-worm dataset
+  cycles: 1 # num. passes through each multi-worm dataset
   epochs: 1 # num. passes through each single worm dataset per cycle
   train_size: 1048576 # total size (num. batches) of train data
   test_size: 262144 # total size (num. batches) of test data
