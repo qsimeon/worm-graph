@@ -4,4 +4,3 @@ model:
   hidden_size: 64
   num_layers: 1
   loss: MSE # L1
-  # TODO: make the loss function a hyperparam

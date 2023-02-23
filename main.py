@@ -25,7 +25,8 @@ def pipeline(config: DictConfig) -> None:
     model, log_dir = train_model(model, dataset, config, shuffle=True)
 
     plot_figures(config, log_dir)
-    # TODO: analysis
+    ## TODO: analysis
+    # analyze_outputs(config, log_dir)
     return None
 
 

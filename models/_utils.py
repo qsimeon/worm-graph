@@ -2,7 +2,7 @@ from models._pkg import *
 
 
 class LinearNN(torch.nn.Module):
-    def __init__(self, input_size, hidden_size, num_layers=1):
+    def __init__(self, input_size, hidden_size, num_layers=1, loss=None):
         """
         A simple linear regression model to use as a baseline.
         For all our models:
@@ -23,6 +23,8 @@ class LinearNN(torch.nn.Module):
                 models to figure out to implement this.
         """
         super(LinearNN, self).__init__()
+        # Loss function
+        if (loss is None) or (loss.lower() == "MSE"):
         # Setup
         self.input_size = input_size
         self.output_size = input_size
