@@ -1,8 +1,12 @@
 train:
   learn_rate: 0.01 # learning rate
   seq_len: # length(s) of sequences to train
-    - 101
-  k_splits: 2 # num. interleaved train/test splits per single worm dataset
+    - 11
+    - 41
+    - 71
+    - 97
+    - 131
+  k_splits: 5 # num. interleaved train/test splits per single worm dataset
   cycles: 10 # num. passes through each multi-worm dataset
   epochs: 1 # num. passes through each single worm dataset per cycle
   train_size: 1048576 # total size (num. batches) of train data

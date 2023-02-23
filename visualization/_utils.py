@@ -191,7 +191,7 @@ def plot_before_after_weights(log_dir):
     plt.close()
 
 
-def plot_targets_predictions(log_dir, worm, neuron="all"):
+def plot_targets_predictions(log_dir, worm="all", neuron="all"):
     """
     Plot of the target Ca2+ residual time series overlayed
     with the predicted Ca2+ residual time series of a single
@@ -199,6 +199,14 @@ def plot_targets_predictions(log_dir, worm, neuron="all"):
     """
     # process the log folder name
     timestamp, dataset_name, model_name = str.split(os.path.split(log_dir)[-1], "-")
+    # recursive call for all worms
+    if (worm is None) or (worm.lower() == "all"):
+        all_worms = [fname for fname in os.listdir(log_dir) if fname.startswith("worm")]
+        for _worm_ in all_worms:
+            plot_targets_predictions(log_dir, _worm_, neuron)
+        return None
+    else:
+        assert worm in set(os.listdir(log_dir)), "No data for requested worm found."
 
     # load predictions dataframe
     predictions_df = pd.read_csv(
@@ -211,6 +219,7 @@ def plot_targets_predictions(log_dir, worm, neuron="all"):
 
     # plot helper
     def func(_neuron_):
+        os.makedirs(os.path.join(log_dir, worm, "figures"), exist_ok=True)
         plt_title = "Residual neural activity\nworm: {}, neuron: {}\nmodel: {}, dataset: {}\ntime: {}".format(
             worm,
             _neuron_,
@@ -224,21 +233,40 @@ def plot_targets_predictions(log_dir, worm, neuron="all"):
             x=targets_df.index,
             y=targets_df[_neuron_],
             label="target",
-            # style="train_test_label",
         )
         sns.lineplot(
             data=predictions_df,
             x=predictions_df.index,
             y=predictions_df[_neuron_],
             label="predicted",
-            # style="train_test_label",
+            alpha=0.8,
+        )
+        ylo, yhi = plt.gca().get_ylim()
+        plt.gca().fill_between(
+            predictions_df.index,
+            ylo,
+            yhi,
+            where=predictions_df["train_test_label"] == "train",
+            alpha=0.1,
+            facecolor="cyan",
+            label="train",
+        )
+        plt.gca().fill_between(
+            predictions_df.index,
+            ylo,
+            yhi,
+            where=predictions_df["train_test_label"] == "test",
+            alpha=0.1,
+            facecolor="magenta",
+            label="test",
         )
         plt.legend()
         plt.suptitle(plt_title)
-        # plt.axis("square")
         plt.xlabel("Time")
         plt.ylabel("$Ca^{2+}$ Residual ($\Delta F / F$)")
-        plt.savefig(os.path.join(log_dir, worm, "%s_residuals.png" % _neuron_))
+        plt.savefig(
+            os.path.join(log_dir, worm, "figures", "residuals_%s.png" % _neuron_)
+        )
         plt.close()
         return None
 
@@ -266,6 +294,8 @@ def plot_correlation_scatterplot(log_dir, worm="all", neuron="all"):
         for _worm_ in all_worms:
             plot_correlation_scatterplot(log_dir, _worm_, neuron)
         return None
+    else:
+        assert worm in set(os.listdir(log_dir)), "No data for requested worm found."
     # load predictions dataframe
     predictions_df = pd.read_csv(
         os.path.join(log_dir, worm, "predicted_ca_residual.csv"), index_col=0
@@ -277,6 +307,7 @@ def plot_correlation_scatterplot(log_dir, worm="all", neuron="all"):
 
     # plot helper
     def func(_neuron_):
+        os.makedirs(os.path.join(log_dir, worm, "figures"), exist_ok=True)
         plt_title = "Scatterplot of predicted vs target residuals\nworm: {}, neuron: {}\nmodel: {}, dataset: {}\ntime: {}".format(
             worm,
             _neuron_,
@@ -290,13 +321,23 @@ def plot_correlation_scatterplot(log_dir, worm="all", neuron="all"):
             "label": predictions_df["train_test_label"].tolist(),
         }
         data_df = pd.DataFrame(data=data_dict)
-        sns.lmplot(data=data_df, x="target", y="prediction", hue="label", legend=True)
+        sns.lmplot(
+            data=data_df,
+            x="target",
+            y="prediction",
+            hue="label",
+            legend=True,
+            palette={"test": "magenta", "train": "cyan"},
+            scatter_kws={"alpha": 0.5},
+        )
         plt.suptitle(plt_title)
         plt.axis("equal")
         plt.gca().set_ylim(plt.gca().get_xlim())
         plt.xlabel("Target residual $\Delta F / F$")
         plt.ylabel("Predicted residual $\Delta F / F$")
-        plt.savefig(os.path.join(log_dir, worm, "%s_correlation.png" % _neuron_))
+        plt.savefig(
+            os.path.join(log_dir, worm, "figures", "correlation_%s.png" % _neuron_)
+        )
         plt.close()
         return None
 
