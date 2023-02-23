@@ -156,7 +156,7 @@ def plot_loss_curves(log_dir):
     return None
 
 
-def plot_before_after_weights(log_dir):
+def plot_before_after_weights(log_dir: str) -> None:
     """
     Plot the model's readout weigths from
     before and after training.
@@ -189,9 +189,14 @@ def plot_before_after_weights(log_dir):
     plt.suptitle(plt_title)
     plt.savefig(os.path.join(log_dir, "readout_weights.png"))
     plt.close()
+    return None
 
 
-def plot_targets_predictions(log_dir, worm="all", neuron="all"):
+def plot_targets_predictions(
+    log_dir: str,
+    worm: Union[str, None] = "all",
+    neuron: Union[str, None] = "all",
+) -> None:
     """
     Plot of the target Ca2+ residual time series overlayed
     with the predicted Ca2+ residual time series of a single
