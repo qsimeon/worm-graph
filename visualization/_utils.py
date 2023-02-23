@@ -135,6 +135,7 @@ def draw_connectome(
 def plot_loss_curves(log_dir):
     """
     Plot the loss curves stored in the given log directory.
+    TODO: Also make a plot of cumulative number of samples vs. epochs.
     """
     # process the log folder name
     timestamp, dataset_name, model_name = str.split(os.path.split(log_dir)[-1], "-")
@@ -190,7 +191,7 @@ def plot_before_after_weights(log_dir):
     plt.close()
 
 
-def plot_targets_predictions(log_dir, worm, neuron):
+def plot_targets_predictions(log_dir, worm, neuron="all"):
     """
     Plot of the target Ca2+ residual time series overlayed
     with the predicted Ca2+ residual time series of a single
@@ -198,9 +199,7 @@ def plot_targets_predictions(log_dir, worm, neuron):
     """
     # process the log folder name
     timestamp, dataset_name, model_name = str.split(os.path.split(log_dir)[-1], "-")
-    plt_title = "Residual neural activity\nworm: {}, neuron: {}\nmodel: {}, dataset: {}\ntime: {}".format(
-        worm, neuron, model_name, dataset_name, timestamp
-    )
+
     # load predictions dataframe
     predictions_df = pd.read_csv(
         os.path.join(log_dir, worm, "predicted_ca_residual.csv"), index_col=0
@@ -209,40 +208,64 @@ def plot_targets_predictions(log_dir, worm, neuron):
     targets_df = pd.read_csv(
         os.path.join(log_dir, worm, "target_ca_residual.csv"), index_col=0
     )
-    plt.figure()
-    # TODO: overlay shading on the train and test slices
-    sns.lineplot(
-        data=targets_df,
-        x=targets_df.index,
-        y=targets_df[neuron],
-        label="target",
-        # style="train_test_label",
-    )
-    sns.lineplot(
-        data=predictions_df,
-        x=predictions_df.index,
-        y=predictions_df[neuron],
-        label="predicted",
-        # style="train_test_label",
-    )
-    plt.legend()
-    plt.title(plt_title)
-    plt.xlabel("Time")
-    plt.ylabel("$Ca^{2+}$ Residual ($\Delta F / F$)")
-    plt.savefig(os.path.join(log_dir, worm, "%s_residuals.png" % neuron))
-    plt.close()
+
+    # plot helper
+    def func(_neuron_):
+        plt_title = "Residual neural activity\nworm: {}, neuron: {}\nmodel: {}, dataset: {}\ntime: {}".format(
+            worm,
+            _neuron_,
+            model_name,
+            dataset_name,
+            timestamp,
+        )
+        # TODO: overlay shading on the train and test slices
+        sns.lineplot(
+            data=targets_df,
+            x=targets_df.index,
+            y=targets_df[_neuron_],
+            label="target",
+            # style="train_test_label",
+        )
+        sns.lineplot(
+            data=predictions_df,
+            x=predictions_df.index,
+            y=predictions_df[_neuron_],
+            label="predicted",
+            # style="train_test_label",
+        )
+        plt.legend()
+        plt.suptitle(plt_title)
+        # plt.axis("square")
+        plt.xlabel("Time")
+        plt.ylabel("$Ca^{2+}$ Residual ($\Delta F / F$)")
+        plt.savefig(os.path.join(log_dir, worm, "%s_residuals.png" % _neuron_))
+        plt.close()
+        return None
+
+    # plot predictions for neuron(s)
+    columns = set(predictions_df.columns)
+    if (neuron is None) or (neuron.lower() == "all"):
+        for _neuron_ in set(NEURONS_302) & columns:
+            func(_neuron_)
+    elif neuron in columns:
+        func(neuron)
+    else:
+        pass  # do nothing
     return None
 
 
-def plot_correlation_scatterplot(log_dir, worm, neuron):
+def plot_correlation_scatterplot(log_dir, worm="all", neuron="all"):
     """
     Create a scatterpot of the target and predicted Ca2+
     residuals colored by train and test sample.
     """
     timestamp, dataset_name, model_name = str.split(os.path.split(log_dir)[-1], "-")
-    plt_title = "Scatterplot of predicted vs target residuals\nworm: {}, neuron: {}\nmodel: {}, dataset: {}\ntime: {}".format(
-        worm, neuron, model_name, dataset_name, timestamp
-    )
+    # recursive call for all worms
+    if (worm is None) or (worm.lower() == "all"):
+        all_worms = [fname for fname in os.listdir(log_dir) if fname.startswith("worm")]
+        for _worm_ in all_worms:
+            plot_correlation_scatterplot(log_dir, _worm_, neuron)
+        return None
     # load predictions dataframe
     predictions_df = pd.read_csv(
         os.path.join(log_dir, worm, "predicted_ca_residual.csv"), index_col=0
@@ -251,19 +274,41 @@ def plot_correlation_scatterplot(log_dir, worm, neuron):
     targets_df = pd.read_csv(
         os.path.join(log_dir, worm, "target_ca_residual.csv"), index_col=0
     )
-    data_dict = {
-        "target": targets_df[neuron].tolist(),
-        "prediction": predictions_df[neuron].tolist(),
-        "label": predictions_df["train_test_label"].tolist(),
-    }
-    data_df = pd.DataFrame(data=data_dict)
-    sns.lmplot(data=data_df, x="target", y="prediction", hue="label", legend=True)
-    plt.suptitle(plt_title)
-    plt.axis("square")
-    plt.xlabel("Target residual $\Delta F / F$")
-    plt.ylabel("Predicted residual $\Delta F / F$")
-    plt.savefig(os.path.join(log_dir, worm, "%s_correlation.png" % neuron))
-    plt.close()
+
+    # plot helper
+    def func(_neuron_):
+        plt_title = "Scatterplot of predicted vs target residuals\nworm: {}, neuron: {}\nmodel: {}, dataset: {}\ntime: {}".format(
+            worm,
+            _neuron_,
+            model_name,
+            dataset_name,
+            timestamp,
+        )
+        data_dict = {
+            "target": targets_df[_neuron_].tolist(),
+            "prediction": predictions_df[_neuron_].tolist(),
+            "label": predictions_df["train_test_label"].tolist(),
+        }
+        data_df = pd.DataFrame(data=data_dict)
+        sns.lmplot(data=data_df, x="target", y="prediction", hue="label", legend=True)
+        plt.suptitle(plt_title)
+        plt.axis("equal")
+        plt.gca().set_ylim(plt.gca().get_xlim())
+        plt.xlabel("Target residual $\Delta F / F$")
+        plt.ylabel("Predicted residual $\Delta F / F$")
+        plt.savefig(os.path.join(log_dir, worm, "%s_correlation.png" % _neuron_))
+        plt.close()
+        return None
+
+    # plot predictions for neuron(s)
+    columns = set(predictions_df.columns)
+    if (neuron is None) or (neuron.lower() == "all"):
+        for _neuron_ in set(NEURONS_302) & columns:
+            func(_neuron_)
+    elif neuron in columns:
+        func(neuron)
+    else:
+        pass  # do nothing
     return None
 
 

@@ -1,4 +1,4 @@
 visualize:
-  default_log_dir: logs/2023_02_21_14_17-Kaplan2020_Kato2015_Uzel2022-NeuralCFC
-  default_worm: worm0
-  default_neuron: AVAL
+  default_log_dir: logs/2023_02_21_13_47-Kato2015_Uzel2022-NeuralCFC
+  default_worm: all
+  default_neuron: all

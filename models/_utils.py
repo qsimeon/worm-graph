@@ -51,6 +51,7 @@ class LinearNN(torch.nn.Module):
         """
         The loss function to be used with this model.
         """
+        # return torch.nn.L1Loss()
         return torch.nn.MSELoss()
 
     def get_input_size(self):
@@ -98,6 +99,7 @@ class DenseCFC(torch.nn.Module):
         """
         The loss function to be used with this model.
         """
+        # return torch.nn.L1Loss()
         return torch.nn.MSELoss()
 
     def get_input_size(self):
@@ -149,7 +151,8 @@ class NeuralCFC(torch.nn.Module):
         """
         The loss function to be used with this model.
         """
-        return torch.nn.MSELoss()
+        return torch.nn.L1Loss()
+        # return torch.nn.MSELoss()
 
     def get_input_size(self):
         return self.input_size
@@ -208,7 +211,8 @@ class NetworkLSTM(torch.nn.Module):
         """
         The loss function to be used with this model.
         """
-        return torch.nn.MSELoss()
+        return torch.nn.L1Loss()
+        # return torch.nn.MSELoss()
 
     def get_input_size(self):
         return self.input_size
@@ -279,6 +283,7 @@ class VariationalLSTM(nn.Module):
         """
 
         def func(input, target, **kwargs):
+            # return self.elbo_loss + torch.nn.L1Loss(**kwargs)(input, target)
             return self.elbo_loss + torch.nn.MSELoss(**kwargs)(input, target)
 
         return func

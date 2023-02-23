@@ -1,22 +1,33 @@
 from train._pkg import *
 
 
-def train(loader, model, mask, optimizer, no_grad=False):
+def train(
+    loader: torch.utils.data.DataLoader,
+    model: torch.nn.Module,
+    mask: torch.Tensor,
+    optimizer: torch.optim.Optimizer,
+    no_grad: bool = False,
+) -> dict:
+    """Train a model.
+
+    Train a model (for 1 epoch) to predict the residual neural
+    activity given a data loader of neural activity training set
+    sequences.
+
+    Args:
+        loader: training set dataloader
+        model: instance of a NetworkLSTM
+        mask: selects indices of named neurons with data
+        optimizer: gradient descent optimizer loaded with model params
+
+    Returns:
+        losses: dict w/ keys train_loss and base_train_loss
     """
-    Train (for 1 epoch) a model to predict the residual neural
-    activity given a data-loader of neural activity for 1 epoch.
-      Args:
-          loader: training set dataloader
-          model: instance of a NetworkLSTM
-          mask: selects indices of neurons in the dataset with data
-          optimizer: gradient descent optimizer with model params on it
-      Returns:
-          losses: dict w/ keys train_loss and base_train_loss
-    """
-    # set model to train
+    # set model to train mode
     model.train()
     criterion = model.loss_fn()
     base_loss, train_loss = 0, 0
+    num_train_samples = 0
     # Iterate in batches over the training dataset.
     for i, data in enumerate(loader):
         X_train, Y_train, meta = data  # X, Y: (batch_size, seq_len, num_neurons)
@@ -41,28 +52,42 @@ def train(loader, model, mask, optimizer, no_grad=False):
         # Store train and baseline loss.
         base_loss += base.detach().item()
         train_loss += loss.detach().item()
+        num_train_samples += X_train.size(0)
     # Average train and baseline losses
     losses = {
         "train_loss": train_loss / (i + 1),
         "base_train_loss": base_loss / (i + 1),
+        "num_train_samples": num_train_samples,
     }
     # return mean train and baseline losses
     return losses
 
 
 @torch.no_grad()
-def test(loader, model, mask):
-    """
-    Evaluate a model on a given dataset.
+def test(
+    loader: torch.utils.data.DataLoader,
+    model: torch.nn.Module,
+    mask: torch.Tensor,
+) -> dict:
+    """Evaluate a model.
+
+    Test a model's residual neural activity prediction
+    given a data loader of neural activity validation set
+    sequences.
+
+    Args:
         loader: test/validation set dataloader
         model: instance of a NetworkLSTM
         mask: mask which neurons in the dataset have real data
+
     Returns:
         losses: dict w/ keys test_loss and base_test_loss
     """
-    model.eval()  # this turns of grad
+    # set model to inference mode
+    model.eval()
     criterion = model.loss_fn()
     base_loss, test_loss = 0, 0
+    num_test_samples = 0
     # Iterate in batches over the validation dataset.
     for i, data in enumerate(loader):
         X_test, Y_test, meta = data  # X, Y: (batch_size, seq_len, num_neurons)
@@ -80,13 +105,18 @@ def test(loader, model, mask):
         # Store test and baseline loss.
         base_loss += base.detach().item()
         test_loss += loss.detach().item()
+        num_test_samples += X_test.size(0)
     # Average test and baseline losses
-    losses = {"test_loss": test_loss / (i + 1), "base_test_loss": base_loss / (i + 1)}
+    losses = {
+        "test_loss": test_loss / (i + 1),
+        "base_test_loss": base_loss / (i + 1),
+        "num_test_samples": num_test_samples,
+    }
     return losses
 
 
 def split_train_test(
-    data: torch.tensor,
+    data: torch.Tensor,
     k_splits: int = 2,
     seq_len: Union[int, list] = 101,
     train_size: int = 1024,
@@ -94,7 +124,12 @@ def split_train_test(
     tau: int = 1,
     shuffle: bool = True,
     reverse: bool = True,
-):
+) -> tuple[
+    torch.utils.data.DataLoader,
+    torch.utils.data.DataLoader,
+    torch.Tensor,
+    torch.Tensor,
+]:
     """
     Create neural activity train and test datasets.
     Returns train and test data loaders and masks.
@@ -193,7 +228,7 @@ def split_train_test(
 
 
 def optimize_model(
-    data: torch.tensor,
+    data: torch.Tensor,
     model: torch.nn.Module,
     mask: Union[torch.tensor, None] = None,
     optimizer: Union[torch.optim.Optimizer, None] = None,
@@ -237,6 +272,8 @@ def optimize_model(
         "base_test_losses": [],
         "train_losses": [],
         "test_losses": [],
+        "num_train_samples": [],
+        "num_test_samples": [],
         "centered_train_losses": [],
         "centered_test_losses": [],
         "model_state_dicts": [],
@@ -249,11 +286,16 @@ def optimize_model(
         # train the model
         train_log = train(train_loader, model, mask, optimizer, no_grad=(epoch == 0))
         test_log = test(test_loader, model, mask)
-        base_train_loss, train_loss = (
+        base_train_loss, train_loss, num_train_samples = (
             train_log["base_train_loss"],
             train_log["train_loss"],
+            train_log["num_train_samples"],
         )
-        base_test_loss, test_loss = test_log["base_test_loss"], test_log["test_loss"]
+        base_test_loss, test_loss, num_test_samples = (
+            test_log["base_test_loss"],
+            test_log["test_loss"],
+            test_log["num_test_samples"],
+        )
         centered_train_loss = train_loss - base_train_loss
         centered_test_loss = test_loss - base_test_loss
         if (num_epochs < 10) or (epoch % (num_epochs // 10) == 0):
@@ -263,11 +305,13 @@ def optimize_model(
             )
             # save epochs
             log["epochs"].append(epoch)
-            # save losses
+            # save losses and batch counts
             log["base_train_losses"].append(base_train_loss)
             log["base_test_losses"].append(base_test_loss)
             log["train_losses"].append(train_loss)
             log["test_losses"].append(test_loss)
+            log["num_train_samples"].append(num_train_samples)
+            log["num_test_samples"].append(num_test_samples)
             log["centered_train_losses"].append(centered_train_loss)
             log["centered_test_losses"].append(centered_test_loss)
     # return optimized model
@@ -335,7 +379,9 @@ def make_predictions(
     return None
 
 
-def model_predict(model, calcium_data):
+def model_predict(
+    model: torch.nn.Module, calcium_data: torch.Tensor
+) -> tuple[torch.Tensor, torch.Tensor]:
     """
     Makes predictions for all neurons in the
     calcium data tensor using a trained model.

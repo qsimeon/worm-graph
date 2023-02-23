@@ -39,6 +39,8 @@ def train_model(
         "base_test_losses": [],
         "train_losses": [],
         "test_losses": [],
+        "num_train_samples": [],
+        "num_test_samples": [],
         "centered_train_losses": [],
         "centered_test_losses": [],
     }
@@ -65,7 +67,7 @@ def train_model(
             start_epoch=reset_epoch,
             **kwargs, # args to `split_train_test
         )
-        # retrieve losses
+        # retrieve losses and sample counts
         [data[key].extend(log[key]) for key in data]
         # mutate the dataset for this worm with the train and test masks
         dataset[worm]["train_mask"] = log["train_mask"]
