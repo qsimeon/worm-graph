@@ -81,24 +81,24 @@ Verify that the new environment was installed correctly: `conda env list`
  
 Always activate the environment before working on the project: `conda activate worm-graph`
 
-## Get started with the pipeline in 1-line
+## Get started with the pipeline in one line
 
-`python -i main.py`
+`python -u main.py`
 
 For one multi-worm dataset of neural activity, this pipeline will:
 1. Load the preprocessed calcium data for all worms in the dataset.
 2. Train a neural network model to predict future calcium activity from previous activity.
 3. Plot the train and validation loss curves for the model and its predictions on test data.
 
-## Naming conventions
+## File naming conventions
 
 For folders and script files, use the `lower_case_with_underscores` naming style.
 **Example:** `my_folder`, `my_script.py`.
 
-For Jupyter notebooks, use the `UPPER_CASE_WITH_UNDERSCORES` naming style.
+For Jupyter notebooks, use the `CamelCase` naming style.
 **Example:** `MyAnalysisNotebook.ipynb`.
 
-## Style conventions
+## Code style conventions
 
 Aim to make every runnable script (e.g. Python files with a `if __name__ == "__main__":` section) not significantly longer than 100 lines. If your code is getting longer than this, it probably is a good idea to modularize things by encapsulating certain processes in helper functions and moving those to a separare file like `_utils.py`. 
 
@@ -106,6 +106,7 @@ Note the orgaization structure of this project. Each self-contained (sub-)module
    - `_main.py` holds the main code that module executes, typically as a single function that gets called in `if __name__ == "__main__":` part. 
    - `_pkg.py` is exclusively for placing all package imports that the module needs. 
    - `_utils.py` is the bulk of the module's code as it contains the definitions for all custom classes and helper functions to be used by the module.
+   - there may be other miscellaneous subfolders and files that are important and specific to that module (e.g. the `processed/` and `raw/` folders inside `data/`) or just something that is a work in progress.
 
 Use the [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black) formatter. Before a commit, run the command `black .` in the Terminal from the repository's root directory `worm-graph`. This will automatically reformat all code according to the [Black Code Style](https://github.com/psf/black). 
 

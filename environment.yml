@@ -6,7 +6,7 @@ channels:
   - anaconda
   - conda-forge
 dependencies:
-  - python=3.11
+  - python=3.9
   - pytorch=1.13
   - scikit-learn-intelex
   - scikit-learn
@@ -25,6 +25,8 @@ dependencies:
   - mat73
   - h5py
   - tqdm
+  - pyg
+  - pip
   - pip:
       - black[jupyter]
       - hydra-core
