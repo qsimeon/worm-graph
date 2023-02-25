@@ -1,4 +1,4 @@
 visualize:
-  log_dir: logs/2023_02_23_17_38-Skora2018-NeuralCFC
+  log_dir: logs/2023_02_23_09_26-Flavell2023-NeuralCFC
   worm: worm0
-  neuron: all
+  neuron: AVAL

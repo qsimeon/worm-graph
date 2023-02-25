@@ -144,12 +144,13 @@ def plot_loss_curves(log_dir):
     )
     # load the loss dataframe
     loss_df = pd.read_csv(os.path.join(log_dir, "loss_curves.csv"), index_col=0)
+    # plot loss vs epochs
     plt.figure()
     sns.lineplot(x="epochs", y="centered_train_losses", data=loss_df, label="train")
     sns.lineplot(x="epochs", y="centered_test_losses", data=loss_df, label="test")
     plt.legend()
     plt.title(plt_title)
-    plt.xlabel("Epoch")
+    plt.xlabel("Epoch (# worms)")
     plt.ylabel("Loss - Baseline")
     plt.savefig(os.path.join(log_dir, "loss_curves.png"))
     plt.close()

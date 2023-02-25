@@ -50,9 +50,9 @@ def train_model(
         num_epochs=config.train.epochs,
         k_splits=config.train.k_splits,
         seq_len=config.train.seq_len,
-        # hold the total train and test size constant
-        train_size=config.train.train_size // len(dataset_items),
-        test_size=config.train.test_size // len(dataset_items),
+        # hold the per worm train and test sizes constant
+        train_size=config.train.train_size * len(dataset_items),
+        test_size=config.train.test_size * len(dataset_items),
         tau=1,
         shuffle=True,
         reverse=True,
@@ -65,7 +65,7 @@ def train_model(
             model=model,
             mask=single_worm_dataset["named_neurons_mask"],
             start_epoch=reset_epoch,
-            **kwargs, # args to `split_train_test
+            **kwargs,  # args to `split_train_test
         )
         # retrieve losses and sample counts
         [data[key].extend(log[key]) for key in data]

@@ -167,7 +167,7 @@ def split_train_test(
             tau=tau,
             seq_len=seq,
             reverse=reverse,
-            # keep total train size constant and dataset balanced
+            # keep per worm train size constant and dataset balanced
             size=train_size // train_div,
         )
         for seq in seq_len
@@ -180,7 +180,7 @@ def split_train_test(
             tau=tau,
             seq_len=seq,
             reverse=reverse,
-            # keep total test size constant and dataset balanced
+            # keep per worm test size constant and dataset balanced
             size=test_size // test_div,
         )
         for seq in seq_len
