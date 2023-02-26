@@ -51,8 +51,8 @@ def train_model(
         k_splits=config.train.k_splits,
         seq_len=config.train.seq_len,
         # hold the per worm train and test sizes constant
-        train_size=config.train.train_size * len(dataset_items),
-        test_size=config.train.test_size * len(dataset_items),
+        train_size=config.train.train_size // len(dataset_items),
+        test_size=config.train.test_size // len(dataset_items),
         tau=1,
         shuffle=True,
         reverse=True,
