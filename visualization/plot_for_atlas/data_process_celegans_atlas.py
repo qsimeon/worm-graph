@@ -29,8 +29,7 @@ def transpose_2d(data):
 filename = "exported_data"
 if not os.path.exists(filename):
     tf = tarfile.open(filename + ".tar.gz")
-    os.mkdir("./" + filename)
-    tf.extractall('./' + filename)
+    tf.extractall(filename)
 
 gcamp = []
 label = []
@@ -38,7 +37,7 @@ gcamp_np = []
 
 num = 49
 for i in range(0, num):
-    with open("./" + filename + "/" + str(i) + '_gcamp.txt', 'r') as f:
+    with open(filename + "/" + str(i) + '_gcamp.txt', 'r') as f:
         cal_list = []
         for line in f.readlines():
             cal = list(map(float, line.split(" ")))
