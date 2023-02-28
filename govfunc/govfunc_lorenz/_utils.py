@@ -4,7 +4,7 @@
 @author: ivy
 @contact: ivyivyzhao77@gmail.com
 @software: PyCharm 2022.1
-@file: _utils.py.py
+@file: _utils.py
 @time: 2023/2/28 10:57
 @desc:
 '''
