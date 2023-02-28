@@ -8,11 +8,9 @@
 @time: 2023/2/28 10:57
 @desc:
 '''
-import numpy as np
 from scipy.integrate import odeint
 import matplotlib.pyplot as plt
-from govfunc_lorenz._utils import *
-from mpl_toolkits.mplot3d import Axes3D
+from govfunc.govfunc_lorenz._utils import *
 
 # Generate data
 polyorder = 5
