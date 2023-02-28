@@ -145,7 +145,7 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
-# *.pickle
+*.pickle
 # data/processed/neural/Kaplan2020.pickle
 # data/processed/neural/Kato2015.pickle
 # data/processed/neural/Nguyen2017.pickle
