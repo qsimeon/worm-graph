@@ -33,7 +33,7 @@ def neuro_plot(y, isTarget):
     axe.spines['right'].set_color('none')
     axe.spines['left'].set_color('none')
 
-    # transfer to list in order to fit in ticks-reformat
+    # transfer to list in order to re-label the y-axis
     list_y = []
     list_label = []
 
@@ -59,6 +59,11 @@ def neuro_plot(y, isTarget):
 
 
 def derivative(y, t):
+    '''
+    input: [time, status]
+    func: calculate the residual between time steps
+    output: [residual(\delta t), status]
+    '''
     yrow, ycol = y.size()
     dy = np.zeros((yrow-1, ycol))
     for i in range(0, yrow-1):
@@ -67,6 +72,10 @@ def derivative(y, t):
 
 
 def poolData(yin, nVars, polyorder, usesine):
+    '''
+    func: generate polynomial functions as candidates
+    output: \theta(yin)
+    '''
     n = yin.shape[0]
     yout = np.zeros((n, 1))
 
@@ -127,6 +136,10 @@ def poolData(yin, nVars, polyorder, usesine):
 
 
 def sparsifyDynamics(Theta, dXdt, lam, n):
+    '''
+    func: calculate coefficients of \theta() generated from poolData(...) using dynamic regression
+    note: consume large computational resouces
+    '''
     # Compute Sparse regression: sequential least squares
     Xi = np.linalg.lstsq(Theta, dXdt, rcond=None)[0]  # initial guess: Least-squares
 
@@ -159,7 +172,9 @@ def governingFuncPredict(x0, Theta, Xi):
 
 
 def calculas(y0, y_hat):
-    # this is the reverse of derivative
+    '''
+    this is the reverse of derivative
+    '''
     # print(y0.shape, y_hat.shape) # [1:3], [301:3]
     yrow, ycol = y_hat.shape[0], y_hat.shape[1]
     sum_y = np.zeros((yrow+1, ycol))
