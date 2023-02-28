@@ -14,7 +14,7 @@ import pandas as pd
 import seaborn as sns
 import torch
 
-def neuro_plot(y, isTarget=True):
+def neuro_plot(y, isTarget):
     y_np = pd.DataFrame(y)
     # print(y_np.shape)
 
@@ -52,9 +52,10 @@ def neuro_plot(y, isTarget=True):
 
     if isTarget == True:
         plt.savefig('./worm_response_target.png', dpi=1000, bbox_inches='tight')
-    else :
+    else:
         plt.savefig('./worm_response_pred.png', dpi=1000, bbox_inches='tight')
     plt.show()
+
 
 
 def derivative(y, t):
@@ -147,3 +148,22 @@ def sparseGalerkin(y, t, ahat, polyorder, usesine):
     dy = np.dot(yPool, ahat).T
     dy = dy.reshape((len(dy), ))
     return dy
+
+
+def governingFuncPredict(x0, Theta, Xi):
+    x_hat = np.dot(Theta, Xi)
+    # print(x_hat.shape, "---")
+    # print(x_hat.shape)
+    pred = calculas(x0.T, x_hat)
+    return pred
+
+
+def calculas(y0, y_hat):
+    # this is the reverse of derivative
+    # print(y0.shape, y_hat.shape) # [1:3], [301:3]
+    yrow, ycol = y_hat.shape[0], y_hat.shape[1]
+    sum_y = np.zeros((yrow+1, ycol))
+    sum_y[0, :] = y0
+    for i in range(1, yrow+1):
+        sum_y[i, :] = sum_y[i-1, :] + y_hat[i-1, :]
+    return sum_y
