@@ -3,4 +3,4 @@ model:
   input_size: 302 # fixed
   hidden_size: 64 # options: int > 0
   num_layers: 1 # fixed
-  loss: L1 # options: MSE, Huber, L1
+  loss: MSE # options: MSE, Huber, L1
