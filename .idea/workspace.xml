@@ -6,8 +6,6 @@
   <component name="ChangeListManager">
     <list default="true" id="9604bd16-0a50-48f0-95b8-a59c5c782330" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/conf/model.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/conf/model.yaml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/models/_utils.py" beforeDir="false" afterPath="$PROJECT_DIR$/models/_utils.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -63,35 +61,6 @@
       <recent name="$PROJECT_DIR$/" />
     </key>
   </component>
-  <component name="RunManager">
-    <configuration name="_utils" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
-      <module name="worm-graph" />
-      <option name="INTERPRETER_OPTIONS" value="" />
-      <option name="PARENT_ENVS" value="true" />
-      <envs>
-        <env name="PYTHONUNBUFFERED" value="1" />
-      </envs>
-      <option name="SDK_HOME" value="" />
-      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/govfunc_lorenz" />
-      <option name="IS_MODULE_SDK" value="true" />
-      <option name="ADD_CONTENT_ROOTS" value="true" />
-      <option name="ADD_SOURCE_ROOTS" value="true" />
-      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
-      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/govfunc_lorenz/_utils.py" />
-      <option name="PARAMETERS" value="" />
-      <option name="SHOW_COMMAND_LINE" value="false" />
-      <option name="EMULATE_TERMINAL" value="false" />
-      <option name="MODULE_MODE" value="false" />
-      <option name="REDIRECT_INPUT" value="false" />
-      <option name="INPUT_FILE" value="" />
-      <method v="2" />
-    </configuration>
-    <recent_temporary>
-      <list>
-        <item itemvalue="Python._utils" />
-      </list>
-    </recent_temporary>
-  </component>
   <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />
   <component name="TaskManager">
     <task active="true" id="Default" summary="Default task">
@@ -103,7 +72,7 @@
       <workItem from="1677437996237" duration="4044000" />
       <workItem from="1677532457312" duration="9971000" />
       <workItem from="1677598065179" duration="23330000" />
-      <workItem from="1677682912712" duration="1181000" />
+      <workItem from="1677682912712" duration="5259000" />
     </task>
     <servers />
   </component>
@@ -141,8 +110,11 @@
     <SUITE FILE_PATH="coverage/worm_graph$main.coverage" NAME="main Coverage Results" MODIFIED="1677438023002" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/worm_graph$data_process_celegans_atlas.coverage" NAME="data_process_celegans_atlas Coverage Results" MODIFIED="1677603907434" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/visualization/plot_for_Atlas" />
     <SUITE FILE_PATH="coverage/worm_graph$_utils.coverage" NAME="_utils Coverage Results" MODIFIED="1677616312637" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/govfunc" />
+    <SUITE FILE_PATH="coverage/worm_graph$quick_script_4.coverage" NAME="quick_script_4 Coverage Results" MODIFIED="1677693578669" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/worm_graph$temporary_work.coverage" NAME="temporary_work Coverage Results" MODIFIED="1677619243671" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/govfunc" />
     <SUITE FILE_PATH="coverage/worm_graph$_main.coverage" NAME="_main Coverage Results" MODIFIED="1677623382030" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/govfunc" />
+    <SUITE FILE_PATH="coverage/worm_graph$quick_script_3.coverage" NAME="quick_script_3 Coverage Results" MODIFIED="1677693793683" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/worm_graph$plot_neuroResponds.coverage" NAME="plot_neuroResponds Coverage Results" MODIFIED="1677603930198" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/visualization/plot_for_Atlas" />
+    <SUITE FILE_PATH="coverage/worm_graph$quick_script_2.coverage" NAME="quick_script_2 Coverage Results" MODIFIED="1677693910978" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
   </component>
 </project>
