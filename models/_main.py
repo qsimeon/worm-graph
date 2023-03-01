@@ -20,7 +20,7 @@ def get_model(config: DictConfig) -> torch.nn.Module:
         model = NeuralCFC(**args).double()
     elif config.model.type == "dense_cfc":
         model = DenseCFC(**args).double()
-    elif config.model.type == "dense_cfc":
+    elif config.model.type == "linear_nn":
         model = LinearNN(**args).double()
     else:  # default to "linear" model
         model = LinearNN(**args).double()
