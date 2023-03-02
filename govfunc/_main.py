@@ -27,10 +27,10 @@ def main():
 
     for i in range(0, numOfWorm):
         worm.append(dataset["worm" + str(i)])
-        worm[i]["calcium_data"] = worm[i]["calcium_data"].T
+        worm[i]["calcium_data"] = worm[i]["calcium_data"]
         # print(worm[i]["calcium_data"].shape)
     rows, cols = worm[0]["calcium_data"].size()
-    print("the time steps is " + str(rows))  # 302
+    print("the time step is " + str(rows))
 
     dys = []
     for i in range(0, numOfWorm):
@@ -41,10 +41,10 @@ def main():
     ##########################################
     # here we just use one worm
     x = worm[0]["calcium_data"]
-    dx = derivative(worm[0]["calcium_data"], 0)
+    dx = derivative(x, 0)
 
-    # dataset is sliced because of the huge amount of parameters
-    slices = 10
+    # dataset is sliced based on number of neurons(parameter: slices) because of the huge amount of parameters
+    slices = 30
     x = x[:, 0:slices]
     dx = dx[:, 0:slices]
     print("x_initial: ", x.shape)
@@ -55,7 +55,7 @@ def main():
     print("x0: ", x0.shape)
 
     # polyorder: polynomial formula with the first variant up to x^(i), where i is chosen from [1, polyorder]
-    polyorder = 3
+    polyorder = 2
     usesine = False
     r, c = x.shape
     Theta = poolData(x[1:], c, polyorder, usesine)
@@ -81,8 +81,9 @@ def main():
     tr, tc = pred.size()
     print("the shape of pred: (" + str(tr) + ", " + str(tc) + ")")
 
-    neuro_plot(target[0:20, :], True)
-    neuro_plot(pred[0:20, :], False)
+    time_slice = 300
+    neuro_plot(target[:, 0:time_slice], True)
+    neuro_plot(pred[:, 0:time_slice], False)
 
     return 0
 

@@ -15,16 +15,18 @@ import seaborn as sns
 import torch
 
 def neuro_plot(y, isTarget):
-    y_np = pd.DataFrame(y)
-    # print(y_np.shape)
-
+    y_df = pd.DataFrame(y)
+    print(y_df.shape)
+    print(y_df)
     # data normalization: z-scoring
     cnt = 0
-    interval = 3
-    for i in range(0, y_np.shape[0]):
-        y_np.iloc[i] = (y_np.iloc[i] - y_np.iloc[i].mean()) / y_np.iloc[i].std()
-        y_np.iloc[i] = y_np.iloc[i] + cnt
+    interval = 10
+    for i in range(0, y_df.shape[0]):
+        y_df.iloc[i] = (y_df.iloc[i] - y_df.iloc[i].mean()) / y_df.iloc[i].std()
+        y_df.iloc[i] = y_df.iloc[i] + cnt
         cnt -= interval
+
+    print(y_df)
 
     # start plotting
     plt.figure(figsize=(6, 12))
@@ -37,17 +39,17 @@ def neuro_plot(y, isTarget):
     list_y = []
     list_label = []
 
-    for j in range(0, y_np.shape[0]):
+    for j in range(0, y_df.shape[0]):
         list_y.append(-j*interval)
         list_label.append(j)
 
-    plt.ylabel("Status")
+    plt.ylabel("Neurons")
     plt.xlabel("Time(s)")
 
     plt.yticks(list_y, list_label, fontproperties='Times New Roman', size=6)
 
-    for i in range(0, y_np.shape[0]):
-        plt.plot(range(0, y_np.shape[1]), y_np.iloc[i], color=sns.color_palette("deep", n_colors=20)[i % 20],
+    for i in range(0, y_df.shape[0]):
+        plt.plot(range(0, y_df.shape[1]), y_df.iloc[i], color=sns.color_palette("deep", n_colors=20)[i % 20],
                  linewidth=0.5)
 
     if isTarget == True:
@@ -74,7 +76,7 @@ def derivative(y, t):
 def poolData(yin, nVars, polyorder, usesine):
     '''
     func: generate polynomial functions as candidates
-    output: \theta(yin)
+    output: \theta(yin) as denoted in paper
     '''
     n = yin.shape[0]
     yout = np.zeros((n, 1))
@@ -138,7 +140,7 @@ def poolData(yin, nVars, polyorder, usesine):
 def sparsifyDynamics(Theta, dXdt, lam, n):
     '''
     func: calculate coefficients of \theta() generated from poolData(...) using dynamic regression
-    note: consume large computational resouces
+    note: consume large computational resources
     '''
     # Compute Sparse regression: sequential least squares
     Xi = np.linalg.lstsq(Theta, dXdt, rcond=None)[0]  # initial guess: Least-squares
@@ -155,19 +157,12 @@ def sparsifyDynamics(Theta, dXdt, lam, n):
     return Xi
 
 
-def sparseGalerkin(y, t, ahat, polyorder, usesine):
-    y_ = y.reshape((len(y), 1)).T
-    yPool = poolData(y_, len(y), polyorder, usesine)
-    dy = np.dot(yPool, ahat).T
-    dy = dy.reshape((len(dy), ))
-    return dy
-
 
 def governingFuncPredict(x0, Theta, Xi):
     x_hat = np.dot(Theta, Xi)
     # print(x_hat.shape, "---")
     # print(x_hat.shape)
-    pred = calculas(x0.T, x_hat)
+    pred = calculas(x0, x_hat)
     return pred
 
 
@@ -175,7 +170,7 @@ def calculas(y0, y_hat):
     '''
     this is the reverse of derivative
     '''
-    # print(y0.shape, y_hat.shape) # [1:3], [301:3]
+    # print(y0.shape, y_hat.shape)
     yrow, ycol = y_hat.shape[0], y_hat.shape[1]
     sum_y = np.zeros((yrow+1, ycol))
     sum_y[0, :] = y0
