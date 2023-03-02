@@ -47,24 +47,24 @@ def main():
     slices = 30
     x = x[:, 0:slices]
     dx = dx[:, 0:slices]
-    print("x_initial: ", x.shape)
-    print("dx: ", dx.shape)
+    # print("x_initial: ", x.shape)
+    # print("dx: ", dx.shape)
 
     # the original status x0 from time step 0
     x0 = x[0]
-    print("x0: ", x0.shape)
+    # print("x0: ", x0.shape)
 
     # polyorder: polynomial formula with the first variant up to x^(i), where i is chosen from [1, polyorder]
     polyorder = 2
     usesine = False
     r, c = x.shape
     Theta = poolData(x[1:], c, polyorder, usesine)
-    print("Theta: ", Theta.shape)
+    # print("Theta: ", Theta.shape)
 
     # TODO: figure out the influence of changing lambda_
     lambda_ = 0.025
     Xi = sparsifyDynamics(Theta, dx, lambda_, c)
-    print("Xi: ", Xi.shape)
+    # print("Xi: ", Xi.shape)
 
     # true calcium_data: worm[0]["calcium_data"]
     # denoted as target
