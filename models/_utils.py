@@ -25,11 +25,11 @@ class LinearNN(torch.nn.Module):
     def __init__(self, input_size, hidden_size, num_layers=1, loss=None):
         super(LinearNN, self).__init__()
         # Loss function
-        if (loss is None) or (loss.lower() == "L1"):
+        if (loss is None) or (str(loss).lower() == "l1"):
             self.loss = torch.nn.L1Loss
-        elif loss.lower() == "MSE":
+        elif str(loss).lower() == "mse":
             self.loss = torch.nn.MSELoss
-        elif loss.lower() == "Huber":
+        elif str(loss).lower() == "huber":
             self.loss == torch.nn.HuberLoss
         else:
             self.loss = torch.nn.L1Loss
@@ -50,7 +50,7 @@ class LinearNN(torch.nn.Module):
         # Readout
         self.linear = torch.nn.Linear(self.hidden_size, self.output_size)
         # Full model
-        self.model = nn.Sequential(
+        self.model = torch.nn.Sequential(
             *self.input_hidden,
             *self.hidden_hidden,
             self.linear,
@@ -99,11 +99,11 @@ class DenseCFC(torch.nn.Module):
         """
         super(DenseCFC, self).__init__()
         # Loss function
-        if (loss is None) or (loss.lower() == "L1"):
+        if (loss is None) or (str(loss).lower() == "l1"):
             self.loss = torch.nn.L1Loss
-        elif loss.lower() == "MSE":
+        elif str(loss).lower() == "mse":
             self.loss = torch.nn.MSELoss
-        elif loss.lower() == "Huber":
+        elif str(loss).lower() == "huber":
             self.loss == torch.nn.HuberLoss
         else:
             self.loss = torch.nn.L1Loss
@@ -163,11 +163,11 @@ class NeuralCFC(torch.nn.Module):
         """
         super(NeuralCFC, self).__init__()
         # Loss function
-        if (loss is None) or (loss.lower() == "L1"):
+        if (loss is None) or (str(loss).lower() == "l1"):
             self.loss = torch.nn.L1Loss
-        elif loss.lower() == "MSE":
+        elif str(loss).lower() == "mse":
             self.loss = torch.nn.MSELoss
-        elif loss.lower() == "Huber":
+        elif str(loss).lower() == "huber":
             self.loss == torch.nn.HuberLoss
         else:
             self.loss = torch.nn.L1Loss
@@ -231,11 +231,11 @@ class NetworkLSTM(torch.nn.Module):
         """
         super(NetworkLSTM, self).__init__()
         # Loss function
-        if (loss is None) or (loss.lower() == "L1"):
+        if (loss is None) or (str(loss).lower() == "l1"):
             self.loss = torch.nn.L1Loss
-        elif loss.lower() == "MSE":
+        elif str(loss).lower() == "mse":
             self.loss = torch.nn.MSELoss
-        elif loss.lower() == "Huber":
+        elif str(loss).lower() == "huber":
             self.loss == torch.nn.HuberLoss
         else:
             self.loss = torch.nn.L1Loss
@@ -302,11 +302,11 @@ class VariationalLSTM(torch.nn.Module):
     ):
         super(VariationalLSTM, self).__init__()
         # Loss function
-        if (loss is None) or (loss.lower() == "L1"):
+        if (loss is None) or (str(loss).lower() == "l1"):
             self.loss = torch.nn.L1Loss
-        elif loss.lower() == "MSE":
+        elif str(loss).lower() == "mse":
             self.loss = torch.nn.MSELoss
-        elif loss.lower() == "Huber":
+        elif str(loss).lower() == "huber":
             self.loss == torch.nn.HuberLoss
         else:
             self.loss = torch.nn.L1Loss
