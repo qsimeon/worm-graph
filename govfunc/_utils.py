@@ -16,8 +16,6 @@ import torch
 
 def neuro_plot(y, isTarget):
     y_df = pd.DataFrame(y)
-    print(y_df.shape)
-    print(y_df)
     # data normalization: z-scoring
     cnt = 0
     interval = 10
@@ -25,9 +23,6 @@ def neuro_plot(y, isTarget):
         y_df.iloc[i] = (y_df.iloc[i] - y_df.iloc[i].mean()) / y_df.iloc[i].std()
         y_df.iloc[i] = y_df.iloc[i] + cnt
         cnt -= interval
-
-    print(y_df)
-
     # start plotting
     plt.figure(figsize=(6, 12))
     axe = plt.gca()
