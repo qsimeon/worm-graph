@@ -1,12 +1,12 @@
 #!/usr/bin/env python
 # encoding: utf-8
-'''
+"""
 @author: ivy
 @contact: ivyivyzhao77@gmail.com
 @software: PyCharm 2022.3
 @file: tvrd.py
 @time: 2023/3/3 16:36
-'''
+"""
 
 from diff_tvr import DiffTVR
 import numpy as np
@@ -19,21 +19,20 @@ from data._main import *
 from govfunc._utils import *
 
 
-
 def derivative(y, t):
-    '''
+    """
     input: [time, status]
     func: calculate the residual between time steps
     output: [residual(\delta t), status]
-    '''
+    """
     yrow, ycol = y.size()
-    dy = np.zeros((yrow-1, ycol))
-    for i in range(0, yrow-1):
-        dy[i, :] = y[i+1, :] - y[i, :]
+    dy = np.zeros((yrow - 1, ycol))
+    for i in range(0, yrow - 1):
+        dy[i, :] = y[i + 1, :] - y[i, :]
     return dy
 
-if __name__ == "__main__":
 
+if __name__ == "__main__":
     # # Data
     # dx = 0.01
     #
@@ -54,9 +53,6 @@ if __name__ == "__main__":
     # # Add noise
     # n = len(data)
     # data_noisy = data + np.random.normal(0, 0.05, n)
-
-
-
 
     config = OmegaConf.load("../../conf/dataset.yaml")
     print("config:", OmegaConf.to_yaml(config), end="\n\n")
@@ -90,16 +86,18 @@ if __name__ == "__main__":
     data = x[2].reshape(len(x[2]), 1)
     data = data.T
 
-
     # True derivative
     dx = derivative(data.T, 0).T
-
 
     data = data.T
     dx = dx.T
 
-    data = data.reshape(data.shape[0], )
-    dx = dx.reshape(dx.shape[0], )
+    data = data.reshape(
+        data.shape[0],
+    )
+    dx = dx.reshape(
+        dx.shape[0],
+    )
 
     data = np.array(data[1:])
     deriv_true = np.array(dx)
@@ -122,10 +120,7 @@ if __name__ == "__main__":
     # Derivative with TVR
     diff_tvr = DiffTVR(n, 1)
     (deriv, _) = diff_tvr.get_deriv_tvr(
-        data=data_noisy,
-        deriv_guess=np.full(n+1, 0.0),
-        alpha=0.2,
-        no_opt_steps=100
+        data=data_noisy, deriv_guess=np.full(n + 1, 0.0), alpha=0.2, no_opt_steps=100
     )
 
     # Plot TVR derivative
@@ -135,7 +130,7 @@ if __name__ == "__main__":
     plt.title("Derivative")
     plt.legend(["True", "TVR"])
 
-    fig1.savefig('signal.png')
-    fig2.savefig('derivative.png')
+    fig1.savefig("signal.png")
+    fig2.savefig("derivative.png")
 
     plt.show()
