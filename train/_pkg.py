@@ -19,3 +19,4 @@ from models._utils import NetworkLSTM
 from data._utils import NeuralActivityDataset, BatchSampler, pick_worm
 from data._main import get_dataset
 from models._main import get_model
+from scipy.signal import savgol_filter
