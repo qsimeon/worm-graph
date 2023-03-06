@@ -5,7 +5,8 @@ import hydra
 import random
 import numpy as np
 import pandas as pd
-from typing import Union
+from scipy.linalg import solve
+from typing import Tuple, Union
 from datetime import datetime
 from hydra.core.hydra_config import HydraConfig
 from omegaconf import DictConfig

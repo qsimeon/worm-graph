@@ -1,18 +1,15 @@
 #!/usr/bin/env python
 # encoding: utf-8
-'''
+"""
 @author: ivy
 @contact: ivyivyzhao77@gmail.com
 @software: PyCharm 2022.3
 @file: _main.py
 @time: 2023/2/28 12:15
-'''
+"""
 
 from data._main import *
 from govfunc._utils import *
-
-from scipy.integrate import odeint
-import matplotlib.pyplot as plt
 
 
 def main():
@@ -45,17 +42,18 @@ def main():
 
     # dataset is sliced based on number of neurons(parameter: slices) because of the huge amount of parameters
     slices = 30
-    x = x[:, 0:slices]
-    dx = dx[:, 0:slices]
-    print("x_initial: ", x.shape)
-    print("dx: ", dx.shape)
+    timestep = 500
+    x = x[0:timestep, 0:slices]
+    dx = dx[0:timestep, 0:slices]
+    # print("x_initial: ", x.shape)
+    # print("dx: ", dx.shape)
 
     # the original status x0 from time step 0
     x0 = x[0]
-    print("x0: ", x0.shape)
+    # print("x0: ", x0.shape)
 
     # polyorder: polynomial formula with the first variant up to x^(i), where i is chosen from [1, polyorder]
-    polyorder = 2
+    polyorder = 4
     usesine = False
     r, c = x.shape
     Theta = poolData(x[1:], c, polyorder, usesine)
@@ -81,7 +79,7 @@ def main():
     tr, tc = pred.size()
     print("the shape of pred: (" + str(tr) + ", " + str(tc) + ")")
 
-    time_slice = 300
+    time_slice = 1000
     neuro_plot(target[:, 0:time_slice], True)
     neuro_plot(pred[:, 0:time_slice], False)
 

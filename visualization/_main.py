@@ -37,6 +37,8 @@ def plot_figures(
 
 
 if __name__ == "__main__":
-    config = OmegaConf.load("conf/visualize.yaml")
+    root = os.path.abspath(os.path.dirname(os.getcwd()))
+    root += "/"
+    config = OmegaConf.load(root + "conf/visualize.yaml")
     print("config:", OmegaConf.to_yaml(config), end="\n\n")
     plot_figures(config)
