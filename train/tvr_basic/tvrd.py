@@ -23,6 +23,7 @@ from govfunc._utils import *
 from numpy.fft import fft
 from scipy.signal import savgol_filter
 
+
 def derivative(y, t):
     """
     input: [time, status]
@@ -57,7 +58,6 @@ if __name__ == "__main__":
     # # Add noise
     # n = len(data)
     # data_noisy = data + np.random.normal(0, 0.05, n)
-
 
     config = OmegaConf.load("../../conf/dataset.yaml")
     print("config:", OmegaConf.to_yaml(config), end="\n\n")
@@ -126,10 +126,7 @@ if __name__ == "__main__":
     # Derivative with TVR
     diff_tvr = DiffTVR(n, 1)
     (deriv_tvr, _) = diff_tvr.get_deriv_tvr(
-        data=data_noisy,
-        deriv_guess=np.full(n + 1, 0.0),
-        alpha=0.005,
-        no_opt_steps=100
+        data=data_noisy, deriv_guess=np.full(n + 1, 0.0), alpha=0.005, no_opt_steps=100
     )
 
     deriv_tvr = deriv_tvr[:-1]
@@ -137,15 +134,13 @@ if __name__ == "__main__":
     # Derivative with FFT
     # deriv_fft = fft(deriv_true, n)
 
-    deriv_sf = savgol_filter(deriv_true, 5, 3, mode='nearest')
-
+    deriv_sf = savgol_filter(deriv_true, 5, 3, mode="nearest")
 
     # np.convolve
     def moving_average(interval, windowsize):
         window = np.ones(int(windowsize)) / float(windowsize)
-        re = np.convolve(interval, window, 'same')
+        re = np.convolve(interval, window, "same")
         return re
-
 
     deriv_con = moving_average(deriv_true, 5)
 

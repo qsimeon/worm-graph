@@ -241,7 +241,9 @@ def train(
 
         optimizer.zero_grad()  # Clear gradients.
         # Baseline: loss if the model predicted the residual to be 0
-        base = criterion(torch.zeros_like(Y_train[:, :, mask]), Y_train[:, :, mask]) / (tau + 1)
+        base = criterion(torch.zeros_like(Y_train[:, :, mask]), Y_train[:, :, mask]) / (
+            tau + 1
+        )
         # Train
         Y_tr = model(X_train)  # Forward pass.
         Y_tr.retain_grad()
@@ -299,7 +301,9 @@ def test(
         tau = meta["tau"][0]  # num. timesteps the target sequence is right shifted by
 
         # Baseline: loss if the model predicted the residual to be 0
-        base = criterion(torch.zeros_like(Y_test[:, :, mask]), Y_test[:, :, mask]) / (tau + 1)
+        base = criterion(torch.zeros_like(Y_test[:, :, mask]), Y_test[:, :, mask]) / (
+            tau + 1
+        )
         # Test
         Y_te = model(X_test)  # Forward pass.
         loss = criterion(Y_te[:, :, mask], Y_test[:, :, mask]) / (
@@ -616,7 +620,7 @@ def model_predict(
     for i in range(0, residual_origin.shape[1]):
         temp = np.array(residual_origin[:, i])
         temp.reshape(len(temp), 1)
-        item_denoise = savgol_filter(temp, 5, 3, mode='nearest')
+        item_denoise = savgol_filter(temp, 5, 3, mode="nearest")
         residual[:, i] = torch.tensor(item_denoise)
         # (item_denoise, _) = diff_tvr.get_deriv_tvr(
         #     data=temp,
