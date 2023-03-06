@@ -1,12 +1,12 @@
 #!/usr/bin/env python
 # encoding: utf-8
-'''
+"""
 @author: ivy
 @contact: ivyivyzhao77@gmail.com
 @software: PyCharm 2022.3
 @file: tvrd.py
 @time: 2023/3/3 16:36
-'''
+"""
 
 ### smooth method: TVR, Savitzky-Golay filter, np.convolve()
 
@@ -23,13 +23,12 @@ from govfunc._utils import *
 from numpy.fft import fft
 from scipy.signal import savgol_filter
 
-
 def derivative(y, t):
-    '''
+    """
     input: [time, status]
     func: calculate the residual between time steps
     output: [residual(\delta t), status]
-    '''
+    """
     yrow, ycol = y.size()
     dy = np.zeros((yrow - 1, ycol))
     for i in range(0, yrow - 1):
@@ -38,7 +37,6 @@ def derivative(y, t):
 
 
 if __name__ == "__main__":
-
     # # Data
     # dx = 0.01
     #
@@ -60,7 +58,8 @@ if __name__ == "__main__":
     # n = len(data)
     # data_noisy = data + np.random.normal(0, 0.05, n)
 
-    config = OmegaConf.load("dataset.yaml")
+
+    config = OmegaConf.load("../../conf/dataset.yaml")
     print("config:", OmegaConf.to_yaml(config), end="\n\n")
     dataset = get_dataset(config)
     print("----dataset prepared------\n")
@@ -98,8 +97,12 @@ if __name__ == "__main__":
     data = data.T
     dx = dx.T
 
-    data = data.reshape(data.shape[0], )
-    dx = dx.reshape(dx.shape[0], )
+    data = data.reshape(
+        data.shape[0],
+    )
+    dx = dx.reshape(
+        dx.shape[0],
+    )
 
     data = np.array(data[1:])
     deriv_true = np.array(dx)

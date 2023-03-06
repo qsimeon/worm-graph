@@ -1,8 +1,9 @@
 from train._pkg import *
 from govfunc._utils import *
+
+
 # new method TVR for derivative smoothing
 class DiffTVR:
-
     def __init__(self, n: int, dx: float):
         """Differentiate with TVR.
 
@@ -94,7 +95,9 @@ class DiffTVR:
         """
         return self.dx * np.transpose(self.d_mat) @ en_mat @ self.d_mat
 
-    def make_gn_vec(self, deriv_curr: np.array, data: np.array, alpha: float, ln_mat: np.array) -> np.array:
+    def make_gn_vec(
+        self, deriv_curr: np.array, data: np.array, alpha: float, ln_mat: np.array
+    ) -> np.array:
         """Negative right hand side of linear problem
 
         Args:
@@ -106,7 +109,11 @@ class DiffTVR:
         Returns:
             np.array: Vector of length N+1
         """
-        return self.a_mat_t @ self.a_mat @ deriv_curr - self.a_mat_t @ (data - data[0]) + alpha * ln_mat @ deriv_curr
+        return (
+            self.a_mat_t @ self.a_mat @ deriv_curr
+            - self.a_mat_t @ (data - data[0])
+            + alpha * ln_mat @ deriv_curr
+        )
 
     def make_hn_mat(self, alpha: float, ln_mat: np.array) -> np.array:
         """Matrix in linear problem
@@ -120,7 +127,9 @@ class DiffTVR:
         """
         return self.a_mat_t @ self.a_mat + alpha * ln_mat
 
-    def get_deriv_tvr_update(self, data: np.array, deriv_curr: np.array, alpha: float) -> np.array:
+    def get_deriv_tvr_update(
+        self, data: np.array, deriv_curr: np.array, alpha: float
+    ) -> np.array:
         """Get the TVR update
 
         Args:
@@ -134,36 +143,27 @@ class DiffTVR:
 
         n = len(data)
 
-        en_mat = self.make_en_mat(
-            deriv_curr=deriv_curr
-        )
+        en_mat = self.make_en_mat(deriv_curr=deriv_curr)
 
-        ln_mat = self.make_ln_mat(
-            en_mat=en_mat
-        )
+        ln_mat = self.make_ln_mat(en_mat=en_mat)
 
-        hn_mat = self.make_hn_mat(
-            alpha=alpha,
-            ln_mat=ln_mat
-        )
+        hn_mat = self.make_hn_mat(alpha=alpha, ln_mat=ln_mat)
 
         gn_vec = self.make_gn_vec(
-            deriv_curr=deriv_curr,
-            data=data,
-            alpha=alpha,
-            ln_mat=ln_mat
+            deriv_curr=deriv_curr, data=data, alpha=alpha, ln_mat=ln_mat
         )
 
         return solve(hn_mat, -gn_vec)
 
-    def get_deriv_tvr(self,
-                      data: np.array,
-                      deriv_guess: np.array,
-                      alpha: float,
-                      no_opt_steps: int,
-                      return_progress: bool = False,
-                      return_interval: int = 1
-                      ) -> Tuple[np.array, np.array]:
+    def get_deriv_tvr(
+        self,
+        data: np.array,
+        deriv_guess: np.array,
+        alpha: float,
+        no_opt_steps: int,
+        return_progress: bool = False,
+        return_interval: int = 1,
+    ) -> Tuple[np.array, np.array]:
         """Get derivative via TVR over optimization steps
 
         Args:
@@ -187,9 +187,7 @@ class DiffTVR:
 
         for opt_step in range(0, no_opt_steps):
             update = self.get_deriv_tvr_update(
-                data=data,
-                deriv_curr=deriv_curr,
-                alpha=alpha
+                data=data, deriv_curr=deriv_curr, alpha=alpha
             )
 
             deriv_curr += update
@@ -247,9 +245,11 @@ def train(
                     data=temp,
                     deriv_guess=np.full(n + 1, 0.0),
                     alpha=0.005,
-                    no_opt_steps=100
+                    no_opt_steps=100,
                 )
-                residual[j, :, i] = torch.tensor(item_denoise[:(len(item_denoise)-1)])
+                residual[j, :, i] = torch.tensor(
+                    item_denoise[: (len(item_denoise) - 1)]
+                )
 
         # plt.plot(residual[0, :, 0])
         # plt.plot(residual_origin[0, :, 0])
@@ -260,9 +260,7 @@ def train(
 
         optimizer.zero_grad()  # Clear gradients.
         # Baseline: loss if the model predicted the residual to be 0
-        base = criterion(
-            torch.zeros_like(Y_train[:, :, mask]), residual
-        ) / (tau + 1)
+        base = criterion(torch.zeros_like(Y_train[:, :, mask]), residual) / (tau + 1)
         # Train
         Y_tr = model(X_train)  # Forward pass.
         Y_tr.retain_grad()
@@ -331,13 +329,13 @@ def test(
                     data=temp,
                     deriv_guess=np.full(n + 1, 0.0),
                     alpha=0.005,
-                    no_opt_steps=100
+                    no_opt_steps=100,
                 )
-                residual[j, :, i] = torch.tensor(item_denoise[:(len(item_denoise)-1)])
+                residual[j, :, i] = torch.tensor(
+                    item_denoise[: (len(item_denoise) - 1)]
+                )
         # Baseline: loss if the model predicted the residual to be 0
-        base = criterion(
-            torch.zeros_like(Y_test[:, :, mask]), residual
-        ) / (tau + 1)
+        base = criterion(torch.zeros_like(Y_test[:, :, mask]), residual) / (tau + 1)
         # Test
         Y_te = model(X_test)  # Forward pass.
         loss = criterion(Y_te[:, :, mask], residual) / (

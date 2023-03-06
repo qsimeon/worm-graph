@@ -1,3 +1,7 @@
+"""
+Testing out prediction with untrained model
+on data from a single worm.
+"""
 from models._utils import NeuralCFC
 
 from train._utils import model_predict
