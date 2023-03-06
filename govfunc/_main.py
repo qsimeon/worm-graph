@@ -11,10 +11,6 @@
 from data._main import *
 from govfunc._utils import *
 
-from scipy.integrate import odeint
-import matplotlib.pyplot as plt
-
-
 def main():
     config = OmegaConf.load("./dataset.yaml")
     print("config:", OmegaConf.to_yaml(config), end="\n\n")
@@ -45,8 +41,9 @@ def main():
 
     # dataset is sliced based on number of neurons(parameter: slices) because of the huge amount of parameters
     slices = 30
-    x = x[:, 0:slices]
-    dx = dx[:, 0:slices]
+    timestep = 500
+    x = x[0:timestep, 0:slices]
+    dx = dx[0:timestep, 0:slices]
     # print("x_initial: ", x.shape)
     # print("dx: ", dx.shape)
 

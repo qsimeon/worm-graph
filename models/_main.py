@@ -29,6 +29,8 @@ def get_model(config: DictConfig) -> torch.nn.Module:
 
 
 if __name__ == "__main__":
-    config = OmegaConf.load("conf/model.yaml")
+    root = os.path.abspath(os.path.dirname(os.getcwd()))
+    root += "/"
+    config = OmegaConf.load(root + "conf/model.yaml")
     print("config:", OmegaConf.to_yaml(config), end="\n\n")
     get_model(config)
