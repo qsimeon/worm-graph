@@ -8,6 +8,9 @@
 @time: 2023/3/3 16:36
 '''
 
+### smooth method: TVR, Savitzky-Golay filter, np.convolve()
+
+
 from diff_tvr import DiffTVR
 import numpy as np
 import matplotlib.pyplot as plt
@@ -17,7 +20,8 @@ from omegaconf import OmegaConf
 from govfunc._utils import *
 from data._main import *
 from govfunc._utils import *
-
+from numpy.fft import fft
+from scipy.signal import savgol_filter
 
 
 def derivative(y, t):
@@ -27,10 +31,11 @@ def derivative(y, t):
     output: [residual(\delta t), status]
     '''
     yrow, ycol = y.size()
-    dy = np.zeros((yrow-1, ycol))
-    for i in range(0, yrow-1):
-        dy[i, :] = y[i+1, :] - y[i, :]
+    dy = np.zeros((yrow - 1, ycol))
+    for i in range(0, yrow - 1):
+        dy[i, :] = y[i + 1, :] - y[i, :]
     return dy
+
 
 if __name__ == "__main__":
 
@@ -55,10 +60,7 @@ if __name__ == "__main__":
     # n = len(data)
     # data_noisy = data + np.random.normal(0, 0.05, n)
 
-
-
-
-    config = OmegaConf.load("../../conf/dataset.yaml")
+    config = OmegaConf.load("dataset.yaml")
     print("config:", OmegaConf.to_yaml(config), end="\n\n")
     dataset = get_dataset(config)
     print("----dataset prepared------\n")
@@ -80,7 +82,7 @@ if __name__ == "__main__":
         # print(dy.shape)
         dys.append(dy)
 
-    #######################r###################
+    ##########################################
     # here we just use one worm
     x = worm[0]["calcium_data"]
     # plt.plot(x[:, 2])
@@ -90,10 +92,8 @@ if __name__ == "__main__":
     data = x[2].reshape(len(x[2]), 1)
     data = data.T
 
-
     # True derivative
     dx = derivative(data.T, 0).T
-
 
     data = data.T
     dx = dx.T
@@ -108,34 +108,51 @@ if __name__ == "__main__":
     print(dx.shape)
 
     # Add noise
+    data = data[0:1000]
     n = len(data)
     data_noisy = data
 
-    # Plot true and noisy signal
-    fig1 = plt.figure()
-    plt.plot(data)
-    plt.plot(data_noisy)
-    plt.title("Signal")
-    plt.legend(["True", "Noisy"])
-    plt.show()
-    # exit(0)
+    # # Plot true and noisy signal
+    # fig1 = plt.figure()
+    # plt.plot(data)
+    # plt.plot(data_noisy)
+    # plt.title("Signal")
+    # plt.legend(["True", "Noisy"])
+    # plt.show()
+    # # exit(0)
     # Derivative with TVR
     diff_tvr = DiffTVR(n, 1)
-    (deriv, _) = diff_tvr.get_deriv_tvr(
+    (deriv_tvr, _) = diff_tvr.get_deriv_tvr(
         data=data_noisy,
-        deriv_guess=np.full(n+1, 0.0),
-        alpha=0.2,
+        deriv_guess=np.full(n + 1, 0.0),
+        alpha=0.005,
         no_opt_steps=100
     )
+
+    deriv_tvr = deriv_tvr[:-1]
+
+    # Derivative with FFT
+    # deriv_fft = fft(deriv_true, n)
+
+    deriv_sf = savgol_filter(deriv_true, 5, 3, mode='nearest')
+
+
+    # np.convolve
+    def moving_average(interval, windowsize):
+        window = np.ones(int(windowsize)) / float(windowsize)
+        re = np.convolve(interval, window, 'same')
+        return re
+
+
+    deriv_con = moving_average(deriv_true, 5)
 
     # Plot TVR derivative
     fig2 = plt.figure()
     plt.plot(deriv_true)
-    plt.plot(deriv)
+    # plt.plot(deriv_tvr)
+    # plt.plot(deriv_sf)
+    plt.plot(deriv_con)
     plt.title("Derivative")
-    plt.legend(["True", "TVR"])
-
-    fig1.savefig('signal.png')
-    fig2.savefig('derivative.png')
-
+    plt.legend(["True", "CON"])
+    # fig2.savefig('derivative.png')
     plt.show()

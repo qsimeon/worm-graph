@@ -584,6 +584,7 @@ def make_predictions(
         os.makedirs(os.path.join(log_dir, worm), exist_ok=True)
         # get data to save
         named_neuron_to_idx = single_worm_dataset["named_neuron_to_idx"]
+        ### change the length of time series to accelerate the speed - trial only
         calcium_data = single_worm_dataset["calcium_data"]
         named_neurons_mask = single_worm_dataset["named_neurons_mask"]
         train_mask = single_worm_dataset["train_mask"]
@@ -634,11 +635,28 @@ def model_predict(
     assert (
         calcium_data.ndim == 2 and calcium_data.size(1) == NUM_NEURONS
     ), "Calcium data has incorrect shape!"
+
+    #######TODO: move the Ca2+ residual calculation and smoothing process codes into /data folder
     input = calcium_data.to(DEVICE)
     # add batch dimension
     output = model(input.unsqueeze(0)).squeeze()
     # targets/predictions
-    targets = (input[1:] - input[:-1]).detach().cpu()
+    residual_origin = input[1:] - input[:-1]
+    residual = torch.zeros_like(residual_origin)
+    # smooth the residual with total-variation denoising
+    n = residual_origin.shape[0]
+    diff_tvr = DiffTVR(n, 1)
+    for i in range(0, residual_origin.shape[1]):
+        temp = np.array(residual_origin[:, i])
+        temp.reshape(len(temp), 1)
+        (item_denoise, _) = diff_tvr.get_deriv_tvr(
+            data=temp,
+            deriv_guess=np.full(n + 1, 0.0),
+            alpha=0.005,
+            no_opt_steps=100
+        )
+        residual[:, i] = torch.tensor(item_denoise[:(len(item_denoise) - 1)])
+    targets = residual.detach().cpu()
     predictions = output[:-1].detach().cpu()
     return targets, predictions
 
