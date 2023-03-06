@@ -1,5 +1,5 @@
 from train._pkg import *
-
+from govfunc._utils import *
 # new method TVR for derivative smoothing
 class DiffTVR:
 
@@ -246,10 +246,18 @@ def train(
                 (item_denoise, _) = diff_tvr.get_deriv_tvr(
                     data=temp,
                     deriv_guess=np.full(n + 1, 0.0),
-                    alpha=0.2,
+                    alpha=0.005,
                     no_opt_steps=100
                 )
                 residual[j, :, i] = torch.tensor(item_denoise[:(len(item_denoise)-1)])
+
+        # plt.plot(residual[0, :, 0])
+        # plt.plot(residual_origin[0, :, 0])
+        # plt.title("Residual")
+        # plt.legend(["TVR", "Origin"])
+        # plt.show()
+        # exit(0)
+
         optimizer.zero_grad()  # Clear gradients.
         # Baseline: loss if the model predicted the residual to be 0
         base = criterion(
@@ -322,7 +330,7 @@ def test(
                 (item_denoise, _) = diff_tvr.get_deriv_tvr(
                     data=temp,
                     deriv_guess=np.full(n + 1, 0.0),
-                    alpha=0.2,
+                    alpha=0.005,
                     no_opt_steps=100
                 )
                 residual[j, :, i] = torch.tensor(item_denoise[:(len(item_denoise)-1)])
