@@ -11,10 +11,7 @@ def get_dataset(config: DictConfig):
         dataset_names = [config.dataset.name]
     else:
         dataset_names = sorted(list(config.dataset.name))
-    if isinstance(config.smooth.name, str):
-        smooth_method = [config.smooth.name]
-    else:
-        smooth_method = sorted(list(config.smooth.name))
+    smooth_method = config.dataset.smooth
     # load the dataset(s)
     combined_dataset = dict()
     for dataset_name in dataset_names:

@@ -372,6 +372,7 @@ def split_train_test(
             reverse=reverse,
             # keep per worm train size constant and dataset balanced
             size=train_size // train_div,
+            smooth="sq",
         )
         for seq in seq_len
         for dset in train_splits
@@ -385,6 +386,7 @@ def split_train_test(
             reverse=reverse,
             # keep per worm test size constant and dataset balanced
             size=test_size // test_div,
+            smooth="sq",
         )
         for seq in seq_len
         for dset in test_splits

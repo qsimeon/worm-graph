@@ -334,7 +334,7 @@ class NeuralActivityDataset(torch.utils.data.Dataset):
                     start + self.tau: end + self.tau, self.neurons, self.feature_mask
                     ]
 
-            Res_tau = self.smooth_data(X_tau, Y_tau, self.smooth)
+            Res_tau = self.__smooth_data(X_tau, Y_tau, self.smooth)
 
             # store metadata about the sample
             tau = torch.tensor(self.tau)
@@ -358,10 +358,9 @@ class NeuralActivityDataset(torch.utils.data.Dataset):
         # return samples and batch_sampler
         return data_samples, batch_sampler
 
-    def smooth_data(self, x_tau, y_tau, smooth):
+    def __smooth_data(self, x_tau, y_tau, smooth):
         residual_origin = y_tau - x_tau
         residual = torch.zeros_like(residual_origin)
-
         if str(smooth).lower() == 'sg':
             for i in range(0, residual_origin.shape[1]):
                 temp = np.array(residual_origin[:, i])
@@ -387,7 +386,7 @@ class NeuralActivityDataset(torch.utils.data.Dataset):
         elif str(smooth).lower() == 'fft':
             pass
         else: # no smoothing process
-            pass
+            return residual_origin
         return residual
 
 
@@ -687,10 +686,3 @@ def graph_inject_data(single_worm_dataset, connectome_graph):
     print(f"\tIs directed: {subgraph.is_directed()}")
     # return the graph, subgraph and mask
     return graph, subgraph, subgraph_mask
-
-# def smooth_data(method, dataset):
-#     if method == 'None' or str(method).lower() == "sg":
-#
-#     else:
-#
-#     return dataset
