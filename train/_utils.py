@@ -232,25 +232,6 @@ def train(
         X_train, Y_train = X_train.to(DEVICE), Y_train.to(DEVICE)
         # print(X_train.shape, Y_train.shape)
         tau = meta["tau"][0]  # num. timesteps the target sequence is right shifted by
-        residual_origin = (Y_train - X_train)[:, :, mask]
-        residual = torch.zeros_like(residual_origin)
-        # smooth the residual with total-variation denoising
-        n = residual_origin.shape[1]
-        diff_tvr = DiffTVR(n, 1)
-        for j in range(0, residual_origin.shape[0]):
-            for i in range(0, residual_origin.shape[2]):
-                temp = np.array(residual_origin[j, :, i])
-                temp.reshape(len(temp), 1)
-                (item_denoise, _) = diff_tvr.get_deriv_tvr(
-                    data=temp,
-                    deriv_guess=np.full(n + 1, 0.0),
-                    alpha=0.005,
-                    no_opt_steps=100,
-                )
-                residual[j, :, i] = torch.tensor(
-                    item_denoise[: (len(item_denoise) - 1)]
-                )
-
         # plt.plot(residual[0, :, 0])
         # plt.plot(residual_origin[0, :, 0])
         # plt.title("Residual")
@@ -260,12 +241,12 @@ def train(
 
         optimizer.zero_grad()  # Clear gradients.
         # Baseline: loss if the model predicted the residual to be 0
-        base = criterion(torch.zeros_like(Y_train[:, :, mask]), residual) / (tau + 1)
+        base = criterion(torch.zeros_like(Y_train[:, :, mask]), Y_train[:, :, mask]) / (tau + 1)
         # Train
         Y_tr = model(X_train)  # Forward pass.
         Y_tr.retain_grad()
         Y_tr.register_hook(lambda grad: grad * mask.double())
-        loss = criterion(Y_tr[:, :, mask], residual) / (
+        loss = criterion(Y_tr[:, :, mask], Y_train[:, :, mask]) / (
             tau + 1
         )  # Compute training loss.
         loss.backward()  # Derive gradients.
@@ -316,29 +297,12 @@ def test(
         X_test, Y_test, meta = data  # X, Y: (batch_size, seq_len, num_neurons)
         X_test, Y_test = X_test.to(DEVICE), Y_test.to(DEVICE)
         tau = meta["tau"][0]  # num. timesteps the target sequence is right shifted by
-        residual_origin = (Y_test - X_test)[:, :, mask]
-        residual = torch.zeros_like(residual_origin)
-        # smooth the residual with total-variation denoising
-        n = residual_origin.shape[1]
-        diff_tvr = DiffTVR(n, 1)
-        for j in range(0, residual_origin.shape[0]):
-            for i in range(0, residual_origin.shape[2]):
-                temp = np.array(residual_origin[j, :, i])
-                temp.reshape(len(temp), 1)
-                (item_denoise, _) = diff_tvr.get_deriv_tvr(
-                    data=temp,
-                    deriv_guess=np.full(n + 1, 0.0),
-                    alpha=0.005,
-                    no_opt_steps=100,
-                )
-                residual[j, :, i] = torch.tensor(
-                    item_denoise[: (len(item_denoise) - 1)]
-                )
+
         # Baseline: loss if the model predicted the residual to be 0
-        base = criterion(torch.zeros_like(Y_test[:, :, mask]), residual) / (tau + 1)
+        base = criterion(torch.zeros_like(Y_test[:, :, mask]), Y_test[:, :, mask]) / (tau + 1)
         # Test
         Y_te = model(X_test)  # Forward pass.
-        loss = criterion(Y_te[:, :, mask], residual) / (
+        loss = criterion(Y_te[:, :, mask], Y_test[:, :, mask]) / (
             tau + 1
         )  # Compute the validation loss.
         # Store test and baseline loss.
@@ -363,6 +327,7 @@ def split_train_test(
     tau: int = 1,
     shuffle: bool = True,
     reverse: bool = True,
+    **kwargs,
 ) -> tuple[
     torch.utils.data.DataLoader,
     torch.utils.data.DataLoader,
@@ -408,6 +373,7 @@ def split_train_test(
             reverse=reverse,
             # keep per worm train size constant and dataset balanced
             size=train_size // train_div,
+            smooth=str(*kwargs.values()),
         )
         for seq in seq_len
         for dset in train_splits
@@ -421,6 +387,7 @@ def split_train_test(
             reverse=reverse,
             # keep per worm test size constant and dataset balanced
             size=test_size // test_div,
+            smooth=str(*kwargs.values()),
         )
         for seq in seq_len
         for dset in test_splits
@@ -489,6 +456,7 @@ def optimize_model(
                 tau: int,
                 shuffle: bool,
                 reverse: bool,
+                smooth: str
             }
     """
     # create the feature mask
@@ -583,6 +551,8 @@ def make_predictions(
         # get data to save
         named_neuron_to_idx = single_worm_dataset["named_neuron_to_idx"]
         ### change the length of time series to accelerate the speed - trial only
+        slices = 100
+
         calcium_data = single_worm_dataset["calcium_data"]
         named_neurons_mask = single_worm_dataset["named_neurons_mask"]
         train_mask = single_worm_dataset["train_mask"]
@@ -634,7 +604,6 @@ def model_predict(
         calcium_data.ndim == 2 and calcium_data.size(1) == NUM_NEURONS
     ), "Calcium data has incorrect shape!"
 
-    #######TODO: move the Ca2+ residual calculation and smoothing process codes into /data folder
     input = calcium_data.to(DEVICE)
     # add batch dimension
     output = model(input.unsqueeze(0)).squeeze()
@@ -647,13 +616,15 @@ def model_predict(
     for i in range(0, residual_origin.shape[1]):
         temp = np.array(residual_origin[:, i])
         temp.reshape(len(temp), 1)
-        (item_denoise, _) = diff_tvr.get_deriv_tvr(
-            data=temp,
-            deriv_guess=np.full(n + 1, 0.0),
-            alpha=0.005,
-            no_opt_steps=100
-        )
-        residual[:, i] = torch.tensor(item_denoise[:(len(item_denoise) - 1)])
+        item_denoise = savgol_filter(temp, 5, 3, mode='nearest')
+        residual[:, i] = torch.tensor(item_denoise)
+        # (item_denoise, _) = diff_tvr.get_deriv_tvr(
+        #     data=temp,
+        #     deriv_guess=np.full(n + 1, 0.0),
+        #     alpha=0.005,
+        #     no_opt_steps=100
+        # )
+        # residual[:, i] = torch.tensor(item_denoise[:(len(item_denoise) - 1)])
     targets = residual.detach().cpu()
     predictions = output[:-1].detach().cpu()
     return targets, predictions

@@ -1,5 +1,200 @@
 from data._pkg import *
 
+class DiffTVR:
+    def __init__(self, n: int, dx: float):
+        """Differentiate with TVR.
+
+        Args:
+            n (int): Number of points in data.
+            dx (float): Spacing of data.
+        """
+        self.n = n
+        self.dx = dx
+
+        self.d_mat = self._make_d_mat()
+        self.a_mat = self._make_a_mat()
+        self.a_mat_t = self._make_a_mat_t()
+
+    def _make_d_mat(self) -> np.array:
+        """Make differentiation matrix with central differences. NOTE: not efficient!
+
+        Returns:
+            np.array: N x N+1
+        """
+
+        arr = np.zeros((self.n, self.n + 1))
+        for i in range(0, self.n):
+            arr[i, i] = -1.0
+            arr[i, i + 1] = 1.0
+        return arr / self.dx
+
+    # TODO: improve these matrix constructors
+    def _make_a_mat(self) -> np.array:
+        """Make integration matrix with trapezoidal rule. NOTE: not efficient!
+
+        Returns:
+            np.array: N x N+1
+        """
+        arr = np.zeros((self.n + 1, self.n + 1))
+        for i in range(0, self.n + 1):
+            if i == 0:
+                continue
+            for j in range(0, self.n + 1):
+                if j == 0:
+                    arr[i, j] = 0.5
+                elif j < i:
+                    arr[i, j] = 1.0
+                elif i == j:
+                    arr[i, j] = 0.5
+
+        return arr[1:] * self.dx
+
+    def _make_a_mat_t(self) -> np.array:
+        """Transpose of the integration matirx with trapezoidal rule. NOTE: not efficient!
+
+        Returns:
+            np.array: N+1 x N
+        """
+        smat = np.ones((self.n + 1, self.n))
+
+        cmat = np.zeros((self.n, self.n))
+        li = np.tril_indices(self.n)
+        cmat[li] = 1.0
+
+        dmat = np.diag(np.full(self.n, 0.5))
+
+        vec = np.array([np.full(self.n, 0.5)])
+        combmat = np.concatenate((vec, cmat - dmat))
+
+        return (smat - combmat) * self.dx
+
+    def make_en_mat(self, deriv_curr: np.array) -> np.array:
+        """Diffusion matrix
+
+        Args:
+            deriv_curr (np.array): Current derivative of length N+1
+
+        Returns:
+            np.array: N x N
+        """
+        eps = pow(10, -6)
+        vec = 1.0 / np.sqrt(pow(self.d_mat @ deriv_curr, 2) + eps)
+        return np.diag(vec)
+
+    def make_ln_mat(self, en_mat: np.array) -> np.array:
+        """Diffusivity term
+
+        Args:
+            en_mat (np.array): Result from make_en_mat
+
+        Returns:
+            np.array: N+1 x N+1
+        """
+        return self.dx * np.transpose(self.d_mat) @ en_mat @ self.d_mat
+
+    def make_gn_vec(
+        self, deriv_curr: np.array, data: np.array, alpha: float, ln_mat: np.array
+    ) -> np.array:
+        """Negative right hand side of linear problem
+
+        Args:
+            deriv_curr (np.array): Current derivative of size N+1
+            data (np.array): Data of size N
+            alpha (float): Regularization parameter
+            ln_mat (np.array): Diffusivity term from make_ln_mat
+
+        Returns:
+            np.array: Vector of length N+1
+        """
+        return (
+            self.a_mat_t @ self.a_mat @ deriv_curr
+            - self.a_mat_t @ (data - data[0])
+            + alpha * ln_mat @ deriv_curr
+        )
+
+    def make_hn_mat(self, alpha: float, ln_mat: np.array) -> np.array:
+        """Matrix in linear problem
+
+        Args:
+            alpha (float): Regularization parameter
+            ln_mat (np.array): Diffusivity term from make_ln_mat
+
+        Returns:
+            np.array: N+1 x N+1
+        """
+        return self.a_mat_t @ self.a_mat + alpha * ln_mat
+
+    def get_deriv_tvr_update(
+        self, data: np.array, deriv_curr: np.array, alpha: float
+    ) -> np.array:
+        """Get the TVR update
+
+        Args:
+            data (np.array): Data of size N
+            deriv_curr (np.array): Current deriv of size N+1
+            alpha (float): Regularization parameter
+
+        Returns:
+            np.array: Update vector of size N+1
+        """
+
+        n = len(data)
+
+        en_mat = self.make_en_mat(deriv_curr=deriv_curr)
+
+        ln_mat = self.make_ln_mat(en_mat=en_mat)
+
+        hn_mat = self.make_hn_mat(alpha=alpha, ln_mat=ln_mat)
+
+        gn_vec = self.make_gn_vec(
+            deriv_curr=deriv_curr, data=data, alpha=alpha, ln_mat=ln_mat
+        )
+
+        return solve(hn_mat, -gn_vec)
+
+    def get_deriv_tvr(
+        self,
+        data: np.array,
+        deriv_guess: np.array,
+        alpha: float,
+        no_opt_steps: int,
+        return_progress: bool = False,
+        return_interval: int = 1,
+    ) -> Tuple[np.array, np.array]:
+        """Get derivative via TVR over optimization steps
+
+        Args:
+            data (np.array): Data of size N
+            deriv_guess (np.array): Guess for derivative of size N+1
+            alpha (float): Regularization parameter
+            no_opt_steps (int): No. opt steps to run
+            return_progress (bool, optional): True to return derivative progress during optimization. Defaults to False.
+            return_interval (int, optional): Interval at which to store derivative if returning. Defaults to 1.
+
+        Returns:
+            Tuple[np.array,np.array]: First is the final derivative of size N+1, second is the stored derivatives if return_progress=True of size no_opt_steps+1 x N+1, else [].
+        """
+
+        deriv_curr = deriv_guess
+
+        if return_progress:
+            deriv_st = np.full((no_opt_steps + 1, len(deriv_guess)), 0)
+        else:
+            deriv_st = np.array([])
+
+        for opt_step in range(0, no_opt_steps):
+            update = self.get_deriv_tvr_update(
+                data=data, deriv_curr=deriv_curr, alpha=alpha
+            )
+
+            deriv_curr += update
+
+            if return_progress:
+                if opt_step % return_interval == 0:
+                    deriv_st[int(opt_step / return_interval)] = deriv_curr
+
+        return (deriv_curr, deriv_st)
+
 
 class BatchSampler(torch.utils.data.Sampler):
     def __init__(self, data_source):
@@ -25,14 +220,15 @@ class NeuralActivityDataset(torch.utils.data.Dataset):
     """
 
     def __init__(
-        self,
-        D,
-        neurons=None,
-        tau=1,
-        seq_len=17,
-        size=1000,
-        feature_mask=None,
-        reverse=False,
+            self,
+            D,
+            neurons=None,
+            tau=1,
+            seq_len=17,
+            size=1000,
+            feature_mask=None,
+            reverse=False,
+            smooth="sg",
     ):
         """
         Args:
@@ -46,6 +242,7 @@ class NeuralActivityDataset(torch.utils.data.Dataset):
                     is achieved.
           feature_mask: torch.tensor. What features to select for generating dataset.
           reverse: bool. Whether to sample sequences backward from end of the data.
+          smooth: str, Method in data smoothing process.
         Returns:
           (X, Y, meta): tuple. Batch of data samples.
             X: torch.tensor. Input tensor w/ shape (batch_size, seq_len,
@@ -63,13 +260,14 @@ class NeuralActivityDataset(torch.utils.data.Dataset):
         self.seq_len = seq_len
         self.max_time, num_neurons, num_features = D.shape
         self.reverse = reverse
+        self.smooth = smooth
         # feature checking
         if feature_mask is not None:
             assert len(feature_mask) == num_features, (
-                "`feature_mask` must have shape (%s, 1)." % num_features
+                    "`feature_mask` must have shape (%s, 1)." % num_features
             )
             assert (
-                feature_mask.sum() > 0
+                    feature_mask.sum() > 0
             ), "`feature_mask` must select at least 1 feature."
             self.feature_mask = feature_mask
         else:
@@ -85,7 +283,7 @@ class NeuralActivityDataset(torch.utils.data.Dataset):
         else:  # multiple signals
             if neurons is not None:
                 assert (
-                    np.array(neurons).size == 1
+                        np.array(neurons).size == 1
                 ), "Only select 1 neuron when using > 1 signals as features."
                 self.neurons = np.array(neurons)  # use the single neuron given
             else:
@@ -133,13 +331,17 @@ class NeuralActivityDataset(torch.utils.data.Dataset):
             # data samples: input, X_tau and target, Y_tau
             X_tau = self.D[start:end, self.neurons, self.feature_mask]
             Y_tau = self.D[
-                start + self.tau : end + self.tau, self.neurons, self.feature_mask
-            ]
+                    start + self.tau: end + self.tau, self.neurons, self.feature_mask
+                    ]
+
+            Res_tau = self.__smooth_data(X_tau, Y_tau, self.smooth)
+
             # store metadata about the sample
             tau = torch.tensor(self.tau)
             meta = {"seq_len": L, "start": start, "end": end, "tau": tau}
             # append to data samples
-            data_samples.append((X_tau, Y_tau, meta))
+            # change Y_tau to Res_tau
+            data_samples.append((X_tau, Res_tau, meta))
             # append index to batch
             batch_indices.append(self.counter)
             self.counter += 1
@@ -156,14 +358,45 @@ class NeuralActivityDataset(torch.utils.data.Dataset):
         # return samples and batch_sampler
         return data_samples, batch_sampler
 
+    def __smooth_data(self, x_tau, y_tau, smooth):
+        residual_origin = y_tau - x_tau
+        residual = torch.zeros_like(residual_origin)
+        if str(smooth).lower() == 'sg':
+            for i in range(0, residual_origin.shape[1]):
+                temp = np.array(residual_origin[:, i])
+                temp.reshape(len(temp), 1)
+                item_denoise = savgol_filter(temp, 5, 3, mode='nearest')
+                residual[:, i] = torch.tensor(item_denoise)
+        elif str(smooth).lower() == 'tvr':
+            n = residual_origin.shape[0]
+            diff_tvr = DiffTVR(n, 1)
+            for i in range(0, residual_origin.shape[1]):
+                temp = np.array(residual_origin[:, i])
+                temp.reshape(len(temp), 1)
+                (item_denoise, _) = diff_tvr.get_deriv_tvr(
+                    data=temp,
+                    deriv_guess=np.full(n + 1, 0.0),
+                    alpha=0.005,
+                    no_opt_steps=100,
+                )
+                residual[:, i] = torch.tensor(
+                    item_denoise[: (len(item_denoise) - 1)]
+                )
+        # TODO: implement Fast Fourier Transform
+        elif str(smooth).lower() == 'fft':
+            pass
+        else: # no smoothing process
+            return residual_origin
+        return residual
+
 
 class CElegansConnectome(InMemoryDataset):
     def __init__(
-        self,
-        root=os.path.join(ROOT_DIR, "data"),
-        transform=None,
-        pre_transform=None,
-        pre_filter=None,
+            self,
+            root=os.path.join(ROOT_DIR, "data"),
+            transform=None,
+            pre_transform=None,
+            pre_filter=None,
     ):
         """
         Defines CElegansConnectome as a subclass of a PyG InMemoryDataset.
@@ -248,9 +481,9 @@ def pick_worm(dataset, wormid):
         dataset = load_dataset(dataset)
     else:
         assert (
-            isinstance(dataset, dict)
-            and ("name" in dataset.keys())
-            and ("worm0" in set(dataset["generator"]))
+                isinstance(dataset, dict)
+                and ("name" in dataset.keys())
+                and ("worm0" in set(dataset["generator"]))
         ), "Not a valid worm datset!"
     avail_worms = set(dataset["generator"])
     if isinstance(wormid, str) and wormid.startswith("worm"):
@@ -280,7 +513,7 @@ def load_dataset(name):
     Loads the dataset with the specified name.
     """
     assert (
-        name in VALID_DATASETS
+            name in VALID_DATASETS
     ), "Unrecognized dataset! Please pick one from:\n{}".format(list(VALID_DATASETS))
     loader = eval("load_" + name)
     return loader()
