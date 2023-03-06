@@ -1,5 +1,5 @@
 """
-Testing out multiprocessing.
+Learning about the Python multiprocessing library.
 """
 
 from multiprocessing import Pool, TimeoutError
