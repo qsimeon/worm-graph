@@ -1,7 +1,7 @@
 dataset:
   name:
     - Uzel2022
-  smooth: TVR     # None: No signal smoothing
+  smooth: sq    # None: No signal smoothing
              # FFT: Fast Fourier Transform
              # TVR: Total Variantion Regularization
              # SG: Savitzky–Golay Filter
