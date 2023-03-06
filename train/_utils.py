@@ -249,7 +249,7 @@ def train(
                     alpha=0.2,
                     no_opt_steps=100
                 )
-                residual[j, :, i] = torch.tensor(item_denoise[1:])
+                residual[j, :, i] = torch.tensor(item_denoise[:(len(item_denoise)-1)])
         optimizer.zero_grad()  # Clear gradients.
         # Baseline: loss if the model predicted the residual to be 0
         base = criterion(

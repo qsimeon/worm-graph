@@ -19,17 +19,17 @@ def plot_figures(
     if neuron is None:
         neuron = config.visualize.neuron
 
-    # loss curves
-    plot_loss_curves(log_dir)
-
-    # plot model weights
-    plot_before_after_weights(log_dir)
+    # # loss curves
+    # plot_loss_curves(log_dir)
+    #
+    # # plot model weights
+    # plot_before_after_weights(log_dir)
 
     # calcium residuals
     plot_targets_predictions(log_dir, worm, neuron)
 
-    # scatterplot of modelled vs. real neuron activity
-    plot_correlation_scatterplot(log_dir, worm, neuron)
+    # # scatterplot of modelled vs. real neuron activity
+    # plot_correlation_scatterplot(log_dir, worm, neuron)
 
     # TODO add more plotting functions for different figures
 
@@ -42,3 +42,4 @@ if __name__ == "__main__":
     config = OmegaConf.load(root + "conf/visualize.yaml")
     print("config:", OmegaConf.to_yaml(config), end="\n\n")
     plot_figures(config)
+

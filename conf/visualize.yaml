@@ -1,4 +1,4 @@
 visualize:
-  log_dir: ../train/logs/2023_03_05_20_13-Uzel2022-NeuralCFC
+  log_dir: ../train/logs/2023_03_05_21_44-Uzel2022-NeuralCFC
   worm: worm0
   neuron: AVAL
