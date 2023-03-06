@@ -36,6 +36,7 @@ def get_dataset(config: DictConfig):
         end="\n\n",
     )
 
+    combined_dataset["smooth"] = smooth_method
     return combined_dataset
 
 

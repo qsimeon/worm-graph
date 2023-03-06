@@ -1,5 +1,6 @@
 from data._pkg import *
 
+
 class DiffTVR:
     def __init__(self, n: int, dx: float):
         """Differentiate with TVR.
@@ -220,15 +221,15 @@ class NeuralActivityDataset(torch.utils.data.Dataset):
     """
 
     def __init__(
-            self,
-            D,
-            neurons=None,
-            tau=1,
-            seq_len=17,
-            size=1000,
-            feature_mask=None,
-            reverse=False,
-            smooth="sg",
+        self,
+        D,
+        neurons=None,
+        tau=1,
+        seq_len=17,
+        size=1000,
+        feature_mask=None,
+        reverse=False,
+        smooth="sg",
     ):
         """
         Args:
@@ -264,10 +265,10 @@ class NeuralActivityDataset(torch.utils.data.Dataset):
         # feature checking
         if feature_mask is not None:
             assert len(feature_mask) == num_features, (
-                    "`feature_mask` must have shape (%s, 1)." % num_features
+                "`feature_mask` must have shape (%s, 1)." % num_features
             )
             assert (
-                    feature_mask.sum() > 0
+                feature_mask.sum() > 0
             ), "`feature_mask` must select at least 1 feature."
             self.feature_mask = feature_mask
         else:
@@ -283,7 +284,7 @@ class NeuralActivityDataset(torch.utils.data.Dataset):
         else:  # multiple signals
             if neurons is not None:
                 assert (
-                        np.array(neurons).size == 1
+                    np.array(neurons).size == 1
                 ), "Only select 1 neuron when using > 1 signals as features."
                 self.neurons = np.array(neurons)  # use the single neuron given
             else:
@@ -331,8 +332,8 @@ class NeuralActivityDataset(torch.utils.data.Dataset):
             # data samples: input, X_tau and target, Y_tau
             X_tau = self.D[start:end, self.neurons, self.feature_mask]
             Y_tau = self.D[
-                    start + self.tau: end + self.tau, self.neurons, self.feature_mask
-                    ]
+                start + self.tau : end + self.tau, self.neurons, self.feature_mask
+            ]
 
             Res_tau = self.__smooth_data(X_tau, Y_tau, self.smooth)
 
@@ -361,13 +362,13 @@ class NeuralActivityDataset(torch.utils.data.Dataset):
     def __smooth_data(self, x_tau, y_tau, smooth):
         residual_origin = y_tau - x_tau
         residual = torch.zeros_like(residual_origin)
-        if str(smooth).lower() == 'sg':
+        if str(smooth).lower() == "sg":
             for i in range(0, residual_origin.shape[1]):
                 temp = np.array(residual_origin[:, i])
                 temp.reshape(len(temp), 1)
-                item_denoise = savgol_filter(temp, 5, 3, mode='nearest')
+                item_denoise = savgol_filter(temp, 5, 3, mode="nearest")
                 residual[:, i] = torch.tensor(item_denoise)
-        elif str(smooth).lower() == 'tvr':
+        elif str(smooth).lower() == "tvr":
             n = residual_origin.shape[0]
             diff_tvr = DiffTVR(n, 1)
             for i in range(0, residual_origin.shape[1]):
@@ -379,24 +380,22 @@ class NeuralActivityDataset(torch.utils.data.Dataset):
                     alpha=0.005,
                     no_opt_steps=100,
                 )
-                residual[:, i] = torch.tensor(
-                    item_denoise[: (len(item_denoise) - 1)]
-                )
+                residual[:, i] = torch.tensor(item_denoise[: (len(item_denoise) - 1)])
         # TODO: implement Fast Fourier Transform
-        elif str(smooth).lower() == 'fft':
+        elif str(smooth).lower() == "fft":
             pass
-        else: # no smoothing process
+        else:  # no smoothing process
             return residual_origin
         return residual
 
 
 class CElegansConnectome(InMemoryDataset):
     def __init__(
-            self,
-            root=os.path.join(ROOT_DIR, "data"),
-            transform=None,
-            pre_transform=None,
-            pre_filter=None,
+        self,
+        root=os.path.join(ROOT_DIR, "data"),
+        transform=None,
+        pre_transform=None,
+        pre_filter=None,
     ):
         """
         Defines CElegansConnectome as a subclass of a PyG InMemoryDataset.
@@ -481,9 +480,9 @@ def pick_worm(dataset, wormid):
         dataset = load_dataset(dataset)
     else:
         assert (
-                isinstance(dataset, dict)
-                and ("name" in dataset.keys())
-                and ("worm0" in set(dataset["generator"]))
+            isinstance(dataset, dict)
+            and ("name" in dataset.keys())
+            and ("worm0" in set(dataset["generator"]))
         ), "Not a valid worm datset!"
     avail_worms = set(dataset["generator"])
     if isinstance(wormid, str) and wormid.startswith("worm"):
@@ -513,7 +512,7 @@ def load_dataset(name):
     Loads the dataset with the specified name.
     """
     assert (
-            name in VALID_DATASETS
+        name in VALID_DATASETS
     ), "Unrecognized dataset! Please pick one from:\n{}".format(list(VALID_DATASETS))
     loader = eval("load_" + name)
     return loader()

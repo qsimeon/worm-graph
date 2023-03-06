@@ -5,7 +5,6 @@ def train_model(
     model: torch.nn.Module,
     dataset: dict,
     config: DictConfig,
-    config_data: DictConfig,
     optimizer: Union[torch.optim.Optimizer, None] = None,
     shuffle: bool = True,
 ) -> tuple[torch.nn.Module, str]:
@@ -15,6 +14,8 @@ def train_model(
     """
     assert "worm0" in dataset, "Not a valid dataset object."
     # initialize
+    smth = dataset["smooth"]
+    dataset.pop("smooth")
     dataset_name = dataset["worm0"]["dataset"]
     model_class_name = model.__class__.__name__
     timestamp = datetime.now().strftime("%Y_%m_%d_%H_%M")
@@ -57,7 +58,7 @@ def train_model(
         tau=1,
         shuffle=True,
         reverse=True,
-        smooth=str(config_data.dataset.smooth),
+        smooth=smth,
     )
     # train for multiple cycles
     reset_epoch = 1
@@ -110,8 +111,7 @@ if __name__ == "__main__":
     root = os.path.abspath(os.path.dirname(os.getcwd()))
     root += "/"
     config = OmegaConf.load(root + "conf/train.yaml")
-    config_data = OmegaConf.load(root + "conf/dataset.yaml")
     print("config:", OmegaConf.to_yaml(config), end="\n\n")
     model = get_model(OmegaConf.load(root + "conf/model.yaml"))
     dataset = get_dataset(OmegaConf.load(root + "conf/dataset.yaml"))
-    model, log_dir = train_model(model, dataset, config, config_data)
+    model, log_dir = train_model(model, dataset, config)
