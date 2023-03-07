@@ -110,9 +110,9 @@ train:
 #  train_size: 128 # size (num. samples) of train data per worm
 #  test_size: 128 # size (num. samples) of test data per worm
 
-  seq_len: 47 # length(s) of sequences to train
+  seq_len: [19, 29, 47, 59, 71, 113, 199, 211, 457, 523] # length(s) of sequences to train
   k_splits: 5 # number of interleaved train/test splits per single worm dataset
   cycles: 5 # number of passes through a multi-worm dataset
   epochs: 1 # number passes through a single worm dataset per cycle
-  train_size: 1024 # total number of samples of train data
-  test_size: 1024 # total number of samples of test data
+  train_size: 4096 # total number of samples of train data
+  test_size: 2048 # total number of samples of test data
