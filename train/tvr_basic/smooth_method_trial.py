@@ -107,124 +107,124 @@ if __name__ == "__main__":
     plt.show()
 
 
-
-    plt.semilogy(fft_input)
-    plt.semilogy(fft_input * oneD_kernel)
-    plt.semilogy(oneD_kernel)  # frequencies are in Hertz (if we knew the real `dt`)
-    plt.xlabel("Hz")
-    plt.ylabel("Amplitude")
-    plt.title("trial")
-    plt.grid()
-    plt.show()
-    exit(0)
-
-
-
-
-
-
-
-
-
-    n = data_torch.shape[0]
-    frequencies = torch.fft.rfftfreq(n, d=1.0)
-    threshold = torch.abs(frequencies)[30]
-    oneD_kernel = torch.abs(frequencies) < threshold
-    fft_input = torch.fft.rfft(data_torch)
-    new_yf_clean = torch.fft.irfft(fft_input * oneD_kernel)
-
-
-    plt.semilogy(fft_input)
-    plt.semilogy(fft_input * oneD_kernel)
-    plt.semilogy(oneD_kernel)  # frequencies are in Hertz (if we knew the real `dt`)
-    plt.xlabel("Hz")
-    plt.ylabel("Amplitude")
-    plt.title("trial")
-    plt.grid()
-    plt.show()
-    exit(0)
-
-
-
-    # hyperparameter `alpha`: threshold
-    alpha = 0.01
-    n = data_torch.shape[0]
-    yf = torch.fft.rfft(data_torch)
-    xf = torch.fft.rfftfreq(n, 0.001)
-    yf_abs = np.abs(np.array(yf))
-    print(yf.shape)
-    print(yf_abs)
-    max_val = yf_abs.max(axis=0)
-    print(max_val)
-    indices = yf_abs > 10
-    print(indices.shape)
-
-    indices = indices.astype(int)
-    indices = torch.tensor(indices)
-    print(indices)
-    yf_clean = indices * yf
-    new_yf_clean = torch.fft.irfft(yf_clean)
-
-
-    plt.semilogy(xf, yf)
-    plt.semilogy(xf, yf_clean)
-    plt.xlabel("Hz")
-    plt.ylabel("Amplitude")
-    plt.grid()
-    plt.show()
-
-    plt.plot(data_torch)
-    plt.plot(new_yf_clean)
-    plt.title("calcium data")
-    plt.legend(["True", "FFT"])
-    # fig2.savefig('derivative.png')
-    plt.show()
-    exit(0)
-
-
-
-
-    # Add noise
-    data = data[0:1000]
-    n = len(data)
-    data_noisy = data
-
-    # # Plot true and noisy signal
-    # fig1 = plt.figure()
-    # plt.plot(data)
-    # plt.plot(data_noisy)
-    # plt.title("Signal")
-    # plt.legend(["True", "Noisy"])
+    #
+    # plt.semilogy(fft_input)
+    # plt.semilogy(fft_input * oneD_kernel)
+    # plt.semilogy(oneD_kernel)  # frequencies are in Hertz (if we knew the real `dt`)
+    # plt.xlabel("Hz")
+    # plt.ylabel("Amplitude")
+    # plt.title("trial")
+    # plt.grid()
     # plt.show()
-    # # exit(0)
-    # Derivative with TVR
-    diff_tvr = DiffTVR(n, 1)
-    (deriv_tvr, _) = diff_tvr.get_deriv_tvr(
-        data=data_noisy, deriv_guess=np.full(n + 1, 0.0), alpha=0.005, no_opt_steps=100
-    )
-
-    deriv_tvr = deriv_tvr[:-1]
-
-    # Derivative with FFT
-    # deriv_fft = fft(deriv_true, n)
-
-    deriv_sf = savgol_filter(deriv_true, 5, 3, mode="nearest")
-
-    # np.convolve
-    def moving_average(interval, windowsize):
-        window = np.ones(int(windowsize)) / float(windowsize)
-        re = np.convolve(interval, window, "same")
-        return re
-
-    deriv_con = moving_average(deriv_true, 5)
-
-    # Plot TVR derivative
-    fig2 = plt.figure()
-    plt.plot(deriv_true)
-    # plt.plot(deriv_tvr)
-    # plt.plot(deriv_sf)
-    plt.plot(deriv_con)
-    plt.title("Derivative")
-    plt.legend(["True", "CON"])
-    # fig2.savefig('derivative.png')
-    plt.show()
+    # exit(0)
+    #
+    #
+    #
+    #
+    #
+    #
+    #
+    #
+    #
+    # n = data_torch.shape[0]
+    # frequencies = torch.fft.rfftfreq(n, d=1.0)
+    # threshold = torch.abs(frequencies)[30]
+    # oneD_kernel = torch.abs(frequencies) < threshold
+    # fft_input = torch.fft.rfft(data_torch)
+    # new_yf_clean = torch.fft.irfft(fft_input * oneD_kernel)
+    #
+    #
+    # plt.semilogy(fft_input)
+    # plt.semilogy(fft_input * oneD_kernel)
+    # plt.semilogy(oneD_kernel)  # frequencies are in Hertz (if we knew the real `dt`)
+    # plt.xlabel("Hz")
+    # plt.ylabel("Amplitude")
+    # plt.title("trial")
+    # plt.grid()
+    # plt.show()
+    # exit(0)
+    #
+    #
+    #
+    # # hyperparameter `alpha`: threshold
+    # alpha = 0.01
+    # n = data_torch.shape[0]
+    # yf = torch.fft.rfft(data_torch)
+    # xf = torch.fft.rfftfreq(n, 0.001)
+    # yf_abs = np.abs(np.array(yf))
+    # print(yf.shape)
+    # print(yf_abs)
+    # max_val = yf_abs.max(axis=0)
+    # print(max_val)
+    # indices = yf_abs > 10
+    # print(indices.shape)
+    #
+    # indices = indices.astype(int)
+    # indices = torch.tensor(indices)
+    # print(indices)
+    # yf_clean = indices * yf
+    # new_yf_clean = torch.fft.irfft(yf_clean)
+    #
+    #
+    # plt.semilogy(xf, yf)
+    # plt.semilogy(xf, yf_clean)
+    # plt.xlabel("Hz")
+    # plt.ylabel("Amplitude")
+    # plt.grid()
+    # plt.show()
+    #
+    # plt.plot(data_torch)
+    # plt.plot(new_yf_clean)
+    # plt.title("calcium data")
+    # plt.legend(["True", "FFT"])
+    # # fig2.savefig('derivative.png')
+    # plt.show()
+    # exit(0)
+    #
+    #
+    #
+    #
+    # # Add noise
+    # data = data[0:1000]
+    # n = len(data)
+    # data_noisy = data
+    #
+    # # # Plot true and noisy signal
+    # # fig1 = plt.figure()
+    # # plt.plot(data)
+    # # plt.plot(data_noisy)
+    # # plt.title("Signal")
+    # # plt.legend(["True", "Noisy"])
+    # # plt.show()
+    # # # exit(0)
+    # # Derivative with TVR
+    # diff_tvr = DiffTVR(n, 1)
+    # (deriv_tvr, _) = diff_tvr.get_deriv_tvr(
+    #     data=data_noisy, deriv_guess=np.full(n + 1, 0.0), alpha=0.005, no_opt_steps=100
+    # )
+    #
+    # deriv_tvr = deriv_tvr[:-1]
+    #
+    # # Derivative with FFT
+    # # deriv_fft = fft(deriv_true, n)
+    #
+    # deriv_sf = savgol_filter(deriv_true, 5, 3, mode="nearest")
+    #
+    # # np.convolve
+    # def moving_average(interval, windowsize):
+    #     window = np.ones(int(windowsize)) / float(windowsize)
+    #     re = np.convolve(interval, window, "same")
+    #     return re
+    #
+    # deriv_con = moving_average(deriv_true, 5)
+    #
+    # # Plot TVR derivative
+    # fig2 = plt.figure()
+    # plt.plot(deriv_true)
+    # # plt.plot(deriv_tvr)
+    # # plt.plot(deriv_sf)
+    # plt.plot(deriv_con)
+    # plt.title("Derivative")
+    # plt.legend(["True", "CON"])
+    # # fig2.savefig('derivative.png')
+    # plt.show()
