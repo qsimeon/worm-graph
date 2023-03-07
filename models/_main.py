@@ -22,6 +22,8 @@ def get_model(config: DictConfig) -> torch.nn.Module:
         model = DenseCFC(**args).double()
     elif config.model.type == "linear_nn":
         model = LinearNN(**args).double()
+    # elif config.model.type == "simple_linear":
+    #     model = SimpleLinear(**args).double()
     else:  # default to "linear" model
         model = LinearNN(**args).double()
     print("Model:", model, end="\n\n")

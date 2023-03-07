@@ -1,5 +1,5 @@
 from data._pkg import *
-
+import matplotlib.pyplot as plt
 
 class DiffTVR:
     def __init__(self, n: int, dx: float):
@@ -363,11 +363,7 @@ class NeuralActivityDataset(torch.utils.data.Dataset):
         residual_origin = y_tau - x_tau
         residual = torch.zeros_like(residual_origin)
         if str(smooth).lower() == "sg":
-            for i in range(0, residual_origin.shape[1]):
-                temp = np.array(residual_origin[:, i])
-                temp.reshape(len(temp), 1)
-                item_denoise = savgol_filter(temp, 5, 3, mode="nearest")
-                residual[:, i] = torch.tensor(item_denoise)
+            residual = savgol_filter(residual_origin, 5, 3, mode="nearest", axis=-1)
         elif str(smooth).lower() == "tvr":
             n = residual_origin.shape[0]
             diff_tvr = DiffTVR(n, 1)
@@ -381,9 +377,16 @@ class NeuralActivityDataset(torch.utils.data.Dataset):
                     no_opt_steps=100,
                 )
                 residual[:, i] = torch.tensor(item_denoise[: (len(item_denoise) - 1)])
-        # TODO: implement Fast Fourier Transform
         elif str(smooth).lower() == "fft":
-            pass
+            data_torch = residual_origin
+            max_time, num_neurons = data_torch.shape
+            frequencies = torch.fft.rfftfreq(max_time, d=1.0)
+            threshold = torch.abs(frequencies)[int(frequencies.shape[0] * 0.1)]  # picks first 30 frequencies (can use value > 30 to smooth less)
+            oneD_kernel = torch.abs(frequencies) < threshold
+            fft_input = torch.fft.rfftn(data_torch, dim=0)
+            oneD_kernel = oneD_kernel.repeat(302, 1).T
+            filtered_data_torch = torch.fft.irfftn(fft_input * oneD_kernel, dim=0)
+            residual[1:] = filtered_data_torch
         else:  # no smoothing process
             return residual_origin
         return residual
