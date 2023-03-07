@@ -9,7 +9,7 @@ def plot_figures(
 ) -> None:
     """
     Plots the loss curves and other basic plots from the results of traininig
-    a model on a worm neural activity dataset. Saves figures to the directory `log_dir`.
+    a model on a worm neural activity dataset. Save figures to the directory `log_dir`.
     """
     # get default hyperparams for plotting
     if log_dir is None:

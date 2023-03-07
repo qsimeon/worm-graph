@@ -4,7 +4,7 @@
 @author: ivy
 @contact: ivyivyzhao77@gmail.com
 @software: PyCharm 2022.3
-@file: tvrd.py
+@file: smooth_method_trial.py
 @time: 2023/3/3 16:36
 """
 
@@ -22,7 +22,7 @@ from data._main import *
 from govfunc._utils import *
 from numpy.fft import fft
 from scipy.signal import savgol_filter
-
+from torch.fft import fft
 
 def derivative(y, t):
     """
@@ -83,32 +83,88 @@ if __name__ == "__main__":
 
     ##########################################
     # here we just use one worm
-    x = worm[0]["calcium_data"]
-    # plt.plot(x[:, 2])
-    # plt.show()
-    # exit()
-    x = x.T
-    data = x[2].reshape(len(x[2]), 1)
-    data = data.T
+    data = worm[0]["calcium_data"]
+    data_torch = torch.tensor(data)
 
-    # True derivative
-    dx = derivative(data.T, 0).T
+    print(data_torch.shape)
 
-    data = data.T
-    dx = dx.T
+    print("---")
+    print(data_torch.shape)
 
-    data = data.reshape(
-        data.shape[0],
-    )
-    dx = dx.reshape(
-        dx.shape[0],
-    )
+    max_time, num_neurons = data_torch.shape
+    frequencies = torch.fft.rfftfreq(max_time, d=1.0)
+    threshold = torch.abs(frequencies)[30]  # picks first 30 frequencies (can use value > 30 to smooth less)
+    oneD_kernel = torch.abs(frequencies) < threshold
+    fft_input = torch.fft.rfftn(data_torch, dim=0)
+    oneD_kernel = oneD_kernel.repeat(302, 1).T
+    filtered_data_torch = torch.fft.irfftn(fft_input * oneD_kernel, dim=0)
+    plt.semilogy(fft_input)
+    plt.semilogy(fft_input * oneD_kernel)
+    plt.semilogy(oneD_kernel)  # frequencies are in Hertz (if we knew the real `dt`)
+    plt.xlabel("Hz")
+    plt.ylabel("Amplitude")
+    plt.title("trial")
+    plt.grid()
+    plt.show()
+    exit(0)
 
-    data = np.array(data[1:])
-    deriv_true = np.array(dx)
+    n = data_torch.shape[0]
+    frequencies = torch.fft.rfftfreq(n, d=1.0)
+    threshold = torch.abs(frequencies)[30]
+    oneD_kernel = torch.abs(frequencies) < threshold
+    fft_input = torch.fft.rfft(data_torch)
+    new_yf_clean = torch.fft.irfft(fft_input * oneD_kernel)
 
-    print(data.shape)
-    print(dx.shape)
+
+    plt.semilogy(fft_input)
+    plt.semilogy(fft_input * oneD_kernel)
+    plt.semilogy(oneD_kernel)  # frequencies are in Hertz (if we knew the real `dt`)
+    plt.xlabel("Hz")
+    plt.ylabel("Amplitude")
+    plt.title("trial")
+    plt.grid()
+    plt.show()
+    exit(0)
+
+
+
+    # hyperparameter `alpha`: threshold
+    alpha = 0.01
+    n = data_torch.shape[0]
+    yf = torch.fft.rfft(data_torch)
+    xf = torch.fft.rfftfreq(n, 0.001)
+    yf_abs = np.abs(np.array(yf))
+    print(yf.shape)
+    print(yf_abs)
+    max_val = yf_abs.max(axis=0)
+    print(max_val)
+    indices = yf_abs > 10
+    print(indices.shape)
+
+    indices = indices.astype(int)
+    indices = torch.tensor(indices)
+    print(indices)
+    yf_clean = indices * yf
+    new_yf_clean = torch.fft.irfft(yf_clean)
+
+
+    plt.semilogy(xf, yf)
+    plt.semilogy(xf, yf_clean)
+    plt.xlabel("Hz")
+    plt.ylabel("Amplitude")
+    plt.grid()
+    plt.show()
+
+    plt.plot(data_torch)
+    plt.plot(new_yf_clean)
+    plt.title("calcium data")
+    plt.legend(["True", "FFT"])
+    # fig2.savefig('derivative.png')
+    plt.show()
+    exit(0)
+
+
+
 
     # Add noise
     data = data[0:1000]
