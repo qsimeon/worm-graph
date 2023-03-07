@@ -98,6 +98,16 @@ if __name__ == "__main__":
     fft_input = torch.fft.rfftn(data_torch, dim=0)
     oneD_kernel = oneD_kernel.repeat(302, 1).T
     filtered_data_torch = torch.fft.irfftn(fft_input * oneD_kernel, dim=0)
+
+    plt.plot(data_torch[:, 26])
+    plt.plot(filtered_data_torch[:, 26])
+    plt.title("calcium data")
+    plt.legend(["True", "FFT"])
+    # fig2.savefig('derivative.png')
+    plt.show()
+
+
+
     plt.semilogy(fft_input)
     plt.semilogy(fft_input * oneD_kernel)
     plt.semilogy(oneD_kernel)  # frequencies are in Hertz (if we knew the real `dt`)
@@ -107,6 +117,14 @@ if __name__ == "__main__":
     plt.grid()
     plt.show()
     exit(0)
+
+
+
+
+
+
+
+
 
     n = data_torch.shape[0]
     frequencies = torch.fft.rfftfreq(n, d=1.0)
