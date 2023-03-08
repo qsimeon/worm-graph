@@ -27,10 +27,13 @@ def transpose_2d(data):
 
 
 # extract .tar.gz file
-filename = "exported_data"
-if not os.path.exists(filename):
-    tf = tarfile.open(filename + ".tar.gz")
-    tf.extractall(filename)
+filename = "exported_data_unc31"
+tf = tarfile.open(filename + ".tar.gz")
+tf.extractall(filename)
+
+
+
+
 
 gcamp = []
 label = []

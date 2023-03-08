@@ -215,7 +215,8 @@ def smooth_data_preprocess(calcium_data, smooth_method, dt=1.0):
     # initialize the size for smooth_calcium_data
     smooth_ca_data = torch.zeros_like(calcium_data)
     # calculate original residual
-    residual = calcium_data[1:] - calcium_data[:n - 1]
+    residual = torch.zeros_like(calcium_data)
+    residual[1:] = calcium_data[1:] - calcium_data[:n - 1]
     if str(smooth_method).lower() == "sg" or smooth_method == None:
         smooth_ca_data = savgol_filter(calcium_data, 5, 3, mode="nearest", axis=-1)
     elif str(smooth_method).lower() == "fft":
@@ -245,7 +246,8 @@ def smooth_data_preprocess(calcium_data, smooth_method, dt=1.0):
         print("Wrong Input, check the config/preprocess.yml")
         exit(0)
     m = smooth_ca_data.shape[0]
-    residual_smooth_ca_data = smooth_ca_data[1:] - smooth_ca_data[:m - 1]
+    residual_smooth_ca_data = torch.zeros_like(residual)
+    residual_smooth_ca_data[1:] = smooth_ca_data[1:] - smooth_ca_data[:m - 1]
     return smooth_ca_data, residual, residual_smooth_ca_data
 
 
@@ -455,9 +457,9 @@ def reshape_calcium_data(single_worm_dataset):
     # create the new calcium data structure
     # len(residual) = len(data) - 1
     standard_calcium_data = torch.zeros(max_time, 302, dtype=origin_calcium_data.dtype)
-    standard_residual_calcium = torch.zeros(max_time-1, 302, dtype=residual_calcium.dtype)
+    standard_residual_calcium = torch.zeros(max_time, 302, dtype=residual_calcium.dtype)
     standard_smooth_calcium_data = torch.zeros(max_time, 302, dtype=smooth_calcium_data.dtype)
-    standard_residual_smooth_calcium = torch.zeros(max_time-1, 302, dtype=residual_smooth_calcium.dtype)
+    standard_residual_smooth_calcium = torch.zeros(max_time, 302, dtype=residual_smooth_calcium.dtype)
     # fill the new calcium data structure with data from named neurons
     slot_to_named_neuron = dict((k, v) for k, v in enumerate(neurons_302))
     for slot, neuron in slot_to_named_neuron.items():
@@ -494,7 +496,7 @@ def reshape_calcium_data(single_worm_dataset):
     single_worm_dataset.update(
         {
             "calcium_data": standard_calcium_data,
-            "smooth_calcium": standard_smooth_calcium_data,
+            "smooth_calcium_data": standard_smooth_calcium_data,
             "residual_calcium": standard_residual_calcium,
             "residual_smooth_calcium": standard_residual_smooth_calcium,
             "named_neurons_mask": named_neurons_mask,

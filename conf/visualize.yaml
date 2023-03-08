@@ -1,4 +1,4 @@
 visualize:
-  log_dir: ../train/logs/2023_03_07_22_11-Uzel2022-LinearNN
+  log_dir: ../train/logs/2023_03_08_10_29-Uzel2022-LinearNN
   worm: worm0
   neuron: AVAL

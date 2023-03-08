@@ -4,10 +4,14 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
+<<<<<<< Updated upstream
     <list default="true" id="9604bd16-0a50-48f0-95b8-a59c5c782330" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/preprocess/_utils.py" beforeDir="false" afterPath="$PROJECT_DIR$/preprocess/_utils.py" afterDir="false" />
     </list>
+=======
+    <list default="true" id="9604bd16-0a50-48f0-95b8-a59c5c782330" name="Changes" comment="" />
+>>>>>>> Stashed changes
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -236,8 +240,12 @@
       <workItem from="1678073660072" duration="3809000" />
       <workItem from="1678115075186" duration="10285000" />
       <workItem from="1678125750258" duration="12153000" />
+<<<<<<< Updated upstream
       <workItem from="1678201834145" duration="32776000" />
       <workItem from="1678288602417" duration="392000" />
+=======
+      <workItem from="1678201834145" duration="33110000" />
+>>>>>>> Stashed changes
     </task>
     <servers />
   </component>

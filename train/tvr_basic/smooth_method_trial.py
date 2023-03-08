@@ -72,10 +72,10 @@ if __name__ == "__main__":
     # n = dataset["worm0"]["calcium_data"].shape[0]
     # t = dataset["worm0"]["calcium_data"][1:] - dataset["worm0"]["calcium_data"][:(n-1)]
     # print("zzzz", t.shape)
-    print(dataset["worm0"]["calcium_data"][1:] - dataset["worm0"]["calcium_data"][:(dataset["worm0"]["calcium_data"].shape[0]-1)] == dataset["worm0"]["residual_calcium"])
+    print(dataset["worm0"]["calcium_data"][1:] - dataset["worm0"]["calcium_data"][:-1] == dataset["worm0"]["residual_calcium"][1:])
 
 
-
+    exit(0)
 
 
     ########### neuronal trials ##################
@@ -100,6 +100,14 @@ if __name__ == "__main__":
     # here we just use one worm
     data = worm[0]["calcium_data"]
     data_torch = torch.tensor(data)
+
+    print(worm[0].keys())
+    # dict_keys(['dataset', 'worm', 'calcium_data', 'smooth_calcium_data', 'residual_calcium', 'residual_smooth_calcium', 'neuron_to_idx', 'idx_to_neuron', 'max_time', 'num_neurons', 'num_named_neurons', 'num_unknown_neurons', 'named_neurons_mask', 'unknown_neurons_mask', 'neurons_mask', 'named_neuron_to_idx', 'idx_to_named_neuron', 'unknown_neuron_to_idx', 'idx_to_unknown_neuron', 'slot_to_named_neuron', 'named_neuron_to_slot', 'slot_to_unknown_neuron', 'unknown_neuron_to_slot', 'slot_to_neuron', 'neuron_to_slot'])
+    exit(0)
+
+
+
+
 
     print(data_torch.shape)
 
