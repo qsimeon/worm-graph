@@ -1711,3 +1711,11 @@ def pickle_Flavell2023(transform, smooth_method="fft"):
     Flavell2023 = pickle.load(pickle_in)
     print(Flavell2023.keys(), end="\n\n")
     return data_dict
+
+
+def pickle_Leifer2023(transform, smooth_method="fft"):
+
+
+
+    data_dict = 0
+    return
