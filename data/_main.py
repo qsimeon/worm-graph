@@ -11,7 +11,6 @@ def get_dataset(config: DictConfig):
         dataset_names = [config.dataset.name]
     else:
         dataset_names = sorted(list(config.dataset.name))
-    smooth_method = config.dataset.smooth
     # load the dataset(s)
     combined_dataset = dict()
     for dataset_name in dataset_names:
@@ -27,16 +26,13 @@ def get_dataset(config: DictConfig):
                 combined_dataset[worm]["dataset"] = "_".join(dataset_names)
     # display the dataset
     print(
-        "Chosen dataset(s): {}\nNum. worms: {}\nWorm names: {}\nSmoothing Method: {}".format(
+        "Chosen dataset(s): {}\nNum. worms: {}\nWorm names: {}\n".format(
             dataset_names,
             len(combined_dataset),
             list(combined_dataset.keys()),
-            smooth_method,
         ),
         end="\n\n",
     )
-
-    combined_dataset["smooth"] = smooth_method
     return combined_dataset
 
 

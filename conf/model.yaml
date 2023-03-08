@@ -1,6 +1,6 @@
 model:
-  type: neural_cfc # options: linear, dense_cfc, neural_cfc, lstm, vae_lstm
+  type: linear # options: linear, dense_cfc, neural_cfc, lstm, vae_lstm
   input_size: 302 # fixed
   hidden_size: 64 # options: int > 0
   num_layers: 1 # fixed
-  loss: l1 # options: MSE, Huber, L1
+  loss: mse # options: MSE, Huber, L1

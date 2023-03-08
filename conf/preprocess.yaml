@@ -3,3 +3,4 @@ preprocess:
   zipfile: opensource_data.zip
   dataset: all
   raw_dir: data/raw
+  smooth: fft    # None: No signal smoothing # FFT: Fast Fourier Transform # TVR: Total Variantion Regularization # SG: Savitzky–Golay Filter

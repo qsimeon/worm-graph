@@ -323,7 +323,6 @@ def split_train_test(
     tau: int = 1,
     shuffle: bool = True,
     reverse: bool = True,
-    **kwargs,
 ) -> tuple[
     torch.utils.data.DataLoader,
     torch.utils.data.DataLoader,
@@ -369,7 +368,6 @@ def split_train_test(
             reverse=reverse,
             # keep per worm train size constant and dataset balanced
             size=train_size // train_div,
-            smooth=str(*kwargs.values()),
         )
         for seq in seq_len
         for dset in train_splits
@@ -383,7 +381,6 @@ def split_train_test(
             reverse=reverse,
             # keep per worm test size constant and dataset balanced
             size=test_size // test_div,
-            smooth=str(*kwargs.values()),
         )
         for seq in seq_len
         for dset in test_splits
@@ -452,7 +449,6 @@ def optimize_model(
                 tau: int,
                 shuffle: bool,
                 reverse: bool,
-                smooth: str
             }
     """
     # create the feature mask

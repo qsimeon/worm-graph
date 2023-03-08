@@ -59,11 +59,26 @@ if __name__ == "__main__":
     # n = len(data)
     # data_noisy = data + np.random.normal(0, 0.05, n)
 
-    config = OmegaConf.load("../../conf/dataset.yaml")
+    config = OmegaConf.load("dataset.yaml")
     print("config:", OmegaConf.to_yaml(config), end="\n\n")
     dataset = get_dataset(config)
     print("----dataset prepared------\n")
 
+    # proof on data preprocessing
+    print(dataset["worm0"].keys())
+    print(dataset["worm0"]["calcium_data"].shape, dataset["worm0"]["residual_calcium"].shape)
+    ### 'calcium_data', 'smooth_calcium_data', 'residual_calcium', 'residual_smooth_calcium',
+
+    # n = dataset["worm0"]["calcium_data"].shape[0]
+    # t = dataset["worm0"]["calcium_data"][1:] - dataset["worm0"]["calcium_data"][:(n-1)]
+    # print("zzzz", t.shape)
+    print(dataset["worm0"]["calcium_data"][1:] - dataset["worm0"]["calcium_data"][:(dataset["worm0"]["calcium_data"].shape[0]-1)] == dataset["worm0"]["residual_calcium"])
+
+
+
+
+
+    ########### neuronal trials ##################
     # take three worms as an example
     numOfWorm = 3
     worm = []
@@ -91,13 +106,17 @@ if __name__ == "__main__":
     print("---")
     print(data_torch.shape)
 
+    # FFT
+    filtered_data_torch = torch.zeros_like(data_torch)
     max_time, num_neurons = data_torch.shape
     frequencies = torch.fft.rfftfreq(max_time, d=1.0)
     threshold = torch.abs(frequencies)[30]  # picks first 30 frequencies (can use value > 30 to smooth less)
     oneD_kernel = torch.abs(frequencies) < threshold
     fft_input = torch.fft.rfftn(data_torch, dim=0)
+    print(fft_input.shape, oneD_kernel.shape)
     oneD_kernel = oneD_kernel.repeat(302, 1).T
-    filtered_data_torch = torch.fft.irfftn(fft_input * oneD_kernel, dim=0)
+    filtered_data_torch[0:] = torch.fft.irfftn(fft_input * oneD_kernel, dim=0)
+    print(filtered_data_torch.shape, "-----------")
 
     plt.plot(data_torch[:, 26])
     plt.plot(filtered_data_torch[:, 26])
@@ -107,7 +126,6 @@ if __name__ == "__main__":
     plt.show()
 
 
-    #
     # plt.semilogy(fft_input)
     # plt.semilogy(fft_input * oneD_kernel)
     # plt.semilogy(oneD_kernel)  # frequencies are in Hertz (if we knew the real `dt`)
@@ -117,15 +135,11 @@ if __name__ == "__main__":
     # plt.grid()
     # plt.show()
     # exit(0)
-    #
-    #
-    #
-    #
-    #
-    #
-    #
-    #
-    #
+
+
+
+
+    # # a piece of wrong code -- wait to debug
     # n = data_torch.shape[0]
     # frequencies = torch.fft.rfftfreq(n, d=1.0)
     # threshold = torch.abs(frequencies)[30]
@@ -181,9 +195,8 @@ if __name__ == "__main__":
     # plt.show()
     # exit(0)
     #
-    #
-    #
-    #
+
+
     # # Add noise
     # data = data[0:1000]
     # n = len(data)

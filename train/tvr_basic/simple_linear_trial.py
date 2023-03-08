@@ -51,3 +51,10 @@ if __name__ == "__main__":
     data = worm[0]["calcium_data"]
     data_torch = torch.tensor(data)
 
+
+    n = data.shape[0]
+
+    print((data[1:]-data[:n-1]).shape)
+
+
+
