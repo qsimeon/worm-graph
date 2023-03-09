@@ -2,11 +2,11 @@ from train._utils import *
 
 
 def train_model(
-    model: torch.nn.Module,
-    dataset: dict,
-    config: DictConfig,
-    optimizer: Union[torch.optim.Optimizer, None] = None,
-    shuffle: bool = True,
+        model: torch.nn.Module,
+        dataset: dict,
+        config: DictConfig,
+        optimizer: Union[torch.optim.Optimizer, None] = None,
+        shuffle: bool = True,
 ) -> tuple[torch.nn.Module, str]:
     """
     Trains a model on a multi-worm dataset. Returns the trained model

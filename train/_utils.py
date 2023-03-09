@@ -3,11 +3,11 @@ from govfunc._utils import *
 
 
 def train(
-    loader: torch.utils.data.DataLoader,
-    model: torch.nn.Module,
-    mask: torch.Tensor,
-    optimizer: torch.optim.Optimizer,
-    no_grad: bool = False,
+        loader: torch.utils.data.DataLoader,
+        model: torch.nn.Module,
+        mask: torch.Tensor,
+        optimizer: torch.optim.Optimizer,
+        no_grad: bool = False,
 ) -> dict:
     """Train a model.
 
@@ -17,7 +17,7 @@ def train(
 
     Args:
         loader: training set dataloader
-        model: instance of a NetworkLSTM
+        model: instance of a Network
         mask: selects indices of named neurons with data
         optimizer: gradient descent optimizer loaded with model params
 
@@ -37,14 +37,14 @@ def train(
         optimizer.zero_grad()  # Clear gradients.
         # Baseline: loss if the model predicted the residual to be 0
         base = criterion(torch.zeros_like(Y_train[:, :, mask]), Y_train[:, :, mask]) / (
-            tau + 1
+                tau + 1
         )
         # Train
         Y_tr = model(X_train)  # Forward pass.
         Y_tr.retain_grad()
         Y_tr.register_hook(lambda grad: grad * mask.double())
         loss = criterion(Y_tr[:, :, mask], Y_train[:, :, mask]) / (
-            tau + 1
+                tau + 1
         )  # Compute training loss.
         loss.backward()  # Derive gradients.
         if no_grad:
@@ -66,9 +66,9 @@ def train(
 
 @torch.no_grad()
 def test(
-    loader: torch.utils.data.DataLoader,
-    model: torch.nn.Module,
-    mask: torch.Tensor,
+        loader: torch.utils.data.DataLoader,
+        model: torch.nn.Module,
+        mask: torch.Tensor,
 ) -> dict:
     """Evaluate a model.
 
@@ -97,12 +97,12 @@ def test(
 
         # Baseline: loss if the model predicted the residual to be 0
         base = criterion(torch.zeros_like(Y_test[:, :, mask]), Y_test[:, :, mask]) / (
-            tau + 1
+                tau + 1
         )
         # Test
         Y_te = model(X_test)  # Forward pass.
         loss = criterion(Y_te[:, :, mask], Y_test[:, :, mask]) / (
-            tau + 1
+                tau + 1
         )  # Compute the validation loss.
         # Store test and baseline loss.
         base_loss += base.detach().item()
@@ -118,14 +118,14 @@ def test(
 
 
 def split_train_test(
-    data: torch.Tensor,
-    k_splits: int = 2,
-    seq_len: Union[int, list] = 101,
-    train_size: int = 1024,
-    test_size: int = 1024,
-    tau: int = 1,
-    shuffle: bool = True,
-    reverse: bool = True,
+        data: torch.Tensor,
+        k_splits: int = 2,
+        seq_len: Union[int, list] = 101,
+        train_size: int = 1024,
+        test_size: int = 1024,
+        tau: int = 1,
+        shuffle: bool = True,
+        reverse: bool = True,
 ) -> tuple[
     torch.utils.data.DataLoader,
     torch.utils.data.DataLoader,
@@ -230,14 +230,14 @@ def split_train_test(
 
 
 def optimize_model(
-    data: torch.Tensor,
-    model: torch.nn.Module,
-    mask: Union[torch.tensor, None] = None,
-    optimizer: Union[torch.optim.Optimizer, None] = None,
-    start_epoch: int = 1,
-    learn_rate: float = 0.01,
-    num_epochs: int = 100,
-    **kwargs,
+        data: torch.Tensor,
+        model: torch.nn.Module,
+        mask: Union[torch.tensor, None] = None,
+        optimizer: Union[torch.optim.Optimizer, None] = None,
+        start_epoch: int = 1,
+        learn_rate: float = 0.01,
+        num_epochs: int = 100,
+        **kwargs,
 ) -> tuple[torch.nn.Module, dict]:
     """
     Creates train and test data loaders from the given dataset
@@ -321,9 +321,9 @@ def optimize_model(
 
 
 def make_predictions(
-    model: torch.nn.Module,
-    dataset: dict,
-    log_dir: str,
+        model: torch.nn.Module,
+        dataset: dict,
+        log_dir: str,
 ) -> None:
     """Make predicitons on a dataset with a trained model.
 
@@ -382,7 +382,7 @@ def make_predictions(
 
 
 def model_predict(
-    model: torch.nn.Module, calcium_data: torch.Tensor
+        model: torch.nn.Module, calcium_data: torch.Tensor
 ) -> tuple[torch.Tensor, torch.Tensor]:
     """
     Makes predictions for all neurons in the
@@ -393,7 +393,7 @@ def model_predict(
     # model in/out
     calcium_data = calcium_data.squeeze()
     assert (
-        calcium_data.ndim == 2 and calcium_data.size(1) == NUM_NEURONS
+            calcium_data.ndim == 2 and calcium_data.size(1) == NUM_NEURONS
     ), "Calcium data has incorrect shape!"
 
     input = calcium_data.to(DEVICE)
@@ -416,7 +416,7 @@ def gnn_train_val_mask(graph, train_ratio=0.7, train_mask=None):
     # create the train and validation masks
     if train_mask is not None:
         assert (
-            train_mask.ndim == 1 and train_mask.size(0) == graph.num_nodes
+                train_mask.ndim == 1 and train_mask.size(0) == graph.num_nodes
         ), "Invalid train_mask provided."
     else:
         train_mask = torch.rand(graph.num_nodes) < train_ratio
