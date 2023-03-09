@@ -2,11 +2,11 @@ from train._utils import *
 
 
 def train_model(
-        model: torch.nn.Module,
-        dataset: dict,
-        config: DictConfig,
-        optimizer: Union[torch.optim.Optimizer, None] = None,
-        shuffle: bool = True,
+    model: torch.nn.Module,
+    dataset: dict,
+    config: DictConfig,
+    optimizer: Union[torch.optim.Optimizer, None] = None,
+    shuffle: bool = True,
 ) -> tuple[torch.nn.Module, str]:
     """
     Trains a model on a multi-worm dataset. Returns the trained model
@@ -44,7 +44,7 @@ def train_model(
         "centered_train_losses": [],
         "centered_test_losses": [],
     }
-    # train the model for multiple cycles
+    # train the model for multiple cyles
     kwargs = dict(
         optimizer=optimizer,
         num_epochs=config.train.epochs,
@@ -57,19 +57,16 @@ def train_model(
         shuffle=True,
         reverse=True,
     )
-    smooth_method = config.train.type_select
-    if str(smooth_method).lower() == "smooth":
+    # choose whether to use original or smoothed calcium data
+    if config.train.smooth_data:
         key_data = "smooth_calcium_data"
-        key_target = "residual_smooth_calcium"
     else:
         key_data = "calcium_data"
-        key_target = "residual_calcium"
     # train for multiple cycles
     reset_epoch = 1
     for i, (worm, single_worm_dataset) in enumerate(dataset_items):
-        data_input = torch.stack((single_worm_dataset[key_data], single_worm_dataset[key_target]), 2)
         model, log = optimize_model(
-            data=data_input,
+            data=single_worm_dataset[key_data],
             model=model,
             mask=single_worm_dataset["named_neurons_mask"],
             start_epoch=reset_epoch,
@@ -107,16 +104,14 @@ def train_model(
         header=True,
     )
     # make predictions with last saved model
-    make_predictions(model, dataset, smooth_method, log_dir)
+    make_predictions(model, dataset, log_dir)
     # returned trained model and a path to log directory
     return model, log_dir
 
 
 if __name__ == "__main__":
-    root = os.path.abspath(os.path.dirname(os.getcwd()))
-    root += "/"
-    config = OmegaConf.load(root + "conf/train.yaml")
+    config = OmegaConf.load("conf/train.yaml")
     print("config:", OmegaConf.to_yaml(config), end="\n\n")
-    model = get_model(OmegaConf.load(root + "conf/model.yaml"))
-    dataset = get_dataset(OmegaConf.load(root + "conf/dataset.yaml"))
+    model = get_model(OmegaConf.load("conf/model.yaml"))
+    dataset = get_dataset(OmegaConf.load("conf/dataset.yaml"))
     model, log_dir = train_model(model, dataset, config)

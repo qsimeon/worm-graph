@@ -116,4 +116,4 @@ train:
   epochs: 1 # number passes through a single worm dataset per cycle
   train_size: 4096 # total number of samples of train data
   test_size: 2048 # total number of samples of test data
-  type_select: smooth # [smooth, origin]  choose whether to use the smoothed/original calcium data as model input
+  smooth_data: True # choose whether to use the smoothed/original calcium data as model input

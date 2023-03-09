@@ -2,203 +2,6 @@ from train._pkg import *
 from govfunc._utils import *
 
 
-# new method TVR for derivative smoothing
-class DiffTVR:
-    def __init__(self, n: int, dx: float):
-        """Differentiate with TVR.
-
-        Args:
-            n (int): Number of points in data.
-            dx (float): Spacing of data.
-        """
-        self.n = n
-        self.dx = dx
-
-        self.d_mat = self._make_d_mat()
-        self.a_mat = self._make_a_mat()
-        self.a_mat_t = self._make_a_mat_t()
-
-    def _make_d_mat(self) -> np.array:
-        """Make differentiation matrix with central differences. NOTE: not efficient!
-
-        Returns:
-            np.array: N x N+1
-        """
-
-        arr = np.zeros((self.n, self.n + 1))
-        for i in range(0, self.n):
-            arr[i, i] = -1.0
-            arr[i, i + 1] = 1.0
-        return arr / self.dx
-
-    # TODO: improve these matrix constructors
-    def _make_a_mat(self) -> np.array:
-        """Make integration matrix with trapezoidal rule. NOTE: not efficient!
-
-        Returns:
-            np.array: N x N+1
-        """
-        arr = np.zeros((self.n + 1, self.n + 1))
-        for i in range(0, self.n + 1):
-            if i == 0:
-                continue
-            for j in range(0, self.n + 1):
-                if j == 0:
-                    arr[i, j] = 0.5
-                elif j < i:
-                    arr[i, j] = 1.0
-                elif i == j:
-                    arr[i, j] = 0.5
-
-        return arr[1:] * self.dx
-
-    def _make_a_mat_t(self) -> np.array:
-        """Transpose of the integration matirx with trapezoidal rule. NOTE: not efficient!
-
-        Returns:
-            np.array: N+1 x N
-        """
-        smat = np.ones((self.n + 1, self.n))
-
-        cmat = np.zeros((self.n, self.n))
-        li = np.tril_indices(self.n)
-        cmat[li] = 1.0
-
-        dmat = np.diag(np.full(self.n, 0.5))
-
-        vec = np.array([np.full(self.n, 0.5)])
-        combmat = np.concatenate((vec, cmat - dmat))
-
-        return (smat - combmat) * self.dx
-
-    def make_en_mat(self, deriv_curr: np.array) -> np.array:
-        """Diffusion matrix
-
-        Args:
-            deriv_curr (np.array): Current derivative of length N+1
-
-        Returns:
-            np.array: N x N
-        """
-        eps = pow(10, -6)
-        vec = 1.0 / np.sqrt(pow(self.d_mat @ deriv_curr, 2) + eps)
-        return np.diag(vec)
-
-    def make_ln_mat(self, en_mat: np.array) -> np.array:
-        """Diffusivity term
-
-        Args:
-            en_mat (np.array): Result from make_en_mat
-
-        Returns:
-            np.array: N+1 x N+1
-        """
-        return self.dx * np.transpose(self.d_mat) @ en_mat @ self.d_mat
-
-    def make_gn_vec(
-        self, deriv_curr: np.array, data: np.array, alpha: float, ln_mat: np.array
-    ) -> np.array:
-        """Negative right hand side of linear problem
-
-        Args:
-            deriv_curr (np.array): Current derivative of size N+1
-            data (np.array): Data of size N
-            alpha (float): Regularization parameter
-            ln_mat (np.array): Diffusivity term from make_ln_mat
-
-        Returns:
-            np.array: Vector of length N+1
-        """
-        return (
-            self.a_mat_t @ self.a_mat @ deriv_curr
-            - self.a_mat_t @ (data - data[0])
-            + alpha * ln_mat @ deriv_curr
-        )
-
-    def make_hn_mat(self, alpha: float, ln_mat: np.array) -> np.array:
-        """Matrix in linear problem
-
-        Args:
-            alpha (float): Regularization parameter
-            ln_mat (np.array): Diffusivity term from make_ln_mat
-
-        Returns:
-            np.array: N+1 x N+1
-        """
-        return self.a_mat_t @ self.a_mat + alpha * ln_mat
-
-    def get_deriv_tvr_update(
-        self, data: np.array, deriv_curr: np.array, alpha: float
-    ) -> np.array:
-        """Get the TVR update
-
-        Args:
-            data (np.array): Data of size N
-            deriv_curr (np.array): Current deriv of size N+1
-            alpha (float): Regularization parameter
-
-        Returns:
-            np.array: Update vector of size N+1
-        """
-
-        n = len(data)
-
-        en_mat = self.make_en_mat(deriv_curr=deriv_curr)
-
-        ln_mat = self.make_ln_mat(en_mat=en_mat)
-
-        hn_mat = self.make_hn_mat(alpha=alpha, ln_mat=ln_mat)
-
-        gn_vec = self.make_gn_vec(
-            deriv_curr=deriv_curr, data=data, alpha=alpha, ln_mat=ln_mat
-        )
-
-        return solve(hn_mat, -gn_vec)
-
-    def get_deriv_tvr(
-        self,
-        data: np.array,
-        deriv_guess: np.array,
-        alpha: float,
-        no_opt_steps: int,
-        return_progress: bool = False,
-        return_interval: int = 1,
-    ) -> Tuple[np.array, np.array]:
-        """Get derivative via TVR over optimization steps
-
-        Args:
-            data (np.array): Data of size N
-            deriv_guess (np.array): Guess for derivative of size N+1
-            alpha (float): Regularization parameter
-            no_opt_steps (int): No. opt steps to run
-            return_progress (bool, optional): True to return derivative progress during optimization. Defaults to False.
-            return_interval (int, optional): Interval at which to store derivative if returning. Defaults to 1.
-
-        Returns:
-            Tuple[np.array,np.array]: First is the final derivative of size N+1, second is the stored derivatives if return_progress=True of size no_opt_steps+1 x N+1, else [].
-        """
-
-        deriv_curr = deriv_guess
-
-        if return_progress:
-            deriv_st = np.full((no_opt_steps + 1, len(deriv_guess)), 0)
-        else:
-            deriv_st = np.array([])
-
-        for opt_step in range(0, no_opt_steps):
-            update = self.get_deriv_tvr_update(
-                data=data, deriv_curr=deriv_curr, alpha=alpha
-            )
-
-            deriv_curr += update
-
-            if return_progress:
-                if opt_step % return_interval == 0:
-                    deriv_st[int(opt_step / return_interval)] = deriv_curr
-
-        return (deriv_curr, deriv_st)
-
-
 def train(
     loader: torch.utils.data.DataLoader,
     model: torch.nn.Module,
@@ -332,10 +135,6 @@ def split_train_test(
     """
     Create neural activity train and test datasets.
     Returns train and test data loaders and masks.
-
-    data: [max_time, num_neurons, 2] i.e.,
-    data[:, :, 0] = dataset["(smoothed)calcium_data"]
-    data[:, :, 1] = dataset["residual_(smoothed)calcium"]
     """
     # argument checking
     assert isinstance(k_splits, int) and k_splits > 1, "Ensure that k_splits > 1."
@@ -364,11 +163,9 @@ def split_train_test(
     test_splits = split_datasets[1::2]
     # make datasets
     train_div = len(seq_len) * len(train_splits)
-
     train_datasets = [
         NeuralActivityDataset(
-            D=dset[:, :, 0],
-            Target=dset[:, :, 1],
+            dset,
             tau=tau,
             seq_len=seq,
             reverse=reverse,
@@ -381,8 +178,7 @@ def split_train_test(
     test_div = len(seq_len) * len(test_splits)
     test_datasets = [
         NeuralActivityDataset(
-            D=dset[:, :, 0],
-            Target=dset[:, :, 1],
+            dset,
             tau=tau,
             seq_len=seq,
             reverse=reverse,
@@ -527,7 +323,6 @@ def optimize_model(
 def make_predictions(
     model: torch.nn.Module,
     dataset: dict,
-    smooth_method: "smooth",
     log_dir: str,
 ) -> None:
     """Make predicitons on a dataset with a trained model.
@@ -546,25 +341,17 @@ def make_predictions(
     Returns:
         None.
     """
-    if str(smooth_method).lower() == "smooth":
-        key_data = "smooth_calcium_data"
-        key_target = "residual_smooth_calcium"
-    else:
-        key_data = "calcium_data"
-        key_target = "residual_calcium"
-
     for worm, single_worm_dataset in dataset.items():
         os.makedirs(os.path.join(log_dir, worm), exist_ok=True)
         # get data to save
         named_neuron_to_idx = single_worm_dataset["named_neuron_to_idx"]
-        calcium_data = single_worm_dataset[key_data]
-        targets = single_worm_dataset[key_target]
+        calcium_data = single_worm_dataset["calcium_data"]
         named_neurons_mask = single_worm_dataset["named_neurons_mask"]
         train_mask = single_worm_dataset["train_mask"]
         labels = np.expand_dims(np.where(train_mask, "train", "test"), axis=-1)
         columns = list(named_neuron_to_idx) + ["train_test_label"]
         # make predictions with final model
-        predictions = model_predict(model, calcium_data)
+        targets, predictions = model_predict(model, calcium_data)
         # save dataframes
         data = calcium_data[:, named_neurons_mask].numpy()
         data = np.hstack((data, labels))
@@ -573,14 +360,18 @@ def make_predictions(
             index=True,
             header=True,
         )
-        data = targets[:, named_neurons_mask].numpy()
+        data = torch.nn.functional.pad(
+            targets[:, named_neurons_mask], (0, 0, 1, 0)
+        ).numpy()
         data = np.hstack((data, labels))
         pd.DataFrame(data=data, columns=columns).to_csv(
             os.path.join(log_dir, worm, "target_ca_residual.csv"),
             index=True,
             header=True,
         )
-        data = predictions[:, named_neurons_mask].numpy()
+        data = torch.nn.functional.pad(
+            predictions[:, named_neurons_mask], (0, 0, 0, 1)
+        ).numpy()
         data = np.hstack((data, labels))
         pd.DataFrame(data=data, columns=columns).to_csv(
             os.path.join(log_dir, worm, "predicted_ca_residual.csv"),
@@ -608,9 +399,11 @@ def model_predict(
     input = calcium_data.to(DEVICE)
     # add batch dimension
     output = model(input.unsqueeze(0)).squeeze()
-    predictions = torch.zeros_like(calcium_data)
-    predictions[1:] = output[:-1].detach().cpu()
-    return predictions
+    # targets/predictions
+    residual_origin = input[1:] - input[:-1]
+    targets = residual_origin.detach().cpu()
+    predictions = output[:-1].detach().cpu()
+    return targets, predictions
 
 
 def gnn_train_val_mask(graph, train_ratio=0.7, train_mask=None):
