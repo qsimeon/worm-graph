@@ -6,7 +6,6 @@ class BatchSampler(torch.utils.data.Sampler):
     def __init__(self, data_source):
         super(BatchSampler, self).__init__(data_source)
         self.data_source = data_source
-        # self.target = data_target
 
     def __len__(self):
         return len(self.data_source)
@@ -29,18 +28,17 @@ class NeuralActivityDataset(torch.utils.data.Dataset):
     def __init__(
         self,
         D,
-        Target,
         neurons=None,
         tau=1,
         seq_len=17,
         size=1000,
         feature_mask=None,
         reverse=False,
+        smooth="sg",
     ):
         """
         Args:
           D: torch.tensor. Data w/ shape (max_time, num_neurons, num_features).
-          T: torch.tensor. Target w/ shape (max_time, num_neurons, num_features).
           neurons: None, int or array-like. Index of neuron(s) to return data for.
                   Returns data for all neurons if None.
           tau: int, 0 <= tau < max_time//2. Forward time offset of target sequence.
@@ -50,6 +48,7 @@ class NeuralActivityDataset(torch.utils.data.Dataset):
                     is achieved.
           feature_mask: torch.tensor. What features to select for generating dataset.
           reverse: bool. Whether to sample sequences backward from end of the data.
+          smooth: str, Method in data smoothing process.
         Returns:
           (X, Y, meta): tuple. Batch of data samples.
             X: torch.tensor. Input tensor w/ shape (batch_size, seq_len,
@@ -61,16 +60,13 @@ class NeuralActivityDataset(torch.utils.data.Dataset):
         super(NeuralActivityDataset, self).__init__()
         # dataset checking
         assert torch.is_tensor(D), "Recast the dataset as `torch.tensor`."
-
         if D.ndim == 2:
             D = D.unsqueeze(-1)  # expand to 3D if dataset given is 2D
-        if Target.ndim == 2:
-            Target = Target.unsqueeze(-1)
-
         assert isinstance(seq_len, int), "Enter an integer sequence length `seq_len`."
         self.seq_len = seq_len
         self.max_time, num_neurons, num_features = D.shape
         self.reverse = reverse
+        self.smooth = smooth
         # feature checking
         if feature_mask is not None:
             assert len(feature_mask) == num_features, (
@@ -104,7 +100,6 @@ class NeuralActivityDataset(torch.utils.data.Dataset):
             self.feature_mask.sum() if self.num_neurons == 1 else self.num_neurons
         )
         self.D = D
-        self.Target = Target
         assert 0 <= tau < self.max_time // 2, "`tau` must be  0 <= tau < max_time//2"
         self.tau = tau
         self.size = size
@@ -141,16 +136,16 @@ class NeuralActivityDataset(torch.utils.data.Dataset):
             end = start + L
             # data samples: input, X_tau and target, Y_tau
             X_tau = self.D[start:end, self.neurons, self.feature_mask]
-            Y_tau = self.Target[
-                (start + self.tau):(end + self.tau), self.neurons, self.feature_mask
+            Y_tau = self.D[
+                start + self.tau : end + self.tau, self.neurons, self.feature_mask
             ]
-
+            Res_tau = Y_tau - X_tau
             # store metadata about the sample
             tau = torch.tensor(self.tau)
             meta = {"seq_len": L, "start": start, "end": end, "tau": tau}
             # append to data samples
             # change Y_tau to Res_tau
-            data_samples.append((X_tau, Y_tau, meta))
+            data_samples.append((X_tau, Res_tau, meta))
             # append index to batch
             batch_indices.append(self.counter)
             self.counter += 1
