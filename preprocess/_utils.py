@@ -590,6 +590,7 @@ def pickle_Kato2015(transform, smooth_method="fft"):
     # get data for all worms
     all_IDs = arr["IDs"]  # identified neuron IDs (only subset have neuron names)
     all_traces = arr["traces"]  # neural activity traces corrected for bleaching
+    timeVectorSeconds = arr["timeVectorSeconds"]
     print("num. worms:", len(all_IDs), end="\n\n")
     for i, real_data in enumerate(all_traces):
         worm = "worm" + str(i)
@@ -619,6 +620,10 @@ def pickle_Kato2015(transform, smooth_method="fft"):
             (v, k) for k, v in neuron_to_idx.items()
         )  # map should be neuron -> index
         max_time, num_neurons = real_data.shape
+        time_in_seconds = timeVectorSeconds[i].reshape(timeVectorSeconds[i].shape[0], 1)
+        time_in_seconds = torch.tensor(time_in_seconds)
+        dt = torch.zeros_like(time_in_seconds)
+        dt[1:] = time_in_seconds[1:] - time_in_seconds[:-1]
         num_named = len(
             [k for k in neuron_to_idx.keys() if not k.isnumeric()]
         )  # number of neurons that were ID'd
@@ -645,6 +650,8 @@ def pickle_Kato2015(transform, smooth_method="fft"):
                     "neuron_to_idx": neuron_to_idx,
                     "idx_to_neuron": dict((v, k) for k, v in neuron_to_idx.items()),
                     "max_time": int(max_time),
+                    "time_in_seconds": time_in_seconds,
+                    "dt": dt,
                     "num_neurons": int(num_neurons),
                     "num_named_neurons": num_named,
                     "num_unknown_neurons": int(num_neurons) - num_named,
@@ -665,6 +672,7 @@ def pickle_Kato2015(transform, smooth_method="fft"):
         "NeuronNames"
     ]  # identified neuron IDs (only subset have neuron names)
     all_traces = arr["deltaFOverF_bc"]  # neural activity traces corrected for bleaching
+    timeVectorSeconds = arr["tv"]
     print("num. worms:", len(all_IDs), end="\n\n")
     for ii, real_data in enumerate(all_traces):
         worm = "worm" + str(ii + i + 1)
@@ -692,6 +700,10 @@ def pickle_Kato2015(transform, smooth_method="fft"):
         }
         neuron_to_idx = dict((v, k) for k, v in neuron_to_idx.items())
         max_time, num_neurons = real_data.shape
+        time_in_seconds = timeVectorSeconds[ii].reshape(timeVectorSeconds[ii].shape[0], 1)
+        time_in_seconds = torch.tensor(time_in_seconds)
+        dt = torch.zeros_like(time_in_seconds)
+        dt[1:] = time_in_seconds[1:] - time_in_seconds[:-1]
         num_named = len(
             [k for k in neuron_to_idx.keys() if not k.isnumeric()]
         )  # number of neurons that were ID'd
@@ -718,6 +730,8 @@ def pickle_Kato2015(transform, smooth_method="fft"):
                     "neuron_to_idx": neuron_to_idx,
                     "idx_to_neuron": dict((v, k) for k, v in neuron_to_idx.items()),
                     "max_time": int(max_time),
+                    "time_in_seconds": time_in_seconds,
+                    "dt": dt,
                     "num_neurons": int(num_neurons),
                     "num_named_neurons": num_named,
                     "num_unknown_neurons": int(num_neurons) - num_named,
@@ -751,6 +765,7 @@ def pickle_Nichols2017(transform, smooth_method="fft"):
     # get data for all worms
     all_IDs = arr["IDs"]  # identified neuron IDs (only subset have neuron names)
     all_traces = arr["traces"]  # neural activity traces corrected for bleaching
+    timeVectorSeconds = arr["timeVectorSeconds"]
     print("num. worms:", len(all_IDs), end="\n\n")
     for i, real_data in enumerate(all_traces):
         worm = "worm" + str(i)
@@ -778,6 +793,10 @@ def pickle_Nichols2017(transform, smooth_method="fft"):
         }
         neuron_to_idx = dict((v, k) for k, v in neuron_to_idx.items())
         max_time, num_neurons = real_data.shape
+        time_in_seconds = timeVectorSeconds[i].reshape(timeVectorSeconds[i].shape[0], 1)
+        time_in_seconds = torch.tensor(time_in_seconds)
+        dt = torch.zeros_like(time_in_seconds)
+        dt[1:] = time_in_seconds[1:] - time_in_seconds[:-1]
         num_named = len(
             [k for k in neuron_to_idx.keys() if not k.isnumeric()]
         )  # number of neurons that were ID'd
@@ -804,6 +823,8 @@ def pickle_Nichols2017(transform, smooth_method="fft"):
                     "neuron_to_idx": neuron_to_idx,
                     "idx_to_neuron": dict((v, k) for k, v in neuron_to_idx.items()),
                     "max_time": int(max_time),
+                    "time_in_seconds": time_in_seconds,
+                    "dt": dt,
                     "num_neurons": int(num_neurons),
                     "num_named_neurons": num_named,
                     "num_unknown_neurons": int(num_neurons) - num_named,
@@ -821,6 +842,7 @@ def pickle_Nichols2017(transform, smooth_method="fft"):
     # get data for all worms
     all_IDs = arr["IDs"]  # identified neuron IDs (only subset have neuron names)
     all_traces = arr["traces"]  # neural activity traces corrected for bleaching
+    timeVectorSeconds = arr["timeVectorSeconds"]
     print("num. worms:", len(all_IDs), end="\n\n")
     for ii, real_data in enumerate(all_traces):
         worm = "worm" + str(ii + i + 1)
@@ -848,6 +870,10 @@ def pickle_Nichols2017(transform, smooth_method="fft"):
         }
         neuron_to_idx = dict((v, k) for k, v in neuron_to_idx.items())
         max_time, num_neurons = real_data.shape
+        time_in_seconds = timeVectorSeconds[ii].reshape(timeVectorSeconds[ii].shape[0], 1)
+        time_in_seconds = torch.tensor(time_in_seconds)
+        dt = torch.zeros_like(time_in_seconds)
+        dt[1:] = time_in_seconds[1:] - time_in_seconds[:-1]
         num_named = len(
             [k for k in neuron_to_idx.keys() if not k.isnumeric()]
         )  # number of neurons that were ID'd
@@ -874,6 +900,8 @@ def pickle_Nichols2017(transform, smooth_method="fft"):
                     "neuron_to_idx": neuron_to_idx,
                     "idx_to_neuron": dict((v, k) for k, v in neuron_to_idx.items()),
                     "max_time": int(max_time),
+                    "time_in_seconds": time_in_seconds,
+                    "dt": dt,
                     "num_neurons": int(num_neurons),
                     "num_named_neurons": num_named,
                     "num_unknown_neurons": int(num_neurons) - num_named,
@@ -891,6 +919,7 @@ def pickle_Nichols2017(transform, smooth_method="fft"):
     # get data for all worms
     all_IDs = arr["IDs"]  # identified neuron IDs (only subset have neuron names)
     all_traces = arr["traces"]  # neural activity traces corrected for bleaching
+    timeVectorSeconds = arr["timeVectorSeconds"]
     print("num. worms:", len(all_IDs), end="\n\n")
     for iii, real_data in enumerate(all_traces):
         worm = "worm" + str(iii + ii + 1 + i + 1)
@@ -918,6 +947,10 @@ def pickle_Nichols2017(transform, smooth_method="fft"):
         }
         neuron_to_idx = dict((v, k) for k, v in neuron_to_idx.items())
         max_time, num_neurons = real_data.shape
+        time_in_seconds = timeVectorSeconds[iii].reshape(timeVectorSeconds[iii].shape[0], 1)
+        time_in_seconds = torch.tensor(time_in_seconds)
+        dt = torch.zeros_like(time_in_seconds)
+        dt[1:] = time_in_seconds[1:] - time_in_seconds[:-1]
         num_named = len(
             [k for k in neuron_to_idx.keys() if not k.isnumeric()]
         )  # number of neurons that were ID'd
@@ -944,6 +977,8 @@ def pickle_Nichols2017(transform, smooth_method="fft"):
                     "neuron_to_idx": neuron_to_idx,
                     "idx_to_neuron": dict((v, k) for k, v in neuron_to_idx.items()),
                     "max_time": int(max_time),
+                    "time_in_seconds": time_in_seconds,
+                    "dt": dt,
                     "num_neurons": int(num_neurons),
                     "num_named_neurons": num_named,
                     "num_unknown_neurons": int(num_neurons) - num_named,
@@ -961,6 +996,7 @@ def pickle_Nichols2017(transform, smooth_method="fft"):
     # get data for all worms
     all_IDs = arr["IDs"]  # identified neuron IDs (only subset have neuron names)
     all_traces = arr["traces"]  # neural activity traces corrected for bleaching
+    timeVectorSeconds = arr["timeVectorSeconds"]
     print("num. worms:", len(all_IDs), end="\n\n")
     for iv, real_data in enumerate(all_traces):
         worm = "worm" + str(iv + iii + 1 + ii + 1 + i + 1)
@@ -988,6 +1024,10 @@ def pickle_Nichols2017(transform, smooth_method="fft"):
         }
         neuron_to_idx = dict((v, k) for k, v in neuron_to_idx.items())
         max_time, num_neurons = real_data.shape
+        time_in_seconds = timeVectorSeconds[iv].reshape(timeVectorSeconds[iv].shape[0], 1)
+        time_in_seconds = torch.tensor(time_in_seconds)
+        dt = torch.zeros_like(time_in_seconds)
+        dt[1:] = time_in_seconds[1:] - time_in_seconds[:-1]
         num_named = len(
             [k for k in neuron_to_idx.keys() if not k.isnumeric()]
         )  # number of neurons that were ID'd
@@ -1014,6 +1054,8 @@ def pickle_Nichols2017(transform, smooth_method="fft"):
                     "neuron_to_idx": neuron_to_idx,
                     "idx_to_neuron": dict((v, k) for k, v in neuron_to_idx.items()),
                     "max_time": int(max_time),
+                    "time_in_seconds": time_in_seconds,
+                    "dt": dt,
                     "num_neurons": int(num_neurons),
                     "num_named_neurons": num_named,
                     "num_unknown_neurons": int(num_neurons) - num_named,
@@ -1138,6 +1180,8 @@ def pickle_Nguyen2017(transform, smooth_method="fft"):
             "neuron_to_idx": worm0_ID,
             "idx_to_neuron": dict((v, k) for k, v in worm0_ID.items()),
             "max_time": max_time0,
+            "time_in_seconds": None,
+            "dt": None,
             "num_neurons": num_neurons0,
             "num_named_neurons": num_named0,
             "num_unknown_neurons": num_neurons0 - num_named0,
@@ -1152,6 +1196,8 @@ def pickle_Nguyen2017(transform, smooth_method="fft"):
             "neuron_to_idx": worm1_ID,
             "idx_to_neuron": dict((v, k) for k, v in worm1_ID.items()),
             "max_time": max_time1,
+            "time_in_seconds": None,
+            "dt": None,
             "num_neurons": num_neurons1,
             "num_named_neurons": num_named1,
             "num_unknown_neurons": num_neurons1 - num_named1,
@@ -1166,6 +1212,8 @@ def pickle_Nguyen2017(transform, smooth_method="fft"):
             "neuron_to_idx": worm2_ID,
             "idx_to_neuron": dict((v, k) for k, v in worm2_ID.items()),
             "max_time": max_time2,
+            "time_in_seconds": None,
+            "dt": None,
             "num_neurons": num_neurons2,
             "num_named_neurons": num_named2,
             "num_unknown_neurons": num_neurons2 - num_named2,
@@ -1198,6 +1246,7 @@ def pickle_Skora2018(transform, smooth_method="fft"):
     # get data for all worms
     all_IDs = arr["IDs"]  # identified neuron IDs (only subset have neuron names)
     all_traces = arr["traces"]  # neural activity traces corrected for bleaching
+    timeVectorSeconds = arr["timeVectorSeconds"]
     print("num. worms:", len(all_IDs), end="\n\n")
     for i, real_data in enumerate(all_traces):
         worm = "worm" + str(i)
@@ -1225,6 +1274,10 @@ def pickle_Skora2018(transform, smooth_method="fft"):
         }
         neuron_to_idx = dict((v, k) for k, v in neuron_to_idx.items())
         max_time, num_neurons = real_data.shape
+        time_in_seconds = timeVectorSeconds[i].reshape(timeVectorSeconds[i].shape[0], 1)
+        time_in_seconds = torch.tensor(time_in_seconds)
+        dt = torch.zeros_like(time_in_seconds)
+        dt[1:] = time_in_seconds[1:] - time_in_seconds[:-1]
         num_named = len(
             [k for k in neuron_to_idx.keys() if not k.isnumeric()]
         )  # number of neurons that were ID'd
@@ -1251,6 +1304,8 @@ def pickle_Skora2018(transform, smooth_method="fft"):
                     "neuron_to_idx": neuron_to_idx,
                     "idx_to_neuron": dict((v, k) for k, v in neuron_to_idx.items()),
                     "max_time": int(max_time),
+                    "time_in_seconds": time_in_seconds,
+                    "dt": dt,
                     "num_neurons": int(num_neurons),
                     "num_named_neurons": num_named,
                     "num_unknown_neurons": int(num_neurons) - num_named,
@@ -1268,6 +1323,7 @@ def pickle_Skora2018(transform, smooth_method="fft"):
     # get data for all worms
     all_IDs = arr["IDs"]  # identified neuron IDs (only subset have neuron names)
     all_traces = arr["traces"]  # neural activity traces corrected for bleaching
+    timeVectorSeconds = arr["timeVectorSeconds"]
     print("num. worms:", len(all_IDs), end="\n\n")
     for ii, real_data in enumerate(all_traces):
         worm = "worm" + str(ii + i + 1)
@@ -1295,6 +1351,10 @@ def pickle_Skora2018(transform, smooth_method="fft"):
         }
         neuron_to_idx = dict((v, k) for k, v in neuron_to_idx.items())
         max_time, num_neurons = real_data.shape
+        time_in_seconds = timeVectorSeconds[ii].reshape(timeVectorSeconds[ii].shape[0], 1)
+        time_in_seconds = torch.tensor(time_in_seconds)
+        dt = torch.zeros_like(time_in_seconds)
+        dt[1:] = time_in_seconds[1:] - time_in_seconds[:-1]
         num_named = len(
             [k for k in neuron_to_idx.keys() if not k.isnumeric()]
         )  # number of neurons that were ID'd
@@ -1321,6 +1381,8 @@ def pickle_Skora2018(transform, smooth_method="fft"):
                     "neuron_to_idx": neuron_to_idx,
                     "idx_to_neuron": dict((v, k) for k, v in neuron_to_idx.items()),
                     "max_time": int(max_time),
+                    "time_in_seconds": time_in_seconds,
+                    "dt": dt,
                     "num_neurons": int(num_neurons),
                     "num_named_neurons": num_named,
                     "num_unknown_neurons": int(num_neurons) - num_named,
@@ -1356,6 +1418,7 @@ def pickle_Kaplan2020(transform, smooth_method="fft"):
     all_traces = arr[
         "traces_bleach_corrected"
     ]  # neural activity traces corrected for bleaching
+    timeVectorSeconds = arr["time_vector"]
     print("num. worms:", len(all_IDs), end="\n\n")
     for i, real_data in enumerate(all_traces):
         worm = "worm" + str(i)
@@ -1375,6 +1438,10 @@ def pickle_Kaplan2020(transform, smooth_method="fft"):
         }
         neuron_to_idx = dict((v, k) for k, v in neuron_to_idx.items())
         max_time, num_neurons = real_data.shape
+        time_in_seconds = timeVectorSeconds[i].reshape(timeVectorSeconds[i].shape[0], 1)
+        time_in_seconds = torch.tensor(time_in_seconds)
+        dt = torch.zeros_like(time_in_seconds)
+        dt[1:] = time_in_seconds[1:] - time_in_seconds[:-1]
         num_named = len(
             [k for k in neuron_to_idx.keys() if not k.isnumeric()]
         )  # number of neurons that were ID'd
@@ -1401,6 +1468,8 @@ def pickle_Kaplan2020(transform, smooth_method="fft"):
                     "neuron_to_idx": neuron_to_idx,
                     "idx_to_neuron": dict((v, k) for k, v in neuron_to_idx.items()),
                     "max_time": int(max_time),
+                    "time_in_seconds": time_in_seconds,
+                    "dt": dt,
                     "num_neurons": int(num_neurons),
                     "num_named_neurons": num_named,
                     "num_unknown_neurons": int(num_neurons) - num_named,
@@ -1420,6 +1489,7 @@ def pickle_Kaplan2020(transform, smooth_method="fft"):
     all_traces = arr[
         "traces_bleach_corrected"
     ]  # neural activity traces corrected for bleaching
+    timeVectorSeconds = arr["time_vector"]
     print("num. worms:", len(all_IDs), end="\n\n")
     for ii, real_data in enumerate(all_traces):
         worm = "worm" + str(ii + i + 1)
@@ -1439,6 +1509,10 @@ def pickle_Kaplan2020(transform, smooth_method="fft"):
         }
         neuron_to_idx = dict((v, k) for k, v in neuron_to_idx.items())
         max_time, num_neurons = real_data.shape
+        time_in_seconds = timeVectorSeconds[ii].reshape(timeVectorSeconds[ii].shape[0], 1)
+        time_in_seconds = torch.tensor(time_in_seconds)
+        dt = torch.zeros_like(time_in_seconds)
+        dt[1:] = time_in_seconds[1:] - time_in_seconds[:-1]
         num_named = len(
             [k for k in neuron_to_idx.keys() if not k.isnumeric()]
         )  # number of neurons that were ID'd
@@ -1465,6 +1539,8 @@ def pickle_Kaplan2020(transform, smooth_method="fft"):
                     "neuron_to_idx": neuron_to_idx,
                     "idx_to_neuron": dict((v, k) for k, v in neuron_to_idx.items()),
                     "max_time": int(max_time),
+                    "time_in_seconds": time_in_seconds,
+                    "dt": dt,
                     "num_neurons": int(num_neurons),
                     "num_named_neurons": num_named,
                     "num_unknown_neurons": int(num_neurons) - num_named,
@@ -1484,6 +1560,7 @@ def pickle_Kaplan2020(transform, smooth_method="fft"):
     all_traces = arr[
         "traces_bleach_corrected"
     ]  # neural activity traces corrected for bleaching
+    timeVectorSeconds = arr["time_vector"]
     print("num. worms:", len(all_IDs), end="\n\n")
     for iii, real_data in enumerate(all_traces):
         worm = "worm" + str(iii + ii + 1 + i + 1)
@@ -1503,6 +1580,10 @@ def pickle_Kaplan2020(transform, smooth_method="fft"):
         }
         neuron_to_idx = dict((v, k) for k, v in neuron_to_idx.items())
         max_time, num_neurons = real_data.shape
+        time_in_seconds = timeVectorSeconds[iii].reshape(timeVectorSeconds[iii].shape[0], 1)
+        time_in_seconds = torch.tensor(time_in_seconds)
+        dt = torch.zeros_like(time_in_seconds)
+        dt[1:] = time_in_seconds[1:] - time_in_seconds[:-1]
         num_named = len(
             [k for k in neuron_to_idx.keys() if not k.isnumeric()]
         )  # number of neurons that were ID'd
@@ -1529,6 +1610,8 @@ def pickle_Kaplan2020(transform, smooth_method="fft"):
                     "neuron_to_idx": neuron_to_idx,
                     "idx_to_neuron": dict((v, k) for k, v in neuron_to_idx.items()),
                     "max_time": int(max_time),
+                    "time_in_seconds": time_in_seconds,
+                    "dt": dt,
                     "num_neurons": int(num_neurons),
                     "num_named_neurons": num_named,
                     "num_unknown_neurons": int(num_neurons) - num_named,
@@ -1561,6 +1644,7 @@ def pickle_Uzel2022(transform, smooth_method="fft"):
     # get data for all worms
     all_IDs = arr["IDs"]  # identified neuron IDs (only subset have neuron names)
     all_traces = arr["traces"]  # neural activity traces corrected for bleaching
+    timeVectorSeconds = arr["tv"]
     print("num. worms:", len(all_IDs), end="\n\n")
     for i, real_data in enumerate(all_traces):
         worm = "worm" + str(i)
@@ -1583,6 +1667,10 @@ def pickle_Uzel2022(transform, smooth_method="fft"):
         }
         neuron_to_idx = dict((v, k) for k, v in neuron_to_idx.items())
         max_time, num_neurons = real_data.shape
+        time_in_seconds = timeVectorSeconds[i].reshape(timeVectorSeconds[i].shape[0], 1)
+        time_in_seconds = torch.tensor(time_in_seconds)
+        dt = torch.zeros_like(time_in_seconds)
+        dt[1:] = time_in_seconds[1:] - time_in_seconds[:-1]
         num_named = len(
             [k for k in neuron_to_idx.keys() if not k.isnumeric()]
         )  # number of neurons that were ID'd
@@ -1611,6 +1699,8 @@ def pickle_Uzel2022(transform, smooth_method="fft"):
                     "neuron_to_idx": neuron_to_idx,
                     "idx_to_neuron": dict((v, k) for k, v in neuron_to_idx.items()),
                     "max_time": int(max_time),
+                    "time_in_seconds": time_in_seconds,
+                    "dt": dt,
                     "num_neurons": int(num_neurons),
                     "num_named_neurons": num_named,
                     "num_unknown_neurons": int(num_neurons) - num_named,
@@ -1696,6 +1786,8 @@ def pickle_Flavell2023(transform, smooth_method="fft"):
                     "neuron_to_idx": neuron_to_idx,
                     "idx_to_neuron": dict((v, k) for k, v in neuron_to_idx.items()),
                     "max_time": max_time,
+                    "time_in_seconds": None,
+                    "dt": None,
                     "num_neurons": num_neurons,
                     "num_named_neurons": num_named,
                     "num_unknown_neurons": num_neurons - num_named,
