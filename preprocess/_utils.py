@@ -94,7 +94,7 @@ class DiffTVR:
         return self.dx * np.transpose(self.d_mat) @ en_mat @ self.d_mat
 
     def make_gn_vec(
-            self, deriv_curr: np.array, data: np.array, alpha: float, ln_mat: np.array
+        self, deriv_curr: np.array, data: np.array, alpha: float, ln_mat: np.array
     ) -> np.array:
         """Negative right hand side of linear problem
 
@@ -108,9 +108,9 @@ class DiffTVR:
             np.array: Vector of length N+1
         """
         return (
-                self.a_mat_t @ self.a_mat @ deriv_curr
-                - self.a_mat_t @ (data - data[0])
-                + alpha * ln_mat @ deriv_curr
+            self.a_mat_t @ self.a_mat @ deriv_curr
+            - self.a_mat_t @ (data - data[0])
+            + alpha * ln_mat @ deriv_curr
         )
 
     def make_hn_mat(self, alpha: float, ln_mat: np.array) -> np.array:
@@ -126,7 +126,7 @@ class DiffTVR:
         return self.a_mat_t @ self.a_mat + alpha * ln_mat
 
     def get_deriv_tvr_update(
-            self, data: np.array, deriv_curr: np.array, alpha: float
+        self, data: np.array, deriv_curr: np.array, alpha: float
     ) -> np.array:
         """Get the TVR update
 
@@ -154,13 +154,13 @@ class DiffTVR:
         return solve(hn_mat, -gn_vec)
 
     def get_deriv_tvr(
-            self,
-            data: np.array,
-            deriv_guess: np.array,
-            alpha: float,
-            no_opt_steps: int,
-            return_progress: bool = False,
-            return_interval: int = 1,
+        self,
+        data: np.array,
+        deriv_guess: np.array,
+        alpha: float,
+        no_opt_steps: int,
+        return_progress: bool = False,
+        return_interval: int = 1,
     ) -> Tuple[np.array, np.array]:
         """Get derivative via TVR over optimization steps
 
@@ -199,7 +199,8 @@ class DiffTVR:
 
 def smooth_data_preprocess(calcium_data, smooth_method, dt=1.0):
     """
-    Smooth the data, get signals denoised
+    Smooth the calcium data. Returns the denoised signals calcium signals
+    using FFT.
 
     Args:
         calcium_data: original calcium data from dataset
@@ -216,7 +217,7 @@ def smooth_data_preprocess(calcium_data, smooth_method, dt=1.0):
     smooth_ca_data = torch.zeros_like(calcium_data)
     # calculate original residual
     residual = torch.zeros_like(calcium_data)
-    residual[1:] = calcium_data[1:] - calcium_data[:n - 1]
+    residual[1:] = calcium_data[1:] - calcium_data[: n - 1]
     if str(smooth_method).lower() == "sg" or smooth_method == None:
         smooth_ca_data = savgol_filter(calcium_data, 5, 3, mode="nearest", axis=-1)
     elif str(smooth_method).lower() == "fft":
@@ -229,7 +230,7 @@ def smooth_data_preprocess(calcium_data, smooth_method, dt=1.0):
         fft_input = torch.fft.rfftn(data_torch, dim=0)
         oneD_kernel = oneD_kernel.repeat(calcium_data.shape[1], 1).T
         fft_result = torch.fft.irfftn(fft_input * oneD_kernel, dim=0)
-        smooth_ca_data[0:min(fft_result.shape[0], calcium_data.shape[0])] = fft_result
+        smooth_ca_data[0 : min(fft_result.shape[0], calcium_data.shape[0])] = fft_result
     elif str(smooth_method).lower() == "tvr":
         diff_tvr = DiffTVR(n, 1)
         for i in range(0, calcium_data.shape[1]):
@@ -247,7 +248,7 @@ def smooth_data_preprocess(calcium_data, smooth_method, dt=1.0):
         exit(0)
     m = smooth_ca_data.shape[0]
     residual_smooth_ca_data = torch.zeros_like(residual)
-    residual_smooth_ca_data[1:] = smooth_ca_data[1:] - smooth_ca_data[:m - 1]
+    residual_smooth_ca_data[1:] = smooth_ca_data[1:] - smooth_ca_data[: m - 1]
     return smooth_ca_data, residual, residual_smooth_ca_data
 
 
@@ -294,7 +295,7 @@ def preprocess_connectome(raw_dir, raw_files):
         i
         for i in GHermElec_Sym_Edges.index
         if df.iloc[i]["EndNodes_1"] in set(Ggap_nodes.Name)
-           and df.iloc[i]["EndNodes_2"] in set(Ggap_nodes.Name)
+        and df.iloc[i]["EndNodes_2"] in set(Ggap_nodes.Name)
     ]  # indices
     Ggap_edges = df.iloc[inds].reset_index(drop=True)
     # chemical synapses
@@ -309,7 +310,7 @@ def preprocess_connectome(raw_dir, raw_files):
         i
         for i in GHermChem_Edges.index
         if df.iloc[i]["EndNodes_1"] in set(Gsyn_nodes.Name)
-           and df.iloc[i]["EndNodes_2"] in set(Gsyn_nodes.Name)
+        and df.iloc[i]["EndNodes_2"] in set(Gsyn_nodes.Name)
     ]  # indices
     Gsyn_edges = df.iloc[inds].reset_index(drop=True)
     # map neuron names (IDs) to indices
@@ -458,8 +459,12 @@ def reshape_calcium_data(single_worm_dataset):
     # len(residual) = len(data) - 1
     standard_calcium_data = torch.zeros(max_time, 302, dtype=origin_calcium_data.dtype)
     standard_residual_calcium = torch.zeros(max_time, 302, dtype=residual_calcium.dtype)
-    standard_smooth_calcium_data = torch.zeros(max_time, 302, dtype=smooth_calcium_data.dtype)
-    standard_residual_smooth_calcium = torch.zeros(max_time, 302, dtype=residual_smooth_calcium.dtype)
+    standard_smooth_calcium_data = torch.zeros(
+        max_time, 302, dtype=smooth_calcium_data.dtype
+    )
+    standard_residual_smooth_calcium = torch.zeros(
+        max_time, 302, dtype=residual_smooth_calcium.dtype
+    )
     # fill the new calcium data structure with data from named neurons
     slot_to_named_neuron = dict((k, v) for k, v in enumerate(neurons_302))
     for slot, neuron in slot_to_named_neuron.items():
@@ -524,7 +529,11 @@ def reshape_calcium_data(single_worm_dataset):
 
 
 def pickle_neural_data(
-        url, zipfile, dataset="all", transform=MinMaxScaler(feature_range=(-1, 1)), smooth_method="fft"
+    url,
+    zipfile,
+    dataset="all",
+    transform=MinMaxScaler(feature_range=(-1, 1)),
+    smooth_method="fft",
 ):
     """
     Function for converting C. elegans neural data from open source
@@ -563,7 +572,7 @@ def pickle_neural_data(
     # (re)-Pickle a single dataset
     else:
         assert (
-                dataset in VALID_DATASETS
+            dataset in VALID_DATASETS
         ), "Invalid dataset requested! Please pick one from:\n{}".format(
             list(VALID_DATASETS)
         )
@@ -637,7 +646,9 @@ def pickle_Kato2015(transform, smooth_method="fft"):
         real_data = torch.tensor(
             real_data, dtype=torch.float64
         )  # add a feature dimension and convert to tensor
-        smooth_real_data, residual, smooth_residual = smooth_data_preprocess(real_data, smooth_method)
+        smooth_real_data, residual, smooth_residual = smooth_data_preprocess(
+            real_data, smooth_method
+        )
         data_dict.update(
             {
                 worm: {
@@ -700,7 +711,9 @@ def pickle_Kato2015(transform, smooth_method="fft"):
         }
         neuron_to_idx = dict((v, k) for k, v in neuron_to_idx.items())
         max_time, num_neurons = real_data.shape
-        time_in_seconds = timeVectorSeconds[ii].reshape(timeVectorSeconds[ii].shape[0], 1)
+        time_in_seconds = timeVectorSeconds[ii].reshape(
+            timeVectorSeconds[ii].shape[0], 1
+        )
         time_in_seconds = torch.tensor(time_in_seconds)
         dt = torch.zeros_like(time_in_seconds)
         dt[1:] = time_in_seconds[1:] - time_in_seconds[:-1]
@@ -717,7 +730,9 @@ def pickle_Kato2015(transform, smooth_method="fft"):
         real_data = torch.tensor(
             real_data, dtype=torch.float64
         )  # add a feature dimension and convert to tensor
-        smooth_real_data, residual, smooth_residual = smooth_data_preprocess(real_data, smooth_method)
+        smooth_real_data, residual, smooth_residual = smooth_data_preprocess(
+            real_data, smooth_method
+        )
         data_dict.update(
             {
                 worm: {
@@ -810,7 +825,9 @@ def pickle_Nichols2017(transform, smooth_method="fft"):
         real_data = torch.tensor(
             real_data, dtype=torch.float64
         )  # add a feature dimension and convert to tensor
-        smooth_real_data, residual, smooth_residual = smooth_data_preprocess(real_data, smooth_method)
+        smooth_real_data, residual, smooth_residual = smooth_data_preprocess(
+            real_data, smooth_method
+        )
         data_dict.update(
             {
                 worm: {
@@ -870,7 +887,9 @@ def pickle_Nichols2017(transform, smooth_method="fft"):
         }
         neuron_to_idx = dict((v, k) for k, v in neuron_to_idx.items())
         max_time, num_neurons = real_data.shape
-        time_in_seconds = timeVectorSeconds[ii].reshape(timeVectorSeconds[ii].shape[0], 1)
+        time_in_seconds = timeVectorSeconds[ii].reshape(
+            timeVectorSeconds[ii].shape[0], 1
+        )
         time_in_seconds = torch.tensor(time_in_seconds)
         dt = torch.zeros_like(time_in_seconds)
         dt[1:] = time_in_seconds[1:] - time_in_seconds[:-1]
@@ -887,7 +906,9 @@ def pickle_Nichols2017(transform, smooth_method="fft"):
         real_data = torch.tensor(
             real_data, dtype=torch.float64
         )  # add a feature dimension and convert to tensor
-        smooth_real_data, residual, smooth_residual = smooth_data_preprocess(real_data, smooth_method)
+        smooth_real_data, residual, smooth_residual = smooth_data_preprocess(
+            real_data, smooth_method
+        )
         data_dict.update(
             {
                 worm: {
@@ -947,7 +968,9 @@ def pickle_Nichols2017(transform, smooth_method="fft"):
         }
         neuron_to_idx = dict((v, k) for k, v in neuron_to_idx.items())
         max_time, num_neurons = real_data.shape
-        time_in_seconds = timeVectorSeconds[iii].reshape(timeVectorSeconds[iii].shape[0], 1)
+        time_in_seconds = timeVectorSeconds[iii].reshape(
+            timeVectorSeconds[iii].shape[0], 1
+        )
         time_in_seconds = torch.tensor(time_in_seconds)
         dt = torch.zeros_like(time_in_seconds)
         dt[1:] = time_in_seconds[1:] - time_in_seconds[:-1]
@@ -964,7 +987,9 @@ def pickle_Nichols2017(transform, smooth_method="fft"):
         real_data = torch.tensor(
             real_data, dtype=torch.float64
         )  # add a feature dimension and convert to tensor
-        smooth_real_data, residual, smooth_residual = smooth_data_preprocess(real_data, smooth_method)
+        smooth_real_data, residual, smooth_residual = smooth_data_preprocess(
+            real_data, smooth_method
+        )
         data_dict.update(
             {
                 worm: {
@@ -1024,7 +1049,9 @@ def pickle_Nichols2017(transform, smooth_method="fft"):
         }
         neuron_to_idx = dict((v, k) for k, v in neuron_to_idx.items())
         max_time, num_neurons = real_data.shape
-        time_in_seconds = timeVectorSeconds[iv].reshape(timeVectorSeconds[iv].shape[0], 1)
+        time_in_seconds = timeVectorSeconds[iv].reshape(
+            timeVectorSeconds[iv].shape[0], 1
+        )
         time_in_seconds = torch.tensor(time_in_seconds)
         dt = torch.zeros_like(time_in_seconds)
         dt[1:] = time_in_seconds[1:] - time_in_seconds[:-1]
@@ -1041,7 +1068,9 @@ def pickle_Nichols2017(transform, smooth_method="fft"):
         real_data = torch.tensor(
             real_data, dtype=torch.float64
         )  # add a feature dimension and convert to tensor
-        smooth_real_data, residual, smooth_residual = smooth_data_preprocess(real_data, smooth_method)
+        smooth_real_data, residual, smooth_residual = smooth_data_preprocess(
+            real_data, smooth_method
+        )
         data_dict.update(
             {
                 worm: {
@@ -1165,9 +1194,15 @@ def pickle_Nguyen2017(transform, smooth_method="fft"):
     real_data2 = sc.fit_transform(real_data2[:, :num_neurons2])
     real_data2 = torch.tensor(real_data2, dtype=torch.float64)
 
-    smooth_real_data0, residual0, smooth_residual0 = smooth_data_preprocess(real_data0, smooth_method)
-    smooth_real_data1, residual1, smooth_residual1 = smooth_data_preprocess(real_data1, smooth_method)
-    smooth_real_data2, residual2, smooth_residual2 = smooth_data_preprocess(real_data2, smooth_method)
+    smooth_real_data0, residual0, smooth_residual0 = smooth_data_preprocess(
+        real_data0, smooth_method
+    )
+    smooth_real_data1, residual1, smooth_residual1 = smooth_data_preprocess(
+        real_data1, smooth_method
+    )
+    smooth_real_data2, residual2, smooth_residual2 = smooth_data_preprocess(
+        real_data2, smooth_method
+    )
     # pickle the data
     data_dict = {
         "worm0": {
@@ -1291,7 +1326,9 @@ def pickle_Skora2018(transform, smooth_method="fft"):
         real_data = torch.tensor(
             real_data, dtype=torch.float64
         )  # add a feature dimension and convert to tensor
-        smooth_real_data, residual, smooth_residual = smooth_data_preprocess(real_data, smooth_method)
+        smooth_real_data, residual, smooth_residual = smooth_data_preprocess(
+            real_data, smooth_method
+        )
         data_dict.update(
             {
                 worm: {
@@ -1351,7 +1388,9 @@ def pickle_Skora2018(transform, smooth_method="fft"):
         }
         neuron_to_idx = dict((v, k) for k, v in neuron_to_idx.items())
         max_time, num_neurons = real_data.shape
-        time_in_seconds = timeVectorSeconds[ii].reshape(timeVectorSeconds[ii].shape[0], 1)
+        time_in_seconds = timeVectorSeconds[ii].reshape(
+            timeVectorSeconds[ii].shape[0], 1
+        )
         time_in_seconds = torch.tensor(time_in_seconds)
         dt = torch.zeros_like(time_in_seconds)
         dt[1:] = time_in_seconds[1:] - time_in_seconds[:-1]
@@ -1368,7 +1407,9 @@ def pickle_Skora2018(transform, smooth_method="fft"):
         real_data = torch.tensor(
             real_data, dtype=torch.float64
         )  # add a feature dimension and convert to tensor
-        smooth_real_data, residual, smooth_residual = smooth_data_preprocess(real_data, smooth_method)
+        smooth_real_data, residual, smooth_residual = smooth_data_preprocess(
+            real_data, smooth_method
+        )
         data_dict.update(
             {
                 worm: {
@@ -1455,7 +1496,9 @@ def pickle_Kaplan2020(transform, smooth_method="fft"):
         real_data = torch.tensor(
             real_data, dtype=torch.float64
         )  # add a feature dimension and convert to tensor
-        smooth_real_data, residual, smooth_residual = smooth_data_preprocess(real_data, smooth_method)
+        smooth_real_data, residual, smooth_residual = smooth_data_preprocess(
+            real_data, smooth_method
+        )
         data_dict.update(
             {
                 worm: {
@@ -1509,7 +1552,9 @@ def pickle_Kaplan2020(transform, smooth_method="fft"):
         }
         neuron_to_idx = dict((v, k) for k, v in neuron_to_idx.items())
         max_time, num_neurons = real_data.shape
-        time_in_seconds = timeVectorSeconds[ii].reshape(timeVectorSeconds[ii].shape[0], 1)
+        time_in_seconds = timeVectorSeconds[ii].reshape(
+            timeVectorSeconds[ii].shape[0], 1
+        )
         time_in_seconds = torch.tensor(time_in_seconds)
         dt = torch.zeros_like(time_in_seconds)
         dt[1:] = time_in_seconds[1:] - time_in_seconds[:-1]
@@ -1526,7 +1571,9 @@ def pickle_Kaplan2020(transform, smooth_method="fft"):
         real_data = torch.tensor(
             real_data, dtype=torch.float64
         )  # add a feature dimension and convert to tensor
-        smooth_real_data, residual, smooth_residual = smooth_data_preprocess(real_data, smooth_method)
+        smooth_real_data, residual, smooth_residual = smooth_data_preprocess(
+            real_data, smooth_method
+        )
         data_dict.update(
             {
                 worm: {
@@ -1580,7 +1627,9 @@ def pickle_Kaplan2020(transform, smooth_method="fft"):
         }
         neuron_to_idx = dict((v, k) for k, v in neuron_to_idx.items())
         max_time, num_neurons = real_data.shape
-        time_in_seconds = timeVectorSeconds[iii].reshape(timeVectorSeconds[iii].shape[0], 1)
+        time_in_seconds = timeVectorSeconds[iii].reshape(
+            timeVectorSeconds[iii].shape[0], 1
+        )
         time_in_seconds = torch.tensor(time_in_seconds)
         dt = torch.zeros_like(time_in_seconds)
         dt[1:] = time_in_seconds[1:] - time_in_seconds[:-1]
@@ -1597,7 +1646,9 @@ def pickle_Kaplan2020(transform, smooth_method="fft"):
         real_data = torch.tensor(
             real_data, dtype=torch.float64
         )  # add a feature dimension and convert to tensor
-        smooth_real_data, residual, smooth_residual = smooth_data_preprocess(real_data, smooth_method)
+        smooth_real_data, residual, smooth_residual = smooth_data_preprocess(
+            real_data, smooth_method
+        )
         data_dict.update(
             {
                 worm: {
@@ -1685,7 +1736,9 @@ def pickle_Uzel2022(transform, smooth_method="fft"):
             real_data, dtype=torch.float64
         )  # add a feature dimension and convert to tensor
 
-        smooth_real_data, residual, smooth_residual = smooth_data_preprocess(real_data, smooth_method)
+        smooth_real_data, residual, smooth_residual = smooth_data_preprocess(
+            real_data, smooth_method
+        )
 
         data_dict.update(
             {
@@ -1773,7 +1826,9 @@ def pickle_Flavell2023(transform, smooth_method="fft"):
             end="\n\n",
         )
         # add worm to data dictionary
-        smooth_real_data, residual, smooth_residual = smooth_data_preprocess(calcium_data, smooth_method)
+        smooth_real_data, residual, smooth_residual = smooth_data_preprocess(
+            calcium_data, smooth_method
+        )
         data_dict.update(
             {
                 worm: {
@@ -1808,8 +1863,5 @@ def pickle_Flavell2023(transform, smooth_method="fft"):
 
 
 def pickle_Leifer2023(transform, smooth_method="fft"):
-
-
-
     data_dict = 0
     return

@@ -153,7 +153,8 @@ def plot_loss_curves(log_dir):
     plt.legend()
     plt.title(plt_title)
     plt.xlabel("Epoch (# worms)")
-    plt.ylabel("Loss - Baseline")
+    # plt.ylabel("Loss - Baseline")
+    plt.ylabel("Loss")
     plt.savefig(os.path.join(log_dir, "loss_curves.png"))
     plt.close()
     return None

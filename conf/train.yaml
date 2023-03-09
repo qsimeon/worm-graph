@@ -115,5 +115,5 @@ train:
   cycles: 10 # number of passes through a multi-worm dataset
   epochs: 1 # number passes through a single worm dataset per cycle
   train_size: 4096 # total number of samples of train data
-  test_size: 2048 # total number of samples of test data
+  test_size: 4096 # total number of samples of test data
   smooth_data: True
