@@ -57,6 +57,14 @@ if __name__ == "__main__":
     n = data.shape[0]
 
     print(worm[0]["time_in_seconds"].shape, worm[0]["dt"].shape)
+
+    temp = torch.stack((worm[0]["calcium_data"], worm[0]["residual_calcium"]), 2)
+    tmp = temp[:, :, 0]
+    print(tmp.shape)
+    plt.plot(tmp[:, 2])
+    plt.show()
+
+    print(temp.shape)
     exit(0)
 
     # print(worm[0].keys())
