@@ -56,6 +56,9 @@ if __name__ == "__main__":
 
     n = data.shape[0]
 
+    print(worm[0]["time_in_seconds"], worm[0]["dt"])
+    exit(0)
+
     # print(worm[0].keys())
     # print(worm[0]["neuron_to_idx"],'\n', worm[0]["num_neurons"], worm[0]["num_named_neurons"], worm[0]["num_unknown_neurons"])
 
