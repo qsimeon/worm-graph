@@ -621,7 +621,8 @@ def pickle_Kato2015(transform, smooth_method="fft"):
         )  # map should be neuron -> index
         max_time, num_neurons = real_data.shape
         time_in_seconds = timeVectorSeconds[i].reshape(timeVectorSeconds[i].shape[0], 1)
-        dt = np.zeros_like(time_in_seconds)
+        time_in_seconds = torch.tensor(time_in_seconds)
+        dt = torch.zeros_like(time_in_seconds)
         dt[1:] = time_in_seconds[1:] - time_in_seconds[:-1]
         num_named = len(
             [k for k in neuron_to_idx.keys() if not k.isnumeric()]
@@ -700,7 +701,8 @@ def pickle_Kato2015(transform, smooth_method="fft"):
         neuron_to_idx = dict((v, k) for k, v in neuron_to_idx.items())
         max_time, num_neurons = real_data.shape
         time_in_seconds = timeVectorSeconds[ii].reshape(timeVectorSeconds[ii].shape[0], 1)
-        dt = np.zeros_like(time_in_seconds)
+        time_in_seconds = torch.tensor(time_in_seconds)
+        dt = torch.zeros_like(time_in_seconds)
         dt[1:] = time_in_seconds[1:] - time_in_seconds[:-1]
         num_named = len(
             [k for k in neuron_to_idx.keys() if not k.isnumeric()]
@@ -792,7 +794,8 @@ def pickle_Nichols2017(transform, smooth_method="fft"):
         neuron_to_idx = dict((v, k) for k, v in neuron_to_idx.items())
         max_time, num_neurons = real_data.shape
         time_in_seconds = timeVectorSeconds[i].reshape(timeVectorSeconds[i].shape[0], 1)
-        dt = np.zeros_like(time_in_seconds)
+        time_in_seconds = torch.tensor(time_in_seconds)
+        dt = torch.zeros_like(time_in_seconds)
         dt[1:] = time_in_seconds[1:] - time_in_seconds[:-1]
         num_named = len(
             [k for k in neuron_to_idx.keys() if not k.isnumeric()]
@@ -868,7 +871,8 @@ def pickle_Nichols2017(transform, smooth_method="fft"):
         neuron_to_idx = dict((v, k) for k, v in neuron_to_idx.items())
         max_time, num_neurons = real_data.shape
         time_in_seconds = timeVectorSeconds[ii].reshape(timeVectorSeconds[ii].shape[0], 1)
-        dt = np.zeros_like(time_in_seconds)
+        time_in_seconds = torch.tensor(time_in_seconds)
+        dt = torch.zeros_like(time_in_seconds)
         dt[1:] = time_in_seconds[1:] - time_in_seconds[:-1]
         num_named = len(
             [k for k in neuron_to_idx.keys() if not k.isnumeric()]
@@ -944,7 +948,8 @@ def pickle_Nichols2017(transform, smooth_method="fft"):
         neuron_to_idx = dict((v, k) for k, v in neuron_to_idx.items())
         max_time, num_neurons = real_data.shape
         time_in_seconds = timeVectorSeconds[iii].reshape(timeVectorSeconds[iii].shape[0], 1)
-        dt = np.zeros_like(time_in_seconds)
+        time_in_seconds = torch.tensor(time_in_seconds)
+        dt = torch.zeros_like(time_in_seconds)
         dt[1:] = time_in_seconds[1:] - time_in_seconds[:-1]
         num_named = len(
             [k for k in neuron_to_idx.keys() if not k.isnumeric()]
@@ -1020,7 +1025,8 @@ def pickle_Nichols2017(transform, smooth_method="fft"):
         neuron_to_idx = dict((v, k) for k, v in neuron_to_idx.items())
         max_time, num_neurons = real_data.shape
         time_in_seconds = timeVectorSeconds[iv].reshape(timeVectorSeconds[iv].shape[0], 1)
-        dt = np.zeros_like(time_in_seconds)
+        time_in_seconds = torch.tensor(time_in_seconds)
+        dt = torch.zeros_like(time_in_seconds)
         dt[1:] = time_in_seconds[1:] - time_in_seconds[:-1]
         num_named = len(
             [k for k in neuron_to_idx.keys() if not k.isnumeric()]
@@ -1269,7 +1275,8 @@ def pickle_Skora2018(transform, smooth_method="fft"):
         neuron_to_idx = dict((v, k) for k, v in neuron_to_idx.items())
         max_time, num_neurons = real_data.shape
         time_in_seconds = timeVectorSeconds[i].reshape(timeVectorSeconds[i].shape[0], 1)
-        dt = np.zeros_like(time_in_seconds)
+        time_in_seconds = torch.tensor(time_in_seconds)
+        dt = torch.zeros_like(time_in_seconds)
         dt[1:] = time_in_seconds[1:] - time_in_seconds[:-1]
         num_named = len(
             [k for k in neuron_to_idx.keys() if not k.isnumeric()]
@@ -1345,7 +1352,8 @@ def pickle_Skora2018(transform, smooth_method="fft"):
         neuron_to_idx = dict((v, k) for k, v in neuron_to_idx.items())
         max_time, num_neurons = real_data.shape
         time_in_seconds = timeVectorSeconds[ii].reshape(timeVectorSeconds[ii].shape[0], 1)
-        dt = np.zeros_like(time_in_seconds)
+        time_in_seconds = torch.tensor(time_in_seconds)
+        dt = torch.zeros_like(time_in_seconds)
         dt[1:] = time_in_seconds[1:] - time_in_seconds[:-1]
         num_named = len(
             [k for k in neuron_to_idx.keys() if not k.isnumeric()]
@@ -1431,7 +1439,8 @@ def pickle_Kaplan2020(transform, smooth_method="fft"):
         neuron_to_idx = dict((v, k) for k, v in neuron_to_idx.items())
         max_time, num_neurons = real_data.shape
         time_in_seconds = timeVectorSeconds[i].reshape(timeVectorSeconds[i].shape[0], 1)
-        dt = np.zeros_like(time_in_seconds)
+        time_in_seconds = torch.tensor(time_in_seconds)
+        dt = torch.zeros_like(time_in_seconds)
         dt[1:] = time_in_seconds[1:] - time_in_seconds[:-1]
         num_named = len(
             [k for k in neuron_to_idx.keys() if not k.isnumeric()]
@@ -1501,7 +1510,8 @@ def pickle_Kaplan2020(transform, smooth_method="fft"):
         neuron_to_idx = dict((v, k) for k, v in neuron_to_idx.items())
         max_time, num_neurons = real_data.shape
         time_in_seconds = timeVectorSeconds[ii].reshape(timeVectorSeconds[ii].shape[0], 1)
-        dt = np.zeros_like(time_in_seconds)
+        time_in_seconds = torch.tensor(time_in_seconds)
+        dt = torch.zeros_like(time_in_seconds)
         dt[1:] = time_in_seconds[1:] - time_in_seconds[:-1]
         num_named = len(
             [k for k in neuron_to_idx.keys() if not k.isnumeric()]
@@ -1571,7 +1581,8 @@ def pickle_Kaplan2020(transform, smooth_method="fft"):
         neuron_to_idx = dict((v, k) for k, v in neuron_to_idx.items())
         max_time, num_neurons = real_data.shape
         time_in_seconds = timeVectorSeconds[iii].reshape(timeVectorSeconds[iii].shape[0], 1)
-        dt = np.zeros_like(time_in_seconds)
+        time_in_seconds = torch.tensor(time_in_seconds)
+        dt = torch.zeros_like(time_in_seconds)
         dt[1:] = time_in_seconds[1:] - time_in_seconds[:-1]
         num_named = len(
             [k for k in neuron_to_idx.keys() if not k.isnumeric()]
@@ -1657,7 +1668,8 @@ def pickle_Uzel2022(transform, smooth_method="fft"):
         neuron_to_idx = dict((v, k) for k, v in neuron_to_idx.items())
         max_time, num_neurons = real_data.shape
         time_in_seconds = timeVectorSeconds[i].reshape(timeVectorSeconds[i].shape[0], 1)
-        dt = np.zeros_like(time_in_seconds)
+        time_in_seconds = torch.tensor(time_in_seconds)
+        dt = torch.zeros_like(time_in_seconds)
         dt[1:] = time_in_seconds[1:] - time_in_seconds[:-1]
         num_named = len(
             [k for k in neuron_to_idx.keys() if not k.isnumeric()]

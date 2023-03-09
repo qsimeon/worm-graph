@@ -56,7 +56,7 @@ if __name__ == "__main__":
 
     n = data.shape[0]
 
-    print(worm[0]["time_in_seconds"], worm[0]["dt"])
+    print(worm[0]["time_in_seconds"].shape, worm[0]["dt"].shape)
     exit(0)
 
     # print(worm[0].keys())
