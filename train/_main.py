@@ -110,10 +110,8 @@ def train_model(
 
 
 if __name__ == "__main__":
-    root = os.path.abspath(os.path.dirname(os.getcwd()))
-    root += "/"
-    config = OmegaConf.load(root + "conf/train.yaml")
+    config = OmegaConf.load("conf/train.yaml")
     print("config:", OmegaConf.to_yaml(config), end="\n\n")
-    model = get_model(OmegaConf.load(root + "conf/model.yaml"))
-    dataset = get_dataset(OmegaConf.load(root + "conf/dataset.yaml"))
+    model = get_model(OmegaConf.load("conf/model.yaml"))
+    dataset = get_dataset(OmegaConf.load("conf/dataset.yaml"))
     model, log_dir = train_model(model, dataset, config)

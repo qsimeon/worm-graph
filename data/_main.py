@@ -37,8 +37,6 @@ def get_dataset(config: DictConfig):
 
 
 if __name__ == "__main__":
-    root = os.path.abspath(os.path.dirname(os.getcwd()))
-    root += "/"
-    config = OmegaConf.load(root + "conf/dataset.yaml")
+    config = OmegaConf.load("conf/dataset.yaml")
     print("config:", OmegaConf.to_yaml(config), end="\n\n")
     dataset = get_dataset(config)
