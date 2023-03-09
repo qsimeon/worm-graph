@@ -57,11 +57,16 @@ def train_model(
         shuffle=True,
         reverse=True,
     )
+    # choose whether to use original or smoothed calcium data
+    if config.train.smooth_data:
+        key_data = "smooth_calcium_data"
+    else:
+        key_data = "calcium_data"
     # train for multiple cycles
     reset_epoch = 1
     for i, (worm, single_worm_dataset) in enumerate(dataset_items):
         model, log = optimize_model(
-            data=single_worm_dataset["calcium_data"],
+            data=single_worm_dataset[key_data],
             model=model,
             mask=single_worm_dataset["named_neurons_mask"],
             start_epoch=reset_epoch,

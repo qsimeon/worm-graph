@@ -139,9 +139,7 @@ class NeuralActivityDataset(torch.utils.data.Dataset):
             Y_tau = self.D[
                 start + self.tau : end + self.tau, self.neurons, self.feature_mask
             ]
-
-            Res_tau = self.__smooth_data(X_tau, Y_tau, self.smooth)
-
+            Res_tau = Y_tau - X_tau
             # store metadata about the sample
             tau = torch.tensor(self.tau)
             meta = {"seq_len": L, "start": start, "end": end, "tau": tau}
@@ -163,38 +161,6 @@ class NeuralActivityDataset(torch.utils.data.Dataset):
         batch_sampler = BatchSampler([self.batch_indices])
         # return samples and batch_sampler
         return data_samples, batch_sampler
-
-    def __smooth_data(self, x_tau, y_tau, smooth):
-        residual_origin = y_tau - x_tau
-        residual = torch.zeros_like(residual_origin)
-        if str(smooth).lower() == "sg":
-            residual = savgol_filter(residual_origin, 5, 3, mode="nearest", axis=-1)
-        elif str(smooth).lower() == "tvr":
-            n = residual_origin.shape[0]
-            diff_tvr = DiffTVR(n, 1)
-            for i in range(0, residual_origin.shape[1]):
-                temp = np.array(residual_origin[:, i])
-                temp.reshape(len(temp), 1)
-                (item_denoise, _) = diff_tvr.get_deriv_tvr(
-                    data=temp,
-                    deriv_guess=np.full(n + 1, 0.0),
-                    alpha=0.005,
-                    no_opt_steps=100,
-                )
-                residual[:, i] = torch.tensor(item_denoise[: (len(item_denoise) - 1)])
-        elif str(smooth).lower() == "fft":
-            data_torch = residual_origin
-            max_time, num_neurons = data_torch.shape
-            frequencies = torch.fft.rfftfreq(max_time, d=1.0)
-            threshold = torch.abs(frequencies)[int(frequencies.shape[0] * 0.1)]  # picks first 30 frequencies (can use value > 30 to smooth less)
-            oneD_kernel = torch.abs(frequencies) < threshold
-            fft_input = torch.fft.rfftn(data_torch, dim=0)
-            oneD_kernel = oneD_kernel.repeat(302, 1).T
-            filtered_data_torch = torch.fft.irfftn(fft_input * oneD_kernel, dim=0)
-            residual[1:] = filtered_data_torch
-        else:  # no smoothing process
-            return residual_origin
-        return residual
 
 
 class CElegansConnectome(InMemoryDataset):
