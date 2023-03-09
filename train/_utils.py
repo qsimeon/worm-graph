@@ -332,6 +332,10 @@ def split_train_test(
     """
     Create neural activity train and test datasets.
     Returns train and test data loaders and masks.
+
+    data: [max_time, num_neurons, 2] i.e.,
+    data[:, :, 0] = dataset["(smoothed)calcium_data"]
+    data[:, :, 1] = dataset["residual_(smoothed)calcium"]
     """
     # argument checking
     assert isinstance(k_splits, int) and k_splits > 1, "Ensure that k_splits > 1."
@@ -360,9 +364,11 @@ def split_train_test(
     test_splits = split_datasets[1::2]
     # make datasets
     train_div = len(seq_len) * len(train_splits)
+
     train_datasets = [
         NeuralActivityDataset(
-            dset,
+            D=dset[:, :, 0],
+            Target=dset[:, :, 1],
             tau=tau,
             seq_len=seq,
             reverse=reverse,
@@ -375,7 +381,8 @@ def split_train_test(
     test_div = len(seq_len) * len(test_splits)
     test_datasets = [
         NeuralActivityDataset(
-            dset,
+            D=dset[:, :, 0],
+            Target=dset[:, :, 1],
             tau=tau,
             seq_len=seq,
             reverse=reverse,
@@ -520,6 +527,7 @@ def optimize_model(
 def make_predictions(
     model: torch.nn.Module,
     dataset: dict,
+    smooth_method: "smooth",
     log_dir: str,
 ) -> None:
     """Make predicitons on a dataset with a trained model.
@@ -538,17 +546,25 @@ def make_predictions(
     Returns:
         None.
     """
+    if str(smooth_method).lower() == "smooth":
+        key_data = "smooth_calcium_data"
+        key_target = "residual_smooth_calcium"
+    else:
+        key_data = "calcium_data"
+        key_target = "residual_calcium"
+
     for worm, single_worm_dataset in dataset.items():
         os.makedirs(os.path.join(log_dir, worm), exist_ok=True)
         # get data to save
         named_neuron_to_idx = single_worm_dataset["named_neuron_to_idx"]
-        calcium_data = single_worm_dataset["calcium_data"]
+        calcium_data = single_worm_dataset[key_data]
+        targets = single_worm_dataset[key_target]
         named_neurons_mask = single_worm_dataset["named_neurons_mask"]
         train_mask = single_worm_dataset["train_mask"]
         labels = np.expand_dims(np.where(train_mask, "train", "test"), axis=-1)
         columns = list(named_neuron_to_idx) + ["train_test_label"]
         # make predictions with final model
-        targets, predictions = model_predict(model, calcium_data)
+        predictions = model_predict(model, calcium_data)
         # save dataframes
         data = calcium_data[:, named_neurons_mask].numpy()
         data = np.hstack((data, labels))
@@ -557,18 +573,14 @@ def make_predictions(
             index=True,
             header=True,
         )
-        data = torch.nn.functional.pad(
-            targets[:, named_neurons_mask], (0, 0, 1, 0)
-        ).numpy()
+        data = targets[:, named_neurons_mask].numpy()
         data = np.hstack((data, labels))
         pd.DataFrame(data=data, columns=columns).to_csv(
             os.path.join(log_dir, worm, "target_ca_residual.csv"),
             index=True,
             header=True,
         )
-        data = torch.nn.functional.pad(
-            predictions[:, named_neurons_mask], (0, 0, 0, 1)
-        ).numpy()
+        data = predictions[:, named_neurons_mask].numpy()
         data = np.hstack((data, labels))
         pd.DataFrame(data=data, columns=columns).to_csv(
             os.path.join(log_dir, worm, "predicted_ca_residual.csv"),
@@ -596,27 +608,9 @@ def model_predict(
     input = calcium_data.to(DEVICE)
     # add batch dimension
     output = model(input.unsqueeze(0)).squeeze()
-    # targets/predictions
-    residual_origin = input[1:] - input[:-1]
-    # residual = torch.zeros_like(residual_origin)
-    # # smooth the residual with total-variation denoising
-    # n = residual_origin.shape[0]
-    # diff_tvr = DiffTVR(n, 1)
-    # for i in range(0, residual_origin.shape[1]):
-    #     temp = np.array(residual_origin[:, i])
-    #     temp.reshape(len(temp), 1)
-    #     item_denoise = savgol_filter(temp, 5, 3, mode="nearest")
-    #     residual[:, i] = torch.tensor(item_denoise)
-    #     # (item_denoise, _) = diff_tvr.get_deriv_tvr(
-    #     #     data=temp,
-    #     #     deriv_guess=np.full(n + 1, 0.0),
-    #     #     alpha=0.005,
-    #     #     no_opt_steps=100
-    #     # )
-    #     # residual[:, i] = torch.tensor(item_denoise[:(len(item_denoise) - 1)])
-    targets = residual_origin.detach().cpu()
-    predictions = output[:-1].detach().cpu()
-    return targets, predictions
+    predictions = torch.zeros_like(calcium_data)
+    predictions[1:] = output[:-1].detach().cpu()
+    return predictions
 
 
 def gnn_train_val_mask(graph, train_ratio=0.7, train_mask=None):
