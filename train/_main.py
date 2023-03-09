@@ -14,8 +14,6 @@ def train_model(
     """
     assert "worm0" in dataset, "Not a valid dataset object."
     # initialize
-    smth = dataset["smooth"]
-    dataset.pop("smooth")
     dataset_name = dataset["worm0"]["dataset"]
     model_class_name = model.__class__.__name__
     timestamp = datetime.now().strftime("%Y_%m_%d_%H_%M")
@@ -58,7 +56,6 @@ def train_model(
         tau=1,
         shuffle=True,
         reverse=True,
-        smooth=smth,
     )
     # train for multiple cycles
     reset_epoch = 1

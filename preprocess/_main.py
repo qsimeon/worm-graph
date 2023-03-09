@@ -11,6 +11,7 @@ def process_data(config: DictConfig) -> None:
             url=config.preprocess.url,
             zipfile=config.preprocess.zipfile,
             dataset=config.preprocess.dataset,
+            smooth_method=config.preprocess.smooth,
         )
         print("C. elegans neural data has been pickled!", end="\n\n")
     else:
@@ -24,6 +25,8 @@ def process_data(config: DictConfig) -> None:
 
 
 if __name__ == "__main__":
-    config = OmegaConf.load("conf/preprocess.yaml")
+    root = os.path.abspath(os.path.dirname(os.getcwd()))
+    root += "/"
+    config = OmegaConf.load(root + "conf/preprocess.yaml")
     print("config:", OmegaConf.to_yaml(config), end="\n\n")
     process_data(config)
