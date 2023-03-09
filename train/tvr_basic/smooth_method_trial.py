@@ -24,6 +24,7 @@ from numpy.fft import fft
 from scipy.signal import savgol_filter
 from torch.fft import fft
 
+
 def derivative(y, t):
     """
     input: [time, status]
@@ -72,11 +73,15 @@ if __name__ == "__main__":
     # n = dataset["worm0"]["calcium_data"].shape[0]
     # t = dataset["worm0"]["calcium_data"][1:] - dataset["worm0"]["calcium_data"][:(n-1)]
     # print("zzzz", t.shape)
-    print(dataset["worm0"]["calcium_data"][1:] - dataset["worm0"]["calcium_data"][:-1] == dataset["worm0"]["residual_calcium"][1:])
+    print(dataset["worm0"]["calcium_data"][1:] - dataset["worm0"]["calcium_data"][:-1] == dataset["worm0"][
+                                                                                              "residual_calcium"][1:])
 
+    plt.plot(dataset["worm0"]["calcium_data"][:, 0])
+    plt.plot(dataset["worm0"]["smooth_calcium_data"][:, 0])
+    plt.legend(["cal", "smooth_cal"])
+    plt.show()
 
     exit(0)
-
 
     ########### neuronal trials ##################
     # take three worms as an example
@@ -105,10 +110,6 @@ if __name__ == "__main__":
     # dict_keys(['dataset', 'worm', 'calcium_data', 'smooth_calcium_data', 'residual_calcium', 'residual_smooth_calcium', 'neuron_to_idx', 'idx_to_neuron', 'max_time', 'num_neurons', 'num_named_neurons', 'num_unknown_neurons', 'named_neurons_mask', 'unknown_neurons_mask', 'neurons_mask', 'named_neuron_to_idx', 'idx_to_named_neuron', 'unknown_neuron_to_idx', 'idx_to_unknown_neuron', 'slot_to_named_neuron', 'named_neuron_to_slot', 'slot_to_unknown_neuron', 'unknown_neuron_to_slot', 'slot_to_neuron', 'neuron_to_slot'])
     exit(0)
 
-
-
-
-
     print(data_torch.shape)
 
     print("---")
@@ -133,7 +134,6 @@ if __name__ == "__main__":
     # fig2.savefig('derivative.png')
     plt.show()
 
-
     # plt.semilogy(fft_input)
     # plt.semilogy(fft_input * oneD_kernel)
     # plt.semilogy(oneD_kernel)  # frequencies are in Hertz (if we knew the real `dt`)
@@ -143,109 +143,3 @@ if __name__ == "__main__":
     # plt.grid()
     # plt.show()
     # exit(0)
-
-
-
-
-    # # a piece of wrong code -- wait to debug
-    # n = data_torch.shape[0]
-    # frequencies = torch.fft.rfftfreq(n, d=1.0)
-    # threshold = torch.abs(frequencies)[30]
-    # oneD_kernel = torch.abs(frequencies) < threshold
-    # fft_input = torch.fft.rfft(data_torch)
-    # new_yf_clean = torch.fft.irfft(fft_input * oneD_kernel)
-    #
-    #
-    # plt.semilogy(fft_input)
-    # plt.semilogy(fft_input * oneD_kernel)
-    # plt.semilogy(oneD_kernel)  # frequencies are in Hertz (if we knew the real `dt`)
-    # plt.xlabel("Hz")
-    # plt.ylabel("Amplitude")
-    # plt.title("trial")
-    # plt.grid()
-    # plt.show()
-    # exit(0)
-    #
-    #
-    #
-    # # hyperparameter `alpha`: threshold
-    # alpha = 0.01
-    # n = data_torch.shape[0]
-    # yf = torch.fft.rfft(data_torch)
-    # xf = torch.fft.rfftfreq(n, 0.001)
-    # yf_abs = np.abs(np.array(yf))
-    # print(yf.shape)
-    # print(yf_abs)
-    # max_val = yf_abs.max(axis=0)
-    # print(max_val)
-    # indices = yf_abs > 10
-    # print(indices.shape)
-    #
-    # indices = indices.astype(int)
-    # indices = torch.tensor(indices)
-    # print(indices)
-    # yf_clean = indices * yf
-    # new_yf_clean = torch.fft.irfft(yf_clean)
-    #
-    #
-    # plt.semilogy(xf, yf)
-    # plt.semilogy(xf, yf_clean)
-    # plt.xlabel("Hz")
-    # plt.ylabel("Amplitude")
-    # plt.grid()
-    # plt.show()
-    #
-    # plt.plot(data_torch)
-    # plt.plot(new_yf_clean)
-    # plt.title("calcium data")
-    # plt.legend(["True", "FFT"])
-    # # fig2.savefig('derivative.png')
-    # plt.show()
-    # exit(0)
-    #
-
-
-    # # Add noise
-    # data = data[0:1000]
-    # n = len(data)
-    # data_noisy = data
-    #
-    # # # Plot true and noisy signal
-    # # fig1 = plt.figure()
-    # # plt.plot(data)
-    # # plt.plot(data_noisy)
-    # # plt.title("Signal")
-    # # plt.legend(["True", "Noisy"])
-    # # plt.show()
-    # # # exit(0)
-    # # Derivative with TVR
-    # diff_tvr = DiffTVR(n, 1)
-    # (deriv_tvr, _) = diff_tvr.get_deriv_tvr(
-    #     data=data_noisy, deriv_guess=np.full(n + 1, 0.0), alpha=0.005, no_opt_steps=100
-    # )
-    #
-    # deriv_tvr = deriv_tvr[:-1]
-    #
-    # # Derivative with FFT
-    # # deriv_fft = fft(deriv_true, n)
-    #
-    # deriv_sf = savgol_filter(deriv_true, 5, 3, mode="nearest")
-    #
-    # # np.convolve
-    # def moving_average(interval, windowsize):
-    #     window = np.ones(int(windowsize)) / float(windowsize)
-    #     re = np.convolve(interval, window, "same")
-    #     return re
-    #
-    # deriv_con = moving_average(deriv_true, 5)
-    #
-    # # Plot TVR derivative
-    # fig2 = plt.figure()
-    # plt.plot(deriv_true)
-    # # plt.plot(deriv_tvr)
-    # # plt.plot(deriv_sf)
-    # plt.plot(deriv_con)
-    # plt.title("Derivative")
-    # plt.legend(["True", "CON"])
-    # # fig2.savefig('derivative.png')
-    # plt.show()
