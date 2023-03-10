@@ -2,7 +2,7 @@ from visualization._pkg import *
 
 
 def draw_connectome(
-        network, pos=None, labels=None, plt_title="C. elegans connectome network"
+    network, pos=None, labels=None, plt_title="C. elegans connectome network"
 ):
     """
     Args:
@@ -146,10 +146,10 @@ def plot_loss_curves(log_dir):
     loss_df = pd.read_csv(os.path.join(log_dir, "loss_curves.csv"), index_col=0)
     # plot loss vs epochs
     plt.figure()
-    sns.lineplot(x="epochs", y="centered_train_losses", data=loss_df, label="train")
-    sns.lineplot(x="epochs", y="centered_test_losses", data=loss_df, label="test")
-    # sns.lineplot(x="epochs", y="train_losses", data=loss_df, label="ori_train")
-    # sns.lineplot(x="epochs", y="test_losses", data=loss_df, label="ori_test")
+    # sns.lineplot(x="epochs", y="centered_train_losses", data=loss_df, label="train")
+    # sns.lineplot(x="epochs", y="centered_test_losses", data=loss_df, label="test")
+    sns.lineplot(x="epochs", y="train_losses", data=loss_df, label="train")
+    sns.lineplot(x="epochs", y="test_losses", data=loss_df, label="test")
     plt.legend()
     plt.title(plt_title)
     plt.xlabel("Epoch (# worms)")
@@ -197,9 +197,9 @@ def plot_before_after_weights(log_dir: str) -> None:
 
 
 def plot_targets_predictions(
-        log_dir: str,
-        worm: Union[str, None] = "all",
-        neuron: Union[str, None] = "all",
+    log_dir: str,
+    worm: Union[str, None] = "all",
+    neuron: Union[str, None] = "all",
 ) -> None:
     """
     Plot of the target Ca2+ residual time series overlayed
@@ -292,9 +292,9 @@ def plot_targets_predictions(
 
 
 def plot_correlation_scatterplot(
-        log_dir: str,
-        worm: Union[str, None] = "all",
-        neuron: Union[str, None] = "all",
+    log_dir: str,
+    worm: Union[str, None] = "all",
+    neuron: Union[str, None] = "all",
 ):
     """
     Create a scatterpot of the target and predicted Ca2+

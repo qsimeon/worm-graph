@@ -1,52 +1,53 @@
-from data._main import get_dataset
-
-from omegaconf import OmegaConf
-
-from train._utils import split_train_test
+"""
+Testing data loaders. 
+"""
 
 import matplotlib.pyplot as plt
+from omegaconf import OmegaConf
+from data._main import get_dataset
+from train._utils import split_train_test
 
-dataset = get_dataset(OmegaConf.load("conf/dataset.yaml"))
 
-calcium_data = dataset["worm0"]["calcium_data"]
+if __name__ == "__main__":
+    dataset = get_dataset(OmegaConf.load("conf/dataset.yaml"))
 
-kwargs = dict(tau=1, shuffle=True, reverse=True)
+    calcium_data = dataset["worm0"]["calcium_data"]
 
-train_loader, test_loader, train_mask, test_mask = split_train_test(
-    calcium_data,
-    seq_len=[7, 13, 101],
-    k_splits=5,
-    train_size=3312 * 3,
-    test_size=3312 * 3,
-    **kwargs,
-)
+    kwargs = dict(tau=1, shuffle=True, reverse=True)
 
-print("Train batches")
-for data in train_loader:
-    X, Y, meta = data
-    print(X.shape)
-    # break
-print()
+    train_loader, test_loader, train_mask, test_mask = split_train_test(
+        calcium_data,
+        seq_len=[7, 13, 101],
+        k_splits=5,
+        train_size=131702,
+        test_size=131702,
+        **kwargs,
+    )
 
-print("Test batches")
-for data in test_loader:
-    X, y, meta = data
-    print(X.shape)
-    # break
-print()
+    print("Train batches")
+    for data in train_loader:
+        X, Y, meta = data
+        print(X.shape)
+    print()
 
-plt.figure()
+    print("Test batches")
+    for data in test_loader:
+        X, y, meta = data
+        print(X.shape)
+    print()
 
-plt.plot(train_mask.to(float).numpy(), label="train")
+    plt.figure()
 
-plt.plot(test_mask.to(float).numpy(), label="test")
+    plt.plot(train_mask.to(float).numpy(), label="train")
 
-plt.legend()
+    plt.plot(test_mask.to(float).numpy(), label="test")
 
-plt.title("Train and Test Masks")
+    plt.legend()
 
-plt.xlabel("Time")
+    plt.title("Train and Test Masks")
 
-plt.ylabel("Test (0) / Train (1)")
+    plt.xlabel("Time")
 
-plt.show()
+    plt.ylabel("Test (0) / Train (1)")
+
+    plt.show()
