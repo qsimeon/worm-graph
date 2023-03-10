@@ -1,8 +1,4 @@
 visualize:
-<<<<<<< HEAD
-  log_dir: logs/2023_03_09_16_35-Uzel2022-LinearNN
-=======
   log_dir: logs/2023_03_09_15_36-Uzel2022-NeuralCFC
->>>>>>> 00c9565 (change root path)
   worm: worm0
   neuron: AVAL
