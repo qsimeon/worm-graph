@@ -1,41 +1,35 @@
-from data._main import get_dataset
-
+import matplotlib.pyplot as plt
 from omegaconf import OmegaConf
-
-from train._utils import optimize_model
-
-from train._main import train_model
-
 from models._utils import LinearNN
-
+from train._main import train_model
+from data._main import get_dataset
+from train._utils import optimize_model
 from visualization._utils import plot_before_after_weights
 
-import matplotlib.pyplot as plt
+if __name__ == "__main__":
+    # load dataset and get calcium data for one worm
+    dataset = get_dataset(OmegaConf.load("conf/dataset.yaml"))
+    calcium_data = dataset["worm0"]["calcium_data"]
+    # create a model
+    model = LinearNN(302, 64).double()
+    # train the model
+    kwargs = dict(train_size=4096, test_size=4096, tau=1, seq_len=47, reverse=False)
+    model, log = optimize_model(calcium_data, model, k_splits=2, **kwargs)
 
-dataset = get_dataset(OmegaConf.load("conf/dataset.yaml"))
+    plt.figure()
 
-calcium_data = dataset["worm0"]["calcium_data"]
+    plt.plot(log["train_mask"].to(float).numpy())
 
-model = LinearNN(302, 64).double()
+    plt.title("Train mask")
 
-kwargs = dict(train_size=1000, test_size=1000, tau=1, seq_len=7, reverse=True)
+    plt.xlabel("Time")
 
-model, log = optimize_model(calcium_data, model, k_splits=7, **kwargs)
+    plt.ylabel("Test (0) / Train (1)")
 
-plt.figure()
+    plt.show()
 
-plt.plot(log["train_mask"].to(float).numpy())
+    config = OmegaConf.load("conf/train.yaml")
 
-plt.title("Train mask")
+    model, log_dir = train_model(model, dataset, config, shuffle=True)
 
-plt.xlabel("Time")
-
-plt.ylabel("Test (0) / Train (1)")
-
-plt.show()
-
-config = OmegaConf.load("conf/train.yaml")
-
-model, log_dir = train_model(model, dataset, config, shuffle=True)
-
-plot_before_after_weights(log_dir)
+    plot_before_after_weights(log_dir)
