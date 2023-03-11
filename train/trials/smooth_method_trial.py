@@ -60,13 +60,14 @@ if __name__ == "__main__":
     # n = len(data)
     # data_noisy = data + np.random.normal(0, 0.05, n)
 
-    config = OmegaConf.load("dataset.yaml")
+    config = OmegaConf.load("conf/dataset.yaml")
     print("config:", OmegaConf.to_yaml(config), end="\n\n")
     dataset = get_dataset(config)
     print("----dataset prepared------\n")
 
     # proof on data preprocessing
     print(dataset["worm0"].keys())
+    print(dataset["worm0"]["named_neurons_mask"].shape)
     print(dataset["worm0"]["calcium_data"].shape, dataset["worm0"]["residual_calcium"].shape)
     ### 'calcium_data', 'smooth_calcium_data', 'residual_calcium', 'residual_smooth_calcium',
 

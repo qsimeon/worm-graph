@@ -124,8 +124,8 @@ def split_train_test(
         train_size: int = 1024,
         test_size: int = 1024,
         tau: int = 1,
-        shuffle: bool = True,
-        reverse: bool = True,
+        shuffle: bool = False,
+        reverse: bool = False,
 ) -> tuple[
     torch.utils.data.DataLoader,
     torch.utils.data.DataLoader,
@@ -151,6 +151,7 @@ def split_train_test(
     # create train and test masks. important that this is before dropping last split
     train_mask = torch.cat(
         [
+            # split as train-test-train-test-...
             (True if i % 2 == 0 else False) * torch.ones(len(section), dtype=torch.bool)
             for i, section in enumerate(split_datasets)
         ]
@@ -200,7 +201,7 @@ def split_train_test(
         test_indices.append(dset.batch_indices + prev_bn)
         prev_bn += dset.batch_indices[-1] + 1
     # shuffle data
-    if shuffle == True:
+    if shuffle:
         train_shuffle_inds = random.sample(
             range(len(train_datasets)), k=len(train_datasets)
         )
