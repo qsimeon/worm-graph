@@ -1,4 +1,4 @@
 visualize:
-  log_dir: logs/2023_03_10_10_01-Flavell2023-NeuralCFC
+  log_dir: logs/2023_03_10_18_38-sine-LinearNN
   worm: worm0
-  neuron: AVAL
+  neuron: "300"

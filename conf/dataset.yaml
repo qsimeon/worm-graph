@@ -1,5 +1,11 @@
 dataset:
   name:
-    - Flavell2023
+    - Uzel2022
+
+
+    ### 'calcium_data', 'smooth_calcium_data', 'residual_calcium', 'residual_smooth_calcium',
+
+
+# dict_keys(['dataset', 'worm', 'calcium_data', 'smooth_calcium_data', 'residual_calcium', 'residual_smooth_calcium', 'neuron_to_idx', 'idx_to_neuron', 'max_time', 'time_in_seconds', 'dt', 'num_neurons', 'num_named_neurons', 'num_unknown_neurons', 'named_neurons_mask', 'unknown_neurons_mask', 'neurons_mask', 'named_neuron_to_idx', 'idx_to_named_neuron', 'unknown_neuron_to_idx', 'idx_to_unknown_neuron', 'slot_to_named_neuron', 'named_neuron_to_slot', 'slot_to_unknown_neuron', 'unknown_neuron_to_slot', 'slot_to_neuron', 'neuron_to_slot'])
 
 

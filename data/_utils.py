@@ -34,7 +34,6 @@ class NeuralActivityDataset(torch.utils.data.Dataset):
             size=1000,
             feature_mask=None,
             reverse=False,
-            smooth="sg",
     ):
         """
         Args:
@@ -66,7 +65,6 @@ class NeuralActivityDataset(torch.utils.data.Dataset):
         self.seq_len = seq_len
         self.max_time, num_neurons, num_features = D.shape
         self.reverse = reverse
-        self.smooth = smooth
         # feature checking
         if feature_mask is not None:
             assert len(feature_mask) == num_features, (
@@ -127,8 +125,8 @@ class NeuralActivityDataset(torch.utils.data.Dataset):
         L = self.seq_len
         # iterate over all start indices
         start_range = (
-            range(0, T - L - self.tau + 1)  # generate from start to end
-            if not self.reverse
+            range(0, T - L - self.tau + 1)
+            if not self.reverse  # generate from start to end
             else range(T - L - self.tau, -1, -1)  # generate from end to start
         )
         for start in start_range:
