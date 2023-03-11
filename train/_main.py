@@ -67,6 +67,7 @@ def train_model(
     for i, (worm, single_worm_dataset) in enumerate(dataset_items):
         model, log = optimize_model(
             data=single_worm_dataset[key_data],
+            dt=single_worm_dataset["dt"],
             model=model,
             mask=single_worm_dataset["named_neurons_mask"],
             start_epoch=reset_epoch,

@@ -112,7 +112,7 @@ train:
 
   seq_len: 47 # length(s) of sequences to train
   k_splits: 2 # number of interleaved train/test splits per single worm dataset
-  cycles: 10 # number of passes through a multi-worm dataset
+  cycles: 1000 # number of passes through a multi-worm dataset
   epochs: 1 # number passes through a single worm dataset per cycle
   train_size: 2048 # total number of samples of train data = batch_size*cycles*num_worms -> get batch_size
   test_size: 2048 # total number of samples of test data
