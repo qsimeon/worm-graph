@@ -68,10 +68,10 @@ class NeuralActivityDataset(torch.utils.data.Dataset):
         # feature checking
         if feature_mask is not None:
             assert len(feature_mask) == num_features, (
-                    "`feature_mask` must have shape (%s, 1)." % num_features
+                "`feature_mask` must have shape (%s, 1)." % num_features
             )
             assert (
-                    feature_mask.sum() > 0
+                feature_mask.sum() > 0
             ), "`feature_mask` must select at least 1 feature."
             self.feature_mask = feature_mask
         else:
@@ -87,7 +87,7 @@ class NeuralActivityDataset(torch.utils.data.Dataset):
         else:  # multiple signals
             if neurons is not None:
                 assert (
-                        np.array(neurons).size == 1
+                    np.array(neurons).size == 1
                 ), "Only select 1 neuron when using > 1 signals as features."
                 self.neurons = np.array(neurons)  # use the single neuron given
             else:
@@ -135,8 +135,8 @@ class NeuralActivityDataset(torch.utils.data.Dataset):
             # data samples: input, X_tau and target, Y_tau
             X_tau = self.D[start:end, self.neurons, self.feature_mask]
             Y_tau = self.D[
-                    start + self.tau: end + self.tau, self.neurons, self.feature_mask
-                    ]
+                start + self.tau : end + self.tau, self.neurons, self.feature_mask
+            ]
             Res_tau = Y_tau - X_tau
             # store metadata about the sample
             tau = torch.tensor(self.tau)
@@ -163,11 +163,11 @@ class NeuralActivityDataset(torch.utils.data.Dataset):
 
 class CElegansConnectome(InMemoryDataset):
     def __init__(
-            self,
-            root=os.path.join(ROOT_DIR, "data"),
-            transform=None,
-            pre_transform=None,
-            pre_filter=None,
+        self,
+        root=os.path.join(ROOT_DIR, "data"),
+        transform=None,
+        pre_transform=None,
+        pre_filter=None,
     ):
         """
         Defines CElegansConnectome as a subclass of a PyG InMemoryDataset.
@@ -185,7 +185,7 @@ class CElegansConnectome(InMemoryDataset):
     @property
     def processed_file_names(self):
         """List of the processed files needed to proceed."""
-        return ["connectome/graph_tensors.pt", "connectome/data.pt"]
+        return ["connectome/graph_tensors.pt"]
 
     def download(self):
         """Download the raw zip file if not already retrieved."""
@@ -252,9 +252,9 @@ def pick_worm(dataset, wormid):
         dataset = load_dataset(dataset)
     else:
         assert (
-                isinstance(dataset, dict)
-                and ("name" in dataset.keys())
-                and ("worm0" in set(dataset["generator"]))
+            isinstance(dataset, dict)
+            and ("name" in dataset.keys())
+            and ("worm0" in set(dataset["generator"]))
         ), "Not a valid worm datset!"
     avail_worms = set(dataset["generator"])
     if isinstance(wormid, str) and wormid.startswith("worm"):
@@ -284,7 +284,7 @@ def load_dataset(name):
     Loads the dataset with the specified name.
     """
     assert (
-            name in VALID_DATASETS
+        name in VALID_DATASETS
     ), "Unrecognized dataset! Please pick one from:\n{}".format(list(VALID_DATASETS))
     loader = eval("load_" + name)
     return loader()
