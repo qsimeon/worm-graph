@@ -1,4 +1,4 @@
 visualize:
-  log_dir: logs/2023_03_10_22_36-sine-NetworkLSTM
+  log_dir: logs/2023_03_12_16_11-sine-NetworkLSTM
   worm: worm0
   neuron: "100"

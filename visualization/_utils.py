@@ -146,9 +146,6 @@ def plot_loss_curves(log_dir):
     loss_df = pd.read_csv(os.path.join(log_dir, "loss_curves.csv"), index_col=0)
     # plot loss vs epochs
     plt.figure()
-
-    sns.lineplot(x="epochs", y="train_losses", data=loss_df, label="train", color='r')
-    sns.lineplot(x="epochs", y="test_losses", data=loss_df, label="test", color='g')
     sns.lineplot(x="epochs", y="centered_train_losses", data=loss_df, label="train")
     sns.lineplot(x="epochs", y="centered_test_losses", data=loss_df, label="test")
     plt.legend()
