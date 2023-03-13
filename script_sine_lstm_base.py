@@ -49,8 +49,10 @@ class myLSTM(torch.nn.Module):
 
     def forward(self, x):
         x, _ = self.lstm(x)  # seq batch hidden
+        print(x.shape)
         # x[:,-1:,] 这里是取最后一个值，用来进行全连接，下面注释掉的与全连接这句的意思是一样的。
         out = self.liner1(x[:, -1:, ])
+        print(out.shape)
         # s,b,h = x.shape
         # x = x.view(s*b,h)
         # x = self.liner1(x)
