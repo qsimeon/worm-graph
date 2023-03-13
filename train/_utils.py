@@ -119,7 +119,6 @@ def test(
 
 def split_train_test(
         data: torch.Tensor,
-        dt: torch.Tensor,
         k_splits: int = 2,
         seq_len: Union[int, list] = 101,
         train_size: int = 1024,
@@ -149,7 +148,6 @@ def split_train_test(
     # split dataset into train and test sections
     chunk_size = len(data) // k_splits
     split_datasets = torch.split(data, chunk_size, dim=0)  # length k_splits tuple
-    split_dt = torch.split(dt, chunk_size, dim=0)
     # create train and test masks. important that this is before dropping last split
     train_mask = torch.cat(
         [
@@ -162,40 +160,35 @@ def split_train_test(
     # drop last split if too small. important that this is after making train/test masks
     if (2 * tau >= len(split_datasets[-1])) or (len(split_datasets[-1]) < min(seq_len)):
         split_datasets = split_datasets[:-1]
-        split_dt = split_dt[:-1]
     train_splits = split_datasets[::2]
-    train_dt = split_dt[::2]
     test_splits = split_datasets[1::2]
-    test_dt = train_dt
     # make datasets
     train_div = len(seq_len) * len(train_splits)
-    for seq in seq_len:
-        for i in range(len(train_splits)):
-            train_datasets = [
-                NeuralActivityDataset(
-                    train_splits[i],
-                    train_dt[i],
-                    tau=tau,
-                    seq_len=seq,
-                    reverse=reverse,
-                    # keep per worm train size constant and dataset balanced
-                    size=train_size // train_div,
-                )
-            ]
+    train_datasets = [
+        NeuralActivityDataset(
+            dset,
+            tau=tau,
+            seq_len=seq,
+            reverse=reverse,
+            # keep per worm train size constant and dataset balanced
+            size=train_size // train_div,
+        )
+        for seq in seq_len
+        for dset in train_splits
+    ]
     test_div = len(seq_len) * len(test_splits)
-    for seq in seq_len:
-        for i in range(len(test_splits)):
-            test_datasets = [
-                NeuralActivityDataset(
-                    test_splits[i],
-                    test_dt[i],
-                    tau=tau,
-                    seq_len=seq,
-                    reverse=reverse,
-                    # keep per worm test size constant and dataset balanced
-                    size=test_size // test_div,
-                )
-            ]
+    test_datasets = [
+        NeuralActivityDataset(
+            dset,
+            tau=tau,
+            seq_len=seq,
+            reverse=reverse,
+            # keep per worm test size constant and dataset balanced
+            size=test_size // test_div,
+        )
+        for seq in seq_len
+        for dset in test_splits
+    ]
     # batch indices
     train_indices = []
     test_indices = []
@@ -240,7 +233,6 @@ def split_train_test(
 def optimize_model(
         data: torch.Tensor,
         model: torch.nn.Module,
-        dt: torch.Tensor,
         mask: Union[torch.tensor, None] = None,
         optimizer: Union[torch.optim.Optimizer, None] = None,
         start_epoch: int = 1,
@@ -275,7 +267,7 @@ def optimize_model(
     if optimizer is None:
         optimizer = torch.optim.Adam(model.parameters(), lr=learn_rate)
     # create data loaders and train/test masks
-    train_loader, test_loader, train_mask, test_mask = split_train_test(data, dt, **kwargs)
+    train_loader, test_loader, train_mask, test_mask = split_train_test(data, **kwargs)
     # create log dictionary to return
     log = {
         "epochs": [],
@@ -355,13 +347,12 @@ def make_predictions(
         # get data to save
         named_neuron_to_idx = single_worm_dataset["named_neuron_to_idx"]
         calcium_data = single_worm_dataset["calcium_data"]
-        dt = single_worm_dataset["dt"]
         named_neurons_mask = single_worm_dataset["named_neurons_mask"]
         train_mask = single_worm_dataset["train_mask"]
         labels = np.expand_dims(np.where(train_mask, "train", "test"), axis=-1)
         columns = list(named_neuron_to_idx) + ["train_test_label"]
         # make predictions with final model
-        targets, predictions = model_predict(model, calcium_data, dt)
+        targets, predictions = model_predict(model, calcium_data)
         # save dataframes
         data = calcium_data[:, named_neurons_mask].numpy()
         data = np.hstack((data, labels))
@@ -392,8 +383,7 @@ def make_predictions(
 
 
 def model_predict(
-        model: torch.nn.Module, calcium_data: torch.Tensor,
-        dt: torch.Tensor
+        model: torch.nn.Module, calcium_data: torch.Tensor
 ) -> tuple[torch.Tensor, torch.Tensor]:
     """
     Makes predictions for all neurons in the
@@ -411,10 +401,8 @@ def model_predict(
     # add batch dimension
     output = model(input.unsqueeze(0)).squeeze()
     # targets/predictions
-    residual = input[1:] - input[:-1]
-    for i in range(residual.shape[1]):
-        residual[:, i] = residual[:, i] / dt[:, i]
-    targets = residual.detach().cpu()
+    residual_origin = input[1:] - input[:-1]
+    targets = residual_origin.detach().cpu()
     predictions = output[:-1].detach().cpu()
     return targets, predictions
 

@@ -28,7 +28,6 @@ class NeuralActivityDataset(torch.utils.data.Dataset):
     def __init__(
             self,
             D,
-            Dt,
             neurons=None,
             tau=1,
             seq_len=17,
@@ -99,7 +98,6 @@ class NeuralActivityDataset(torch.utils.data.Dataset):
             self.feature_mask.sum() if self.num_neurons == 1 else self.num_neurons
         )
         self.D = D
-        self.Dt = Dt
         assert 0 <= tau < self.max_time // 2, "`tau` must be  0 <= tau < max_time//2"
         self.tau = tau
         self.size = size
@@ -140,11 +138,6 @@ class NeuralActivityDataset(torch.utils.data.Dataset):
                 start + self.tau : end + self.tau, self.neurons, self.feature_mask
             ]
             Res_tau = Y_tau - X_tau
-            val_dt = self.Dt.numpy().reshape(Res_tau.shape[1], 1)
-            dt_list = list(val_dt)
-            for i in range(Res_tau.shape[1]):
-                val_dt = torch.tensor(dt_list[i])
-                Res_tau[:, i] = torch.div(Res_tau[:, i], val_dt)
             # store metadata about the sample
             tau = torch.tensor(self.tau)
             meta = {"seq_len": L, "start": start, "end": end, "tau": tau}
