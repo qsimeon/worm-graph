@@ -22,24 +22,31 @@ if __name__ == "__main__":
         test_size=131702,
         **kwargs,
     )
-    # shapes of train batches
+
     print("Train batches")
     for data in train_loader:
         X, Y, meta = data
         print(X.shape)
     print()
-    # shapes of test batches
+
     print("Test batches")
     for data in test_loader:
         X, y, meta = data
         print(X.shape)
     print()
-    # display figure of train/test masks
+
     plt.figure()
+
     plt.plot(train_mask.to(float).numpy(), label="train")
+
     plt.plot(test_mask.to(float).numpy(), label="test")
+
     plt.legend()
+
     plt.title("Train and Test Masks")
+
     plt.xlabel("Time")
+
     plt.ylabel("Test (0) / Train (1)")
+
     plt.show()
