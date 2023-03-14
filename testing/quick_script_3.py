@@ -7,11 +7,14 @@ from omegaconf import OmegaConf
 from data._main import get_dataset
 from train._utils import split_train_test
 
+config = OmegaConf.load("conf/dataset.yaml")
 
 if __name__ == "__main__":
-    # load dataset and get calcium data for one worm
-    dataset = get_dataset(OmegaConf.load("conf/dataset.yaml"))
-    calcium_data = dataset["worm0"]["calcium_data"]
+    # load a dataset (multiple worms)
+    dataset = get_dataset(config)
+    # get calcium data for one worm
+    single_worm_dataset = dataset["worm0"]
+    calcium_data = single_worm_dataset["calcium_data"]
     # create train and test data loaders
     kwargs = dict(tau=1, shuffle=False, reverse=False)
     train_loader, test_loader, train_mask, test_mask = split_train_test(
