@@ -142,8 +142,7 @@ class NeuralActivityDataset(torch.utils.data.Dataset):
             tau = torch.tensor(self.tau)
             meta = {"seq_len": L, "start": start, "end": end, "tau": tau}
             # append to data samples
-            # change Y_tau to Res_tau
-            data_samples.append((X_tau, Res_tau, meta))
+            data_samples.append((X_tau, Y_tau, meta))
             # append index to batch
             batch_indices.append(self.counter)
             self.counter += 1

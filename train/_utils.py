@@ -41,8 +41,7 @@ def train(
         )
         # Train
         Y_tr = model(X_train)  # Forward pass.
-        Y_tr.retain_grad()
-        Y_tr.register_hook(lambda grad: grad * mask.double())
+
         loss = criterion(Y_tr[:, :, mask], Y_train[:, :, mask]) / (
                 tau + 1
         )  # Compute training loss.
@@ -352,6 +351,8 @@ def make_predictions(
         labels = np.expand_dims(np.where(train_mask, "train", "test"), axis=-1)
         columns = list(named_neuron_to_idx) + ["train_test_label"]
         # make predictions with final model
+        model = get_model(OmegaConf.load("conf/model.yaml"))
+        model.load_state_dict(torch.load("logs/2023_03_13_17_04-Uzel2022-NetworkLSTM/checkpoints/5001_epochs_5001_worms.pt"))
         targets, predictions = model_predict(model, calcium_data)
         # save dataframes
         data = calcium_data[:, named_neurons_mask].numpy()
@@ -402,7 +403,7 @@ def model_predict(
     output = model(input.unsqueeze(0)).squeeze()
     # targets/predictions
     residual_origin = input[1:] - input[:-1]
-    targets = residual_origin.detach().cpu()
+    targets = input[1:].detach().cpu()
     predictions = output[:-1].detach().cpu()
     return targets, predictions
 
