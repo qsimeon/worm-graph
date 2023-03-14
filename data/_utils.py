@@ -26,18 +26,17 @@ class NeuralActivityDataset(torch.utils.data.Dataset):
     """
 
     def __init__(
-            self,
-            D,
-            neurons=None,
-            tau=1,
-            seq_len=17,
-            size=1000,
-            feature_mask=None,
-            reverse=False,
+        self,
+        data,
+        neurons=None,
+        tau=1,
+        seq_len=17,
+        size=1000,
+        reverse=False,
     ):
         """
         Args:
-          D: torch.tensor. Data w/ shape (max_time, num_neurons, num_features).
+          D: torch.tensor. Data w/ shape (max_time, num_neurons).
           neurons: None, int or array-like. Index of neuron(s) to return data for.
                   Returns data for all neurons if None.
           tau: int, 0 <= tau < max_time//2. Forward time offset of target sequence.
@@ -45,59 +44,34 @@ class NeuralActivityDataset(torch.utils.data.Dataset):
                                             data pairs to generate.
           seq_len: int. Sequences of length `seq_len` are generated until the dataset `size`
                     is achieved.
-          feature_mask: torch.tensor. What features to select for generating dataset.
           reverse: bool. Whether to sample sequences backward from end of the data.
           smooth: str, Method in data smoothing process.
         Returns:
           (X, Y, meta): tuple. Batch of data samples.
             X: torch.tensor. Input tensor w/ shape (batch_size, seq_len,
-                                                  num_neurons, num_features)
+                                                  num_neurons)
             Y: torch.tensor. Target tensor w/ same shape as X
             meta: dict. Metadata information about samples.
                         keys: 'seq_len', 'start' index , 'end' index
         """
         super(NeuralActivityDataset, self).__init__()
         # dataset checking
-        assert torch.is_tensor(D), "Recast the dataset as `torch.tensor`."
-        if D.ndim == 2:
-            D = D.unsqueeze(-1)  # expand to 3D if dataset given is 2D
+        assert torch.is_tensor(data), "Recast the data as type `torch.tensor`."
+        assert data.ndim == 2 and data.size(0) > data.size(
+            1
+        ), "Reshape the data as (time, neurons)"
         assert isinstance(seq_len, int), "Enter an integer sequence length `seq_len`."
         self.seq_len = seq_len
-        self.max_time, num_neurons, num_features = D.shape
+        self.max_time, num_neurons = data.shape
         self.reverse = reverse
-        # feature checking
-        if feature_mask is not None:
-            assert len(feature_mask) == num_features, (
-                "`feature_mask` must have shape (%s, 1)." % num_features
-            )
-            assert (
-                feature_mask.sum() > 0
-            ), "`feature_mask` must select at least 1 feature."
-            self.feature_mask = feature_mask
-        else:
-            self.feature_mask = torch.tensor([1] + (num_features - 1) * [0]).to(
-                torch.bool
-            )
-        # enforce a constraint on using the neurons or signals as features
-        if self.feature_mask.sum() == 1:  # single signal
-            if neurons is not None:
-                self.neurons = np.array(neurons)  # use the subset of neurons given
-            else:  # neurons is None
-                self.neurons = np.arange(num_neurons)  # use all the neurons
-        else:  # multiple signals
-            if neurons is not None:
-                assert (
-                    np.array(neurons).size == 1
-                ), "Only select 1 neuron when using > 1 signals as features."
-                self.neurons = np.array(neurons)  # use the single neuron given
-            else:
-                self.neurons = np.array([0])  # use the first neuron
+        # select out requested neurons
+        if neurons is not None:
+            self.neurons = np.array(neurons)  # use the subset of neurons given
+        else:  # neurons is None
+            self.neurons = np.arange(num_neurons)  # use all the neurons
+
         self.num_neurons = self.neurons.size
-        # number of features equals: number of neurons if one signal; number of signals if multiple
-        self.num_features = (
-            self.feature_mask.sum() if self.num_neurons == 1 else self.num_neurons
-        )
-        self.D = D
+        self.data = data
         assert 0 <= tau < self.max_time // 2, "`tau` must be  0 <= tau < max_time//2"
         self.tau = tau
         self.size = size
@@ -114,14 +88,14 @@ class NeuralActivityDataset(torch.utils.data.Dataset):
 
     def __data_generator(self):
         """
-        Private method for generating all possible/requested data samples.
+        Private method for generating data samples.
         """
         data_samples = []
-        # a batch contains all data of a certain length
+        # a batch contains all data of a certain seq_len
         batch_indices = []
         # define length of time
         T = self.max_time
-        # iterate over all sequences of length eq_len
+        # iterate over all sequences of length seq_len
         L = self.seq_len
         # iterate over all start indices
         start_range = (
@@ -133,7 +107,7 @@ class NeuralActivityDataset(torch.utils.data.Dataset):
             # define an end index
             end = start + L
             # data samples: input, X_tau and target, Y_tau
-            X_tau = self.D[start:end, self.neurons, self.feature_mask]
+            X_tau = self.D[start:end, self.neurons]
             Y_tau = self.D[
                 start + self.tau : end + self.tau, self.neurons, self.feature_mask
             ]
