@@ -3,9 +3,14 @@ import matplotlib.pyplot as plt
 
 
 class BatchSampler(torch.utils.data.Sampler):
-    def __init__(self, data_source):
-        super(BatchSampler, self).__init__(data_source)
-        self.data_source = data_source
+    """
+    A custom sampler that returns the proper batche indices
+    for an instance of NeuralActivityDataset.
+    """
+
+    def __init__(self, batch_indices):
+        super(BatchSampler, self).__init__(batch_indices)
+        self.data_source = batch_indices
 
     def __len__(self):
         return len(self.data_source)
@@ -28,30 +33,30 @@ class NeuralActivityDataset(torch.utils.data.Dataset):
     def __init__(
         self,
         data,
-        neurons=None,
-        tau=1,
         seq_len=17,
-        size=1000,
+        num_samples=1000,
+        neurons=None,
+        time_vec=None,
         reverse=False,
     ):
         """
         Args:
-          D: torch.tensor. Data w/ shape (max_time, num_neurons).
-          neurons: None, int or array-like. Index of neuron(s) to return data for.
-                  Returns data for all neurons if None.
-          tau: int, 0 <= tau < max_time//2. Forward time offset of target sequence.
-          size: int, 0 < size <= max_time. Batch size. i.e. Number of (input, target)
-                                            data pairs to generate.
+          data: torch.tensor. Data w/ shape (max_time, num_neurons).
           seq_len: int. Sequences of length `seq_len` are generated until the dataset `size`
                     is achieved.
+          num_samples: int, 0 < num_samples <= max_time. Total number of (input, target)
+                      data pairs to generate.
+          neurons: None, int or array-like. Index of neuron(s) to return data for.
+                  Returns data for all neurons if None.
+          time_vec: None or array-like. A vector of the time (in seconds) corresponding
+                    to the time axis (axis 0) of the `data` tensor.
           reverse: bool. Whether to sample sequences backward from end of the data.
-          smooth: str, Method in data smoothing process.
         Returns:
-          (X, Y, meta): tuple. Batch of data samples.
+          (X, Y, metadata): tuple. Batch of data samples.
             X: torch.tensor. Input tensor w/ shape (batch_size, seq_len,
                                                   num_neurons)
             Y: torch.tensor. Target tensor w/ same shape as X
-            meta: dict. Metadata information about samples.
+            metadata: dict. Metadata information about samples.
                         keys: 'seq_len', 'start' index , 'end' index
         """
         super(NeuralActivityDataset, self).__init__()
@@ -62,6 +67,7 @@ class NeuralActivityDataset(torch.utils.data.Dataset):
         ), "Reshape the data as (time, neurons)"
         assert isinstance(seq_len, int), "Enter an integer sequence length `seq_len`."
         self.seq_len = seq_len
+        self.tau = 1
         self.max_time, num_neurons = data.shape
         self.reverse = reverse
         # select out requested neurons
@@ -69,14 +75,19 @@ class NeuralActivityDataset(torch.utils.data.Dataset):
             self.neurons = np.array(neurons)  # use the subset of neurons given
         else:  # neurons is None
             self.neurons = np.arange(num_neurons)  # use all the neurons
-
         self.num_neurons = self.neurons.size
+        # create time vector
+        if time_vec is not None:
+            time_vec = torch.tensor(time_vec).squeeze()
+            assert time_vec.ndim == 1 and len(time_vec) == data.size(
+                0
+            ), "Time vector must have shape (len(data), )"
+            self.time_vec = time_vec
+        else:
+            self.time_vec = torch.arange(self.max_time)
         self.data = data
-        assert 0 <= tau < self.max_time // 2, "`tau` must be  0 <= tau < max_time//2"
-        self.tau = tau
-        self.size = size
-        self.counter = 0
-        self.data_samples, self.batch_sampler = self.__data_generator()
+        self.num_samples = num_samples
+        self.data_samples = self.__data_generator()
 
     def __len__(self):
         """Denotes the total number of samples."""
@@ -86,53 +97,50 @@ class NeuralActivityDataset(torch.utils.data.Dataset):
         """Generates one sample of data."""
         return self.data_samples[index]
 
+    def parfor_func(self, start):
+        """
+        Helper function that parallelizes `__data_generator`.
+        """
+        # define an end index
+        end = start + self.seq_len
+        # get the time vector
+        time_vec = self.time_vec[start:end]
+        # data samples: input (X_tau) and target (Y_tau)
+        X_tau = self.data[start:end, self.neurons]
+        Y_tau = self.data[start + self.tau : end + self.tau, self.neurons]
+        # calculate the residual (forward first derivative)
+        Res_tau = Y_tau - X_tau
+        # store metadata about the sample
+        metadata = {
+            "seq_len": self.seq_len,
+            "start": start,
+            "end": end,
+            "tau": self.tau,
+            "residual": Res_tau,
+            "time_vec": time_vec,
+        }
+        # return sample
+        return X_tau, Y_tau, metadata
+
     def __data_generator(self):
         """
         Private method for generating data samples.
         """
-        data_samples = []
-        # a batch contains all data of a certain seq_len
-        batch_indices = []
         # define length of time
         T = self.max_time
-        # iterate over all sequences of length seq_len
+        # dataset will contain sequences of length `seq_len`
         L = self.seq_len
-        # iterate over all start indices
+        # all start indices
         start_range = (
             range(0, T - L - self.tau + 1)
             if not self.reverse  # generate from start to end
             else range(T - L - self.tau, -1, -1)  # generate from end to start
         )
-        for start in start_range:
-            # define an end index
-            end = start + L
-            # data samples: input, X_tau and target, Y_tau
-            X_tau = self.D[start:end, self.neurons]
-            Y_tau = self.D[
-                start + self.tau : end + self.tau, self.neurons, self.feature_mask
-            ]
-            Res_tau = Y_tau - X_tau
-            # store metadata about the sample
-            tau = torch.tensor(self.tau)
-            meta = {"seq_len": L, "start": start, "end": end, "tau": tau}
-            # append to data samples
-            # change Y_tau to Res_tau
-            data_samples.append((X_tau, Res_tau, meta))
-            # append index to batch
-            batch_indices.append(self.counter)
-            self.counter += 1
-            # we only want a number of samples up to self.size
-            if self.counter >= self.size:
-                break
-        batch_indices = torch.tensor(batch_indices)
-        # size of dataset
-        self.size = self.counter
-        # save batch indices as attribute
-        self.batch_indices = batch_indices
-        # create a batch sampler
-        batch_sampler = BatchSampler([self.batch_indices])
-        # return samples and batch_sampler
-        return data_samples, batch_sampler
+        # parallelize the data generation
+        with Pool(processes=cpu_count() // 2) as pool:
+            # synchronous
+            data_samples = pool.map(self.parfor_func, start_range[: self.num_samples])
+        return data_samples
 
 
 class CElegansConnectome(InMemoryDataset):
