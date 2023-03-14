@@ -65,6 +65,10 @@ if __name__ == "__main__":
     plt.show()
 
     print(temp.shape)
+
+    print("--------")
+    print(worm[0]["dt"].shape)
+
     exit(0)
 
     # print(worm[0].keys())
