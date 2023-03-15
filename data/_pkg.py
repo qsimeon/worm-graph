@@ -10,8 +10,5 @@ from omegaconf import DictConfig, OmegaConf
 from multiprocessing import Pool, cpu_count
 from scipy.linalg import solve
 from scipy.signal import savgol_filter
-from torch.utils.data.dataloader import SequentialSampler
 from torch_geometric.data import Data, InMemoryDataset, download_url, extract_zip
 from utils import ROOT_DIR, RAW_FILES, RAW_DATA_URL, VALID_DATASETS
-
-

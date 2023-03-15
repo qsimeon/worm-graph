@@ -16,7 +16,7 @@ from tqdm import tqdm
 from torch.utils.data.dataloader import default_collate
 from torch.utils.data import ConcatDataset, DataLoader
 from models._utils import NetworkLSTM
-from data._utils import NeuralActivityDataset, BatchSampler, pick_worm
+from data._utils import NeuralActivityDataset, pick_worm
 from data._main import get_dataset
 from models._main import get_model
 from scipy.signal import savgol_filter

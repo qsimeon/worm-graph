@@ -1,22 +1,4 @@
 from data._pkg import *
-import matplotlib.pyplot as plt
-
-
-class BatchSampler(torch.utils.data.Sampler):
-    """
-    A custom sampler that returns the proper batche indices
-    for an instance of NeuralActivityDataset.
-    """
-
-    def __init__(self, batch_indices):
-        super(BatchSampler, self).__init__(batch_indices)
-        self.data_source = batch_indices
-
-    def __len__(self):
-        return len(self.data_source)
-
-    def __iter__(self):
-        return iter(self.data_source)
 
 
 class NeuralActivityDataset(torch.utils.data.Dataset):
@@ -99,7 +81,7 @@ class NeuralActivityDataset(torch.utils.data.Dataset):
 
     def parfor_func(self, start):
         """
-        Helper function that parallelizes `__data_generator`.
+        Helper function for parallelizing `__data_generator`.
         """
         # define an end index
         end = start + self.seq_len

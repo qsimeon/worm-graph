@@ -25,9 +25,9 @@ if __name__ == "__main__":
     # create dataloader from neural dataset
     loader = DataLoader(
         neural_dataset,
-        pin_memory=True,
         batch_size=127,
         shuffle=False,
+        pin_memory=True,
     )
     # display shapes of batches
     print("Batches")
@@ -35,7 +35,7 @@ if __name__ == "__main__":
         X, Y, metadata = data
         print(X.shape)
         print()
-    # plot figure of last batch first neuron
+    # figure of first samples from neuron 0 in last batch
     plt.figure()
     for i in range(5):
         plt.plot(
@@ -48,34 +48,38 @@ if __name__ == "__main__":
     plt.title("Last batch, Neuron 0, First 5 samples")
     plt.legend()
     plt.show()
-    # # create train and test data loaders using
-    # kwargs = dict(tau=1, shuffle=False, reverse=False)
-    # train_loader, test_loader, train_mask, test_mask = split_train_test(
-    #     calcium_data,
-    #     seq_len=[7, 13, 101],
-    #     k_splits=2,
-    #     train_size=131702,
-    #     test_size=131702,
-    #     **kwargs,
-    # )
-    # # shapes of train batches
-    # print("Train batches")
-    # for data in train_loader:
-    #     X, Y, meta = data
-    #     print(X.shape)
-    # print()
-    # # shapes of test batches
-    # print("Test batches")
-    # for data in test_loader:
-    #     X, y, meta = data
-    #     print(X.shape)
-    # print()
-    # # display figure of train/test masks
-    # plt.figure()
-    # plt.plot(train_mask.to(float).numpy(), label="train")
-    # plt.plot(test_mask.to(float).numpy(), label="test")
-    # plt.legend()
-    # plt.title("Train and Test Masks")
-    # plt.xlabel("Time")
-    # plt.ylabel("Test (0) / Train (1)")
-    # plt.show()
+    # create train and test data loaders using
+    kwargs = dict(
+        k_splits=2,
+        seq_len=101,
+        batch_size=63,
+        train_size=512,
+        test_size=256,
+        shuffle=False,
+        reverse=False,
+    )
+    train_loader, test_loader, train_mask, test_mask = split_train_test(
+        calcium_data,
+        **kwargs,
+    )
+    # shapes of train batches
+    print("Train batches")
+    for data in train_loader:
+        X, Y, metadata = data
+        print(X.shape)
+    print()
+    # shapes of test batches
+    print("Test batches")
+    for data in test_loader:
+        X, y, metadata = data
+        print(X.shape)
+    print()
+    # display figure of train/test masks
+    plt.figure()
+    plt.plot(train_mask.to(float).numpy(), label="train")
+    plt.plot(test_mask.to(float).numpy(), label="test")
+    plt.legend()
+    plt.title("Train and Test Masks")
+    plt.xlabel("Time")
+    plt.ylabel("Test (0) / Train (1)")
+    plt.show()
