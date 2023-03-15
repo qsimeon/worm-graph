@@ -56,7 +56,7 @@ def train_model(
         batch_size=config.train.batch_size,
         train_size=config.train.train_size // len(dataset_items),
         test_size=config.train.test_size // len(dataset_items),
-        shuffle=True,
+        shuffle=config.train.shuffle,
         reverse=True,
     )
     # choose whether to use original or smoothed calcium data

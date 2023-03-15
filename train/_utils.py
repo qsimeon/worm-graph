@@ -26,7 +26,6 @@ def train(
     """
     # Set model to train mode.
     model.train()
-    mask = mask.double()
     criterion = model.loss_fn()
     base_loss, train_loss = 0, 0
     num_train_samples = 0
@@ -34,16 +33,23 @@ def train(
     for i, data in enumerate(loader):
         X_train, Y_train, metadata = data  # X, Y: (batch_size, seq_len, num_neurons)
         X_train, Y_train = X_train.to(DEVICE), Y_train.to(DEVICE)
-        optimizer.zero_grad()  # Clear gradients.
+        # Turn on gradients on tensors.
+        X_train.requires_grad = True
+        Y_train.requires_grad = True
+        # Clear optimizer gradients.
+        optimizer.zero_grad()
         # Baseline: loss if the model predicted the residual to be 0.
-        base = criterion(X_train * mask, Y_train * mask)
+        base = criterion(X_train[:,:,mask], Y_train[:,:,mask])
         # Train
-        Y_tr = model(X_train * mask)  # Forward pass.
+        Y_tr = model(X_train * mask.double())  # Forward pass.
+        # Register hook.
+        Y_tr.retain_grad()
+        Y_tr.register_hook(lambda grad: grad * mask.double())
         # Compute training loss.
-        loss = criterion(Y_tr * mask, Y_train * mask)
+        loss = criterion(Y_tr[:,:,mask], Y_train[:,:,mask])
         loss.backward(retain_graph=True)  # Derive gradients.
-        # Prevent update of weights from neurons without data.
-        model.linear.weight.grad *= mask.unsqueeze(-1)
+        # # Prevent update of weights from neurons without data.
+        # model.linear.weight.grad *= mask.unsqueeze(-1)
         # No backprop on epoch 0.
         if no_grad:
             optimizer.zero_grad()
@@ -84,7 +90,6 @@ def test(
     """
     # Set model to inference mode.
     model.eval()
-    mask = mask.double()
     criterion = model.loss_fn()
     base_loss, test_loss = 0, 0
     num_test_samples = 0
@@ -93,10 +98,10 @@ def test(
         X_test, Y_test, metadata = data  # X, Y: (batch_size, seq_len, num_neurons)
         X_test, Y_test = X_test.to(DEVICE), Y_test.to(DEVICE)
         # Baseline: loss if the model predicted the residual to be 0.
-        base = criterion(X_test * mask, Y_test * mask)
+        base = criterion(X_test[:,:,mask], Y_test[:,:,mask])
         # Test
-        Y_te = model(X_test * mask)  # Forward pass.
-        loss = criterion(Y_te * mask, Y_test * mask)  # Compute the validation loss.
+        Y_te = model(X_test * mask.double())  # Forward pass.
+        loss = criterion(Y_te[:,:,mask], Y_test[:,:,mask])  # Compute the validation loss.
         # Store test and baseline loss.
         base_loss += base.detach().item()
         test_loss += loss.detach().item()
@@ -118,8 +123,8 @@ def split_train_test(
     batch_size: int = 32,
     train_size: int = 1024,
     test_size: int = 1024,
-    shuffle: bool = False,
-    reverse: bool = False,
+    shuffle: bool = True,
+    reverse: bool = True,
 ) -> tuple[
     torch.utils.data.DataLoader,
     torch.utils.data.DataLoader,
@@ -153,28 +158,26 @@ def split_train_test(
         split_datasets = split_datasets[:-1]
     train_splits = split_datasets[::2]
     test_splits = split_datasets[1::2]
-    # make datasets
+    # make datasets; TODO: Parallelize this with `multiprocess.Pool`.
     # train dataset
-    train_div = len(train_splits)
     train_datasets = [
         NeuralActivityDataset(
             data,
             seq_len=seq_len,
             # keep per worm train size constant
-            num_samples=train_size // train_div,
+            num_samples=train_size // len(train_splits),
             reverse=reverse,
         )
         for data in train_splits
     ]
     train_dataset = ConcatDataset(train_datasets)
     # tests dataset
-    test_div = len(test_splits)
     test_datasets = [
         NeuralActivityDataset(
             data,
             seq_len=seq_len,
             # keep per worm test size constant
-            num_samples=test_size // test_div,
+            num_samples=test_size // len(test_splits),
             reverse=reverse,
         )
         for data in test_splits

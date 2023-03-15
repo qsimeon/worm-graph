@@ -22,9 +22,10 @@ if __name__ == "__main__":
         k_splits=2,
         seq_len=47,
         batch_size=64,
-        train_size=4096,
-        test_size=4096,
-        reverse=True,
+        train_size=65536,
+        test_size=65536,
+        reverse=False,
+        # TODO: Why does `shuffle=True` improve performance so much?
         shuffle=True,
     )
     # train the model with the `optimize_model` function

@@ -20,6 +20,7 @@ class NeuralActivityDataset(torch.utils.data.Dataset):
         neurons=None,
         time_vec=None,
         reverse=False,
+        tau=1,  # deprecated
     ):
         """
         Args:
@@ -33,6 +34,8 @@ class NeuralActivityDataset(torch.utils.data.Dataset):
           time_vec: None or array-like. A vector of the time (in seconds) corresponding
                     to the time axis (axis 0) of the `data` tensor.
           reverse: bool. Whether to sample sequences backward from end of the data.
+          tau: int, 0 < tau < max_time//2. The number of timesteps to the right by which the
+                target sequence is offset from input sequence. Deprecated (unused) argument.
         Returns:
           (X, Y, metadata): tuple. Batch of data samples.
             X: torch.tensor. Input tensor w/ shape (batch_size, seq_len,
@@ -49,7 +52,7 @@ class NeuralActivityDataset(torch.utils.data.Dataset):
         ), "Reshape the data as (time, neurons)"
         assert isinstance(seq_len, int), "Enter an integer sequence length `seq_len`."
         self.seq_len = seq_len
-        self.tau = 1
+        self.tau = tau
         self.max_time, num_neurons = data.shape
         self.reverse = reverse
         # select out requested neurons
@@ -252,6 +255,64 @@ def load_dataset(name):
     ), "Unrecognized dataset! Please pick one from:\n{}".format(list(VALID_DATASETS))
     loader = eval("load_" + name)
     return loader()
+
+
+def load_sine():
+    """
+    A test dataset to evaluate models on.
+    Sinusoid signals.
+    Varied frequency and amplitutde.
+    """
+    file = os.path.join(ROOT_DIR, "data", "processed", "neural", "sine.pickle")
+    assert os.path.exists(file)
+    pickle_in = open(file, "rb")
+    # unpickle the data
+    dataset = pickle.load(pickle_in)
+    return dataset
+
+
+def load_sine_noise():
+    """
+    A test dataset to evaluate models on.
+    Sinusoid signals + Gaussian noise.
+    Varied frequency, phase and noise variance.
+    """
+    file = os.path.join(ROOT_DIR, "data", "processed", "neural", "sine_noise.pickle")
+    assert os.path.exists(file)
+    pickle_in = open(file, "rb")
+    # unpickle the data
+    dataset = pickle.load(pickle_in)
+    return dataset
+
+
+def load_sum_sine():
+    """
+    A test dataset to evaluate models on.
+    Sums-of-sinusoid signals.
+    Varied frequency, phase and number of terms in sum.
+    """
+    file = os.path.join(ROOT_DIR, "data", "processed", "neural", "sum_sine.pickle")
+    assert os.path.exists(file)
+    pickle_in = open(file, "rb")
+    # unpickle the data
+    dataset = pickle.load(pickle_in)
+    return dataset
+
+
+def load_sum_sine_noise():
+    """
+    A test dataset to evaluate models on.
+    Sums-of-sinusoid signals + Gaussian noise.
+    Varied frequency, phase, number of terms in sum and noise variance.
+    """
+    file = os.path.join(
+        ROOT_DIR, "data", "processed", "neural", "sum_sine_noise.pickle"
+    )
+    assert os.path.exists(file)
+    pickle_in = open(file, "rb")
+    # unpickle the data
+    dataset = pickle.load(pickle_in)
+    return dataset
 
 
 def load_Kato2015():

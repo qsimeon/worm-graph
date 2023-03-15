@@ -1,5 +1,6 @@
 """
-Check whether data loaders work as intended. 
+Tests whether the data loaders generate  
+batches and samples as expected.
 """
 
 import matplotlib.pyplot as plt
@@ -55,7 +56,7 @@ if __name__ == "__main__":
         batch_size=63,
         train_size=512,
         test_size=256,
-        shuffle=False,
+        shuffle=True,
         reverse=False,
     )
     train_loader, test_loader, train_mask, test_mask = split_train_test(

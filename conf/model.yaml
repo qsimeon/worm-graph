@@ -1,5 +1,5 @@
 model:
-  type: neural_cfc # options: linear, dense_cfc, neural_cfc, lstm, vae_lstm
+  type: lstm # options: linear, dense_cfc, neural_cfc, lstm, vae_lstm
   # linearNN isn't work well now -03/10/2023
   input_size: 302 # fixed
   hidden_size: 64 # options: int > 0
