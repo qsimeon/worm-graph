@@ -128,8 +128,13 @@ class NeuralActivityDataset(torch.utils.data.Dataset):
         )
         # parallelize the data generation
         with Pool(processes=cpu_count() // 2) as pool:
-            # synchronous
-            data_samples = pool.map(self.parfor_func, start_range[: self.num_samples])
+            # # synchronous
+            # data_samples = pool.map(self.parfor_func, start_range[: self.num_samples])
+            # asynchronous
+            data_samples = pool.map_async(
+                self.parfor_func, start_range[: self.num_samples]
+            ).get()
+        pool.join()
         return data_samples
 
 

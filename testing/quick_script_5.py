@@ -17,7 +17,8 @@ if __name__ == "__main__":
     dataset = get_dataset(data_config)
     # create a model
     model = LinearNN(302, 64).double()
+    # model = NetworkLSTM(302, 64).double()
     # run the full train pipeline
     model, log_dir = train_model(model, dataset, train_config)
     # compare predictions against targets
-    plot_targets_predictions(log_dir, worm="worm5", neuron="all")
+    plot_targets_predictions(log_dir, worm="worm0", neuron="all")

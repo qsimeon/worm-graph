@@ -18,12 +18,12 @@ if __name__ == "__main__":
     # create a model
     # model = LinearNN(302, 64).double()
     # model = NeuralCFC(302, 64).double()
-    model = NetworkLSTM(302, 128, 2).double()
+    model = NetworkLSTM(302, 128).double()
     # keyword args to `split_train_test`
     kwargs = dict(
         k_splits=2,
         seq_len=101,
-        batch_size=64,
+        batch_size=128,
         train_size=8192,
         test_size=8192,
         reverse=False,
@@ -31,7 +31,7 @@ if __name__ == "__main__":
         shuffle=True,
     )
     # train the model with the `optimize_model` function
-    model, log = optimize_model(calcium_data, model, num_epochs=50, **kwargs)
+    model, log = optimize_model(calcium_data, model, num_epochs=30, **kwargs)
     # make predictions with trained model
     targets, predictions = model_predict(model, calcium_data)
     print("Targets:", targets.shape, "\nPredictions:", predictions.shape, end="\n\n")

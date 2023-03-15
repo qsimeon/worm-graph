@@ -34,8 +34,8 @@ def train(
         X_train, Y_train, metadata = data  # X, Y: (batch_size, seq_len, num_neurons)
         X_train, Y_train = X_train.to(DEVICE), Y_train.to(DEVICE)
         # Turn on gradients on tensors.
-        X_train.requires_grad = True
-        Y_train.requires_grad = True
+        X_train.requires_grad_()
+        Y_train.requires_grad_()
         # Clear optimizer gradients.
         optimizer.zero_grad()
         # Baseline: loss if the model predicted the residual to be 0.
@@ -194,12 +194,14 @@ def split_train_test(
         batch_size=batch_size,
         shuffle=shuffle,
         pin_memory=True,
+        # num_workers=cpu_count() // 2,
     )
     test_loader = DataLoader(
         test_dataset,
         batch_size=batch_size,
         shuffle=shuffle,
         pin_memory=True,
+        # num_workers=cpu_count() // 2,
     )
     # return data loaders and masks
     return train_loader, test_loader, train_mask, test_mask
