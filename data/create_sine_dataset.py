@@ -94,7 +94,7 @@ class create_four_sine_datasets():
         # residual_smooth_ca_data[1:] = smooth_ca_data[1:] - smooth_ca_data[: m - 1]
         return smooth_ca_data  # residual, residual_smooth_ca_data
 
-    def create_synthetic_data(self, d, n, ifnoise=False, sum=0):
+    def create_synthetic_data(self, d, n, ifnoise, sum):
         calcium = np.zeros((d, n))
         res = np.zeros((d, n))
 
@@ -188,6 +188,18 @@ class create_four_sine_datasets():
             raw_der.append(dx)
 
         dataset = self.create_dataset(raw_data, raw_der)
+
+        plt.plot(dataset["worm0"]["calcium_data"][:, 0:10])
+        plt.show()
+
+        plt.plot(dataset["worm0"]["calcium_data"][:, 0])
+        plt.plot(dataset["worm0"]["residual_calcium"][:, 0])
+
+        plt.show()
+
+        print(dataset["worm0"]["num_named_neurons"], dataset["worm0"]["num_unknown_neurons"])
+        print("------")
+
         file = open("./data/processed/neural/sine.pickle", "wb")
         pickle.dump(dataset, file)
         file.close()
@@ -196,12 +208,23 @@ class create_four_sine_datasets():
         raw_data = []
         raw_der = []
         for j in range(self.num_worms):
-            x, dx = self.create_synthetic_data(self.seq_len, self.num_signal, self.if_noise, 0)
+            x, dx = self.create_synthetic_data(self.seq_len, self.num_signal, True, 0)
             x_torch = Variable(torch.from_numpy(x), requires_grad=False)
             raw_data.append(x_torch)
             raw_der.append(dx)
 
         dataset = self.create_dataset(raw_data, raw_der)
+
+        plt.plot(dataset["worm0"]["calcium_data"][:, 0:10])
+        plt.show()
+
+        plt.plot(dataset["worm0"]["calcium_data"][:, 0])
+        plt.plot(dataset["worm0"]["residual_calcium"][:, 0])
+        plt.show()
+
+        print(dataset["worm0"]["num_named_neurons"], dataset["worm0"]["num_unknown_neurons"])
+        print("------")
+
         file = open("./data/processed/neural/sine_noise.pickle", "wb")
         pickle.dump(dataset, file)
         file.close()
@@ -211,12 +234,23 @@ class create_four_sine_datasets():
         raw_data = []
         raw_der = []
         for j in range(self.num_worms):
-            x, dx = self.create_synthetic_data(self.seq_len, self.num_signal, False, self.sum)
+            x, dx = self.create_synthetic_data(self.seq_len, self.num_signal, False, 8)
             x_torch = Variable(torch.from_numpy(x), requires_grad=False)
             raw_data.append(x_torch)
             raw_der.append(dx)
 
         dataset = self.create_dataset(raw_data, raw_der)
+
+        plt.plot(dataset["worm0"]["calcium_data"][:, 0:10])
+        plt.show()
+
+        plt.plot(dataset["worm0"]["calcium_data"][:, 0])
+        plt.plot(dataset["worm0"]["residual_calcium"][:, 0])
+        plt.show()
+
+        print(dataset["worm0"]["num_named_neurons"], dataset["worm0"]["num_unknown_neurons"])
+        print("------")
+
         file = open("./data/processed/neural/sum_sine.pickle", "wb")
         pickle.dump(dataset, file)
         file.close()
@@ -225,12 +259,23 @@ class create_four_sine_datasets():
         raw_data = []
         raw_der = []
         for j in range(self.num_worms):
-            x, dx = self.create_synthetic_data(self.seq_len, self.num_signal, self.if_noise, self.sum)
+            x, dx = self.create_synthetic_data(self.seq_len, self.num_signal, True, 8)
             x_torch = Variable(torch.from_numpy(x), requires_grad=False)
             raw_data.append(x_torch)
             raw_der.append(dx)
 
         dataset = self.create_dataset(raw_data, raw_der)
+
+        plt.plot(dataset["worm0"]["calcium_data"][:, 0:10])
+        plt.show()
+
+        plt.plot(dataset["worm0"]["calcium_data"][:, 0])
+        plt.plot(dataset["worm0"]["residual_calcium"][:, 0])
+        plt.show()
+
+        print(dataset["worm0"]["num_named_neurons"], dataset["worm0"]["num_unknown_neurons"])
+        print("------")
+
         file = open("./data/processed/neural/sum_sine_noise.pickle", "wb")
         pickle.dump(dataset, file)
         file.close()
