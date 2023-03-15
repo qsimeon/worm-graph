@@ -1,14 +1,11 @@
 """
-Tests the model optimization, the full training 
-pipeline and the train test masks.
+Tests the model optimization function `optimize_model`.
 """
 import matplotlib.pyplot as plt
 from omegaconf import OmegaConf
 from models._utils import LinearNN
-from train._main import train_model
 from data._main import get_dataset
-from train._utils import optimize_model
-from visualization._utils import plot_before_after_weights
+from train._utils import optimize_model, model_predict
 
 config = OmegaConf.load("conf/dataset.yaml")
 
@@ -17,21 +14,30 @@ if __name__ == "__main__":
     dataset = get_dataset(config)
     # get calcium data for one worm
     single_worm_dataset = dataset["worm0"]
-    calcium_data = dataset["calcium_data"]
+    calcium_data = single_worm_dataset["calcium_data"]
     # create a model
     model = LinearNN(302, 64).double()
-    # test the  `optimize_model` function
-    kwargs = dict(train_size=4096, test_size=4096, tau=1, seq_len=47, reverse=False)
-    model, log = optimize_model(calcium_data, model, k_splits=2, **kwargs)
-    # run the full train pipeline
-    config = OmegaConf.load("conf/train.yaml")
-    model, log_dir = train_model(model, dataset, config, shuffle=True)
-    # plot figure showing train mask
+    # keyword args to `split_train_test`
+    kwargs = dict(
+        k_splits=2,
+        seq_len=47,
+        batch_size=64,
+        train_size=4096,
+        test_size=4096,
+        reverse=True,
+        shuffle=True,
+    )
+    # train the model with the `optimize_model` function
+    model, log = optimize_model(calcium_data, model, num_epochs=10, **kwargs)
+    # make predictions with trained model
+    targets, predictions = model_predict(model, calcium_data)
+    print("Targets:", targets.shape, "\nPredictions:", predictions.shape, end="\n\n")
+    # figure of neuron 0 calcium target and prediction
     plt.figure()
-    plt.plot(log["train_mask"].to(float).numpy())
-    plt.title("Train mask")
+    plt.plot(targets[:, 0], label="target")
+    plt.plot(predictions[:, 0], alpha=0.8, label="prediction")
+    plt.legend()
+    plt.title("Neuron 0 target and prediction")
     plt.xlabel("Time")
-    plt.ylabel("Test (0) / Train (1)")
+    plt.ylabel("$Ca^{2+} \Delta F / F$")
     plt.show()
-    # plot untrained versus trained weights
-    plot_before_after_weights(log_dir)

@@ -146,27 +146,24 @@ def plot_loss_curves(log_dir):
     loss_df = pd.read_csv(os.path.join(log_dir, "loss_curves.csv"), index_col=0)
     # plot loss vs epochs
     plt.figure()
-
-    sns.lineplot(x="epochs", y="train_losses", data=loss_df, label="train", color='r')
-    sns.lineplot(x="epochs", y="test_losses", data=loss_df, label="test", color='g')
+    # centered loss curves
     sns.lineplot(x="epochs", y="centered_train_losses", data=loss_df, label="train")
     sns.lineplot(x="epochs", y="centered_test_losses", data=loss_df, label="test")
     plt.legend()
     plt.title(plt_title)
     plt.xlabel("Epoch (# worms)")
-    # plt.ylabel("Loss - Baseline")
-    plt.ylabel("Loss")
-    plt.savefig(os.path.join(log_dir, "loss_curves.png"))
+    plt.ylabel("Loss - Baseline")
+    plt.savefig(os.path.join(log_dir, "centered_loss_curves.png"))
     plt.close()
-
     plt.figure()
-    sns.lineplot(x="epochs", y="train_losses", data=loss_df, label="ori_train", color="r")
-    sns.lineplot(x="epochs", y="test_losses", data=loss_df, label="ori_test", color="g")
+    # original loss curves
+    sns.lineplot(x="epochs", y="train_losses", data=loss_df, label="train", color="r")
+    sns.lineplot(x="epochs", y="test_losses", data=loss_df, label="test", color="g")
     plt.legend()
     plt.title(plt_title)
     plt.xlabel("Epoch (# worms)")
-    plt.ylabel("Original Loss")
-    plt.savefig(os.path.join(log_dir, "origin_loss_curves.png"))
+    plt.ylabel("Loss")
+    plt.savefig(os.path.join(log_dir, "original_loss_curves.png"))
     plt.close()
     return None
 
@@ -230,12 +227,10 @@ def plot_targets_predictions(
 
     # load predictions dataframe
     predictions_df = pd.read_csv(
-        os.path.join(log_dir, worm, "predicted_ca_residual.csv"), index_col=0
+        os.path.join(log_dir, worm, "predicted_ca.csv"), index_col=0
     )
     # load targets dataframe
-    targets_df = pd.read_csv(
-        os.path.join(log_dir, worm, "target_ca_residual.csv"), index_col=0
-    )
+    targets_df = pd.read_csv(os.path.join(log_dir, worm, "target_ca.csv"), index_col=0)
 
     # plot helper
     def func(_neuron_):
@@ -247,7 +242,6 @@ def plot_targets_predictions(
             dataset_name,
             timestamp,
         )
-        # TODO: overlay shading on the train and test slices
         sns.lineplot(
             data=targets_df,
             x=targets_df.index,
@@ -322,12 +316,10 @@ def plot_correlation_scatterplot(
         assert worm in set(os.listdir(log_dir)), "No data for requested worm found."
     # load predictions dataframe
     predictions_df = pd.read_csv(
-        os.path.join(log_dir, worm, "predicted_ca_residual.csv"), index_col=0
+        os.path.join(log_dir, worm, "predicted_ca.csv"), index_col=0
     )
     # load targets dataframe
-    targets_df = pd.read_csv(
-        os.path.join(log_dir, worm, "target_ca_residual.csv"), index_col=0
-    )
+    targets_df = pd.read_csv(os.path.join(log_dir, worm, "target_ca.csv"), index_col=0)
 
     # plot helper
     def func(_neuron_):

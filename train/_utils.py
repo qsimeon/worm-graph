@@ -24,8 +24,9 @@ def train(
     Returns:
         losses: dict w/ keys train_loss and base_train_loss
     """
-    # set model to train mode
+    # Set model to train mode.
     model.train()
+    mask = mask.double()
     criterion = model.loss_fn()
     base_loss, train_loss = 0, 0
     num_train_samples = 0
@@ -35,14 +36,14 @@ def train(
         X_train, Y_train = X_train.to(DEVICE), Y_train.to(DEVICE)
         optimizer.zero_grad()  # Clear gradients.
         # Baseline: loss if the model predicted the residual to be 0.
-        base = criterion(torch.zeros_like(Y_train[:, :, mask]), Y_train[:, :, mask])
+        base = criterion(X_train * mask, Y_train * mask)
         # Train
-        Y_tr = model(X_train)  # Forward pass.
-        Y_tr.retain_grad()
-        Y_tr.register_hook(lambda grad: grad * mask.double())
+        Y_tr = model(X_train * mask)  # Forward pass.
         # Compute training loss.
-        loss = criterion(Y_tr[:, :, mask], Y_train[:, :, mask])
-        loss.backward()  # Derive gradients.
+        loss = criterion(Y_tr * mask, Y_train * mask)
+        loss.backward(retain_graph=True)  # Derive gradients.
+        # Prevent update of weights from neurons without data.
+        model.linear.weight.grad *= mask.unsqueeze(-1)
         # No backprop on epoch 0.
         if no_grad:
             optimizer.zero_grad()
@@ -81,8 +82,9 @@ def test(
     Returns:
         losses: dict w/ keys test_loss and base_test_loss
     """
-    # set model to inference mode
+    # Set model to inference mode.
     model.eval()
+    mask = mask.double()
     criterion = model.loss_fn()
     base_loss, test_loss = 0, 0
     num_test_samples = 0
@@ -91,12 +93,10 @@ def test(
         X_test, Y_test, metadata = data  # X, Y: (batch_size, seq_len, num_neurons)
         X_test, Y_test = X_test.to(DEVICE), Y_test.to(DEVICE)
         # Baseline: loss if the model predicted the residual to be 0.
-        base = criterion(torch.zeros_like(Y_test[:, :, mask]), Y_test[:, :, mask])
+        base = criterion(X_test * mask, Y_test * mask)
         # Test
-        Y_te = model(X_test)  # Forward pass.
-        loss = criterion(
-            Y_te[:, :, mask], Y_test[:, :, mask]
-        )  # Compute the validation loss.
+        Y_te = model(X_test * mask)  # Forward pass.
+        loss = criterion(Y_te * mask, Y_test * mask)  # Compute the validation loss.
         # Store test and baseline loss.
         base_loss += base.detach().item()
         test_loss += loss.detach().item()
@@ -115,9 +115,9 @@ def split_train_test(
     data: torch.Tensor,
     k_splits: int = 2,
     seq_len: int = 101,
-    batch_size: int = 64,
-    train_size: int = 4096,
-    test_size: int = 4096,
+    batch_size: int = 32,
+    train_size: int = 1024,
+    test_size: int = 1024,
     shuffle: bool = False,
     reverse: bool = False,
 ) -> tuple[
@@ -226,7 +226,6 @@ def optimize_model(
     if mask is None:
         mask = torch.ones(NUM_NEURONS, dtype=torch.bool)
     assert mask.size(0) == NUM_NEURONS and mask.dtype == torch.bool
-    mask.requires_grad = False  # TODO: set True
     mask = mask.to(DEVICE)
     # put model on device
     model = model.to(DEVICE)
@@ -328,21 +327,17 @@ def make_predictions(
             index=True,
             header=True,
         )
-        data = torch.nn.functional.pad(
-            targets[:, named_neurons_mask], (0, 0, 1, 0)
-        ).numpy()
+        data = targets[:, named_neurons_mask].numpy()
         data = np.hstack((data, labels))
         pd.DataFrame(data=data, columns=columns).to_csv(
-            os.path.join(log_dir, worm, "target_ca_residual.csv"),
+            os.path.join(log_dir, worm, "target_ca.csv"),
             index=True,
             header=True,
         )
-        data = torch.nn.functional.pad(
-            predictions[:, named_neurons_mask], (0, 0, 0, 1)
-        ).numpy()
+        data = predictions[:, named_neurons_mask].numpy()
         data = np.hstack((data, labels))
         pd.DataFrame(data=data, columns=columns).to_csv(
-            os.path.join(log_dir, worm, "predicted_ca_residual.csv"),
+            os.path.join(log_dir, worm, "predicted_ca.csv"),
             index=True,
             header=True,
         )
@@ -363,14 +358,12 @@ def model_predict(
     assert (
         calcium_data.ndim == 2 and calcium_data.size(1) == NUM_NEURONS
     ), "Calcium data has incorrect shape!"
-
+    # get input and output
     input = calcium_data.to(DEVICE)
-    # add batch dimension
     output = model(input.unsqueeze(0)).squeeze()
     # targets/predictions
-    residual_origin = input[1:] - input[:-1]
-    targets = residual_origin.detach().cpu()
-    predictions = output[:-1].detach().cpu()
+    targets = input.detach().cpu()
+    predictions = output.detach().cpu()
     return targets, predictions
 
 
