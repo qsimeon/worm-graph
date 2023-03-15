@@ -39,14 +39,14 @@ def train(
         # Clear optimizer gradients.
         optimizer.zero_grad()
         # Baseline: loss if the model predicted the residual to be 0.
-        base = criterion(X_train[:,:,mask], Y_train[:,:,mask])
+        base = criterion(X_train[:, :, mask], Y_train[:, :, mask])
         # Train
         Y_tr = model(X_train * mask.double())  # Forward pass.
         # Register hook.
         Y_tr.retain_grad()
         Y_tr.register_hook(lambda grad: grad * mask.double())
         # Compute training loss.
-        loss = criterion(Y_tr[:,:,mask], Y_train[:,:,mask])
+        loss = criterion(Y_tr[:, :, mask], Y_train[:, :, mask])
         loss.backward(retain_graph=True)  # Derive gradients.
         # # Prevent update of weights from neurons without data.
         # model.linear.weight.grad *= mask.unsqueeze(-1)
@@ -98,10 +98,12 @@ def test(
         X_test, Y_test, metadata = data  # X, Y: (batch_size, seq_len, num_neurons)
         X_test, Y_test = X_test.to(DEVICE), Y_test.to(DEVICE)
         # Baseline: loss if the model predicted the residual to be 0.
-        base = criterion(X_test[:,:,mask], Y_test[:,:,mask])
+        base = criterion(X_test[:, :, mask], Y_test[:, :, mask])
         # Test
         Y_te = model(X_test * mask.double())  # Forward pass.
-        loss = criterion(Y_te[:,:,mask], Y_test[:,:,mask])  # Compute the validation loss.
+        loss = criterion(
+            Y_te[:, :, mask], Y_test[:, :, mask]
+        )  # Compute the validation loss.
         # Store test and baseline loss.
         base_loss += base.detach().item()
         test_loss += loss.detach().item()
@@ -159,6 +161,9 @@ def split_train_test(
     train_splits = split_datasets[::2]
     test_splits = split_datasets[1::2]
     # make datasets; TODO: Parallelize this with `multiprocess.Pool`.
+    # with Pool(processes=cpu_count() // 2) as pool:
+    #     # synchronous
+    #     data_samples = pool.map(fun, datasets)
     # train dataset
     train_datasets = [
         NeuralActivityDataset(

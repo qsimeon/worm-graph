@@ -16,7 +16,8 @@ if __name__ == "__main__":
     # load a dataset (multiple worms)
     dataset = get_dataset(data_config)
     # create a model
-    model = LinearNN(302, 64).double()
+    # model = LinearNN(302, 64).double()
+    model = NetworkLSTM(302, 64).double()
     # run the full train pipeline
     model, log_dir = train_model(model, dataset, train_config)
     # compare predictions against targets

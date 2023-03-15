@@ -45,15 +45,20 @@ class NeuralActivityDataset(torch.utils.data.Dataset):
                         keys: 'seq_len', 'start' index , 'end' index
         """
         super(NeuralActivityDataset, self).__init__()
-        # dataset checking
+        # check the inputs
         assert torch.is_tensor(data), "Recast the data as type `torch.tensor`."
         assert data.ndim == 2 and data.size(0) > data.size(
             1
-        ), "Reshape the data as (time, neurons)"
-        assert isinstance(seq_len, int), "Enter an integer sequence length `seq_len`."
+        ), "Reshape the data tensor as (time, neurons)"
+        assert isinstance(seq_len, int) and 0 < seq_len <= data.size(
+            0
+        ), "Enter an integer sequence length 0 < `seq_len` <= max_time."
+        assert (
+            isinstance(tau, int) and 0 <= tau < data.size(0) // 2
+        ), "Enter a integer offset `0 <= tau < max_time // 2`."
+        self.max_time, num_neurons = data.shape
         self.seq_len = seq_len
         self.tau = tau
-        self.max_time, num_neurons = data.shape
         self.reverse = reverse
         # select out requested neurons
         if neurons is not None:

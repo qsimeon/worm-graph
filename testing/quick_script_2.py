@@ -3,7 +3,7 @@ Tests the model optimization function `optimize_model`.
 """
 import matplotlib.pyplot as plt
 from omegaconf import OmegaConf
-from models._utils import LinearNN
+from models._utils import LinearNN, NeuralCFC, NetworkLSTM
 from data._main import get_dataset
 from train._utils import optimize_model, model_predict
 
@@ -16,20 +16,22 @@ if __name__ == "__main__":
     single_worm_dataset = dataset["worm0"]
     calcium_data = single_worm_dataset["calcium_data"]
     # create a model
-    model = LinearNN(302, 64).double()
+    # model = LinearNN(302, 64).double()
+    # model = NeuralCFC(302, 64).double()
+    model = NetworkLSTM(302, 128, 2).double()
     # keyword args to `split_train_test`
     kwargs = dict(
         k_splits=2,
-        seq_len=47,
+        seq_len=101,
         batch_size=64,
-        train_size=65536,
-        test_size=65536,
+        train_size=8192,
+        test_size=8192,
         reverse=False,
         # TODO: Why does `shuffle=True` improve performance so much?
         shuffle=True,
     )
     # train the model with the `optimize_model` function
-    model, log = optimize_model(calcium_data, model, num_epochs=10, **kwargs)
+    model, log = optimize_model(calcium_data, model, num_epochs=50, **kwargs)
     # make predictions with trained model
     targets, predictions = model_predict(model, calcium_data)
     print("Targets:", targets.shape, "\nPredictions:", predictions.shape, end="\n\n")
