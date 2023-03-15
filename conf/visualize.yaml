@@ -1,4 +1,4 @@
 visualize:
-  log_dir: logs/2023_03_15_02_23-Uzel2022-LinearNN
+  log_dir: logs/2023_03_15_13_02-Uzel2022-NetworkLSTM
   worm: worm0
   neuron: all

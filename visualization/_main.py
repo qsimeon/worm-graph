@@ -25,11 +25,11 @@ def plot_figures(
     # # plot model weights
     # plot_before_after_weights(log_dir)
 
-    # calcium residuals
-    plot_targets_predictions(log_dir, worm, neuron)
+    # # calcium residuals
+    # plot_targets_predictions(log_dir, worm, neuron)
 
-    # scatterplot of modelled vs. real neuron activity
-    plot_correlation_scatterplot(log_dir, worm, neuron)
+    # # scatterplot of modelled vs. real neuron activity
+    # plot_correlation_scatterplot(log_dir, worm, neuron)
 
     # TODO add more plotting functions for different figures
 
