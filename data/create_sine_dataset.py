@@ -174,7 +174,7 @@ def create_dataset(raw_data, raw_res):
 # Creating signal
 seq_len = 3312
 num_signal = 302
-if_noise = True
+if_noise = False
 sum = 8
 num_worms = 6
 raw_data = []
@@ -210,7 +210,7 @@ plt.show()
 
 print(dataset["worm0"]["named_neurons_mask"])
 
-file = open("./data/processed/neural/sum_sine_noise.pickle", "wb")
+file = open("./data/processed/neural/sum_sine.pickle", "wb")
 pickle.dump(dataset, file)
 
 file.close()
