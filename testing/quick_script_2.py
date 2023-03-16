@@ -11,7 +11,7 @@ config = OmegaConf.load("conf/dataset.yaml")
 
 if __name__ == "__main__":
     # number of neurons we want to predict
-    num_neurons = 1
+    num_neurons = 5
     # number of split of data
     k = 2
     # load a dataset (multiple worms)
@@ -29,8 +29,8 @@ if __name__ == "__main__":
         k_splits=k,
         seq_len=10,
         batch_size=128,
-        train_size=1024,
-        test_size=1024,
+        train_size=1656,
+        test_size=1656,
         # TODO: Why does `shuffle=True` improve performance so much?
         shuffle=True,
         reverse=False,
@@ -41,13 +41,13 @@ if __name__ == "__main__":
         calcium_data,
         model,
         mask=named_neurons_mask,
-        num_epochs=10,
+        num_epochs=100,
         learn_rate=0.01,
         **kwargs,
     )
     # keyword args to `model_predict`
-    # kwargs = dict(tau=1)
-    kwargs = dict(tau=len(calcium_data) // k)
+    kwargs = dict(tau=1)
+    # kwargs = dict(tau=len(calcium_data) // k)
     # make predictions with trained model
     targets, predictions = model_predict(
         model, calcium_data * named_neurons_mask, **kwargs
@@ -62,15 +62,16 @@ if __name__ == "__main__":
     plt.xlabel("Epochs")
     plt.ylabel("Loss - Baseline")
     plt.show()
-    # figure of neuron 0 calcium target and prediction
-    plt.figure()
-    plt.plot(targets[:, 0], label="target")
-    plt.plot(predictions[:, 0], alpha=0.8, label="prediction")
-    plt.legend()
-    plt.title("Neuron 0 target and prediction")
-    plt.xlabel("Time")
-    plt.ylabel("$Ca^{2+} \Delta F / F$")
-    plt.show()
+    # figures of neuron calcium target and prediction
+    for neuron in range(num_neurons):
+        plt.figure()
+        plt.plot(targets[:, neuron], label="target")
+        plt.plot(predictions[:, neuron], alpha=0.8, label="prediction")
+        plt.legend()
+        plt.title("Neuron 0 target and prediction")
+        plt.xlabel("Time")
+        plt.ylabel("$Ca^{2+} \Delta F / F$")
+        plt.show()
     # # figure of neuron 49 calcium target and prediction
     # plt.figure()
     # plt.plot(targets[:, 49], label="target")
