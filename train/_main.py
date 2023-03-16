@@ -2,11 +2,11 @@ from train._utils import *
 
 
 def train_model(
-        model: torch.nn.Module,
-        dataset: dict,
-        config: DictConfig,
-        optimizer: Union[torch.optim.Optimizer, None] = None,
-        shuffle: bool = True,
+    model: torch.nn.Module,
+    dataset: dict,
+    config: DictConfig,
+    optimizer: Union[torch.optim.Optimizer, None] = None,
+    shuffle: bool = True,
 ) -> tuple[torch.nn.Module, str]:
     """
     Trains a model on a multi-worm dataset. Returns the trained model
@@ -32,6 +32,7 @@ def train_model(
         optimizer = optimizer
     else:
         optimizer = torch.optim.Adam(model.parameters(), lr=config.train.learn_rate)
+        # optimizer = torch.optim.SGD(model.parameters(), lr=config.train.learn_rate)
     # train/test loss metrics
     data = {
         "epochs": [],
@@ -46,16 +47,19 @@ def train_model(
     }
     # train the model for multiple cyles
     kwargs = dict(
+        # args to `optimize_model`
         optimizer=optimizer,
         num_epochs=config.train.epochs,
+        # args to `split_train_test`
         k_splits=config.train.k_splits,
         seq_len=config.train.seq_len,
         # hold the per worm train and test sizes constant
+        batch_size=config.train.batch_size,
         train_size=config.train.train_size // len(dataset_items),
         test_size=config.train.test_size // len(dataset_items),
-        tau=1,
-        shuffle=True,
+        shuffle=config.train.shuffle,
         reverse=True,
+        tau=1,  # deprecated
     )
     # choose whether to use original or smoothed calcium data
     if config.train.smooth_data:
@@ -70,7 +74,7 @@ def train_model(
             model=model,
             mask=single_worm_dataset["named_neurons_mask"],
             start_epoch=reset_epoch,
-            **kwargs,  # args to `split_train_test
+            **kwargs,
         )
         # retrieve losses and sample counts
         [data[key].extend(log[key]) for key in data]
@@ -104,7 +108,8 @@ def train_model(
         header=True,
     )
     # make predictions with last saved model
-    make_predictions(model, dataset, log_dir)
+    kwargs = dict(tau=1)  # args passed to model_predict
+    make_predictions(model, dataset, log_dir, **kwargs)
     # returned trained model and a path to log directory
     return model, log_dir
 

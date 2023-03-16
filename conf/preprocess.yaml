@@ -1,6 +1,6 @@
 preprocess:
-  url: https://www.dropbox.com/s/g0dqu8i0zvdfhb2/opensource_data.zip?dl=1
+  url: https://www.dropbox.com/s/za0w8z4bs5qj42m/opensource_data.zip?dl=1
   zipfile: opensource_data.zip
   dataset: all
   raw_dir: data/raw
-  smooth: fft    # None: No signal smoothing # FFT: Fast Fourier Transform # TVR: Total Variantion Regularization # SG: Savitzky–Golay Filter
+  smooth: fft # None: No signal smoothing # FFT: Fast Fourier Transform # TVR: Total Variantion Regularization # SG: Savitzky–Golay Filter

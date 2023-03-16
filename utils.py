@@ -24,6 +24,7 @@ DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # set of C. elegans datasets we have processed
 VALID_DATASETS = {
+    # real worm datasets
     "Nichols2017",
     "Nguyen2017",
     "Skora2018",
@@ -31,9 +32,11 @@ VALID_DATASETS = {
     "Uzel2022",
     "Kato2015",
     "Flavell2023",
+    # test datasets
     "sine",
     "sine_noise",
-    "sum_sine",
+    "sum_sime",
+
     "sum_sine_noise",
 }  # TODO: set an option for pooling all datasets
 

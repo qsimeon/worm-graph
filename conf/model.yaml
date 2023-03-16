@@ -3,5 +3,5 @@ model:
   # linearNN isn't work well now -03/10/2023
   input_size: 302 # fixed
   hidden_size: 302 # options: int > 0
-  num_layers: 5 # fixed
+  num_layers: 1 # fixed
   loss: mse # options: MSE, Huber, L1
