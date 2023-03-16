@@ -1,0 +1,74 @@
+Index: conf/dataset.yaml
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>dataset:\n  name:\n    - sine\n    # - Uzel2022\n
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/conf/dataset.yaml b/conf/dataset.yaml
+--- a/conf/dataset.yaml	
++++ b/conf/dataset.yaml	
+@@ -1,4 +1,4 @@
+ dataset:
+   name:
+-    - sine
+-    # - Uzel2022
++    - sum_sine_noise
++#    - Uzel2022
+Index: conf/train.yaml
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>train:\n  learn_rate: 0.01 # learning rate\n  seq_len: 47 # length of sequences to train\n  k_splits: 2 # number of interleaved train/test splits per single worm dataset\n  cycles: 5 # number of passes through a multi-worm dataset\n  epochs: 1 # number passes through a single worm dataset per cycle\n  smooth_data: True # if True use the smoothed calcium data as input\n  batch_size: 128 # maximum number of samples per batch\n  # constraint: train/test_size = batch_size * cycles * num_worms\n  train_size: 524288 # total number of samples of train data\n  test_size: 131072 # total number of samples of test data\n  shuffle: True # whether to shuffle samples\n
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/conf/train.yaml b/conf/train.yaml
+--- a/conf/train.yaml	
++++ b/conf/train.yaml	
+@@ -2,7 +2,7 @@
+   learn_rate: 0.01 # learning rate
+   seq_len: 47 # length of sequences to train
+   k_splits: 2 # number of interleaved train/test splits per single worm dataset
+-  cycles: 5 # number of passes through a multi-worm dataset
++  cycles: 100 # number of passes through a multi-worm dataset
+   epochs: 1 # number passes through a single worm dataset per cycle
+   smooth_data: True # if True use the smoothed calcium data as input
+   batch_size: 128 # maximum number of samples per batch
+Index: conf/visualize.yaml
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>visualize:\n  log_dir: logs/2023_03_15_13_02-Uzel2022-NetworkLSTM\n  worm: worm0\n  neuron: all\n
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/conf/visualize.yaml b/conf/visualize.yaml
+--- a/conf/visualize.yaml	
++++ b/conf/visualize.yaml	
+@@ -1,4 +1,4 @@
+ visualize:
+-  log_dir: logs/2023_03_15_13_02-Uzel2022-NetworkLSTM
++  log_dir: logs/2023_03_15_20_20-sum_sine_noise-NeuralCFC
+   worm: worm0
+-  neuron: all
++  neuron: "all"
+Index: testing/quick_script_5.py
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>\"\"\"\nTests the full training pipeline function `train_model`.\n\"\"\"\n\nimport matplotlib.pyplot as plt\nfrom omegaconf import OmegaConf\nfrom models._utils import LinearNN, NeuralCFC, NetworkLSTM\nfrom train._main import train_model\nfrom data._main import get_dataset\nfrom visualization._utils import plot_targets_predictions\n\ndata_config = OmegaConf.load(\"conf/dataset.yaml\")\ntrain_config = OmegaConf.load(\"conf/train.yaml\")\n\nif __name__ == \"__main__\":\n    # load a dataset (multiple worms)\n    dataset = get_dataset(data_config)\n    # create a model\n    model = LinearNN(302, 64).double()\n    # run the full train pipeline\n    model, log_dir = train_model(model, dataset, train_config)\n    # compare predictions against targets\n    plot_targets_predictions(log_dir, worm=\"worm5\", neuron=\"all\")\n
+===================================================================
+diff --git a/testing/quick_script_5.py b/testing/quick_script_5.py
+--- a/testing/quick_script_5.py	
++++ b/testing/quick_script_5.py	
+@@ -16,8 +16,10 @@
+     # load a dataset (multiple worms)
+     dataset = get_dataset(data_config)
+     # create a model
+-    model = LinearNN(302, 64).double()
++    model = NeuralCFC(302, 302, 5).double()
+     # run the full train pipeline
+     model, log_dir = train_model(model, dataset, train_config)
+     # compare predictions against targets
+-    plot_targets_predictions(log_dir, worm="worm5", neuron="all")
++    plot_targets_predictions(log_dir, worm="worm0", neuron="0")
++
++    print("NeuralCFC, cycle = 100")
