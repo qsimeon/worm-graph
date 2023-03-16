@@ -99,8 +99,8 @@ class NeuralActivityDataset(torch.utils.data.Dataset):
         time_vec = self.time_vec[start:end]
         # data samples: input (X_tau) and target (Y_tau)
         X_tau = self.data[start:end, self.neurons]
-        Y_tau = self.data[start + self.tau : end + self.tau, self.neurons]
-        # Y_tau = self.data[end : end + self.seq_len, self.neurons]
+        Y_tau = self.data[start + self.tau : end + self.tau, self.neurons]  # overlap
+        # Y_tau = self.data[end : end + self.seq_len, self.neurons] # non-overlap
         # calculate the residual (forward first derivative)
         Res_tau = Y_tau - X_tau
         # store metadata about the sample
@@ -128,12 +128,12 @@ class NeuralActivityDataset(torch.utils.data.Dataset):
             range(0, T - L - self.tau + 1)
             if not self.reverse  # generate from start to end
             else range(T - L - self.tau, -1, -1)  # generate from end to start
-        )
+        )  # overlapping windows
         # start_range = (
         #     range(0, T - 2 * L + 1)
         #     if not self.reverse  # generate from start to end
         #     else range(T - 2 * L, -1, -1)  # generate from end to start
-        # )
+        # ) # non-overlapping windows
         # parallelize the data generation
         with Pool(processes=cpu_count() // 2) as pool:
             # # synchronous
@@ -274,6 +274,7 @@ def load_dataset(name):
     loader = eval("load_" + name)
     return loader()
 
+
 def load_sine():
     file = os.path.join(ROOT_DIR, "data", "processed", "neural", "sine.pickle")
     assert os.path.exists(file)
@@ -281,6 +282,7 @@ def load_sine():
     # unpickle the data
     dataset = pickle.load(pickle_in)
     return dataset
+
 
 def load_sine_noise():
     file = os.path.join(ROOT_DIR, "data", "processed", "neural", "sine_noise.pickle")
@@ -290,6 +292,7 @@ def load_sine_noise():
     dataset = pickle.load(pickle_in)
     return dataset
 
+
 def load_sum_sine():
     file = os.path.join(ROOT_DIR, "data", "processed", "neural", "sum_sine.pickle")
     assert os.path.exists(file)
@@ -298,8 +301,11 @@ def load_sum_sine():
     dataset = pickle.load(pickle_in)
     return dataset
 
+
 def load_sum_sine_noise():
-    file = os.path.join(ROOT_DIR, "data", "processed", "neural", "sum_sine_noise.pickle")
+    file = os.path.join(
+        ROOT_DIR, "data", "processed", "neural", "sum_sine_noise.pickle"
+    )
     assert os.path.exists(file)
     pickle_in = open(file, "rb")
     # unpickle the data
