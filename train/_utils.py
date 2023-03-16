@@ -33,20 +33,23 @@ def train(
     for i, data in enumerate(loader):
         X_train, Y_train, metadata = data  # X, Y: (batch_size, seq_len, num_neurons)
         X_train, Y_train = X_train.to(DEVICE), Y_train.to(DEVICE)
-        # Turn on gradients on tensors.
-        X_train.requires_grad_()
-        Y_train.requires_grad_()
+        # # Turn on gradients on tensors.
+        # X_train.requires_grad_()
+        # Y_train.requires_grad_()
         # Clear optimizer gradients.
         optimizer.zero_grad()
         # Baseline: loss if the model predicted the residual to be 0.
-        base = criterion(X_train[:, :, mask], Y_train[:, :, mask])
+        # base = criterion(X_train[:, :, mask], Y_train[:, :, mask])
+        base = criterion(X_train * mask, Y_train * mask)
         # Train
-        Y_tr = model(X_train * mask.double())  # Forward pass.
+        # Y_tr = model(X_train * mask.double())  # Forward pass.
+        Y_tr = model(X_train)  # Forward pass.
         # Register hook.
         Y_tr.retain_grad()
         Y_tr.register_hook(lambda grad: grad * mask.double())
         # Compute training loss.
-        loss = criterion(Y_tr[:, :, mask], Y_train[:, :, mask])
+        # loss = criterion(Y_tr[:, :, mask], Y_train[:, :, mask])
+        loss = criterion(Y_tr * mask, Y_train * mask)
         loss.backward(retain_graph=True)  # Derive gradients.
         # # Prevent update of weights from neurons without data.
         # model.linear.weight.grad *= mask.unsqueeze(-1)
@@ -98,12 +101,13 @@ def test(
         X_test, Y_test, metadata = data  # X, Y: (batch_size, seq_len, num_neurons)
         X_test, Y_test = X_test.to(DEVICE), Y_test.to(DEVICE)
         # Baseline: loss if the model predicted the residual to be 0.
-        base = criterion(X_test[:, :, mask], Y_test[:, :, mask])
+        # base = criterion(X_test[:, :, mask], Y_test[:, :, mask])
+        base = criterion(X_test * mask, Y_test * mask)
         # Test
-        Y_te = model(X_test * mask.double())  # Forward pass.
-        loss = criterion(
-            Y_te[:, :, mask], Y_test[:, :, mask]
-        )  # Compute the validation loss.
+        # Y_te = model(X_test * mask.double())  # Forward pass.
+        Y_te = model(X_test)  # Forward pass.
+        # loss = criterion(Y_te[:, :, mask], Y_test[:, :, mask])  # Compute the validation loss.
+        loss = criterion(Y_te * mask, Y_test * mask)  # Compute the validation loss.
         # Store test and baseline loss.
         base_loss += base.detach().item()
         test_loss += loss.detach().item()
@@ -127,6 +131,7 @@ def split_train_test(
     test_size: int = 1024,
     shuffle: bool = True,
     reverse: bool = True,
+    tau: int = 1,  # deprecated
 ) -> tuple[
     torch.utils.data.DataLoader,
     torch.utils.data.DataLoader,
@@ -143,8 +148,10 @@ def split_train_test(
         data
     ), "Invalid `seq_len` entered."
     # split dataset into train and test sections
+    time_vec = torch.arange(len(data))
     chunk_size = len(data) // k_splits
     split_datasets = torch.split(data, chunk_size, dim=0)  # length k_splits tuple
+    split_times = torch.split(time_vec, chunk_size, dim=0)
     # create train and test masks. important that this is before dropping last split
     train_mask = torch.cat(
         [
@@ -155,15 +162,12 @@ def split_train_test(
     )
     test_mask = ~train_mask
     # drop last split if too small. important that this is after making train/test masks
-    tau = 1
     if (2 * tau >= len(split_datasets[-1])) or (len(split_datasets[-1]) < seq_len):
         split_datasets = split_datasets[:-1]
-    train_splits = split_datasets[::2]
-    test_splits = split_datasets[1::2]
+        split_times = split_times[:-1]
+    train_splits, train_times = split_datasets[::2], split_times[::2]
+    test_splits, test_times = split_datasets[1::2], split_times[1::2]
     # make datasets; TODO: Parallelize this with `multiprocess.Pool`.
-    # with Pool(processes=cpu_count() // 2) as pool:
-    #     # synchronous
-    #     data_samples = pool.map(fun, datasets)
     # train dataset
     train_datasets = [
         NeuralActivityDataset(
@@ -172,8 +176,10 @@ def split_train_test(
             # keep per worm train size constant
             num_samples=train_size // len(train_splits),
             reverse=reverse,
+            time_vec=train_times[i],
+            tau=tau,
         )
-        for data in train_splits
+        for i, data in enumerate(train_splits)
     ]
     train_dataset = ConcatDataset(train_datasets)
     # tests dataset
@@ -183,9 +189,11 @@ def split_train_test(
             seq_len=seq_len,
             # keep per worm test size constant
             num_samples=test_size // len(test_splits),
-            reverse=reverse,
+            reverse=(not reverse),
+            time_vec=test_times[i],
+            tau=tau,
         )
-        for data in test_splits
+        for i, data in enumerate(test_splits)
     ]
     test_dataset = ConcatDataset(test_datasets)
     # make data loaders

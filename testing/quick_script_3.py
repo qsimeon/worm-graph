@@ -3,13 +3,14 @@ Tests whether the data loaders generate
 batches and samples as expected.
 """
 
+import numpy as np
 import matplotlib.pyplot as plt
 from omegaconf import OmegaConf
 from torch.utils.data import DataLoader
 from data._main import get_dataset
 from data._utils import NeuralActivityDataset
 from multiprocessing import cpu_count
-from numpy import random
+
 
 config = OmegaConf.load("conf/dataset.yaml")
 
@@ -22,8 +23,8 @@ if __name__ == "__main__":
     # create a Pytorch dataset from `calcium_data`
     neural_dataset = NeuralActivityDataset(
         calcium_data,
-        seq_len=517,
-        num_samples=8192,
+        seq_len=999,
+        num_samples=1024,
         tau=100,  # offset of target
         reverse=False,
     )
@@ -50,7 +51,7 @@ if __name__ == "__main__":
     )
     plt.plot(
         metadata["time_vec"][-1, :] + metadata["tau"][-1],
-        0.5 * random.randn() + Y[-1, :, 0],
+        0.5 * np.random.randn() + Y[-1, :, 0],
         label="target",
     )
     plt.xlabel("Time")

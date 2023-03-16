@@ -56,6 +56,17 @@ class NeuralActivityDataset(torch.utils.data.Dataset):
         assert (
             isinstance(tau, int) and 0 <= tau < data.size(0) // 2
         ), "Enter a integer offset `0 <= tau < max_time // 2`."
+        # create time vector
+        if time_vec is not None:
+            assert torch.is_tensor(
+                time_vec
+            ), "Recast the time vector as type `torch.tensor`."
+            assert time_vec.squeeze().ndim == 1 and len(time_vec) == data.size(
+                0
+            ), "Time vector must have shape (len(data), )"
+            self.time_vec = time_vec.squeeze()
+        else:
+            self.time_vec = torch.arange(data.size(0))
         self.max_time, num_neurons = data.shape
         self.seq_len = seq_len
         self.tau = tau
@@ -66,15 +77,6 @@ class NeuralActivityDataset(torch.utils.data.Dataset):
         else:  # neurons is None
             self.neurons = np.arange(num_neurons)  # use all the neurons
         self.num_neurons = self.neurons.size
-        # create time vector
-        if time_vec is not None:
-            time_vec = torch.tensor(time_vec).squeeze()
-            assert time_vec.ndim == 1 and len(time_vec) == data.size(
-                0
-            ), "Time vector must have shape (len(data), )"
-            self.time_vec = time_vec
-        else:
-            self.time_vec = torch.arange(self.max_time)
         self.data = data
         self.num_samples = num_samples
         self.data_samples = self.__data_generator()

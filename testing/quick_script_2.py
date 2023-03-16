@@ -26,9 +26,10 @@ if __name__ == "__main__":
         batch_size=128,
         train_size=8192,
         test_size=8192,
-        reverse=False,
         # TODO: Why does `shuffle=True` improve performance so much?
         shuffle=True,
+        reverse=False,
+        tau=1,
     )
     # train the model with the `optimize_model` function
     model, log = optimize_model(calcium_data, model, num_epochs=30, **kwargs)

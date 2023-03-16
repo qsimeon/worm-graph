@@ -58,6 +58,7 @@ def train_model(
         test_size=config.train.test_size // len(dataset_items),
         shuffle=config.train.shuffle,
         reverse=True,
+        tau=1,  # deprecated
     )
     # choose whether to use original or smoothed calcium data
     if config.train.smooth_data:
