@@ -32,6 +32,7 @@ def train_model(
         optimizer = optimizer
     else:
         optimizer = torch.optim.Adam(model.parameters(), lr=config.train.learn_rate)
+        # optimizer = torch.optim.SGD(model.parameters(), lr=config.train.learn_rate)
     # train/test loss metrics
     data = {
         "epochs": [],
@@ -107,7 +108,8 @@ def train_model(
         header=True,
     )
     # make predictions with last saved model
-    make_predictions(model, dataset, log_dir)
+    kwargs = dict(tau=1)  # args passed to model_predict
+    make_predictions(model, dataset, log_dir, **kwargs)
     # returned trained model and a path to log directory
     return model, log_dir
 

@@ -100,6 +100,7 @@ class NeuralActivityDataset(torch.utils.data.Dataset):
         # data samples: input (X_tau) and target (Y_tau)
         X_tau = self.data[start:end, self.neurons]
         Y_tau = self.data[start + self.tau : end + self.tau, self.neurons]
+        # Y_tau = self.data[end : end + self.seq_len, self.neurons]
         # calculate the residual (forward first derivative)
         Res_tau = Y_tau - X_tau
         # store metadata about the sample
@@ -128,14 +129,19 @@ class NeuralActivityDataset(torch.utils.data.Dataset):
             if not self.reverse  # generate from start to end
             else range(T - L - self.tau, -1, -1)  # generate from end to start
         )
+        # start_range = (
+        #     range(0, T - 2 * L + 1)
+        #     if not self.reverse  # generate from start to end
+        #     else range(T - 2 * L, -1, -1)  # generate from end to start
+        # )
         # parallelize the data generation
         with Pool(processes=cpu_count() // 2) as pool:
             # # synchronous
-            # data_samples = pool.map(self.parfor_func, start_range[: self.num_samples])
+            # data_samples = pool.map(self.parfor_func, start_range)[: self.num_samples]
             # asynchronous
-            data_samples = pool.map_async(
-                self.parfor_func, start_range[: self.num_samples]
-            ).get()
+            data_samples = pool.map_async(self.parfor_func, start_range).get()[
+                : self.num_samples
+            ]
         pool.join()
         return data_samples
 

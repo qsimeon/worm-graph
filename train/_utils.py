@@ -43,10 +43,10 @@ def train(
         base = criterion(X_train * mask, Y_train * mask)
         # Train
         # Y_tr = model(X_train * mask.double())  # Forward pass.
-        Y_tr = model(X_train)  # Forward pass.
-        # Register hook.
-        Y_tr.retain_grad()
-        Y_tr.register_hook(lambda grad: grad * mask.double())
+        Y_tr = model(X_train * mask)  # Forward pass.
+        # # Register hook.
+        # Y_tr.retain_grad()
+        # Y_tr.register_hook(lambda grad: grad * mask.double())
         # Compute training loss.
         # loss = criterion(Y_tr[:, :, mask], Y_train[:, :, mask])
         loss = criterion(Y_tr * mask, Y_train * mask)
@@ -105,7 +105,7 @@ def test(
         base = criterion(X_test * mask, Y_test * mask)
         # Test
         # Y_te = model(X_test * mask.double())  # Forward pass.
-        Y_te = model(X_test)  # Forward pass.
+        Y_te = model(X_test * mask)  # Forward pass.
         # loss = criterion(Y_te[:, :, mask], Y_test[:, :, mask])  # Compute the validation loss.
         loss = criterion(Y_te * mask, Y_test * mask)  # Compute the validation loss.
         # Store test and baseline loss.
@@ -250,6 +250,7 @@ def optimize_model(
     # create optimizer
     if optimizer is None:
         optimizer = torch.optim.Adam(model.parameters(), lr=learn_rate)
+        # optimizer = torch.optim.SGD(model.parameters(), lr=learn_rate)
     # create data loaders and train/test masks
     train_loader, test_loader, train_mask, test_mask = split_train_test(data, **kwargs)
     # create log dictionary to return
@@ -309,6 +310,7 @@ def make_predictions(
     model: torch.nn.Module,
     dataset: dict,
     log_dir: str,
+    **kwargs,
 ) -> None:
     """Make predicitons on a dataset with a trained model.
 
@@ -336,7 +338,9 @@ def make_predictions(
         labels = np.expand_dims(np.where(train_mask, "train", "test"), axis=-1)
         columns = list(named_neuron_to_idx) + ["train_test_label"]
         # make predictions with final model
-        targets, predictions = model_predict(model, calcium_data)
+        targets, predictions = model_predict(
+            model, calcium_data * named_neurons_mask, **kwargs
+        )
         # save dataframes
         data = calcium_data[:, named_neurons_mask].numpy()
         data = np.hstack((data, labels))
@@ -363,7 +367,9 @@ def make_predictions(
 
 
 def model_predict(
-    model: torch.nn.Module, calcium_data: torch.Tensor
+    model: torch.nn.Module,
+    calcium_data: torch.Tensor,
+    tau: int = 1,
 ) -> tuple[torch.Tensor, torch.Tensor]:
     """
     Makes predictions for all neurons in the
@@ -378,10 +384,17 @@ def model_predict(
     ), "Calcium data has incorrect shape!"
     # get input and output
     input = calcium_data.to(DEVICE)
-    output = model(input.unsqueeze(0)).squeeze()
-    # targets/predictions
-    targets = input.detach().cpu()
-    predictions = output.detach().cpu()
+    # TODO: Why does this make such a big difference in prediction?
+    # output = model(input.unsqueeze(1)) # (max_time, 1, 302), batch_size = max_time, seq_len = 1
+    output = model(
+        input.unsqueeze(0)
+    )  # (1, max_time, 302),  batch_size = 1, seq_len = max_time
+    output = output.squeeze()
+    # # targets/predictions
+    targets = torch.nn.functional.pad(input[tau:, :].detach().cpu(), (0, 0, tau, 0)).numpy()
+    predictions = torch.nn.functional.pad(output[:-tau, :].detach().cpu(), (0, 0, 0, tau)).numpy()
+    # targets = input.detach().cpu()
+    # predictions = output.detach().cpu()
     return targets, predictions
 
 
