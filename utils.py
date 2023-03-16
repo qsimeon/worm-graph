@@ -36,6 +36,7 @@ VALID_DATASETS = {
     "sine",
     "sine_noise",
     "sum_sime",
+
     "sum_sine_noise",
 }  # TODO: set an option for pooling all datasets
 

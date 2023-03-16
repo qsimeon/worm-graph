@@ -274,6 +274,38 @@ def load_dataset(name):
     loader = eval("load_" + name)
     return loader()
 
+def load_sine():
+    file = os.path.join(ROOT_DIR, "data", "processed", "neural", "sine.pickle")
+    assert os.path.exists(file)
+    pickle_in = open(file, "rb")
+    # unpickle the data
+    dataset = pickle.load(pickle_in)
+    return dataset
+
+def load_sine_noise():
+    file = os.path.join(ROOT_DIR, "data", "processed", "neural", "sine_noise.pickle")
+    assert os.path.exists(file)
+    pickle_in = open(file, "rb")
+    # unpickle the data
+    dataset = pickle.load(pickle_in)
+    return dataset
+
+def load_sum_sine():
+    file = os.path.join(ROOT_DIR, "data", "processed", "neural", "sum_sine.pickle")
+    assert os.path.exists(file)
+    pickle_in = open(file, "rb")
+    # unpickle the data
+    dataset = pickle.load(pickle_in)
+    return dataset
+
+def load_sum_sine_noise():
+    file = os.path.join(ROOT_DIR, "data", "processed", "neural", "sum_sine_noise.pickle")
+    assert os.path.exists(file)
+    pickle_in = open(file, "rb")
+    # unpickle the data
+    dataset = pickle.load(pickle_in)
+    return dataset
+
 
 def load_sine():
     """
