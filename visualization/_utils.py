@@ -147,6 +147,7 @@ def plot_loss_curves(log_dir):
     # plot loss vs epochs
     plt.figure()
     # centered loss curves
+
     sns.lineplot(x="epochs", y="centered_train_losses", data=loss_df, label="train")
     sns.lineplot(x="epochs", y="centered_test_losses", data=loss_df, label="test")
     # sns.lineplot(x="epochs", y="train_losses", data=loss_df, label="ori_train", color="r")

@@ -2,3 +2,4 @@ visualize:
   log_dir: logs/2023_03_16_11_26-sum_sine_noise-NetworkLSTM
   worm: worm0
   neuron: all
+

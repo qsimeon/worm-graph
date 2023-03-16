@@ -27,7 +27,7 @@ import torch.nn.functional as F
 
 if __name__ == "__main__":
 
-    config = OmegaConf.load("../../conf/dataset.yaml")
+    config = OmegaConf.load("conf/dataset.yaml")
     print("config:", OmegaConf.to_yaml(config), end="\n\n")
     dataset = get_dataset(config)
     print("----dataset prepared------\n")
@@ -61,10 +61,14 @@ if __name__ == "__main__":
     temp = torch.stack((worm[0]["calcium_data"], worm[0]["residual_calcium"]), 2)
     tmp = temp[:, :, 0]
     print(tmp.shape)
-    plt.plot(tmp[:, 2])
+    plt.plot(tmp[:, 0])
     plt.show()
 
     print(temp.shape)
+
+    print("--------")
+    print(worm[0]["dt"].shape)
+
     exit(0)
 
     # print(worm[0].keys())

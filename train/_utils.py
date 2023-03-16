@@ -54,6 +54,7 @@ def train(
         # # Prevent update of weights from neurons without data.
         # model.linear.weight.grad *= mask.unsqueeze(-1)
         # No backprop on epoch 0.
+
         if no_grad:
             optimizer.zero_grad()
         optimizer.step()  # Update parameters based on gradients.
@@ -345,6 +346,7 @@ def make_predictions(
         targets, predictions = model_predict(
             model, calcium_data * named_neurons_mask, **kwargs
         )
+
         # save dataframes
         data = calcium_data[:, named_neurons_mask].numpy()
         data = np.hstack((data, labels))
