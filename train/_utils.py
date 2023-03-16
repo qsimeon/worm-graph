@@ -398,10 +398,14 @@ def model_predict(
     )  # (1, max_time, NUM_NEURONS),  batch_size = 1, seq_len = max_time
     output = output.squeeze(0)
     # targets/predictions
-    # targets = torch.nn.functional.pad(input[tau:, :].detach().cpu(), (0, 0, tau, 0)).numpy()
-    # predictions = torch.nn.functional.pad(output[:-tau, :].detach().cpu(), (0, 0, 0, tau)).numpy()
-    targets = input.detach().cpu()
-    predictions = output.detach().cpu()
+    targets = torch.nn.functional.pad(
+        input[tau:, :].detach().cpu(), (0, 0, tau, 0)
+    ).numpy()
+    predictions = torch.nn.functional.pad(
+        output[:-tau, :].detach().cpu(), (0, 0, 0, tau)
+    ).numpy()
+    # targets = input.detach().cpu()
+    # predictions = output.detach().cpu()
     return targets, predictions
 
 

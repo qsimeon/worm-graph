@@ -12,6 +12,8 @@ config = OmegaConf.load("conf/dataset.yaml")
 if __name__ == "__main__":
     # number of neurons we want to predict
     num_neurons = 1
+    # number of split of data
+    k = 2
     # load a dataset (multiple worms)
     dataset = get_dataset(config)
     # get calcium data for one worm
@@ -24,11 +26,11 @@ if __name__ == "__main__":
     model = NetworkLSTM(num_neurons, 64).double()
     # keyword args to `split_train_test`
     kwargs = dict(
-        k_splits=2,
+        k_splits=k,
         seq_len=10,
         batch_size=128,
-        train_size=1656//2,
-        test_size=1656//2,
+        train_size=1656,
+        test_size=1656,
         # TODO: Why does `shuffle=True` improve performance so much?
         shuffle=True,
         reverse=False,
@@ -44,7 +46,7 @@ if __name__ == "__main__":
         **kwargs,
     )
     # keyword args to `model_predict`
-    kwargs = dict(tau=1)
+    kwargs = dict(tau=len(calcium_data)//k)
     # make predictions with trained model
     targets, predictions = model_predict(
         model, calcium_data * named_neurons_mask, **kwargs
