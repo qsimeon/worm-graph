@@ -240,10 +240,14 @@ def optimize_model(
                 reverse: bool,
             }
     """
+    # number of neurons in dataset
+    NUM_NEURONS = data.size(1)
     # create the feature mask
     if mask is None:
         mask = torch.ones(NUM_NEURONS, dtype=torch.bool)
-    assert mask.size(0) == NUM_NEURONS and mask.dtype == torch.bool
+    assert (
+        mask.size(0) == NUM_NEURONS and mask.dtype == torch.bool
+    ), "Please use a valid mask."
     mask = mask.to(DEVICE)
     # put model on device
     model = model.to(DEVICE)
@@ -375,26 +379,29 @@ def model_predict(
     Makes predictions for all neurons in the
     calcium data tensor using a trained model.
     """
+    NUM_NEURONS = calcium_data.size(1)
     model = model.double()
     model.eval()
     # model in/out
-    calcium_data = calcium_data.squeeze()
+    calcium_data = calcium_data.squeeze(0)
+    print("cal data shape", calcium_data.shape)
     assert (
-        calcium_data.ndim == 2 and calcium_data.size(1) == NUM_NEURONS
+        calcium_data.ndim == 2 and calcium_data.size(0) >= NUM_NEURONS
     ), "Calcium data has incorrect shape!"
     # get input and output
     input = calcium_data.to(DEVICE)
     # TODO: Why does this make such a big difference in prediction?
-    # output = model(input.unsqueeze(1)) # (max_time, 1, 302), batch_size = max_time, seq_len = 1
+    # output = model(input.unsqueeze(1)) # (max_time, 1, NUM_NEURONS), batch_size = max_time, seq_len = 1
+    # output = output.squeeze(1)
     output = model(
         input.unsqueeze(0)
-    )  # (1, max_time, 302),  batch_size = 1, seq_len = max_time
-    output = output.squeeze()
-    # # targets/predictions
-    targets = torch.nn.functional.pad(input[tau:, :].detach().cpu(), (0, 0, tau, 0)).numpy()
-    predictions = torch.nn.functional.pad(output[:-tau, :].detach().cpu(), (0, 0, 0, tau)).numpy()
-    # targets = input.detach().cpu()
-    # predictions = output.detach().cpu()
+    )  # (1, max_time, NUM_NEURONS),  batch_size = 1, seq_len = max_time
+    output = output.squeeze(0)
+    # targets/predictions
+    # targets = torch.nn.functional.pad(input[tau:, :].detach().cpu(), (0, 0, tau, 0)).numpy()
+    # predictions = torch.nn.functional.pad(output[:-tau, :].detach().cpu(), (0, 0, 0, tau)).numpy()
+    targets = input.detach().cpu()
+    predictions = output.detach().cpu()
     return targets, predictions
 
 

@@ -25,10 +25,10 @@ if __name__ == "__main__":
     # keyword args to `split_train_test`
     kwargs = dict(
         k_splits=2,
-        seq_len=99,
+        seq_len=10,
         batch_size=128,
-        train_size=165600,
-        test_size=165600,
+        train_size=1656//2,
+        test_size=1656//2,
         # TODO: Why does `shuffle=True` improve performance so much?
         shuffle=True,
         reverse=False,
@@ -39,8 +39,8 @@ if __name__ == "__main__":
         calcium_data,
         model,
         mask=named_neurons_mask,
-        num_epochs=10,
-        learn_rate=0.1,
+        num_epochs=2,
+        learn_rate=0.01,
         **kwargs,
     )
     # keyword args to `model_predict`
@@ -67,39 +67,39 @@ if __name__ == "__main__":
     plt.xlabel("Time")
     plt.ylabel("$Ca^{2+} \Delta F / F$")
     plt.show()
-    # figure of neuron 49 calcium target and prediction
-    plt.figure()
-    plt.plot(targets[:, 49], label="target")
-    plt.plot(predictions[:, 49], alpha=0.8, label="prediction")
-    plt.legend()
-    plt.title("Neuron 49 target and prediction")
-    plt.xlabel("Time")
-    plt.ylabel("$Ca^{2+} \Delta F / F$")
-    plt.show()
-    # figure of neuron 60 calcium target and prediction
-    plt.figure()
-    plt.plot(targets[:, 60], label="target")
-    plt.plot(predictions[:, 60], alpha=0.8, label="prediction")
-    plt.legend()
-    plt.title("Neuron 60 target and prediction")
-    plt.xlabel("Time")
-    plt.ylabel("$Ca^{2+} \Delta F / F$")
-    plt.show()
-    # figure of neuron 200 calcium target and prediction
-    plt.figure()
-    plt.plot(targets[:, 200], label="target")
-    plt.plot(predictions[:, 200], alpha=0.8, label="prediction")
-    plt.legend()
-    plt.title("Neuron 200 target and prediction")
-    plt.xlabel("Time")
-    plt.ylabel("$Ca^{2+} \Delta F / F$")
-    plt.show()
-    # figure of neuron 300 calcium target and prediction
-    plt.figure()
-    plt.plot(targets[:, 300], label="target")
-    plt.plot(predictions[:, 300], alpha=0.8, label="prediction")
-    plt.legend()
-    plt.title("Neuron 300 target and prediction")
-    plt.xlabel("Time")
-    plt.ylabel("$Ca^{2+} \Delta F / F$")
-    plt.show()
+    # # figure of neuron 49 calcium target and prediction
+    # plt.figure()
+    # plt.plot(targets[:, 49], label="target")
+    # plt.plot(predictions[:, 49], alpha=0.8, label="prediction")
+    # plt.legend()
+    # plt.title("Neuron 49 target and prediction")
+    # plt.xlabel("Time")
+    # plt.ylabel("$Ca^{2+} \Delta F / F$")
+    # plt.show()
+    # # figure of neuron 60 calcium target and prediction
+    # plt.figure()
+    # plt.plot(targets[:, 60], label="target")
+    # plt.plot(predictions[:, 60], alpha=0.8, label="prediction")
+    # plt.legend()
+    # plt.title("Neuron 60 target and prediction")
+    # plt.xlabel("Time")
+    # plt.ylabel("$Ca^{2+} \Delta F / F$")
+    # plt.show()
+    # # figure of neuron 200 calcium target and prediction
+    # plt.figure()
+    # plt.plot(targets[:, 200], label="target")
+    # plt.plot(predictions[:, 200], alpha=0.8, label="prediction")
+    # plt.legend()
+    # plt.title("Neuron 200 target and prediction")
+    # plt.xlabel("Time")
+    # plt.ylabel("$Ca^{2+} \Delta F / F$")
+    # plt.show()
+    # # figure of neuron 300 calcium target and prediction
+    # plt.figure()
+    # plt.plot(targets[:, 300], label="target")
+    # plt.plot(predictions[:, 300], alpha=0.8, label="prediction")
+    # plt.legend()
+    # plt.title("Neuron 300 target and prediction")
+    # plt.xlabel("Time")
+    # plt.ylabel("$Ca^{2+} \Delta F / F$")
+    # plt.show()
