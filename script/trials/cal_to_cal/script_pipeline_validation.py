@@ -8,6 +8,11 @@
 @time: 2023/3/10 14:54
 '''
 
+import warnings
+
+with warnings.catch_warnings():
+    warnings.simplefilter("ignore")
+
 from train._main import *
 
 import numpy as np
@@ -18,6 +23,10 @@ import torch
 from torch.autograd import Variable
 from models._main import *
 from preprocess._utils import *
+import torch.nn as nn
+import torch.utils.data as Data
+import torch
+from torch.optim import optimizer
 
 
 def create_synthetic_data(d, n, ifnoise=False):
@@ -52,7 +61,6 @@ def create_dataset(raw_data, raw_der):
 
         smooth_real_data, residual, smooth_residual = smooth_data_preprocess(real_data, "fft")
 
-
         for i in range(residual.shape[1]):
             residual[:, i] = residual[:, i] / dt[:, i]
 
@@ -82,6 +90,26 @@ def create_dataset(raw_data, raw_der):
     return sine_dataset
 
 
+class lstm(nn.Module):
+    def __init__(self, INPUT_SIZE, HIDDEN_SIZE, LAYERS, DROP_RATE):
+        super(lstm, self).__init__()
+        self.rnn = nn.LSTM(
+            input_size=INPUT_SIZE,
+            hidden_size=HIDDEN_SIZE,
+            num_layers=LAYERS,
+            dropout=DROP_RATE,
+            batch_first=True
+        )
+        self.hidden_out = nn.Linear(HIDDEN_SIZE, INPUT_SIZE)
+        self.h_s = None
+        self.h_c = None
+
+    def forward(self, x):
+        r_out, (h_s, h_c) = self.rnn(x)
+        output = self.hidden_out(r_out)
+        return output
+
+
 if __name__ == "__main__":
     # Creating signal
     seq_len = 3312
@@ -97,7 +125,6 @@ if __name__ == "__main__":
         raw_der.append(der)
 
     dataset = create_dataset(raw_data, raw_der)
-
     print(dataset["worm0"].keys())
 
     plt.plot(dataset["worm0"]["calcium_data"][:, 3])
@@ -105,13 +132,12 @@ if __name__ == "__main__":
     plt.legend(["cal", "res"], loc="upper right")
     plt.show()
 
-    config = OmegaConf.load("conf/model.yaml")
+    config = OmegaConf.load("../../../conf/model.yaml")
     print("Model:", OmegaConf.to_yaml(config), end="\n\n")
     model = get_model(config)
 
-    config = OmegaConf.load("conf/train.yaml")
+    config = OmegaConf.load("../../../conf/train.yaml")
     model, log_dir = train_model(model, dataset, config)
-
 
 
 

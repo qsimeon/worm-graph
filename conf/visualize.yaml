@@ -1,4 +1,4 @@
 visualize:
-  log_dir: logs/2023_03_10_18_38-sine-LinearNN
-  worm: worm0
-  neuron: "300"
+  log_dir: logs/2023_03_17_13_56-Kato2015-NetworkLSTM
+  worm: all
+  neuron: AVAL

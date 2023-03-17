@@ -2,11 +2,11 @@ from train._utils import *
 
 
 def train_model(
-        model: torch.nn.Module,
-        dataset: dict,
-        config: DictConfig,
-        optimizer: Union[torch.optim.Optimizer, None] = None,
-        shuffle: bool = True,
+    model: torch.nn.Module,
+    dataset: dict,
+    config: DictConfig,
+    optimizer: Union[torch.optim.Optimizer, None] = None,
+    shuffle: bool = True,
 ) -> tuple[torch.nn.Module, str]:
     """
     Trains a model on a multi-worm dataset. Returns the trained model
@@ -22,16 +22,24 @@ def train_model(
     )
     os.makedirs(log_dir, exist_ok=True)
     os.makedirs(os.path.join(log_dir, "checkpoints"), exist_ok=True)
-    # create cycles of the dataset
-    dataset_items = list(dataset.items()) * config.train.cycles
+    # sample worms with replacement until desired number epochs (i.e. worms) obtained
+    dataset_items = [
+        (k, dataset[k])
+        for k in np.random.choice(
+            list(dataset.keys()), size=config.train.epochs, replace=True
+        )
+    ]
     # shuffle the dataset (without replacement)
     if shuffle == True:
         dataset_items = random.sample(dataset_items, k=len(dataset_items))
+    # remake dataset with only selected worms
+    dataset = dict(dataset_items)
     # instantiate the optimizer
     if optimizer is not None:
         optimizer = optimizer
     else:
         optimizer = torch.optim.Adam(model.parameters(), lr=config.train.learn_rate)
+        # optimizer = torch.optim.SGD(model.parameters(), lr=config.train.learn_rate)
     # train/test loss metrics
     data = {
         "epochs": [],
@@ -46,41 +54,43 @@ def train_model(
     }
     # train the model for multiple cyles
     kwargs = dict(
+        # args to `optimize_model`
         optimizer=optimizer,
-        num_epochs=config.train.epochs,
+        num_epochs=1,
+        # args to `split_train_test`
         k_splits=config.train.k_splits,
         seq_len=config.train.seq_len,
-        # hold the per worm train and test sizes constant
-        train_size=config.train.train_size // len(dataset_items),
-        test_size=config.train.test_size // len(dataset_items),
-        tau=1,
-        shuffle=True,
-        reverse=True,
+        batch_size=config.train.batch_size,
+        train_size=config.train.train_size,
+        test_size=config.train.test_size,
+        shuffle=config.train.shuffle,
+        reverse=False,
+        tau=1,  # deprecated
     )
     # choose whether to use original or smoothed calcium data
     if config.train.smooth_data:
         key_data = "smooth_calcium_data"
     else:
         key_data = "calcium_data"
-    # train for multiple cycles
+    # train for config.train.num_epochs
     reset_epoch = 1
     for i, (worm, single_worm_dataset) in enumerate(dataset_items):
+        # optimize for 1 epoch per (possibly duplicated) worm
         model, log = optimize_model(
             data=single_worm_dataset[key_data],
             model=model,
             mask=single_worm_dataset["named_neurons_mask"],
             start_epoch=reset_epoch,
-            **kwargs,  # args to `split_train_test
+            **kwargs,
         )
         # retrieve losses and sample counts
         [data[key].extend(log[key]) for key in data]
         # mutate the dataset for this worm with the train and test masks
-        dataset[worm]["train_mask"] = log["train_mask"]
-        dataset[worm]["test_mask"] = log["test_mask"]
+        dataset[worm].setdefault("train_mask", log["train_mask"])
+        dataset[worm].setdefault("test_mask", log["test_mask"])
         # set to next epoch
         reset_epoch = log["epochs"][-1] + 1
-        # outputs
-        if (i % config.train.cycles) == 0:
+        if (i % config.train.save_freq == 0) or (i + 1 == config.train.epochs):
             # display progress
             print("num. worms trained on:", i + 1, "\nprevious worm:", worm, end="\n\n")
             # save model checkpoints

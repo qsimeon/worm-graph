@@ -1,37 +1,66 @@
 """
-Tests the model optimization, the full training 
-pipeline and the train test masks.
+Tests the model optimization function `optimize_model`.
 """
 import matplotlib.pyplot as plt
 from omegaconf import OmegaConf
-from models._utils import LinearNN
-from train._main import train_model
+from models._utils import NetworkLSTM
 from data._main import get_dataset
-from train._utils import optimize_model
-from visualization._utils import plot_before_after_weights
+from train._utils import optimize_model, model_predict
 
 config = OmegaConf.load("conf/dataset.yaml")
 
 if __name__ == "__main__":
+    # pick indices of neurons we want
+    neuron_inds = range(6, 11)
+    num_neurons = len(neuron_inds)
     # load a dataset (multiple worms)
     dataset = get_dataset(config)
     # get calcium data for one worm
     single_worm_dataset = dataset["worm0"]
-    calcium_data = dataset["calcium_data"]
+    calcium_data = single_worm_dataset["calcium_data"][:, neuron_inds]
+    named_neurons_mask = single_worm_dataset["named_neurons_mask"][neuron_inds]
     # create a model
-    model = LinearNN(302, 64).double()
-    # test the  `optimize_model` function
-    kwargs = dict(train_size=4096, test_size=4096, tau=1, seq_len=47, reverse=False)
-    model, log = optimize_model(calcium_data, model, k_splits=2, **kwargs)
-    # run the full train pipeline
-    config = OmegaConf.load("conf/train.yaml")
-    model, log_dir = train_model(model, dataset, config, shuffle=True)
-    # plot figure showing train mask
+    model = NetworkLSTM(num_neurons, 64).double()
+    # keyword args to `split_train_test`
+    kwargs = dict(
+        k_splits=2,
+        seq_len=10,
+        batch_size=128,
+        train_size=1654,
+        test_size=1654,
+        # TODO: Why does `shuffle=True` improve performance so much?
+        shuffle=True,
+        reverse=False,
+        tau=1,
+    )
+    # train the model with the `optimize_model` function
+    model, log = optimize_model(
+        calcium_data,
+        model,
+        mask=named_neurons_mask,
+        num_epochs=100,
+        learn_rate=0.1,
+        **kwargs,
+    )
+    # make predictions with trained model
+    targets, predictions = model_predict(model, calcium_data * named_neurons_mask)
+    print("Targets:", targets.shape, "\nPredictions:", predictions.shape, end="\n\n")
+    # plot entered loss curves
     plt.figure()
-    plt.plot(log["train_mask"].to(float).numpy())
-    plt.title("Train mask")
-    plt.xlabel("Time")
-    plt.ylabel("Test (0) / Train (1)")
+    plt.plot(log["epochs"], log["centered_train_losses"], label="train")
+    plt.plot(log["epochs"], log["centered_test_losses"], label="test")
+    plt.legend()
+    plt.title("Loss curves")
+    plt.xlabel("Epochs")
+    plt.ylabel("Loss - Baseline")
     plt.show()
-    # plot untrained versus trained weights
-    plot_before_after_weights(log_dir)
+    # figures of neuron calcium target and prediction
+    for neuron in range(num_neurons):
+        plt.figure()
+        plt.plot(targets[:, neuron], label="target")
+        plt.plot(predictions[:, neuron], alpha=0.8, label="prediction")
+        plt.legend()
+        plt.title("Neuron %s target and prediction" % neuron)
+        plt.xlabel("Time")
+        plt.ylabel("$Ca^{2+} \Delta F / F$")
+        plt.show()

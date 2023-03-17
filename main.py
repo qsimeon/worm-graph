@@ -14,6 +14,7 @@ def pipeline(config: DictConfig) -> None:
         plot_figures: visualize.yaml
         TODO: analyze_outputs: analysis.yaml
     """
+    print()
     # skips if data already preprocessed
     process_data(config)
 

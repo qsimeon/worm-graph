@@ -13,15 +13,15 @@ hydra:
   sweep:
     dir: logs/multirun/${now:%Y_%m_%d_%H_%M}
     subdir: ${hydra.job.num}
-  mode: MULTIRUN
+  mode: RUN # options: RUN, MULTIRUN
   job:
     chdir: false
   sweeper:
     params:
-      train.k_splits: 2, 5, 8, 10, 20
-      # train.train_size: 1024, 2048, 4096, 8192
-      # dataset.name: Skora2018
-      # train.cycles: 10, 30, 50
+      # train.k_splits: 2, 5, 8, 10, 20
+      # train.train_size: 1024, 2048, 4096
       # train.test_size: 1024, 2048, 4096
+      # dataset.name: Skora2018
+      # train.cycles: 1, 10, 100
       # model.type: linear, dense_cfc, neural_cfc, lstm, vae_lstm
       # model.hidden_size: 64
