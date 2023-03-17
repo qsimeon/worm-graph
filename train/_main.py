@@ -86,9 +86,7 @@ def train_model(
         # retrieve losses and sample counts
         [data[key].extend(log[key]) for key in data]
         # mutate the dataset for this worm with the train and test masks
-        # dataset[worm]["train_mask"] = log["train_mask"]
         dataset[worm].setdefault("train_mask", log["train_mask"])
-        # dataset[worm]["test_mask"] = log["test_mask"]
         dataset[worm].setdefault("test_mask", log["test_mask"])
         # set to next epoch
         reset_epoch = log["epochs"][-1] + 1

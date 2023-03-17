@@ -13,8 +13,6 @@ if __name__ == "__main__":
     # pick indices of neurons we want
     neuron_inds = range(6, 11)
     num_neurons = len(neuron_inds)
-    # number of split of data
-    k = 2
     # load a dataset (multiple worms)
     dataset = get_dataset(config)
     # get calcium data for one worm
@@ -25,7 +23,7 @@ if __name__ == "__main__":
     model = NetworkLSTM(num_neurons, 64).double()
     # keyword args to `split_train_test`
     kwargs = dict(
-        k_splits=k,
+        k_splits=2,
         seq_len=10,
         batch_size=128,
         train_size=1654,
