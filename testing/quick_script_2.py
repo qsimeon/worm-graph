@@ -33,7 +33,7 @@ if __name__ == "__main__":
         k_splits=k,
         seq_len=10,
         batch_size=128,
-        train_size=1,
+        train_size=100000,
         test_size=1,
         # TODO: Why does `shuffle=True` improve performance so much?
         shuffle=True,
