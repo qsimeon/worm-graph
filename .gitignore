@@ -147,9 +147,3 @@ dmypy.json
 .pyre/
 *.pickle
 *.zip
-# data/processed/neural/Kaplan2020.pickle
-# data/processed/neural/Kato2015.pickle
-# data/processed/neural/Nguyen2017.pickle
-# data/processed/neural/Nichols2017.pickle
-# data/processed/neural/Skora2018.pickle
-# data/processed/neural/Uzel2022.pickle
