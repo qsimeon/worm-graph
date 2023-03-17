@@ -220,7 +220,7 @@ def optimize_model(
     optimizer: Union[torch.optim.Optimizer, None] = None,
     start_epoch: int = 1,
     learn_rate: float = 0.01,
-    num_epochs: int = 100,
+    num_epochs: int = 1,
     **kwargs,
 ) -> tuple[torch.nn.Module, dict]:
     """

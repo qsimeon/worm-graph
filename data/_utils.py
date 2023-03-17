@@ -16,7 +16,7 @@ class NeuralActivityDataset(torch.utils.data.Dataset):
         self,
         data,
         seq_len=17,
-        num_samples=1000,
+        num_samples=10,
         neurons=None,
         time_vec=None,
         reverse=False,

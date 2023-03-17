@@ -10,19 +10,16 @@ from train._utils import optimize_model, model_predict
 config = OmegaConf.load("conf/dataset.yaml")
 
 if __name__ == "__main__":
-    # number of neurons we want to predict
+    # pick indices of neurons we want
     neuron_inds = range(6, 11)
     num_neurons = len(neuron_inds)
-    # num_neurons = 1
     # number of split of data
     k = 2
     # load a dataset (multiple worms)
     dataset = get_dataset(config)
     # get calcium data for one worm
     single_worm_dataset = dataset["worm0"]
-    # calcium_data = single_worm_dataset["calcium_data"][:, :num_neurons]
     calcium_data = single_worm_dataset["calcium_data"][:, neuron_inds]
-    # named_neurons_mask = single_worm_dataset["named_neurons_mask"][:num_neurons]
     named_neurons_mask = single_worm_dataset["named_neurons_mask"][neuron_inds]
     # create a model
     model = NetworkLSTM(num_neurons, 64).double()
@@ -31,8 +28,8 @@ if __name__ == "__main__":
         k_splits=k,
         seq_len=10,
         batch_size=128,
-        train_size=1646,
-        test_size=1646,
+        train_size=1654,
+        test_size=1654,
         # TODO: Why does `shuffle=True` improve performance so much?
         shuffle=True,
         reverse=False,
