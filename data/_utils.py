@@ -139,9 +139,10 @@ class NeuralActivityDataset(torch.utils.data.Dataset):
             # # synchronous
             # data_samples = pool.map(self.parfor_func, start_range)[: self.num_samples]
             # asynchronous
-            data_samples = pool.map_async(self.parfor_func, start_range).get()[
-                : self.num_samples
-            ]
+            data_samples = pool.map_async(
+                self.parfor_func,
+                start_range,
+            ).get()[: self.num_samples]
         pool.join()
         return data_samples
 

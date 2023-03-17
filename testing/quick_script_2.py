@@ -3,7 +3,7 @@ Tests the model optimization function `optimize_model`.
 """
 import matplotlib.pyplot as plt
 from omegaconf import OmegaConf
-from models._utils import LinearNN, NeuralCFC, NetworkLSTM
+from models._utils import NetworkLSTM
 from data._main import get_dataset
 from train._utils import optimize_model, model_predict
 
@@ -11,26 +11,28 @@ config = OmegaConf.load("conf/dataset.yaml")
 
 if __name__ == "__main__":
     # number of neurons we want to predict
-    num_neurons = 5
+    neuron_inds = range(6, 11)
+    num_neurons = len(neuron_inds)
+    # num_neurons = 1
     # number of split of data
     k = 2
     # load a dataset (multiple worms)
     dataset = get_dataset(config)
     # get calcium data for one worm
     single_worm_dataset = dataset["worm0"]
-    calcium_data = single_worm_dataset["calcium_data"][:, :num_neurons]
-    named_neurons_mask = single_worm_dataset["named_neurons_mask"][:num_neurons]
+    # calcium_data = single_worm_dataset["calcium_data"][:, :num_neurons]
+    calcium_data = single_worm_dataset["calcium_data"][:, neuron_inds]
+    # named_neurons_mask = single_worm_dataset["named_neurons_mask"][:num_neurons]
+    named_neurons_mask = single_worm_dataset["named_neurons_mask"][neuron_inds]
     # create a model
-    # model = LinearNN(num_neurons, 64).double()
-    # model = NeuralCFC(num_neurons, 64).double()
     model = NetworkLSTM(num_neurons, 64).double()
     # keyword args to `split_train_test`
     kwargs = dict(
         k_splits=k,
         seq_len=10,
         batch_size=128,
-        train_size=1656,
-        test_size=1656,
+        train_size=1646,
+        test_size=1646,
         # TODO: Why does `shuffle=True` improve performance so much?
         shuffle=True,
         reverse=False,
@@ -42,16 +44,11 @@ if __name__ == "__main__":
         model,
         mask=named_neurons_mask,
         num_epochs=100,
-        learn_rate=0.01,
+        learn_rate=0.1,
         **kwargs,
     )
-    # keyword args to `model_predict`
-    kwargs = dict(tau=1)
-    # kwargs = dict(tau=len(calcium_data) // k)
     # make predictions with trained model
-    targets, predictions = model_predict(
-        model, calcium_data * named_neurons_mask, **kwargs
-    )
+    targets, predictions = model_predict(model, calcium_data * named_neurons_mask)
     print("Targets:", targets.shape, "\nPredictions:", predictions.shape, end="\n\n")
     # plot entered loss curves
     plt.figure()
@@ -68,43 +65,7 @@ if __name__ == "__main__":
         plt.plot(targets[:, neuron], label="target")
         plt.plot(predictions[:, neuron], alpha=0.8, label="prediction")
         plt.legend()
-        plt.title("Neuron 0 target and prediction")
+        plt.title("Neuron %s target and prediction" % neuron)
         plt.xlabel("Time")
         plt.ylabel("$Ca^{2+} \Delta F / F$")
         plt.show()
-    # # figure of neuron 49 calcium target and prediction
-    # plt.figure()
-    # plt.plot(targets[:, 49], label="target")
-    # plt.plot(predictions[:, 49], alpha=0.8, label="prediction")
-    # plt.legend()
-    # plt.title("Neuron 49 target and prediction")
-    # plt.xlabel("Time")
-    # plt.ylabel("$Ca^{2+} \Delta F / F$")
-    # plt.show()
-    # # figure of neuron 60 calcium target and prediction
-    # plt.figure()
-    # plt.plot(targets[:, 60], label="target")
-    # plt.plot(predictions[:, 60], alpha=0.8, label="prediction")
-    # plt.legend()
-    # plt.title("Neuron 60 target and prediction")
-    # plt.xlabel("Time")
-    # plt.ylabel("$Ca^{2+} \Delta F / F$")
-    # plt.show()
-    # # figure of neuron 200 calcium target and prediction
-    # plt.figure()
-    # plt.plot(targets[:, 200], label="target")
-    # plt.plot(predictions[:, 200], alpha=0.8, label="prediction")
-    # plt.legend()
-    # plt.title("Neuron 200 target and prediction")
-    # plt.xlabel("Time")
-    # plt.ylabel("$Ca^{2+} \Delta F / F$")
-    # plt.show()
-    # # figure of neuron 300 calcium target and prediction
-    # plt.figure()
-    # plt.plot(targets[:, 300], label="target")
-    # plt.plot(predictions[:, 300], alpha=0.8, label="prediction")
-    # plt.legend()
-    # plt.title("Neuron 300 target and prediction")
-    # plt.xlabel("Time")
-    # plt.ylabel("$Ca^{2+} \Delta F / F$")
-    # plt.show()
