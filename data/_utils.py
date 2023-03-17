@@ -332,7 +332,6 @@ def load_sum_sine_noise():
     return dataset
 
 
-
 def load_Kato2015():
     """
     Loads the worm neural activity datasets from Kato et al., Cell Reports 2015,
