@@ -16,6 +16,8 @@ if __name__ == "__main__":
     # num_neurons = 1
     # number of split of data
     k = 2
+    # offset of the prediction
+    tau = 100
     # load a dataset (multiple worms)
     dataset = get_dataset(config)
     # get calcium data for one worm
@@ -36,7 +38,7 @@ if __name__ == "__main__":
         # TODO: Why does `shuffle=True` improve performance so much?
         shuffle=True,
         reverse=False,
-        tau=100,
+        tau=tau,
     )
     # train the model with the `optimize_model` function
     model, log = optimize_model(

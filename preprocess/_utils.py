@@ -651,13 +651,18 @@ class create_four_sine_datasets():
 
             # randomly choose some neurons to be inactivated
             num_unnamed = 100
-            list_random = random.sample(range(10, real_data.shape[1]), num_unnamed)
+            list_random = random.sample(range(1, real_data.shape[1]), num_unnamed)
             named_mask = torch.full((num_neurons,), True)
 
             for i in list_random:
                 real_data[:, i] = torch.zeros_like(real_data[:, 0])
                 residual[:, i] = torch.zeros_like(residual[:, 0])
                 named_mask[i] = False
+
+            list_named = []
+            for i in range(0, num_neurons):
+                if i not in list_random:
+                    list_named.append(i)
 
             dt = torch.ones(real_data.shape[0], 1)
 
@@ -676,8 +681,8 @@ class create_four_sine_datasets():
                         "time_in_seconds": time_in_seconds,
                         "dt": dt,
                         "named_neurons_mask": named_mask,
-                        "named_neuron_to_idx": list_random,
-                        "idx_to_named_neuron": list_random,
+                        "named_neuron_to_idx": list_named,
+                        "idx_to_named_neuron": list_named,
                         "num_neurons": int(num_neurons),
                         "num_named_neurons": int(num_neurons) - num_unnamed,
                         "num_unknown_neurons": num_unnamed,
@@ -687,89 +692,89 @@ class create_four_sine_datasets():
         return sine_dataset
 
     def main_create(self):
-        # # Creating signal
-        # raw_data = []
-        # raw_der = []
-        # for j in range(self.num_worms):
-        #     x, dx = self.create_synthetic_data(self.seq_len, self.num_signal, False, 0, False)
-        #     x_torch = Variable(torch.from_numpy(x), requires_grad=False)
-        #     raw_data.append(x_torch)
-        #     raw_der.append(dx)
-        #
-        # dataset = self.create_dataset(raw_data, raw_der)
-        # file = open("./data/processed/neural/sine.pickle", "wb")
-        # pickle.dump(dataset, file)
-        # file.close()
+        # Creating signal
+        raw_data = []
+        raw_der = []
+        for j in range(self.num_worms):
+            x, dx = self.create_synthetic_data(self.seq_len, self.num_signal, False, 0, False)
+            x_torch = Variable(torch.from_numpy(x), requires_grad=False)
+            raw_data.append(x_torch)
+            raw_der.append(dx)
 
-        # # Creating signal
-        # raw_data = []
-        # raw_der = []
-        # for j in range(self.num_worms):
-        #     x, dx = self.create_synthetic_data(self.seq_len, self.num_signal, False, 0, True)
-        #     x_torch = Variable(torch.from_numpy(x), requires_grad=False)
-        #     raw_data.append(x_torch)
-        #     raw_der.append(dx)
-        #
-        # dataset = self.create_dataset(raw_data, raw_der)
-        # file = open("./data/processed/neural/sine_seq.pickle", "wb")
-        # pickle.dump(dataset, file)
-        # file.close()
-        #
-        # # Creating signal
-        # raw_data = []
-        # raw_der = []
-        # for j in range(self.num_worms):
-        #     x, dx = self.create_synthetic_data(self.seq_len, self.num_signal, self.if_noise, 0, True)
-        #     x_torch = Variable(torch.from_numpy(x), requires_grad=False)
-        #     raw_data.append(x_torch)
-        #     raw_der.append(dx)
-        #
-        # dataset = self.create_dataset(raw_data, raw_der)
-        # file = open("./data/processed/neural/sine_seq_noise.pickle", "wb")
-        # pickle.dump(dataset, file)
-        # file.close()
+        dataset = self.create_dataset(raw_data, raw_der)
+        file = open("./data/processed/neural/sine.pickle", "wb")
+        pickle.dump(dataset, file)
+        file.close()
 
-        # # Creating signal
-        # raw_data = []
-        # raw_der = []
-        # for j in range(self.num_worms):
-        #     x, dx = self.create_synthetic_data(self.seq_len, self.num_signal, self.if_noise, 0, False)
-        #     x_torch = Variable(torch.from_numpy(x), requires_grad=False)
-        #     raw_data.append(x_torch)
-        #     raw_der.append(dx)
-        #
-        # dataset = self.create_dataset(raw_data, raw_der)
-        # file = open("./data/processed/neural/sine_noise.pickle", "wb")
-        # pickle.dump(dataset, file)
-        # file.close()
+        # Creating signal
+        raw_data = []
+        raw_der = []
+        for j in range(self.num_worms):
+            x, dx = self.create_synthetic_data(self.seq_len, self.num_signal, False, 0, True)
+            x_torch = Variable(torch.from_numpy(x), requires_grad=False)
+            raw_data.append(x_torch)
+            raw_der.append(dx)
 
-        # # Creating signal
-        # raw_data = []
-        # raw_der = []
-        # for j in range(self.num_worms):
-        #     x, dx = self.create_synthetic_data(self.seq_len, self.num_signal, False, self.sum, False)
-        #     x_torch = Variable(torch.from_numpy(x), requires_grad=False)
-        #     raw_data.append(x_torch)
-        #     raw_der.append(dx)
-        #
-        # dataset = self.create_dataset(raw_data, raw_der)
-        # file = open("./data/processed/neural/sum_sine.pickle", "wb")
-        # pickle.dump(dataset, file)
-        # file.close()
+        dataset = self.create_dataset(raw_data, raw_der)
+        file = open("./data/processed/neural/sine_seq.pickle", "wb")
+        pickle.dump(dataset, file)
+        file.close()
 
-        # # Creating signal
-        # raw_data = []
-        # raw_der = []
-        # for j in range(self.num_worms):
-        #     x, dx = self.create_synthetic_data(self.seq_len, self.num_signal, self.if_noise, self.sum, False)
-        #     x_torch = Variable(torch.from_numpy(x), requires_grad=False)
-        #     raw_data.append(x_torch)
-        #     raw_der.append(dx)
-        #
-        # dataset = self.create_dataset(raw_data, raw_der)
-        # file = open("./data/processed/neural/sum_sine_noise.pickle", "wb")
-        # pickle.dump(dataset, file)
-        # file.close()
+        # Creating signal
+        raw_data = []
+        raw_der = []
+        for j in range(self.num_worms):
+            x, dx = self.create_synthetic_data(self.seq_len, self.num_signal, self.if_noise, 0, True)
+            x_torch = Variable(torch.from_numpy(x), requires_grad=False)
+            raw_data.append(x_torch)
+            raw_der.append(dx)
+
+        dataset = self.create_dataset(raw_data, raw_der)
+        file = open("./data/processed/neural/sine_seq_noise.pickle", "wb")
+        pickle.dump(dataset, file)
+        file.close()
+
+        # Creating signal
+        raw_data = []
+        raw_der = []
+        for j in range(self.num_worms):
+            x, dx = self.create_synthetic_data(self.seq_len, self.num_signal, self.if_noise, 0, False)
+            x_torch = Variable(torch.from_numpy(x), requires_grad=False)
+            raw_data.append(x_torch)
+            raw_der.append(dx)
+
+        dataset = self.create_dataset(raw_data, raw_der)
+        file = open("./data/processed/neural/sine_noise.pickle", "wb")
+        pickle.dump(dataset, file)
+        file.close()
+
+        # Creating signal
+        raw_data = []
+        raw_der = []
+        for j in range(self.num_worms):
+            x, dx = self.create_synthetic_data(self.seq_len, self.num_signal, False, self.sum, False)
+            x_torch = Variable(torch.from_numpy(x), requires_grad=False)
+            raw_data.append(x_torch)
+            raw_der.append(dx)
+
+        dataset = self.create_dataset(raw_data, raw_der)
+        file = open("./data/processed/neural/sum_sine.pickle", "wb")
+        pickle.dump(dataset, file)
+        file.close()
+
+        # Creating signal
+        raw_data = []
+        raw_der = []
+        for j in range(self.num_worms):
+            x, dx = self.create_synthetic_data(self.seq_len, self.num_signal, self.if_noise, self.sum, False)
+            x_torch = Variable(torch.from_numpy(x), requires_grad=False)
+            raw_data.append(x_torch)
+            raw_der.append(dx)
+
+        dataset = self.create_dataset(raw_data, raw_der)
+        file = open("./data/processed/neural/sum_sine_noise.pickle", "wb")
+        pickle.dump(dataset, file)
+        file.close()
         return
 
 

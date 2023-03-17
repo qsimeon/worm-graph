@@ -3,11 +3,11 @@ from govfunc._utils import *
 
 
 def train(
-    loader: torch.utils.data.DataLoader,
-    model: torch.nn.Module,
-    mask: torch.Tensor,
-    optimizer: torch.optim.Optimizer,
-    no_grad: bool = False,
+        loader: torch.utils.data.DataLoader,
+        model: torch.nn.Module,
+        mask: torch.Tensor,
+        optimizer: torch.optim.Optimizer,
+        no_grad: bool = False,
 ) -> dict:
     """Train a model.
 
@@ -70,9 +70,9 @@ def train(
 
 @torch.no_grad()
 def test(
-    loader: torch.utils.data.DataLoader,
-    model: torch.nn.Module,
-    mask: torch.Tensor,
+        loader: torch.utils.data.DataLoader,
+        model: torch.nn.Module,
+        mask: torch.Tensor,
 ) -> dict:
     """Evaluate a model.
 
@@ -121,15 +121,15 @@ def test(
 
 
 def split_train_test(
-    data: torch.Tensor,
-    k_splits: int = 2,
-    seq_len: int = 101,
-    batch_size: int = 32,
-    train_size: int = 1024,
-    test_size: int = 1024,
-    shuffle: bool = True,
-    reverse: bool = True,
-    tau: int = 1,  # deprecated
+        data: torch.Tensor,
+        k_splits: int = 2,
+        seq_len: int = 101,
+        batch_size: int = 32,
+        train_size: int = 1024,
+        test_size: int = 1024,
+        shuffle: bool = True,
+        reverse: bool = True,
+        tau: int = 1,  # deprecated
 ) -> tuple[
     torch.utils.data.DataLoader,
     torch.utils.data.DataLoader,
@@ -214,14 +214,14 @@ def split_train_test(
 
 
 def optimize_model(
-    data: torch.Tensor,
-    model: torch.nn.Module,
-    mask: Union[torch.tensor, None] = None,
-    optimizer: Union[torch.optim.Optimizer, None] = None,
-    start_epoch: int = 1,
-    learn_rate: float = 0.01,
-    num_epochs: int = 100,
-    **kwargs,
+        data: torch.Tensor,
+        model: torch.nn.Module,
+        mask: Union[torch.tensor, None] = None,
+        optimizer: Union[torch.optim.Optimizer, None] = None,
+        start_epoch: int = 1,
+        learn_rate: float = 0.01,
+        num_epochs: int = 100,
+        **kwargs,
 ) -> tuple[torch.nn.Module, dict]:
     """
     Creates train and test data loaders from the given dataset
@@ -244,7 +244,7 @@ def optimize_model(
     if mask is None:
         mask = torch.ones(NUM_NEURONS, dtype=torch.bool)
     assert (
-        mask.size(0) == NUM_NEURONS and mask.dtype == torch.bool
+            mask.size(0) == NUM_NEURONS and mask.dtype == torch.bool
     ), "Please use a valid mask."
     mask = mask.to(DEVICE)
     # put model on device
@@ -309,9 +309,9 @@ def optimize_model(
 
 
 def make_predictions(
-    model: torch.nn.Module,
-    dataset: dict,
-    log_dir: str,
+        model: torch.nn.Module,
+        dataset: dict,
+        log_dir: str,
 ) -> None:
     """Make predicitons on a dataset with a trained model.
 
@@ -367,8 +367,8 @@ def make_predictions(
 
 
 def model_predict(
-    model: torch.nn.Module,
-    calcium_data: torch.Tensor,
+        model: torch.nn.Module,
+        calcium_data: torch.Tensor,
 ) -> tuple[torch.Tensor, torch.Tensor]:
     """
     Makes predictions for all neurons in the
@@ -380,7 +380,7 @@ def model_predict(
     # model in/out
     calcium_data = calcium_data.squeeze(0)
     assert (
-        calcium_data.ndim == 2 and calcium_data.size(0) >= NUM_NEURONS
+            calcium_data.ndim == 2 and calcium_data.size(0) >= NUM_NEURONS
     ), "Calcium data has incorrect shape!"
     # get input and output
     input = calcium_data.to(DEVICE)
@@ -395,6 +395,7 @@ def model_predict(
     # output = output.squeeze(0)
     # targets/predictions
     targets = input.detach().cpu()
+    # output is the prediction of input[offset:, :]
     predictions = output.detach().cpu()
     return targets, predictions
 
@@ -409,7 +410,7 @@ def gnn_train_val_mask(graph, train_ratio=0.7, train_mask=None):
     # create the train and validation masks
     if train_mask is not None:
         assert (
-            train_mask.ndim == 1 and train_mask.size(0) == graph.num_nodes
+                train_mask.ndim == 1 and train_mask.size(0) == graph.num_nodes
         ), "Invalid train_mask provided."
     else:
         train_mask = torch.rand(graph.num_nodes) < train_ratio

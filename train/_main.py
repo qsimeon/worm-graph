@@ -59,7 +59,7 @@ def train_model(
         test_size=config.train.test_size // len(dataset_items),
         shuffle=config.train.shuffle,
         reverse=True,
-        tau=1,  # deprecated
+        tau=config.train.tau,
     )
     # choose whether to use original or smoothed calcium data
     if config.train.smooth_data:
@@ -108,8 +108,7 @@ def train_model(
         header=True,
     )
     # make predictions with last saved model
-    kwargs = dict(tau=1)  # args passed to model_predict
-    make_predictions(model, dataset, log_dir, **kwargs)
+    make_predictions(model, dataset, log_dir)
     # returned trained model and a path to log directory
     return model, log_dir
 

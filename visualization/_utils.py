@@ -211,6 +211,7 @@ def plot_targets_predictions(
     log_dir: str,
     worm: Union[str, None] = "all",
     neuron: Union[str, None] = "all",
+    tau: int = 1, ## offset of target
 ) -> None:
     """
     Plot of the target Ca2+ residual time series overlayed
@@ -253,7 +254,7 @@ def plot_targets_predictions(
         )
         sns.lineplot(
             data=predictions_df,
-            x=predictions_df.index,
+            x=tau + predictions_df.index,
             y=predictions_df[_neuron_],
             label="predicted",
             alpha=0.8,
@@ -277,7 +278,15 @@ def plot_targets_predictions(
             facecolor="magenta",
             label="test",
         )
-        plt.legend()
+        plt.gca().fill_between(
+            range(predictions_df.index[-1], predictions_df.index[-1] + tau),
+            ylo,
+            yhi,
+            alpha=0.1,
+            facecolor="red",
+            label="predict",
+        )
+        plt.legend(loc="upper left")
         plt.suptitle(plt_title)
         plt.xlabel("Time")
         plt.ylabel("$Ca^{2+}$ Residual ($\Delta F / F$)")

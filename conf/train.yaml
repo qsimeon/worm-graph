@@ -3,10 +3,11 @@ train:
   seq_len: 10 # length of sequences to train
   k_splits: 2 # number of interleaved train/test splits per single worm dataset
   cycles: 1 # number of passes through a multi-worm dataset
-  epochs: 100 # number passes through a single worm dataset per cycle
+  epochs: 1 # number passes through a single worm dataset per cycle
   smooth_data: False # if True use the smoothed calcium data as input
   batch_size: 128 # maximum number of samples per batch
   # constraint: train/test_size = batch_size * cycles * num_worms
   train_size: 1656 # total number of samples of train data
   test_size: 1656 # total number of samples of test data
   shuffle: True # whether to shuffle samples
+  tau: 500 # offset of time steps for target
