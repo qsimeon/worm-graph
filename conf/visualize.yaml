@@ -1,5 +1,5 @@
 visualize:
-  log_dir: logs/2023_03_17_17_47-sum_sine_noise-NetworkLSTM
+  log_dir: logs/2023_03_17_19_06-sine_seq-NetworkLSTM
   worm: worm0
-  neuron: "0"
+  neuron: "20"
 
