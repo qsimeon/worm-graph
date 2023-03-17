@@ -146,27 +146,20 @@ def plot_loss_curves(log_dir):
     loss_df = pd.read_csv(os.path.join(log_dir, "loss_curves.csv"), index_col=0)
     # plot loss vs epochs
     plt.figure()
-    # centered loss curves
-
     sns.lineplot(x="epochs", y="centered_train_losses", data=loss_df, label="train")
     sns.lineplot(x="epochs", y="centered_test_losses", data=loss_df, label="test")
-    # sns.lineplot(x="epochs", y="train_losses", data=loss_df, label="ori_train", color="r")
-    # sns.lineplot(x="epochs", y="test_losses", data=loss_df, label="ori_test", color="g")
+    # sns.lineplot(
+    #     x="epochs", y="train_losses", data=loss_df, label="original train", color="r"
+    # )
+    # sns.lineplot(
+    #     x="epochs", y="test_losses", data=loss_df, label="original test", color="g"
+    # )
     plt.legend()
     plt.title(plt_title)
     plt.xlabel("Epoch (# worms)")
     plt.ylabel("Loss - Baseline")
-    plt.savefig(os.path.join(log_dir, "centered_loss_curves.png"))
+    plt.savefig(os.path.join(log_dir, "loss_curves.png"))
     plt.close()
-    plt.figure()
-    # original loss curves
-    sns.lineplot(x="epochs", y="train_losses", data=loss_df, label="train", color="r")
-    sns.lineplot(x="epochs", y="test_losses", data=loss_df, label="test", color="g")
-    plt.legend()
-    plt.title(plt_title)
-    plt.xlabel("Epoch (# worms)")
-    plt.ylabel("Loss")
-    plt.savefig(os.path.join(log_dir, "original_loss_curves.png"))
     plt.close()
     return None
 

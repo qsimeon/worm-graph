@@ -25,14 +25,16 @@ DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 # set of C. elegans datasets we have processed
 VALID_DATASETS = {
     # real worm datasets
+    "Uzel2022",
+    "Skora2018",
     "Nichols2017",
     "Nguyen2017",
-    "Skora2018",
-    "Kaplan2020",
-    "Uzel2022",
     "Kato2015",
+    "Kaplan2020",
     "Flavell2023",
     # test datasets
+    "sum_sine",
+    "sum_sine_noise",
     "sine",
     "sine_seq",
     "sine_seq_noise",

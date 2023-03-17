@@ -214,14 +214,14 @@ def split_train_test(
 
 
 def optimize_model(
-        data: torch.Tensor,
-        model: torch.nn.Module,
-        mask: Union[torch.tensor, None] = None,
-        optimizer: Union[torch.optim.Optimizer, None] = None,
-        start_epoch: int = 1,
-        learn_rate: float = 0.01,
-        num_epochs: int = 100,
-        **kwargs,
+    data: torch.Tensor,
+    model: torch.nn.Module,
+    mask: Union[torch.tensor, None] = None,
+    optimizer: Union[torch.optim.Optimizer, None] = None,
+    start_epoch: int = 1,
+    learn_rate: float = 0.01,
+    num_epochs: int = 1,
+    **kwargs,
 ) -> tuple[torch.nn.Module, dict]:
     """
     Creates train and test data loaders from the given dataset
