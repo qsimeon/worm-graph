@@ -42,7 +42,7 @@ def train(
         Y_tr = model(X_train * mask)  # Forward pass.
         # Register hook.
         Y_tr.retain_grad()
-        Y_tr.register_hook(lambda grad: grad * mask.double())
+        Y_tr.register_hook(lambda grad: grad * mask)
         # Compute training loss.
         # loss = criterion(Y_tr[:, :, mask], Y_train[:, :, mask])
         # loss = criterion(Y_tr, Y_train * mask)

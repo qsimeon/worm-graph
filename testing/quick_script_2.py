@@ -32,7 +32,7 @@ if __name__ == "__main__":
         seq_len=10,
         batch_size=128,
         train_size=1646,
-        test_size=1,
+        test_size=1646,
         # TODO: Why does `shuffle=True` improve performance so much?
         shuffle=True,
         reverse=False,
@@ -43,7 +43,7 @@ if __name__ == "__main__":
         calcium_data,
         model,
         mask=named_neurons_mask,
-        num_epochs=10,
+        num_epochs=100,
         learn_rate=0.1,
         **kwargs,
     )
