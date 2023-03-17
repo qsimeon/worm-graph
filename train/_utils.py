@@ -36,17 +36,16 @@ def train(
         # Clear optimizer gradients.
         optimizer.zero_grad()
         # Baseline: loss if the model predicted the residual to be 0.
-        # base = criterion(X_train[:, :, mask], Y_train[:, :, mask])
-        base = criterion(X_train * mask, Y_train * mask)
+        base = criterion(X_train[:, :, mask], Y_train[:, :, mask])
+        # base = criterion(X_train * mask, Y_train * mask)
         # Train
         Y_tr = model(X_train * mask)  # Forward pass.
         # Register hook.
         Y_tr.retain_grad()
         Y_tr.register_hook(lambda grad: grad * mask)
         # Compute training loss.
-        # loss = criterion(Y_tr[:, :, mask], Y_train[:, :, mask])
-        # loss = criterion(Y_tr, Y_train * mask)
-        loss = criterion(Y_tr * mask, Y_train * mask)
+        loss = criterion(Y_tr[:, :, mask], Y_train[:, :, mask])
+        # loss = criterion(Y_tr * mask, Y_train * mask)
         loss.backward(retain_graph=True)  # Derive gradients.
         # # Prevent update of weights connected to inactive neurons.
         # model.linear.weight.grad *= mask.unsqueeze(-1)
@@ -98,14 +97,13 @@ def test(
         X_test, Y_test, metadata = data  # X, Y: (batch_size, seq_len, num_neurons)
         X_test, Y_test = X_test.to(DEVICE), Y_test.to(DEVICE)
         # Baseline: loss if the model predicted the residual to be 0.
-        # base = criterion(X_test[:, :, mask], Y_test[:, :, mask])
-        base = criterion(X_test * mask, Y_test * mask)
+        base = criterion(X_test[:, :, mask], Y_test[:, :, mask])
+        # base = criterion(X_test * mask, Y_test * mask)
         # Test
         Y_te = model(X_test * mask)  # Forward pass.
         # Compute the validation loss.
-        # loss = criterion(Y_te[:, :, mask], Y_test[:, :, mask])
-        # loss = criterion(Y_te, Y_test * mask)
-        loss = criterion(Y_te * mask, Y_test * mask)
+        loss = criterion(Y_te[:, :, mask], Y_test[:, :, mask])
+        # loss = criterion(Y_te * mask, Y_test * mask)
         # Store test and baseline loss.
         base_loss += base.detach().item()
         test_loss += loss.detach().item()
