@@ -33,28 +33,24 @@ def train(
     for i, data in enumerate(loader):
         X_train, Y_train, metadata = data  # X, Y: (batch_size, seq_len, num_neurons)
         X_train, Y_train = X_train.to(DEVICE), Y_train.to(DEVICE)
-        # # Turn on gradients on tensors.
-        # X_train.requires_grad_()
-        # Y_train.requires_grad_()
         # Clear optimizer gradients.
         optimizer.zero_grad()
         # Baseline: loss if the model predicted the residual to be 0.
-        # base = criterion(X_train[:, :, mask], Y_train[:, :, mask])
-        base = criterion(X_train * mask, Y_train * mask)
+        base = criterion(X_train[:, :, mask], Y_train[:, :, mask])
+        # base = criterion(X_train * mask, Y_train * mask)
         # Train
         # Y_tr = model(X_train * mask.double())  # Forward pass.
         Y_tr = model(X_train * mask)  # Forward pass.
-        # # Register hook.
-        # Y_tr.retain_grad()
-        # Y_tr.register_hook(lambda grad: grad * mask.double())
+        # Register hook.
+        Y_tr.retain_grad()
+        Y_tr.register_hook(lambda grad: grad * mask.double())
         # Compute training loss.
-        # loss = criterion(Y_tr[:, :, mask], Y_train[:, :, mask])
-        loss = criterion(Y_tr * mask, Y_train * mask)
+        loss = criterion(Y_tr[:, :, mask], Y_train[:, :, mask])
+        # loss = criterion(Y_tr * mask, Y_train * mask)
         loss.backward(retain_graph=True)  # Derive gradients.
-        # # Prevent update of weights from neurons without data.
-        # model.linear.weight.grad *= mask.unsqueeze(-1)
+        # Prevent update of weights connected to inactive neurons.
+        model.linear.weight.grad *= mask.unsqueeze(-1)
         # No backprop on epoch 0.
-
         if no_grad:
             optimizer.zero_grad()
         optimizer.step()  # Update parameters based on gradients.
@@ -102,13 +98,15 @@ def test(
         X_test, Y_test, metadata = data  # X, Y: (batch_size, seq_len, num_neurons)
         X_test, Y_test = X_test.to(DEVICE), Y_test.to(DEVICE)
         # Baseline: loss if the model predicted the residual to be 0.
-        # base = criterion(X_test[:, :, mask], Y_test[:, :, mask])
-        base = criterion(X_test * mask, Y_test * mask)
+        base = criterion(X_test[:, :, mask], Y_test[:, :, mask])
+        # base = criterion(X_test * mask, Y_test * mask)
         # Test
         # Y_te = model(X_test * mask.double())  # Forward pass.
         Y_te = model(X_test * mask)  # Forward pass.
-        # loss = criterion(Y_te[:, :, mask], Y_test[:, :, mask])  # Compute the validation loss.
-        loss = criterion(Y_te * mask, Y_test * mask)  # Compute the validation loss.
+        loss = criterion(
+            Y_te[:, :, mask], Y_test[:, :, mask]
+        )  # Compute the validation loss.
+        # loss = criterion(Y_te * mask, Y_test * mask)  # Compute the validation loss.
         # Store test and baseline loss.
         base_loss += base.detach().item()
         test_loss += loss.detach().item()
@@ -221,7 +219,7 @@ def optimize_model(
     model: torch.nn.Module,
     mask: Union[torch.tensor, None] = None,
     optimizer: Union[torch.optim.Optimizer, None] = None,
-    start_epoch: int = 1,
+    start_epoch: int = 0,
     learn_rate: float = 0.01,
     num_epochs: int = 100,
     **kwargs,
@@ -315,7 +313,6 @@ def make_predictions(
     model: torch.nn.Module,
     dataset: dict,
     log_dir: str,
-    **kwargs,
 ) -> None:
     """Make predicitons on a dataset with a trained model.
 
@@ -343,9 +340,7 @@ def make_predictions(
         labels = np.expand_dims(np.where(train_mask, "train", "test"), axis=-1)
         columns = list(named_neuron_to_idx) + ["train_test_label"]
         # make predictions with final model
-        targets, predictions = model_predict(
-            model, calcium_data * named_neurons_mask, **kwargs
-        )
+        targets, predictions = model_predict(model, calcium_data * named_neurons_mask)
 
         # save dataframes
         data = calcium_data[:, named_neurons_mask].numpy()
@@ -375,7 +370,6 @@ def make_predictions(
 def model_predict(
     model: torch.nn.Module,
     calcium_data: torch.Tensor,
-    tau: int = 1,
 ) -> tuple[torch.Tensor, torch.Tensor]:
     """
     Makes predictions for all neurons in the
@@ -386,7 +380,6 @@ def model_predict(
     model.eval()
     # model in/out
     calcium_data = calcium_data.squeeze(0)
-    print("cal data shape", calcium_data.shape)
     assert (
         calcium_data.ndim == 2 and calcium_data.size(0) >= NUM_NEURONS
     ), "Calcium data has incorrect shape!"
@@ -400,12 +393,6 @@ def model_predict(
     )  # (1, max_time, NUM_NEURONS),  batch_size = 1, seq_len = max_time
     output = output.squeeze(0)
     # targets/predictions
-    # targets = torch.nn.functional.pad(
-    #     input[tau:, :].detach().cpu(), (0, 0, 0, tau)
-    # ).numpy()
-    # predictions = torch.nn.functional.pad(
-    #     output[:-tau, :].detach().cpu(), (0, 0, tau, 0)
-    # ).numpy()
     targets = input.detach().cpu()
     predictions = output.detach().cpu()
     return targets, predictions
