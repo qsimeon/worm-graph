@@ -20,12 +20,12 @@ dependencies:
   - seaborn=0.12.2
   - pandas=1.5.2
   - numpy=1.23.5
-  - nomkl=3.0
+  - nomkl
   - scipy=1.10.0
   - mat73=0.60
   - h5py=3.7.0
   - tqdm=4.64.1
-  - pyg=2.2.0
+  - pyg
   - pip=23.0.1
   - pip:
       - black[jupyter]
