@@ -1,7 +1,8 @@
 dataset:
   name:
-    - sine
+    - sine_seq_noise
 #    - sum_sine_noise
 #    - sine_seq
-    # - Kato2015
+#    - Kato2015
+#    - Uzel2022
 
