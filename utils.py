@@ -25,20 +25,20 @@ DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 # set of C. elegans datasets we have processed
 VALID_DATASETS = {
     # real worm datasets
-    "Uzel2022",
-    "Skora2018",
     "Nichols2017",
-    "Nguyen2017",  # no named neurons!
-    "Kato2015",
+    "Nguyen2017",
+    "Skora2018",
     "Kaplan2020",
-    "Flavell2023",  # something wrong with this
+    "Uzel2022",
+    "Kato2015",
+    "Flavell2023",
     # test datasets
-    "sum_sine",
-    "sum_sine_noise",
     "sine",
     "sine_seq",
     "sine_seq_noise",
     "sine_noise",
+    "sum_sine",
+    "sum_sine_noise",
 }  # TODO: set an option for pooling all datasets
 
 # list of all 302 hermaphrodite neurons
