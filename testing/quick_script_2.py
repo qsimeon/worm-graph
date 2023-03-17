@@ -11,30 +11,30 @@ config = OmegaConf.load("conf/dataset.yaml")
 
 if __name__ == "__main__":
     # number of neurons we want to predict
-    neuron_inds = range(6, 11)
-    num_neurons = len(neuron_inds)
-    # num_neurons = 5
+    # neuron_inds = range(6, 11)
+    # num_neurons = len(neuron_inds)
+    num_neurons = 1
     # number of split of data
-    k = 3
+    k = 2
     # load a dataset (multiple worms)
     dataset = get_dataset(config)
     # get calcium data for one worm
     single_worm_dataset = dataset["worm0"]
-    # calcium_data = single_worm_dataset["calcium_data"][:, :num_neurons]
-    calcium_data = single_worm_dataset["calcium_data"][:, neuron_inds]
-    # named_neurons_mask = single_worm_dataset["named_neurons_mask"][:num_neurons]
-    named_neurons_mask = single_worm_dataset["named_neurons_mask"][neuron_inds]
+    calcium_data = single_worm_dataset["calcium_data"][:, :num_neurons]
+    # calcium_data = single_worm_dataset["calcium_data"][:, neuron_inds]
+    named_neurons_mask = single_worm_dataset["named_neurons_mask"][:num_neurons]
+    # named_neurons_mask = single_worm_dataset["named_neurons_mask"][neuron_inds]
     # create a model
     # model = LinearNN(num_neurons, 64).double()
     # model = NeuralCFC(num_neurons, 64).double()
-    model = NetworkLSTM(num_neurons, 128).double()
+    model = NetworkLSTM(num_neurons, 64).double()
     # keyword args to `split_train_test`
     kwargs = dict(
         k_splits=k,
         seq_len=10,
         batch_size=128,
-        train_size=0,
-        test_size=0,
+        train_size=1,
+        test_size=1,
         # TODO: Why does `shuffle=True` improve performance so much?
         shuffle=True,
         reverse=False,
