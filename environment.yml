@@ -1,8 +1,8 @@
 name: worm-graph
 channels:
   - defaults
-  - pytorch=1.13.1
-  - pyg=2.2.0
+  - pytorch
+  - pyg
   - anaconda
   - conda-forge
 dependencies:
