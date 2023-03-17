@@ -3,8 +3,8 @@ dataset:
     # - sine
     # - sine_noise
     # - sine_seq
-    # - sine_seq_noise
+    - sine_seq_noise
     # - sum_sine
     # - sum_sine_noise
     # - Kaplan2020
-    - Skora2018
+    # - Skora2018
