@@ -41,42 +41,100 @@ if __name__ == "__main__":
     # shapes of test batches
     print("Test batches")
     for X_test, Y_test, metadata_test in test_loader:
-        break    
+        break
     print(X_test.shape, Y_test.shape)
     # display figures on inputs, targets and masks
-    b = 0 # batch
-    n = np.random.choice(302) # neuron
+    b = 0  # batch
+    n = np.random.choice(302)  # neuron
     # multiple inputs
     plt.figure()
-    plt.plot(train_mask.to(float).numpy(), color='black', label="train mask") # train mask
-    plt.plot(test_mask.to(float).numpy(), color='darkgray', label="test mask") # test mask
+    plt.plot(
+        train_mask.to(float).numpy(), color="black", label="train mask"
+    )  # train mask
+    plt.plot(
+        test_mask.to(float).numpy(), color="darkgray", label="test mask"
+    )  # test mask
     # train
-    plt.plot(metadata_train['time_vec'][b,:], X_train[b, :, n], color='red', label='1st train input') # first sample in train batch
-    plt.plot(metadata_train['time_vec'][b,:], 0.15*np.random.rand() + X_train[b+1, :, n], color='orange', label='2nd train input') # second sample in train batch
-    plt.plot(metadata_train['time_vec'][b,:], 0.2*np.random.rand() + X_train[b+2, :, n], color='chocolate', label='3rd train input') # second sample in train batch
+    plt.plot(
+        metadata_train["time_vec"][b, :],
+        X_train[b, :, n],
+        color="red",
+        label="1st train input",
+    )  # first sample in train batch
+    plt.plot(
+        metadata_train["time_vec"][b, :],
+        0.15 * np.random.rand() + X_train[b + 1, :, n],
+        color="orange",
+        label="2nd train input",
+    )  # second sample in train batch
+    plt.plot(
+        metadata_train["time_vec"][b, :],
+        0.2 * np.random.rand() + X_train[b + 2, :, n],
+        color="chocolate",
+        label="3rd train input",
+    )  # second sample in train batch
     # test
-    plt.plot(metadata_test['time_vec'][b, :], X_test[b, :, n], color='blue', label='1st test input') # first sample in test batch, neuron 0
-    plt.plot(metadata_test['time_vec'][b, :], 0.15*np.random.rand() + X_test[b+1, :, n], color='cyan', label='2nd test input') # second sample in test batch
-    plt.plot(metadata_test['time_vec'][b, :], 0.2*np.random.rand() + X_test[b+2, :, n], color='limegreen', label='3rd test input') # second sample in test batch
+    plt.plot(
+        metadata_test["time_vec"][b, :],
+        X_test[b, :, n],
+        color="blue",
+        label="1st test input",
+    )  # first sample in test batch, neuron 0
+    plt.plot(
+        metadata_test["time_vec"][b, :],
+        0.15 * np.random.rand() + X_test[b + 1, :, n],
+        color="cyan",
+        label="2nd test input",
+    )  # second sample in test batch
+    plt.plot(
+        metadata_test["time_vec"][b, :],
+        0.2 * np.random.rand() + X_test[b + 2, :, n],
+        color="limegreen",
+        label="3rd test input",
+    )  # second sample in test batch
     # labeling
-    plt.xlabel('time')
-    plt.ylabel('amplitude')
-    plt.legend(loc='lower right')
-    plt.title("samples from batch %s, neuron %s"%(b,n))
+    plt.xlabel("time")
+    plt.ylabel("amplitude")
+    plt.legend(loc="lower right")
+    plt.title("samples from batch %s, neuron %s" % (b, n))
     plt.show()
     # inputs and targets
     plt.figure()
-    plt.plot(train_mask.to(float).numpy(), color='black', label="train mask") # train mask
-    plt.plot(test_mask.to(float).numpy(), color='darkgray', label="test mask") # test mask
+    plt.plot(
+        train_mask.to(float).numpy(), color="black", label="train mask"
+    )  # train mask
+    plt.plot(
+        test_mask.to(float).numpy(), color="darkgray", label="test mask"
+    )  # test mask
     # train
-    plt.plot(metadata_train['time_vec'][b, :], X_train[b, :, n], color='red', label='1st train input') # first sample in train batch
-    plt.plot(metadata_train['tau'][b] + metadata_train['time_vec'][b, :], 0.2*np.random.rand() + Y_train[b, :, n], color='orange', label='1st train target') # second sample in train batch
+    plt.plot(
+        metadata_train["time_vec"][b, :],
+        X_train[b, :, n],
+        color="red",
+        label="1st train input",
+    )  # first sample in train batch
+    plt.plot(
+        metadata_train["tau"][b] + metadata_train["time_vec"][b, :],
+        0.2 * np.random.rand() + Y_train[b, :, n],
+        color="orange",
+        label="1st train target",
+    )  # second sample in train batch
     # test
-    plt.plot(metadata_test['time_vec'][b, :], X_test[b, :, n], color='blue', label='1st test input') # first sample in test batch
-    plt.plot(metadata_test['tau'][b] + metadata_test['time_vec'][b, :], 0.2*np.random.rand() + Y_test[b, :, n], color='cyan', label='1st test target') # second sample in test batch
+    plt.plot(
+        metadata_test["time_vec"][b, :],
+        X_test[b, :, n],
+        color="blue",
+        label="1st test input",
+    )  # first sample in test batch
+    plt.plot(
+        metadata_test["tau"][b] + metadata_test["time_vec"][b, :],
+        0.2 * np.random.rand() + Y_test[b, :, n],
+        color="cyan",
+        label="1st test target",
+    )  # second sample in test batch
     # labeling
-    plt.xlabel('time')
-    plt.ylabel('amplitude')
-    plt.legend(loc='lower right')
-    plt.title("samples from batch %s, neuron %s"%(b,n))
+    plt.xlabel("time")
+    plt.ylabel("amplitude")
+    plt.legend(loc="lower right")
+    plt.title("samples from batch %s, neuron %s" % (b, n))
     plt.show()

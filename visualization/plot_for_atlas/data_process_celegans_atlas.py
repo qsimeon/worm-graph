@@ -32,9 +32,6 @@ tf = tarfile.open(filename + ".tar.gz")
 tf.extractall(filename)
 
 
-
-
-
 gcamp = []
 label = []
 gcamp_np = []
