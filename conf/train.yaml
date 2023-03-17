@@ -7,6 +7,6 @@ train:
   smooth_data: False # if True use the smoothed calcium data as input
   batch_size: 128 # maximum number of samples per batch
   # constraint: train/test_size = batch_size * cycles * num_worms
-  train_size: 165600 # total number of samples of train data
-  test_size: 165600 # total number of samples of test data
+  train_size: 1656 # total number of samples of train data
+  test_size: 1656 # total number of samples of test data
   shuffle: True # whether to shuffle samples

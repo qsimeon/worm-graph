@@ -48,8 +48,8 @@ def train(
         loss = criterion(Y_tr[:, :, mask], Y_train[:, :, mask])
         # loss = criterion(Y_tr * mask, Y_train * mask)
         loss.backward(retain_graph=True)  # Derive gradients.
-        # Prevent update of weights connected to inactive neurons.
-        model.linear.weight.grad *= mask.unsqueeze(-1)
+        # # Prevent update of weights connected to inactive neurons.
+        # model.linear.weight.grad *= mask.unsqueeze(-1)
         # No backprop on epoch 0.
         if no_grad:
             optimizer.zero_grad()
