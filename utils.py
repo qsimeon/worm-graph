@@ -34,9 +34,10 @@ VALID_DATASETS = {
     "Flavell2023",
     # test datasets
     "sine",
+    "sine_seq",
+    "sine_seq_noise",
     "sine_noise",
-    "sum_sime",
-
+    "sum_sine",
     "sum_sine_noise",
 }  # TODO: set an option for pooling all datasets
 
