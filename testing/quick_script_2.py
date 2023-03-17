@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 from omegaconf import OmegaConf
 from models._utils import NetworkLSTM
 from data._main import get_dataset
-from train._utils import optimize_model, model_predict
+from train._utils import split_train_test, optimize_model, model_predict
 
 config = OmegaConf.load("conf/dataset.yaml")
 
@@ -33,14 +33,19 @@ if __name__ == "__main__":
         reverse=False,
         tau=1,
     )
+    # create data loaders and train/test masks
+    train_loader, test_loader, train_mask, test_mask = split_train_test(
+        calcium_data,
+        **kwargs,
+    )
     # train the model with the `optimize_model` function
     model, log = optimize_model(
-        calcium_data,
         model,
-        mask=named_neurons_mask,
+        train_loader,
+        test_loader,
+        neurons_mask=named_neurons_mask,
         num_epochs=100,
         learn_rate=0.1,
-        **kwargs,
     )
     # make predictions with trained model
     targets, predictions = model_predict(model, calcium_data * named_neurons_mask)

@@ -6,4 +6,5 @@ dataset:
     # - sine_seq_noise
     # - sum_sine
     # - sum_sine_noise
-    - Uzel2022
+    # - Kaplan2020
+    - Skora2018

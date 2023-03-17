@@ -35,10 +35,11 @@ def train_model(
     # remake dataset with only selected worms
     dataset = dict(dataset_items)
     # instantiate the optimizer
+    learn_rate = config.train.learn_rate
     if optimizer is not None:
         optimizer = optimizer
     else:
-        optimizer = torch.optim.Adam(model.parameters(), lr=config.train.learn_rate)
+        optimizer = torch.optim.Adam(model.parameters(), lr=learn_rate)
         # optimizer = torch.optim.SGD(model.parameters(), lr=config.train.learn_rate)
     # train/test loss metrics
     data = {
@@ -53,11 +54,7 @@ def train_model(
         "centered_test_losses": [],
     }
     # train the model for multiple cyles
-    kwargs = dict(
-        # args to `optimize_model`
-        optimizer=optimizer,
-        num_epochs=1,
-        # args to `split_train_test`
+    kwargs = dict(  # args to `split_train_test`
         k_splits=config.train.k_splits,
         seq_len=config.train.seq_len,
         batch_size=config.train.batch_size,
@@ -65,29 +62,58 @@ def train_model(
         test_size=config.train.test_size,
         shuffle=config.train.shuffle,
         reverse=False,
-        tau=1,  # deprecated
+        tau=1,  # unused currently
     )
     # choose whether to use original or smoothed calcium data
     if config.train.smooth_data:
         key_data = "smooth_calcium_data"
     else:
         key_data = "calcium_data"
+    # memoize creation of data loaders and masks for speed
+    memo_loaders_masks = dict()
     # train for config.train.num_epochs
     reset_epoch = 1
     for i, (worm, single_worm_dataset) in enumerate(dataset_items):
+        # check memo for loaders and masks
+        if worm in memo_loaders_masks:
+            train_loader = memo_loaders_masks[worm]["train_loader"]
+            test_loader = memo_loaders_masks[worm]["test_loader"]
+            train_mask = memo_loaders_masks[worm]["train_mask"]
+            test_mask = memo_loaders_masks[worm]["test_mask"]
+        else:
+            # create data loaders and train/test masks only once per worm
+            train_loader, test_loader, train_mask, test_mask = split_train_test(
+                data=single_worm_dataset[key_data],
+                **kwargs,
+            )
+            # add to memo
+            memo_loaders_masks.setdefault(
+                worm,
+                dict(
+                    train_loader=train_loader,
+                    test_loader=test_loader,
+                    train_mask=train_mask,
+                    test_mask=test_mask,
+                ),
+            )
+        # mutate the dataset for this worm with the train and test masks
+        dataset[worm].setdefault("train_mask", train_mask)
+        dataset[worm].setdefault("test_mask", test_mask)
+        # get the neurons mask for this worm
+        neurons_mask = single_worm_dataset["named_neurons_mask"]
         # optimize for 1 epoch per (possibly duplicated) worm
         model, log = optimize_model(
-            data=single_worm_dataset[key_data],
             model=model,
-            mask=single_worm_dataset["named_neurons_mask"],
+            train_loader=train_loader,
+            test_loader=test_loader,
+            neurons_mask=neurons_mask,
+            optimizer=optimizer,
             start_epoch=reset_epoch,
-            **kwargs,
+            learn_rate=learn_rate,
+            num_epochs=1,
         )
         # retrieve losses and sample counts
-        [data[key].extend(log[key]) for key in data]
-        # mutate the dataset for this worm with the train and test masks
-        dataset[worm].setdefault("train_mask", log["train_mask"])
-        dataset[worm].setdefault("test_mask", log["test_mask"])
+        [data[key].extend(log[key]) for key in data]  # Python list comprehension
         # set to next epoch
         reset_epoch = log["epochs"][-1] + 1
         if (i % config.train.save_freq == 0) or (i + 1 == config.train.epochs):
