@@ -1,6 +1,7 @@
 dataset:
   name:
-    - sine_noise
+#    - sine_noise
+    - Uzel2022
 
 
     ### 'calcium_data', 'smooth_calcium_data', 'residual_calcium', 'residual_smooth_calcium',
