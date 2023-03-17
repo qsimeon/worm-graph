@@ -11,7 +11,7 @@ config = OmegaConf.load("conf/dataset.yaml")
 
 if __name__ == "__main__":
     # number of neurons we want to predict
-    neuron_inds = range(20, 30)
+    neuron_inds = range(6, 11)
     num_neurons = len(neuron_inds)
     # num_neurons = 1
     # number of split of data
@@ -43,7 +43,7 @@ if __name__ == "__main__":
         calcium_data,
         model,
         mask=named_neurons_mask,
-        num_epochs=100,
+        num_epochs=10,
         learn_rate=0.1,
         **kwargs,
     )

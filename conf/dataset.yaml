@@ -1,4 +1,4 @@
 dataset:
   name:
-    # - sine_noise
-    - Kato2015
+    - sine_noise
+    # - Kato2015
