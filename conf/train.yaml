@@ -12,4 +12,4 @@ train:
   test_size: 1654 # number of samples (sequences) of validation data per epoch
   # constraint: batch_size < min(train_size, test_size)
   shuffle: True # whether to shuffle samples
-  tau: 100 # offset of time steps for target
+  tau: 500 # offset of time steps for target

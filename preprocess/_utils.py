@@ -2039,6 +2039,9 @@ def pickle_Flavell2023(transform, smooth_method="fft"):
         h5_file = os.path.join(data_dir, h5_file)
         worm = "worm" + str(i)
         h5 = h5py.File(h5_file, "r")
+        time_in_seconds = torch.tensor(h5["timestamp_confocal"]).reshape((h5["timestamp_confocal"].shape[0], 1))
+        dt = torch.zeros_like(time_in_seconds)
+        dt[1:] = time_in_seconds[1:] - time_in_seconds[:-1]
         if i == 0:
             print(list(h5.keys()), end="\n\n")
         print("num. worms:", 1, end="\n\n")
@@ -2091,8 +2094,8 @@ def pickle_Flavell2023(transform, smooth_method="fft"):
                     "neuron_to_idx": neuron_to_idx,
                     "idx_to_neuron": dict((v, k) for k, v in neuron_to_idx.items()),
                     "max_time": max_time,
-                    "time_in_seconds": None,
-                    "dt": None,
+                    "time_in_seconds": time_in_seconds,
+                    "dt": dt,
                     "num_neurons": num_neurons,
                     "num_named_neurons": num_named,
                     "num_unknown_neurons": num_neurons - num_named,
