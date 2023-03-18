@@ -343,10 +343,10 @@ def make_predictions(
             header=True,
         )
         columns = list(named_neuron_to_idx) + ["train_test_label"] + ["tau"]
-        tau = np.full((calcium_data.shape[0], 1), tau)
+        tau_expand = np.full((calcium_data.shape[0], 1), tau)
         data = predictions[:, named_neurons_mask].detach().numpy()
         data = np.hstack((data, labels))
-        data = np.hstack((data, tau))
+        data = np.hstack((data, tau_expand))
         pd.DataFrame(data=data, columns=columns).to_csv(
             os.path.join(log_dir, worm, "predicted_ca.csv"),
             index=True,
