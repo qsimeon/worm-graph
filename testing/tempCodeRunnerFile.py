@@ -1,0 +1,1 @@
+time_vec = single_worm_dataset.get("time_in_seconds", None)

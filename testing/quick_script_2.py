@@ -4,21 +4,21 @@ Tests the model optimization function `optimize_model`.
 import matplotlib.pyplot as plt
 from omegaconf import OmegaConf
 from models._utils import NetworkLSTM
-from data._main import get_dataset
+from data._utils import load_sine_seq_noise
 from train._utils import split_train_test, optimize_model, model_predict
 
-config = OmegaConf.load("conf/dataset.yaml")
 
 if __name__ == "__main__":
     # pick indices of neurons we want
-    neuron_inds = range(6, 11)
+    neuron_inds = range(0, 4)
     num_neurons = len(neuron_inds)
     # load a dataset (multiple worms)
-    dataset = get_dataset(config)
+    dataset = load_sine_seq_noise()
     # get calcium data for one worm
     single_worm_dataset = dataset["worm0"]
     calcium_data = single_worm_dataset["calcium_data"][:, neuron_inds]
     named_neurons_mask = single_worm_dataset["named_neurons_mask"][neuron_inds]
+    time_vec = single_worm_dataset.get("time_in_seconds", None)
     # create a model
     model = NetworkLSTM(num_neurons, 64).double()
     # keyword args to `split_train_test`
@@ -28,6 +28,7 @@ if __name__ == "__main__":
         batch_size=128,
         train_size=1654,
         test_size=1654,
+        time_vec=time_vec,
         # TODO: Why does `shuffle=True` improve performance so much?
         shuffle=True,
         reverse=False,
@@ -44,7 +45,7 @@ if __name__ == "__main__":
         train_loader,
         test_loader,
         neurons_mask=named_neurons_mask,
-        num_epochs=100,
+        num_epochs=500,
         learn_rate=0.1,
     )
     # make predictions with trained model
