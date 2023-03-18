@@ -3,11 +3,11 @@ from govfunc._utils import *
 
 
 def train(
-        loader: torch.utils.data.DataLoader,
-        model: torch.nn.Module,
-        mask: torch.Tensor,
-        optimizer: torch.optim.Optimizer,
-        no_grad: bool = False,
+    loader: torch.utils.data.DataLoader,
+    model: torch.nn.Module,
+    mask: torch.Tensor,
+    optimizer: torch.optim.Optimizer,
+    no_grad: bool = False,
 ) -> dict:
     """Train a model.
 
@@ -69,9 +69,9 @@ def train(
 
 @torch.no_grad()
 def test(
-        loader: torch.utils.data.DataLoader,
-        model: torch.nn.Module,
-        mask: torch.Tensor,
+    loader: torch.utils.data.DataLoader,
+    model: torch.nn.Module,
+    mask: torch.Tensor,
 ) -> dict:
     """Evaluate a model.
 
@@ -125,7 +125,6 @@ def split_train_test(
     batch_size: int = 32,
     train_size: int = 1024,
     test_size: int = 1024,
-    time_vec: Union[torch.Tensor, None] = None,
     shuffle: bool = True,
     reverse: bool = True,
     tau: int = 1,  # deprecated
@@ -144,14 +143,8 @@ def split_train_test(
     assert isinstance(seq_len, int) and seq_len < len(
         data
     ), "Invalid `seq_len` entered."
-    # make time vector
-    if time_vec is None:
-        time_vec = torch.arange(len(data))
-    assert torch.is_tensor(time_vec) and len(time_vec) == len(
-        data
-    ), "Enter a time vector with same length as data."
     # split dataset into train and test sections
-
+    time_vec = torch.arange(len(data))
     chunk_size = len(data) // k_splits
     split_datasets = torch.split(data, chunk_size, dim=0)  # length k_splits tuple
     split_times = torch.split(time_vec, chunk_size, dim=0)
@@ -222,7 +215,7 @@ def optimize_model(
     model: torch.nn.Module,
     train_loader: torch.utils.data.DataLoader,
     test_loader: torch.utils.data.DataLoader,
-    neurons_mask: Union[torch.Tensor, None] = None,
+    neurons_mask: Union[torch.tensor, None] = None,
     optimizer: Union[torch.optim.Optimizer, None] = None,
     start_epoch: int = 1,
     learn_rate: float = 0.01,
@@ -302,10 +295,10 @@ def optimize_model(
 
 
 def make_predictions(
-        model: torch.nn.Module,
-        dataset: dict,
-        tau: int,
-        log_dir: str,
+    model: torch.nn.Module,
+    dataset: dict,
+    tau: int,
+    log_dir: str,
 ) -> None:
     """Make predicitons on a dataset with a trained model.
 
@@ -334,6 +327,7 @@ def make_predictions(
         columns = list(named_neuron_to_idx) + ["train_test_label"]
         # make predictions with final model
         targets, predictions = model_predict(model, calcium_data * named_neurons_mask)
+
         # save dataframes
         data = calcium_data[:, named_neurons_mask].numpy()
         data = np.hstack((data, labels))
@@ -350,8 +344,8 @@ def make_predictions(
             header=True,
         )
         columns = list(named_neuron_to_idx) + ["train_test_label"] + ["tau"]
-        tau_expand = np.full((calcium_data.shape[0], 1), tau)
-        data = predictions[:, named_neurons_mask].detach().numpy()
+        tau_expand = np.full((predictions.shape[0], 1), tau)
+        data = predictions[:, named_neurons_mask].numpy()
         data = np.hstack((data, labels))
         data = np.hstack((data, tau_expand))
         pd.DataFrame(data=data, columns=columns).to_csv(
@@ -363,8 +357,8 @@ def make_predictions(
 
 
 def model_predict(
-        model: torch.nn.Module,
-        calcium_data: torch.Tensor,
+    model: torch.nn.Module,
+    calcium_data: torch.Tensor,
 ) -> tuple[torch.Tensor, torch.Tensor]:
     """
     Makes predictions for all neurons in the
@@ -376,7 +370,7 @@ def model_predict(
     # model in/out
     calcium_data = calcium_data.squeeze(0)
     assert (
-            calcium_data.ndim == 2 and calcium_data.size(0) >= NUM_NEURONS
+        calcium_data.ndim == 2 and calcium_data.size(0) >= NUM_NEURONS
     ), "Calcium data has incorrect shape!"
     # get input and output
     input = calcium_data.to(DEVICE)
@@ -391,7 +385,6 @@ def model_predict(
     output = output.squeeze(0)
     # targets/predictions
     targets = input.detach().cpu()
-    # output is the prediction of input[offset:, :]
     predictions = output.detach().cpu()
     return targets, predictions
 
@@ -406,7 +399,7 @@ def gnn_train_val_mask(graph, train_ratio=0.7, train_mask=None):
     # create the train and validation masks
     if train_mask is not None:
         assert (
-                train_mask.ndim == 1 and train_mask.size(0) == graph.num_nodes
+            train_mask.ndim == 1 and train_mask.size(0) == graph.num_nodes
         ), "Invalid train_mask provided."
     else:
         train_mask = torch.rand(graph.num_nodes) < train_ratio
