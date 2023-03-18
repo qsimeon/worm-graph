@@ -529,6 +529,7 @@ def reshape_calcium_data(single_worm_dataset):
 
 
 class create_four_sine_datasets():
+
     def __init__(self):
         super(create_four_sine_datasets, self).__init__()
         self.seq_len = 3312
@@ -571,7 +572,9 @@ class create_four_sine_datasets():
             fft_input = torch.fft.rfftn(data_torch, dim=0)
             oneD_kernel = oneD_kernel.repeat(calcium_data.shape[1], 1).T
             fft_result = torch.fft.irfftn(fft_input * oneD_kernel, dim=0)
-            smooth_ca_data[0: min(fft_result.shape[0], calcium_data.shape[0])] = fft_result
+            smooth_ca_data[
+                0 : min(fft_result.shape[0], calcium_data.shape[0])
+            ] = fft_result
         elif str(smooth_method).lower() == "tvr":
             diff_tvr = DiffTVR(n, 1)
             for i in range(0, calcium_data.shape[1]):
@@ -583,7 +586,9 @@ class create_four_sine_datasets():
                     alpha=0.005,
                     no_opt_steps=100,
                 )
-                smooth_ca_data[:, i] = torch.tensor(item_denoise[: (len(item_denoise) - 1)])
+                smooth_ca_data[:, i] = torch.tensor(
+                    item_denoise[: (len(item_denoise) - 1)]
+                )
         else:
             print("Wrong Input, check the config/preprocess.yml")
             exit(0)
@@ -597,7 +602,6 @@ class create_four_sine_datasets():
         res = np.zeros((d, n))
 
         assert isinstance(n, int), "wrong number for samples"
-
         if ifsequence:
             freq1 = 1.0 / d
             phi1 = 0
@@ -609,7 +613,6 @@ class create_four_sine_datasets():
                     for j in range(0, d):
                         calcium[j, i] += + random.gauss(0, 0.02)
                 res[1:, i] = (calcium[1:, i] - calcium[:-1, i])
-
         else:
             for i in range(0, n):
                 freq = 0
@@ -635,19 +638,19 @@ class create_four_sine_datasets():
             worm = "worm" + str(i)
             max_time = self.seq_len
             num_neurons = self.num_signal
-            time_in_seconds = torch.tensor(np.array(np.arange(self.seq_len)).reshape(self.seq_len, 1))
+            time_in_seconds = torch.tensor(
+                np.array(np.arange(self.seq_len)).reshape(self.seq_len, 1)
+            )
 
-            real_data = torch.tensor(
-                real_data, dtype=torch.float64
-            )
-            residual = torch.tensor(
-                raw_res[i], dtype=torch.float64
-            )
+            real_data = torch.tensor(real_data, dtype=torch.float64)
+            residual = torch.tensor(raw_res[i], dtype=torch.float64)
 
             smooth_real_data = self.smooth_data(real_data, "fft")
 
             residual_smooth_calcium = torch.zeros_like(smooth_real_data)
-            residual_smooth_calcium[1:, :] = smooth_real_data[1:, :] - smooth_real_data[:-1, :]
+            residual_smooth_calcium[1:, :] = (
+                smooth_real_data[1:, :] - smooth_real_data[:-1, :]
+            )
 
             # randomly choose some neurons to be inactivated
             num_unnamed = 100
@@ -710,6 +713,7 @@ class create_four_sine_datasets():
         raw_data = []
         raw_der = []
         for j in range(self.num_worms):
+<<<<<<< HEAD
             x, dx = self.create_synthetic_data(self.seq_len, self.num_signal, False, 0, True)
             x_torch = Variable(torch.from_numpy(x), requires_grad=False)
             raw_data.append(x_torch)
@@ -739,6 +743,11 @@ class create_four_sine_datasets():
         raw_der = []
         for j in range(self.num_worms):
             x, dx = self.create_synthetic_data(self.seq_len, self.num_signal, self.if_noise, 0, False)
+=======
+            x, dx = self.create_synthetic_data(
+                self.seq_len, self.num_signal, self.if_noise, 0
+            )
+>>>>>>> main
             x_torch = Variable(torch.from_numpy(x), requires_grad=False)
             raw_data.append(x_torch)
             raw_der.append(dx)
@@ -752,7 +761,13 @@ class create_four_sine_datasets():
         raw_data = []
         raw_der = []
         for j in range(self.num_worms):
+<<<<<<< HEAD
             x, dx = self.create_synthetic_data(self.seq_len, self.num_signal, False, self.sum, False)
+=======
+            x, dx = self.create_synthetic_data(
+                self.seq_len, self.num_signal, False, self.sum
+            )
+>>>>>>> main
             x_torch = Variable(torch.from_numpy(x), requires_grad=False)
             raw_data.append(x_torch)
             raw_der.append(dx)
@@ -766,7 +781,13 @@ class create_four_sine_datasets():
         raw_data = []
         raw_der = []
         for j in range(self.num_worms):
+<<<<<<< HEAD
             x, dx = self.create_synthetic_data(self.seq_len, self.num_signal, self.if_noise, self.sum, False)
+=======
+            x, dx = self.create_synthetic_data(
+                self.seq_len, self.num_signal, self.if_noise, self.sum
+            )
+>>>>>>> main
             x_torch = Variable(torch.from_numpy(x), requires_grad=False)
             raw_data.append(x_torch)
             raw_der.append(dx)
@@ -775,7 +796,11 @@ class create_four_sine_datasets():
         file = open("./data/processed/neural/sum_sine_noise.pickle", "wb")
         pickle.dump(dataset, file)
         file.close()
+<<<<<<< HEAD
         return
+=======
+        return None
+>>>>>>> main
 
 
 def pickle_neural_data(
@@ -816,6 +841,9 @@ def pickle_neural_data(
     # Pickle all the datasets ... OR
     if dataset is None or dataset.lower() == "all":
         for dataset in VALID_DATASETS:
+            # skip these test datasets
+            if dataset.__contains__("sine"):
+                continue
             print("Dataset:", dataset, end="\n\n")
             pickler = eval("pickle_" + dataset)
             pickler(transform)
@@ -2034,7 +2062,6 @@ def pickle_Flavell2023(transform, smooth_method="fft"):
     for i, h5_file in enumerate(os.listdir(data_dir)):
         if not h5_file.endswith(".h5"):
             continue
-
         # each h5 has the data for one (1) worm
         h5_file = os.path.join(data_dir, h5_file)
         worm = "worm" + str(i)
@@ -2086,7 +2113,7 @@ def pickle_Flavell2023(transform, smooth_method="fft"):
             {
                 worm: {
                     "dataset": "Flavell2023",
-                    "worm": "worm0",
+                    "worm": worm,
                     "calcium_data": calcium_data,
                     "smooth_calcium_data": smooth_real_data,
                     "residual_calcium": residual,

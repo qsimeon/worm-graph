@@ -26,12 +26,11 @@ DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 VALID_DATASETS = {
     # real worm datasets
     "Nichols2017",
-    "Nguyen2017",
-    "Skora2018",
-    "Kaplan2020",
-    "Uzel2022",
+
+    "Nguyen2017",  # no named neurons!
     "Kato2015",
-    "Flavell2023",
+    "Kaplan2020",
+    "Flavell2023",  # something wrong with this
     # test datasets
     # "sine",
     # "sine_seq",
