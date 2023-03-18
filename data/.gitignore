@@ -3,5 +3,5 @@
 *__MACOSX
 
 # Pickle files
-# processed/neural/*.pickle
+processed/neural/*.pickle
 processed/neural/.processed
