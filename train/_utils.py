@@ -371,14 +371,14 @@ def model_predict(
     # get input and output
     input = calcium_data.to(DEVICE)
     # TODO: Why does this make such a big difference in prediction?
-    output = model(
-        input.unsqueeze(1)
-    )  # (max_time, 1, NUM_NEURONS), batch_size = max_time, seq_len = 1
-    output = output.squeeze(1)
     # output = model(
-    #     input.unsqueeze(0)
-    # )  # (1, max_time, NUM_NEURONS),  batch_size = 1, seq_len = max_time
-    # output = output.squeeze(0)
+    #     input.unsqueeze(1)
+    # )  # (max_time, 1, NUM_NEURONS), batch_size = max_time, seq_len = 1
+    # output = output.squeeze(1)
+    output = model(
+        input.unsqueeze(0)
+    )  # (1, max_time, NUM_NEURONS),  batch_size = 1, seq_len = max_time
+    output = output.squeeze(0)
     # targets/predictions
     targets = input.detach().cpu()
     predictions = output.detach().cpu()
