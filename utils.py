@@ -28,10 +28,10 @@ VALID_DATASETS = {
     "Uzel2022",
     "Skora2018",
     "Nichols2017",
-    "Nguyen2017",
+    "Nguyen2017",  # no named neurons!
     "Kato2015",
     "Kaplan2020",
-    "Flavell2023",
+    "Flavell2023",  # something wrong with this
     # test datasets
     "sum_sine",
     "sum_sine_noise",

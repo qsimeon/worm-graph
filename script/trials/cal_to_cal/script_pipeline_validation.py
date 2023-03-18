@@ -1,12 +1,12 @@
 #!/usr/bin/env python
 # encoding: utf-8
-'''
+"""
 @author: ivy
 @contact: ivyivyzhao77@gmail.com
 @software: PyCharm 2022.3
 @file: script_pipeline_validation.py
 @time: 2023/3/10 14:54
-'''
+"""
 
 import warnings
 
@@ -55,11 +55,11 @@ def create_dataset(raw_data, raw_der):
         dt = torch.tensor(der)
 
         num_named = num_neurons
-        real_data = torch.tensor(
-            real_data, dtype=torch.float64
-        )
+        real_data = torch.tensor(real_data, dtype=torch.float64)
 
-        smooth_real_data, residual, smooth_residual = smooth_data_preprocess(real_data, "fft")
+        smooth_real_data, residual, smooth_residual = smooth_data_preprocess(
+            real_data, "fft"
+        )
 
         for i in range(residual.shape[1]):
             residual[:, i] = residual[:, i] / dt[:, i]
@@ -98,7 +98,7 @@ class lstm(nn.Module):
             hidden_size=HIDDEN_SIZE,
             num_layers=LAYERS,
             dropout=DROP_RATE,
-            batch_first=True
+            batch_first=True,
         )
         self.hidden_out = nn.Linear(HIDDEN_SIZE, INPUT_SIZE)
         self.h_s = None
@@ -138,7 +138,3 @@ if __name__ == "__main__":
 
     config = OmegaConf.load("../../../conf/train.yaml")
     model, log_dir = train_model(model, dataset, config)
-
-
-
-

@@ -274,9 +274,7 @@ def plot_targets_predictions(
         plt.suptitle(plt_title)
         plt.xlabel("Time")
         plt.ylabel("$Ca^{2+}$ Residual ($\Delta F / F$)")
-        plt.savefig(
-            os.path.join(log_dir, worm, "figures", "residuals_%s.png" % _neuron_)
-        )
+        plt.savefig(os.path.join(log_dir, worm, "figures", "calcium_%s.png" % _neuron_))
         plt.close()
         return None
 

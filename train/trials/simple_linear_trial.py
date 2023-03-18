@@ -26,7 +26,6 @@ import matplotlib.pyplot as plt
 import torch.nn.functional as F
 
 if __name__ == "__main__":
-
     config = OmegaConf.load("conf/dataset.yaml")
     print("config:", OmegaConf.to_yaml(config), end="\n\n")
     dataset = get_dataset(config)
@@ -76,8 +75,11 @@ if __name__ == "__main__":
 
     # try the basic model
     cols_with_data_mask = worm[0]["neurons_mask"]
-    labels_neurons_with_data = [worm[0]["slot_to_neuron"][slot] for slot, boole in enumerate(cols_with_data_mask) if
-                                boole.item() is True]
+    labels_neurons_with_data = [
+        worm[0]["slot_to_neuron"][slot]
+        for slot, boole in enumerate(cols_with_data_mask)
+        if boole.item() is True
+    ]
 
     cal_data = worm[0]["smooth_calcium_data"][:, cols_with_data_mask]
     data_temp = cal_data
@@ -89,7 +91,6 @@ if __name__ == "__main__":
 
     cal_data = cal_data[0:3000]
 
-
     class Net(nn.Module):
         def __init__(self, in_, out_):
             super(Net, self).__init__()
@@ -98,7 +99,6 @@ if __name__ == "__main__":
         def forward(self, input):
             out = self.predict(input)
             return out
-
 
     net = Net(2, 1)
     print(net)
@@ -110,8 +110,8 @@ if __name__ == "__main__":
     cal_data = cal_data.to(torch.float32)
     for e in range(epoch):
         for t in range(1, cal_data.shape[0] - 1):
-            input = cal_data[t - 1:t + 1].T
-            target = cal_data[t + 1:t + 2].T
+            input = cal_data[t - 1 : t + 1].T
+            target = cal_data[t + 1 : t + 2].T
             prediction = net.forward(input)
             loss = loss_func(prediction, target)
             optimizer.zero_grad()
@@ -149,20 +149,13 @@ if __name__ == "__main__":
 
     print("the closest: {:.4f}".format(float((loss_pred - loss_base).min())))
 
-    plt.scatter(labels_neurons_with_data, loss_pred - loss_base, edgecolors='g')
+    plt.scatter(labels_neurons_with_data, loss_pred - loss_base, edgecolors="g")
     plt.legend(["pred - base"])
     plt.xlabel("Neuron")
     plt.ylabel("Loss(MSE)")
     plt.show()
 
     exit(0)
-
-
-
-
-
-
-
 
     ###################### for the simplest linear combination on neuronal signals #################
     # pred y_t+1 = wa * y_t + wb * y_t-1
@@ -197,20 +190,20 @@ if __name__ == "__main__":
     import matplotlib.pyplot as plt
 
     # Create the dataframe with your data
-    data = pd.DataFrame.from_dict({"x": labels_neurons_with_data, "base": loss_base, "pred": loss_pred})
+    data = pd.DataFrame.from_dict(
+        {"x": labels_neurons_with_data, "base": loss_base, "pred": loss_pred}
+    )
 
     # Initialize the matplotlib figure
     f, ax = plt.subplots(figsize=(6, 15))
 
     # Plot the total crashes
     sns.set_color_codes("pastel")
-    sns.barplot(x="base", y="x", data=data,
-                label="base", color="b")
+    sns.barplot(x="base", y="x", data=data, label="base", color="b")
 
     # Plot the crashes where alcohol was involved
     sns.set_color_codes("muted")
-    sns.barplot(x="pred", y="x", data=data,
-                label="pred", color="b")
+    sns.barplot(x="pred", y="x", data=data, label="pred", color="b")
     plt.show()
 
     # sns.set_theme(style="whitegrid")

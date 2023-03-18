@@ -1,4 +1,4 @@
 visualize:
-  log_dir: logs/2023_03_17_13_56-Kato2015-NetworkLSTM
+  log_dir: logs/2023_03_17_20_00-Kaplan2020-NetworkLSTM
   worm: all
   neuron: AVAL

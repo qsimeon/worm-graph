@@ -1,12 +1,12 @@
 #!/usr/bin/env python
 # encoding: utf-8
-'''
+"""
 @author: ivy
 @contact: ivyivyzhao77@gmail.com
 @software: PyCharm 2022.3
 @file: create_sine_dataset.py
 @time: 2023/3/14 10:01
-'''
+"""
 
 # !/usr/bin/env python
 # encoding: utf-8
@@ -31,7 +31,7 @@ import torch
 from torch.optim import optimizer
 
 
-class create_four_sine_datasets():
+class create_four_sine_datasets:
     def __init__(self):
         super(create_four_sine_datasets, self).__init__()
         self.seq_len = 3312
@@ -73,7 +73,9 @@ class create_four_sine_datasets():
             fft_input = torch.fft.rfftn(data_torch, dim=0)
             oneD_kernel = oneD_kernel.repeat(calcium_data.shape[1], 1).T
             fft_result = torch.fft.irfftn(fft_input * oneD_kernel, dim=0)
-            smooth_ca_data[0: min(fft_result.shape[0], calcium_data.shape[0])] = fft_result
+            smooth_ca_data[
+                0 : min(fft_result.shape[0], calcium_data.shape[0])
+            ] = fft_result
         elif str(smooth_method).lower() == "tvr":
             diff_tvr = DiffTVR(n, 1)
             for i in range(0, calcium_data.shape[1]):
@@ -85,7 +87,9 @@ class create_four_sine_datasets():
                     alpha=0.005,
                     no_opt_steps=100,
                 )
-                smooth_ca_data[:, i] = torch.tensor(item_denoise[: (len(item_denoise) - 1)])
+                smooth_ca_data[:, i] = torch.tensor(
+                    item_denoise[: (len(item_denoise) - 1)]
+                )
         else:
             print("Wrong Input, check the config/preprocess.yml")
             exit(0)
@@ -114,9 +118,9 @@ class create_four_sine_datasets():
                 freq += freq2
             if ifnoise:
                 for j in range(0, d):
-                    calcium[j, i] += + random.gauss(0, 0.02)
+                    calcium[j, i] += +random.gauss(0, 0.02)
 
-            res[1:, i] = (calcium[1:, i] - calcium[:-1, i])
+            res[1:, i] = calcium[1:, i] - calcium[:-1, i]
 
         return calcium, res
 
@@ -126,19 +130,19 @@ class create_four_sine_datasets():
             worm = "worm" + str(i)
             max_time = self.seq_len
             num_neurons = self.num_signal
-            time_in_seconds = torch.tensor(np.array(np.arange(self.seq_len)).reshape(self.seq_len, 1))
+            time_in_seconds = torch.tensor(
+                np.array(np.arange(self.seq_len)).reshape(self.seq_len, 1)
+            )
 
-            real_data = torch.tensor(
-                real_data, dtype=torch.float64
-            )
-            residual = torch.tensor(
-                raw_res[i], dtype=torch.float64
-            )
+            real_data = torch.tensor(real_data, dtype=torch.float64)
+            residual = torch.tensor(raw_res[i], dtype=torch.float64)
 
             smooth_real_data = self.smooth_data(real_data, "fft")
 
             residual_smooth_calcium = torch.zeros_like(smooth_real_data)
-            residual_smooth_calcium[1:, :] = smooth_real_data[1:, :] - smooth_real_data[:-1, :]
+            residual_smooth_calcium[1:, :] = (
+                smooth_real_data[1:, :] - smooth_real_data[:-1, :]
+            )
 
             # randomly choose some neurons to be inactivated
             num_unnamed = 100
@@ -197,7 +201,10 @@ class create_four_sine_datasets():
 
         plt.show()
 
-        print(dataset["worm0"]["num_named_neurons"], dataset["worm0"]["num_unknown_neurons"])
+        print(
+            dataset["worm0"]["num_named_neurons"],
+            dataset["worm0"]["num_unknown_neurons"],
+        )
         print("------")
 
         file = open("./data/processed/neural/sine.pickle", "wb")
@@ -222,13 +229,15 @@ class create_four_sine_datasets():
         plt.plot(dataset["worm0"]["residual_calcium"][:, 0])
         plt.show()
 
-        print(dataset["worm0"]["num_named_neurons"], dataset["worm0"]["num_unknown_neurons"])
+        print(
+            dataset["worm0"]["num_named_neurons"],
+            dataset["worm0"]["num_unknown_neurons"],
+        )
         print("------")
 
         file = open("./data/processed/neural/sine_noise.pickle", "wb")
         pickle.dump(dataset, file)
         file.close()
-
 
         # Creating signal
         raw_data = []
@@ -248,7 +257,10 @@ class create_four_sine_datasets():
         plt.plot(dataset["worm0"]["residual_calcium"][:, 0])
         plt.show()
 
-        print(dataset["worm0"]["num_named_neurons"], dataset["worm0"]["num_unknown_neurons"])
+        print(
+            dataset["worm0"]["num_named_neurons"],
+            dataset["worm0"]["num_unknown_neurons"],
+        )
         print("------")
 
         file = open("./data/processed/neural/sum_sine.pickle", "wb")
@@ -273,7 +285,10 @@ class create_four_sine_datasets():
         plt.plot(dataset["worm0"]["residual_calcium"][:, 0])
         plt.show()
 
-        print(dataset["worm0"]["num_named_neurons"], dataset["worm0"]["num_unknown_neurons"])
+        print(
+            dataset["worm0"]["num_named_neurons"],
+            dataset["worm0"]["num_unknown_neurons"],
+        )
         print("------")
 
         file = open("./data/processed/neural/sum_sine_noise.pickle", "wb")
@@ -281,8 +296,6 @@ class create_four_sine_datasets():
         file.close()
 
         return
-
-
 
 
 if __name__ == "__main__":
