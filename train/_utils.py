@@ -311,6 +311,7 @@ def optimize_model(
 def make_predictions(
         model: torch.nn.Module,
         dataset: dict,
+        tau: int,
         log_dir: str,
 ) -> None:
     """Make predicitons on a dataset with a trained model.
@@ -340,7 +341,6 @@ def make_predictions(
         columns = list(named_neuron_to_idx) + ["train_test_label"]
         # make predictions with final model
         targets, predictions = model_predict(model, calcium_data * named_neurons_mask)
-
         # save dataframes
         data = calcium_data[:, named_neurons_mask].numpy()
         data = np.hstack((data, labels))
@@ -356,8 +356,11 @@ def make_predictions(
             index=True,
             header=True,
         )
-        data = predictions[:, named_neurons_mask].numpy()
+        columns = list(named_neuron_to_idx) + ["train_test_label"] + ["tau"]
+        tau = np.full((calcium_data.shape[0], 1), tau)
+        data = predictions[:, named_neurons_mask].detach().numpy()
         data = np.hstack((data, labels))
+        data = np.hstack((data, tau))
         pd.DataFrame(data=data, columns=columns).to_csv(
             os.path.join(log_dir, worm, "predicted_ca.csv"),
             index=True,
