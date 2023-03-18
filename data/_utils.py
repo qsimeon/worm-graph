@@ -284,24 +284,6 @@ def load_sine():
     dataset = pickle.load(pickle_in)
     return dataset
 
-def load_sine_seq():
-    file = os.path.join(ROOT_DIR, "data", "processed", "neural", "sine_seq.pickle")
-    assert os.path.exists(file)
-    pickle_in = open(file, "rb")
-    # unpickle the data
-    dataset = pickle.load(pickle_in)
-    return dataset
-
-
-def load_sine_seq_noise():
-    file = os.path.join(ROOT_DIR, "data", "processed", "neural", "sine_seq_noise.pickle")
-    assert os.path.exists(file)
-    pickle_in = open(file, "rb")
-    # unpickle the data
-    dataset = pickle.load(pickle_in)
-    return dataset
-
-
 
 def load_sine_noise():
     file = os.path.join(ROOT_DIR, "data", "processed", "neural", "sine_noise.pickle")
@@ -322,6 +304,94 @@ def load_sum_sine():
 
 
 def load_sum_sine_noise():
+    file = os.path.join(
+        ROOT_DIR, "data", "processed", "neural", "sum_sine_noise.pickle"
+    )
+    assert os.path.exists(file)
+    pickle_in = open(file, "rb")
+    # unpickle the data
+    dataset = pickle.load(pickle_in)
+    return dataset
+
+
+def load_sine():
+    """
+    A test dataset to evaluate models on.
+    Independent sinusoid signals.
+    Varied frequency and amplitutde.
+    """
+    file = os.path.join(ROOT_DIR, "data", "processed", "neural", "sine.pickle")
+    assert os.path.exists(file)
+    pickle_in = open(file, "rb")
+    # unpickle the data
+    dataset = pickle.load(pickle_in)
+    return dataset
+
+
+def load_sine_seq():
+    """
+    A test dataset to evaluate models on.
+    Correlated sinusoid signals.
+    Varied frequency and amplitutde.
+    """
+    file = os.path.join(ROOT_DIR, "data", "processed", "neural", "sine_seq.pickle")
+    assert os.path.exists(file)
+    pickle_in = open(file, "rb")
+    # unpickle the data
+    dataset = pickle.load(pickle_in)
+    return dataset
+
+
+def load_sine_noise():
+    """
+    A test dataset to evaluate models on.
+    Independent sinusoid signals + Gaussian noise.
+    Varied frequency, phase and noise variance.
+    """
+    file = os.path.join(ROOT_DIR, "data", "processed", "neural", "sine_noise.pickle")
+    assert os.path.exists(file)
+    pickle_in = open(file, "rb")
+    # unpickle the data
+    dataset = pickle.load(pickle_in)
+    return dataset
+
+
+def load_sine_seq_noise():
+    """
+    A test dataset to evaluate models on.
+    Correlated sinusoid signals + Gaussian noise.
+    Varied frequency, phase and noise variance.
+    """
+    file = os.path.join(
+        ROOT_DIR, "data", "processed", "neural", "sine_seq_noise.pickle"
+    )
+    assert os.path.exists(file)
+    pickle_in = open(file, "rb")
+    # unpickle the data
+    dataset = pickle.load(pickle_in)
+    return dataset
+
+
+def load_sum_sine():
+    """
+    A test dataset to evaluate models on.
+    Independent sums-of-sinusoid signals.
+    Varied frequency, phase and number of terms in sum.
+    """
+    file = os.path.join(ROOT_DIR, "data", "processed", "neural", "sum_sine.pickle")
+    assert os.path.exists(file)
+    pickle_in = open(file, "rb")
+    # unpickle the data
+    dataset = pickle.load(pickle_in)
+    return dataset
+
+
+def load_sum_sine_noise():
+    """
+    A test dataset to evaluate models on.
+    Independent sums-of-sinusoid signals + Gaussian noise.
+    Varied frequency, phase, number of terms in sum and noise variance.
+    """
     file = os.path.join(
         ROOT_DIR, "data", "processed", "neural", "sum_sine_noise.pickle"
     )

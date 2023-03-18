@@ -29,7 +29,6 @@ if __name__ == "__main__":
     print("config:", OmegaConf.to_yaml(config), end="\n\n")
     process_data(config)
 
-
     # # use this if you need to
     # data_loader = create_four_sine_datasets()
     # data_loader.main_create()

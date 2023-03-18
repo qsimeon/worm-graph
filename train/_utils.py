@@ -3,11 +3,11 @@ from govfunc._utils import *
 
 
 def train(
-        loader: torch.utils.data.DataLoader,
-        model: torch.nn.Module,
-        mask: torch.Tensor,
-        optimizer: torch.optim.Optimizer,
-        no_grad: bool = False,
+    loader: torch.utils.data.DataLoader,
+    model: torch.nn.Module,
+    mask: torch.Tensor,
+    optimizer: torch.optim.Optimizer,
+    no_grad: bool = False,
 ) -> dict:
     """Train a model.
 
@@ -45,7 +45,6 @@ def train(
         Y_tr.register_hook(lambda grad: grad * mask)
         # Compute training loss.
         # loss = criterion(Y_tr[:, :, mask], Y_train[:, :, mask])
-        # loss = criterion(Y_tr, Y_train * mask)
         loss = criterion(Y_tr * mask, Y_train * mask)
         loss.backward(retain_graph=True)  # Derive gradients.
         # # Prevent update of weights connected to inactive neurons.
@@ -70,9 +69,9 @@ def train(
 
 @torch.no_grad()
 def test(
-        loader: torch.utils.data.DataLoader,
-        model: torch.nn.Module,
-        mask: torch.Tensor,
+    loader: torch.utils.data.DataLoader,
+    model: torch.nn.Module,
+    mask: torch.Tensor,
 ) -> dict:
     """Evaluate a model.
 
@@ -104,7 +103,6 @@ def test(
         Y_te = model(X_test * mask)  # Forward pass.
         # Compute the validation loss.
         # loss = criterion(Y_te[:, :, mask], Y_test[:, :, mask])
-        # loss = criterion(Y_te, Y_test * mask)
         loss = criterion(Y_te * mask, Y_test * mask)
         # Store test and baseline loss.
         base_loss += base.detach().item()
@@ -121,15 +119,15 @@ def test(
 
 
 def split_train_test(
-        data: torch.Tensor,
-        k_splits: int = 2,
-        seq_len: int = 101,
-        batch_size: int = 32,
-        train_size: int = 1024,
-        test_size: int = 1024,
-        shuffle: bool = True,
-        reverse: bool = True,
-        tau: int = 1,  # deprecated
+    data: torch.Tensor,
+    k_splits: int = 2,
+    seq_len: int = 101,
+    batch_size: int = 32,
+    train_size: int = 1024,
+    test_size: int = 1024,
+    shuffle: bool = True,
+    reverse: bool = True,
+    tau: int = 1,  # deprecated
 ) -> tuple[
     torch.utils.data.DataLoader,
     torch.utils.data.DataLoader,
@@ -214,47 +212,36 @@ def split_train_test(
 
 
 def optimize_model(
-    data: torch.Tensor,
     model: torch.nn.Module,
-    mask: Union[torch.tensor, None] = None,
+    train_loader: torch.utils.data.DataLoader,
+    test_loader: torch.utils.data.DataLoader,
+    neurons_mask: Union[torch.tensor, None] = None,
     optimizer: Union[torch.optim.Optimizer, None] = None,
     start_epoch: int = 1,
     learn_rate: float = 0.01,
     num_epochs: int = 1,
-    **kwargs,
 ) -> tuple[torch.nn.Module, dict]:
     """
     Creates train and test data loaders from the given dataset
     and an optimizer given the model. Trains and validates the
     model for specified number of epochs. Returns the trained
     model and a dictionary with log information including losses.
-    kwargs:  {
-                k_splits: int,
-                seq_len: int,
-                batch_size: int,
-                train_size: int,
-                test_size: int,
-                shuffle: bool,
-                reverse: bool,
-            }
     """
-    # number of neurons in dataset
-    NUM_NEURONS = data.size(1)
-    # create the feature mask
-    if mask is None:
-        mask = torch.ones(NUM_NEURONS, dtype=torch.bool)
+    batch_in, _, _ = next(iter(train_loader))
+    NUM_NEURONS = batch_in.size(-1)
+    # create the neurons/feature mask
+    if neurons_mask is None:
+        neurons_mask = torch.ones(NUM_NEURONS, dtype=torch.bool)
     assert (
-            mask.size(0) == NUM_NEURONS and mask.dtype == torch.bool
-    ), "Please use a valid mask."
-    mask = mask.to(DEVICE)
-    # put model on device
+        neurons_mask.size(0) == NUM_NEURONS and neurons_mask.dtype == torch.bool
+    ), "Please use a valid boolean mask for neurons."
+    # put model and neurons mask on device
     model = model.to(DEVICE)
+    neurons_mask = neurons_mask.to(DEVICE)
     # create optimizer
     if optimizer is None:
         optimizer = torch.optim.Adam(model.parameters(), lr=learn_rate)
         # optimizer = torch.optim.SGD(model.parameters(), lr=learn_rate)
-    # create data loaders and train/test masks
-    train_loader, test_loader, train_mask, test_mask = split_train_test(data, **kwargs)
     # create log dictionary to return
     log = {
         "epochs": [],
@@ -268,14 +255,14 @@ def optimize_model(
         "centered_test_losses": [],
         "model_state_dicts": [],
         "optimizer_state_dicts": [],
-        "train_mask": train_mask,
-        "test_mask": test_mask,
     }
     # iterate over the training data multiple times
     for epoch in range(start_epoch, num_epochs + start_epoch):
         # train the model
-        train_log = train(train_loader, model, mask, optimizer, no_grad=(epoch == 0))
-        test_log = test(test_loader, model, mask)
+        train_log = train(
+            train_loader, model, neurons_mask, optimizer, no_grad=(epoch == 0)
+        )
+        test_log = test(test_loader, model, neurons_mask)
         base_train_loss, train_loss, num_train_samples = (
             train_log["base_train_loss"],
             train_log["train_loss"],
@@ -293,9 +280,8 @@ def optimize_model(
                 f"Epoch: {epoch:03d}, Train Loss: {centered_train_loss:.4f}, Val. Loss: {centered_test_loss:.4f}",
                 end="\n\n",
             )
-            # save epochs
+            # save epochs, losses and batch counts
             log["epochs"].append(epoch)
-            # save losses and batch counts
             log["base_train_losses"].append(base_train_loss)
             log["base_test_losses"].append(base_test_loss)
             log["train_losses"].append(train_loss)
@@ -309,10 +295,9 @@ def optimize_model(
 
 
 def make_predictions(
-        model: torch.nn.Module,
-        dataset: dict,
-        tau: int,
-        log_dir: str,
+    model: torch.nn.Module,
+    dataset: dict,
+    log_dir: str,
 ) -> None:
     """Make predicitons on a dataset with a trained model.
 
@@ -341,6 +326,7 @@ def make_predictions(
         columns = list(named_neuron_to_idx) + ["train_test_label"]
         # make predictions with final model
         targets, predictions = model_predict(model, calcium_data * named_neurons_mask)
+
         # save dataframes
         data = calcium_data[:, named_neurons_mask].numpy()
         data = np.hstack((data, labels))
@@ -356,11 +342,8 @@ def make_predictions(
             index=True,
             header=True,
         )
-        columns = list(named_neuron_to_idx) + ["train_test_label"] + ["tau"]
-        tau = np.full((calcium_data.shape[0], 1), tau)
-        data = predictions[:, named_neurons_mask].detach().numpy()
+        data = predictions[:, named_neurons_mask].numpy()
         data = np.hstack((data, labels))
-        data = np.hstack((data, tau))
         pd.DataFrame(data=data, columns=columns).to_csv(
             os.path.join(log_dir, worm, "predicted_ca.csv"),
             index=True,
@@ -370,8 +353,8 @@ def make_predictions(
 
 
 def model_predict(
-        model: torch.nn.Module,
-        calcium_data: torch.Tensor,
+    model: torch.nn.Module,
+    calcium_data: torch.Tensor,
 ) -> tuple[torch.Tensor, torch.Tensor]:
     """
     Makes predictions for all neurons in the
@@ -383,22 +366,21 @@ def model_predict(
     # model in/out
     calcium_data = calcium_data.squeeze(0)
     assert (
-            calcium_data.ndim == 2 and calcium_data.size(0) >= NUM_NEURONS
+        calcium_data.ndim == 2 and calcium_data.size(0) >= NUM_NEURONS
     ), "Calcium data has incorrect shape!"
     # get input and output
     input = calcium_data.to(DEVICE)
     # TODO: Why does this make such a big difference in prediction?
-    output = model(
-        input.unsqueeze(1)
-    )  # (max_time, 1, NUM_NEURONS), batch_size = max_time, seq_len = 1
-    output = output.squeeze(1)
     # output = model(
-    #     input.unsqueeze(0)
-    # )  # (1, max_time, NUM_NEURONS),  batch_size = 1, seq_len = max_time
-    # output = output.squeeze(0)
+    #     input.unsqueeze(1)
+    # )  # (max_time, 1, NUM_NEURONS), batch_size = max_time, seq_len = 1
+    # output = output.squeeze(1)
+    output = model(
+        input.unsqueeze(0)
+    )  # (1, max_time, NUM_NEURONS),  batch_size = 1, seq_len = max_time
+    output = output.squeeze(0)
     # targets/predictions
     targets = input.detach().cpu()
-    # output is the prediction of input[offset:, :]
     predictions = output.detach().cpu()
     return targets, predictions
 
@@ -413,7 +395,7 @@ def gnn_train_val_mask(graph, train_ratio=0.7, train_mask=None):
     # create the train and validation masks
     if train_mask is not None:
         assert (
-                train_mask.ndim == 1 and train_mask.size(0) == graph.num_nodes
+            train_mask.ndim == 1 and train_mask.size(0) == graph.num_nodes
         ), "Invalid train_mask provided."
     else:
         train_mask = torch.rand(graph.num_nodes) < train_ratio

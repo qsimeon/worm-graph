@@ -203,7 +203,7 @@ def plot_before_after_weights(log_dir: str) -> None:
 def plot_targets_predictions(
     log_dir: str,
     worm: Union[str, None] = "all",
-    neuron: Union[str, None] = "all"
+    neuron: Union[str, None] = "all",
 ) -> None:
     """
     Plot of the target Ca2+ residual time series overlayed
@@ -225,7 +225,6 @@ def plot_targets_predictions(
     predictions_df = pd.read_csv(
         os.path.join(log_dir, worm, "predicted_ca.csv"), index_col=0
     )
-    tau = predictions_df["tau"][0]
     # load targets dataframe
     targets_df = pd.read_csv(os.path.join(log_dir, worm, "target_ca.csv"), index_col=0)
 
@@ -247,7 +246,7 @@ def plot_targets_predictions(
         )
         sns.lineplot(
             data=predictions_df,
-            x=tau + predictions_df.index,
+            x=predictions_df.index,
             y=predictions_df[_neuron_],
             label="predicted",
             alpha=0.8,
@@ -271,21 +270,11 @@ def plot_targets_predictions(
             facecolor="magenta",
             label="test",
         )
-        plt.gca().fill_between(
-            range(predictions_df.index[-1], predictions_df.index[-1] + tau),
-            ylo,
-            yhi,
-            alpha=0.1,
-            facecolor="red",
-            label="predict",
-        )
-        plt.legend(loc="upper left")
+        plt.legend()
         plt.suptitle(plt_title)
         plt.xlabel("Time")
         plt.ylabel("$Ca^{2+}$ Residual ($\Delta F / F$)")
-        plt.savefig(
-            os.path.join(log_dir, worm, "figures", "residuals_%s.png" % _neuron_)
-        )
+        plt.savefig(os.path.join(log_dir, worm, "figures", "calcium_%s.png" % _neuron_))
         plt.close()
         return None
 

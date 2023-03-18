@@ -68,14 +68,19 @@ if __name__ == "__main__":
     # proof on data preprocessing
     print(dataset["worm0"].keys())
     print(dataset["worm0"]["named_neurons_mask"].shape)
-    print(dataset["worm0"]["calcium_data"].shape, dataset["worm0"]["residual_calcium"].shape)
+    print(
+        dataset["worm0"]["calcium_data"].shape,
+        dataset["worm0"]["residual_calcium"].shape,
+    )
     ### 'calcium_data', 'smooth_calcium_data', 'residual_calcium', 'residual_smooth_calcium',
 
     # n = dataset["worm0"]["calcium_data"].shape[0]
     # t = dataset["worm0"]["calcium_data"][1:] - dataset["worm0"]["calcium_data"][:(n-1)]
     # print("zzzz", t.shape)
-    print(dataset["worm0"]["calcium_data"][1:] - dataset["worm0"]["calcium_data"][:-1] == dataset["worm0"][
-                                                                                              "residual_calcium"][1:])
+    print(
+        dataset["worm0"]["calcium_data"][1:] - dataset["worm0"]["calcium_data"][:-1]
+        == dataset["worm0"]["residual_calcium"][1:]
+    )
 
     plt.plot(dataset["worm0"]["calcium_data"][:, 0])
     plt.plot(dataset["worm0"]["smooth_calcium_data"][:, 0])
@@ -120,7 +125,9 @@ if __name__ == "__main__":
     filtered_data_torch = torch.zeros_like(data_torch)
     max_time, num_neurons = data_torch.shape
     frequencies = torch.fft.rfftfreq(max_time, d=1.0)
-    threshold = torch.abs(frequencies)[30]  # picks first 30 frequencies (can use value > 30 to smooth less)
+    threshold = torch.abs(frequencies)[
+        30
+    ]  # picks first 30 frequencies (can use value > 30 to smooth less)
     oneD_kernel = torch.abs(frequencies) < threshold
     fft_input = torch.fft.rfftn(data_torch, dim=0)
     print(fft_input.shape, oneD_kernel.shape)

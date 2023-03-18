@@ -1,12 +1,12 @@
 #!/usr/bin/env python
 # encoding: utf-8
-'''
+"""
 @author: ivy
 @contact: ivyivyzhao77@gmail.com
 @software: PyCharm 2022.3
-@file: script_sum_sines_noise_qM_iDL_qT.py
+@file: script_sine_qM_iDL_qT.py
 @time: 2023/3/14 11:21
-'''
+"""
 
 from train._utils import *
 
@@ -14,7 +14,7 @@ time_step = 10
 BATCH_SIZE = 128
 LR = 0.1
 EPOCH = 100
-num_worms_train = 6
+num_worms_train = 1
 
 model = get_model(OmegaConf.load("conf/model.yaml"))
 optimizer = torch.optim.SGD(model.parameters(), lr=LR)
@@ -43,8 +43,8 @@ for k in range(num_worms_train):
     train_loop_cal = []
     train_loop_res = []
     for i in range(0, train_ca.shape[0] - time_step):
-        train_loop_res.append(np.array(train_res[i:i + time_step, :]))
-        train_loop_cal.append(np.array(train_ca[i:i + time_step, :]))
+        train_loop_res.append(np.array(train_res[i : i + time_step, :]))
+        train_loop_cal.append(np.array(train_ca[i : i + time_step, :]))
 
     train_loop_cal = torch.tensor(np.array(train_loop_cal))
     train_loop_res = torch.tensor(np.array(train_loop_res))
@@ -54,14 +54,21 @@ for k in range(num_worms_train):
     test_loop_cal = []
     test_loop_res = []
     for i in range(0, test_ca.shape[0] - time_step):
-        test_loop_res.append(np.array(test_res[i:i + time_step, :]))
-        test_loop_cal.append(np.array(test_ca[i:i + time_step, :]))
+        test_loop_res.append(np.array(test_res[i : i + time_step, :]))
+        test_loop_cal.append(np.array(test_ca[i : i + time_step, :]))
 
     test_loop_cal = torch.tensor(np.array(test_loop_cal))
     test_loop_res = torch.tensor(np.array(test_loop_res))
+    train_loop_cal_target = torch.zeros_like(train_loop_cal)
+    train_loop_cal_target[:-1] = train_loop_cal[1:]
 
-    train_dataset = torch.utils.data.TensorDataset(train_loop_cal, train_loop_res)
-    test_dataset = torch.utils.data.TensorDataset(test_loop_cal, test_loop_res)
+    test_loop_cal_target = torch.zeros_like(test_loop_cal)
+    test_loop_cal_target[:-1] = test_loop_cal[1:]
+
+    train_dataset = torch.utils.data.TensorDataset(
+        train_loop_cal, train_loop_cal_target
+    )
+    test_dataset = torch.utils.data.TensorDataset(test_loop_cal, test_loop_cal_target)
 
     train_loader = torch.utils.data.DataLoader(
         dataset=train_dataset,
@@ -90,7 +97,9 @@ for k in range(num_worms_train):
         count = 0
         for X_train, Y_train in train_loader:
             mask_train = dataset[worm]["named_neurons_mask"]
-            X_train, Y_train = torch.tensor(X_train, requires_grad=True), torch.tensor(Y_train, requires_grad=True)
+            X_train, Y_train = torch.tensor(X_train, requires_grad=True), torch.tensor(
+                Y_train, requires_grad=True
+            )
             optimizer.zero_grad()
             # Baseline: loss if the model predicted the residual to be 0
             # print(Y_train.shape, mask.shape)
@@ -98,7 +107,7 @@ for k in range(num_worms_train):
             mask_train = mask_train.unsqueeze(0)
             mask_train = mask_train.repeat(Y_train.shape[0], 1, 1)
             # print(Y_train.shape, mask.shape)
-            base = criterion(torch.zeros_like(Y_train * mask_train), Y_train * mask_train)
+            base = criterion(X_train * mask_train, Y_train * mask_train)
             # print(Y_train*mask, (Y_train*mask).shape)
             # print(X_train.shape)
             Y_tr = model(X_train)  # .transpose(1, 2))  # Forward pass.
@@ -114,13 +123,15 @@ for k in range(num_worms_train):
         count = 0
         for X_test, Y_test in test_loader:
             mask_test = dataset[worm]["named_neurons_mask"]
-            X_test, Y_test = torch.tensor(X_test, requires_grad=True), torch.tensor(Y_test, requires_grad=True)
+            X_test, Y_test = torch.tensor(X_test, requires_grad=True), torch.tensor(
+                Y_test, requires_grad=True
+            )
             optimizer.zero_grad()  # Clear gradients.
             mask_test = mask_test.repeat(Y_test.shape[1], 1)
             mask_test = mask_test.unsqueeze(0)
             mask_test = mask_test.repeat(Y_test.shape[0], 1, 1)
             # Baseline: loss if the model predicted the residual to be 0
-            base = criterion(torch.zeros_like(Y_test * mask_test), Y_test * mask_test)
+            base = criterion(X_test * mask_test, Y_test * mask_test)
             # X_test = X_test.reshape((1, X_test.shape[0], X_test.shape[1])).transpose(1, 2)
             Y_pred = model(X_test)  # .transpose(1, 2))  # Forward pass.
             Y_pred = Y_pred  # .transpose(1, 2)
@@ -131,14 +142,22 @@ for k in range(num_worms_train):
         test_base_loss_history.append(test_base_loss / count)
         test_pred_loss_history.append(test_pred_loss / count)
 
-        print("epoch = {}, train_loss = {:.4f}, test_loss = {:.4f}".format(e, train_pred_loss_history[-1] -
-                                                                           train_base_loss_history[-1],
-                                                                           test_pred_loss_history[-1] -
-                                                                           test_base_loss_history[-1]))
+        print(
+            "epoch = {}, train_loss = {:.4f}, test_loss = {:.4f}".format(
+                e,
+                train_pred_loss_history[-1] - train_base_loss_history[-1],
+                test_pred_loss_history[-1] - test_base_loss_history[-1],
+            )
+        )
 
-    delta_train = [train_pred_loss_history[i] - train_base_loss_history[i] for i in
-                   range(len(train_base_loss_history))]
-    delta_test = [test_pred_loss_history[i] - test_base_loss_history[i] for i in range(len(test_base_loss_history))]
+    delta_train = [
+        train_pred_loss_history[i] - train_base_loss_history[i]
+        for i in range(len(train_base_loss_history))
+    ]
+    delta_test = [
+        test_pred_loss_history[i] - test_base_loss_history[i]
+        for i in range(len(test_base_loss_history))
+    ]
     plt.plot(delta_train)
     plt.plot(delta_test)
     plt.legend(["train", "test"])
@@ -154,9 +173,11 @@ X_test = []
 Y_test = []
 
 num_neurons = 302
-
 for i in range(time_step, calcium_data.shape[0] - 1):
-    X, Y = calcium_data[i - time_step:i, :num_neurons], residual_calcium[i - time_step:i, :num_neurons]
+    X, Y = (
+        calcium_data[i - time_step : i, :num_neurons],
+        calcium_data[i - time_step + 1 : i + 1, :num_neurons],
+    )
     X_test.append(np.array(X))
     Y_test.append(np.array(Y))
 
@@ -164,7 +185,7 @@ X_test = torch.tensor(np.array(X_test))
 Y_test = torch.tensor(np.array(Y_test))
 print(X_test.shape)
 optimizer.zero_grad()  # Clear gradients.
-mask_test = dataset["worm0"]["named_neurons_mask"]
+mask_test = dataset[worm]["named_neurons_mask"]
 mask_test = mask_test.repeat(Y_test.shape[1], 1)
 mask_test = mask_test.unsqueeze(0)
 mask_test = mask_test.repeat(Y_test.shape[0], 1, 1)
@@ -181,6 +202,7 @@ def draw_pic(Y_pred, Y_test, num, time):
     plt.legend(["target", "pred"], loc="upper right")
     plt.title("Plot for Neuron " + str(num) + " from time 0 to " + str(time))
     plt.show()
+
 
 draw_pic(Y_pred, Y_test, 0, dataset["worm0"]["max_time"])
 
