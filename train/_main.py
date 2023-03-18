@@ -108,7 +108,7 @@ def train_model(
         header=True,
     )
     # make predictions with last saved model
-    make_predictions(model, dataset, log_dir)
+    make_predictions(model, dataset, config.train.tau, log_dir)
     # returned trained model and a path to log directory
     return model, log_dir
 

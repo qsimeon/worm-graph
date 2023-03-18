@@ -203,8 +203,7 @@ def plot_before_after_weights(log_dir: str) -> None:
 def plot_targets_predictions(
     log_dir: str,
     worm: Union[str, None] = "all",
-    neuron: Union[str, None] = "all",
-    tau: int = 1, ## offset of target
+    neuron: Union[str, None] = "all"
 ) -> None:
     """
     Plot of the target Ca2+ residual time series overlayed
@@ -226,6 +225,7 @@ def plot_targets_predictions(
     predictions_df = pd.read_csv(
         os.path.join(log_dir, worm, "predicted_ca.csv"), index_col=0
     )
+    tau = predictions_df["tau"][0]
     # load targets dataframe
     targets_df = pd.read_csv(os.path.join(log_dir, worm, "target_ca.csv"), index_col=0)
 
