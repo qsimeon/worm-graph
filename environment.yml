@@ -9,28 +9,28 @@ dependencies:
   - python=3.9
   - pytorch=1.13
   - scikit-learn-intelex
-  - scikit-learn
-  - ipywidgets
-  - jupyterlab
-  - matplotlib
-  - pynamical
-  - notebook
-  - freetype
-  - networkx
-  - seaborn
-  - pandas
-  - numpy
+  - scikit-learn=1.2.1
+  - ipywidgets=7.6.5
+  - jupyterlab=3.5.3
+  - matplotlib=3.6.2
+  - pynamical=0.3.2
+  - notebook=6.5.2
+  - freetype=2.12.1
+  - networkx=2.8.4
+  - seaborn=0.12.2
+  - pandas=1.5.2
+  - numpy=1.23.5
   - nomkl
-  - scipy
-  - mat73
-  - h5py
-  - tqdm
+  - scipy=1.10.0
+  - mat73=0.60
+  - h5py=3.7.0
+  - tqdm=4.64.1
   - pyg
-  - pip
+  - pip=23.0.1
   - pip:
       - black[jupyter]
-      - hydra-core
-      - omegaconf
-      - pyEDM
-      - wget
-      - ncps
+      - hydra-core=1.3.2
+      - omegaconf=2.3.0
+      - pyEDM=1.13.1.0
+      - wget=3.2
+      - ncps=0.0.7

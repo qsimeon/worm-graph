@@ -3,11 +3,11 @@ from govfunc._utils import *
 
 
 def train(
-    loader: torch.utils.data.DataLoader,
-    model: torch.nn.Module,
-    mask: torch.Tensor,
-    optimizer: torch.optim.Optimizer,
-    no_grad: bool = False,
+        loader: torch.utils.data.DataLoader,
+        model: torch.nn.Module,
+        mask: torch.Tensor,
+        optimizer: torch.optim.Optimizer,
+        no_grad: bool = False,
 ) -> dict:
     """Train a model.
 
@@ -69,9 +69,9 @@ def train(
 
 @torch.no_grad()
 def test(
-    loader: torch.utils.data.DataLoader,
-    model: torch.nn.Module,
-    mask: torch.Tensor,
+        loader: torch.utils.data.DataLoader,
+        model: torch.nn.Module,
+        mask: torch.Tensor,
 ) -> dict:
     """Evaluate a model.
 
@@ -302,9 +302,10 @@ def optimize_model(
 
 
 def make_predictions(
-    model: torch.nn.Module,
-    dataset: dict,
-    log_dir: str,
+        model: torch.nn.Module,
+        dataset: dict,
+        tau: int,
+        log_dir: str,
 ) -> None:
     """Make predicitons on a dataset with a trained model.
 
@@ -333,7 +334,6 @@ def make_predictions(
         columns = list(named_neuron_to_idx) + ["train_test_label"]
         # make predictions with final model
         targets, predictions = model_predict(model, calcium_data * named_neurons_mask)
-
         # save dataframes
         data = calcium_data[:, named_neurons_mask].numpy()
         data = np.hstack((data, labels))
@@ -349,8 +349,11 @@ def make_predictions(
             index=True,
             header=True,
         )
-        data = predictions[:, named_neurons_mask].numpy()
+        columns = list(named_neuron_to_idx) + ["train_test_label"] + ["tau"]
+        tau_expand = np.full((calcium_data.shape[0], 1), tau)
+        data = predictions[:, named_neurons_mask].detach().numpy()
         data = np.hstack((data, labels))
+        data = np.hstack((data, tau_expand))
         pd.DataFrame(data=data, columns=columns).to_csv(
             os.path.join(log_dir, worm, "predicted_ca.csv"),
             index=True,
@@ -360,8 +363,8 @@ def make_predictions(
 
 
 def model_predict(
-    model: torch.nn.Module,
-    calcium_data: torch.Tensor,
+        model: torch.nn.Module,
+        calcium_data: torch.Tensor,
 ) -> tuple[torch.Tensor, torch.Tensor]:
     """
     Makes predictions for all neurons in the
@@ -373,7 +376,7 @@ def model_predict(
     # model in/out
     calcium_data = calcium_data.squeeze(0)
     assert (
-        calcium_data.ndim == 2 and calcium_data.size(0) >= NUM_NEURONS
+            calcium_data.ndim == 2 and calcium_data.size(0) >= NUM_NEURONS
     ), "Calcium data has incorrect shape!"
     # get input and output
     input = calcium_data.to(DEVICE)
@@ -388,6 +391,7 @@ def model_predict(
     output = output.squeeze(0)
     # targets/predictions
     targets = input.detach().cpu()
+    # output is the prediction of input[offset:, :]
     predictions = output.detach().cpu()
     return targets, predictions
 
@@ -402,7 +406,7 @@ def gnn_train_val_mask(graph, train_ratio=0.7, train_mask=None):
     # create the train and validation masks
     if train_mask is not None:
         assert (
-            train_mask.ndim == 1 and train_mask.size(0) == graph.num_nodes
+                train_mask.ndim == 1 and train_mask.size(0) == graph.num_nodes
         ), "Invalid train_mask provided."
     else:
         train_mask = torch.rand(graph.num_nodes) < train_ratio

@@ -22,18 +22,11 @@ def train_model(
     )
     os.makedirs(log_dir, exist_ok=True)
     os.makedirs(os.path.join(log_dir, "checkpoints"), exist_ok=True)
-    # sample worms with replacement until desired number epochs (i.e. worms) obtained
-    dataset_items = [
-        (k, dataset[k])
-        for k in np.random.choice(
-            list(dataset.keys()), size=config.train.epochs, replace=True
-        )
-    ]
+    # create cycles of the dataset
+    dataset_items = list(dataset.items()) * config.train.cycles
     # shuffle the dataset (without replacement)
     if shuffle == True:
         dataset_items = random.sample(dataset_items, k=len(dataset_items))
-    # remake dataset with only selected worms
-    dataset = dict(dataset_items)
     # instantiate the optimizer
     learn_rate = config.train.learn_rate
     if optimizer is not None:
@@ -54,15 +47,17 @@ def train_model(
         "centered_test_losses": [],
     }
     # train the model for multiple cyles
+
     kwargs = dict(  # args to `split_train_test`
         k_splits=config.train.k_splits,
         seq_len=config.train.seq_len,
+        # hold the per worm train and test sizes constant
         batch_size=config.train.batch_size,
-        train_size=config.train.train_size,
-        test_size=config.train.test_size,
+        train_size=config.train.train_size // len(dataset_items),
+        test_size=config.train.test_size // len(dataset_items),
         shuffle=config.train.shuffle,
         reverse=False,
-        tau=1,  # unused currently
+        tau=config.train.tau,
     )
     # choose whether to use original or smoothed calcium data
     if config.train.smooth_data:
@@ -116,7 +111,8 @@ def train_model(
         [data[key].extend(log[key]) for key in data]  # Python list comprehension
         # set to next epoch
         reset_epoch = log["epochs"][-1] + 1
-        if (i % config.train.save_freq == 0) or (i + 1 == config.train.epochs):
+        # outputs
+        if (i % config.train.cycles) == 0:
             # display progress
             print("num. worms trained on:", i + 1, "\nprevious worm:", worm, end="\n\n")
             # save model checkpoints
@@ -140,7 +136,7 @@ def train_model(
         header=True,
     )
     # make predictions with last saved model
-    make_predictions(model, dataset, log_dir)
+    make_predictions(model, dataset, config.train.tau, log_dir)
     # returned trained model and a path to log directory
     return model, log_dir
 
