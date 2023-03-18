@@ -119,15 +119,16 @@ def test(
 
 
 def split_train_test(
-        data: torch.Tensor,
-        k_splits: int = 2,
-        seq_len: int = 101,
-        batch_size: int = 32,
-        train_size: int = 1024,
-        test_size: int = 1024,
-        shuffle: bool = True,
-        reverse: bool = True,
-        tau: int = 1,  # deprecated
+    data: torch.Tensor,
+    k_splits: int = 2,
+    seq_len: int = 101,
+    batch_size: int = 32,
+    train_size: int = 1024,
+    test_size: int = 1024,
+    time_vec: Union[torch.Tensor, None] = None,
+    shuffle: bool = True,
+    reverse: bool = True,
+    tau: int = 1,  # deprecated
 ) -> tuple[
     torch.utils.data.DataLoader,
     torch.utils.data.DataLoader,
@@ -143,8 +144,14 @@ def split_train_test(
     assert isinstance(seq_len, int) and seq_len < len(
         data
     ), "Invalid `seq_len` entered."
+    # make time vector
+    if time_vec is None:
+        time_vec = torch.arange(len(data))
+    assert torch.is_tensor(time_vec) and len(time_vec) == len(
+        data
+    ), "Enter a time vector with same length as data."
     # split dataset into train and test sections
-    time_vec = torch.arange(len(data))
+
     chunk_size = len(data) // k_splits
     split_datasets = torch.split(data, chunk_size, dim=0)  # length k_splits tuple
     split_times = torch.split(time_vec, chunk_size, dim=0)
@@ -215,7 +222,7 @@ def optimize_model(
     model: torch.nn.Module,
     train_loader: torch.utils.data.DataLoader,
     test_loader: torch.utils.data.DataLoader,
-    neurons_mask: Union[torch.tensor, None] = None,
+    neurons_mask: Union[torch.Tensor, None] = None,
     optimizer: Union[torch.optim.Optimizer, None] = None,
     start_epoch: int = 1,
     learn_rate: float = 0.01,

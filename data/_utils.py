@@ -37,7 +37,7 @@ class NeuralActivityDataset(torch.utils.data.Dataset):
           tau: int, 0 < tau < max_time//2. The number of timesteps to the right by which the
                 target sequence is offset from input sequence. Deprecated (unused) argument.
         Returns:
-          (X, Y, metadata): tuple. Batch of data samples.
+            (X, Y, metadata): tuple. Batch of data samples.
             X: torch.tensor. Input tensor w/ shape (batch_size, seq_len,
                                                   num_neurons)
             Y: torch.tensor. Target tensor w/ same shape as X
