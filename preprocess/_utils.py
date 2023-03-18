@@ -713,7 +713,6 @@ class create_four_sine_datasets():
         raw_data = []
         raw_der = []
         for j in range(self.num_worms):
-<<<<<<< HEAD
             x, dx = self.create_synthetic_data(self.seq_len, self.num_signal, False, 0, True)
             x_torch = Variable(torch.from_numpy(x), requires_grad=False)
             raw_data.append(x_torch)
@@ -743,11 +742,6 @@ class create_four_sine_datasets():
         raw_der = []
         for j in range(self.num_worms):
             x, dx = self.create_synthetic_data(self.seq_len, self.num_signal, self.if_noise, 0, False)
-=======
-            x, dx = self.create_synthetic_data(
-                self.seq_len, self.num_signal, self.if_noise, 0
-            )
->>>>>>> main
             x_torch = Variable(torch.from_numpy(x), requires_grad=False)
             raw_data.append(x_torch)
             raw_der.append(dx)
@@ -761,13 +755,7 @@ class create_four_sine_datasets():
         raw_data = []
         raw_der = []
         for j in range(self.num_worms):
-<<<<<<< HEAD
             x, dx = self.create_synthetic_data(self.seq_len, self.num_signal, False, self.sum, False)
-=======
-            x, dx = self.create_synthetic_data(
-                self.seq_len, self.num_signal, False, self.sum
-            )
->>>>>>> main
             x_torch = Variable(torch.from_numpy(x), requires_grad=False)
             raw_data.append(x_torch)
             raw_der.append(dx)
@@ -781,13 +769,7 @@ class create_four_sine_datasets():
         raw_data = []
         raw_der = []
         for j in range(self.num_worms):
-<<<<<<< HEAD
             x, dx = self.create_synthetic_data(self.seq_len, self.num_signal, self.if_noise, self.sum, False)
-=======
-            x, dx = self.create_synthetic_data(
-                self.seq_len, self.num_signal, self.if_noise, self.sum
-            )
->>>>>>> main
             x_torch = Variable(torch.from_numpy(x), requires_grad=False)
             raw_data.append(x_torch)
             raw_der.append(dx)
@@ -796,11 +778,7 @@ class create_four_sine_datasets():
         file = open("./data/processed/neural/sum_sine_noise.pickle", "wb")
         pickle.dump(dataset, file)
         file.close()
-<<<<<<< HEAD
         return
-=======
-        return None
->>>>>>> main
 
 
 def pickle_neural_data(
