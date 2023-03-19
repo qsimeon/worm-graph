@@ -2059,7 +2059,7 @@ def pickle_Flavell2023(transform, smooth_method="fft"):
         h5 = h5py.File(h5_file, "r")
         time_in_seconds = torch.tensor(h5["timestamp_confocal"])
         time_in_seconds = time_in_seconds - time_in_seconds[0]  # start at 0
-        time_in_seconds = torch.tensor(time_in_seconds).reshape((-1, 1))
+        time_in_seconds = time_in_seconds.reshape((-1, 1))
         dt = torch.zeros_like(time_in_seconds)
         dt[1:] = time_in_seconds[1:] - time_in_seconds[:-1]
         if i == 0:
