@@ -24,7 +24,7 @@ if __name__ == "__main__":
     # keyword args to `split_train_test`
     kwargs = dict(
         k_splits=2,
-        seq_len=100,
+        seq_len=10,
         batch_size=128,
         train_size=1654,
         test_size=1654,
