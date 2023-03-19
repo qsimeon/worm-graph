@@ -3,11 +3,11 @@ from govfunc._utils import *
 
 
 def train(
-        loader: torch.utils.data.DataLoader,
-        model: torch.nn.Module,
-        mask: torch.Tensor,
-        optimizer: torch.optim.Optimizer,
-        no_grad: bool = False,
+    loader: torch.utils.data.DataLoader,
+    model: torch.nn.Module,
+    mask: torch.Tensor,
+    optimizer: torch.optim.Optimizer,
+    no_grad: bool = False,
 ) -> dict:
     """Train a model.
 
@@ -36,16 +36,16 @@ def train(
         # Clear optimizer gradients.
         optimizer.zero_grad()
         # Baseline: loss if the model predicted the residual to be 0.
-        # base = criterion(X_train[:, :, mask], Y_train[:, :, mask])
-        base = criterion(X_train * mask, Y_train * mask)
+        base = criterion(X_train[:, :, mask], Y_train[:, :, mask])
+        # base = criterion(X_train * mask, Y_train * mask)
         # Train
         Y_tr = model(X_train * mask)  # Forward pass.
         # Register hook.
         Y_tr.retain_grad()
         Y_tr.register_hook(lambda grad: grad * mask)
         # Compute training loss.
-        # loss = criterion(Y_tr[:, :, mask], Y_train[:, :, mask])
-        loss = criterion(Y_tr * mask, Y_train * mask)
+        loss = criterion(Y_tr[:, :, mask], Y_train[:, :, mask])
+        # loss = criterion(Y_tr * mask, Y_train * mask)
         loss.backward(retain_graph=True)  # Derive gradients.
         # # Prevent update of weights connected to inactive neurons.
         # model.linear.weight.grad *= mask.unsqueeze(-1)
@@ -69,9 +69,9 @@ def train(
 
 @torch.no_grad()
 def test(
-        loader: torch.utils.data.DataLoader,
-        model: torch.nn.Module,
-        mask: torch.Tensor,
+    loader: torch.utils.data.DataLoader,
+    model: torch.nn.Module,
+    mask: torch.Tensor,
 ) -> dict:
     """Evaluate a model.
 
@@ -97,13 +97,13 @@ def test(
         X_test, Y_test, metadata = data  # X, Y: (batch_size, seq_len, num_neurons)
         X_test, Y_test = X_test.to(DEVICE), Y_test.to(DEVICE)
         # Baseline: loss if the model predicted the residual to be 0.
-        # base = criterion(X_test[:, :, mask], Y_test[:, :, mask])
-        base = criterion(X_test * mask, Y_test * mask)
+        base = criterion(X_test[:, :, mask], Y_test[:, :, mask])
+        # base = criterion(X_test * mask, Y_test * mask)
         # Test
         Y_te = model(X_test * mask)  # Forward pass.
         # Compute the validation loss.
-        # loss = criterion(Y_te[:, :, mask], Y_test[:, :, mask])
-        loss = criterion(Y_te * mask, Y_test * mask)
+        loss = criterion(Y_te[:, :, mask], Y_test[:, :, mask])
+        # loss = criterion(Y_te * mask, Y_test * mask)
         # Store test and baseline loss.
         base_loss += base.detach().item()
         test_loss += loss.detach().item()
@@ -151,7 +151,6 @@ def split_train_test(
         data
     ), "Enter a time vector with same length as data."
     # split dataset into train and test sections
-
     chunk_size = len(data) // k_splits
     split_datasets = torch.split(data, chunk_size, dim=0)  # length k_splits tuple
     split_times = torch.split(time_vec, chunk_size, dim=0)
@@ -302,10 +301,10 @@ def optimize_model(
 
 
 def make_predictions(
-        model: torch.nn.Module,
-        dataset: dict,
-        tau: int,
-        log_dir: str,
+    model: torch.nn.Module,
+    dataset: dict,
+    tau: int,
+    log_dir: str,
 ) -> None:
     """Make predicitons on a dataset with a trained model.
 
@@ -363,8 +362,8 @@ def make_predictions(
 
 
 def model_predict(
-        model: torch.nn.Module,
-        calcium_data: torch.Tensor,
+    model: torch.nn.Module,
+    calcium_data: torch.Tensor,
 ) -> tuple[torch.Tensor, torch.Tensor]:
     """
     Makes predictions for all neurons in the
@@ -376,7 +375,7 @@ def model_predict(
     # model in/out
     calcium_data = calcium_data.squeeze(0)
     assert (
-            calcium_data.ndim == 2 and calcium_data.size(0) >= NUM_NEURONS
+        calcium_data.ndim == 2 and calcium_data.size(0) >= NUM_NEURONS
     ), "Calcium data has incorrect shape!"
     # get input and output
     input = calcium_data.to(DEVICE)
@@ -406,7 +405,7 @@ def gnn_train_val_mask(graph, train_ratio=0.7, train_mask=None):
     # create the train and validation masks
     if train_mask is not None:
         assert (
-                train_mask.ndim == 1 and train_mask.size(0) == graph.num_nodes
+            train_mask.ndim == 1 and train_mask.size(0) == graph.num_nodes
         ), "Invalid train_mask provided."
     else:
         train_mask = torch.rand(graph.num_nodes) < train_ratio

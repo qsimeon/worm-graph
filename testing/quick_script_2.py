@@ -10,7 +10,7 @@ from train._utils import split_train_test, optimize_model, model_predict
 
 if __name__ == "__main__":
     # pick indices of neurons we want
-    neuron_inds = range(0, 4)
+    neuron_inds = range(4, 10)
     num_neurons = len(neuron_inds)
     # load a dataset (multiple worms)
     dataset = load_sine_seq_noise()
@@ -24,7 +24,7 @@ if __name__ == "__main__":
     # keyword args to `split_train_test`
     kwargs = dict(
         k_splits=2,
-        seq_len=10,
+        seq_len=100,
         batch_size=128,
         train_size=1654,
         test_size=1654,
@@ -45,7 +45,7 @@ if __name__ == "__main__":
         train_loader,
         test_loader,
         neurons_mask=named_neurons_mask,
-        num_epochs=500,
+        num_epochs=100,
         learn_rate=0.1,
     )
     # make predictions with trained model
