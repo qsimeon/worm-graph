@@ -2,25 +2,24 @@
 Tests the model optimization function `optimize_model`.
 """
 import matplotlib.pyplot as plt
-from omegaconf import OmegaConf
 from models._utils import NetworkLSTM
-from data._utils import load_sine_seq_noise
+from data._utils import load_sine_seq
 from train._utils import split_train_test, optimize_model, model_predict
 
 
 if __name__ == "__main__":
     # pick indices of neurons we want
-    neuron_inds = range(4, 10)
+    neuron_inds = range(0, 10)
     num_neurons = len(neuron_inds)
     # load a dataset (multiple worms)
-    dataset = load_sine_seq_noise()
+    dataset = load_sine_seq()
     # get calcium data for one worm
     single_worm_dataset = dataset["worm0"]
     calcium_data = single_worm_dataset["calcium_data"][:, neuron_inds]
     named_neurons_mask = single_worm_dataset["named_neurons_mask"][neuron_inds]
     time_vec = single_worm_dataset.get("time_in_seconds", None)
     # create a model
-    model = NetworkLSTM(num_neurons, 64).double()
+    model = NetworkLSTM(num_neurons, 32, 3).double()
     # keyword args to `split_train_test`
     kwargs = dict(
         k_splits=2,
@@ -45,7 +44,7 @@ if __name__ == "__main__":
         train_loader,
         test_loader,
         neurons_mask=named_neurons_mask,
-        num_epochs=100,
+        num_epochs=1000,
         learn_rate=0.1,
     )
     # make predictions with trained model

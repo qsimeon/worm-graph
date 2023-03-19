@@ -53,6 +53,8 @@ def train_model(
         "centered_train_losses": [],
         "centered_test_losses": [],
     }
+    # time vector
+
     # train the model for multiple cyles
     kwargs = dict(  # args to `split_train_test`
         k_splits=config.train.k_splits,
@@ -84,6 +86,7 @@ def train_model(
             # create data loaders and train/test masks only once per worm
             train_loader, test_loader, train_mask, test_mask = split_train_test(
                 data=single_worm_dataset[key_data],
+                time_vec=single_worm_dataset.get("time_in_seconds", None),
                 **kwargs,
             )
             # add to memo
