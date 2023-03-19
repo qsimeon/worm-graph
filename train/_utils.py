@@ -246,8 +246,8 @@ def optimize_model(
     neurons_mask = neurons_mask.to(DEVICE)
     # create optimizer
     if optimizer is None:
-        optimizer = torch.optim.Adam(model.parameters(), lr=learn_rate)
-        # optimizer = torch.optim.SGD(model.parameters(), lr=learn_rate)
+        # optimizer = torch.optim.Adam(model.parameters(), lr=learn_rate)
+        optimizer = torch.optim.SGD(model.parameters(), lr=learn_rate)
     # create log dictionary to return
     log = {
         "epochs": [],
@@ -303,8 +303,8 @@ def optimize_model(
 def make_predictions(
     model: torch.nn.Module,
     dataset: dict,
-    tau: int,
     log_dir: str,
+    tau: int = 1,
 ) -> None:
     """Make predicitons on a dataset with a trained model.
 
@@ -332,7 +332,11 @@ def make_predictions(
         labels = np.expand_dims(np.where(train_mask, "train", "test"), axis=-1)
         columns = list(named_neuron_to_idx) + ["train_test_label"]
         # make predictions with final model
-        targets, predictions = model_predict(model, calcium_data * named_neurons_mask)
+        targets, predictions = model_predict(
+            model,
+            calcium_data * named_neurons_mask,
+            tau=tau,
+        )
         # save dataframes
         data = calcium_data[:, named_neurons_mask].numpy()
         data = np.hstack((data, labels))
@@ -364,6 +368,7 @@ def make_predictions(
 def model_predict(
     model: torch.nn.Module,
     calcium_data: torch.Tensor,
+    tau: int = 1,
 ) -> tuple[torch.Tensor, torch.Tensor]:
     """
     Makes predictions for all neurons in the
@@ -381,11 +386,12 @@ def model_predict(
     input = calcium_data.to(DEVICE)
     # TODO: Why does this make such a big difference in prediction?
     # output = model(
-    #     input.unsqueeze(1)
+    #     input.unsqueeze(1), tau,
     # )  # (max_time, 1, NUM_NEURONS), batch_size = max_time, seq_len = 1
     # output = output.squeeze(1)
     output = model(
-        input.unsqueeze(0)
+        input.unsqueeze(0),
+        tau=tau,
     )  # (1, max_time, NUM_NEURONS),  batch_size = 1, seq_len = max_time
     output = output.squeeze(0)
     # targets/predictions
