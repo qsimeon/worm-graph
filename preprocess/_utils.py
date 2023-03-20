@@ -435,7 +435,7 @@ def reshape_calcium_data(single_worm_dataset):
     origin_calcium_data = single_worm_dataset["calcium_data"]
     smooth_calcium_data = single_worm_dataset["smooth_calcium_data"]
     residual_calcium = single_worm_dataset["residual_calcium"]
-    residual_smooth_calcium = single_worm_dataset["residual_smooth_calcium"]
+    smooth_residual_calcium = single_worm_dataset["smooth_residual_calcium"]
     # get the number of unidentified tracked neurons
     num_unknown_neurons = single_worm_dataset["num_unknown_neurons"]
     # get the neuron to idx map
@@ -463,7 +463,7 @@ def reshape_calcium_data(single_worm_dataset):
         max_time, 302, dtype=smooth_calcium_data.dtype
     )
     standard_residual_smooth_calcium = torch.zeros(
-        max_time, 302, dtype=residual_smooth_calcium.dtype
+        max_time, 302, dtype=smooth_residual_calcium.dtype
     )
     # fill the new calcium data structure with data from named neurons
     slot_to_named_neuron = dict((k, v) for k, v in enumerate(neurons_302))
@@ -474,7 +474,7 @@ def reshape_calcium_data(single_worm_dataset):
             standard_calcium_data[:, slot] = origin_calcium_data[:, idx]
             standard_residual_calcium[:, slot] = residual_calcium[:, idx]
             standard_smooth_calcium_data[:, slot] = smooth_calcium_data[:, idx]
-            standard_residual_smooth_calcium[:, slot] = residual_smooth_calcium[:, idx]
+            standard_residual_smooth_calcium[:, slot] = smooth_residual_calcium[:, idx]
             named_neurons_mask[slot] = True
     # randomly distribute the remaining data from unknown neurons
     for neuron in set(neuron_to_idx) - set(named_neuron_to_idx):
@@ -491,7 +491,7 @@ def reshape_calcium_data(single_worm_dataset):
         standard_calcium_data[:, slot] = origin_calcium_data[:, idx]
         standard_residual_calcium[:, slot] = residual_calcium[:, idx]
         standard_smooth_calcium_data[:, slot] = smooth_calcium_data[:, idx]
-        standard_residual_smooth_calcium[:, slot] = residual_smooth_calcium[:, idx]
+        standard_residual_smooth_calcium[:, slot] = smooth_residual_calcium[:, idx]
         unknown_neurons_mask[slot] = True
     # combined slot to neuron mapping
     slot_to_neuron = dict()
@@ -503,7 +503,7 @@ def reshape_calcium_data(single_worm_dataset):
             "calcium_data": standard_calcium_data,
             "smooth_calcium_data": standard_smooth_calcium_data,
             "residual_calcium": standard_residual_calcium,
-            "residual_smooth_calcium": standard_residual_smooth_calcium,
+            "smooth_residual_calcium": standard_residual_smooth_calcium,
             "named_neurons_mask": named_neurons_mask,
             "unknown_neurons_mask": unknown_neurons_mask,
             "neurons_mask": named_neurons_mask | unknown_neurons_mask,
@@ -648,8 +648,8 @@ class create_four_sine_datasets:
 
             smooth_real_data = self.smooth_data(real_data, "fft")
 
-            residual_smooth_calcium = torch.zeros_like(smooth_real_data)
-            residual_smooth_calcium[1:, :] = (
+            smooth_residual_calcium = torch.zeros_like(smooth_real_data)
+            smooth_residual_calcium[1:, :] = (
                 smooth_real_data[1:, :] - smooth_real_data[:-1, :]
             )
 
@@ -678,7 +678,7 @@ class create_four_sine_datasets:
                         "calcium_data": real_data,
                         "smooth_calcium_data": smooth_real_data,
                         "residual_calcium": residual,
-                        "residual_smooth_calcium": residual_smooth_calcium,
+                        "smooth_residual_calcium": smooth_residual_calcium,
                         "neuron_to_idx": range(0, num_neurons),
                         "idx_to_neuron": range(num_neurons - 1, -1, -1),
                         "max_time": int(max_time),
@@ -926,7 +926,7 @@ def pickle_Kato2015(transform, smooth_method="fft"):
                     "calcium_data": real_data,
                     "smooth_calcium_data": smooth_real_data,
                     "residual_calcium": residual,
-                    "residual_smooth_calcium": smooth_residual,
+                    "smooth_residual_calcium": smooth_residual,
                     "neuron_to_idx": neuron_to_idx,
                     "idx_to_neuron": dict((v, k) for k, v in neuron_to_idx.items()),
                     "max_time": int(max_time),
@@ -1010,7 +1010,7 @@ def pickle_Kato2015(transform, smooth_method="fft"):
                     "calcium_data": real_data,
                     "smooth_calcium_data": smooth_real_data,
                     "residual_calcium": residual,
-                    "residual_smooth_calcium": smooth_residual,
+                    "smooth_residual_calcium": smooth_residual,
                     "neuron_to_idx": neuron_to_idx,
                     "idx_to_neuron": dict((v, k) for k, v in neuron_to_idx.items()),
                     "max_time": int(max_time),
@@ -1105,7 +1105,7 @@ def pickle_Nichols2017(transform, smooth_method="fft"):
                     "calcium_data": real_data,
                     "smooth_calcium_data": smooth_real_data,
                     "residual_calcium": residual,
-                    "residual_smooth_calcium": smooth_residual,
+                    "smooth_residual_calcium": smooth_residual,
                     "neuron_to_idx": neuron_to_idx,
                     "idx_to_neuron": dict((v, k) for k, v in neuron_to_idx.items()),
                     "max_time": int(max_time),
@@ -1186,7 +1186,7 @@ def pickle_Nichols2017(transform, smooth_method="fft"):
                     "calcium_data": real_data,
                     "smooth_calcium_data": smooth_real_data,
                     "residual_calcium": residual,
-                    "residual_smooth_calcium": smooth_residual,
+                    "smooth_residual_calcium": smooth_residual,
                     "neuron_to_idx": neuron_to_idx,
                     "idx_to_neuron": dict((v, k) for k, v in neuron_to_idx.items()),
                     "max_time": int(max_time),
@@ -1267,7 +1267,7 @@ def pickle_Nichols2017(transform, smooth_method="fft"):
                     "calcium_data": real_data,
                     "smooth_calcium_data": smooth_real_data,
                     "residual_calcium": residual,
-                    "residual_smooth_calcium": smooth_residual,
+                    "smooth_residual_calcium": smooth_residual,
                     "neuron_to_idx": neuron_to_idx,
                     "idx_to_neuron": dict((v, k) for k, v in neuron_to_idx.items()),
                     "max_time": int(max_time),
@@ -1348,7 +1348,7 @@ def pickle_Nichols2017(transform, smooth_method="fft"):
                     "calcium_data": real_data,
                     "smooth_calcium_data": smooth_real_data,
                     "residual_calcium": residual,
-                    "residual_smooth_calcium": smooth_residual,
+                    "smooth_residual_calcium": smooth_residual,
                     "neuron_to_idx": neuron_to_idx,
                     "idx_to_neuron": dict((v, k) for k, v in neuron_to_idx.items()),
                     "max_time": int(max_time),
@@ -1480,7 +1480,7 @@ def pickle_Nguyen2017(transform, smooth_method="fft"):
             "calcium_data": real_data0,
             "smooth_calcium_data": smooth_real_data0,
             "residual_calcium": residual0,
-            "residual_smooth_calcium": smooth_residual0,
+            "smooth_residual_calcium": smooth_residual0,
             "neuron_to_idx": worm0_ID,
             "idx_to_neuron": dict((v, k) for k, v in worm0_ID.items()),
             "max_time": max_time0,
@@ -1496,7 +1496,7 @@ def pickle_Nguyen2017(transform, smooth_method="fft"):
             "calcium_data": real_data1,
             "smooth_calcium_data": smooth_real_data1,
             "residual_calcium": residual1,
-            "residual_smooth_calcium": smooth_residual1,
+            "smooth_residual_calcium": smooth_residual1,
             "neuron_to_idx": worm1_ID,
             "idx_to_neuron": dict((v, k) for k, v in worm1_ID.items()),
             "max_time": max_time1,
@@ -1512,7 +1512,7 @@ def pickle_Nguyen2017(transform, smooth_method="fft"):
             "calcium_data": real_data2,
             "smooth_calcium_data": smooth_real_data2,
             "residual_calcium": residual2,
-            "residual_smooth_calcium": smooth_residual2,
+            "smooth_residual_calcium": smooth_residual2,
             "neuron_to_idx": worm2_ID,
             "idx_to_neuron": dict((v, k) for k, v in worm2_ID.items()),
             "max_time": max_time2,
@@ -1606,7 +1606,7 @@ def pickle_Skora2018(transform, smooth_method="fft"):
                     "calcium_data": real_data,
                     "smooth_calcium_data": smooth_real_data,
                     "residual_calcium": residual,
-                    "residual_smooth_calcium": smooth_residual,
+                    "smooth_residual_calcium": smooth_residual,
                     "neuron_to_idx": neuron_to_idx,
                     "idx_to_neuron": dict((v, k) for k, v in neuron_to_idx.items()),
                     "max_time": int(max_time),
@@ -1687,7 +1687,7 @@ def pickle_Skora2018(transform, smooth_method="fft"):
                     "calcium_data": real_data,
                     "smooth_calcium_data": smooth_real_data,
                     "residual_calcium": residual,
-                    "residual_smooth_calcium": smooth_residual,
+                    "smooth_residual_calcium": smooth_residual,
                     "neuron_to_idx": neuron_to_idx,
                     "idx_to_neuron": dict((v, k) for k, v in neuron_to_idx.items()),
                     "max_time": int(max_time),
@@ -1776,7 +1776,7 @@ def pickle_Kaplan2020(transform, smooth_method="fft"):
                     "calcium_data": real_data,
                     "smooth_calcium_data": smooth_real_data,
                     "residual_calcium": residual,
-                    "residual_smooth_calcium": smooth_residual,
+                    "smooth_residual_calcium": smooth_residual,
                     "neuron_to_idx": neuron_to_idx,
                     "idx_to_neuron": dict((v, k) for k, v in neuron_to_idx.items()),
                     "max_time": int(max_time),
@@ -1851,7 +1851,7 @@ def pickle_Kaplan2020(transform, smooth_method="fft"):
                     "calcium_data": real_data,
                     "smooth_calcium_data": smooth_real_data,
                     "residual_calcium": residual,
-                    "residual_smooth_calcium": smooth_residual,
+                    "smooth_residual_calcium": smooth_residual,
                     "neuron_to_idx": neuron_to_idx,
                     "idx_to_neuron": dict((v, k) for k, v in neuron_to_idx.items()),
                     "max_time": int(max_time),
@@ -1926,7 +1926,7 @@ def pickle_Kaplan2020(transform, smooth_method="fft"):
                     "calcium_data": real_data,
                     "smooth_calcium_data": smooth_real_data,
                     "residual_calcium": residual,
-                    "residual_smooth_calcium": smooth_residual,
+                    "smooth_residual_calcium": smooth_residual,
                     "neuron_to_idx": neuron_to_idx,
                     "idx_to_neuron": dict((v, k) for k, v in neuron_to_idx.items()),
                     "max_time": int(max_time),
@@ -2017,7 +2017,7 @@ def pickle_Uzel2022(transform, smooth_method="fft"):
                     "calcium_data": real_data,
                     "smooth_calcium_data": smooth_real_data,
                     "residual_calcium": residual,
-                    "residual_smooth_calcium": smooth_residual,
+                    "smooth_residual_calcium": smooth_residual,
                     "neuron_to_idx": neuron_to_idx,
                     "idx_to_neuron": dict((v, k) for k, v in neuron_to_idx.items()),
                     "max_time": int(max_time),
@@ -2110,7 +2110,7 @@ def pickle_Flavell2023(transform, smooth_method="fft"):
                     "calcium_data": calcium_data,
                     "smooth_calcium_data": smooth_real_data,
                     "residual_calcium": residual,
-                    "residual_smooth_calcium": smooth_residual,
+                    "smooth_residual_calcium": smooth_residual,
                     "neuron_to_idx": neuron_to_idx,
                     "idx_to_neuron": dict((v, k) for k, v in neuron_to_idx.items()),
                     "max_time": max_time,
