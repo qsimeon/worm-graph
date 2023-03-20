@@ -24,7 +24,7 @@ if __name__ == "__main__":
     # keyword args to `split_train_test`
     kwargs = dict(
         k_splits=2,
-        seq_len=10,
+        seq_len=100,
         batch_size=128,
         train_size=1654,
         test_size=1654,
@@ -45,11 +45,15 @@ if __name__ == "__main__":
         train_loader,
         test_loader,
         neurons_mask=named_neurons_mask,
-        num_epochs=100,
+        num_epochs=50,
         learn_rate=0.1,
     )
     # make predictions with trained model
-    targets, predictions = model_predict(model, calcium_data * named_neurons_mask)
+    targets, predictions = model_predict(
+        model,
+        calcium_data * named_neurons_mask,
+        tau=10,
+    )
     print("Targets:", targets.shape, "\nPredictions:", predictions.shape, end="\n\n")
     # plot entered loss curves
     plt.figure()

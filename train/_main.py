@@ -35,12 +35,13 @@ def train_model(
     # remake dataset with only selected worms
     dataset = dict(dataset_items)
     # instantiate the optimizer
+    # optimizer = eval("torch.optim." + config.train.optimizer + "(model.parameters(), lr="+ config.train.learn_rate + ")")
     learn_rate = config.train.learn_rate
     if optimizer is not None:
         optimizer = optimizer
     else:
-        optimizer = torch.optim.Adam(model.parameters(), lr=learn_rate)
-        # optimizer = torch.optim.SGD(model.parameters(), lr=config.train.learn_rate)
+        # optimizer = torch.optim.Adam(model.parameters(), lr=learn_rate)
+        optimizer = torch.optim.SGD(model.parameters(), lr=learn_rate)
     # train/test loss metrics
     data = {
         "epochs": [],
@@ -53,8 +54,6 @@ def train_model(
         "centered_train_losses": [],
         "centered_test_losses": [],
     }
-    # time vector
-
     # train the model for multiple cyles
     kwargs = dict(  # args to `split_train_test`
         k_splits=config.train.k_splits,
@@ -86,7 +85,9 @@ def train_model(
             # create data loaders and train/test masks only once per worm
             train_loader, test_loader, train_mask, test_mask = split_train_test(
                 data=single_worm_dataset[key_data],
-                time_vec=single_worm_dataset.get("time_in_seconds", None),
+                time_vec=single_worm_dataset.get(
+                    "time_in_seconds", None
+                ),  # time vector
                 **kwargs,
             )
             # add to memo
