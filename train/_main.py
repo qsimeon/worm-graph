@@ -74,6 +74,11 @@ def train_model(
         reverse=False,
         tau=config.train.tau_in,
     )
+    # choose whether to use calcium data or residual
+    if config.globals.use_residual:
+        key_data = "residual_calcium"
+    else:
+        key_data = "calcium_data"
     # choose whether to use original or smoothed calcium data
     if config.train.smooth_data:
         key_data = "smooth_calcium_data"

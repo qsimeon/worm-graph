@@ -1,0 +1,10 @@
+defaults:
+  - preprocess
+  - dataset
+  - model
+  - visualize
+  - train
+  - _self_
+
+globals:
+  use_residual: False

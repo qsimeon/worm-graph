@@ -24,6 +24,7 @@ def pipeline(config: DictConfig) -> None:
 
     model = get_model(config)
 
+    # train model is the bulk of the pipeline code
     model, log_dir = train_model(model, dataset, config, shuffle=True)
 
     plot_figures(config, log_dir)

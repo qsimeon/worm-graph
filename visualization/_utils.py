@@ -218,8 +218,8 @@ def plot_targets_predictions(
     neuron: Union[str, None] = "all",
 ) -> None:
     """
-    Plot of the target Ca2+ residual time series overlayed
-    with the predicted Ca2+ residual time series of a single
+    Plot of the target calcium or caclcium residual time series overlayed
+    with the predicted calcium or caclcium residual time series of a single
     neuron in a given worm.
     """
     # process the log folder name
@@ -244,7 +244,7 @@ def plot_targets_predictions(
     # plot helper
     def func(_neuron_):
         os.makedirs(os.path.join(log_dir, worm, "figures"), exist_ok=True)
-        plt_title = "Residual neural activity\nworm: {}, neuron: {}\nmodel: {}, dataset: {}\ntime: {}".format(
+        plt_title = "Neural activity (via calcium fluorescence) \nworm: {}, neuron: {}\nmodel: {}, dataset: {}\ntime: {}".format(
             worm,
             _neuron_,
             model_name,
@@ -294,7 +294,7 @@ def plot_targets_predictions(
         plt.legend(loc="upper left")
         plt.suptitle(plt_title)
         plt.xlabel("Time (seconds)")
-        plt.ylabel("$Ca^{2+}$ ($\\frac{\Delta F}{F}$)")
+        plt.ylabel("Calcium ($\\frac{\Delta F}{F}$)")
         plt.savefig(os.path.join(log_dir, worm, "figures", "calcium_%s.png" % _neuron_))
         plt.close()
         return None
@@ -364,8 +364,8 @@ def plot_correlation_scatterplot(
         plt.suptitle(plt_title)
         plt.axis("equal")
         plt.gca().set_ylim(plt.gca().get_xlim())
-        plt.xlabel("Target residual $\Delta F / F$")
-        plt.ylabel("Predicted residual $\Delta F / F$")
+        plt.xlabel("Target calcium ($\\frac{\Delta F}{F}$)")
+        plt.ylabel("Predicted calcium ($\\frac{\Delta F}{F}$)")
         plt.savefig(
             os.path.join(log_dir, worm, "figures", "correlation_%s.png" % _neuron_)
         )
