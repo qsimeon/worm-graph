@@ -16,7 +16,7 @@ class NeuralActivityDataset(torch.utils.data.Dataset):
         self,
         data,
         seq_len=17,
-        num_samples=10,
+        num_samples=1024,
         neurons=None,
         time_vec=None,
         reverse=False,
@@ -37,7 +37,7 @@ class NeuralActivityDataset(torch.utils.data.Dataset):
           tau: int, 0 < tau < max_time//2. The number of timesteps to the right by which the
                 target sequence is offset from input sequence. Deprecated (unused) argument.
         Returns:
-          (X, Y, metadata): tuple. Batch of data samples.
+            (X, Y, metadata): tuple. Batch of data samples.
             X: torch.tensor. Input tensor w/ shape (batch_size, seq_len,
                                                   num_neurons)
             Y: torch.tensor. Target tensor w/ same shape as X
@@ -100,7 +100,6 @@ class NeuralActivityDataset(torch.utils.data.Dataset):
         # data samples: input (X_tau) and target (Y_tau)
         X_tau = self.data[start:end, self.neurons]
         Y_tau = self.data[start + self.tau : end + self.tau, self.neurons]  # overlap
-        # Y_tau = self.data[end : end + self.seq_len, self.neurons] # non-overlap
         # calculate the residual (forward first derivative)
         Res_tau = Y_tau - X_tau
         # store metadata about the sample
@@ -129,11 +128,6 @@ class NeuralActivityDataset(torch.utils.data.Dataset):
             if not self.reverse  # generate from start to end
             else range(T - L - self.tau, -1, -1)  # generate from end to start
         )  # overlapping windows
-        # start_range = (
-        #     range(0, T - 2 * L + 1)
-        #     if not self.reverse  # generate from start to end
-        #     else range(T - 2 * L, -1, -1)  # generate from end to start
-        # ) # non-overlapping windows
         # parallelize the data generation
         with Pool(processes=cpu_count() // 2) as pool:
             # # synchronous

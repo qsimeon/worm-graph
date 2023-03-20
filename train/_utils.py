@@ -36,16 +36,16 @@ def train(
         # Clear optimizer gradients.
         optimizer.zero_grad()
         # Baseline: loss if the model predicted the residual to be 0.
-        # base = criterion(X_train[:, :, mask], Y_train[:, :, mask])
-        base = criterion(X_train * mask, Y_train * mask)
+        base = criterion(X_train[:, :, mask], Y_train[:, :, mask])
+        # base = criterion(X_train * mask, Y_train * mask)
         # Train
         Y_tr = model(X_train * mask)  # Forward pass.
         # Register hook.
         Y_tr.retain_grad()
         Y_tr.register_hook(lambda grad: grad * mask)
         # Compute training loss.
-        # loss = criterion(Y_tr[:, :, mask], Y_train[:, :, mask])
-        loss = criterion(Y_tr * mask, Y_train * mask)
+        loss = criterion(Y_tr[:, :, mask], Y_train[:, :, mask])
+        # loss = criterion(Y_tr * mask, Y_train * mask)
         loss.backward(retain_graph=True)  # Derive gradients.
         # # Prevent update of weights connected to inactive neurons.
         # model.linear.weight.grad *= mask.unsqueeze(-1)
@@ -97,13 +97,13 @@ def test(
         X_test, Y_test, metadata = data  # X, Y: (batch_size, seq_len, num_neurons)
         X_test, Y_test = X_test.to(DEVICE), Y_test.to(DEVICE)
         # Baseline: loss if the model predicted the residual to be 0.
-        # base = criterion(X_test[:, :, mask], Y_test[:, :, mask])
-        base = criterion(X_test * mask, Y_test * mask)
+        base = criterion(X_test[:, :, mask], Y_test[:, :, mask])
+        # base = criterion(X_test * mask, Y_test * mask)
         # Test
         Y_te = model(X_test * mask)  # Forward pass.
         # Compute the validation loss.
-        # loss = criterion(Y_te[:, :, mask], Y_test[:, :, mask])
-        loss = criterion(Y_te * mask, Y_test * mask)
+        loss = criterion(Y_te[:, :, mask], Y_test[:, :, mask])
+        # loss = criterion(Y_te * mask, Y_test * mask)
         # Store test and baseline loss.
         base_loss += base.detach().item()
         test_loss += loss.detach().item()
@@ -125,6 +125,7 @@ def split_train_test(
     batch_size: int = 32,
     train_size: int = 1024,
     test_size: int = 1024,
+    time_vec: Union[torch.Tensor, None] = None,
     shuffle: bool = True,
     reverse: bool = True,
     tau: int = 1,  # deprecated
@@ -143,8 +144,13 @@ def split_train_test(
     assert isinstance(seq_len, int) and seq_len < len(
         data
     ), "Invalid `seq_len` entered."
+    # make time vector
+    if time_vec is None:
+        time_vec = torch.arange(len(data))
+    assert torch.is_tensor(time_vec) and len(time_vec) == len(
+        data
+    ), "Enter a time vector with same length as data."
     # split dataset into train and test sections
-    time_vec = torch.arange(len(data))
     chunk_size = len(data) // k_splits
     split_datasets = torch.split(data, chunk_size, dim=0)  # length k_splits tuple
     split_times = torch.split(time_vec, chunk_size, dim=0)
@@ -215,7 +221,7 @@ def optimize_model(
     model: torch.nn.Module,
     train_loader: torch.utils.data.DataLoader,
     test_loader: torch.utils.data.DataLoader,
-    neurons_mask: Union[torch.tensor, None] = None,
+    neurons_mask: Union[torch.Tensor, None] = None,
     optimizer: Union[torch.optim.Optimizer, None] = None,
     start_epoch: int = 1,
     learn_rate: float = 0.01,
@@ -240,8 +246,7 @@ def optimize_model(
     neurons_mask = neurons_mask.to(DEVICE)
     # create optimizer
     if optimizer is None:
-        optimizer = torch.optim.Adam(model.parameters(), lr=learn_rate)
-        # optimizer = torch.optim.SGD(model.parameters(), lr=learn_rate)
+        optimizer = torch.optim.SGD(model.parameters(), lr=learn_rate)
     # create log dictionary to return
     log = {
         "epochs": [],
@@ -298,6 +303,7 @@ def make_predictions(
     model: torch.nn.Module,
     dataset: dict,
     log_dir: str,
+    tau: int = 1,
 ) -> None:
     """Make predicitons on a dataset with a trained model.
 
@@ -321,29 +327,43 @@ def make_predictions(
         named_neuron_to_idx = single_worm_dataset["named_neuron_to_idx"]
         calcium_data = single_worm_dataset["calcium_data"]
         named_neurons_mask = single_worm_dataset["named_neurons_mask"]
+        time_in_seconds = single_worm_dataset["time_in_seconds"]
         train_mask = single_worm_dataset["train_mask"]
         labels = np.expand_dims(np.where(train_mask, "train", "test"), axis=-1)
-        columns = list(named_neuron_to_idx) + ["train_test_label"]
+        columns = list(named_neuron_to_idx) + [
+            "train_test_label",
+            "time_in_seconds",
+            "tau",
+        ]
         # make predictions with final model
-        targets, predictions = model_predict(model, calcium_data * named_neurons_mask)
-
+        targets, predictions = model_predict(
+            model,
+            calcium_data * named_neurons_mask,
+            tau=tau,
+        )
         # save dataframes
+        tau_expand = np.full(time_in_seconds.shape, tau)
         data = calcium_data[:, named_neurons_mask].numpy()
-        data = np.hstack((data, labels))
+        data = np.hstack((data, labels, time_in_seconds, tau_expand))
         pd.DataFrame(data=data, columns=columns).to_csv(
             os.path.join(log_dir, worm, "ca_activity.csv"),
             index=True,
             header=True,
         )
         data = targets[:, named_neurons_mask].numpy()
-        data = np.hstack((data, labels))
+        data = np.hstack((data, labels, time_in_seconds, tau_expand))
         pd.DataFrame(data=data, columns=columns).to_csv(
             os.path.join(log_dir, worm, "target_ca.csv"),
             index=True,
             header=True,
         )
-        data = predictions[:, named_neurons_mask].numpy()
-        data = np.hstack((data, labels))
+        columns = list(named_neuron_to_idx) + [
+            "train_test_label",
+            "time_in_seconds",
+            "tau",
+        ]
+        data = predictions[:, named_neurons_mask].detach().numpy()
+        data = np.hstack((data, labels, tau_expand))
         pd.DataFrame(data=data, columns=columns).to_csv(
             os.path.join(log_dir, worm, "predicted_ca.csv"),
             index=True,
@@ -355,6 +375,7 @@ def make_predictions(
 def model_predict(
     model: torch.nn.Module,
     calcium_data: torch.Tensor,
+    tau: int = 1,
 ) -> tuple[torch.Tensor, torch.Tensor]:
     """
     Makes predictions for all neurons in the
@@ -372,15 +393,17 @@ def model_predict(
     input = calcium_data.to(DEVICE)
     # TODO: Why does this make such a big difference in prediction?
     # output = model(
-    #     input.unsqueeze(1)
-    # )  # (max_time, 1, NUM_NEURONS), batch_size = max_time, seq_len = 1
-    # output = output.squeeze(1)
+    #     input.unsqueeze(1), tau,
+    # ).squeeze(1)  # (max_time, 1, NUM_NEURONS), batch_size = max_time, seq_len = 1
     output = model(
-        input.unsqueeze(0)
+        input.unsqueeze(0),
+        tau=tau,
+    ).squeeze(
+        0
     )  # (1, max_time, NUM_NEURONS),  batch_size = 1, seq_len = max_time
-    output = output.squeeze(0)
-    # targets/predictions
-    targets = input.detach().cpu()
+    # targets and predictions
+    targets = torch.nn.functional.pad(input[tau:].detach().cpu(), (0, 0, 0, tau))
+    # prediction of the input shifted by tau
     predictions = output.detach().cpu()
     return targets, predictions
 

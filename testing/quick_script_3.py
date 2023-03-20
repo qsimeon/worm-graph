@@ -9,7 +9,6 @@ from omegaconf import OmegaConf
 from torch.utils.data import DataLoader
 from data._main import get_dataset
 from data._utils import NeuralActivityDataset
-from multiprocessing import cpu_count
 
 
 config = OmegaConf.load("conf/dataset.yaml")
@@ -34,7 +33,6 @@ if __name__ == "__main__":
         batch_size=128,
         shuffle=True,
         pin_memory=True,
-        # num_workers=cpu_count() // 2,
     )
     # display shapes of batches
     print("Batches")
@@ -56,6 +54,6 @@ if __name__ == "__main__":
     )
     plt.xlabel("Time")
     plt.ylabel("$Ca^{2+} \Delta F / F$")
-    plt.title("Last sample, Last batch, Neuron 0 input & target")
+    plt.title("Last sample, Last batch, Neuron , Input & Target")
     plt.legend()
     plt.show()

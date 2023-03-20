@@ -1,10 +1,9 @@
 """
-Tests the full training pipeline function `train_model`.
+Tests the training pipeline using `train_model`.
 """
 
-import matplotlib.pyplot as plt
 from omegaconf import OmegaConf
-from models._utils import LinearNN, NeuralCFC, NetworkLSTM
+from models._utils import NetworkLSTM
 from train._main import train_model
 from data._main import get_dataset
 from visualization._utils import plot_targets_predictions
@@ -16,8 +15,7 @@ if __name__ == "__main__":
     # load a dataset (multiple worms)
     dataset = get_dataset(data_config)
     # create a model
-    model = LinearNN(302, 64).double()
-    # model = NetworkLSTM(302, 64).double()
+    model = NetworkLSTM(302, 64).double()
     # run the full train pipeline
     model, log_dir = train_model(model, dataset, train_config)
     # compare predictions against targets

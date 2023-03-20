@@ -5,7 +5,7 @@ def train_model(
     model: torch.nn.Module,
     dataset: dict,
     config: DictConfig,
-    optimizer: Union[torch.optim.Optimizer, None] = None,
+    optimizer: Union[torch.optim.Optimizer, str, None] = None,
     shuffle: bool = True,
 ) -> tuple[torch.nn.Module, str]:
     """
@@ -37,10 +37,13 @@ def train_model(
     # instantiate the optimizer
     learn_rate = config.train.learn_rate
     if optimizer is not None:
-        optimizer = optimizer
+        if isinstance(optimizer, str):
+            optimizer = eval("torch.optim." + config.train.optimizer + "(model.parameters(), lr="+ config.train.learn_rate + ")")
+        else: # torch.optim.Optimizer
+            assert isinstance(optimizer, torch.optim.Optimizer), "Please use an instance of torch.optim.Optimizer."
+            optimizer = optimizer
     else:
-        optimizer = torch.optim.Adam(model.parameters(), lr=learn_rate)
-        # optimizer = torch.optim.SGD(model.parameters(), lr=config.train.learn_rate)
+        optimizer = torch.optim.SGD(model.parameters(), lr=learn_rate)
     # train/test loss metrics
     data = {
         "epochs": [],
@@ -62,14 +65,14 @@ def train_model(
         test_size=config.train.test_size,
         shuffle=config.train.shuffle,
         reverse=False,
-        tau=1,  # unused currently
+        tau=config.train.tau,
     )
     # choose whether to use original or smoothed calcium data
     if config.train.smooth_data:
         key_data = "smooth_calcium_data"
     else:
         key_data = "calcium_data"
-    # memoize creation of data loaders and masks for speed
+    # memoize creation of data loaders and masks for speedup
     memo_loaders_masks = dict()
     # train for config.train.num_epochs
     reset_epoch = 1
@@ -84,6 +87,9 @@ def train_model(
             # create data loaders and train/test masks only once per worm
             train_loader, test_loader, train_mask, test_mask = split_train_test(
                 data=single_worm_dataset[key_data],
+                time_vec=single_worm_dataset.get(
+                    "time_in_seconds", None
+                ),  # time vector
                 **kwargs,
             )
             # add to memo
@@ -116,6 +122,7 @@ def train_model(
         [data[key].extend(log[key]) for key in data]  # Python list comprehension
         # set to next epoch
         reset_epoch = log["epochs"][-1] + 1
+        # outputs
         if (i % config.train.save_freq == 0) or (i + 1 == config.train.epochs):
             # display progress
             print("num. worms trained on:", i + 1, "\nprevious worm:", worm, end="\n\n")
@@ -140,7 +147,7 @@ def train_model(
         header=True,
     )
     # make predictions with last saved model
-    make_predictions(model, dataset, log_dir)
+    make_predictions(model, dataset, config.train.tau, log_dir)
     # returned trained model and a path to log directory
     return model, log_dir
 

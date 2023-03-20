@@ -132,9 +132,9 @@ if __name__ == "__main__":
     plt.legend(["cal", "res"], loc="upper right")
     plt.show()
 
-    config = OmegaConf.load("../../../conf/model.yaml")
+    config = OmegaConf.load("../../conf/model.yaml")
     print("Model:", OmegaConf.to_yaml(config), end="\n\n")
     model = get_model(config)
 
-    config = OmegaConf.load("../../../conf/train.yaml")
+    config = OmegaConf.load("../../conf/train.yaml")
     model, log_dir = train_model(model, dataset, config)
