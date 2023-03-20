@@ -18,21 +18,22 @@ if __name__ == "__main__":
     single_worm_dataset = dataset["worm0"]
     calcium_data = single_worm_dataset["calcium_data"][:, neuron_inds]
     named_neurons_mask = single_worm_dataset["named_neurons_mask"][neuron_inds]
-    time_vec = single_worm_dataset.get("time_in_seconds", None)
+    time_in_seconds = single_worm_dataset.get("time_in_seconds", None)
     # create a model
     model = NetworkLSTM(num_neurons, 64).double()
     # keyword args to `split_train_test`
+    train_tau = 1
     kwargs = dict(
         k_splits=2,
-        seq_len=100,
+        seq_len=10,
         batch_size=128,
         train_size=1654,
         test_size=1654,
-        time_vec=time_vec,
+        time_vec=time_in_seconds,
         # TODO: Why does `shuffle=True` improve performance so much?
         shuffle=True,
         reverse=False,
-        tau=1,
+        tau=train_tau,
     )
     # create data loaders and train/test masks
     train_loader, test_loader, train_mask, test_mask = split_train_test(
@@ -46,20 +47,21 @@ if __name__ == "__main__":
         test_loader,
         neurons_mask=named_neurons_mask,
         num_epochs=50,
-        learn_rate=0.1,
+        learn_rate=0.01,
     )
     # make predictions with trained model
+    pred_tau = 50
     targets, predictions = model_predict(
         model,
         calcium_data * named_neurons_mask,
-        tau=10,
+        tau=pred_tau,
     )
     print("Targets:", targets.shape, "\nPredictions:", predictions.shape, end="\n\n")
     # plot entered loss curves
     plt.figure()
     plt.plot(log["epochs"], log["centered_train_losses"], label="train")
     plt.plot(log["epochs"], log["centered_test_losses"], label="test")
-    plt.legend()
+    plt.legend(loc="best")
     plt.title("Loss curves")
     plt.xlabel("Epochs")
     plt.ylabel("Loss - Baseline")
@@ -67,10 +69,10 @@ if __name__ == "__main__":
     # figures of neuron calcium target and prediction
     for neuron in range(num_neurons):
         plt.figure()
-        plt.plot(targets[:, neuron], label="target")
-        plt.plot(predictions[:, neuron], alpha=0.8, label="prediction")
+        plt.plot(time_in_seconds, targets[:, neuron], label="target")
+        plt.plot(time_in_seconds, predictions[:, neuron], alpha=0.8, label="prediction")
         plt.legend()
-        plt.title("Neuron %s target and prediction" % neuron)
-        plt.xlabel("Time")
+        plt.title("Neuron %s target and prediction ($\\tau = %s$)" % (neuron, pred_tau))
+        plt.xlabel("Time (seconds)")
         plt.ylabel("$Ca^{2+} \Delta F / F$")
         plt.show()

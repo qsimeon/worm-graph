@@ -328,9 +328,14 @@ def make_predictions(
         named_neuron_to_idx = single_worm_dataset["named_neuron_to_idx"]
         calcium_data = single_worm_dataset["calcium_data"]
         named_neurons_mask = single_worm_dataset["named_neurons_mask"]
+        time_in_seconds = single_worm_dataset["time_in_seconds"]
         train_mask = single_worm_dataset["train_mask"]
         labels = np.expand_dims(np.where(train_mask, "train", "test"), axis=-1)
-        columns = list(named_neuron_to_idx) + ["train_test_label"]
+        columns = list(named_neuron_to_idx) + [
+            "train_test_label",
+            "time_in_seconds",
+            "tau",
+        ]
         # make predictions with final model
         targets, predictions = model_predict(
             model,
@@ -338,25 +343,28 @@ def make_predictions(
             tau=tau,
         )
         # save dataframes
+        tau_expand = np.full(time_in_seconds.shape, tau)
         data = calcium_data[:, named_neurons_mask].numpy()
-        data = np.hstack((data, labels))
+        data = np.hstack((data, labels, time_in_seconds, tau_expand))
         pd.DataFrame(data=data, columns=columns).to_csv(
             os.path.join(log_dir, worm, "ca_activity.csv"),
             index=True,
             header=True,
         )
         data = targets[:, named_neurons_mask].numpy()
-        data = np.hstack((data, labels))
+        data = np.hstack((data, labels, time_in_seconds, tau_expand))
         pd.DataFrame(data=data, columns=columns).to_csv(
             os.path.join(log_dir, worm, "target_ca.csv"),
             index=True,
             header=True,
         )
-        columns = list(named_neuron_to_idx) + ["train_test_label"] + ["tau"]
-        tau_expand = np.full((calcium_data.shape[0], 1), tau)
+        columns = list(named_neuron_to_idx) + [
+            "train_test_label",
+            "time_in_seconds",
+            "tau",
+        ]
         data = predictions[:, named_neurons_mask].detach().numpy()
-        data = np.hstack((data, labels))
-        data = np.hstack((data, tau_expand))
+        data = np.hstack((data, labels, tau_expand))
         pd.DataFrame(data=data, columns=columns).to_csv(
             os.path.join(log_dir, worm, "predicted_ca.csv"),
             index=True,
@@ -396,8 +404,6 @@ def model_predict(
     )  # (1, max_time, NUM_NEURONS),  batch_size = 1, seq_len = max_time
     # targets and predictions
     targets = torch.nn.functional.pad(input[tau:].detach().cpu(), (0, 0, 0, tau))
-    print("input, targets", input.shape, targets.shape)
-    print("targets", targets)
     # prediction of the input shifted by tau
     predictions = output.detach().cpu()
     return targets, predictions

@@ -19,7 +19,7 @@ class LinearNN(torch.nn.Module):
         6. TODO: A method called `sample` should be implemented to allow
             sampling spontaneous neural activity from the network.
             Need to read the literature on generative, score-based and energy-based
-            models to figure out to implement this.
+            models to figure out how to implement this.
     """
 
     def __init__(self, input_size, hidden_size, num_layers=1, loss=None):
@@ -114,6 +114,8 @@ class DenseCFC(torch.nn.Module):
         self.num_layers = num_layers
         # Fully-connected CfC
         self.rnn = CfC(input_size=self.input_size, units=self.hidden_size)
+        # Layer normalization
+        self.layer_norm = torch.nn.LayerNorm(self.hidden_size)  # new addition
         # Readout
         self.linear = torch.nn.Linear(self.hidden_size, self.output_size)
 
@@ -136,11 +138,13 @@ class DenseCFC(torch.nn.Module):
         tau: time offset of target
         """
         rnn_out, self.hidden = self.rnn(input)
+        rnn_out = self.layer_norm(rnn_out)  # new addition
         readout = self.linear(rnn_out)  # projection
         rnn_out = readout
         # repeat for target with tau>0 offset
         for i in range(1, tau):
             rnn_out, self.hidden = self.rnn(rnn_out, self.hidden)
+            rnn_out = self.layer_norm(rnn_out)
             readout = self.linear(rnn_out)
             rnn_out = readout
         return rnn_out
