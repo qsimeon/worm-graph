@@ -5,8 +5,7 @@ def train_model(
     model: torch.nn.Module,
     dataset: dict,
     config: DictConfig,
-    optimizer: Union[torch.optim.Optimizer, str, None] = None,
-    shuffle: bool = True,
+    shuffle: bool = True,  # whether to shuffle worms
 ) -> tuple[torch.nn.Module, str]:
     """
     Trains a model on a multi-worm dataset. Returns the trained model
@@ -29,21 +28,29 @@ def train_model(
             list(dataset.keys()), size=config.train.epochs, replace=True
         )
     ]
-    # shuffle the dataset (without replacement)
+    # shuffle the worms in dataset (without replacement)
     if shuffle == True:
         dataset_items = random.sample(dataset_items, k=len(dataset_items))
     # remake dataset with only selected worms
     dataset = dict(dataset_items)
     # instantiate the optimizer
+    opt_param = config.train.optimizer
     learn_rate = config.train.learn_rate
-    if optimizer is not None:
-        if isinstance(optimizer, str):
-            optimizer = eval("torch.optim." + config.train.optimizer + "(model.parameters(), lr="+ config.train.learn_rate + ")")
-        else: # torch.optim.Optimizer
-            assert isinstance(optimizer, torch.optim.Optimizer), "Please use an instance of torch.optim.Optimizer."
-            optimizer = optimizer
+    if config.train.optimizer is not None:
+        if isinstance(opt_param, str):
+            optimizer = eval(
+                "torch.optim."
+                + opt_param
+                + "(model.parameters(), lr="
+                + str(learn_rate)
+                + ")"
+            )
+        assert isinstance(
+            optimizer, torch.optim.Optimizer
+        ), "Please use an instance of torch.optim.Optimizer."
     else:
         optimizer = torch.optim.SGD(model.parameters(), lr=learn_rate)
+    print("Optimizer:", optimizer, end="\n\n")
     # train/test loss metrics
     data = {
         "epochs": [],
@@ -63,7 +70,7 @@ def train_model(
         batch_size=config.train.batch_size,
         train_size=config.train.train_size,
         test_size=config.train.test_size,
-        shuffle=config.train.shuffle,
+        shuffle=config.train.shuffle,  # whether to shuffle the samples from a worm
         reverse=False,
         tau=config.train.tau_in,
     )

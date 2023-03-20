@@ -287,7 +287,7 @@ def plot_targets_predictions(
             targets_df.time_in_seconds.to_numpy()[-tau:],
             ylo,
             yhi,
-            alpha=0.1,
+            alpha=0.3,
             facecolor="red",
             label="predict",
         )

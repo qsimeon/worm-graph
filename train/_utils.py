@@ -37,7 +37,6 @@ def train(
         optimizer.zero_grad()
         # Baseline: loss if the model predicted the residual to be 0.
         base = criterion(X_train[:, :, mask], Y_train[:, :, mask])
-        # base = criterion(X_train * mask, Y_train * mask)
         # Train
         Y_tr = model(X_train * mask)  # Forward pass.
         # Register hook.
@@ -45,10 +44,7 @@ def train(
         Y_tr.register_hook(lambda grad: grad * mask)
         # Compute training loss.
         loss = criterion(Y_tr[:, :, mask], Y_train[:, :, mask])
-        # loss = criterion(Y_tr * mask, Y_train * mask)
         loss.backward(retain_graph=True)  # Derive gradients.
-        # # Prevent update of weights connected to inactive neurons.
-        # model.linear.weight.grad *= mask.unsqueeze(-1)
         # No backprop on epoch 0.
         if no_grad:
             optimizer.zero_grad()
@@ -98,12 +94,10 @@ def test(
         X_test, Y_test = X_test.to(DEVICE), Y_test.to(DEVICE)
         # Baseline: loss if the model predicted the residual to be 0.
         base = criterion(X_test[:, :, mask], Y_test[:, :, mask])
-        # base = criterion(X_test * mask, Y_test * mask)
         # Test
         Y_te = model(X_test * mask)  # Forward pass.
         # Compute the validation loss.
         loss = criterion(Y_te[:, :, mask], Y_test[:, :, mask])
-        # loss = criterion(Y_te * mask, Y_test * mask)
         # Store test and baseline loss.
         base_loss += base.detach().item()
         test_loss += loss.detach().item()
@@ -382,7 +376,7 @@ def model_predict(
     calcium data tensor using a trained model.
     """
     NUM_NEURONS = calcium_data.size(1)
-    model = model.double()
+    model = model.double().to(DEVICE)
     model.eval()
     # model in/out
     calcium_data = calcium_data.squeeze(0)

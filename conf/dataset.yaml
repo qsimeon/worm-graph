@@ -2,6 +2,8 @@ dataset:
   name:
     # - sine
     # - sine_noise
+    # - sine_seq
+    # - sine_seq_noise
     # - sum_sine
     # - sum_sine_noise
     # - Kato2015
