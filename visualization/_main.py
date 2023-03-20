@@ -18,6 +18,10 @@ def plot_figures(
         worm = config.visualize.worm
     if neuron is None:
         neuron = config.visualize.neuron
+    if config.get("globals"):
+        use_residual = config.globals.use_residual
+    else:
+        use_residual = False
 
     # loss curves
     plot_loss_curves(log_dir)
@@ -30,7 +34,7 @@ def plot_figures(
         log_dir,
         worm,
         neuron,
-        use_residual=config.globals.use_residual,
+        use_residual,
     )
 
     # scatterplot of modeled vs. real neuron activity
@@ -38,7 +42,7 @@ def plot_figures(
         log_dir,
         worm,
         neuron,
-        use_residual=config.globals.use_residual,
+        use_residual,
     )
 
     # TODO add more plotting functions for different figures

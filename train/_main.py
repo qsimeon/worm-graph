@@ -76,7 +76,10 @@ def train_model(
         use_residual=config.globals.use_residual,
     )
     # choose whether to use calcium or residual data
-    use_residual = config.globals.use_residual
+    if config.get("globals"):
+        use_residual = config.globals.use_residual
+    else:
+        use_residual = False
     if use_residual:
         key_data = "residual_calcium"
     else:
@@ -163,7 +166,13 @@ def train_model(
         header=True,
     )
     # make predictions with last saved model
-    make_predictions(model, dataset, log_dir, tau=config.train.tau_out)
+    make_predictions(
+        model,
+        dataset,
+        log_dir,
+        tau=config.train.tau_out,
+        use_residual=use_residual,
+    )
     # returned trained model and a path to log directory
     return model, log_dir
 

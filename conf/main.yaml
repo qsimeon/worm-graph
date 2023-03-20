@@ -21,9 +21,7 @@ hydra:
   sweeper:
     params:
       # train.k_splits: 2, 5, 8, 10, 20
+      # model.hidden_size: 64, 128, 512
       # train.train_size: 1024, 2048, 4096
-      # train.test_size: 1024, 2048, 4096
-      # dataset.name: Skora2018
-      # train.cycles: 1, 10, 100
       # model.type: linear, dense_cfc, neural_cfc, lstm, vae_lstm
-      # model.hidden_size: 64
+      # dataset.name: Skora2018

@@ -338,7 +338,7 @@ def plot_correlation_scatterplot(
         assert worm in set(os.listdir(log_dir)), "No data for requested worm found."
     # load predictions dataframe
     predictions_df = pd.read_csv(
-        os.path.join(log_dir, worm, "target_" + signal_str + ".csv"), index_col=0
+        os.path.join(log_dir, worm, "predicted_" + signal_str + ".csv"), index_col=0
     )
     # load targets dataframe
     targets_df = pd.read_csv(

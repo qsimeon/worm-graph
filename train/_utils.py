@@ -336,6 +336,7 @@ def make_predictions(
     Returns:
         None.
     """
+    signal_str = "residual" if use_residual else "calcium"
     for worm, single_worm_dataset in dataset.items():
         os.makedirs(os.path.join(log_dir, worm), exist_ok=True)
         # get data to save
@@ -361,14 +362,14 @@ def make_predictions(
         data = calcium_data[:, named_neurons_mask].numpy()
         data = np.hstack((data, labels, time_in_seconds, tau_expand))
         pd.DataFrame(data=data, columns=columns).to_csv(
-            os.path.join(log_dir, worm, "ca_activity.csv"),
+            os.path.join(log_dir, worm, signal_str + "_activity.csv"),
             index=True,
             header=True,
         )
         data = targets[:, named_neurons_mask].numpy()
         data = np.hstack((data, labels, time_in_seconds, tau_expand))
         pd.DataFrame(data=data, columns=columns).to_csv(
-            os.path.join(log_dir, worm, "target_ca.csv"),
+            os.path.join(log_dir, worm, "target_" + signal_str + ".csv"),
             index=True,
             header=True,
         )
@@ -380,7 +381,7 @@ def make_predictions(
         data = predictions[:, named_neurons_mask].detach().numpy()
         data = np.hstack((data, labels, time_in_seconds, tau_expand))
         pd.DataFrame(data=data, columns=columns).to_csv(
-            os.path.join(log_dir, worm, "predicted_ca.csv"),
+            os.path.join(log_dir, worm, "predicted_" + signal_str + ".csv"),
             index=True,
             header=True,
         )
