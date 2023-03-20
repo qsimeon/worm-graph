@@ -128,7 +128,7 @@ def split_train_test(
     time_vec: Union[torch.Tensor, None] = None,
     shuffle: bool = True,
     reverse: bool = True,
-    tau: int = 1,  # deprecated
+    tau: int = 1,
 ) -> tuple[
     torch.utils.data.DataLoader,
     torch.utils.data.DataLoader,
@@ -363,7 +363,7 @@ def make_predictions(
             "tau",
         ]
         data = predictions[:, named_neurons_mask].detach().numpy()
-        data = np.hstack((data, labels, tau_expand))
+        data = np.hstack((data, labels, time_in_seconds, tau_expand))
         pd.DataFrame(data=data, columns=columns).to_csv(
             os.path.join(log_dir, worm, "predicted_ca.csv"),
             index=True,
@@ -511,7 +511,6 @@ def gnn_optimize_model(task, model):
     optimizer = torch.optim.Adam(model.parameters(), lr=0.01)
     log = {"epochs": [], "test_losses": [], "train_losses": []}
     train_dataset, test_dataset = task.train_test_split()
-
     for epoch in tqdm(range(20)):
         # forward pass
         train_loss = train(train_dataset, model)

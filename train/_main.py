@@ -65,7 +65,7 @@ def train_model(
         test_size=config.train.test_size,
         shuffle=config.train.shuffle,
         reverse=False,
-        tau=config.train.tau,
+        tau=config.train.tau_in,
     )
     # choose whether to use original or smoothed calcium data
     if config.train.smooth_data:
@@ -147,7 +147,7 @@ def train_model(
         header=True,
     )
     # make predictions with last saved model
-    make_predictions(model, dataset, config.train.tau, log_dir)
+    make_predictions(model, dataset, log_dir, tau=config.train.tau_out)
     # returned trained model and a path to log directory
     return model, log_dir
 

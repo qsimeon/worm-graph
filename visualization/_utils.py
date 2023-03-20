@@ -146,14 +146,26 @@ def plot_loss_curves(log_dir):
     loss_df = pd.read_csv(os.path.join(log_dir, "loss_curves.csv"), index_col=0)
     # plot loss vs epochs
     plt.figure()
+    sns.lineplot(
+        x="epochs",
+        y="train_losses",
+        data=loss_df,
+        label="original train",
+        color="c",
+        alpha=0.8,
+        **dict(linestyle=":"),
+    )
+    sns.lineplot(
+        x="epochs",
+        y="test_losses",
+        data=loss_df,
+        label="original test",
+        color="r",
+        alpha=0.8,
+        **dict(linestyle=":"),
+    )
     sns.lineplot(x="epochs", y="centered_train_losses", data=loss_df, label="train")
     sns.lineplot(x="epochs", y="centered_test_losses", data=loss_df, label="test")
-    # sns.lineplot(
-    #     x="epochs", y="train_losses", data=loss_df, label="original train", color="r"
-    # )
-    # sns.lineplot(
-    #     x="epochs", y="test_losses", data=loss_df, label="original test", color="g"
-    # )
     plt.legend()
     plt.title(plt_title)
     plt.xlabel("Epoch (# worms)")
@@ -241,20 +253,20 @@ def plot_targets_predictions(
         )
         sns.lineplot(
             data=targets_df,
-            x=targets_df.index,
+            x=targets_df.time_in_seconds,
             y=targets_df[_neuron_],
             label="target",
         )
         sns.lineplot(
             data=predictions_df,
-            x=tau + predictions_df.index,
+            x=targets_df.time_in_seconds,
             y=predictions_df[_neuron_],
             label="predicted",
             alpha=0.8,
         )
         ylo, yhi = plt.gca().get_ylim()
         plt.gca().fill_between(
-            predictions_df.index,
+            targets_df.time_in_seconds,
             ylo,
             yhi,
             where=predictions_df["train_test_label"] == "train",
@@ -263,7 +275,7 @@ def plot_targets_predictions(
             label="train",
         )
         plt.gca().fill_between(
-            predictions_df.index,
+            targets_df.time_in_seconds,
             ylo,
             yhi,
             where=predictions_df["train_test_label"] == "test",
@@ -272,7 +284,7 @@ def plot_targets_predictions(
             label="test",
         )
         plt.gca().fill_between(
-            range(predictions_df.index[-1], predictions_df.index[-1] + tau),
+            targets_df.time_in_seconds.to_numpy()[-tau:],
             ylo,
             yhi,
             alpha=0.1,
@@ -281,8 +293,8 @@ def plot_targets_predictions(
         )
         plt.legend(loc="upper left")
         plt.suptitle(plt_title)
-        plt.xlabel("Time")
-        plt.ylabel("$Ca^{2+}$ Residual ($\Delta F / F$)")
+        plt.xlabel("Time (seconds)")
+        plt.ylabel("$Ca^{2+}$ ($\\frac{\Delta F}{F}$)")
         plt.savefig(os.path.join(log_dir, worm, "figures", "calcium_%s.png" % _neuron_))
         plt.close()
         return None
