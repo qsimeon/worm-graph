@@ -34,7 +34,6 @@ if __name__ == "__main__":
         batch_size=128,
         shuffle=True,
         pin_memory=True,
-        # num_workers=cpu_count() // 2,
     )
     # display shapes of batches
     print("Batches")

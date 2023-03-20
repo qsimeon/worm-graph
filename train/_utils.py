@@ -36,16 +36,16 @@ def train(
         # Clear optimizer gradients.
         optimizer.zero_grad()
         # Baseline: loss if the model predicted the residual to be 0.
-        # base = criterion(X_train[:, :, mask], Y_train[:, :, mask])
-        base = criterion(X_train * mask, Y_train * mask)
+        base = criterion(X_train[:, :, mask], Y_train[:, :, mask])
+        # base = criterion(X_train * mask, Y_train * mask)
         # Train
         Y_tr = model(X_train * mask)  # Forward pass.
         # Register hook.
         Y_tr.retain_grad()
         Y_tr.register_hook(lambda grad: grad * mask)
         # Compute training loss.
-        # loss = criterion(Y_tr[:, :, mask], Y_train[:, :, mask])
-        loss = criterion(Y_tr * mask, Y_train * mask)
+        loss = criterion(Y_tr[:, :, mask], Y_train[:, :, mask])
+        # loss = criterion(Y_tr * mask, Y_train * mask)
         loss.backward(retain_graph=True)  # Derive gradients.
         # # Prevent update of weights connected to inactive neurons.
         # model.linear.weight.grad *= mask.unsqueeze(-1)
@@ -97,13 +97,13 @@ def test(
         X_test, Y_test, metadata = data  # X, Y: (batch_size, seq_len, num_neurons)
         X_test, Y_test = X_test.to(DEVICE), Y_test.to(DEVICE)
         # Baseline: loss if the model predicted the residual to be 0.
-        # base = criterion(X_test[:, :, mask], Y_test[:, :, mask])
-        base = criterion(X_test * mask, Y_test * mask)
+        base = criterion(X_test[:, :, mask], Y_test[:, :, mask])
+        # base = criterion(X_test * mask, Y_test * mask)
         # Test
         Y_te = model(X_test * mask)  # Forward pass.
         # Compute the validation loss.
-        # loss = criterion(Y_te[:, :, mask], Y_test[:, :, mask])
-        loss = criterion(Y_te * mask, Y_test * mask)
+        loss = criterion(Y_te[:, :, mask], Y_test[:, :, mask])
+        # loss = criterion(Y_te * mask, Y_test * mask)
         # Store test and baseline loss.
         base_loss += base.detach().item()
         test_loss += loss.detach().item()
@@ -240,8 +240,8 @@ def optimize_model(
     neurons_mask = neurons_mask.to(DEVICE)
     # create optimizer
     if optimizer is None:
-        optimizer = torch.optim.Adam(model.parameters(), lr=learn_rate)
-        # optimizer = torch.optim.SGD(model.parameters(), lr=learn_rate)
+        # optimizer = torch.optim.Adam(model.parameters(), lr=learn_rate)
+        optimizer = torch.optim.SGD(model.parameters(), lr=learn_rate)
     # create log dictionary to return
     log = {
         "epochs": [],
@@ -297,8 +297,8 @@ def optimize_model(
 def make_predictions(
     model: torch.nn.Module,
     dataset: dict,
-    tau: int,
     log_dir: str,
+    tau: int,
 ) -> None:
     """Make predicitons on a dataset with a trained model.
 
@@ -326,8 +326,12 @@ def make_predictions(
         labels = np.expand_dims(np.where(train_mask, "train", "test"), axis=-1)
         columns = list(named_neuron_to_idx) + ["train_test_label"]
         # make predictions with final model
-        targets, predictions = model_predict(model, calcium_data * named_neurons_mask)
 
+        targets, predictions = model_predict(
+            model,
+            calcium_data * named_neurons_mask,
+            tau=tau,
+        )
         # save dataframes
         data = calcium_data[:, named_neurons_mask].numpy()
         data = np.hstack((data, labels))
@@ -359,6 +363,7 @@ def make_predictions(
 def model_predict(
     model: torch.nn.Module,
     calcium_data: torch.Tensor,
+    tau: int = 1,
 ) -> tuple[torch.Tensor, torch.Tensor]:
     """
     Makes predictions for all neurons in the
@@ -376,11 +381,12 @@ def model_predict(
     input = calcium_data.to(DEVICE)
     # TODO: Why does this make such a big difference in prediction?
     # output = model(
-    #     input.unsqueeze(1)
+    #     input.unsqueeze(1), tau,
     # )  # (max_time, 1, NUM_NEURONS), batch_size = max_time, seq_len = 1
     # output = output.squeeze(1)
     output = model(
-        input.unsqueeze(0)
+        input.unsqueeze(0),
+        tau=tau,
     )  # (1, max_time, NUM_NEURONS),  batch_size = 1, seq_len = max_time
     output = output.squeeze(0)
     # targets/predictions

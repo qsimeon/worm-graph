@@ -203,7 +203,7 @@ def plot_before_after_weights(log_dir: str) -> None:
 def plot_targets_predictions(
     log_dir: str,
     worm: Union[str, None] = "all",
-    neuron: Union[str, None] = "all"
+    neuron: Union[str, None] = "all",
 ) -> None:
     """
     Plot of the target Ca2+ residual time series overlayed

@@ -2,11 +2,11 @@ from train._utils import *
 
 
 def train_model(
-    model: torch.nn.Module,
-    dataset: dict,
-    config: DictConfig,
-    optimizer: Union[torch.optim.Optimizer, None] = None,
-    shuffle: bool = True,
+        model: torch.nn.Module,
+        dataset: dict,
+        config: DictConfig,
+        optimizer: Union[torch.optim.Optimizer, None] = None,
+        shuffle: bool = True,
 ) -> tuple[torch.nn.Module, str]:
     """
     Trains a model on a multi-worm dataset. Returns the trained model
@@ -53,6 +53,7 @@ def train_model(
         "centered_train_losses": [],
         "centered_test_losses": [],
     }
+    # time vector
     # train the model for multiple cyles
     kwargs = dict(  # args to `split_train_test`
         k_splits=config.train.k_splits,
@@ -84,6 +85,7 @@ def train_model(
             # create data loaders and train/test masks only once per worm
             train_loader, test_loader, train_mask, test_mask = split_train_test(
                 data=single_worm_dataset[key_data],
+                time_vec=single_worm_dataset.get("time_in_seconds", None),
                 **kwargs,
             )
             # add to memo
@@ -116,6 +118,7 @@ def train_model(
         [data[key].extend(log[key]) for key in data]  # Python list comprehension
         # set to next epoch
         reset_epoch = log["epochs"][-1] + 1
+        # outputs
         if (i % config.train.save_freq == 0) or (i + 1 == config.train.epochs):
             # display progress
             print("num. worms trained on:", i + 1, "\nprevious worm:", worm, end="\n\n")
@@ -140,7 +143,7 @@ def train_model(
         header=True,
     )
     # make predictions with last saved model
-    make_predictions(model, dataset, config.train.tau, log_dir)
+    make_predictions(model, dataset, log_dir, config.train.tau)
     # returned trained model and a path to log directory
     return model, log_dir
 
