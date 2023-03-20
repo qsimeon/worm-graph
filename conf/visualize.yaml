@@ -1,5 +1,5 @@
 visualize:
-  log_dir: logs/2023_03_18_14_56-Uzel2022-NetworkLSTM
-  worm: worm2
-  neuron: "AVAL"
+  log_dir: logs/2023_03_20_09_54-sine_seq-NetworkLSTM
+  worm: worm1
+  neuron: "1"
 

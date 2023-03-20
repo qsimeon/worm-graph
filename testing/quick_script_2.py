@@ -4,8 +4,9 @@ Tests the model optimization function `optimize_model`.
 
 import matplotlib.pyplot as plt
 from models._utils import NetworkLSTM
-from data._utils import load_sine
+from data._utils import *
 from train._utils import split_train_test, optimize_model, model_predict
+from visualization._main import *
 
 
 if __name__ == "__main__":
@@ -13,7 +14,7 @@ if __name__ == "__main__":
     neuron_inds = range(0, 1)
     num_neurons = len(neuron_inds)
     # load a dataset (multiple worms)
-    dataset = load_sine()
+    dataset = load_sine_seq()
     # get calcium data for one worm
     single_worm_dataset = dataset["worm0"]
     calcium_data = single_worm_dataset["calcium_data"][:, neuron_inds]
@@ -51,22 +52,27 @@ if __name__ == "__main__":
     # make predictions with trained model
     targets, predictions = model_predict(model, calcium_data * named_neurons_mask)
     print("Targets:", targets.shape, "\nPredictions:", predictions.shape, end="\n\n")
-    # plot entered loss curves
-    plt.figure()
-    plt.plot(log["epochs"], log["centered_train_losses"], label="train")
-    plt.plot(log["epochs"], log["centered_test_losses"], label="test")
-    plt.legend()
-    plt.title("Loss curves")
-    plt.xlabel("Epochs")
-    plt.ylabel("Loss - Baseline")
-    plt.show()
-    # figures of neuron calcium target and prediction
-    for neuron in range(num_neurons):
-        plt.figure()
-        plt.plot(targets[:, neuron], label="target")
-        plt.plot(predictions[:, neuron], alpha=0.8, label="prediction")
-        plt.legend()
-        plt.title("Neuron %s target and prediction" % neuron)
-        plt.xlabel("Time")
-        plt.ylabel("$Ca^{2+} \Delta F / F$")
-        plt.show()
+
+    config = OmegaConf.load(log)
+    print("config:", OmegaConf.to_yaml(config), end="\n\n")
+    plot_figures(config)
+
+    # # plot entered loss curves
+    # plt.figure()
+    # plt.plot(log["epochs"], log["centered_train_losses"], label="train")
+    # plt.plot(log["epochs"], log["centered_test_losses"], label="test")
+    # plt.legend()
+    # plt.title("Loss curves")
+    # plt.xlabel("Epochs")
+    # plt.ylabel("Loss - Baseline")
+    # plt.show()
+    # # figures of neuron calcium target and prediction
+    # for neuron in range(num_neurons):
+    #     plt.figure()
+    #     plt.plot(targets[:, neuron], label="target")
+    #     plt.plot(predictions[:, neuron], alpha=0.8, label="prediction")
+    #     plt.legend()
+    #     plt.title("Neuron %s target and prediction" % neuron)
+    #     plt.xlabel("Time")
+    #     plt.ylabel("$Ca^{2+} \Delta F / F$")
+    #     plt.show()

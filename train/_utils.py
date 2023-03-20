@@ -120,6 +120,7 @@ def test(
 
 def split_train_test(
     data: torch.Tensor,
+    time_vec: None,
     k_splits: int = 2,
     seq_len: int = 101,
     batch_size: int = 32,

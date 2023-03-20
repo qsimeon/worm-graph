@@ -32,12 +32,12 @@ VALID_DATASETS = {
     "Kaplan2020",
     "Flavell2023",  # something wrong with this
     # test datasets
-    # "sine",
-    # "sine_seq",
-    # "sine_seq_noise",
-    # "sine_noise",
-    # "sum_sine",
-    # "sum_sine_noise",
+    "sine",
+    "sine_seq",
+    "sine_seq_noise",
+    "sine_noise",
+    "sum_sine",
+    "sum_sine_noise",
 }  # TODO: set an option for pooling all datasets
 
 # list of all 302 hermaphrodite neurons
