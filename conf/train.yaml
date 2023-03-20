@@ -12,4 +12,4 @@ train:
   # constraint: batch_size < min(train_size, test_size)
   shuffle: True # whether to shuffle samples
   tau: 1 # offset of time steps from target
-  optimizer: SGD # which Pytorch optimizer to use
+  optimizer: SGD # which Pytorch optimizer to use; options: Adam, SGD, None

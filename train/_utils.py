@@ -246,7 +246,6 @@ def optimize_model(
     neurons_mask = neurons_mask.to(DEVICE)
     # create optimizer
     if optimizer is None:
-        # optimizer = torch.optim.Adam(model.parameters(), lr=learn_rate)
         optimizer = torch.optim.SGD(model.parameters(), lr=learn_rate)
     # create log dictionary to return
     log = {

@@ -5,7 +5,7 @@ def train_model(
     model: torch.nn.Module,
     dataset: dict,
     config: DictConfig,
-    optimizer: Union[torch.optim.Optimizer, None] = None,
+    optimizer: Union[torch.optim.Optimizer, str, None] = None,
     shuffle: bool = True,
 ) -> tuple[torch.nn.Module, str]:
     """
@@ -35,12 +35,14 @@ def train_model(
     # remake dataset with only selected worms
     dataset = dict(dataset_items)
     # instantiate the optimizer
-    # optimizer = eval("torch.optim." + config.train.optimizer + "(model.parameters(), lr="+ config.train.learn_rate + ")")
     learn_rate = config.train.learn_rate
     if optimizer is not None:
-        optimizer = optimizer
+        if isinstance(optimizer, str):
+            optimizer = eval("torch.optim." + config.train.optimizer + "(model.parameters(), lr="+ config.train.learn_rate + ")")
+        else: # torch.optim.Optimizer
+            assert isinstance(optimizer, torch.optim.Optimizer), "Please use an instance of torch.optim.Optimizer."
+            optimizer = optimizer
     else:
-        # optimizer = torch.optim.Adam(model.parameters(), lr=learn_rate)
         optimizer = torch.optim.SGD(model.parameters(), lr=learn_rate)
     # train/test loss metrics
     data = {
@@ -70,7 +72,7 @@ def train_model(
         key_data = "smooth_calcium_data"
     else:
         key_data = "calcium_data"
-    # memoize creation of data loaders and masks for speed
+    # memoize creation of data loaders and masks for speedup
     memo_loaders_masks = dict()
     # train for config.train.num_epochs
     reset_epoch = 1
