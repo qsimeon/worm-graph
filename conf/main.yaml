@@ -6,7 +6,7 @@ defaults:
   - train
   - _self_
 globals:
-  - use_residual: False
+  use_residual: False
 # If you want your primary config to override the values of configs
 # from the Defaults List, append _self_ to the end of the Defaults List
 hydra:

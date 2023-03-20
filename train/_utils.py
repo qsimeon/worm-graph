@@ -8,6 +8,7 @@ def train(
     mask: torch.Tensor,
     optimizer: torch.optim.Optimizer,
     no_grad: bool = False,
+    use_residual: bool = False,
 ) -> dict:
     """Train a model.
 
@@ -35,8 +36,10 @@ def train(
         X_train, Y_train = X_train.to(DEVICE), Y_train.to(DEVICE)
         # Clear optimizer gradients.
         optimizer.zero_grad()
-        # Baseline: loss if the model predicted the residual to be 0.
-        base = criterion(X_train[:, :, mask], Y_train[:, :, mask])
+        # Baseline: loss if the model predicted value at next timestep equal to current value.
+        base = criterion(
+            (0 if use_residual else 1) * X_train[:, :, mask], Y_train[:, :, mask]
+        )
         # Train
         Y_tr = model(X_train * mask)  # Forward pass.
         # Register hook.
@@ -68,6 +71,7 @@ def test(
     loader: torch.utils.data.DataLoader,
     model: torch.nn.Module,
     mask: torch.Tensor,
+    use_residual: bool = False,
 ) -> dict:
     """Evaluate a model.
 
@@ -93,7 +97,9 @@ def test(
         X_test, Y_test, metadata = data  # X, Y: (batch_size, seq_len, num_neurons)
         X_test, Y_test = X_test.to(DEVICE), Y_test.to(DEVICE)
         # Baseline: loss if the model predicted the residual to be 0.
-        base = criterion(X_test[:, :, mask], Y_test[:, :, mask])
+        base = criterion(
+            (0 if use_residual else 1) * X_test[:, :, mask], Y_test[:, :, mask]
+        )
         # Test
         Y_te = model(X_test * mask)  # Forward pass.
         # Compute the validation loss.
@@ -123,6 +129,7 @@ def split_train_test(
     shuffle: bool = True,
     reverse: bool = True,
     tau: int = 1,
+    use_residual: bool = True,
 ) -> tuple[
     torch.utils.data.DataLoader,
     torch.utils.data.DataLoader,
@@ -163,7 +170,7 @@ def split_train_test(
         split_times = split_times[:-1]
     train_splits, train_times = split_datasets[::2], split_times[::2]
     test_splits, test_times = split_datasets[1::2], split_times[1::2]
-    # make datasets; TODO: Parallelize this with `multiprocess.Pool`.
+    # make datasets
     # train dataset
     train_datasets = [
         NeuralActivityDataset(
@@ -174,6 +181,7 @@ def split_train_test(
             reverse=reverse,
             time_vec=train_times[i],
             tau=tau,
+            use_residual=use_residual,
         )
         for i, data in enumerate(train_splits)
     ]
@@ -188,6 +196,7 @@ def split_train_test(
             reverse=(not reverse),
             time_vec=test_times[i],
             tau=tau,
+            use_residual=use_residual,
         )
         for i, data in enumerate(test_splits)
     ]
@@ -220,6 +229,7 @@ def optimize_model(
     start_epoch: int = 1,
     learn_rate: float = 0.01,
     num_epochs: int = 1,
+    use_residual: bool = False,
 ) -> tuple[torch.nn.Module, dict]:
     """
     Creates train and test data loaders from the given dataset
@@ -259,9 +269,19 @@ def optimize_model(
     for epoch in range(start_epoch, num_epochs + start_epoch):
         # train the model
         train_log = train(
-            train_loader, model, neurons_mask, optimizer, no_grad=(epoch == 0)
+            train_loader,
+            model,
+            neurons_mask,
+            optimizer,
+            no_grad=(epoch == 0),
+            use_residual=use_residual,
         )
-        test_log = test(test_loader, model, neurons_mask)
+        test_log = test(
+            test_loader,
+            model,
+            neurons_mask,
+            use_residual=use_residual,
+        )
         base_train_loss, train_loss, num_train_samples = (
             train_log["base_train_loss"],
             train_log["train_loss"],
@@ -298,6 +318,7 @@ def make_predictions(
     dataset: dict,
     log_dir: str,
     tau: int = 1,
+    use_residual: bool = False,
 ) -> None:
     """Make predicitons on a dataset with a trained model.
 

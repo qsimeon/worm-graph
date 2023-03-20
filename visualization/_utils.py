@@ -135,7 +135,6 @@ def draw_connectome(
 def plot_loss_curves(log_dir):
     """
     Plot the loss curves stored in the given log directory.
-    TODO: Also make a plot of cumulative number of samples vs. epochs.
     """
     # process the log folder name
     timestamp, dataset_name, model_name = str.split(os.path.split(log_dir)[-1], "-")
@@ -178,8 +177,7 @@ def plot_loss_curves(log_dir):
 
 def plot_before_after_weights(log_dir: str) -> None:
     """
-    Plot the model's readout weigths from
-    before and after training.
+    Plot the model's readout weigths from before and after training.
     """
     # process the log folder name
     timestamp, dataset_name, model_name = str.split(os.path.split(log_dir)[-1], "-")
@@ -216,12 +214,14 @@ def plot_targets_predictions(
     log_dir: str,
     worm: Union[str, None] = "all",
     neuron: Union[str, None] = "all",
+    use_residual: bool = False,
 ) -> None:
     """
-    Plot of the target calcium or caclcium residual time series overlayed
-    with the predicted calcium or caclcium residual time series of a single
+    Plot of the target calcium or calcium residual time series overlayed
+    with the predicted calcium or calcium residual time series of a single
     neuron in a given worm.
     """
+    signal_str = "residual" if use_residual else "calcium"
     # process the log folder name
     timestamp, dataset_name, model_name = str.split(os.path.split(log_dir)[-1], "-")
     # recursive call for all worms
@@ -235,16 +235,18 @@ def plot_targets_predictions(
 
     # load predictions dataframe
     predictions_df = pd.read_csv(
-        os.path.join(log_dir, worm, "predicted_ca.csv"), index_col=0
+        os.path.join(log_dir, worm, "predicted_" + signal_str + ".csv"), index_col=0
     )
     tau = predictions_df["tau"][0]
     # load targets dataframe
-    targets_df = pd.read_csv(os.path.join(log_dir, worm, "target_ca.csv"), index_col=0)
+    targets_df = pd.read_csv(
+        os.path.join(log_dir, worm, "target_" + signal_str + ".csv"), index_col=0
+    )
 
     # plot helper
     def func(_neuron_):
         os.makedirs(os.path.join(log_dir, worm, "figures"), exist_ok=True)
-        plt_title = "Neural activity (via calcium fluorescence) \nworm: {}, neuron: {}\nmodel: {}, dataset: {}\ntime: {}".format(
+        plt_title = "Neural activity (via GCaMP fluorescence) \nworm: {}, neuron: {}\nmodel: {}, dataset: {}\ntime: {}".format(
             worm,
             _neuron_,
             model_name,
@@ -294,8 +296,10 @@ def plot_targets_predictions(
         plt.legend(loc="upper left")
         plt.suptitle(plt_title)
         plt.xlabel("Time (seconds)")
-        plt.ylabel("Calcium ($\\frac{\Delta F}{F}$)")
-        plt.savefig(os.path.join(log_dir, worm, "figures", "calcium_%s.png" % _neuron_))
+        plt.ylabel(signal_str.capitalize() + " ($\\frac{\Delta F}{F}$)")
+        plt.savefig(
+            os.path.join(log_dir, worm, "figures", signal_str + "_%s.png" % _neuron_)
+        )
         plt.close()
         return None
 
@@ -315,11 +319,14 @@ def plot_correlation_scatterplot(
     log_dir: str,
     worm: Union[str, None] = "all",
     neuron: Union[str, None] = "all",
+    use_residual: bool = False,
 ):
     """
-    Create a scatterpot of the target and predicted Ca2+
-    residuals colored by train and test sample.
+    Create a scatterpot of the target and predicted calcium or calcium residual
+    colored by train and test sample.
     """
+    signal_str = "residual" if use_residual else "calcium"
+    # process the folder name
     timestamp, dataset_name, model_name = str.split(os.path.split(log_dir)[-1], "-")
     # recursive call for all worms
     if (worm is None) or (worm.lower() == "all"):
@@ -331,10 +338,12 @@ def plot_correlation_scatterplot(
         assert worm in set(os.listdir(log_dir)), "No data for requested worm found."
     # load predictions dataframe
     predictions_df = pd.read_csv(
-        os.path.join(log_dir, worm, "predicted_ca.csv"), index_col=0
+        os.path.join(log_dir, worm, "target_" + signal_str + ".csv"), index_col=0
     )
     # load targets dataframe
-    targets_df = pd.read_csv(os.path.join(log_dir, worm, "target_ca.csv"), index_col=0)
+    targets_df = pd.read_csv(
+        os.path.join(log_dir, worm, "target_" + signal_str + ".csv"), index_col=0
+    )
 
     # plot helper
     def func(_neuron_):
@@ -364,10 +373,12 @@ def plot_correlation_scatterplot(
         plt.suptitle(plt_title)
         plt.axis("equal")
         plt.gca().set_ylim(plt.gca().get_xlim())
-        plt.xlabel("Target calcium ($\\frac{\Delta F}{F}$)")
-        plt.ylabel("Predicted calcium ($\\frac{\Delta F}{F}$)")
+        plt.xlabel("Target " + signal_str + " ($\\frac{\Delta F}{F}$)")
+        plt.ylabel("Predicted " + signal_str + "  ($\\frac{\Delta F}{F}$)")
         plt.savefig(
-            os.path.join(log_dir, worm, "figures", "correlation_%s.png" % _neuron_)
+            os.path.join(
+                log_dir, worm, "figures", signal_str + "_correlation_%s.png" % _neuron_
+            )
         )
         plt.close()
         return None

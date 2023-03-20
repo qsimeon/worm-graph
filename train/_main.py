@@ -73,17 +73,20 @@ def train_model(
         shuffle=config.train.shuffle,  # whether to shuffle the samples from a worm
         reverse=False,
         tau=config.train.tau_in,
+        use_residual=config.globals.use_residual,
     )
-    # choose whether to use calcium data or residual
-    if config.globals.use_residual:
+    # choose whether to use calcium or residual data
+    use_residual = config.globals.use_residual
+    if use_residual:
         key_data = "residual_calcium"
     else:
         key_data = "calcium_data"
-    # choose whether to use original or smoothed calcium data
-    if config.train.smooth_data:
-        key_data = "smooth_calcium_data"
+    # choose whether to use original or smoothed data
+    smooth_data = config.train.smooth_data
+    if smooth_data:
+        key_data = "smooth_" + key_data
     else:
-        key_data = "calcium_data"
+        key_data = key_data
     # memoize creation of data loaders and masks for speedup
     memo_loaders_masks = dict()
     # train for config.train.num_epochs
@@ -129,6 +132,7 @@ def train_model(
             start_epoch=reset_epoch,
             learn_rate=learn_rate,
             num_epochs=1,
+            use_residual=use_residual,
         )
         # retrieve losses and sample counts
         [data[key].extend(log[key]) for key in data]  # Python list comprehension
