@@ -337,11 +337,12 @@ def make_predictions(
         None.
     """
     signal_str = "residual" if use_residual else "calcium"
+    key_data = "residual_calcium" if use_residual else "calcium_data"
     for worm, single_worm_dataset in dataset.items():
         os.makedirs(os.path.join(log_dir, worm), exist_ok=True)
         # get data to save
         named_neuron_to_idx = single_worm_dataset["named_neuron_to_idx"]
-        calcium_data = single_worm_dataset["calcium_data"]
+        calcium_data = single_worm_dataset[key_data]
         named_neurons_mask = single_worm_dataset["named_neurons_mask"]
         time_in_seconds = single_worm_dataset["time_in_seconds"]
         train_mask = single_worm_dataset["train_mask"]
