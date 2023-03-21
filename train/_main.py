@@ -15,7 +15,7 @@ def train_model(
     # initialize
     dataset_name = dataset["worm0"]["dataset"]
     model_class_name = model.__class__.__name__
-    timestamp = datetime.now().strftime("%Y_%m_%d_%H_%M")
+    timestamp = datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
     log_dir = os.path.join(
         "logs", "{}-{}-{}".format(timestamp, dataset_name, model_class_name)
     )

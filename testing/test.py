@@ -1,15 +1,11 @@
+import os
 import hydra
 from omegaconf import OmegaConf, DictConfig
-import logging
-import os
-
-log = logging.getLogger(__name__)
-
 
 @hydra.main(version_base=None, config_path="../conf", config_name="testing")
 def main(cfg: DictConfig) -> None:
-    print(OmegaConf.to_yaml(cfg))
-    print(os.getcwd())
+    print("Working directory:", os.getcwd(), end="\n\n")
+    print("`config` YAML:\n", OmegaConf.to_yaml(cfg), end="\n\n")
 
 
 if __name__ == "__main__":

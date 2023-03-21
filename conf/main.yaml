@@ -12,11 +12,11 @@ globals:
 # from the Defaults List, append _self_ to the end of the Defaults List
 hydra:
   run:
-    dir: logs/${now:%Y_%m_%d_%H_%M}-${dataset.name}-${model.type}
+    dir: logs/hydra/${now:%Y_%m_%d_%H_%M_%S}-${dataset.name}-${model.type}
   sweep:
-    dir: logs/${now:%Y_%m_%d_%H_%M}-${dataset.name}-${model.type}
+    dir: logs/hydra/${now:%Y_%m_%d_%H_%M_%S}-${dataset.name}-${model.type}
     subdir: ${hydra.job.num}
-  mode: MULTIRUN # options: RUN, MULTIRUN
+  mode: RUN # options: RUN, MULTIRUN
   job:
     chdir: false
   sweeper:
