@@ -4,5 +4,5 @@
 
 # Pickle files
 *.pickle
-# processed/neural/*.pickle
+processed/neural/*.pickle
 processed/neural/.processed
