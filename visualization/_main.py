@@ -18,6 +18,7 @@ def plot_figures(
         worm = config.visualize.worm
     if neuron is None:
         neuron = config.visualize.neuron
+    # get other config params
     if config.get("globals"):
         use_residual = config.globals.use_residual
     else:

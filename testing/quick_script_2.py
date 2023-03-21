@@ -74,5 +74,5 @@ if __name__ == "__main__":
         plt.legend()
         plt.title("Neuron %s target and prediction ($\\tau = %s$)" % (neuron, tau_out))
         plt.xlabel("Time (seconds)")
-        plt.ylabel("$Ca^{2+} \Delta F / F$")
+        plt.ylabel("$Ca^{2+}$ ($\Delta F / F$)")
         plt.show()

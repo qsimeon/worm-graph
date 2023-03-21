@@ -319,6 +319,7 @@ def make_predictions(
     log_dir: str,
     tau: int = 1,
     use_residual: bool = False,
+    smooth_data: bool =False,
 ) -> None:
     """Make predicitons on a dataset with a trained model.
 
@@ -338,6 +339,7 @@ def make_predictions(
     """
     signal_str = "residual" if use_residual else "calcium"
     key_data = "residual_calcium" if use_residual else "calcium_data"
+    key_data = "smooth_" + key_data if smooth_data else key_data
     for worm, single_worm_dataset in dataset.items():
         os.makedirs(os.path.join(log_dir, worm), exist_ok=True)
         # get data to save

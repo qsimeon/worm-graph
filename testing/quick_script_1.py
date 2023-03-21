@@ -40,5 +40,5 @@ if __name__ == "__main__":
         "Neuron %s target and prediction ($\\tau = %s$)" % (neuron, tau_out)
     )
     axs[1].set_xlabel("Time (seconds)")
-    axs[1].set_ylabel("$Ca^{2+} \Delta F / F$")
+    axs[1].set_ylabel("$Ca^{2+}$ ($\Delta F / F$)")
     plt.show()

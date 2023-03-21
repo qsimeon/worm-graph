@@ -53,7 +53,7 @@ if __name__ == "__main__":
         label="target",
     )
     plt.xlabel("Time")
-    plt.ylabel("$Ca^{2+}$ ($\\frac{\Delta F}{F}$)")
+    plt.ylabel("$Ca^{2+}$ ($\Delta F / F$)")
     plt.title("Last sample, Last batch, Neuron , Input & Target")
     plt.legend()
     plt.show()

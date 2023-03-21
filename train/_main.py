@@ -51,6 +51,13 @@ def train_model(
     else:
         optimizer = torch.optim.SGD(model.parameters(), lr=learn_rate)
     print("Optimizer:", optimizer, end="\n\n")
+    # get other config params
+    if config.get("globals"):
+        use_residual = config.globals.use_residual
+        smooth_data = config.train.smooth_data
+    else:
+        use_residual = False
+        smooth_data = False
     # train/test loss metrics
     data = {
         "epochs": [],
@@ -73,19 +80,14 @@ def train_model(
         shuffle=config.train.shuffle,  # whether to shuffle the samples from a worm
         reverse=False,
         tau=config.train.tau_in,
-        use_residual=config.globals.use_residual,
+        use_residual=use_residual,
     )
     # choose whether to use calcium or residual data
-    if config.get("globals"):
-        use_residual = config.globals.use_residual
-    else:
-        use_residual = False
     if use_residual:
         key_data = "residual_calcium"
     else:
         key_data = "calcium_data"
     # choose whether to use original or smoothed data
-    smooth_data = config.train.smooth_data
     if smooth_data:
         key_data = "smooth_" + key_data
     else:
@@ -172,6 +174,7 @@ def train_model(
         log_dir,
         tau=config.train.tau_out,
         use_residual=use_residual,
+        smooth_data=smooth_data,
     )
     # returned trained model and a path to log directory
     return model, log_dir

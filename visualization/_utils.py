@@ -246,12 +246,16 @@ def plot_targets_predictions(
     # plot helper
     def func(_neuron_):
         os.makedirs(os.path.join(log_dir, worm, "figures"), exist_ok=True)
-        plt_title = "Neural activity (via GCaMP fluorescence) \nworm: {}, neuron: {}\nmodel: {}, dataset: {}\ntime: {}".format(
-            worm,
-            _neuron_,
-            model_name,
-            dataset_name,
-            timestamp,
+        plt_title = (
+            "Neural activity "
+            + signal_str
+            + " (GCaMP fluorescence) \nworm: {}, neuron: {}\nmodel: {}, dataset: {}\ntime: {}".format(
+                worm,
+                _neuron_,
+                model_name,
+                dataset_name,
+                timestamp,
+            )
         )
         sns.lineplot(
             data=targets_df,
@@ -296,7 +300,7 @@ def plot_targets_predictions(
         plt.legend(loc="upper left")
         plt.suptitle(plt_title)
         plt.xlabel("Time (seconds)")
-        plt.ylabel(signal_str.capitalize() + " ($\\frac{\Delta F}{F}$)")
+        plt.ylabel(signal_str.capitalize() + " ($\Delta F / F$)")
         plt.savefig(
             os.path.join(log_dir, worm, "figures", signal_str + "_%s.png" % _neuron_)
         )
@@ -373,8 +377,8 @@ def plot_correlation_scatterplot(
         plt.suptitle(plt_title)
         plt.axis("equal")
         plt.gca().set_ylim(plt.gca().get_xlim())
-        plt.xlabel("Target " + signal_str + " ($\\frac{\Delta F}{F}$)")
-        plt.ylabel("Predicted " + signal_str + "  ($\\frac{\Delta F}{F}$)")
+        plt.xlabel("Target " + signal_str + " ($\Delta F / F$)")
+        plt.ylabel("Predicted " + signal_str + " ($\Delta F / F$)")
         plt.savefig(
             os.path.join(
                 log_dir, worm, "figures", signal_str + "_correlation_%s.png" % _neuron_
