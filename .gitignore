@@ -18,7 +18,7 @@ raw_data.zip
 raw_data/
 
 # Logs
-# logs/
+logs/
 
 # C extensions
 *.so
