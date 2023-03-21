@@ -24,7 +24,7 @@ if __name__ == "__main__":
         calcium_data,
         seq_len=999,
         num_samples=1024,
-        tau=100,  # offset of target
+        tau=100,  # target offset
         reverse=False,
     )
     # create dataloader from neural dataset
@@ -53,7 +53,7 @@ if __name__ == "__main__":
         label="target",
     )
     plt.xlabel("Time")
-    plt.ylabel("$Ca^{2+} \Delta F / F$")
+    plt.ylabel("$Ca^{2+}$ ($\Delta F / F$)")
     plt.title("Last sample, Last batch, Neuron , Input & Target")
     plt.legend()
     plt.show()

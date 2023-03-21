@@ -10,7 +10,8 @@ def get_dataset(config: DictConfig):
     if isinstance(config.dataset.name, str):
         dataset_names = [config.dataset.name]
     else:
-        dataset_names = sorted(list(config.dataset.name))
+        # dataset_names = sorted(list(config.dataset.name))
+        dataset_names = list(config.dataset.name)
     # load the dataset(s)
     combined_dataset = dict()
     for dataset_name in dataset_names:
@@ -20,10 +21,12 @@ def get_dataset(config: DictConfig):
                 worm_ = "worm%s" % len(combined_dataset)
                 combined_dataset[worm_] = multi_worms_dataset[worm]
                 combined_dataset[worm_]["worm"] = worm_
-                combined_dataset[worm_]["dataset"] = "_".join(dataset_names)
+                # combined_dataset[worm_]["dataset"] = "_".join(dataset_names)
+                combined_dataset[worm_]["dataset"] = str(dataset_names)
             else:
                 combined_dataset[worm] = multi_worms_dataset[worm]
-                combined_dataset[worm]["dataset"] = "_".join(dataset_names)
+                # combined_dataset[worm]["dataset"] = "_".join(dataset_names)
+                combined_dataset[worm]["dataset"] = str(dataset_names)
     # display the dataset
     print(
         "Chosen dataset(s): {}\nNum. worms: {}\nWorm names: {}\n".format(

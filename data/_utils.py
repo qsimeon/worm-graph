@@ -21,6 +21,7 @@ class NeuralActivityDataset(torch.utils.data.Dataset):
         time_vec=None,
         reverse=False,
         tau=1,  # deprecated
+        use_residual=False,
     ):
         """
         Args:
@@ -69,8 +70,9 @@ class NeuralActivityDataset(torch.utils.data.Dataset):
             self.time_vec = torch.arange(data.size(0))
         self.max_time, num_neurons = data.shape
         self.seq_len = seq_len
-        self.tau = tau
         self.reverse = reverse
+        self.tau = tau
+        self.use_residual = use_residual
         # select out requested neurons
         if neurons is not None:
             self.neurons = np.array(neurons)  # use the subset of neurons given
@@ -97,21 +99,29 @@ class NeuralActivityDataset(torch.utils.data.Dataset):
         end = start + self.seq_len
         # get the time vector
         time_vec = self.time_vec[start:end]
+        # calculate the average dt
+        avg_dt = torch.diff(time_vec).mean()
         # data samples: input (X_tau) and target (Y_tau)
         X_tau = self.data[start:end, self.neurons]
         Y_tau = self.data[start + self.tau : end + self.tau, self.neurons]  # overlap
         # calculate the residual (forward first derivative)
-        Res_tau = Y_tau - X_tau
+        Res_tau = (Y_tau - X_tau) / (avg_dt * max(1, self.tau))
         # store metadata about the sample
-        metadata = {
-            "seq_len": self.seq_len,
-            "start": start,
-            "end": end,
-            "tau": self.tau,
-            "residual": Res_tau,
-            "time_vec": time_vec,
-        }
+        input = "calcium"
+        target = "residual" if self.use_residual else "calcium"
+        metadata = dict(
+            seq_len=self.seq_len,
+            start=start,
+            end=end,
+            tau=self.tau,
+            avg_dt=avg_dt,
+            input=input,
+            target=target,
+            time_vec=time_vec,
+        )
         # return sample
+        if self.use_residual:
+            Y_tau = Res_tau
         return X_tau, Y_tau, metadata
 
     def __data_generator(self):
@@ -130,8 +140,6 @@ class NeuralActivityDataset(torch.utils.data.Dataset):
         )  # overlapping windows
         # parallelize the data generation
         with Pool(processes=cpu_count() // 2) as pool:
-            # # synchronous
-            # data_samples = pool.map(self.parfor_func, start_range)[: self.num_samples]
             # asynchronous
             data_samples = pool.map_async(
                 self.parfor_func,

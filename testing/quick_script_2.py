@@ -22,7 +22,7 @@ if __name__ == "__main__":
     # create a model
     model = NetworkLSTM(num_neurons, 64).double()
     # keyword args to `split_train_test`
-    train_tau = 1
+    tau_in = 1
     kwargs = dict(
         k_splits=2,
         seq_len=10,
@@ -33,7 +33,7 @@ if __name__ == "__main__":
         # TODO: Why does `shuffle=True` improve performance so much?
         shuffle=True,
         reverse=False,
-        tau=train_tau,
+        tau=tau_in,
     )
     # create data loaders and train/test masks
     train_loader, test_loader, train_mask, test_mask = split_train_test(
@@ -50,11 +50,11 @@ if __name__ == "__main__":
         learn_rate=0.01,
     )
     # make predictions with trained model
-    pred_tau = 50
+    tau_out = 50
     targets, predictions = model_predict(
         model,
         calcium_data * named_neurons_mask,
-        tau=pred_tau,
+        tau=tau_out,
     )
     print("Targets:", targets.shape, "\nPredictions:", predictions.shape, end="\n\n")
     # plot entered loss curves
@@ -72,7 +72,7 @@ if __name__ == "__main__":
         plt.plot(time_in_seconds, targets[:, neuron], label="target")
         plt.plot(time_in_seconds, predictions[:, neuron], alpha=0.8, label="prediction")
         plt.legend()
-        plt.title("Neuron %s target and prediction ($\\tau = %s$)" % (neuron, pred_tau))
+        plt.title("Neuron %s target and prediction ($\\tau = %s$)" % (neuron, tau_out))
         plt.xlabel("Time (seconds)")
-        plt.ylabel("$Ca^{2+} \Delta F / F$")
+        plt.ylabel("$Ca^{2+}$ ($\Delta F / F$)")
         plt.show()

@@ -19,9 +19,9 @@ if __name__ == "__main__":
     time_in_seconds = single_worm_dataset.get("time_in_seconds", None)
     # create a model
     model = LinearNN(302, 64).double()
-    # make 1-step ahead prediction with untrained model
-    pred_tau = 300
-    targets, predictions = model_predict(model, calcium_data, tau=pred_tau)
+    # make 0-step (i.e. identity) prediction with untrained model
+    tau_out = 0
+    targets, predictions = model_predict(model, calcium_data, tau=tau_out)
     print("Targets:", targets.shape, "\nPredictions:", predictions.shape, end="\n\n")
     # pick a neuron idx
     neuron = 0
@@ -37,8 +37,8 @@ if __name__ == "__main__":
     axs[1].plot(time_in_seconds, predictions[:, neuron], alpha=0.8, label="prediction")
     axs[1].legend()
     axs[1].set_title(
-        "Neuron %s target and prediction ($\\tau = %s$)" % (neuron, pred_tau)
+        "Neuron %s target and prediction ($\\tau = %s$)" % (neuron, tau_out)
     )
     axs[1].set_xlabel("Time (seconds)")
-    axs[1].set_ylabel("$Ca^{2+} \Delta F / F$")
+    axs[1].set_ylabel("$Ca^{2+}$ ($\Delta F / F$)")
     plt.show()

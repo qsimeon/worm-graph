@@ -19,4 +19,4 @@ if __name__ == "__main__":
     # run the full train pipeline
     model, log_dir = train_model(model, dataset, train_config)
     # compare predictions against targets
-    plot_targets_predictions(log_dir, worm="worm0", neuron="all")
+    plot_targets_predictions(log_dir, worm="worm0", neuron="AVAL")
