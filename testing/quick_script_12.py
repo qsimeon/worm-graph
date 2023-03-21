@@ -1,6 +1,5 @@
 """
 make seq_len == tau
-use predictions to predict next seq_len
 """
 
 import matplotlib.pyplot as plt
@@ -25,7 +24,7 @@ if __name__ == "__main__":
     named_neurons_mask = single_worm_dataset["named_neurons_mask"][neuron_inds]
     time_vec = single_worm_dataset.get("time_in_seconds", None)
     # create a model
-    model = NeuralCFC(num_neurons, 100, 2).double()
+    model = NeuralCFC(num_neurons, 100, 5).double()
     # keyword args to `split_train_test`
     kwargs = dict(
         k_splits=2,

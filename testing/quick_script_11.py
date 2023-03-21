@@ -36,7 +36,7 @@ if __name__ == "__main__":
         # TODO: Why does `shuffle=True` improve performance so much?
         shuffle=True,
         reverse=False,
-        tau=1,
+        tau=tau,
     )
     # create data loaders and train/test masks
     train_loader, test_loader, train_mask, test_mask = split_train_test(
