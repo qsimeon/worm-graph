@@ -13,7 +13,7 @@ from govfunc._utils import *
 
 
 def main():
-    config = OmegaConf.load("./dataset.yaml")
+    config = OmegaConf.load("conf/dataset.yaml")
     print("config:", OmegaConf.to_yaml(config), end="\n\n")
     dataset = get_dataset(config)
     print("----dataset prepared------\n")
