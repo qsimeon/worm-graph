@@ -207,14 +207,12 @@ def split_train_test(
         batch_size=batch_size,
         shuffle=shuffle,
         pin_memory=True,
-        # num_workers=cpu_count() // 2,
     )
     test_loader = DataLoader(
         test_dataset,
         batch_size=batch_size,
         shuffle=shuffle,
         pin_memory=True,
-        # num_workers=cpu_count() // 2,
     )
     # return data loaders and masks
     return train_loader, test_loader, train_mask, test_mask
@@ -319,7 +317,7 @@ def make_predictions(
     log_dir: str,
     tau: int = 1,
     use_residual: bool = False,
-    smooth_data: bool =False,
+    smooth_data: bool = False,
 ) -> None:
     """Make predicitons on a dataset with a trained model.
 

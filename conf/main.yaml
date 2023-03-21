@@ -5,6 +5,7 @@ defaults:
   - visualize
   - train
   - _self_
+  # - override hydra/launcher: joblib
 globals:
   use_residual: False
 # If you want your primary config to override the values of configs
@@ -13,9 +14,9 @@ hydra:
   run:
     dir: logs/${now:%Y_%m_%d_%H_%M}-${dataset.name}-${model.type}
   sweep:
-    dir: logs/${now:%Y_%m_%d_%H_%M}-${dataset.name}-{model.type}
+    dir: logs/${now:%Y_%m_%d_%H_%M}-${dataset.name}-${model.type}
     subdir: ${hydra.job.num}
-  mode: RUN # options: RUN, MULTIRUN
+  mode: MULTIRUN # options: RUN, MULTIRUN
   job:
     chdir: false
   sweeper:
@@ -24,4 +25,4 @@ hydra:
       # model.hidden_size: 64, 128, 512
       # train.train_size: 1024, 2048, 4096
       # model.type: linear, dense_cfc, neural_cfc, lstm, vae_lstm
-      # dataset.name: Skora2018
+      dataset.name: Skora2018, Kaplan2020

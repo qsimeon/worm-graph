@@ -30,6 +30,8 @@ dependencies:
   - pip:
       - black[jupyter]
       - hydra-core=1.3.2
+      - hydra-submitit-launcher
+      - hydra-joblib-launcher
       - omegaconf=2.3.0
       - pyEDM=1.13.1.0
       - wget=3.2
