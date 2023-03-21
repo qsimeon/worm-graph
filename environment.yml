@@ -22,15 +22,15 @@ dependencies:
   - numpy=1.23.5
   - nomkl
   - scipy=1.10.0
-  - mat73=0.60
+  - mat73
   - h5py=3.7.0
   - tqdm=4.64.1
   - pyg
   - pip=23.0.1
   - pip:
       - black[jupyter]
-      - hydra-core=1.3.2
-      - omegaconf=2.3.0
-      - pyEDM=1.13.1.0
-      - wget=3.2
-      - ncps=0.0.7
+      - hydra-core==1.3.2
+      - omegaconf==2.3.0
+      - pyEDM==1.13.1.0
+      - wget==3.2
+      - ncps==0.0.7

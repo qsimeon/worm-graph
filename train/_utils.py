@@ -242,7 +242,7 @@ def optimize_model(
     # create optimizer
     if optimizer is None:
         # optimizer = torch.optim.Adam(model.parameters(), lr=learn_rate)
-        optimizer = torch.optim.SGD(model.parameters(), lr=learn_rate)
+        optimizer = torch.optim.AdamW(model.parameters(), lr=learn_rate)
     # create log dictionary to return
     log = {
         "epochs": [],
@@ -376,7 +376,7 @@ def model_predict(
     # model in/out
     calcium_data = calcium_data.squeeze(0)
     assert (
-        calcium_data.ndim == 2 and calcium_data.size(0) >= NUM_NEURONS
+        calcium_data.ndim == 2 and calcium_data.size(1) >= NUM_NEURONS
     ), "Calcium data has incorrect shape!"
     # get input and output
     input = calcium_data.to(DEVICE)
@@ -394,6 +394,8 @@ def model_predict(
     targets = input.detach().cpu()
     predictions = output.detach().cpu()
     return targets, predictions
+
+
 
 
 def gnn_train_val_mask(graph, train_ratio=0.7, train_mask=None):
@@ -418,6 +420,8 @@ def gnn_train_val_mask(graph, train_ratio=0.7, train_mask=None):
     graph = graph.to(DEVICE)
     # return the graph with train and validation masks
     return graph
+
+
 
 
 def gnn_train(loader, model, graph, optimizer):
