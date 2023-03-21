@@ -15,6 +15,12 @@ import seaborn as sns
 import torch
 
 
+def generate_polynomial(x, polyorder, usesine):
+    # polyorder: polynomial formula with the first variant up to x^(i), where i is chosen from [1, polyorder]
+    r, c = x.shape
+    Theta = poolData(x, c, polyorder, usesine)
+    return Theta
+
 def neuro_plot(y, isTarget):
     y_df = pd.DataFrame(y)
     # data normalization: z-scoring
