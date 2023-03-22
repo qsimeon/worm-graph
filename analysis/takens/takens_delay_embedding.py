@@ -1,5 +1,5 @@
 """
-This scripts requires the `matplotlib` and a CSV file with evenly sampled data.
+This script requires the `matplotlib` and a CSV file with evenly sampled data.
 """
 FILENAME = "../input/ca_activity.csv"
 COLUMN = -1  ## Which column of csv file to use, 0 means leftmost.

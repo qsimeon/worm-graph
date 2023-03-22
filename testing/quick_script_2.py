@@ -4,9 +4,8 @@ Tests the model optimization function `optimize_model`.
 
 import matplotlib.pyplot as plt
 from models._utils import NetworkLSTM
-from data._utils import *
+from data._utils import load_sine
 from train._utils import split_train_test, optimize_model, model_predict
-from visualization._main import *
 
 
 if __name__ == "__main__":
@@ -14,7 +13,7 @@ if __name__ == "__main__":
     neuron_inds = range(0, 1)
     num_neurons = len(neuron_inds)
     # load a dataset (multiple worms)
-    dataset = load_sine_seq()
+    dataset = load_sine()
     # get calcium data for one worm
     single_worm_dataset = dataset["worm0"]
     calcium_data = single_worm_dataset["calcium_data"][:, neuron_inds]
