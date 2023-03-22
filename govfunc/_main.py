@@ -7,10 +7,8 @@
 @file: _main.py
 @time: 2023/2/28 12:15
 """
-import pandas as pd
 
-from train._main import *
-import os
+from govfunc._utils import *
 
 
 def main(model: torch.nn.Module,
