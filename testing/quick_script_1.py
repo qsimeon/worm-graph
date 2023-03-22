@@ -16,23 +16,29 @@ if __name__ == "__main__":
     # get the calcium data for one worm
     single_worm_dataset = dataset["worm0"]
     calcium_data = single_worm_dataset["calcium_data"]
+    time_in_seconds = single_worm_dataset.get("time_in_seconds", None)
     # create a model
     model = LinearNN(302, 64).double()
-    # make predictions with untrained model
-    targets, predictions = model_predict(model, calcium_data)
+    # make 0-step (i.e. identity) prediction with untrained model
+    tau_out = 0
+    targets, predictions = model_predict(model, calcium_data, tau=tau_out)
     print("Targets:", targets.shape, "\nPredictions:", predictions.shape, end="\n\n")
-    # figure of untrained model weights and neuron 0 calcium traces
+    # pick a neuron idx
+    neuron = 0
+    # figure of untrained model weights and neuron xx calcium traces
     fig, axs = plt.subplots(2, 1)
     # model untrained weights
     axs[0].imshow(model.linear.weight.detach().cpu().T)
     axs[0].set_title("Model initial readout weights")
     axs[0].set_xlabel("Output size")
     axs[0].set_ylabel("Input size")
-    # neuron 5 targets and predictions
-    axs[1].plot(targets[:, 0], label="target")
-    axs[1].plot(predictions[:, 0], alpha=0.8, label="prediction")
+    # neuron xx targets and predictions
+    axs[1].plot(time_in_seconds, targets[:, neuron], label="target")
+    axs[1].plot(time_in_seconds, predictions[:, neuron], alpha=0.8, label="prediction")
     axs[1].legend()
-    axs[1].set_title("Neuron 0 target and prediction")
-    axs[1].set_xlabel("Time")
-    axs[1].set_ylabel("$Ca^{2+} \Delta F / F$")
+    axs[1].set_title(
+        "Neuron %s target and prediction ($\\tau = %s$)" % (neuron, tau_out)
+    )
+    axs[1].set_xlabel("Time (seconds)")
+    axs[1].set_ylabel("$Ca^{2+}$ ($\Delta F / F$)")
     plt.show()

@@ -18,6 +18,11 @@ def plot_figures(
         worm = config.visualize.worm
     if neuron is None:
         neuron = config.visualize.neuron
+    # get other config params
+    if config.get("globals"):
+        use_residual = config.globals.use_residual
+    else:
+        use_residual = False
 
     # loss curves
     plot_loss_curves(log_dir)
@@ -26,10 +31,20 @@ def plot_figures(
     plot_before_after_weights(log_dir)
 
     # calcium residuals
-    plot_targets_predictions(log_dir, worm, neuron)
+    plot_targets_predictions(
+        log_dir,
+        worm,
+        neuron,
+        use_residual,
+    )
 
-    # scatterplot of modelled vs. real neuron activity
-    plot_correlation_scatterplot(log_dir, worm, neuron)
+    # scatterplot of modeled vs. real neuron activity
+    plot_correlation_scatterplot(
+        log_dir,
+        worm,
+        neuron,
+        use_residual,
+    )
 
     # TODO add more plotting functions for different figures
 

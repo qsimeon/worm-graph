@@ -1,5 +1,5 @@
 model:
-  type: neural_cfc # options: linear, dense_cfc, neural_cfc, lstm, vae_lstm
+  type: NetworkLSTM # options: LinearNN, NetworkLSTM, DenseCFC, NeuralCFC, VariationalLSTM
   input_size: 302 # fixed
   hidden_size: 64 # options: int > 0
   num_layers: 2 # fixed

@@ -1,0 +1,16 @@
+# @package _global_
+defaults:
+  - override /hydra/launcher: submitit_slurm
+
+hydra:
+  launcher:
+    cpus_per_task: 4
+    gpus_per_task: 0
+    tasks_per_node: 1
+    nodes: 1
+    mem_gb: 4
+    additional_parameters:
+      mail-user: qsimeon@mit.edu
+      mail-type: END
+    array_parallelism: 800
+    timeout_min: 900 # 15 hours by default

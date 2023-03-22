@@ -1,0 +1,8 @@
+dataset:
+  name: 
+    - Skora2018
+    - Kaplan2020
+
+globals:
+  use_residual: False
+

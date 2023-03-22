@@ -9,7 +9,6 @@ from omegaconf import OmegaConf
 from torch.utils.data import DataLoader
 from data._main import get_dataset
 from data._utils import NeuralActivityDataset
-from multiprocessing import cpu_count
 
 
 config = OmegaConf.load("conf/dataset.yaml")
@@ -25,7 +24,7 @@ if __name__ == "__main__":
         calcium_data,
         seq_len=999,
         num_samples=1024,
-        tau=100,  # offset of target
+        tau=100,  # target offset
         reverse=False,
     )
     # create dataloader from neural dataset
@@ -54,7 +53,7 @@ if __name__ == "__main__":
         label="target",
     )
     plt.xlabel("Time")
-    plt.ylabel("$Ca^{2+} \Delta F / F$")
-    plt.title("Last sample, Last batch, Neuron 0 input & target")
+    plt.ylabel("$Ca^{2+}$ ($\Delta F / F$)")
+    plt.title("Last sample, Last batch, Neuron , Input & Target")
     plt.legend()
     plt.show()

@@ -15,6 +15,7 @@ def pipeline(config: DictConfig) -> None:
         TODO: analyze_outputs: analysis.yaml
     """
     print()
+
     # skips if data already preprocessed
     process_data(config)
 
@@ -23,7 +24,13 @@ def pipeline(config: DictConfig) -> None:
 
     model = get_model(config)
 
-    model, log_dir = train_model(model, dataset, config, shuffle=True)
+    # train model is the bulk of the pipeline code
+    model, log_dir = train_model(
+        model,
+        dataset,
+        config,
+        shuffle=True,
+    )
 
     plot_figures(config, log_dir)
     ## TODO: analysis

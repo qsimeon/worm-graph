@@ -2,11 +2,10 @@ from train._utils import *
 
 
 def train_model(
-        model: torch.nn.Module,
-        dataset: dict,
-        config: DictConfig,
-        optimizer: Union[torch.optim.Optimizer, None] = None,
-        shuffle: bool = True,
+    model: torch.nn.Module,
+    dataset: dict,
+    config: DictConfig,
+    shuffle: bool = True,  # whether to shuffle worms
 ) -> tuple[torch.nn.Module, str]:
     """
     Trains a model on a multi-worm dataset. Returns the trained model
@@ -16,7 +15,7 @@ def train_model(
     # initialize
     dataset_name = dataset["worm0"]["dataset"]
     model_class_name = model.__class__.__name__
-    timestamp = datetime.now().strftime("%Y_%m_%d_%H_%M")
+    timestamp = datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
     log_dir = os.path.join(
         "logs", "{}-{}-{}".format(timestamp, dataset_name, model_class_name)
     )
@@ -29,18 +28,36 @@ def train_model(
             list(dataset.keys()), size=config.train.epochs, replace=True
         )
     ]
-    # shuffle the dataset (without replacement)
+    # shuffle the worms in dataset (without replacement)
     if shuffle == True:
         dataset_items = random.sample(dataset_items, k=len(dataset_items))
     # remake dataset with only selected worms
     dataset = dict(dataset_items)
     # instantiate the optimizer
+    opt_param = config.train.optimizer
     learn_rate = config.train.learn_rate
-    if optimizer is not None:
-        optimizer = optimizer
+    if config.train.optimizer is not None:
+        if isinstance(opt_param, str):
+            optimizer = eval(
+                "torch.optim."
+                + opt_param
+                + "(model.parameters(), lr="
+                + str(learn_rate)
+                + ")"
+            )
+        assert isinstance(
+            optimizer, torch.optim.Optimizer
+        ), "Please use an instance of torch.optim.Optimizer."
     else:
-        optimizer = torch.optim.Adam(model.parameters(), lr=learn_rate)
-        # optimizer = torch.optim.SGD(model.parameters(), lr=config.train.learn_rate)
+        optimizer = torch.optim.SGD(model.parameters(), lr=learn_rate)
+    print("Optimizer:", optimizer, end="\n\n")
+    # get other config params
+    if config.get("globals"):
+        use_residual = config.globals.use_residual
+        smooth_data = config.train.smooth_data
+    else:
+        use_residual = False
+        smooth_data = False
     # train/test loss metrics
     data = {
         "epochs": [],
@@ -53,7 +70,6 @@ def train_model(
         "centered_train_losses": [],
         "centered_test_losses": [],
     }
-    # time vector
     # train the model for multiple cyles
     kwargs = dict(  # args to `split_train_test`
         k_splits=config.train.k_splits,
@@ -61,16 +77,22 @@ def train_model(
         batch_size=config.train.batch_size,
         train_size=config.train.train_size,
         test_size=config.train.test_size,
-        shuffle=config.train.shuffle,
+        shuffle=config.train.shuffle,  # whether to shuffle the samples from a worm
         reverse=False,
-        tau=config.train.tau,
+        tau=config.train.tau_in,
+        use_residual=use_residual,
     )
-    # choose whether to use original or smoothed calcium data
-    if config.train.smooth_data:
-        key_data = "smooth_calcium_data"
+    # choose whether to use calcium or residual data
+    if use_residual:
+        key_data = "residual_calcium"
     else:
         key_data = "calcium_data"
-    # memoize creation of data loaders and masks for speed
+    # choose whether to use original or smoothed data
+    if smooth_data:
+        key_data = "smooth_" + key_data
+    else:
+        key_data = key_data
+    # memoize creation of data loaders and masks for speedup
     memo_loaders_masks = dict()
     # train for config.train.num_epochs
     reset_epoch = 1
@@ -85,7 +107,9 @@ def train_model(
             # create data loaders and train/test masks only once per worm
             train_loader, test_loader, train_mask, test_mask = split_train_test(
                 data=single_worm_dataset[key_data],
-                time_vec=single_worm_dataset.get("time_in_seconds", None),
+                time_vec=single_worm_dataset.get(
+                    "time_in_seconds", None
+                ),  # time vector
                 **kwargs,
             )
             # add to memo
@@ -113,6 +137,7 @@ def train_model(
             start_epoch=reset_epoch,
             learn_rate=learn_rate,
             num_epochs=1,
+            use_residual=use_residual,
         )
         # retrieve losses and sample counts
         [data[key].extend(log[key]) for key in data]  # Python list comprehension
@@ -143,7 +168,14 @@ def train_model(
         header=True,
     )
     # make predictions with last saved model
-    make_predictions(model, dataset, log_dir, config.train.tau)
+    make_predictions(
+        model,
+        dataset,
+        log_dir,
+        tau=config.train.tau_out,
+        use_residual=use_residual,
+        smooth_data=smooth_data,
+    )
     # returned trained model and a path to log directory
     return model, log_dir
 

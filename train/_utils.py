@@ -8,6 +8,7 @@ def train(
     mask: torch.Tensor,
     optimizer: torch.optim.Optimizer,
     no_grad: bool = False,
+    use_residual: bool = False,
 ) -> dict:
     """Train a model.
 
@@ -35,9 +36,10 @@ def train(
         X_train, Y_train = X_train.to(DEVICE), Y_train.to(DEVICE)
         # Clear optimizer gradients.
         optimizer.zero_grad()
-        # Baseline: loss if the model predicted the residual to be 0.
-        base = criterion(X_train[:, :, mask], Y_train[:, :, mask])
-        # base = criterion(X_train * mask, Y_train * mask)
+        # Baseline: loss if the model predicted value at next timestep equal to current value.
+        base = criterion(
+            (0 if use_residual else 1) * X_train[:, :, mask], Y_train[:, :, mask]
+        )
         # Train
         Y_tr = model(X_train * mask)  # Forward pass.
         # Register hook.
@@ -45,10 +47,7 @@ def train(
         Y_tr.register_hook(lambda grad: grad * mask)
         # Compute training loss.
         loss = criterion(Y_tr[:, :, mask], Y_train[:, :, mask])
-        # loss = criterion(Y_tr * mask, Y_train * mask)
         loss.backward(retain_graph=True)  # Derive gradients.
-        # # Prevent update of weights connected to inactive neurons.
-        # model.linear.weight.grad *= mask.unsqueeze(-1)
         # No backprop on epoch 0.
         if no_grad:
             optimizer.zero_grad()
@@ -72,6 +71,7 @@ def test(
     loader: torch.utils.data.DataLoader,
     model: torch.nn.Module,
     mask: torch.Tensor,
+    use_residual: bool = False,
 ) -> dict:
     """Evaluate a model.
 
@@ -97,13 +97,13 @@ def test(
         X_test, Y_test, metadata = data  # X, Y: (batch_size, seq_len, num_neurons)
         X_test, Y_test = X_test.to(DEVICE), Y_test.to(DEVICE)
         # Baseline: loss if the model predicted the residual to be 0.
-        base = criterion(X_test[:, :, mask], Y_test[:, :, mask])
-        # base = criterion(X_test * mask, Y_test * mask)
+        base = criterion(
+            (0 if use_residual else 1) * X_test[:, :, mask], Y_test[:, :, mask]
+        )
         # Test
         Y_te = model(X_test * mask)  # Forward pass.
         # Compute the validation loss.
         loss = criterion(Y_te[:, :, mask], Y_test[:, :, mask])
-        # loss = criterion(Y_te * mask, Y_test * mask)
         # Store test and baseline loss.
         base_loss += base.detach().item()
         test_loss += loss.detach().item()
@@ -128,7 +128,8 @@ def split_train_test(
     test_size: int = 1024,
     shuffle: bool = True,
     reverse: bool = True,
-    tau: int = 1,  # deprecated
+    tau: int = 1,
+    use_residual: bool = True,
 ) -> tuple[
     torch.utils.data.DataLoader,
     torch.utils.data.DataLoader,
@@ -164,7 +165,7 @@ def split_train_test(
         split_times = split_times[:-1]
     train_splits, train_times = split_datasets[::2], split_times[::2]
     test_splits, test_times = split_datasets[1::2], split_times[1::2]
-    # make datasets; TODO: Parallelize this with `multiprocess.Pool`.
+    # make datasets
     # train dataset
     train_datasets = [
         NeuralActivityDataset(
@@ -175,6 +176,7 @@ def split_train_test(
             reverse=reverse,
             time_vec=train_times[i],
             tau=tau,
+            use_residual=use_residual,
         )
         for i, data in enumerate(train_splits)
     ]
@@ -189,6 +191,7 @@ def split_train_test(
             reverse=(not reverse),
             time_vec=test_times[i],
             tau=tau,
+            use_residual=use_residual,
         )
         for i, data in enumerate(test_splits)
     ]
@@ -199,14 +202,12 @@ def split_train_test(
         batch_size=batch_size,
         shuffle=shuffle,
         pin_memory=True,
-        # num_workers=cpu_count() // 2,
     )
     test_loader = DataLoader(
         test_dataset,
         batch_size=batch_size,
         shuffle=shuffle,
         pin_memory=True,
-        # num_workers=cpu_count() // 2,
     )
     # return data loaders and masks
     return train_loader, test_loader, train_mask, test_mask
@@ -221,6 +222,7 @@ def optimize_model(
     start_epoch: int = 1,
     learn_rate: float = 0.01,
     num_epochs: int = 1,
+    use_residual: bool = False,
 ) -> tuple[torch.nn.Module, dict]:
     """
     Creates train and test data loaders from the given dataset
@@ -241,8 +243,7 @@ def optimize_model(
     neurons_mask = neurons_mask.to(DEVICE)
     # create optimizer
     if optimizer is None:
-        # optimizer = torch.optim.Adam(model.parameters(), lr=learn_rate)
-        optimizer = torch.optim.AdamW(model.parameters(), lr=learn_rate)
+        optimizer = torch.optim.SGD(model.parameters(), lr=learn_rate)
     # create log dictionary to return
     log = {
         "epochs": [],
@@ -261,9 +262,19 @@ def optimize_model(
     for epoch in range(start_epoch, num_epochs + start_epoch):
         # train the model
         train_log = train(
-            train_loader, model, neurons_mask, optimizer, no_grad=(epoch == 0)
+            train_loader,
+            model,
+            neurons_mask,
+            optimizer,
+            no_grad=(epoch == 0),
+            use_residual=use_residual,
         )
-        test_log = test(test_loader, model, neurons_mask)
+        test_log = test(
+            test_loader,
+            model,
+            neurons_mask,
+            use_residual=use_residual,
+        )
         base_train_loss, train_loss, num_train_samples = (
             train_log["base_train_loss"],
             train_log["train_loss"],
@@ -299,7 +310,9 @@ def make_predictions(
     model: torch.nn.Module,
     dataset: dict,
     log_dir: str,
-    tau: int,
+    tau: int = 1,
+    use_residual: bool = False,
+    smooth_data: bool = False,
 ) -> None:
     """Make predicitons on a dataset with a trained model.
 
@@ -317,15 +330,23 @@ def make_predictions(
     Returns:
         None.
     """
+    signal_str = "residual" if use_residual else "calcium"
+    key_data = "residual_calcium" if use_residual else "calcium_data"
+    key_data = "smooth_" + key_data if smooth_data else key_data
     for worm, single_worm_dataset in dataset.items():
         os.makedirs(os.path.join(log_dir, worm), exist_ok=True)
         # get data to save
         named_neuron_to_idx = single_worm_dataset["named_neuron_to_idx"]
-        calcium_data = single_worm_dataset["calcium_data"]
+        calcium_data = single_worm_dataset[key_data]
         named_neurons_mask = single_worm_dataset["named_neurons_mask"]
+        time_in_seconds = single_worm_dataset["time_in_seconds"]
         train_mask = single_worm_dataset["train_mask"]
         labels = np.expand_dims(np.where(train_mask, "train", "test"), axis=-1)
-        columns = list(named_neuron_to_idx) + ["train_test_label"]
+        columns = list(named_neuron_to_idx) + [
+            "train_test_label",
+            "time_in_seconds",
+            "tau",
+        ]
         # make predictions with final model
 
         targets, predictions = model_predict(
@@ -334,27 +355,30 @@ def make_predictions(
             tau=tau,
         )
         # save dataframes
+        tau_expand = np.full(time_in_seconds.shape, tau)
         data = calcium_data[:, named_neurons_mask].numpy()
-        data = np.hstack((data, labels))
+        data = np.hstack((data, labels, time_in_seconds, tau_expand))
         pd.DataFrame(data=data, columns=columns).to_csv(
-            os.path.join(log_dir, worm, "ca_activity.csv"),
+            os.path.join(log_dir, worm, signal_str + "_activity.csv"),
             index=True,
             header=True,
         )
         data = targets[:, named_neurons_mask].numpy()
-        data = np.hstack((data, labels))
+        data = np.hstack((data, labels, time_in_seconds, tau_expand))
         pd.DataFrame(data=data, columns=columns).to_csv(
-            os.path.join(log_dir, worm, "target_ca.csv"),
+            os.path.join(log_dir, worm, "target_" + signal_str + ".csv"),
             index=True,
             header=True,
         )
-        columns = list(named_neuron_to_idx) + ["train_test_label"] + ["tau"]
-        tau_expand = np.full((predictions.shape[0], 1), tau)
-        data = predictions[:, named_neurons_mask].numpy()
-        data = np.hstack((data, labels))
-        data = np.hstack((data, tau_expand))
+        columns = list(named_neuron_to_idx) + [
+            "train_test_label",
+            "time_in_seconds",
+            "tau",
+        ]
+        data = predictions[:, named_neurons_mask].detach().numpy()
+        data = np.hstack((data, labels, time_in_seconds, tau_expand))
         pd.DataFrame(data=data, columns=columns).to_csv(
-            os.path.join(log_dir, worm, "predicted_ca.csv"),
+            os.path.join(log_dir, worm, "predicted_" + signal_str + ".csv"),
             index=True,
             header=True,
         )
@@ -371,7 +395,7 @@ def model_predict(
     calcium data tensor using a trained model.
     """
     NUM_NEURONS = calcium_data.size(1)
-    model = model.double()
+    model = model.double().to(DEVICE)
     model.eval()
     # model in/out
     calcium_data = calcium_data.squeeze(0)
@@ -383,15 +407,16 @@ def model_predict(
     # TODO: Why does this make such a big difference in prediction?
     # output = model(
     #     input.unsqueeze(1), tau,
-    # )  # (max_time, 1, NUM_NEURONS), batch_size = max_time, seq_len = 1
-    # output = output.squeeze(1)
+    # ).squeeze(1)  # (max_time, 1, NUM_NEURONS), batch_size = max_time, seq_len = 1
     output = model(
         input.unsqueeze(0),
         tau=tau,
+    ).squeeze(
+        0
     )  # (1, max_time, NUM_NEURONS),  batch_size = 1, seq_len = max_time
-    output = output.squeeze(0)
-    # targets/predictions
-    targets = input.detach().cpu()
+    # targets and predictions
+    targets = torch.nn.functional.pad(input[tau:].detach().cpu(), (0, 0, 0, tau))
+    # prediction of the input shifted by tau
     predictions = output.detach().cpu()
     return targets, predictions
 
@@ -503,7 +528,6 @@ def gnn_optimize_model(task, model):
     optimizer = torch.optim.Adam(model.parameters(), lr=0.01)
     log = {"epochs": [], "test_losses": [], "train_losses": []}
     train_dataset, test_dataset = task.train_test_split()
-
     for epoch in tqdm(range(20)):
         # forward pass
         train_loss = train(train_dataset, model)
