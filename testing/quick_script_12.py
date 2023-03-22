@@ -64,7 +64,7 @@ if __name__ == "__main__":
     targets, predictions = model_predict(model, calcium_data * named_neurons_mask)
     print("Targets:", targets.shape, "\nPredictions:", predictions.shape, end="\n\n")
 
-    for neuron in range(0, min(num_neurons+1, 60)):
+    for neuron in neuron_inds:
         if single_worm_dataset["named_neurons_mask"][neuron].item():
             plt.figure()
             plt.plot(range(targets.shape[0]), targets[:, neuron], label="target")

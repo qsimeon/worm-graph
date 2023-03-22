@@ -1,10 +1,11 @@
-- defaults
+name: worm-graph
+defaults:
   - pytorch
   - pyg
   - anaconda
   - nvidia
   - conda-forge
-- dependencies:
+dependencies:
   - python=3.9
   - pytorch
   - pytorch-cuda=11.7
@@ -36,12 +37,3 @@
   #   - pyEDM=1.13.1.0
   - wget=3.2
   #   - ncps=0.0.7
-
-
-
-
-
-
-
-
-
