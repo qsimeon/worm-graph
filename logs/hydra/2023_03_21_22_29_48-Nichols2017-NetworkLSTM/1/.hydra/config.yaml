@@ -1,0 +1,34 @@
+preprocess:
+  url: https://www.dropbox.com/s/lxptju2zhw0o5ez/opensource_data.zip?dl=1
+  zipfile: opensource_data.zip
+  dataset: all
+  raw_dir: data/raw
+  smooth: fft
+dataset:
+  name: Nichols2017
+model:
+  type: NetworkLSTM
+  input_size: 302
+  hidden_size: 64
+  num_layers: 1
+  loss: mse
+visualize:
+  log_dir: logs/2023_03_21_15_47_03-Kaplan2020-NetworkLSTM
+  worm: worm0
+  neuron: AVAL
+train:
+  learn_rate: 0.1
+  seq_len: 47
+  k_splits: 2
+  epochs: 50
+  save_freq: 10
+  smooth_data: false
+  batch_size: 128
+  train_size: 1654
+  test_size: 1654
+  shuffle: true
+  tau_in: 1
+  tau_out: 1
+  optimizer: SGD
+globals:
+  use_residual: false

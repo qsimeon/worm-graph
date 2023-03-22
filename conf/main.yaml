@@ -11,18 +11,18 @@ globals:
 # If you want your primary config to override the values of configs
 # from the Defaults List, append _self_ to the end of the Defaults List
 hydra:
+  mode: MULTIRUN # options: RUN, MULTIRUN
+  job:
+    chdir: false
   run:
     dir: logs/hydra/${now:%Y_%m_%d_%H_%M_%S}-${dataset.name}-${model.type}
   sweep:
     dir: logs/hydra/${now:%Y_%m_%d_%H_%M_%S}-${dataset.name}-${model.type}
     subdir: ${hydra.job.num}
-  mode: RUN # options: RUN, MULTIRUN
-  job:
-    chdir: false
   sweeper:
     params:
       # train.k_splits: 2, 5, 8, 10, 20
       # model.hidden_size: 64, 128, 512
       # train.train_size: 1024, 2048, 4096
       # model.type: linear, dense_cfc, neural_cfc, lstm, vae_lstm
-      dataset.name: Skora2018, Kaplan2020
+      dataset.name: Nguyen2017
