@@ -10,7 +10,7 @@ from visualization._main import *
 
 if __name__ == "__main__":
     # pick indices of neurons we want
-    neuron_inds = range(0, 302)
+    neuron_inds = range(0, 1)
     num_neurons = len(neuron_inds)
     # decide tau as the offset of the target
     tau_train = 100
@@ -58,7 +58,7 @@ if __name__ == "__main__":
     targets, predictions = model_predict(model, calcium_data * named_neurons_mask)
     print("Targets:", targets.shape, "\nPredictions:", predictions.shape, end="\n\n")
 
-    for neuron in range(0, 60):
+    for neuron in range(0, min(num_neurons, 60)):
         if single_worm_dataset["named_neurons_mask"][neuron].item():
             plt.figure()
             plt.plot(range(targets.shape[0]), targets[:, neuron], label="target")
