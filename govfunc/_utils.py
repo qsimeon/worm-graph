@@ -187,7 +187,7 @@ def calculas(y0, y_hat):
     return sum_y
 
 
-def coef_analysis(worm_name, n_cluster, folder):
+def coef_analysis(dataset_name, worm_name, n_cluster, folder):
     def plot_coefficient(data, sorted, w, path):
         plt.figure(figsize=(20, 20))
         sns.heatmap(data=data, square=True, cmap="RdBu_r", center=0, linecolor='grey', linewidths=0.3)
@@ -229,11 +229,12 @@ def coef_analysis(worm_name, n_cluster, folder):
     #     plt.title("dendrogram of " + w)
     #     plt.savefig('./govfunc/coefficient_CalToRes_tau_1/dendrogram_' + w + '.png')
 
-    def main_function(w, n, folder):
+    def main_function(d, w, n, folder):
         ###############################
         worm = w
-        data = pd.read_hdf("./govfunc/Uzel2022/" + folder + "/coef_" + worm + ".hdf")
-        path = os.path.dirname(os.path.abspath(__file__)) + "/Uzel2022/" + folder
+        data = pd.read_hdf("./govfunc/" + folder + "/coef_" + worm + ".hdf")
+
+        path = os.path.dirname(os.path.abspath(__file__))  + folder
         plot_coefficient(data, False, worm, path)
 
         data_np = data.to_numpy()
@@ -269,9 +270,12 @@ def coef_analysis(worm_name, n_cluster, folder):
 
         # make the graph
         graph = Data(**graph_tensors)
-        dataset = load_Uzel2022()
+        dataset_loader = eval("load_" + d)
+        dataset = dataset_loader()
         neuron_to_slot = dataset[worm]["neuron_to_slot"]
         real_catagory = []
+
+
 
         # mapping neuron index to its name
         for i in range(col_category.shape[0]):
@@ -309,5 +313,5 @@ def coef_analysis(worm_name, n_cluster, folder):
         plot_coefficient(data, True, w, path)
         return data, sorted_np
 
-    data, sorted_np = main_function(worm_name, n_cluster, folder)
+    data, sorted_np = main_function(dataset_name, worm_name, n_cluster, folder)
     return data, sorted_np

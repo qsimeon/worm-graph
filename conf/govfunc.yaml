@@ -1,8 +1,8 @@
 govfunc:
   learn_rate: 0.01 # learning rate
-  seq_len: 3000 # length of sequences to train
+  seq_len: 1400 # length of sequences to train
   start: 0
-  tau: 300 # offset of time steps from target
+  tau: 100 # offset of time steps from target
   k_splits: 2 # number of interleaved train/test splits per single worm
   smooth_data: False # if True use the smoothed calcium data as input
   batch_size: 128 # maximum number of samples per batch
