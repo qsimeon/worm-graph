@@ -24,7 +24,7 @@ if __name__ == "__main__":
     named_neurons_mask = single_worm_dataset["named_neurons_mask"][neuron_inds]
     time_vec = single_worm_dataset.get("time_in_seconds", None)
     # create a model
-    model = NeuralCFC(num_neurons, 100, 5).double()
+    model = NetworkLSTM(num_neurons, 64, 1).double()
     # keyword args to `split_train_test`
     kwargs = dict(
         k_splits=2,
@@ -58,7 +58,7 @@ if __name__ == "__main__":
     targets, predictions = model_predict(model, calcium_data * named_neurons_mask)
     print("Targets:", targets.shape, "\nPredictions:", predictions.shape, end="\n\n")
 
-    for neuron in range(0, min(num_neurons, 60)):
+    for neuron in range(0, min(num_neurons+1, 60)):
         if single_worm_dataset["named_neurons_mask"][neuron].item():
             plt.figure()
             plt.plot(range(targets.shape[0]), targets[:, neuron], label="target")

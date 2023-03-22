@@ -187,17 +187,16 @@ def calculas(y0, y_hat):
     return sum_y
 
 
-def coef_analysis(worm_name, n_cluster):
-    def plot_coefficient(data, sorted, w):
+def coef_analysis(worm_name, n_cluster, folder):
+    def plot_coefficient(data, sorted, w, path):
         plt.figure(figsize=(20, 20))
         sns.heatmap(data=data, square=True, cmap="RdBu_r", center=0, linecolor='grey', linewidths=0.3)
         if sorted:
             plt.title("(sourted) Coefficient of neurons activities of " + w)
-            plt.savefig('./govfunc/coefficient/sorted_coeff_' + w + '.png')
+            plt.savefig(os.path.join(path, 'sorted_coeff_' + w + '.png'))
         else:
             plt.title("(unsourted) Coefficient of neurons activities of " + w)
-            plt.savefig('./govfunc/coefficient/coeff_' + w + '.png')
-
+            plt.savefig(os.path.join(path, 'coeff_' + w + '.png'))
 
     def plot_dendrogram_scipy(clusters, labels):
         plt.figure(figsize=(30, 8))
@@ -228,13 +227,14 @@ def coef_analysis(worm_name, n_cluster):
     #     # Plot the corresponding dendrogram
     #     dendrogram(linkage_matrix, **kwargs)
     #     plt.title("dendrogram of " + w)
-    #     plt.savefig('./govfunc/coefficient/dendrogram_' + w + '.png')
+    #     plt.savefig('./govfunc/coefficient_CalToRes_tau_1/dendrogram_' + w + '.png')
 
-    def main_function(w, n):
+    def main_function(w, n, folder):
         ###############################
         worm = w
-        data = pd.read_hdf("./govfunc/coefficient/coef_" + worm + ".hdf")
-        plot_coefficient(data, False, worm)
+        data = pd.read_hdf("./govfunc/Uzel2022/" + folder + "/coef_" + worm + ".hdf")
+        path = os.path.dirname(os.path.abspath(__file__)) + "/Uzel2022/" + folder
+        plot_coefficient(data, False, worm, path)
 
         data_np = data.to_numpy()
         index_col = data.columns.values.tolist()
@@ -288,33 +288,26 @@ def coef_analysis(worm_name, n_cluster):
         # plt.legend(["predict", "target"], loc="lower right")
         # plt.show()
 
-        # sorted by labels in prediction
-        list0 = list(not_sorted_result[:, 2])
-        list1 = list(not_sorted_result[:, 1])
-        list2 = list(index_col)
-        data_list = list(data_np.T)
-        sorted_cat, sorted_name = zip(*sorted(zip(list1, list2)))
-        _, sorted_truth = zip(*sorted(zip(list1, list0)))
-        _, sorted_data = zip(*sorted(zip(list1, data_list), key=lambda x: x[0]))
-
-        # list to numpy array and reshape
-        sorted_cat = np.array(sorted_cat).reshape(len(sorted_cat), 1)
-        sorted_name = np.array(sorted_name).reshape(len(sorted_name), 1)
-        sorted_truth = np.array(sorted_truth).reshape(len(sorted_truth), 1)
-        sorted_data = np.array(sorted_data).reshape(len(sorted_data), len(sorted_data[0])).T
-        sorted_np = np.concatenate((sorted_name, sorted_cat, sorted_truth), axis=1)
-
         # tagging the real label
         list_real_label = ["inter", "motor", "other", "pharynx", "sensory", "sexspec"]
-        for i in range(sorted_np.shape[0]):
-            sorted_np[i, 2] = list_real_label[int(sorted_np[i, 2])]
-        print(sorted_np)
+
+        for i in range(not_sorted_result.shape[0]):
+            not_sorted_result[i, 2] = list_real_label[int(not_sorted_result[i, 2])]
+
+        # sorted by labels in prediction
+        sorted_np = sorted(not_sorted_result, key=lambda x: x[1])
+        data_list = list(data_np.T)
+        _, sorted_data = zip(*sorted(zip(list(not_sorted_result[:, 1]), data_list), key=lambda x: x[0]))
+
+        # list to numpy array and reshape
+        sorted_np = np.array(sorted_np).reshape(len(sorted_np), 3)
+        sorted_data = np.array(sorted_data).reshape(len(sorted_data), len(sorted_data[0])).T
 
         I = pd.Index(index_row, name="rows")
         C = pd.Index(sorted_np[:, 0], name="cols")
         data = pd.DataFrame(sorted_data, index=I, columns=C)
-        plot_coefficient(data, True, w)
+        plot_coefficient(data, True, w, path)
         return data, sorted_np
 
-    data, sorted_np = main_function(worm_name, n_cluster)
+    data, sorted_np = main_function(worm_name, n_cluster, folder)
     return data, sorted_np

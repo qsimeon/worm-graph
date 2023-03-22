@@ -16,8 +16,11 @@ if __name__ == "__main__":
     dataset = load_Uzel2022()
     print(dataset["worm0"].keys())
 
-    slot = dataset["worm0"]["slot_to_neuron"]
+    slot = dataset["worm0"]["neuron_to_slot"]
     print(graph.y)
     print(slot)
+
+    print(graph.y[247])
+
 
 

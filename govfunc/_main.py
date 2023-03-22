@@ -11,8 +11,7 @@
 from govfunc._utils import *
 
 
-def main(model: torch.nn.Module,
-         dataset: dict,
+def main(dataset: dict,
          config: DictConfig,
          optimizer: Union[torch.optim.Optimizer, None] = None,
          shuffle: bool = False,
@@ -21,8 +20,6 @@ def main(model: torch.nn.Module,
     # calcium_data = dataset["worm0"]["calcium_data"]
     # residual = dataset["worm0"]["residual_calcium"]
     #
-    # seq_len = config.govfunc.seq_len
-    # tau = config.govfunc.tau
     #
     # if config.govfunc.smooth_data:
     #     key_data = "smooth_calcium_data"
@@ -58,32 +55,33 @@ def main(model: torch.nn.Module,
     # plt.show()
     for i in range(0, 6):
         worm = "worm" + str(i)
-
-        calcium_data = dataset[worm]["calcium_data"]
-        residual = dataset[worm]["residual_calcium"]
         name_mask = dataset[worm]["named_neurons_mask"]
-        x = calcium_data[:, name_mask]
-        dx = residual[:, name_mask]
+        calcium_data = dataset[worm]["calcium_data"][:, name_mask]
+        residual = dataset[worm]["residual_calcium"][:, name_mask]
 
-        # print("x_initial: ", x.shape)
-        # print("dx: ", dx.shape)
+        # # cal to res, tau = 1
+        # x = calcium_data
+        # dx_nan = torch.div(residual, dataset[worm]["dt"])
+        # dx = torch.where(torch.isnan(dx_nan), torch.full_like(dx_nan, 0), dx_nan)
+
+        # cal to cal, tau = 10, start:end = start:(start+seq_len)
+        seq_len = config.govfunc.seq_len
+        start = config.govfunc.start
+        tau = config.govfunc.tau
+        assert seq_len + start + tau < dataset[worm]["max_time"], "exceed the max_time length"
+        x = calcium_data[start:start+seq_len]
+        dx = calcium_data[start+tau: start+tau+seq_len]
 
         # the original status x0 from time step 0
         x0 = x[0]
-        # print("x0: ", x0.shape)
-
         Theta = generate_polynomial(x, polyorder=1, usesine=False)
-
         # TODO: figure out the influence of changing lambda_
         lambda_ = 0.025
         Xi = sparsifyDynamics(Theta, dx, lambda_, x.shape[1])
         print("Xi: ", Xi.shape)
 
-        print(dataset[worm].keys())
-
         slot_x = []
         slot_y = ["offset"]
-
         for i in range(0, name_mask.shape[0]):
             if name_mask[i] == True:
                 slot_x.append(dataset[worm]["slot_to_named_neuron"][i])
@@ -91,22 +89,21 @@ def main(model: torch.nn.Module,
 
         slot_x = np.array(slot_x)
         slot_y = np.array(slot_y)
-        Xi_plot = np.array(Xi)
-        print(slot_x.shape, slot_y.shape, Xi.shape)
+        # print(slot_x.shape, slot_y.shape, Xi.shape)
 
         I = pd.Index(slot_y, name="rows")
-
         C = pd.Index(slot_x, name="cols")
-
         # dict_plot = {}
         # for i in range(0, slot_y.shape[0]):
         #     dict_plot[slot_y[i]] = Xi_plot[i, :]
 
         data = pd.DataFrame(Xi, index=I, columns=C)
 
-
-
-        data.to_hdf("./govfunc/coefficient/coef_" + worm + '.hdf', "test")
+        path = os.getcwd() + "/govfunc/Uzel2022/" + "coefficient_CalToCal_tau_" + str(tau)
+        isExist = os.path.exists(path)
+        if not isExist:
+            os.mkdir(path)
+        data.to_hdf("./govfunc/Uzel2022/coefficient_CalToCal_tau_" + str(tau) + "/coef_" + worm + '.hdf', "test")
     return
 
     # # true calcium_data: worm[0]["calcium_data"]
@@ -133,8 +130,11 @@ def main(model: torch.nn.Module,
 
 if __name__ == "__main__":
     config = OmegaConf.load("conf/govfunc.yaml")
-    model = get_model(OmegaConf.load("conf/model.yaml"))
     dataset = get_dataset(OmegaConf.load("conf/dataset.yaml"))
     print("config:", OmegaConf.to_yaml(config), end="\n\n")
 
-    main(model, dataset, config)
+    main(dataset, config)
+    for i in range(0, 6):
+        data, sorted_np = coef_analysis(worm_name="worm" + str(i), n_cluster=3, folder="coefficient_CalToCal_tau_" + str(config.govfunc.tau))
+        print(sorted_np)
+
