@@ -67,7 +67,7 @@ class NeuralActivityDataset(torch.utils.data.Dataset):
             ), "Time vector must have shape (len(data), )"
             self.time_vec = time_vec.squeeze()
         else:
-            self.time_vec = torch.arange(data.size(0))
+            self.time_vec = torch.arange(data.size(0)).double()
         self.max_time, num_neurons = data.shape
         self.seq_len = seq_len
         self.reverse = reverse

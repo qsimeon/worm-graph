@@ -147,7 +147,7 @@ def split_train_test(
     ), "Invalid `seq_len` entered."
     # make time vector
     if time_vec is None:
-        time_vec = torch.arange(len(data))
+        time_vec = torch.arange(len(data)).double()
     assert torch.is_tensor(time_vec) and len(time_vec) == len(
         data
     ), "Enter a time vector with same length as data."
@@ -345,6 +345,8 @@ def make_predictions(
         calcium_data = single_worm_dataset[key_data]
         named_neurons_mask = single_worm_dataset["named_neurons_mask"]
         time_in_seconds = single_worm_dataset["time_in_seconds"]
+        if time_in_seconds is None:
+            time_in_seconds = torch.arange(len(calcium_data)).double()
         train_mask = single_worm_dataset["train_mask"]
         labels = np.expand_dims(np.where(train_mask, "train", "test"), axis=-1)
         columns = list(named_neuron_to_idx) + [
