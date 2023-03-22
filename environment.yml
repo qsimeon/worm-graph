@@ -1,5 +1,6 @@
 name: worm-graph
-defaults:
+channels:
+  - defaults
   - pytorch
   - pyg
   - anaconda
@@ -8,7 +9,7 @@ defaults:
 dependencies:
   - python=3.9
   - pytorch
-  - pytorch-cuda=11.7
+  - pytorch-cuda>=11.7
   # - scikit-learn-intelex
   # - scikit-learn=1.2.1
   # - ipywidgets=7.6.5
@@ -26,7 +27,7 @@ dependencies:
   # - mat73=0.60
   # - h5py=3.7.0
   - tqdm=4.64.1
-  - pyg
+  # - pyg
   - pip=23.0.1
 pip:
   #   - black[jupyter]
