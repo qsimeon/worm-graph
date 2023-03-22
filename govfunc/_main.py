@@ -57,21 +57,22 @@ def main(dataset: dict,
     for i in range(0, len(dataset)):
         worm = "worm" + str(i)
         name_mask = dataset[worm]["named_neurons_mask"]
-        calcium_data = dataset[worm]["calcium_data"][:, name_mask]
-        residual = dataset[worm]["residual_calcium"][:, name_mask]
-
-        # # cal to res, tau = 1
-        # x = calcium_data
-        # dx_nan = torch.div(residual, dataset[worm]["dt"])
-        # dx = torch.where(torch.isnan(dx_nan), torch.full_like(dx_nan, 0), dx_nan)
-
-        # cal to cal, tau = 10, start:end = start:(start+seq_len)
+        calcium_data = dataset[worm]["calcium_data"][:]
+        residual = dataset[worm]["residual_calcium"][:]
         seq_len = config.govfunc.seq_len
         start = config.govfunc.start
         tau = config.govfunc.tau
         assert seq_len + start + tau < dataset[worm]["max_time"], "exceed the max_time length"
+
+        # cal to res, tau = 1
         x = calcium_data[start:start + seq_len]
-        dx = calcium_data[start + tau: start + tau + seq_len]
+        residual = residual[start + tau:start + seq_len + tau]
+        dx_nan = torch.div(residual, dataset[worm]["dt"][start + tau:start + seq_len + tau])
+        dx = torch.where(torch.isnan(dx_nan), torch.full_like(dx_nan, 0), dx_nan)
+
+        # # cal to cal, tau = 10, start:end = start:(start+seq_len)
+        # x = calcium_data[start:start + seq_len]
+        # dx = calcium_data[start + tau: start + tau + seq_len]
 
         # the original status x0 from time step 0
         x0 = x[0]
@@ -90,26 +91,26 @@ def main(dataset: dict,
 
         slot_x = np.array(slot_x)
         slot_y = np.array(slot_y)
-        # print(slot_x.shape, slot_y.shape, Xi.shape)
 
-        I = pd.Index(slot_y, name="rows")
-        C = pd.Index(slot_x, name="cols")
-        # dict_plot = {}
-        # for i in range(0, slot_y.shape[0]):
-        #     dict_plot[slot_y[i]] = Xi_plot[i, :]
+        index = list(range(0, 302))
 
-        data = pd.DataFrame(Xi, index=I, columns=C)
+        # I = pd.Index(slot_y, name="rows")
+        # C = pd.Index(slot_x, name="cols")
+        I = pd.Index(index, name="rows")
+        index_y = list(range(-1, 302, 1))
+        C = pd.Index(index_y, name="cols")
+        data = pd.DataFrame(Xi, index=C, columns=I)
 
         parent_path = os.getcwd() + "/govfunc" + folder
         isExist = os.path.exists(parent_path)
         if not isExist:
             os.mkdir(parent_path)
 
-        path = os.getcwd() + "/govfunc" + folder + "/coefficient_CalToCal_tau_" + str(tau)
+        path = os.getcwd() + "/govfunc" + folder + "/coefficient_CalToRes_tau_" + str(tau)
         isExist = os.path.exists(path)
         if not isExist:
             os.mkdir(path)
-        data.to_hdf("./govfunc" + folder + "/coefficient_CalToCal_tau_" + str(tau) + "/coef_" + worm + '.hdf', "test")
+        data.to_hdf("./govfunc" + folder + "/coefficient_CalToRes_tau_" + str(tau) + "/coef_" + worm + '.hdf', "test")
     return
 
     # # true calcium_data: worm[0]["calcium_data"]
@@ -137,10 +138,12 @@ def main(dataset: dict,
 if __name__ == "__main__":
     config = OmegaConf.load("conf/govfunc.yaml")
     dataset = get_dataset(OmegaConf.load("conf/dataset.yaml"))
-    # print("config:", OmegaConf.to_yaml(config), end="\n\n")
+    print("config:", OmegaConf.to_yaml(config), end="\n\n")
     f = "/" + dataset["worm0"]["dataset"]
     main(dataset, config, folder=f)
+
     for i in range(0, len(dataset)):
-        data, sorted_np = coef_analysis(dataset_name=dataset["worm0"]["dataset"], worm_name="worm" + str(i), n_cluster=3,
-                                        folder=f + "/coefficient_CalToCal_tau_" + str(config.govfunc.tau))
+        data, sorted_np = coef_analysis(dataset_name=dataset["worm0"]["dataset"], worm_name="worm" + str(i),
+                                        n_cluster=3,
+                                        folder=f + "/coefficient_CalToRes_tau_" + str(config.govfunc.tau))
         print(sorted_np)

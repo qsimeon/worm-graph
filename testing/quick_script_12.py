@@ -10,7 +10,7 @@ from visualization._main import *
 
 if __name__ == "__main__":
     # pick indices of neurons we want
-    neuron_inds = range(0, 1)
+    neuron_inds = range(12, 13)
     num_neurons = len(neuron_inds)
     # decide tau as the offset of the target
     tau_train = 100
@@ -22,6 +22,12 @@ if __name__ == "__main__":
 
     calcium_data = single_worm_dataset["calcium_data"][:, neuron_inds]
     named_neurons_mask = single_worm_dataset["named_neurons_mask"][neuron_inds]
+
+    print(named_neurons_mask)
+    plt.plot(calcium_data)
+    plt.show()
+
+
     time_vec = single_worm_dataset.get("time_in_seconds", None)
     # create a model
     model = NetworkLSTM(num_neurons, 64, 1).double()
