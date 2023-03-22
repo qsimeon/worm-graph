@@ -59,9 +59,9 @@ def main(dataset: dict,
         name_mask = dataset[worm]["named_neurons_mask"]
         calcium_data = dataset[worm]["calcium_data"][:]
         residual = dataset[worm]["residual_calcium"][:]
-        seq_len = config.govfunc.seq_len
         start = config.govfunc.start
         tau = config.govfunc.tau
+        seq_len = dataset[worm]["max_time"] - tau - start - 1
         assert seq_len + start + tau < dataset[worm]["max_time"], "exceed the max_time length"
 
         # cal to res, tau = 1
@@ -85,21 +85,20 @@ def main(dataset: dict,
         slot_x = []
         slot_y = ["offset"]
         for i in range(0, name_mask.shape[0]):
-            if name_mask[i] == True:
-                slot_x.append(dataset[worm]["slot_to_named_neuron"][i])
-                slot_y.append(dataset[worm]["slot_to_named_neuron"][i])
+            slot_x.append(dataset[worm]["slot_to_named_neuron"][i])
+            slot_y.append(dataset[worm]["slot_to_named_neuron"][i])
 
         slot_x = np.array(slot_x)
         slot_y = np.array(slot_y)
 
-        index = list(range(0, 302))
+        # index = list(range(0, 302))
 
-        # I = pd.Index(slot_y, name="rows")
-        # C = pd.Index(slot_x, name="cols")
-        I = pd.Index(index, name="rows")
-        index_y = list(range(-1, 302, 1))
-        C = pd.Index(index_y, name="cols")
-        data = pd.DataFrame(Xi, index=C, columns=I)
+        I = pd.Index(slot_y, name="rows")
+        C = pd.Index(slot_x, name="cols")
+        # I = pd.Index(index, name="rows")
+        # index_y = list(range(-1, 302, 1))
+        # C = pd.Index(index_y, name="cols")
+        data = pd.DataFrame(Xi, index=I, columns=C)
 
         parent_path = os.getcwd() + "/govfunc" + folder
         isExist = os.path.exists(parent_path)
@@ -140,9 +139,9 @@ if __name__ == "__main__":
     dataset = get_dataset(OmegaConf.load("conf/dataset.yaml"))
     print("config:", OmegaConf.to_yaml(config), end="\n\n")
     f = "/" + dataset["worm0"]["dataset"]
-    main(dataset, config, folder=f)
+    # main(dataset, config, folder=f)
 
-    for i in range(0, len(dataset)):
+    for i in range(0, 1):# len(dataset)):
         data, sorted_np = coef_analysis(dataset_name=dataset["worm0"]["dataset"], worm_name="worm" + str(i),
                                         n_cluster=3,
                                         folder=f + "/coefficient_CalToRes_tau_" + str(config.govfunc.tau))

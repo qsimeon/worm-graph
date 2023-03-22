@@ -64,13 +64,13 @@ if __name__ == "__main__":
     targets, predictions = model_predict(model, calcium_data * named_neurons_mask)
     print("Targets:", targets.shape, "\nPredictions:", predictions.shape, end="\n\n")
 
-    for neuron in neuron_inds:
-        if single_worm_dataset["named_neurons_mask"][neuron].item():
-            plt.figure()
-            plt.plot(range(targets.shape[0]), targets[:, neuron], label="target")
-            plt.plot(range(tau_test, tau_test + predictions.shape[0]), predictions[:, neuron], alpha=0.8, label="prediction")
-            plt.legend()
-            plt.title("Neuron %s target and prediction" % neuron)
-            plt.xlabel("Time")
-            plt.ylabel("$Ca^{2+} \Delta F / F$")
-            plt.show()
+    for neuron in range(0, num_neurons):
+        # if single_worm_dataset["named_neurons_mask"][neuron].item():
+        plt.figure()
+        plt.plot(range(targets.shape[0]), targets[:, neuron], label="target")
+        plt.plot(range(tau_test, tau_test + predictions.shape[0]), predictions[:, neuron], alpha=0.8, label="prediction")
+        plt.legend()
+        plt.title("Neuron %s target and prediction" % neuron)
+        plt.xlabel("Time")
+        plt.ylabel("$Ca^{2+} \Delta F / F$")
+        plt.show()
