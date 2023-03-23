@@ -36,6 +36,7 @@ dependencies:
   - mat73
   # - h5py==3.7.0
   - h5py
+  - black
   # - tqdm==4.64.1
   - tqdm
   # - pyg
