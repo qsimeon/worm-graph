@@ -6,26 +6,26 @@ channels:
   # - pyg
   - conda-forge
 dependencies:
-  - python==3.9.16
+  - python=3.9
   # - pytorch=1.13
   # - torchvision 
   # - torchaudio 
-  - pytorch==1.12.1 
+  - pytorch=1.12
   - torchvision==0.13.1 
   - torchaudio==0.12.1 
   - cudatoolkit=11.2
   # - scikit-learn-intelex
   # - scikit-learn==1.2.1
-  - scikit-learn
+  # - scikit-learn
   # - ipywidgets==7.6.5
   # - jupyterlab==3.5.3
   # - matplotlib==3.6.2
   - matplotlib
   # - pynamical=0.3.2
   # - notebook=6.5.2
-  - notebook
+  # - notebook
   # - freetype==2.12.1
-  - freetype
+  # - freetype
   # - networkx=2.8.4
   - networkx
   # - seaborn=0.12.2
@@ -37,10 +37,10 @@ dependencies:
   - nomkl
   # - scipy=1.10.0
   - scipy
-  - mat73==0.60
-  - h5py==3.7.0
+  # - mat73==0.60
+  # - h5py==3.7.0
   # - tqdm==4.64.1
-  - tqdm
+  # - tqdm
   # - pyg
   # - pip==23.0.1
   - pip
