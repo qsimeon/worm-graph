@@ -17,8 +17,11 @@ worm_data_colab/
 raw_data.zip
 raw_data/
 
+# VSCode
+.vscode/ 
+
 # Logs
-# logs/
+logs/
 
 # C extensions
 *.so
