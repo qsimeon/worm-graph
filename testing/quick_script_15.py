@@ -14,7 +14,9 @@ if __name__ == "__main__":
         d = dataset.popitem()
 
     # list of possible taus
-    tau_range = list(range(1, 301, 30))
+    tau_range = list(range(1, 30, 3))
+    r2 = list(range(30, 301, 30))
+    tau_range.extend(r2)
 
     # go on training, only the val. loss of the last epoch will be recorded
     val_loss = []
@@ -22,18 +24,12 @@ if __name__ == "__main__":
     for tau in tau_range:
         config = OmegaConf.load("conf/train.yaml")
         config.train.tau_in = tau
-        config.train.tau_out = tau
         print("config:", OmegaConf.to_yaml(config), end="\n\n")
         model = get_model(OmegaConf.load("conf/model.yaml"))
         model, log_dir = train_model(model, dataset, config)
-        loss_df = pd.read_csv(os.path.join(log_dir, "loss_curves.csv"), indemux_col=0)
+        loss_df = pd.read_csv(os.path.join(log_dir, "loss_curves.csv"), index_col=0)
         val_loss.append(loss_df["centered_test_losses"].get(config.train.epochs - 1))
         ori_val_loss.append(loss_df["test_losses"].get(config.train.epochs - 1))
-
-    print("----------val loss - baseline----------")
-    print(val_loss)
-    print("----------val loss -------------")
-    print(ori_val_loss)
 
     plt.plot(tau_range, val_loss)
     plt.plot(tau_range, ori_val_loss)
