@@ -1,0 +1,25 @@
+name: worm-graph-newest
+channels:
+  - defaults
+dependencies:
+  - hydra-core
+  - omegaconf
+  - tqdm
+  - h5py
+  - scikit-learn
+  - python=3.9
+  - seaborn
+  - networkx
+  - scipy
+  - mat73
+  - pytorch=1.13
+  - freetype
+  - pytorch-gpu
+  - pip
+  - pandas
+  - numpy
+  - matplotlib
+  - notebook
+  - nomkl
+  - black
+prefix: /om2/user/qsimeon/miniconda/envs/worm-graph-newest
