@@ -3,27 +3,28 @@ channels:
   - conda-forge
   - defaults
 dependencies:
-  - hydra-core
-  - omegaconf
-  - tqdm
-  - h5py
-  - scikit-learn
-  - python=3.9
-  - seaborn
-  - networkx
-  - scipy
-  - mat73
-  - pytorch=1.13
-  - freetype
-  - pytorch-gpu
-  - pip
-  - pandas
-  - numpy
   - matplotlib
-  - notebook
-  - nomkl
+  - pytorch-gpu
+  - scikit-learn
+  - pytorch=1.13
   - black
-  - scikit-learn-intelex
+  - networkx
   - black-jupyter
   - ipywidgets
+  - hydra-core
+  - pip
+  - pandas
+  - nomkl
+  - freetype
+  - python=3.9
+  - numpy
+  - seaborn
+  - scipy
+  - scikit-learn-intelex
+  - omegaconf
+  - h5py
+  - notebook
+  - mat73
+  - tqdm
   - jupyterlab
+prefix: /om2/user/qsimeon/miniconda/envs/worm-graph
