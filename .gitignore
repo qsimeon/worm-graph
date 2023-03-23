@@ -16,6 +16,8 @@ worm_data_colab.zip
 worm_data_colab/
 raw_data.zip
 raw_data/
+*.pickle
+*/.processed
 
 # VSCode
 .vscode/ 

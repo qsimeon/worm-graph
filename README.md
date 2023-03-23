@@ -68,7 +68,7 @@
 
 `cd` into the `worm-graph` directory on your local machine: `cd worm-graph`
 
-Using the terminal or an Anaconda Prompt: `conda env create -f environment.yml`
+Using the terminal or an Anaconda Prompt: `conda env create -f environment_minimal.yml`
    <br>The first line of the `yml` file sets the new environment's name.
 
 Activate the new environment: `conda activate worm-graph`

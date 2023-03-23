@@ -1,0 +1,29 @@
+name: worm-graph
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - hydra-core
+  - omegaconf
+  - tqdm
+  - h5py
+  - scikit-learn
+  - python=3.9
+  - seaborn
+  - networkx
+  - scipy
+  - mat73
+  - pytorch=1.13
+  - freetype
+  - pytorch-gpu
+  - pip
+  - pandas
+  - numpy
+  - matplotlib
+  - notebook
+  - nomkl
+  - black
+  - scikit-learn-intelex
+  - black-jupyter
+  - ipywidgets
+  - jupyterlab
