@@ -1,4 +1,4 @@
-name: worm-graph-2
+name: worm-graph-newest
 channels:
   - defaults
   - anaconda
@@ -7,25 +7,20 @@ channels:
   - conda-forge
 dependencies:
   - python=3.9
-  # - pytorch=1.13
-  # - torchvision 
-  # - torchaudio 
-  - pytorch=1.12
-  - torchvision==0.13.1 
-  - torchaudio==0.12.1 
-  - cudatoolkit=11.2
-  # - scikit-learn-intelex
-  # - scikit-learn==1.2.1
-  # - scikit-learn
-  # - ipywidgets==7.6.5
-  # - jupyterlab==3.5.3
-  # - matplotlib==3.6.2
+  - pytorch=1.13
+  - pytorch-gpu
+  - scikit-learn
+  # - ipywidgets
+  # - jupyterlab
   - matplotlib
+  - omegaconf
+  - hydra-core
+  - hydra-submitit-launcher
   # - pynamical=0.3.2
   # - notebook=6.5.2
   # - notebook
   # - freetype==2.12.1
-  # - freetype
+  - freetype
   # - networkx=2.8.4
   - networkx
   # - seaborn=0.12.2
@@ -34,13 +29,15 @@ dependencies:
   - pandas
   # - numpy=1.23.5
   - numpy
-  - nomkl
+  # - nomkl
   # - scipy=1.10.0
   - scipy
-  # - mat73==0.60
+  # - mat73=0.60
+  - mat73
   # - h5py==3.7.0
+  - h5py
   # - tqdm==4.64.1
-  # - tqdm
+  - tqdm
   # - pyg
   # - pip==23.0.1
   - pip
