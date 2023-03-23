@@ -1,4 +1,4 @@
-name: worm-graph-newest
+name: worm-graph
 channels:
   - anaconda
   - conda-forge
@@ -257,4 +257,3 @@ dependencies:
       - webcolors==1.12
       - webencodings==0.5.1
       - websocket-client==1.5.1
-prefix: /om2/user/qsimeon/miniconda/envs/worm-graph-newest

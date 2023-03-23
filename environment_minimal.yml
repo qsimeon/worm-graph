@@ -1,4 +1,4 @@
-name: worm-graph-newest
+name: worm-graph
 channels:
   - conda-forge
   - defaults
@@ -27,4 +27,3 @@ dependencies:
   - black-jupyter
   - ipywidgets
   - jupyterlab
-prefix: /om2/user/qsimeon/miniconda/envs/worm-graph-newest
