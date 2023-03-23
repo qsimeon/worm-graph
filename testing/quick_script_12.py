@@ -10,7 +10,7 @@ from visualization._main import *
 
 if __name__ == "__main__":
     # pick indices of neurons we want
-    neuron_inds = range(12, 13)
+    neuron_inds = range(0, 302)
     num_neurons = len(neuron_inds)
     # decide tau as the offset of the target
     tau_train = 100
@@ -55,7 +55,7 @@ if __name__ == "__main__":
         train_loader,
         test_loader,
         neurons_mask=named_neurons_mask,
-        num_epochs=100,
+        num_epochs=10,
         learn_rate=0.01,
     )
     # make predictions with trained model
@@ -64,13 +64,13 @@ if __name__ == "__main__":
     targets, predictions = model_predict(model, calcium_data * named_neurons_mask)
     print("Targets:", targets.shape, "\nPredictions:", predictions.shape, end="\n\n")
 
-    for neuron in range(0, num_neurons):
-        # if single_worm_dataset["named_neurons_mask"][neuron].item():
-        plt.figure()
-        plt.plot(range(targets.shape[0]), targets[:, neuron], label="target")
-        plt.plot(range(tau_test, tau_test + predictions.shape[0]), predictions[:, neuron], alpha=0.8, label="prediction")
-        plt.legend()
-        plt.title("Neuron %s target and prediction" % neuron)
-        plt.xlabel("Time")
-        plt.ylabel("$Ca^{2+} \Delta F / F$")
-        plt.show()
+    for neuron in neuron_inds:
+        if single_worm_dataset["named_neurons_mask"][neuron].item():
+            plt.figure()
+            plt.plot(range(targets.shape[0]), targets[:, neuron], label="target")
+            plt.plot(range(tau_test, tau_test + predictions.shape[0]), predictions[:, neuron], alpha=0.8, label="prediction")
+            plt.legend()
+            plt.title("Neuron %s target and prediction" % neuron)
+            plt.xlabel("Time")
+            plt.ylabel("$Ca^{2+} \Delta F / F$")
+            plt.show()

@@ -1,6 +1,6 @@
 train:
-  learn_rate: 0.1 # learning rate
-  seq_len: 47 # length of sequences to train
+  learn_rate: 0.01 # learning rate
+  seq_len: 10 # length of sequences to train
   k_splits: 2 # number of interleaved train/test splits per single worm
   epochs: 100 # number of single worms (including repeats) processed
   save_freq: 10 # frequency (in epochs) with which to save model checkpoints
@@ -13,4 +13,4 @@ train:
   shuffle: True # whether to shuffle samples from each worm
   tau_in: 1 # offset of target seqeunce from input sequence that we which to train with
   tau_out: 1 # offset of target seqeunce from input sequence that we which to make predictions with
-  optimizer: SGD # which Pytorch optimizer to use; options: Adam, SGD, None
+  optimizer: Adam # which Pytorch optimizer to use; options: Adam, SGD, None
