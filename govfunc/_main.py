@@ -139,9 +139,9 @@ if __name__ == "__main__":
     dataset = get_dataset(OmegaConf.load("conf/dataset.yaml"))
     print("config:", OmegaConf.to_yaml(config), end="\n\n")
     f = "/" + dataset["worm0"]["dataset"]
-    # main(dataset, config, folder=f)
+    main(dataset, config, folder=f)
 
-    for i in range(0, 1):# len(dataset)):
+    for i in range(0, len(dataset)):
         data, sorted_np = coef_analysis(dataset_name=dataset["worm0"]["dataset"], worm_name="worm" + str(i),
                                         n_cluster=3,
                                         folder=f + "/coefficient_CalToRes_tau_" + str(config.govfunc.tau))
