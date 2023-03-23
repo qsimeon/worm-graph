@@ -13,7 +13,6 @@ dependencies:
   - ipywidgets
   - hydra-core
   - pip
-  - pyg
   - pandas
   - nomkl
   - freetype
