@@ -11,7 +11,7 @@ globals:
 # If you want your primary config to override the values of configs
 # from the Defaults List, append _self_ to the end of the Defaults List
 hydra:
-  mode: MULTIRUN # options: RUN, MULTIRUN
+  mode: RUN # options: RUN, MULTIRUN
   job:
     chdir: false
   run:
@@ -23,7 +23,7 @@ hydra:
     params:
       # train.k_splits: 2, 5, 10
       # model.hidden_size: 64, 128, 512
-      train.tau_in: 1, 10, 100, 1000
+      # train.tau_in: 1, 10, 100, 1000
       # train.tau_out: 1, 10, 100, 1000
       # model.type: linear, dense_cfc, neural_cfc, lstm, vae_lstm
       # dataset.name: Nguyen2017

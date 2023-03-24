@@ -34,19 +34,20 @@ def train(
     for i, data in enumerate(loader):
         X_train, Y_train, metadata = data  # X, Y: (batch_size, seq_len, num_neurons)
         X_train, Y_train = X_train.to(DEVICE), Y_train.to(DEVICE)
+        tau = metadata["tau"][0]  # penalize longer delays
         # Clear optimizer gradients.
         optimizer.zero_grad()
         # Baseline: loss if the model predicted value at next timestep equal to current value.
         base = criterion(
             (0 if use_residual else 1) * X_train[:, :, mask], Y_train[:, :, mask]
-        )
+        ) / (1 + tau)
         # Train
         Y_tr = model(X_train * mask)  # Forward pass.
         # Register hook.
         Y_tr.retain_grad()
         Y_tr.register_hook(lambda grad: grad * mask)
         # Compute training loss.
-        loss = criterion(Y_tr[:, :, mask], Y_train[:, :, mask])
+        loss = criterion(Y_tr[:, :, mask], Y_train[:, :, mask]) / (1 + tau)
         loss.backward(retain_graph=True)  # Derive gradients.
         # No backprop on epoch 0.
         if no_grad:
@@ -96,14 +97,15 @@ def test(
     for i, data in enumerate(loader):
         X_test, Y_test, metadata = data  # X, Y: (batch_size, seq_len, num_neurons)
         X_test, Y_test = X_test.to(DEVICE), Y_test.to(DEVICE)
+        tau = metadata["tau"][0]  # penalize longer delays
         # Baseline: loss if the model predicted the residual to be 0.
         base = criterion(
             (0 if use_residual else 1) * X_test[:, :, mask], Y_test[:, :, mask]
-        )
+        ) / (1 + tau)
         # Test
         Y_te = model(X_test * mask)  # Forward pass.
         # Compute the validation loss.
-        loss = criterion(Y_te[:, :, mask], Y_test[:, :, mask])
+        loss = criterion(Y_te[:, :, mask], Y_test[:, :, mask]) / (1 + tau)
         # Store test and baseline loss.
         base_loss += base.detach().item()
         test_loss += loss.detach().item()

@@ -172,8 +172,8 @@ def train_model(
         model,
         dataset,
         log_dir,
-        # tau=config.train.tau_out,
-        tau=config.train.tau_in,
+        tau=config.train.tau_out,
+        # tau=config.train.tau_in,
         use_residual=use_residual,
         smooth_data=smooth_data,
     )

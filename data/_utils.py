@@ -138,14 +138,20 @@ class NeuralActivityDataset(torch.utils.data.Dataset):
             if not self.reverse  # generate from start to end
             else range(T - L - self.tau, -1, -1)  # generate from end to start
         )  # overlapping windows
-        # parallelize the data generation
-        with Pool(processes=cpu_count() // 2) as pool:
-            # asynchronous
-            data_samples = pool.map_async(
-                self.parfor_func,
-                start_range,
-            ).get(timeout=10)[: self.num_samples]
-        pool.join()
+        # sequential processing
+        data_samples = list(map(self.parfor_func, start_range))[: self.num_samples]
+        # # parallel processing
+        # with Pool(processes=cpu_count()) as pool:
+        #     # synchronous
+        #     data_samples = pool.map(
+        #         self.parfor_func,
+        #         start_range,
+        #     )[: self.num_samples]
+        #     # OR asynchronous
+        #     data_samples = pool.map_async(
+        #         self.parfor_func,
+        #         start_range,
+        #     ).get(timeout=5)[: self.num_samples]
         return data_samples
 
 
