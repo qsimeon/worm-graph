@@ -1,26 +1,11 @@
-#!/usr/bin/env python
-# encoding: utf-8
-'''
-@author: ivy
-@contact: ivyivyzhao77@gmail.com
-@software: PyCharm 2022.3
-@file: train_main.py
-@time: 2023/3/24 10:15
-
-visualize the relationship between val_loss - baseline and tau_train, and 
-quantitative meature two different criteria for "baseline":
-(1).    use y_t(current) as the prediction
-(2).    use the average of data[t + tau: t + tau + seq_len]
-'''
-
 from train._utils import *
-
+from visualization._main import *
 
 def train_model(
-        model: torch.nn.Module,
-        dataset: dict,
-        config: DictConfig,
-        shuffle: bool = True,  # whether to shuffle worms
+    model: torch.nn.Module,
+    dataset: dict,
+    config: DictConfig,
+    shuffle: bool = True,  # whether to shuffle worms
 ) -> tuple[torch.nn.Module, str]:
     """
     Trains a model on a multi-worm dataset. Returns the trained model
@@ -31,8 +16,11 @@ def train_model(
     dataset_name = dataset["worm0"]["dataset"]
     model_class_name = model.__class__.__name__
     timestamp = datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
-    print("--------timestamp---------")
-    print(timestamp)
+    print("--------------------------")
+    print("time: ", timestamp)
+    print("tau_in = ", config.train.tau_in)
+    print("tau_out = ", config.train.tau_out)
+    print("--------------------------")
     log_dir = os.path.join(
         "logs", "{}-{}-{}".format(timestamp, dataset_name, model_class_name)
     )
@@ -200,63 +188,22 @@ def train_model(
 if __name__ == "__main__":
     config = OmegaConf.load("conf/train.yaml")
     print("config:", OmegaConf.to_yaml(config), end="\n\n")
-
+    model = get_model(OmegaConf.load("conf/model.yaml"))
     dataset = get_dataset(OmegaConf.load("conf/dataset.yaml"))
 
-    model_config = OmegaConf.load("conf/model.yaml")
-    # model_config.model.input_size = dataset["worm0"]["named_neurons_mask"].shape[0]
-    model = get_model(model_config)
-    
     # if not all worms are needed, e.g. here we only choose one worm
     for i in range(len(dataset) - 1):
         d = dataset.popitem()
 
-    tau_range = range(1, config.train.seq_len * 10 + 5, config.train.seq_len)
-    val_loss = []
-    ori_val_loss = []
+    model, log_dir = train_model(model, dataset, config)
 
-    single_worm_dataset = dataset["worm0"]
-    calcium_data = single_worm_dataset["calcium_data"]
+    config_vis = OmegaConf.load("conf/visualize.yaml")
+    config_vis.visualize.log_dir = log_dir
+    print("config:", OmegaConf.to_yaml(config_vis), end="\n\n")
+    plot_figures(config_vis)
 
-    path_par = os.getcwd()
-    path_par += "/testing/ivy_scripts/figure"
-    isExist = os.path.exists(path_par)
-    if not isExist:
-        os.mkdir(path_par)
 
-    path = os.getcwd()
-    path += "/testing/ivy_scripts/figure/seq_len=" + str(config.train.seq_len)
-    isExist = os.path.exists(path)
-    if not isExist:
-        os.mkdir(path)
 
-    for t in tau_range:
-        config.train.tau_in = t
-        config.train.tau_out = t
-        model, log_dir = train_model(model, dataset, config)
-        loss_df = pd.read_csv(os.path.join(log_dir, "loss_curves.csv"), index_col=0)
-        val_loss.append(loss_df["centered_test_losses"].get(config.train.epochs - 1))
-        ori_val_loss.append(loss_df["test_losses"].get(config.train.epochs - 1))
 
-        targets, predictions = model_predict(model, calcium_data)
-        print("Targets:", targets.shape, "\nPredictions:", predictions.shape, end="\n\n")
 
-        for neuron in [12, 22]:
-            plt.figure()
-            plt.plot(targets[:, neuron], label="target")
-            plt.plot(range(t, t+predictions[:, neuron].shape[0]), predictions[:, neuron], alpha=0.8, label="prediction")
-            plt.legend()
-            plt.title("Neuron " + str(neuron)+ " target and prediction on tau = " + str(t) + "\n baseline = current")
-            plt.xlabel("Time")
-            plt.ylabel("$Ca^{2+} \Delta F / F$")
-            plt.savefig(os.path.join(path, "Neuron " + str(neuron)+ " target and prediction on tau = " + str(t) + ".png"))
-
-    plt.figure()
-    plt.plot(tau_range, val_loss)
-    plt.plot(tau_range, ori_val_loss)
-    plt.legend(["cen_loss", "ori_loss"], loc="upper right")
-    plt.ylabel("MSE loss")
-    plt.xlabel("tau (tau_in == tau_out == tau)")
-    plt.title("val_loss - baseline on tau \n baseline: current  worm: worm0  dataset: Uzel2022")
-    plt.show()
 

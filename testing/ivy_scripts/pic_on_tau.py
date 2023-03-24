@@ -14,6 +14,7 @@ quantitative meature two different criteria for "baseline":
 '''
 
 from train._utils import *
+from visualization._main import *
 
 
 def train_model(
@@ -33,6 +34,8 @@ def train_model(
     timestamp = datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
     print("--------timestamp---------")
     print(timestamp)
+    print("tau = ", config.train.tau_out)
+    print("-------------------------")
     log_dir = os.path.join(
         "logs", "{}-{}-{}".format(timestamp, dataset_name, model_class_name)
     )
@@ -200,35 +203,19 @@ def train_model(
 if __name__ == "__main__":
     config = OmegaConf.load("conf/train.yaml")
     print("config:", OmegaConf.to_yaml(config), end="\n\n")
-
+    model = get_model(OmegaConf.load("conf/model.yaml"))
     dataset = get_dataset(OmegaConf.load("conf/dataset.yaml"))
-
-    model_config = OmegaConf.load("conf/model.yaml")
-    # model_config.model.input_size = dataset["worm0"]["named_neurons_mask"].shape[0]
-    model = get_model(model_config)
     
     # if not all worms are needed, e.g. here we only choose one worm
     for i in range(len(dataset) - 1):
         d = dataset.popitem()
 
-    tau_range = range(1, config.train.seq_len * 10 + 5, config.train.seq_len)
+    tau_range = range(1, config.train.seq_len * 10 + 5, 30)
     val_loss = []
     ori_val_loss = []
 
     single_worm_dataset = dataset["worm0"]
     calcium_data = single_worm_dataset["calcium_data"]
-
-    path_par = os.getcwd()
-    path_par += "/testing/ivy_scripts/figure"
-    isExist = os.path.exists(path_par)
-    if not isExist:
-        os.mkdir(path_par)
-
-    path = os.getcwd()
-    path += "/testing/ivy_scripts/figure/seq_len=" + str(config.train.seq_len)
-    isExist = os.path.exists(path)
-    if not isExist:
-        os.mkdir(path)
 
     for t in tau_range:
         config.train.tau_in = t
@@ -237,19 +224,14 @@ if __name__ == "__main__":
         loss_df = pd.read_csv(os.path.join(log_dir, "loss_curves.csv"), index_col=0)
         val_loss.append(loss_df["centered_test_losses"].get(config.train.epochs - 1))
         ori_val_loss.append(loss_df["test_losses"].get(config.train.epochs - 1))
+        
+        config_vis = OmegaConf.load("conf/visualize.yaml")
+        config_vis.visualize.log_dir = log_dir
+        print("config:", OmegaConf.to_yaml(config_vis), end="\n\n")
+        plot_figures(config_vis)
 
-        targets, predictions = model_predict(model, calcium_data)
-        print("Targets:", targets.shape, "\nPredictions:", predictions.shape, end="\n\n")
 
-        for neuron in [12, 22]:
-            plt.figure()
-            plt.plot(targets[:, neuron], label="target")
-            plt.plot(range(t, t+predictions[:, neuron].shape[0]), predictions[:, neuron], alpha=0.8, label="prediction")
-            plt.legend()
-            plt.title("Neuron " + str(neuron)+ " target and prediction on tau = " + str(t) + "\n baseline = current")
-            plt.xlabel("Time")
-            plt.ylabel("$Ca^{2+} \Delta F / F$")
-            plt.savefig(os.path.join(path, "Neuron " + str(neuron)+ " target and prediction on tau = " + str(t) + ".png"))
+
 
     plt.figure()
     plt.plot(tau_range, val_loss)
