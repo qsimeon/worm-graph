@@ -7,12 +7,16 @@
 @file: _utils.py
 @time: 2023/2/28 12:15
 """
-
-import numpy as np
-import matplotlib.pyplot as plt
 import pandas as pd
-import seaborn as sns
-import torch
+
+from govfunc._pkg import *
+
+
+def generate_polynomial(x, polyorder, usesine):
+    # polyorder: polynomial formula with the first variant up to x^(i), where i is chosen from [1, polyorder]
+    r, c = x.shape
+    Theta = poolData(x, c, polyorder, usesine)
+    return Theta
 
 
 def neuro_plot(y, isTarget):
@@ -127,11 +131,11 @@ def poolData(yin, nVars, polyorder, usesine):
                         for m in range(l, nVars):
                             yout = np.c_[yout, np.ones(n)]
                             yout[:, ind] = (
-                                yin[:, i]
-                                * yin[:, j]
-                                * yin[:, k]
-                                * yin[:, l]
-                                * yin[:, m]
+                                    yin[:, i]
+                                    * yin[:, j]
+                                    * yin[:, k]
+                                    * yin[:, l]
+                                    * yin[:, m]
                             )
                             ind += 1
 
@@ -183,3 +187,146 @@ def calculas(y0, y_hat):
     for i in range(1, yrow + 1):
         sum_y[i, :] = sum_y[i - 1, :] + y_hat[i - 1, :]
     return sum_y
+
+
+def plot_coefficient_no_save(data, w, sorted):
+    plt.figure(figsize=(40, 40))
+    sns.heatmap(data=data, square=True, cmap="RdBu_r", center=0)  # , linecolor='grey', linewidths=0.01)
+    if sorted:
+        plt.title("(sourted) Coefficient of neurons activities of " + w)
+    else:
+        plt.title("(unsourted) Coefficient of neurons activities of " + w)
+    plt.show()
+
+
+def plot_coefficient(data, sorted, w, path):
+    plt.figure(figsize=(40, 40))
+    sns.heatmap(data=data, square=True, cmap="RdBu_r", center=0)  # , linecolor='grey', linewidths=0.01)
+    if sorted:
+        plt.title("(sourted) Coefficient of neurons activities of " + w)
+        plt.savefig(os.path.join(path, 'sorted_coeff_' + w + '.png'))
+    else:
+        plt.title("(unsourted) Coefficient of neurons activities of " + w)
+        plt.savefig(os.path.join(path, 'coeff_' + w + '.png'))
+
+
+def coef_analysis(dataset_name, worm_name, n_cluster, folder):
+    def plot_dendrogram_scipy(clusters, labels):
+        plt.figure(figsize=(30, 8))
+        dendrogram = hierarchy.dendrogram(clusters, labels=labels, p=6, orientation="top", leaf_font_size=5,
+                                          leaf_rotation=360)
+        plt.ylabel('Euclidean Distance')
+        plt.show()
+        return dendrogram["ivl"], dendrogram["leaves_color_list"]
+
+    # def plot_dendrogram_agg(model, w, **kwargs):
+    #     # Create linkage matrix and then plot the dendrogram
+    #
+    #     # create the counts of samples under each node
+    #     counts = np.zeros(model.children_.shape[0])
+    #     n_samples = len(model.labels_)
+    #     for i, merge in enumerate(model.children_):
+    #         current_count = 0
+    #         for child_idx in merge:
+    #             if child_idx < n_samples:
+    #                 current_count += 1  # leaf node
+    #             else:
+    #                 current_count += counts[child_idx - n_samples]
+    #         counts[i] = current_count
+    #
+    #     linkage_matrix = np.column_stack(
+    #         [model.children_, model.distances_, counts]
+    #     ).astype(float)
+    #     # Plot the corresponding dendrogram
+    #     dendrogram(linkage_matrix, **kwargs)
+    #     plt.title("dendrogram of " + w)
+    #     plt.savefig('./govfunc/coefficient_CalToRes_tau_1/dendrogram_' + w + '.png')
+
+    def main_function(d, w, n, folder):
+        ###############################
+        worm = w
+        data_read = pd.read_hdf("./govfunc/" + folder + "/coef_" + worm + ".hdf")
+        data = data_read
+        path = os.path.dirname(os.path.abspath(__file__)) + folder
+        plot_coefficient(data, False, worm, path)
+        sorted_np = data.to_numpy()
+
+        # data_np = data.to_numpy()
+        # index_col = data.columns.values.tolist()
+        # index_row = data.index.tolist()
+        # distance = data_np.T @ data_np
+        # # normalization
+        # distance = (distance - np.min(distance)) / (np.max(distance) - np.min(distance))
+        #
+        # # # hierarchy.linkage
+        # # clusters = hierarchy.linkage(distance, method="complete")
+        # # label, leaf_catagory = plot_dendrogram_scipy(clusters, index_col)
+        # #
+        # # label_col = np.zeros_like(index_col)
+        # #
+        # #
+        # # for i in range(len(leaf_catagory)):
+        # #     item = int(leaf_catagory[i][-1])
+        # #     for j in range(len(index_col)):
+        # #         if index_col[j] == label[i]:
+        # #             label_col[j] = item
+        # # col_catagory = np.stack((index_col, label_col)).T
+        # # print(col_catagory)
+        #
+        # agg = AgglomerativeClustering(n_clusters=n, metric="precomputed", linkage="complete", compute_distances=True)
+        # agg.fit(distance)
+        # # plot_dendrogram_agg(agg, w, truncate_mode="level", p=n)
+        # label_col = np.array(agg.labels_, dtype=int)
+        # col_category = np.stack((index_col, label_col)).T
+        #
+        # # load the raw data
+        # graph_tensors = torch.load(os.path.join(ROOT_DIR, "data/processed/connectome", "graph_tensors.pt"))
+        #
+        # # make the graph
+        # graph = Data(**graph_tensors)
+        # dataset_loader = eval("load_" + d)
+        # dataset = dataset_loader()
+        # neuron_to_slot = dataset[worm]["neuron_to_slot"]
+        # real_catagory = []
+        #
+        #
+        #
+        # # mapping neuron index to its name
+        # for i in range(col_category.shape[0]):
+        #     real_catagory.append(graph.y[neuron_to_slot.get(col_category[i, 0])].item())
+        #
+        # real_label = np.array(real_catagory, dtype=int).T.reshape(len(real_catagory), 1)
+        # not_sorted_result = np.concatenate((col_category, real_label), axis=1)
+        # # # result format [neuron_name, predict_category, real_category]
+        # # count = (not_sorted_result[:, 1] == not_sorted_result[:, 2]).sum()
+        # # print("count = ", count)
+        #
+        # # plt.scatter(range(0, not_sorted_result.shape[0]), not_sorted_result[:, 1])
+        # # plt.scatter(range(0, not_sorted_result.shape[0]), not_sorted_result[:, 2])
+        # # plt.legend(["predict", "target"], loc="lower right")
+        # # plt.show()
+        #
+        # # tagging the real label
+        # list_real_label = ["inter", "motor", "other", "pharynx", "sensory", "sexspec"]
+        #
+        # for i in range(not_sorted_result.shape[0]):
+        #     not_sorted_result[i, 2] = list_real_label[int(not_sorted_result[i, 2])]
+        #
+        # # sorted by labels in prediction
+        # sorted_np = sorted(not_sorted_result, key=lambda x: x[1])
+        # data_list = list(data_np.T)
+        # _, sorted_data = zip(*sorted(zip(list(not_sorted_result[:, 1]), data_list), key=lambda x: x[0]))
+        #
+        # # list to numpy array and reshape
+        # sorted_np = np.array(sorted_np).reshape(len(sorted_np), 3)
+        # sorted_data = np.array(sorted_data).reshape(len(sorted_data), len(sorted_data[0])).T
+        #
+        #
+        # I = pd.Index(index_row, name="rows")
+        # C = pd.Index(sorted_np[:, 0], name="cols")
+        # data = pd.DataFrame(sorted_data, index=I, columns=C)
+        # plot_coefficient(data, True, w, path)
+        return data, sorted_np
+
+    data, sorted_np = main_function(dataset_name, worm_name, n_cluster, folder)
+    return data, sorted_np
