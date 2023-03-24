@@ -315,6 +315,7 @@ dependencies:
   - zlib=1.2.13
   - zstd=1.5.2
   - pip:
+      - future==0.18.3
+      - ncps==0.0.7
       - torch-geometric==2.3.0
-      - ncps
 # prefix: /om2/user/qsimeon/miniconda/envs/worm-graph

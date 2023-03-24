@@ -20,6 +20,7 @@ dependencies:
   - numpy
   - seaborn
   - scipy
+  - scikit-learn
   - scikit-learn-intelex
   - omegaconf
   - h5py
