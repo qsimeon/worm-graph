@@ -26,4 +26,4 @@ hydra:
       # train.tau_in: 1, 10, 100, 1000
       # train.tau_out: 1, 10, 100, 1000
       # model.type: linear, dense_cfc, neural_cfc, lstm, vae_lstm
-      # dataset.name: Nguyen2017
+      # dataset.name: Nichols2017
