@@ -29,4 +29,5 @@ dependencies:
   - jupyterlab
   - pip:
       - torch-geometric
-prefix: /om2/user/qsimeon/miniconda/envs/worm-graph
+      - ncps
+# prefix: /om2/user/qsimeon/miniconda/envs/worm-graph

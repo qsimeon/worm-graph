@@ -316,4 +316,5 @@ dependencies:
   - zstd=1.5.2
   - pip:
       - torch-geometric==2.3.0
-prefix: /om2/user/qsimeon/miniconda/envs/worm-graph
+      - ncps
+# prefix: /om2/user/qsimeon/miniconda/envs/worm-graph
