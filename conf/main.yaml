@@ -12,7 +12,7 @@ globals:
 # If you want your primary config to override the values of configs
 # from the Defaults List, append _self_ to the end of the Defaults List
 hydra:
-  mode: RUN # options: RUN, MULTIRUN
+  mode: MULTIRUN # options: RUN, MULTIRUN
   job:
     chdir: false
   run:
@@ -22,6 +22,8 @@ hydra:
     subdir: ${hydra.job.num}
   sweeper:
     params:
+      train.epochs: 100, 300, 500, 700
+      # train.seq_len: 9, 99, 299, 499, 599
       # train.k_splits: 2, 5, 9
       # model.hidden_size: 64, 128, 512
       # train.tau_in: 1, 10, 100
