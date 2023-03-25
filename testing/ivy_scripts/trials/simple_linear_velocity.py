@@ -30,7 +30,7 @@ def alpha_relation(velocity, residual, alpha, seq_len, tau):
         input = residual[t - seq_len: t].T
         target = residual[t:t + tau].T
         prediction = input @ coef
-        # print(coef.shape, input.shape, target.shape, prediction.shape)
+        print(coef.shape, input.shape, target.shape, prediction.shape)
         loss = loss_func(prediction, target)
         val_loss_history.append(loss.detach().numpy())
     val_loss_history = np.array(val_loss_history)
@@ -83,12 +83,12 @@ if __name__ == "__main__":
 
     name_mask = single_worm_dataset["named_neurons_mask"]
 
-    seq_range = range(1, 100, 3)
+    seq_range = range(1, 6, 3)
 
     dict_setting = {0: 12, 1: 22, 2: 59, 3: name_mask}
 
     seq_for_neurons = []
-    for i in range(len(dict_setting)):
+    for i in range(2, len(dict_setting)):
         calcium_data = single_worm_dataset["calcium_data"][:, dict_setting[i]].to(torch.float32)
         residual = single_worm_dataset["residual_calcium"][:, dict_setting[i]].to(torch.float32)
 
