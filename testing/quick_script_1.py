@@ -2,23 +2,21 @@
 Tests prediction with untrained 
 model on data from a single worm.
 """
-import matplotlib.pyplot as plt
-from omegaconf import OmegaConf
-from models._utils import LinearNN
-from train._utils import model_predict
-from data._main import get_dataset
 
-config = OmegaConf.load("conf/dataset.yaml")
+import matplotlib.pyplot as plt
+from models._utils import NetworkLSTM
+from train._utils import model_predict
+from data._utils import load_sine_seq_noise
 
 if __name__ == "__main__":
-    # load a dataset (containes multiple worms)
-    dataset = get_dataset(config)
+    # load a dataset (contains multiple worms)
+    dataset = load_sine_seq_noise()
     # get the calcium data for one worm
     single_worm_dataset = dataset["worm0"]
     calcium_data = single_worm_dataset["calcium_data"]
     time_in_seconds = single_worm_dataset.get("time_in_seconds", None)
     # create a model
-    model = LinearNN(302, 64).double()
+    model = NetworkLSTM(302, 64).double()
     # make 0-step (i.e. identity) prediction with untrained model
     tau_out = 0
     targets, predictions = model_predict(model, calcium_data, tau=tau_out)
@@ -32,7 +30,7 @@ if __name__ == "__main__":
     axs[0].set_title("Model initial readout weights")
     axs[0].set_xlabel("Output size")
     axs[0].set_ylabel("Input size")
-    # neuron xx targets and predictions
+    # neuron targets and predictions
     axs[1].plot(time_in_seconds, targets[:, neuron], label="target")
     axs[1].plot(time_in_seconds, predictions[:, neuron], alpha=0.8, label="prediction")
     axs[1].legend()

@@ -25,7 +25,9 @@ def train_model(
     dataset_items = [
         (k, dataset[k])
         for k in np.random.choice(
-            list(dataset.keys()), size=config.train.epochs, replace=True
+            list(dataset.keys()),
+            size=config.train.epochs,
+            replace=True,
         )
     ]
     # shuffle the worms in dataset (without replacement)
@@ -186,4 +188,9 @@ if __name__ == "__main__":
     print("config:", OmegaConf.to_yaml(config), end="\n\n")
     model = get_model(OmegaConf.load("conf/model.yaml"))
     dataset = get_dataset(OmegaConf.load("conf/dataset.yaml"))
-    model, log_dir = train_model(model, dataset, config)
+    model, log_dir = train_model(
+        model,
+        dataset,
+        config,
+        shuffle=config.train.shuffle,
+    )
