@@ -16,15 +16,15 @@ if __name__ == "__main__":
         dict(
             train=dict(
                 learn_rate=0.01,
-                seq_len=10,
+                seq_len=69,
                 k_splits=2,
-                epochs=200,
+                epochs=100,
                 save_freq=100,
                 smooth_data=False,
                 batch_size=128,
                 train_size=1654,
                 test_size=1654,
-                shuffle=True,
+                shuffle=True,  # whether to shuffle sample
                 tau_in=1,
                 tau_out=1,
                 optimizer="SGD",
