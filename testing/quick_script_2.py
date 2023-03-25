@@ -1,5 +1,8 @@
 """
-Tests the model optimization function `optimize_model`.
+Tests several components of the the model training pipeline:
+    1. the data loader function `split_train_test`;
+    2. the optimization function `optimize_model`; and
+    3. the prediction/inference function `model_predict`.
 """
 
 import matplotlib.pyplot as plt
@@ -9,7 +12,7 @@ from train._utils import split_train_test, optimize_model, model_predict
 
 if __name__ == "__main__":
     # pick indices of neurons we want
-    neuron_inds = range(7, 9)
+    neuron_inds = range(6, 10)
     num_neurons = len(neuron_inds)
     # load a dataset (multiple worms)
     dataset = load_sine_noise()
@@ -46,10 +49,10 @@ if __name__ == "__main__":
         test_loader,
         neurons_mask=named_neurons_mask,
         num_epochs=100,
-        learn_rate=0.01,
+        learn_rate=0.1,
     )
     # make predictions with trained model
-    tau_out = 0
+    tau_out = 69
     targets, predictions = model_predict(
         model,
         calcium_data * named_neurons_mask,

@@ -21,15 +21,10 @@ def train_model(
     )
     os.makedirs(log_dir, exist_ok=True)
     os.makedirs(os.path.join(log_dir, "checkpoints"), exist_ok=True)
-    # sample worms with replacement until desired number epochs (i.e. worms) obtained
-    dataset_items = [
-        (k, dataset[k])
-        for k in np.random.choice(
-            list(dataset.keys()),
-            size=config.train.epochs,
-            replace=True,
-        )
-    ]
+    # cycle the dataset until the desired number epochs (i.e. worms) obtained
+    dataset_items = (
+        sorted(dataset.items()) * (1 + config.train.epochs // len(dataset))
+    )[: config.train.epochs]
     # shuffle the worms in dataset (without replacement)
     if shuffle == True:
         dataset_items = random.sample(dataset_items, k=len(dataset_items))

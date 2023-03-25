@@ -8,6 +8,7 @@ defaults:
   # - override hydra/launcher: joblib
 globals:
   use_residual: False
+  shuffle: False # whether to shuffle worms
 # If you want your primary config to override the values of configs
 # from the Defaults List, append _self_ to the end of the Defaults List
 hydra:
@@ -21,9 +22,9 @@ hydra:
     subdir: ${hydra.job.num}
   sweeper:
     params:
-      # train.k_splits: 2, 5, 10
+      # train.k_splits: 2, 5, 9
       # model.hidden_size: 64, 128, 512
-      # train.tau_in: 1, 10, 100, 1000
-      # train.tau_out: 1, 10, 100, 1000
-      # model.type: linear, dense_cfc, neural_cfc, lstm, vae_lstm
+      # train.tau_in: 1, 10, 100
+      # train.tau_out: 1, 10, 100
+      # model.type: neural_cfc, lstm
       # dataset.name: Nichols2017
