@@ -22,8 +22,8 @@ hydra:
     subdir: ${hydra.job.num}
   sweeper:
     params:
-      train.epochs: 100, 300, 500, 700
-      # train.seq_len: 9, 99, 299, 499, 599
+      # train.epochs: 100, 300, 500, 600
+      train.seq_len: 9, 99, 299, 499
       # train.k_splits: 2, 5, 9
       # train.tau_in: 1, 10, 100
       # train.tau_out: 1, 10, 100
