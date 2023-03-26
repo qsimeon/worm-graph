@@ -3,7 +3,7 @@ train:
   seq_len: 69 # length of sequences to train
   k_splits: 2 # number of interleaved train/test splits per single worm
   epochs: 600 # number of single worms (including repeats) processed
-  save_freq: 10 # frequency (in epochs) with which to save model checkpoints
+  save_freq: 50 # frequency (in epochs) with which to save model checkpoints
   # constraint: epochs >= num_worms &&  save_freq < epochs
   smooth_data: False # if True use the smoothed calcium data as input
   batch_size: 128 # maximum number of samples per batch
