@@ -4,13 +4,13 @@ defaults:
 
 hydra:
   launcher:
-    cpus_per_task: 4
+    cpus_per_task: 1
     gpus_per_task: 1
     tasks_per_node: 1
     nodes: 1
-    mem_gb: 4
-    additional_parameters:
-      mail-user: qsimeon@mit.edu
-      mail-type: END
+    mem_gb: 64
+    # additional_parameters:
+    #   mail-user: qsimeon@mit.edu
+    #   mail-type: END
     array_parallelism: 800
-    timeout_min: 900 # 15 hours by default
+    timeout_min: 720 # 12 hours by default

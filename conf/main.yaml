@@ -4,8 +4,10 @@ defaults:
   - model
   - visualize
   - train
+  # NOTE: WHEN ON OPENMIND, UNCOMMENT LINES BELOW TO RUN MULTIPLE SLURM JOBS
+  # - slurm_default
   - _self_
-  # - override hydra/launcher: joblib
+  
 globals:
   use_residual: False
   shuffle: False # whether to shuffle worms
@@ -23,12 +25,12 @@ hydra:
   sweeper:
     params:
       # train.epochs: 100, 300, 500, 600
-      train.seq_len: 9, 99, 299, 499
+      # train.seq_len: 9, 99, 299, 499
       # train.k_splits: 2, 5, 9
       # train.tau_in: 1, 10, 100
       # train.tau_out: 1, 10, 100
       # model.type: neuralcfc, networklstm
-      # model.hidden_size: 64, 128, 512
+      model.hidden_size: 64, 128, 512
       # globals.shuffle: True, False
       # globals.use_residual: True, False
       # dataset.name: Nichols2017
