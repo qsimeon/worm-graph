@@ -1,8 +1,6 @@
 # @package _global_
 defaults:
   - override /hydra/launcher: submitit_slurm
-  # - override /hydra/launcher: joblib
-
 hydra:
   launcher:
     cpus_per_task: 1
