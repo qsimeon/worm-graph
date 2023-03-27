@@ -29,7 +29,7 @@ def pipeline(config: DictConfig) -> None:
         model,
         dataset,
         config,
-        shuffle=True,
+        shuffle=config.globals.shuffle,  # shuffle worms
     )
 
     plot_figures(config, log_dir)

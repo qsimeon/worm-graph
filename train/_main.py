@@ -21,13 +21,10 @@ def train_model(
     )
     os.makedirs(log_dir, exist_ok=True)
     os.makedirs(os.path.join(log_dir, "checkpoints"), exist_ok=True)
-    # sample worms with replacement until desired number epochs (i.e. worms) obtained
-    dataset_items = [
-        (k, dataset[k])
-        for k in np.random.choice(
-            list(dataset.keys()), size=config.train.epochs, replace=True
-        )
-    ]
+    # cycle the dataset until the desired number epochs (i.e. worms) obtained
+    dataset_items = (
+        sorted(dataset.items()) * (1 + config.train.epochs // len(dataset))
+    )[: config.train.epochs]
     # shuffle the worms in dataset (without replacement)
     if shuffle == True:
         dataset_items = random.sample(dataset_items, k=len(dataset_items))
@@ -186,4 +183,9 @@ if __name__ == "__main__":
     print("config:", OmegaConf.to_yaml(config), end="\n\n")
     model = get_model(OmegaConf.load("conf/model.yaml"))
     dataset = get_dataset(OmegaConf.load("conf/dataset.yaml"))
-    model, log_dir = train_model(model, dataset, config)
+    model, log_dir = train_model(
+        model,
+        dataset,
+        config,
+        shuffle=config.train.shuffle,
+    )

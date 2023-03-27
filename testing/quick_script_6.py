@@ -1,15 +1,13 @@
 """
-Tests the `split_train_test` function interleaved 
-cuts of train and test data given calcium data
-from a single worm.
+Tests the splitting of the calcium data from
+a single worm into interleaved chunks of train 
+and test using the `split_train_test` function.
 """
 
 import numpy as np
 import matplotlib.pyplot as plt
-from omegaconf import OmegaConf
 from data._utils import load_sine_seq
 from train._utils import split_train_test
-
 
 if __name__ == "__main__":
     # load a dataset (multiple worms)
@@ -17,18 +15,20 @@ if __name__ == "__main__":
     # get calcium data for one worm
     single_worm_dataset = dataset["worm0"]
     calcium_data = single_worm_dataset["calcium_data"]
-    time_vec = single_worm_dataset.get("time_in_seconds", None)
+    time_vec = single_worm_dataset["time_in_seconds"]
     # create train and test data loaders with `split_train_test`
     kwargs = dict(
         k_splits=2,
         seq_len=1000,
-        batch_size=64,
-        train_size=1024,
-        test_size=512,
+        batch_size=16,
+        train_size=128,
+        test_size=128,
         time_vec=time_vec,
-        shuffle=False,
+        # shuffle=False,  # sequential train samples
+        shuffle=True,  # shuffled train samples
         reverse=False,
         tau=500,
+        use_residual=False,
     )
     train_loader, test_loader, train_mask, test_mask = split_train_test(
         calcium_data,
@@ -57,13 +57,13 @@ if __name__ == "__main__":
         label="1st train input",
     )  # first sample in train batch
     plt.plot(
-        metadata_train["time_vec"][b, :],
+        metadata_train["time_vec"][b + 1, :],
         0.15 * np.random.rand() + X_train[b + 1, :, n],
         color="orange",
         label="2nd train input",
     )  # second sample in train batch
     plt.plot(
-        metadata_train["time_vec"][b, :],
+        metadata_train["time_vec"][b + 2, :],
         0.2 * np.random.rand() + X_train[b + 2, :, n],
         color="chocolate",
         label="3rd train input",
@@ -76,13 +76,13 @@ if __name__ == "__main__":
         label="1st test input",
     )  # first sample in test batch, neuron 0
     plt.plot(
-        metadata_test["time_vec"][b, :],
+        metadata_test["time_vec"][b + 1, :],
         0.15 * np.random.rand() + X_test[b + 1, :, n],
         color="cyan",
         label="2nd test input",
     )  # second sample in test batch
     plt.plot(
-        metadata_test["time_vec"][b, :],
+        metadata_test["time_vec"][b + 2, :],
         0.2 * np.random.rand() + X_test[b + 2, :, n],
         color="limegreen",
         label="3rd test input",

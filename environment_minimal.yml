@@ -30,5 +30,7 @@ dependencies:
   - jupyterlab
   - pip:
       - torch-geometric
+      - hydra-submitit-launcher
+      - hydra-joblib-launcher
       - ncps
 # prefix: /om2/user/qsimeon/miniconda/envs/worm-graph

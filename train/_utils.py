@@ -48,7 +48,8 @@ def train(
         Y_tr.register_hook(lambda grad: grad * mask)
         # Compute training loss.
         loss = criterion(Y_tr[:, :, mask], Y_train[:, :, mask]) / (1 + tau)
-        loss.backward(retain_graph=True)  # Derive gradients.
+        # loss.backward(retain_graph=True)  # Derive gradients.
+        loss.backward()  # Derive gradients.
         # No backprop on epoch 0.
         if no_grad:
             optimizer.zero_grad()
@@ -131,7 +132,7 @@ def split_train_test(
     shuffle: bool = True,
     reverse: bool = True,
     tau: int = 1,
-    use_residual: bool = True,
+    use_residual: bool = False,
 ) -> tuple[
     torch.utils.data.DataLoader,
     torch.utils.data.DataLoader,
@@ -149,7 +150,8 @@ def split_train_test(
     ), "Invalid `seq_len` entered."
     # make time vector
     if time_vec is None:
-        time_vec = torch.arange(len(data)).double()
+        time_vec = torch.arange(len(data))
+    time_vec = time_vec.double()
     assert torch.is_tensor(time_vec) and len(time_vec) == len(
         data
     ), "Enter a time vector with same length as data."
@@ -209,12 +211,14 @@ def split_train_test(
         batch_size=batch_size,
         shuffle=shuffle,
         pin_memory=True,
+        num_workers=2,
     )
     test_loader = DataLoader(
         test_dataset,
         batch_size=batch_size,
         shuffle=shuffle,
         pin_memory=True,
+        num_workers=2,
     )
     # return data loaders and masks
     return train_loader, test_loader, train_mask, test_mask
