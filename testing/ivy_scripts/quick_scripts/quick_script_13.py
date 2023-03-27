@@ -20,7 +20,16 @@ if __name__ == "__main__":
     print(graph.y)
     print(slot)
 
-    print(graph.y[247])
+    list_save = []
+    for i in range(302):
+        if dataset["worm0"]["named_neurons_mask"][i] == True:
+            list_save.append(i)
+
+    print(list_save)
+
+    neuron_range = [12, 22, 59, 96, 216, 228, 260, 274, 275]
+    for item in neuron_range:
+        print(dataset["worm0"]["slot_to_neuron"][item], graph.y[item].item())
 
 
 

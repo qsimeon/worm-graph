@@ -18,9 +18,9 @@ class Net(nn.Module):
     def weight_exp(self, input):
         # input shape: [batch_size, neurons, seq_len]
         seq_len = input.shape[2]
-        matrix = np.array([math.e ** (-k * 1.0 / self.tau) for k in range(1, seq_len + 1)])
+        matrix = np.array([math.e ** (-p * 1.0 / self.tau) for p in range(1, seq_len + 1)])
         sum_result = matrix.sum()
-        coef = [math.e ** (-k * 1.0 / self.tau) / sum_result for k in range(1, seq_len + 1)]
+        coef = [math.e ** (-q * 1.0 / self.tau) / sum_result for q in range(1, seq_len + 1)]
         coef = torch.tensor(coef).to(torch.float32)
         return coef
 
@@ -37,7 +37,7 @@ if __name__ == "__main__":
     single_worm_dataset = dataset["worm0"]
     name_mask = single_worm_dataset["named_neurons_mask"]
 
-    neuron_range = [12, 22, 59, name_mask]
+    neuron_range = [12, 22, 59, 96, 216, 228, 260, 274, 275, name_mask]
 
     # different choices for tau
     half_life_seq_len_range = [1]
@@ -59,8 +59,8 @@ if __name__ == "__main__":
         alpha_list = []
         for seq_len in seq_len_range:
             # initialize network hyperparameters
-            net = Net(1)
-            optimizer = torch.optim.SGD(net.parameters(), lr=0.001)
+            net = Net(10)
+            optimizer = torch.optim.SGD(net.parameters(), lr=0.0001)
             loss_func = torch.nn.MSELoss()
 
             input_group = []
@@ -99,11 +99,12 @@ if __name__ == "__main__":
             plt.plot(seq_len_range, list_save[k])
 
     print(list_save[-1][-1])
-    list_name = neuron_range
-    list_name.pop()
+
+    neuron_range.pop()
+    list_name = [single_worm_dataset["slot_to_neuron"][i] for i in neuron_range]
     list_name.append("all neurons")
     plt.legend(list_name)
     plt.title("alpha - seq_len_range")
-    plt.xlabel("seq_len_range, epoch = 100")
+    plt.xlabel("seq_len_range, epoch = 100, tau = 10")
     plt.ylabel("optimal solution of alpha")
     plt.show()

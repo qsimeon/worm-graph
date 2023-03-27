@@ -19,7 +19,7 @@ class Net(nn.Module):
 
 
 def alpha_relation(velocity, residual, alpha, seq_len, tau):
-    train_border = 3000
+    train_border = 1000
     matrix = [math.e ** (-i) for i in range(1, seq_len + 1)]
     sum_result = np.array(matrix).sum()
     coef = [math.e ** (-i) * alpha / sum_result for i in range(1, seq_len + 1)]
@@ -88,7 +88,7 @@ if __name__ == "__main__":
     dict_setting = {0: 12, 1: 22, 2: 59, 3: name_mask}
 
     seq_for_neurons = []
-    for i in range(2, len(dict_setting)):
+    for i in range(len(dict_setting)):
         calcium_data = single_worm_dataset["calcium_data"][:, dict_setting[i]].to(torch.float32)
         residual = single_worm_dataset["residual_calcium"][:, dict_setting[i]].to(torch.float32)
 
@@ -106,7 +106,7 @@ if __name__ == "__main__":
             tau = 1
             alpha_range = []
             mean_val_loss = []
-            for alpha in range(-1000, 1000):
+            for alpha in range(-1000, 1000, 5):
                 alpha *= 0.001
                 alpha_range.append(alpha)
                 loss = alpha_relation(velocity, residual, alpha, seq_len, tau)
