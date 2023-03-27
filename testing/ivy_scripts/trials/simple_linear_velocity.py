@@ -19,7 +19,7 @@ class Net(nn.Module):
 
 
 def alpha_relation(velocity, residual, alpha, seq_len, tau):
-    train_border = 1000
+    train_border = 3000
     matrix = [math.e ** (-i) for i in range(1, seq_len + 1)]
     sum_result = np.array(matrix).sum()
     coef = [math.e ** (-i) * alpha / sum_result for i in range(1, seq_len + 1)]
@@ -30,7 +30,7 @@ def alpha_relation(velocity, residual, alpha, seq_len, tau):
         input = residual[t - seq_len: t].T
         target = residual[t:t + tau].T
         prediction = input @ coef
-        print(coef.shape, input.shape, target.shape, prediction.shape)
+        # print(coef.shape, input.shape, target.shape, prediction.shape)
         loss = loss_func(prediction, target)
         val_loss_history.append(loss.detach().numpy())
     val_loss_history = np.array(val_loss_history)
@@ -83,7 +83,7 @@ if __name__ == "__main__":
 
     name_mask = single_worm_dataset["named_neurons_mask"]
 
-    seq_range = range(1, 6, 3)
+    seq_range = range(1, 100, 3)
 
     dict_setting = {0: 12, 1: 22, 2: 59, 3: name_mask}
 
@@ -106,8 +106,8 @@ if __name__ == "__main__":
             tau = 1
             alpha_range = []
             mean_val_loss = []
-            for alpha in range(-100, 100):
-                alpha *= 0.01
+            for alpha in range(-1000, 1000):
+                alpha *= 0.001
                 alpha_range.append(alpha)
                 loss = alpha_relation(velocity, residual, alpha, seq_len, tau)
                 mean_val_loss.append(loss)
