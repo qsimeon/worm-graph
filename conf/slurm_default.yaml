@@ -1,16 +1,14 @@
 # @package _global_
 defaults:
   # - override /hydra/launcher: submitit_slurm
+  # - override hydra/launcher: submitit_local
   - override hydra/launcher: joblib
 # hydra:
 #   launcher:
 #     cpus_per_task: 1
-#     gpus_per_task: 1
+#     gpus_per_node: 1
 #     tasks_per_node: 1
+#     mem_gb: 16
 #     nodes: 1
-#     mem_gb: 32
-#     # additional_parameters:
-#     #   mail-user: qsimeon@mit.edu
-#     #   mail-type: END
-#     array_parallelism: 800
+#     array_parallelism: 256
 #     timeout_min: 720 # 12 hours by default
