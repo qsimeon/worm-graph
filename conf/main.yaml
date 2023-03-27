@@ -4,9 +4,9 @@ defaults:
   - model
   - visualize
   - train
-  - _self_
   # # NOTE: WHEN ON OPENMIND, UNCOMMENT LINE BELOW TO RUN MULTIPLE SLURM JOBS
   # - slurm_default
+  - _self_
 globals:
   use_residual: False
   shuffle: False # whether to shuffle worms
