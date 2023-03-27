@@ -4,7 +4,7 @@ defaults:
   - model
   - visualize
   - train
-  # # NOTE: WHEN ON OPENMIND, UNCOMMENT LINE BELOW TO RUN MULTIPLE SLURM JOBS
+  # NOTE: WHEN ON OPENMIND, UNCOMMENT LINE BELOW TO RUN MULTIPLE SLURM JOBS
   # - slurm_default
   - _self_
 globals:
