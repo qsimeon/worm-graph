@@ -5,7 +5,7 @@ defaults:
   - visualize
   - train
   # NOTE: WHEN ON OPENMIND, UNCOMMENT LINE BELOW TO RUN MULTIPLE SLURM JOBS
-  # - slurm_default
+  - slurm_default
   - _self_
 globals:
   use_residual: False
