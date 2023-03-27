@@ -48,7 +48,8 @@ def train(
         Y_tr.register_hook(lambda grad: grad * mask)
         # Compute training loss.
         loss = criterion(Y_tr[:, :, mask], Y_train[:, :, mask]) / (1 + tau)
-        loss.backward(retain_graph=True)  # Derive gradients.
+        # loss.backward(retain_graph=True)  # Derive gradients.
+        loss.backward()  # Derive gradients.
         # No backprop on epoch 0.
         if no_grad:
             optimizer.zero_grad()

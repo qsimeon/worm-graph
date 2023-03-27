@@ -2,6 +2,8 @@ import os
 import torch
 import pandas as pd
 
+os.environ["HYDRA_FULL_ERROR"] = "1"
+
 NUM_NEURONS = 302
 
 RAW_DATA_URL = "https://www.dropbox.com/s/45yqpvtsncx4095/raw_data.zip?dl=1"

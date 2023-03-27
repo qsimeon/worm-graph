@@ -30,7 +30,7 @@ hydra:
       # train.tau_in: 1, 10, 100
       # train.tau_out: 1, 10, 100
       # model.type: neuralcfc, networklstm
-      model.hidden_size: 64, 128, 512
+      model.hidden_size: 128, 512
       # globals.shuffle: True, False
       # globals.use_residual: True, False
       # dataset.name: Nichols2017
