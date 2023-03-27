@@ -54,6 +54,7 @@ def train(
         if no_grad:
             optimizer.zero_grad()
         optimizer.step()  # Update parameters based on gradients.
+        Y_tr.remove()
         # Store train and baseline loss.
         base_loss += base.detach().item()
         train_loss += loss.detach().item()
