@@ -7,7 +7,7 @@ hydra:
     gpus_per_task: 1
     tasks_per_node: 1
     nodes: 1
-    mem_gb: 32
+    mem_gb: 64
     # additional_parameters:
     #   mail-user: qsimeon@mit.edu
     #   mail-type: END

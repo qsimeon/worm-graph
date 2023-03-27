@@ -267,7 +267,7 @@ def plot_targets_predictions(
             data=predictions_df,
             x=targets_df.time_in_seconds,
             y=predictions_df[_neuron_],
-            label="predicted",
+            label="predict",
             alpha=0.8,
         )
         ylo, yhi = plt.gca().get_ylim()
@@ -297,7 +297,7 @@ def plot_targets_predictions(
             facecolor="red",
             label="predict",
         )
-        plt.legend(loc="upper left")
+        plt.legend(loc="upper left", fontsize=6)
         plt.suptitle(plt_title)
         plt.xlabel("Time (seconds)")
         plt.ylabel(signal_str.capitalize() + " ($\Delta F / F$)")

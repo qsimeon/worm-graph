@@ -106,8 +106,8 @@ if __name__ == "__main__":
             tau = 1
             alpha_range = []
             mean_val_loss = []
-            for alpha in range(-100, 100):
-                alpha *= 0.01
+            for alpha in range(-1000, 1000, 5):
+                alpha *= 0.001
                 alpha_range.append(alpha)
                 loss = alpha_relation(velocity, residual, alpha, seq_len, tau)
                 mean_val_loss.append(loss)
