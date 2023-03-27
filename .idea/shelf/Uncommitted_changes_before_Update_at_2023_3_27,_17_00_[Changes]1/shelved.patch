@@ -1,0 +1,19 @@
+Index: conf/slurm_default.yaml
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+># @package _global_\ndefaults:\n  - override /hydra/launcher: submitit_slurm\nhydra:\n  launcher:\n    cpus_per_task: 1\n    gpus_per_task: 1\n    tasks_per_node: 1\n    nodes: 1\n    mem_gb: 32\n    # additional_parameters:\n    #   mail-user: qsimeon@mit.edu\n    #   mail-type: END\n    array_parallelism: 800\n    timeout_min: 720 # 12 hours by default
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/conf/slurm_default.yaml b/conf/slurm_default.yaml
+--- a/conf/slurm_default.yaml	(revision 60b00cc8743b6804562fb8105b9d0d3796dff7ec)
++++ b/conf/slurm_default.yaml	(date 1679950800783)
+@@ -7,7 +7,7 @@
+     gpus_per_task: 1
+     tasks_per_node: 1
+     nodes: 1
+-    mem_gb: 32
++    mem_gb: 64
+     # additional_parameters:
+     #   mail-user: qsimeon@mit.edu
+     #   mail-type: END
