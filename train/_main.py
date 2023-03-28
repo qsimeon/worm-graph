@@ -17,12 +17,15 @@ def train_model(
     dataset_name = dataset["worm0"]["dataset"]
     model_class_name = model.__class__.__name__
     timestamp = datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
-    if log_dir is None: # hydra changes working directory to log directory
-        log_dir = os.getcwd() 
+    if log_dir is None:  # hydra changes working directory to log directory
+        log_dir = os.getcwd()
     os.makedirs(log_dir, exist_ok=True)
     # create a model checkpoints folder
     os.makedirs(os.path.join(log_dir, "checkpoints"), exist_ok=True)
     # save config to log directory
+    config = OmegaConf.structured(OmegaConf.to_yaml(config))
+    config.model.type = model_class_name
+    config.dataset.name = dataset_name
     OmegaConf.save(config, os.path.join(log_dir, "config.yaml"))
     # cycle the dataset until the desired number epochs (i.e. worms) obtained
     dataset_items = (
@@ -194,5 +197,5 @@ if __name__ == "__main__":
         dataset,
         config,
         shuffle=config.train.shuffle,
-        log_dir=os.path.join("logs", "{}".format(timestamp))
+        log_dir=os.path.join("logs", "{}".format(timestamp)),
     )
