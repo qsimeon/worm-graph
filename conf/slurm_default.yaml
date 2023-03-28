@@ -1,14 +1,13 @@
 # @package _global_
 defaults:
-  # - override /hydra/launcher: submitit_slurm
-  # - override hydra/launcher: submitit_local
-  - override hydra/launcher: joblib
-# hydra:
-#   launcher:
-#     cpus_per_task: 2
-#     gpus_per_node: 1
-#     tasks_per_node: 1
-#     mem_gb: 16
-#     nodes: 1
-#     array_parallelism: 256
-#     timeout_min: 720 # 12 hours by default
+  - override /hydra/launcher: submitit_slurm
+  # - override hydra/launcher: joblib
+hydra:
+  launcher:
+    cpus_per_task: 2
+    gpus_per_node: 1
+    tasks_per_node: 1
+    mem_gb: 8
+    nodes: 4
+    # array_parallelism: 256
+    timeout_min: 720 # 12 hours by default
