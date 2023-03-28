@@ -30,6 +30,7 @@ def pipeline(config: DictConfig) -> None:
         dataset,
         config,
         shuffle=config.globals.shuffle,  # shuffle worms
+        log_dir=None,  # hydra changes working directory to log directory
     )
 
     plot_figures(config, log_dir)

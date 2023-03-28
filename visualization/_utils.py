@@ -136,10 +136,12 @@ def plot_loss_curves(log_dir):
     """
     Plot the loss curves stored in the given log directory.
     """
-    # process the log folder name
-    timestamp, dataset_name, model_name = str.split(os.path.split(log_dir)[-1], "-")
-    plt_title = "Loss curves\nmodel: {}, dataset: {}\ntime: {}".format(
-        model_name, dataset_name, timestamp
+    # process the config.yaml file inside the log folder
+    config = OmegaConf.structured(OmegaConf.load(os.path.join(log_dir, "config.yaml")))
+    dataset_name, model_name = config.dataset.name, config.model.type
+    plt_title = "Loss curves\nmodel: {}, dataset: {}".format(
+        model_name,
+        dataset_name,
     )
     # load the loss dataframe
     loss_df = pd.read_csv(os.path.join(log_dir, "loss_curves.csv"), index_col=0)
@@ -179,10 +181,12 @@ def plot_before_after_weights(log_dir: str) -> None:
     """
     Plot the model's readout weigths from before and after training.
     """
-    # process the log folder name
-    timestamp, dataset_name, model_name = str.split(os.path.split(log_dir)[-1], "-")
-    plt_title = "Model readout weights\nmodel: {}, dataset: {}\ntime: {}".format(
-        model_name, dataset_name, timestamp
+    # process the config.yaml file inside the log folder
+    config = OmegaConf.structured(OmegaConf.load(os.path.join(log_dir, "config.yaml")))
+    dataset_name, model_name = config.dataset.name, config.model.type
+    plt_title = "Model readout weights\nmodel: {}, dataset: {}".format(
+        model_name,
+        dataset_name,
     )
     # load the first model checkpoint
     chkpt_dir = os.path.join(log_dir, "checkpoints")
@@ -222,8 +226,9 @@ def plot_targets_predictions(
     neuron in a given worm.
     """
     signal_str = "residual" if use_residual else "calcium"
-    # process the log folder name
-    timestamp, dataset_name, model_name = str.split(os.path.split(log_dir)[-1], "-")
+    # process the config.yaml file inside the log folder
+    config = OmegaConf.structured(OmegaConf.load(os.path.join(log_dir, "config.yaml")))
+    dataset_name, model_name = config.dataset.name, config.model.type
     # recursive call for all worms
     if (worm is None) or (worm.lower() == "all"):
         all_worms = [fname for fname in os.listdir(log_dir) if fname.startswith("worm")]
@@ -249,12 +254,11 @@ def plot_targets_predictions(
         plt_title = (
             "Neural activity "
             + signal_str
-            + " (GCaMP fluorescence) \nworm: {}, neuron: {}\nmodel: {}, dataset: {}\ntime: {}".format(
+            + " (GCaMP fluorescence) \nworm: {}, neuron: {}\nmodel: {}, dataset: {}".format(
                 worm,
                 _neuron_,
                 model_name,
                 dataset_name,
-                timestamp,
             )
         )
         sns.lineplot(
@@ -330,8 +334,9 @@ def plot_correlation_scatterplot(
     colored by train and test sample.
     """
     signal_str = "residual" if use_residual else "calcium"
-    # process the folder name
-    timestamp, dataset_name, model_name = str.split(os.path.split(log_dir)[-1], "-")
+    # process the config.yaml file inside the log folder
+    config = OmegaConf.structured(OmegaConf.load(os.path.join(log_dir, "config.yaml")))
+    dataset_name, model_name = config.dataset.name, config.model.type
     # recursive call for all worms
     if (worm is None) or (worm.lower() == "all"):
         all_worms = [fname for fname in os.listdir(log_dir) if fname.startswith("worm")]
@@ -352,12 +357,11 @@ def plot_correlation_scatterplot(
     # plot helper
     def func(_neuron_):
         os.makedirs(os.path.join(log_dir, worm, "figures"), exist_ok=True)
-        plt_title = "Scatterplot of predicted vs target residuals\nworm: {}, neuron: {}\nmodel: {}, dataset: {}\ntime: {}".format(
+        plt_title = "Scatterplot of predicted vs target residuals\nworm: {}, neuron: {}\nmodel: {}, dataset: {}".format(
             worm,
             _neuron_,
             model_name,
             dataset_name,
-            timestamp,
         )
         data_dict = {
             "target": targets_df[_neuron_].tolist(),

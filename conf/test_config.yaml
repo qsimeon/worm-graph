@@ -1,0 +1,17 @@
+defaults: 
+  - dataset
+  - model
+  - train
+  - slurm_default
+  - _self_
+globals:
+  use_residual: False
+  shuffle: False
+
+hydra:
+  mode: RUN
+  run:
+    dir: logs/${now:%Y_%m_%d_%H_%M_%S}
+  job:
+    chdir: true
+

@@ -6,6 +6,7 @@ def train_model(
     dataset: dict,
     config: DictConfig,
     shuffle: bool = True,  # whether to shuffle worms
+    log_dir: Union[str, None] = None,  # hydra passes
 ) -> tuple[torch.nn.Module, str]:
     """
     Trains a model on a multi-worm dataset. Returns the trained model
@@ -16,11 +17,13 @@ def train_model(
     dataset_name = dataset["worm0"]["dataset"]
     model_class_name = model.__class__.__name__
     timestamp = datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
-    log_dir = os.path.join(
-        "logs", "{}-{}-{}".format(timestamp, dataset_name, model_class_name)
-    )
+    if log_dir is None: # hydra changes working directory to log directory
+        log_dir = os.getcwd() 
     os.makedirs(log_dir, exist_ok=True)
+    # create a model checkpoints folder
     os.makedirs(os.path.join(log_dir, "checkpoints"), exist_ok=True)
+    # save config to log directory
+    OmegaConf.save(config, os.path.join(log_dir, "config.yaml"))
     # cycle the dataset until the desired number epochs (i.e. worms) obtained
     dataset_items = (
         sorted(dataset.items()) * (1 + config.train.epochs // len(dataset))
@@ -149,7 +152,9 @@ def train_model(
             torch.save(
                 {
                     "epoch": reset_epoch - 1,
+                    "dataset_name": dataset_name,
                     "model_name": model_class_name,
+                    "timestamp": timestamp,
                     "input_size": model.get_input_size(),
                     "hidden_size": model.get_hidden_size(),
                     "num_worms": i + 1,
@@ -183,9 +188,11 @@ if __name__ == "__main__":
     print("config:", OmegaConf.to_yaml(config), end="\n\n")
     model = get_model(OmegaConf.load("conf/model.yaml"))
     dataset = get_dataset(OmegaConf.load("conf/dataset.yaml"))
+    timestamp = datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
     model, log_dir = train_model(
         model,
         dataset,
         config,
         shuffle=config.train.shuffle,
+        log_dir=os.path.join("logs", "{}".format(timestamp))
     )
