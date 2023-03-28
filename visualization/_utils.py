@@ -138,7 +138,8 @@ def plot_loss_curves(log_dir):
     """
     # process the config.yaml file inside the log folder
     config = OmegaConf.structured(OmegaConf.load(os.path.join(log_dir, "config.yaml")))
-    dataset_name, model_name = config.dataset.name, config.model.type
+    dataset_name = config.get("dataset", {"name": ""})["name"]
+    model_name = config.get("model", {"type": ""})["type"]
     plt_title = "Loss curves\nmodel: {}, dataset: {}".format(
         model_name,
         dataset_name,
@@ -183,7 +184,8 @@ def plot_before_after_weights(log_dir: str) -> None:
     """
     # process the config.yaml file inside the log folder
     config = OmegaConf.structured(OmegaConf.load(os.path.join(log_dir, "config.yaml")))
-    dataset_name, model_name = config.dataset.name, config.model.type
+    dataset_name = config.get("dataset", {"name": ""})["name"]
+    model_name = config.get("model", {"type": ""})["type"]
     plt_title = "Model readout weights\nmodel: {}, dataset: {}".format(
         model_name,
         dataset_name,
@@ -228,7 +230,8 @@ def plot_targets_predictions(
     signal_str = "residual" if use_residual else "calcium"
     # process the config.yaml file inside the log folder
     config = OmegaConf.structured(OmegaConf.load(os.path.join(log_dir, "config.yaml")))
-    dataset_name, model_name = config.dataset.name, config.model.type
+    dataset_name = config.get("dataset", {"name": ""})["name"]
+    model_name = config.get("model", {"type": ""})["type"]
     # recursive call for all worms
     if (worm is None) or (worm.lower() == "all"):
         all_worms = [fname for fname in os.listdir(log_dir) if fname.startswith("worm")]
@@ -336,7 +339,8 @@ def plot_correlation_scatterplot(
     signal_str = "residual" if use_residual else "calcium"
     # process the config.yaml file inside the log folder
     config = OmegaConf.structured(OmegaConf.load(os.path.join(log_dir, "config.yaml")))
-    dataset_name, model_name = config.dataset.name, config.model.type
+    dataset_name = config.get("dataset", {"name": ""})["name"]
+    model_name = config.get("model", {"type": ""})["type"]
     # recursive call for all worms
     if (worm is None) or (worm.lower() == "all"):
         all_worms = [fname for fname in os.listdir(log_dir) if fname.startswith("worm")]
