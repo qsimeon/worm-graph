@@ -55,7 +55,7 @@ def train_model(
         ), "Please use an instance of torch.optim.Optimizer."
     else:
         optimizer = torch.optim.SGD(model.parameters(), lr=learn_rate)
-    # print("Optimizer:", optimizer, end="\n\n")
+    print("Optimizer:", optimizer, end="\n\n")
     # get other config params
     if config.get("globals"):
         use_residual = config.globals.use_residual
@@ -102,11 +102,6 @@ def train_model(
     # train for config.train.num_epochs
     reset_epoch = 1
     for i, (worm, single_worm_dataset) in enumerate(dataset_items):
-        print(
-            "size of mem_loaders_masks: %s MB"
-            % (getsizeof(memo_loaders_masks) // 1073741824),
-            end="\n\n",
-        )
         # check memo for loaders and masks
         if worm in memo_loaders_masks:
             train_loader = memo_loaders_masks[worm]["train_loader"]
@@ -189,6 +184,8 @@ def train_model(
         use_residual=use_residual,
         smooth_data=smooth_data,
     )
+    # garbage collection
+    gc.collect()
     # returned trained model and a path to log directory
     return model, log_dir
 

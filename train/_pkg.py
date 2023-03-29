@@ -1,6 +1,7 @@
 # All imports for train module
 import torch
 import os
+import gc
 import hydra
 import random
 import numpy as np

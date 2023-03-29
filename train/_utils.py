@@ -49,6 +49,7 @@ def train(
         # Compute training loss.
         loss = criterion(Y_tr[:, :, mask], Y_train[:, :, mask]) / (1 + tau)
         loss.backward()  # Derive gradients.
+        del Y_tr
         # No backprop on epoch 0.
         if no_grad:
             optimizer.zero_grad()
@@ -56,13 +57,15 @@ def train(
         # Store train and baseline loss.
         base_loss += base.detach().item()
         train_loss += loss.detach().item()
-        num_train_samples += X_train.size(0)
+        num_train_samples += X_train.detach().size(0)
     # Average train and baseline losses.
     losses = {
         "train_loss": train_loss / (i + 1),
         "base_train_loss": base_loss / (i + 1),
         "num_train_samples": num_train_samples,
     }
+    # garbage collection
+    gc.collect()
     # Return losses.
     return losses
 
@@ -106,16 +109,19 @@ def test(
         Y_te = model(X_test * mask)  # Forward pass.
         # Compute the validation loss.
         loss = criterion(Y_te[:, :, mask], Y_test[:, :, mask]) / (1 + tau)
+        del Y_te
         # Store test and baseline loss.
         base_loss += base.detach().item()
         test_loss += loss.detach().item()
-        num_test_samples += X_test.size(0)
+        num_test_samples += X_test.detach().size(0)
     # Average test and baseline losses.
     losses = {
         "test_loss": test_loss / (i + 1),
         "base_test_loss": base_loss / (i + 1),
         "num_test_samples": num_test_samples,
     }
+    # garbage collection
+    gc.collect()
     # Return losses
     return losses
 
@@ -209,14 +215,17 @@ def split_train_test(
         train_dataset,
         batch_size=batch_size,
         shuffle=shuffle,
-        pin_memory=True,
+        pin_memory=False,
     )
     test_loader = DataLoader(
         test_dataset,
         batch_size=batch_size,
         shuffle=shuffle,
-        pin_memory=True,
+        pin_memory=False,
     )
+    # garbage collection
+    del test_dataset, train_dataset
+    gc.collect()
     # return data loaders and masks
     return train_loader, test_loader, train_mask, test_mask
 
@@ -283,6 +292,7 @@ def optimize_model(
             neurons_mask,
             use_residual=use_residual,
         )
+        del neurons_mask
         base_train_loss, train_loss, num_train_samples = (
             train_log["base_train_loss"],
             train_log["train_loss"],
@@ -310,6 +320,8 @@ def optimize_model(
             log["num_test_samples"].append(num_test_samples)
             log["centered_train_losses"].append(centered_train_loss)
             log["centered_test_losses"].append(centered_test_loss)
+    # garbage collection
+    gc.collect()
     # return optimized model
     return model, log
 
@@ -391,6 +403,8 @@ def make_predictions(
             index=True,
             header=True,
         )
+    # garbage collection
+    gc.collect()
     return None
 
 
@@ -424,9 +438,11 @@ def model_predict(
         0
     )  # (1, max_time, NUM_NEURONS),  batch_size = 1, seq_len = max_time
     # targets and predictions
-    targets = torch.nn.functional.pad(input[tau:].detach().cpu(), (0, 0, 0, tau))
+    targets = torch.nn.functional.pad(input.detach().cpu()[tau:], (0, 0, 0, tau))
     # prediction of the input shifted by tau
     predictions = output.detach().cpu()
+    # garbage collection
+    gc.collect()
     return targets, predictions
 
 
