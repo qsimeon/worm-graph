@@ -138,11 +138,13 @@ def plot_loss_curves(log_dir):
     """
     # process the config.yaml file inside the log folder
     config = OmegaConf.structured(OmegaConf.load(os.path.join(log_dir, "config.yaml")))
-    dataset_name = config.get("dataset", {"name": ""})["name"]
-    model_name = config.get("model", {"type": ""})["type"]
-    plt_title = "Loss curves\nmodel: {}, dataset: {}".format(
+    dataset_name = config.dataset.name
+    model_name = config.model.type
+    timestamp = config.timestamp
+    plt_title = "Loss curves\nmodel: {}, dataset: {}\ntime: {}".format(
         model_name,
         dataset_name,
+        timestamp,
     )
     # load the loss dataframe
     loss_df = pd.read_csv(os.path.join(log_dir, "loss_curves.csv"), index_col=0)
@@ -184,11 +186,13 @@ def plot_before_after_weights(log_dir: str) -> None:
     """
     # process the config.yaml file inside the log folder
     config = OmegaConf.structured(OmegaConf.load(os.path.join(log_dir, "config.yaml")))
-    dataset_name = config.get("dataset", {"name": ""})["name"]
-    model_name = config.get("model", {"type": ""})["type"]
-    plt_title = "Model readout weights\nmodel: {}, dataset: {}".format(
+    dataset_name = config.dataset.name
+    model_name = config.model.type
+    timestamp = config.timestamp
+    plt_title = "Model readout weights\nmodel: {}, dataset: {}\ntime: {}".format(
         model_name,
         dataset_name,
+        timestamp,
     )
     # load the first model checkpoint
     chkpt_dir = os.path.join(log_dir, "checkpoints")
@@ -230,8 +234,9 @@ def plot_targets_predictions(
     signal_str = "residual" if use_residual else "calcium"
     # process the config.yaml file inside the log folder
     config = OmegaConf.structured(OmegaConf.load(os.path.join(log_dir, "config.yaml")))
-    dataset_name = config.get("dataset", {"name": ""})["name"]
-    model_name = config.get("model", {"type": ""})["type"]
+    dataset_name = config.dataset.name
+    model_name = config.model.type
+    timestamp = config.timestamp
     # recursive call for all worms
     if (worm is None) or (worm.lower() == "all"):
         all_worms = [fname for fname in os.listdir(log_dir) if fname.startswith("worm")]
@@ -257,11 +262,12 @@ def plot_targets_predictions(
         plt_title = (
             "Neural activity "
             + signal_str
-            + " (GCaMP fluorescence) \nworm: {}, neuron: {}\nmodel: {}, dataset: {}".format(
+            + " (GCaMP fluorescence) \nworm: {}, neuron: {}\nmodel: {}, dataset: {}\ntime: {}".format(
                 worm,
                 _neuron_,
                 model_name,
                 dataset_name,
+                timestamp,
             )
         )
         sns.lineplot(
@@ -339,8 +345,9 @@ def plot_correlation_scatterplot(
     signal_str = "residual" if use_residual else "calcium"
     # process the config.yaml file inside the log folder
     config = OmegaConf.structured(OmegaConf.load(os.path.join(log_dir, "config.yaml")))
-    dataset_name = config.get("dataset", {"name": ""})["name"]
-    model_name = config.get("model", {"type": ""})["type"]
+    dataset_name = config.dataset.name
+    model_name = config.model.type
+    timestamp = config.timestamp
     # recursive call for all worms
     if (worm is None) or (worm.lower() == "all"):
         all_worms = [fname for fname in os.listdir(log_dir) if fname.startswith("worm")]
@@ -361,11 +368,12 @@ def plot_correlation_scatterplot(
     # plot helper
     def func(_neuron_):
         os.makedirs(os.path.join(log_dir, worm, "figures"), exist_ok=True)
-        plt_title = "Scatterplot of predicted vs target residuals\nworm: {}, neuron: {}\nmodel: {}, dataset: {}".format(
+        plt_title = "Scatterplot of predicted vs target residuals\nworm: {}, neuron: {}\nmodel: {}, dataset: {}\ntime: {}".format(
             worm,
             _neuron_,
             model_name,
             dataset_name,
+            timestamp,
         )
         data_dict = {
             "target": targets_df[_neuron_].tolist(),

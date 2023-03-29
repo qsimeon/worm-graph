@@ -27,8 +27,8 @@ def plot_figures(
     # loss curves
     plot_loss_curves(log_dir)
 
-    # # plot model weights
-    # plot_before_after_weights(log_dir)
+    # plot model weights
+    plot_before_after_weights(log_dir)
 
     # scatterplot of modeled vs. real neuron activity
     plot_correlation_scatterplot(

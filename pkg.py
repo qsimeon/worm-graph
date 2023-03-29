@@ -10,3 +10,4 @@ from data._main import get_dataset
 from models._main import get_model
 from train._main import train_model
 from visualization._main import plot_figures
+from utils import DEVICE

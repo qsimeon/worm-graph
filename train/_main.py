@@ -22,6 +22,10 @@ def train_model(
     os.makedirs(log_dir, exist_ok=True)
     # create a model checkpoints folder
     os.makedirs(os.path.join(log_dir, "checkpoints"), exist_ok=True)
+    # modify the config file
+    config.setdefault("dataset", {"name": dataset_name})
+    config.setdefault("model", {"type": model_class_name})
+    config.setdefault("timestamp", {"name": timestamp})
     # save config to log directory
     OmegaConf.save(config, os.path.join(log_dir, "config.yaml"))
     # cycle the dataset until the desired number epochs (i.e. worms) obtained
