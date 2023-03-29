@@ -5,6 +5,7 @@ import hydra
 import random
 import numpy as np
 import pandas as pd
+from sys import getsizeof
 from scipy.linalg import solve
 from typing import Tuple, Union
 from datetime import datetime

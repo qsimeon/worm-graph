@@ -102,6 +102,11 @@ def train_model(
     # train for config.train.num_epochs
     reset_epoch = 1
     for i, (worm, single_worm_dataset) in enumerate(dataset_items):
+        print(
+            "size of mem_loaders_masks: %s MB"
+            % (getsizeof(memo_loaders_masks) // 1073741824),
+            end="\n\n",
+        )
         # check memo for loaders and masks
         if worm in memo_loaders_masks:
             train_loader = memo_loaders_masks[worm]["train_loader"]
