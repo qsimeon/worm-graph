@@ -1,6 +1,6 @@
 preprocess:
   url: https://www.dropbox.com/s/931x52ewwf15mey/opensource_data.zip?dl=1
   zipfile: opensource_data.zip
-  dataset: all
+  dataset: Flavell2023
   raw_dir: data/raw
   smooth: fft # None: No signal smoothing # FFT: Fast Fourier Transform # TVR: Total Variantion Regularization # SG: Savitzky–Golay Filter
