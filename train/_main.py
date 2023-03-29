@@ -101,6 +101,7 @@ def train_model(
     memo_loaders_masks = dict()
     # train for config.train.num_epochs
     reset_epoch = 1
+    # main FOR loop
     for i, (worm, single_worm_dataset) in enumerate(dataset_items):
         # check memo for loaders and masks
         if worm in memo_loaders_masks:
