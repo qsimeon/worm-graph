@@ -1,4 +1,4 @@
 visualize:
-  log_dir: logs/2023_03_29_06_01_19
+  log_dir: logs/hydra/2023_03_29_07_38_37
   worm: worm1
   neuron: AVAL
