@@ -75,17 +75,6 @@ def train_model(
         "centered_train_losses": np.zeros(len(dataset_items), dtype=np.float32),
         "centered_test_losses": np.zeros(len(dataset_items), dtype=np.float32),
     }
-    # data = {
-    #     "epochs": [],
-    #     "base_train_losses": [],
-    #     "base_test_losses": [],
-    #     "train_losses": [],
-    #     "test_losses": [],
-    #     "num_train_samples": [],
-    #     "num_test_samples": [],
-    #     "centered_train_losses": [],
-    #     "centered_test_losses": [],
-    # }
     # train the model for multiple cyles
     kwargs = dict(  # args to `split_train_test`
         k_splits=config.train.k_splits,
@@ -155,12 +144,8 @@ def train_model(
             use_residual=use_residual,
         )
         # retrieve losses and sample counts
-        # DEBUG: I think this is the memory leak; maybe we need to preallocate data[key]
-        # for key in data:
-        #     data[key].extend(list(log[key]))  # Python list comprehension
-        for key in data:
+        for key in data:  # pre-allocated memory for data[key]
             data[key][(i * num_epochs) : (i * num_epochs) + len(log[key])] = log[key]
-        # print("debug", key, data[key])
         # set to next epoch
         reset_epoch = log["epochs"][-1] + 1
         # outputs
