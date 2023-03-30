@@ -2,7 +2,7 @@ train:
   learn_rate: 0.01 # learning rate
   seq_len: 99 # length of sequences to train
   k_splits: 2 # number of interleaved train/test splits per single worm
-  epochs: 7 # number of single worms (including repeats) processed
+  epochs: 100 # number of single worms (including repeats) processed
   save_freq: 100 # frequency (in epochs) with which to save model checkpoints
   # constraint: epochs >= num_worms &&  save_freq < epochs
   smooth_data: False # if True use the smoothed calcium data as input
