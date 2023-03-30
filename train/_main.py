@@ -65,16 +65,27 @@ def train_model(
         smooth_data = False
     # train/test loss metrics
     data = {
-        "epochs": [],
-        "base_train_losses": [],
-        "base_test_losses": [],
-        "train_losses": [],
-        "test_losses": [],
-        "num_train_samples": [],
-        "num_test_samples": [],
-        "centered_train_losses": [],
-        "centered_test_losses": [],
+        "epochs": np.zeros(len(dataset_items), dtype=int),
+        "num_train_samples": np.zeros(len(dataset_items), dtype=int),
+        "num_test_samples": np.zeros(len(dataset_items), dtype=int),
+        "base_train_losses": np.zeros(len(dataset_items), dtype=np.float32),
+        "base_test_losses": np.zeros(len(dataset_items), dtype=np.float32),
+        "train_losses": np.zeros(len(dataset_items), dtype=np.float32),
+        "test_losses": np.zeros(len(dataset_items), dtype=np.float32),
+        "centered_train_losses": np.zeros(len(dataset_items), dtype=np.float32),
+        "centered_test_losses": np.zeros(len(dataset_items), dtype=np.float32),
     }
+    # data = {
+    #     "epochs": [],
+    #     "base_train_losses": [],
+    #     "base_test_losses": [],
+    #     "train_losses": [],
+    #     "test_losses": [],
+    #     "num_train_samples": [],
+    #     "num_test_samples": [],
+    #     "centered_train_losses": [],
+    #     "centered_test_losses": [],
+    # }
     # train the model for multiple cyles
     kwargs = dict(  # args to `split_train_test`
         k_splits=config.train.k_splits,
@@ -131,6 +142,7 @@ def train_model(
         # get the neurons mask for this worm
         neurons_mask = single_worm_dataset["named_neurons_mask"]
         # optimize for 1 epoch per (possibly duplicated) worm
+        num_epochs = 1
         model, log = optimize_model(
             model=model,
             train_loader=train_loader,
@@ -139,12 +151,16 @@ def train_model(
             optimizer=optimizer,
             start_epoch=reset_epoch,
             learn_rate=learn_rate,
-            num_epochs=1,
+            num_epochs=num_epochs,
             use_residual=use_residual,
         )
-        # retrieve losses and sample counts 
-        for key in data: # DEBUG: I think this is the memory leak; maybe we need to preallocate data[key]
-            data[key].extend(log[key])  # Python list comprehension
+        # retrieve losses and sample counts
+        # DEBUG: I think this is the memory leak; maybe we need to preallocate data[key]
+        # for key in data:
+        #     data[key].extend(list(log[key]))  # Python list comprehension
+        for key in data:
+            data[key][(i * num_epochs) : (i * num_epochs) + len(log[key])] = log[key]
+        # print("debug", key, data[key])
         # set to next epoch
         reset_epoch = log["epochs"][-1] + 1
         # outputs

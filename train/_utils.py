@@ -266,21 +266,33 @@ def optimize_model(
     if optimizer is None:
         optimizer = torch.optim.SGD(model.parameters(), lr=learn_rate)
     # create log dictionary to return
+    # log = {
+    #     "epochs": [],
+    #     "base_train_losses": [],
+    #     "base_test_losses": [],
+    #     "train_losses": [],
+    #     "test_losses": [],
+    #     "num_train_samples": [],
+    #     "num_test_samples": [],
+    #     "centered_train_losses": [],
+    #     "centered_test_losses": [],
+    #     "model_state_dicts": [],
+    #     "optimizer_state_dicts": [],
+    # }
     log = {
-        "epochs": [],
-        "base_train_losses": [],
-        "base_test_losses": [],
-        "train_losses": [],
-        "test_losses": [],
-        "num_train_samples": [],
-        "num_test_samples": [],
-        "centered_train_losses": [],
-        "centered_test_losses": [],
-        "model_state_dicts": [],
-        "optimizer_state_dicts": [],
+        "epochs": np.zeros(num_epochs, dtype=int),
+        "base_train_losses": np.zeros(num_epochs, dtype=np.float32),
+        "base_test_losses": np.zeros(num_epochs, dtype=np.float32),
+        "train_losses": np.zeros(num_epochs, dtype=np.float32),
+        "test_losses": np.zeros(num_epochs, dtype=np.float32),
+        "num_train_samples": np.zeros(num_epochs, dtype=int),
+        "num_test_samples": np.zeros(num_epochs, dtype=int),
+        "centered_train_losses": np.zeros(num_epochs, dtype=np.float32),
+        "centered_test_losses": np.zeros(num_epochs, dtype=np.float32),
     }
     # iterate over the training data multiple times
-    for epoch in range(start_epoch, num_epochs + start_epoch):
+    iter_range = range(start_epoch, num_epochs + start_epoch)
+    for i, epoch in enumerate(iter_range):
         # train the model
         train_log = train(
             train_loader,
@@ -296,7 +308,6 @@ def optimize_model(
             neurons_mask,
             use_residual=use_residual,
         )
-        del neurons_mask
         base_train_loss, train_loss, num_train_samples = (
             train_log["base_train_loss"],
             train_log["train_loss"],
@@ -309,21 +320,32 @@ def optimize_model(
         )
         centered_train_loss = train_loss - base_train_loss
         centered_test_loss = test_loss - base_test_loss
+        # save epochs, losses and batch counts
+        log["epochs"][i] = epoch
+        log["base_train_losses"][i] = base_train_loss
+        log["base_test_losses"][i] = base_test_loss
+        log["train_losses"][i] = train_loss
+        log["test_losses"][i] = test_loss
+        log["num_train_samples"][i] = num_train_samples
+        log["num_test_samples"][i] = num_test_samples
+        log["centered_train_losses"][i] = centered_train_loss
+        log["centered_test_losses"][i] = centered_test_loss
+        # print to standard output
         if (num_epochs < 10) or (epoch % (num_epochs // 10) == 0):
             print(
                 f"Epoch: {epoch:03d}, Train Loss: {centered_train_loss:.4f}, Val. Loss: {centered_test_loss:.4f}",
                 end="\n\n",
             )
-            # save epochs, losses and batch counts
-            log["epochs"].append(epoch)
-            log["base_train_losses"].append(base_train_loss)
-            log["base_test_losses"].append(base_test_loss)
-            log["train_losses"].append(train_loss)
-            log["test_losses"].append(test_loss)
-            log["num_train_samples"].append(num_train_samples)
-            log["num_test_samples"].append(num_test_samples)
-            log["centered_train_losses"].append(centered_train_loss)
-            log["centered_test_losses"].append(centered_test_loss)
+            # # save epochs, losses and batch counts
+            # log["epochs"].append(epoch)
+            # log["base_train_losses"].append(base_train_loss)
+            # log["base_test_losses"].append(base_test_loss)
+            # log["train_losses"].append(train_loss)
+            # log["test_losses"].append(test_loss)
+            # log["num_train_samples"].append(num_train_samples)
+            # log["num_test_samples"].append(num_test_samples)
+            # log["centered_train_losses"].append(centered_train_loss)
+            # log["centered_test_losses"].append(centered_test_loss)
     # garbage collection
     gc.collect()
     # return optimized model
