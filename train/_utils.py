@@ -156,10 +156,11 @@ def split_train_test(
     # make time vector
     if time_vec is None:
         time_vec = torch.arange(len(data))
-    time_vec = time_vec.double()
+    time_vec = time_vec.double().detach()
     assert torch.is_tensor(time_vec) and len(time_vec) == len(
         data
     ), "Enter a time vector with same length as data."
+    data = data.detach()
     # split dataset into train and test sections
     chunk_size = len(data) // k_splits
     split_datasets = torch.split(data, chunk_size, dim=0)  # length k_splits tuple
@@ -357,11 +358,12 @@ def make_predictions(
         os.makedirs(os.path.join(log_dir, worm), exist_ok=True)
         # get data to save
         named_neuron_to_idx = single_worm_dataset["named_neuron_to_idx"]
-        calcium_data = single_worm_dataset[key_data]
-        named_neurons_mask = single_worm_dataset["named_neurons_mask"]
+        calcium_data = single_worm_dataset[key_data].detach()
+        named_neurons_mask = single_worm_dataset["named_neurons_mask"].detach()
         time_in_seconds = single_worm_dataset["time_in_seconds"]
         if time_in_seconds is None:
             time_in_seconds = torch.arange(len(calcium_data)).double()
+        time_in_seconds = time_in_seconds.detach()
         train_mask = single_worm_dataset["train_mask"]
         labels = np.expand_dims(np.where(train_mask, "train", "test"), axis=-1)
         columns = list(named_neuron_to_idx) + [
@@ -426,7 +428,7 @@ def model_predict(
         calcium_data.ndim == 2 and calcium_data.size(0) >= NUM_NEURONS
     ), "Calcium data has incorrect shape!"
     # get input and output
-    input = calcium_data.to(DEVICE)
+    input = calcium_data.detach().to(DEVICE)
     # TODO: Why does this make such a big difference in prediction?
     # output = model(
     #     input.unsqueeze(1), tau,

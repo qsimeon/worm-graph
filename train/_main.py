@@ -107,12 +107,12 @@ def train_model(
         if worm in memo_loaders_masks:
             train_loader = memo_loaders_masks[worm]["train_loader"]
             test_loader = memo_loaders_masks[worm]["test_loader"]
-            train_mask = memo_loaders_masks[worm]["train_mask"]
-            test_mask = memo_loaders_masks[worm]["test_mask"]
+            train_mask = memo_loaders_masks[worm]["train_mask"].detach().clone()
+            test_mask = memo_loaders_masks[worm]["test_mask"].detach().clone()
         else:
             # create data loaders and train/test masks only once per worm
             train_loader, test_loader, train_mask, test_mask = split_train_test(
-                data=single_worm_dataset[key_data],
+                data=single_worm_dataset[key_data].detach().clone(),
                 time_vec=single_worm_dataset.get(
                     "time_in_seconds", None
                 ),  # time vector

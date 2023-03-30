@@ -153,3 +153,4 @@ dmypy.json
 
 # Zip files
 *.zip
+*.pickle
