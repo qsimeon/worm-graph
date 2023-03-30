@@ -6,7 +6,7 @@ train:
   save_freq: 100 # frequency (in epochs) with which to save model checkpoints
   # constraint: epochs >= num_worms &&  save_freq < epochs
   smooth_data: False # if True use the smoothed calcium data as input
-  batch_size: 128 # maximum number of samples per batch
+  batch_size: 32 # maximum number of samples per batch
   train_size: 1654 # number of samples (sequences) of training data per epoch
   test_size: 1654 # number of samples (sequences) of validation data per epoch
   # constraint: batch_size <= min(train_size, test_size)

@@ -34,7 +34,7 @@ def train(
     for i, data in enumerate(loader):
         X_train, Y_train, metadata = data  # X, Y: (batch_size, seq_len, num_neurons)
         X_train, Y_train = X_train.to(DEVICE), Y_train.to(DEVICE)
-        tau = metadata["tau"][0]  # penalize longer delays
+        tau = metadata["tau"].detach()[0]  # penalize longer delays
         # Clear optimizer gradients.
         optimizer.zero_grad()
         # Baseline: loss if the model predicted value at next timestep equal to current value.
@@ -155,15 +155,16 @@ def split_train_test(
     ), "Invalid `seq_len` entered."
     # make time vector
     if time_vec is None:
-        time_vec = torch.arange(len(data))
-    time_vec = time_vec.double().detach()
+        time_vec = torch.arange(len(data)).double()
     assert torch.is_tensor(time_vec) and len(time_vec) == len(
         data
     ), "Enter a time vector with same length as data."
+    # detach comutation graph from tensors
+    time_vec = time_vec.detach()
     data = data.detach()
     # split dataset into train and test sections
     chunk_size = len(data) // k_splits
-    split_datasets = torch.split(data, chunk_size, dim=0)  # length k_splits tuple
+    split_datasets = torch.split(data, chunk_size, dim=0)  # length k_splits list
     split_times = torch.split(time_vec, chunk_size, dim=0)
     # create train and test masks. important that this is before dropping last split
     train_mask = torch.cat(
@@ -172,8 +173,8 @@ def split_train_test(
             (True if i % 2 == 0 else False) * torch.ones(len(section), dtype=torch.bool)
             for i, section in enumerate(split_datasets)
         ]
-    )
-    test_mask = ~train_mask
+    ).detach()
+    test_mask = ~train_mask.detach()
     # drop last split if too small. important that this is after making train/test masks
     if (2 * tau >= len(split_datasets[-1])) or (len(split_datasets[-1]) < seq_len):
         split_datasets = split_datasets[:-1]
@@ -184,7 +185,7 @@ def split_train_test(
     # train dataset
     train_datasets = [
         NeuralActivityDataset(
-            data,
+            _data.detach(),
             seq_len=seq_len,
             # keep per worm train size constant
             num_samples=train_size // len(train_splits),
@@ -193,13 +194,13 @@ def split_train_test(
             tau=tau,
             use_residual=use_residual,
         )
-        for i, data in enumerate(train_splits)
+        for i, _data in enumerate(train_splits)
     ]
     train_dataset = ConcatDataset(train_datasets)
     # tests dataset
     test_datasets = [
         NeuralActivityDataset(
-            data,
+            _data.detach(),
             seq_len=seq_len,
             # keep per worm test size constant
             num_samples=test_size // len(test_splits),
@@ -208,7 +209,7 @@ def split_train_test(
             tau=tau,
             use_residual=use_residual,
         )
-        for i, data in enumerate(test_splits)
+        for i, _data in enumerate(test_splits)
     ]
     test_dataset = ConcatDataset(test_datasets)
     # make data loaders
@@ -216,13 +217,13 @@ def split_train_test(
         train_dataset,
         batch_size=batch_size,
         shuffle=shuffle,
-        pin_memory=False,
+        pin_memory=True,
     )
     test_loader = DataLoader(
         test_dataset,
         batch_size=batch_size,
         shuffle=shuffle,
-        pin_memory=False,
+        pin_memory=True,
     )
     # garbage collection
     del test_dataset, train_dataset
@@ -256,6 +257,8 @@ def optimize_model(
     assert (
         neurons_mask.size(0) == NUM_NEURONS and neurons_mask.dtype == torch.bool
     ), "Please use a valid boolean mask for neurons."
+    # detach comutation graph from tensors
+    neurons_mask = neurons_mask.detach()
     # put model and neurons mask on device
     model = model.to(DEVICE)
     neurons_mask = neurons_mask.to(DEVICE)
@@ -358,13 +361,18 @@ def make_predictions(
         os.makedirs(os.path.join(log_dir, worm), exist_ok=True)
         # get data to save
         named_neuron_to_idx = single_worm_dataset["named_neuron_to_idx"]
-        calcium_data = single_worm_dataset[key_data].detach()
-        named_neurons_mask = single_worm_dataset["named_neurons_mask"].detach()
+        calcium_data = single_worm_dataset[key_data]
+        named_neurons_mask = single_worm_dataset["named_neurons_mask"]
         time_in_seconds = single_worm_dataset["time_in_seconds"]
         if time_in_seconds is None:
             time_in_seconds = torch.arange(len(calcium_data)).double()
-        time_in_seconds = time_in_seconds.detach()
         train_mask = single_worm_dataset["train_mask"]
+        # detach computation from tensors
+        calcium_data = calcium_data.detach()
+        named_neurons_mask = named_neurons_mask.detach()
+        time_in_seconds = time_in_seconds.detach()
+        train_mask = train_mask.detach()
+        # labels and columns
         labels = np.expand_dims(np.where(train_mask, "train", "test"), axis=-1)
         columns = list(named_neuron_to_idx) + [
             "train_test_label",
@@ -386,7 +394,7 @@ def make_predictions(
             index=True,
             header=True,
         )
-        data = targets[:, named_neurons_mask].numpy()
+        data = targets[:, named_neurons_mask].detach().numpy()
         data = np.hstack((data, labels, time_in_seconds, tau_expand))
         pd.DataFrame(data=data, columns=columns).to_csv(
             os.path.join(log_dir, worm, "target_" + signal_str + ".csv"),
@@ -580,5 +588,5 @@ def gnn_model_predict(task, model):
     preds = np.empty((task.node_count, task.dataset_size))
     for time, snapshot in enumerate(dataset):
         y_hat = model(snapshot.x, snapshot.edge_index, snapshot.edge_attr)
-        preds[:, [time]] = y_hat.clone().detach().numpy()
+        preds[:, [time]] = y_hat.detach().numpy()
     return preds

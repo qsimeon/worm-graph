@@ -79,7 +79,7 @@ class NeuralActivityDataset(torch.utils.data.Dataset):
         else:  # neurons is None
             self.neurons = np.arange(num_neurons)  # use all the neurons
         self.num_neurons = self.neurons.size
-        self.data = data.detach().clone()
+        self.data = data
         self.num_samples = num_samples
         self.data_samples = self.__data_generator()
 
@@ -98,7 +98,7 @@ class NeuralActivityDataset(torch.utils.data.Dataset):
         # define an end index
         end = start + self.seq_len
         # get the time vector
-        time_vec = self.time_vec[start:end]
+        time_vec = self.time_vec[start:end].detach().clone()
         # calculate the average dt
         avg_dt = torch.diff(time_vec).mean()
         # data samples: input (X_tau) and target (Y_tau)
@@ -107,7 +107,7 @@ class NeuralActivityDataset(torch.utils.data.Dataset):
             self.data[start + self.tau : end + self.tau, self.neurons].detach().clone()
         )  # overlap
         # calculate the residual (forward first derivative)
-        Res_tau = (Y_tau - X_tau) / (avg_dt * max(1, self.tau))
+        Res_tau = (Y_tau - X_tau).detach() / (avg_dt * max(1, self.tau))
         # store metadata about the sample
         input = "calcium"
         target = "residual" if self.use_residual else "calcium"

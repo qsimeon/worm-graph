@@ -107,30 +107,27 @@ def train_model(
         if worm in memo_loaders_masks:
             train_loader = memo_loaders_masks[worm]["train_loader"]
             test_loader = memo_loaders_masks[worm]["test_loader"]
-            train_mask = memo_loaders_masks[worm]["train_mask"].detach().clone()
-            test_mask = memo_loaders_masks[worm]["test_mask"].detach().clone()
+            train_mask = memo_loaders_masks[worm]["train_mask"]
+            test_mask = memo_loaders_masks[worm]["test_mask"]
         else:
             # create data loaders and train/test masks only once per worm
             train_loader, test_loader, train_mask, test_mask = split_train_test(
-                data=single_worm_dataset[key_data].detach().clone(),
+                data=single_worm_dataset[key_data],
                 time_vec=single_worm_dataset.get(
                     "time_in_seconds", None
                 ),  # time vector
                 **kwargs,
             )
             # add to memo
-            memo_loaders_masks.setdefault(
-                worm,
-                dict(
-                    train_loader=train_loader,
-                    test_loader=test_loader,
-                    train_mask=train_mask,
-                    test_mask=test_mask,
-                ),
+            memo_loaders_masks[worm] = dict(
+                train_loader=train_loader,
+                test_loader=test_loader,
+                train_mask=train_mask,
+                test_mask=test_mask,
             )
         # mutate the dataset for this worm with the train and test masks
-        dataset[worm].setdefault("train_mask", train_mask)
-        dataset[worm].setdefault("test_mask", test_mask)
+        dataset[worm].setdefault("train_mask", train_mask.detach())
+        dataset[worm].setdefault("test_mask", test_mask.detach())
         # get the neurons mask for this worm
         neurons_mask = single_worm_dataset["named_neurons_mask"]
         # optimize for 1 epoch per (possibly duplicated) worm
@@ -145,8 +142,9 @@ def train_model(
             num_epochs=1,
             use_residual=use_residual,
         )
-        # retrieve losses and sample counts
-        [data[key].extend(log[key]) for key in data]  # Python list comprehension
+        # retrieve losses and sample counts 
+        for key in data: # DEBUG: I think this is the memory leak; maybe we need to preallocate data[key]
+            data[key].extend(log[key])  # Python list comprehension
         # set to next epoch
         reset_epoch = log["epochs"][-1] + 1
         # outputs
