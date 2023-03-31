@@ -49,7 +49,6 @@ def train(
         # Compute training loss.
         loss = criterion(Y_tr[:, :, mask], Y_train[:, :, mask]) / (1 + tau)
         loss.backward()  # Derive gradients.
-        del Y_tr
         # No backprop on epoch 0.
         if no_grad:
             optimizer.zero_grad()
@@ -109,7 +108,6 @@ def test(
         Y_te = model(X_test * mask)  # Forward pass.
         # Compute the validation loss.
         loss = criterion(Y_te[:, :, mask], Y_test[:, :, mask]) / (1 + tau)
-        del Y_te
         # Store test and baseline loss.
         base_loss += base.detach().item()
         test_loss += loss.detach().item()
@@ -226,7 +224,6 @@ def split_train_test(
         pin_memory=True,
     )
     # garbage collection
-    del test_dataset, train_dataset
     gc.collect()
     # return data loaders and masks
     return train_loader, test_loader, train_mask, test_mask

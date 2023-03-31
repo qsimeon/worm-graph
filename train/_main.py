@@ -26,7 +26,8 @@ def train_model(
     config = OmegaConf.structured(OmegaConf.to_yaml(config))
     config.setdefault("dataset", {"name": dataset_name})
     config.setdefault("model", {"type": model_class_name})
-    config.setdefault("timestamp", {"name": timestamp})
+    config.setdefault("timestamp", timestamp)
+    config.setdefault("num_distinct_worms", len(dataset))
     # save config to log directory
     OmegaConf.save(config, os.path.join(log_dir, "config.yaml"))
     # cycle the dataset until the desired number epochs (i.e. worms) obtained
