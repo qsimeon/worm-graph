@@ -13,19 +13,19 @@ def get_model(config: DictConfig) -> torch.nn.Module:
         loss=config.model.loss,
     )
     if config.model.type.lower() == "networklstm":
-        model = NetworkLSTM(**args).double()
+        model = NetworkLSTM(**args)
     elif config.model.type.lower() == "variationallstm":
-        model = VariationalLSTM(**args).double()
+        model = VariationalLSTM(**args)
     elif config.model.type.lower() == "neuralcfc":
-        model = NeuralCFC(**args).double()
+        model = NeuralCFC(**args)
     elif config.model.type.lower() == "densecfc":
-        model = DenseCFC(**args).double()
+        model = DenseCFC(**args)
     elif config.model.type.lower() == "linearnn":
-        model = LinearNN(**args).double()
+        model = LinearNN(**args)
     else:  # default to "linear" model
-        model = LinearNN(**args).double()
+        model = LinearNN(**args)
     print("Model:", model, end="\n\n")
-    return model
+    return model.to(torch.float32)
 
 
 if __name__ == "__main__":
