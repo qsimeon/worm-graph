@@ -125,7 +125,7 @@ def test(
 
 
 def split_train_test(
-    data: torch.Tensor,
+    data: Union[list, torch.Tensor],
     k_splits: int = 2,
     seq_len: int = 101,
     batch_size: int = 32,
@@ -153,11 +153,13 @@ def split_train_test(
     ), "Invalid `seq_len` entered."
     # make time vector
     if time_vec is None:
-        time_vec = torch.arange(len(data)).double()
+        time_vec = torch.arange(len(data), dtype=torch.float32)
+    else:
+        time_vec = time_vec.to(torch.float32)
     assert torch.is_tensor(time_vec) and len(time_vec) == len(
         data
     ), "Enter a time vector with same length as data."
-    # detach comutation graph from tensors
+    # detach computation graph from tensors
     time_vec = time_vec.detach()
     data = data.detach()
     # split dataset into train and test sections

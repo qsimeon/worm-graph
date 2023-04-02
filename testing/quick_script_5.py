@@ -24,7 +24,7 @@ if __name__ == "__main__":
                 batch_size=128,
                 train_size=1654,
                 test_size=1654,
-                shuffle=True,  # whether to shuffle sample
+                shuffle=True,  # whether to shuffle samples
                 tau_in=1,
                 tau_out=1,
                 optimizer="SGD",
