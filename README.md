@@ -93,6 +93,9 @@ For one multi-worm dataset of neural activity, this pipeline will:
 2. Train a neural network model to predict future calcium activity from previous activity.
 3. Plot the train and validation loss curves for the model and its predictions on test data.
 
+## TODO: How to add models and datasets
+
+
 ## File naming conventions
 
 For folders and script files, use the `lower_case_with_underscores` naming style.
