@@ -137,15 +137,13 @@ class NeuralActivityDataset(torch.utils.data.Dataset):
         # all start indices
         start_range = (
             np.linspace(0, T - L - self.tau, self.num_samples, dtype=int)
-            # range(0, T - L - self.tau + 1)
-            if 
-            not self.reverse  # generate from start to end
-            else # generate from end to start
-            np.linspace(T - L - self.tau, 0, self.num_samples, dtype=int) 
-            # range(T - L - self.tau, -1, -1)  
+            if not self.reverse  # generate from start to end
+            else np.linspace(  # generate from end to start
+                T - L - self.tau, 0, self.num_samples, dtype=int
+            )
         )  # overlapping windows
         # sequential processing
-        data_samples = list(map(self.parfor_func, start_range))[: self.num_samples]
+        data_samples = list(map(self.parfor_func, start_range))
         return data_samples
 
 

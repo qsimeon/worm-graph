@@ -52,7 +52,7 @@ if __name__ == "__main__":
         learn_rate=0.1,
     )
     # make predictions with trained model
-    tau_out = 69
+    tau_out = 1
     targets, predictions = model_predict(
         model,
         calcium_data * named_neurons_mask,
