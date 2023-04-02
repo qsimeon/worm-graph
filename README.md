@@ -22,7 +22,7 @@
    ├── _main.py
    ├── _pkg.py
    ├── _utils.py
-   └── PlotRealData.ipynb
+   └── 
 ├── logs/
    ├── multirun/
    └── run/
@@ -40,11 +40,19 @@
    ├── _pkg.py
    └── _utils.py
 ├── testing/
+   ├── ivy_scripts/
+   ├── analyze_logs_test.ipynb
+   ├── FuturePredictionCElegansNNs.ipynb
+   ├── GNNLossCurves.ipynb
+   ├── LossBaselines.ipynb
+   ├── PlotRealData.ipynb
    ├── quick_script_1.py
    ├── quick_script_2.py
    ├── quick_script_3.py
    ├── quick_script_4.py
-   └── FuturePredictionCElegansNNs.ipynb
+   ├── quick_script_5.py
+   ├── quick_script_6.py
+   └── test_config.py
 ├── train/
    ├── _main.py
    ├── _pkg.py
