@@ -1,4 +1,5 @@
 name: worm-graph
+prefix: /om2/user/kyzhao/worm_conda/env/worm-graph
 channels:
   - conda-forge
   - defaults
@@ -33,4 +34,3 @@ dependencies:
       - hydra-submitit-launcher
       - hydra-joblib-launcher
       - ncps
-# prefix: /om2/user/qsimeon/miniconda/envs/worm-graph

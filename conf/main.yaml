@@ -19,18 +19,20 @@ hydra:
     dir: logs/hydra/${now:%Y_%m_%d_%H_%M_%S}
   sweep:
     dir: logs/hydra/${now:%Y_%m_%d_%H_%M_%S}
-    subdir: ${hydra.job.num}
+    subdir: ${hydra.job.override_dirname}
   sweeper:
     params:
-      # train.epochs: 100, 300, 500, 700
-      train.seq_len: 9, 199, 299
-      # train.k_splits: 2, 5, 9
-      # train.batch_size: 32, 64, 128
-      # train.tau_in: 1, 10, 100
-      # train.tau_out: 1, 10, 100
-      # model.type: NetworkLSTM #NeuralCFC, NetworkLSTM
-      model.hidden_size: 32, 128, 512
-      # globals.shuffle: True, False
-      # globals.use_residual: True, False
-      # dataset.name: Kato2015, Nichols2017, Skora2018, Kaplan2020, Uzel2022, Flavell2023
-      
+      # train.epochs: 2000, 5000
+      # train.seq_len: 99 #9, 99, 199, 299
+      # train.k_splits: 2 #2, 5, 7
+      # train.tau_in: 1 #1, 10, 100
+      # train.tau_out: 1 #1, 10, 100
+      # train.optimizer: Adam #SGD, Adam
+      # train.smooth_data: False #True, False
+      # model.type: NeuralCFC #NeuralCFC, networklstm
+      # model.loss: l1 #l1, mse
+      # model.hidden_size: 128 #64, 128, 512
+      # globals.shuffle: False #True, False
+      # globals.use_residual: False #True, False
+      # dataset.name: Kaplan2020, Uzel2022, Flavell2023 #Nichols2017, Kato2015, Skora2018
+      train.train_size: 10, 100, 1000, 10000
