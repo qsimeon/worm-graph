@@ -26,26 +26,32 @@
 ├── logs/
    ├── multirun/
    └── run/
-├── models
+├── models/
    ├── _main.py
    ├── _pkg.py
    └── _utils.py
-├── preprocess
+├── preprocess/
    ├── _main.py
    ├── _pkg.py
    ├── _utils.py
    └── export_nodes_edges.m
-├── tasks
+├── tasks/
    ├── _main.py
    ├── _pkg.py
    └── _utils.py
-├── train
+├── testing/
+   ├── quick_script_1.py
+   ├── quick_script_2.py
+   ├── quick_script_3.py
+   ├── quick_script_4.py
+   └── FuturePredictionCElegansNNs.ipynb
+├── train/
    ├── _main.py
    ├── _pkg.py
    ├── _utils.py
    ├── GNNLossCurves.ipynb
    └── LossBaselines.ipynb
-├── visualization
+├── visualization/
    ├── _main.py
    ├── _pkg.py
    ├── _utils.py
@@ -56,12 +62,9 @@
 ├── pkg.py
 ├── main.py
 ├── utils.py
-├── quick_script_1.py
-├── quick_script_2.py
-├── quick_script_3.py
-├── quick_script_4.py
-├── README.md
-└── FuturePredictionCElegansNNs.ipynb
+├── environment_minimal.yaml
+├── environment_complete.yaml
+└── README.md
  ```
  
 ## Create the environment from the `environment.yml` file
