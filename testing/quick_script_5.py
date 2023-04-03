@@ -39,7 +39,6 @@ if __name__ == "__main__":
     model = NetworkLSTM(302, 64)
     # run the full train pipeline
     model, log_dir = train_model(model, dataset, config)
-    exit(0)
     # plot the loss curves
     plot_loss_curves(log_dir)
     # compare predictions against targets

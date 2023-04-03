@@ -112,32 +112,42 @@ def train_model(
     reset_epoch = 1
     # main FOR loop
     # for i, (worm, single_worm_dataset) in enumerate(dataset_items):
+    # keep the validation dataset the same
     for i, cohort in enumerate(worm_cohorts):
         # create a list of loaders and masks for the cohort
-        train_loaders = []
-        test_loaders = []
-        neurons_masks = []
+        train_loader = np.empty(len(cohort), dtype=object)
+        if i is 0:
+            test_loader = np.empty(len(cohort), dtype=object)
+        neurons_mask = np.empty(len(cohort), dtype=object)
         # iterate over each worm in the cohort
-        for worm, single_worm_dataset in cohort:
+        for j, (worm, single_worm_dataset) in enumerate(cohort):
             # check the memo for existing loaders and masks
             if worm in memo_loaders_masks:
-                train_loader = memo_loaders_masks[worm]["train_loader"]
-                test_loader = memo_loaders_masks[worm]["test_loader"]
+                train_loader[j] = memo_loaders_masks[worm]["train_loader"]
+                if i is 0:
+                    test_loader[j] = memo_loaders_masks[worm]["test_loader"]
                 train_mask = memo_loaders_masks[worm]["train_mask"]
                 test_mask = memo_loaders_masks[worm]["test_mask"]
             # create data loaders and train/test masks only once per worm
             else:
-                train_loader, test_loader, train_mask, test_mask = split_train_test(
+                (
+                    train_loader[j],
+                    _,
+                    train_mask,
+                    test_mask,
+                ) = split_train_test(
                     data=single_worm_dataset[key_data],
                     time_vec=single_worm_dataset.get(
                         "time_in_seconds", None
                     ),  # time vector
                     **kwargs,
                 )
+                if i is 0:
+                    test_loader[j] = _
                 # add to memo
                 memo_loaders_masks[worm] = dict(
-                    train_loader=train_loader,
-                    test_loader=test_loader,
+                    train_loader=train_loader[j],
+                    test_loader=_,
                     train_mask=train_mask,
                     test_mask=test_mask,
                 )
@@ -145,18 +155,14 @@ def train_model(
             dataset[worm].setdefault("train_mask", train_mask.detach())
             dataset[worm].setdefault("test_mask", test_mask.detach())
             # get the neurons mask for this worm
-            neurons_mask = single_worm_dataset["named_neurons_mask"]
-            # add to the list of loaders and masks
-            train_loaders.append(train_loader)
-            test_loaders.append(test_loader)
-            neurons_masks.append(neurons_mask)
+            neurons_mask[j] = single_worm_dataset["named_neurons_mask"]
         # optimize for 1 epoch per cohort
         num_epochs = 1
         model, log = optimize_model(
             model=model,
-            train_loader=train_loaders,  # list of loaders
-            test_loader=test_loaders,  # list of loaders
-            neurons_mask=neurons_masks,  # list of masks
+            train_loader=list(train_loader),  # list of loaders
+            test_loader=list(test_loader),  # list of loaders
+            neurons_mask=list(neurons_mask),  # list of masks
             optimizer=optimizer,
             start_epoch=reset_epoch,
             learn_rate=learn_rate,

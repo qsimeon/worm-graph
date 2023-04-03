@@ -16,5 +16,5 @@ dataset:
   name: Uzel2022
 model:
   type: NetworkLSTM
-timestamp: '2023_04_02_21_52_17'
+timestamp: '2023_04_02_22_53_52'
 num_unique_worms: 6
