@@ -12,13 +12,15 @@ def train_model(
     Trains a model on a multi-worm dataset. Returns the trained model
     and a path to the directory with training and evaluation logs.
     """
+    # a worm dataset must have at least one worm: "worm0"
     assert "worm0" in dataset, "Not a valid dataset object."
-    # initialize
-    num_unique_worms = len(dataset)
+    # get some helpful variables
     dataset_name = dataset["worm0"]["dataset"]
     model_class_name = model.__class__.__name__
     timestamp = datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
-    if log_dir is None:  # hydra changes working directory to log directory
+    num_unique_worms = len(dataset)
+    # hydra changes the working directory to log directory
+    if log_dir is None:
         log_dir = os.getcwd()
     os.makedirs(log_dir, exist_ok=True)
     # create a model checkpoints folder
@@ -40,13 +42,19 @@ def train_model(
     # dataset = dict(dataset_items)
     # cycle the dataset until the desired number epochs obtained
     dataset_items = sorted(dataset.items()) * config.train.epochs
+    assert (
+        len(dataset_items) == config.train.epochs * num_unique_worms
+    ), "Invalid number of worms."
     # shuffle (without replacement) the worms (including duplicates) in the dataset
     if shuffle == True:
         dataset_items = random.sample(dataset_items, k=len(dataset_items))
-    # split the dataset into cohorts of worms - one cohort per epoch
+    # split the dataset into cohorts of worms; there should be one cohort per epoch
     worm_cohorts = np.array_split(dataset_items, config.train.epochs)
-    worm_cohorts = [_.tolist() for _ in worm_cohorts]
+    worm_cohorts = [_.tolist() for _ in worm_cohorts]  # convert cohort arrays to lists
     assert len(worm_cohorts) == config.train.epochs, "Invalid number of cohorts."
+    assert all(
+        [len(cohort) == num_unique_worms for cohort in worm_cohorts]
+    ), "Invalid cohort size."
     # instantiate the optimizer
     opt_param = config.train.optimizer
     learn_rate = config.train.learn_rate
@@ -64,7 +72,7 @@ def train_model(
         ), "Please use an instance of torch.optim.Optimizer."
     else:
         optimizer = torch.optim.SGD(model.parameters(), lr=learn_rate)
-    print("Optimizer:", optimizer, end="\n\n")
+    print("\nOptimizer:\n\t", optimizer, end="\n\n")
     # get other config params
     if config.get("globals"):
         use_residual = config.globals.use_residual
@@ -72,7 +80,7 @@ def train_model(
     else:
         use_residual = False
         smooth_data = False
-    # train/test loss metrics
+    # initialize train/test loss metrics arrays
     data = {
         "epochs": np.zeros(config.train.epochs, dtype=int),
         "num_train_samples": np.zeros(config.train.epochs, dtype=int),
@@ -84,24 +92,11 @@ def train_model(
         "centered_train_losses": np.zeros(config.train.epochs, dtype=np.float32),
         "centered_test_losses": np.zeros(config.train.epochs, dtype=np.float32),
     }
-    # data = {
-    #     "epochs": np.zeros(len(dataset_items), dtype=int),
-    #     "num_train_samples": np.zeros(len(dataset_items), dtype=int),
-    #     "num_test_samples": np.zeros(len(dataset_items), dtype=int),
-    #     "base_train_losses": np.zeros(len(dataset_items), dtype=np.float32),
-    #     "base_test_losses": np.zeros(len(dataset_items), dtype=np.float32),
-    #     "train_losses": np.zeros(len(dataset_items), dtype=np.float32),
-    #     "test_losses": np.zeros(len(dataset_items), dtype=np.float32),
-    #     "centered_train_losses": np.zeros(len(dataset_items), dtype=np.float32),
-    #     "centered_test_losses": np.zeros(len(dataset_items), dtype=np.float32),
-    # }
-    # train the model for multiple cyles
-    kwargs = dict(  # args to `split_train_test`
+    # args passed to `split_train_test`
+    kwargs = dict(
         k_splits=config.train.k_splits,
         seq_len=config.train.seq_len,
         batch_size=config.train.batch_size,
-        # train_size=config.train.train_size,
-        # test_size=config.train.test_size,
         train_size=config.train.train_size // num_unique_worms,
         test_size=config.train.test_size // num_unique_worms,
         shuffle=config.train.shuffle,  # whether to shuffle samples from each cohort
@@ -119,11 +114,13 @@ def train_model(
         key_data = "smooth_" + key_data
     else:
         key_data = key_data
+    # throughout training, keep track of what neurons have been covered
+    coverage_mask = np.zeros_like(dataset["worm0"]["named_neurons_mask"], dtype=bool)
     # memoize creation of data loaders and masks for speedup
     memo_loaders_masks = dict()
     # train for config.train.num_epochs
     reset_epoch = 1
-    # main FOR loop
+    # main FOR loop; train the model for multiple epochs (one epoch per cohort)
     # for i, (worm, single_worm_dataset) in enumerate(dataset_items):
     for i, cohort in enumerate(worm_cohorts):
         # create a list of loaders and masks for the cohort
@@ -168,13 +165,17 @@ def train_model(
             dataset[worm].setdefault("test_mask", test_mask.detach())
             # get the neurons mask for this worm
             neurons_mask[j] = single_worm_dataset["named_neurons_mask"]
+        # convert loaders and masks to lists
+        train_loader = train_loader.tolist()
+        test_loader = test_loader.tolist()
+        neurons_mask = neurons_mask.tolist()
         # optimize for 1 epoch per cohort
         num_epochs = 1
         model, log = optimize_model(
             model=model,
-            train_loader=list(train_loader),  # list of loaders
-            test_loader=list(test_loader),  # list of loaders
-            neurons_mask=list(neurons_mask),  # list of masks
+            train_loader=train_loader,
+            test_loader=test_loader,
+            neurons_mask=neurons_mask,
             optimizer=optimizer,
             start_epoch=reset_epoch,
             learn_rate=learn_rate,
@@ -182,7 +183,8 @@ def train_model(
             use_residual=use_residual,
         )
         # retrieve losses and sample counts
-        for key in data:  # pre-allocated memory for data[key]
+        for key in data:  # pre-allocated memory for `data[key]`
+            # with `num_epochs=1`, the code below is just equal to data[key][i] = log[key]
             data[key][(i * num_epochs) : (i * num_epochs) + len(log[key])] = log[key]
         # set to next epoch
         reset_epoch = log["epochs"][-1] + 1
@@ -229,7 +231,7 @@ def train_model(
 
 if __name__ == "__main__":
     config = OmegaConf.load("conf/train.yaml")
-    print("config:", OmegaConf.to_yaml(config), end="\n\n")
+    print("\nconfig:\n\t", OmegaConf.to_yaml(config), end="\n\n")
     model = get_model(OmegaConf.load("conf/model.yaml"))
     dataset = get_dataset(OmegaConf.load("conf/dataset.yaml"))
     timestamp = datetime.now().strftime("%Y_%m_%d_%H_%M_%S")

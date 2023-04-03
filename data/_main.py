@@ -26,7 +26,7 @@ def get_dataset(config: DictConfig):
                 combined_dataset[worm]["dataset"] = "_".join(dataset_names)
     # display the dataset
     print(
-        "Chosen dataset(s): {}\nNum. worms: {}\nWorm names: {}\n".format(
+        "\nChosen dataset(s): {}\nNum. worms: {}\nWorm names: {}\n".format(
             dataset_names,
             len(combined_dataset),
             list(combined_dataset.keys()),
@@ -40,5 +40,5 @@ def get_dataset(config: DictConfig):
 
 if __name__ == "__main__":
     config = OmegaConf.load("conf/dataset.yaml")
-    print("config:", OmegaConf.to_yaml(config), end="\n\n")
+    print("\nconfig:\n\t", OmegaConf.to_yaml(config), end="\n\n")
     dataset = get_dataset(config)
