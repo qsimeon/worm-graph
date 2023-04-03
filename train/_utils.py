@@ -3,7 +3,7 @@ from govfunc._utils import *
 
 
 def train(
-    loader: torch.utils.data.DataLoader,
+    loader: Union[list[torch.Tensor], torch.Tensor],
     model: torch.nn.Module,
     mask: torch.Tensor,
     optimizer: torch.optim.Optimizer,
@@ -25,38 +25,51 @@ def train(
     Returns:
         losses: dict w/ keys train_loss and base_train_loss
     """
+    if isinstance(loader, torch.utils.data.DataLoader):
+        loaders = [loader]
+        masks = [mask]
+    else:  # list
+        loaders = loader
+        masks = mask
     # Set model to train mode.
     model.train()
     criterion = model.loss_fn()
     base_loss, train_loss = 0, 0
     num_train_samples = 0
     # Iterate in batches over the training dataset.
-    for i, data in enumerate(loader):
-        X_train, Y_train, metadata = data  # X, Y: (batch_size, seq_len, num_neurons)
-        X_train, Y_train = X_train.to(DEVICE), Y_train.to(DEVICE)
-        tau = metadata["tau"].detach()[0]  # penalize longer delays
-        # Clear optimizer gradients.
-        optimizer.zero_grad()
-        # Baseline: loss if the model predicted value at next timestep equal to current value.
-        base = criterion(
-            (0 if use_residual else 1) * X_train[:, :, mask], Y_train[:, :, mask]
-        ) / (1 + tau)
-        # Train
-        Y_tr = model(X_train * mask)  # Forward pass.
-        # Register hook.
-        Y_tr.retain_grad()
-        Y_tr.register_hook(lambda grad: grad * mask)
-        # Compute training loss.
-        loss = criterion(Y_tr[:, :, mask], Y_train[:, :, mask]) / (1 + tau)
-        loss.backward()  # Derive gradients.
-        # No backprop on epoch 0.
-        if no_grad:
+    i = 0
+    for loader, mask in zip(loaders, masks):
+        for data in loader:
+            i += 1
+            (
+                X_train,
+                Y_train,
+                metadata,
+            ) = data  # X, Y: (batch_size, seq_len, num_neurons)
+            X_train, Y_train = X_train.to(DEVICE), Y_train.to(DEVICE)
+            tau = metadata["tau"].detach()[0]  # penalize longer delays
+            # Clear optimizer gradients.
             optimizer.zero_grad()
-        optimizer.step()  # Update parameters based on gradients.
-        # Store train and baseline loss.
-        base_loss += base.detach().item()
-        train_loss += loss.detach().item()
-        num_train_samples += X_train.detach().size(0)
+            # Baseline: loss if the model predicted value at next timestep equal to current value.
+            base = criterion(
+                (0 if use_residual else 1) * X_train[:, :, mask], Y_train[:, :, mask]
+            ) / (1 + tau)
+            # Train
+            Y_tr = model(X_train * mask)  # Forward pass.
+            # Register hook.
+            Y_tr.retain_grad()
+            Y_tr.register_hook(lambda grad: grad * mask)
+            # Compute training loss.
+            loss = criterion(Y_tr[:, :, mask], Y_train[:, :, mask]) / (1 + tau)
+            loss.backward()  # Derive gradients.
+            # No backprop on epoch 0.
+            if no_grad:
+                optimizer.zero_grad()
+            optimizer.step()  # Update parameters based on gradients.
+            # Store train and baseline loss.
+            base_loss += base.detach().item()
+            train_loss += loss.detach().item()
+            num_train_samples += X_train.detach().size(0)
     # Average train and baseline losses.
     losses = {
         "train_loss": train_loss / (i + 1),
@@ -71,7 +84,7 @@ def train(
 
 @torch.no_grad()
 def test(
-    loader: torch.utils.data.DataLoader,
+    loader: Union[list[torch.Tensor], torch.Tensor],
     model: torch.nn.Module,
     mask: torch.Tensor,
     use_residual: bool = False,
@@ -90,28 +103,37 @@ def test(
     Returns:
         losses: dict w/ keys test_loss and base_test_loss
     """
+    if isinstance(loader, torch.utils.data.DataLoader):
+        loaders = [loader]
+        masks = [masks]
+    else:  # list
+        loaders = loader
+        masks = mask
     # Set model to inference mode.
     model.eval()
     criterion = model.loss_fn()
     base_loss, test_loss = 0, 0
     num_test_samples = 0
     # Iterate in batches over the validation dataset.
-    for i, data in enumerate(loader):
-        X_test, Y_test, metadata = data  # X, Y: (batch_size, seq_len, num_neurons)
-        X_test, Y_test = X_test.to(DEVICE), Y_test.to(DEVICE)
-        tau = metadata["tau"][0]  # penalize longer delays
-        # Baseline: loss if the model predicted the residual to be 0.
-        base = criterion(
-            (0 if use_residual else 1) * X_test[:, :, mask], Y_test[:, :, mask]
-        ) / (1 + tau)
-        # Test
-        Y_te = model(X_test * mask)  # Forward pass.
-        # Compute the validation loss.
-        loss = criterion(Y_te[:, :, mask], Y_test[:, :, mask]) / (1 + tau)
-        # Store test and baseline loss.
-        base_loss += base.detach().item()
-        test_loss += loss.detach().item()
-        num_test_samples += X_test.detach().size(0)
+    i = 0
+    for loader, mask in zip(loaders, masks):
+        for data in loader:
+            i += 1
+            X_test, Y_test, metadata = data  # X, Y: (batch_size, seq_len, num_neurons)
+            X_test, Y_test = X_test.to(DEVICE), Y_test.to(DEVICE)
+            tau = metadata["tau"][0]  # penalize longer delays
+            # Baseline: loss if the model predicted the residual to be 0.
+            base = criterion(
+                (0 if use_residual else 1) * X_test[:, :, mask], Y_test[:, :, mask]
+            ) / (1 + tau)
+            # Test
+            Y_te = model(X_test * mask)  # Forward pass.
+            # Compute the validation loss.
+            loss = criterion(Y_te[:, :, mask], Y_test[:, :, mask]) / (1 + tau)
+            # Store test and baseline loss.
+            base_loss += base.detach().item()
+            test_loss += loss.detach().item()
+            num_test_samples += X_test.detach().size(0)
     # Average test and baseline losses.
     losses = {
         "test_loss": test_loss / (i + 1),
@@ -125,7 +147,7 @@ def test(
 
 
 def split_train_test(
-    data: Union[list, torch.Tensor],
+    data: torch.Tensor,
     k_splits: int = 2,
     seq_len: int = 101,
     batch_size: int = 32,
@@ -227,15 +249,15 @@ def split_train_test(
     )
     # garbage collection
     gc.collect()
-    # return data loaders and masks
+    # return datasets and masks
     return train_loader, test_loader, train_mask, test_mask
 
 
 def optimize_model(
     model: torch.nn.Module,
-    train_loader: torch.utils.data.DataLoader,
-    test_loader: torch.utils.data.DataLoader,
-    neurons_mask: Union[torch.Tensor, None] = None,
+    train_loader: Union[list[torch.Tensor], torch.Tensor],
+    test_loader: Union[list[torch.Tensor], torch.Tensor],
+    neurons_mask: Union[list[Union[torch.Tensor, None]], torch.Tensor, None] = None,
     optimizer: Union[torch.optim.Optimizer, None] = None,
     start_epoch: int = 1,
     learn_rate: float = 0.01,
@@ -248,19 +270,34 @@ def optimize_model(
     model for specified number of epochs. Returns the trained
     model and a dictionary with log information including losses.
     """
-    batch_in, _, _ = next(iter(train_loader))
+    # check the train and test loader input
+    assert isinstance(
+        train_loader, (list, torch.utils.data.DataLoader)
+    ), "Wrong input type for train_loader."
+    assert isinstance(
+        test_loader, (list, torch.utils.data.DataLoader)
+    ), "Wrong input type for test_loader."
+    if isinstance(train_loader, list):
+        batch_in, _, _ = next(iter(train_loader[0]))
+    elif isinstance(train_loader, torch.utils.data.DataLoader):
+        batch_in, _, _ = next(iter(train_loader))
     NUM_NEURONS = batch_in.size(-1)
     # create the neurons/feature mask
-    if neurons_mask is None:
-        neurons_mask = torch.ones(NUM_NEURONS, dtype=torch.bool)
-    assert (
-        neurons_mask.size(0) == NUM_NEURONS and neurons_mask.dtype == torch.bool
-    ), "Please use a valid boolean mask for neurons."
-    # detach comutation graph from tensors
-    neurons_mask = neurons_mask.detach()
-    # put model and neurons mask on device
+    if isinstance(neurons_mask, torch.Tensor):
+        assert (
+            neurons_mask.size(0) == NUM_NEURONS and neurons_mask.dtype == torch.bool
+        ), "Please use a valid boolean mask for neurons."
+        neurons_mask = neurons_mask.detach().to(DEVICE)
+    elif isinstance(neurons_mask, list):
+        for i, mask in enumerate(neurons_mask):
+            assert (
+                mask.size(0) == NUM_NEURONS and mask.dtype == torch.bool
+            ), "Please use a valid boolean mask for neurons."
+            neurons_mask[i] = neurons_mask[i].detach().to(DEVICE)
+    else:
+        neurons_mask = torch.ones(NUM_NEURONS, dtype=torch.bool).detach().to(DEVICE)
+    # put model on device
     model = model.to(DEVICE)
-    neurons_mask = neurons_mask.to(DEVICE)
     # create optimizer
     if optimizer is None:
         optimizer = torch.optim.SGD(model.parameters(), lr=learn_rate)
@@ -426,7 +463,8 @@ def model_predict(
     calcium data tensor using a trained model.
     """
     NUM_NEURONS = calcium_data.size(1)
-    model = model.double().to(DEVICE)
+    # model = model.double().to(DEVICE)
+    model = model.to(DEVICE)
     model.eval()
     # model in/out
     calcium_data = calcium_data.squeeze(0)

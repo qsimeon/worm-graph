@@ -14,6 +14,7 @@ def train_model(
     """
     assert "worm0" in dataset, "Not a valid dataset object."
     # initialize
+    num_unique_worms = len(dataset)
     dataset_name = dataset["worm0"]["dataset"]
     model_class_name = model.__class__.__name__
     timestamp = datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
@@ -27,18 +28,23 @@ def train_model(
     config.setdefault("dataset", {"name": dataset_name})
     config.setdefault("model", {"type": model_class_name})
     config.setdefault("timestamp", timestamp)
-    config.setdefault("num_distinct_worms", len(dataset))
+    config.setdefault("num_unique_worms", num_unique_worms)
     # save config to log directory
     OmegaConf.save(config, os.path.join(log_dir, "config.yaml"))
     # cycle the dataset until the desired number epochs (i.e. worms) obtained
-    dataset_items = (
-        sorted(dataset.items()) * (1 + config.train.epochs // len(dataset))
-    )[: config.train.epochs]
-    # shuffle the worms in dataset (without replacement)
+    # dataset_items = (
+    #     sorted(dataset.items()) * (config.train.epochs // num_unique_worms)
+    #     + sorted(dataset.items())[: (config.train.epochs % num_unique_worms)]
+    # )
+    # # remake dataset with only selected worms
+    # dataset = dict(dataset_items)
+    dataset_items = sorted(dataset.items()) * config.train.epochs
+    # shuffle the worms in the dataset (without replacement)
     if shuffle == True:
         dataset_items = random.sample(dataset_items, k=len(dataset_items))
-    # remake dataset with only selected worms
-    dataset = dict(dataset_items)
+    # split the worms into cohorts per epoch
+    worm_cohorts = np.array_split(dataset_items, config.train.epochs)
+    worm_cohorts = [_.tolist() for _ in worm_cohorts]
     # instantiate the optimizer
     opt_param = config.train.optimizer
     learn_rate = config.train.learn_rate
@@ -81,8 +87,10 @@ def train_model(
         k_splits=config.train.k_splits,
         seq_len=config.train.seq_len,
         batch_size=config.train.batch_size,
-        train_size=config.train.train_size,
-        test_size=config.train.test_size,
+        # train_size=config.train.train_size,
+        # test_size=config.train.test_size,
+        train_size=config.train.train_size // num_unique_worms,
+        test_size=config.train.test_size // num_unique_worms,
         shuffle=config.train.shuffle,  # whether to shuffle the samples from a worm
         reverse=False,
         tau=config.train.tau_in,
@@ -103,41 +111,52 @@ def train_model(
     # train for config.train.num_epochs
     reset_epoch = 1
     # main FOR loop
-    for i, (worm, single_worm_dataset) in enumerate(dataset_items):
-        # check memo for loaders and masks
-        if worm in memo_loaders_masks:
-            train_loader = memo_loaders_masks[worm]["train_loader"]
-            test_loader = memo_loaders_masks[worm]["test_loader"]
-            train_mask = memo_loaders_masks[worm]["train_mask"]
-            test_mask = memo_loaders_masks[worm]["test_mask"]
-        else:
+    # for i, (worm, single_worm_dataset) in enumerate(dataset_items):
+    for i, cohort in enumerate(worm_cohorts):
+        # create a list of loaders and masks for the cohort
+        train_loaders = []
+        test_loaders = []
+        neurons_masks = []
+        # iterate over each worm in the cohort
+        for worm, single_worm_dataset in cohort:
+            # check the memo for existing loaders and masks
+            if worm in memo_loaders_masks:
+                train_loader = memo_loaders_masks[worm]["train_loader"]
+                test_loader = memo_loaders_masks[worm]["test_loader"]
+                train_mask = memo_loaders_masks[worm]["train_mask"]
+                test_mask = memo_loaders_masks[worm]["test_mask"]
             # create data loaders and train/test masks only once per worm
-            train_loader, test_loader, train_mask, test_mask = split_train_test(
-                data=single_worm_dataset[key_data],
-                time_vec=single_worm_dataset.get(
-                    "time_in_seconds", None
-                ),  # time vector
-                **kwargs,
-            )
-            # add to memo
-            memo_loaders_masks[worm] = dict(
-                train_loader=train_loader,
-                test_loader=test_loader,
-                train_mask=train_mask,
-                test_mask=test_mask,
-            )
-        # mutate the dataset for this worm with the train and test masks
-        dataset[worm].setdefault("train_mask", train_mask.detach())
-        dataset[worm].setdefault("test_mask", test_mask.detach())
-        # get the neurons mask for this worm
-        neurons_mask = single_worm_dataset["named_neurons_mask"]
-        # optimize for 1 epoch per (possibly duplicated) worm
+            else:
+                train_loader, test_loader, train_mask, test_mask = split_train_test(
+                    data=single_worm_dataset[key_data],
+                    time_vec=single_worm_dataset.get(
+                        "time_in_seconds", None
+                    ),  # time vector
+                    **kwargs,
+                )
+                # add to memo
+                memo_loaders_masks[worm] = dict(
+                    train_loader=train_loader,
+                    test_loader=test_loader,
+                    train_mask=train_mask,
+                    test_mask=test_mask,
+                )
+            # insert train and test masks for worm into its dataset
+            dataset[worm].setdefault("train_mask", train_mask.detach())
+            dataset[worm].setdefault("test_mask", test_mask.detach())
+            # get the neurons mask for this worm
+            neurons_mask = single_worm_dataset["named_neurons_mask"]
+            # add to the list of loaders and masks
+            train_loaders.append(train_loader)
+            test_loaders.append(test_loader)
+            neurons_masks.append(neurons_mask)
+        # optimize for 1 epoch per cohort
         num_epochs = 1
         model, log = optimize_model(
             model=model,
-            train_loader=train_loader,
-            test_loader=test_loader,
-            neurons_mask=neurons_mask,
+            train_loader=train_loaders,  # list of loaders
+            test_loader=test_loaders,  # list of loaders
+            neurons_mask=neurons_masks,  # list of masks
             optimizer=optimizer,
             start_epoch=reset_epoch,
             learn_rate=learn_rate,

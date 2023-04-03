@@ -35,9 +35,11 @@ if __name__ == "__main__":
     # load a dataset (multiple worms)
     dataset = load_Uzel2022()
     # create a model
-    model = NetworkLSTM(302, 64).double()
+    # model = NetworkLSTM(302, 64).double()
+    model = NetworkLSTM(302, 64)
     # run the full train pipeline
     model, log_dir = train_model(model, dataset, config)
+    exit(0)
     # plot the loss curves
     plot_loss_curves(log_dir)
     # compare predictions against targets
