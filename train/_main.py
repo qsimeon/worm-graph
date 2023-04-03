@@ -30,15 +30,16 @@ def train_model(
     config.setdefault("num_distinct_worms", len(dataset))
     # save config to log directory
     OmegaConf.save(config, os.path.join(log_dir, "config.yaml"))
-    # cycle the dataset until the desired number epochs (i.e. worms) obtained
+    # cycle the dataset items until the desired number epochs (i.e. worms) obtained
     dataset_items = (
-        sorted(dataset.items()) * (1 + config.train.epochs // len(dataset))
-    )[: config.train.epochs]
-    # shuffle the worms in dataset (without replacement)
+        sorted(dataset.items()) * (config.train.epochs // num_unique_worms)
+        + sorted(dataset.items())[: (config.train.epochs % num_unique_worms)]
+    )
+    # remake the original dataset with only selected worms
+    dataset = dict(dataset_items)
+    # shuffle (without replacement) the worms (including duplicates)
     if shuffle == True:
         dataset_items = random.sample(dataset_items, k=len(dataset_items))
-    # remake dataset with only selected worms
-    dataset = dict(dataset_items)
     # instantiate the optimizer
     opt_param = config.train.optimizer
     learn_rate = config.train.learn_rate
