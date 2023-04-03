@@ -85,15 +85,17 @@ def train_model(
         "centered_train_losses": np.zeros(config.train.epochs, dtype=np.float32),
         "centered_test_losses": np.zeros(config.train.epochs, dtype=np.float32),
     }
-    # args passed to `split_train_test`
+    # args to be passed to the `split_train_test` function
     kwargs = dict(
         k_splits=config.train.k_splits,
         seq_len=config.train.seq_len,
         batch_size=config.train.batch_size,
-        train_size=config.train.train_size // num_unique_worms,
-        test_size=config.train.test_size // num_unique_worms,
-        shuffle=config.train.shuffle,  # whether to shuffle samples from each cohort
-        reverse=False,
+        train_size=config.train.train_size
+        // num_unique_worms,  # keeps training set size constant per epoch (cohort)
+        test_size=config.train.test_size
+        // num_unique_worms,  # keeps validation set size constant per epoch (cohort)
+        shuffle=config.train.shuffle,  # shuffle samples from each cohort
+        reverse=config.train.reverse,  # generate samples backward from the end of data
         tau=config.train.tau_in,
         use_residual=use_residual,
     )
@@ -108,19 +110,23 @@ def train_model(
     else:
         key_data = key_data
     # throughout training, keep track of what neurons have been covered
-    coverage_mask = np.zeros_like(dataset["worm0"]["named_neurons_mask"], dtype=bool)
+    coverage_mask = torch.zeros_like(
+        dataset["worm0"]["named_neurons_mask"], dtype=torch.bool
+    )
     # memoize creation of data loaders and masks for speedup
     memo_loaders_masks = dict()
     # train for config.train.num_epochs
-    reset_epoch = 1
+    reset_epoch = 0
+    # reset_epoch = 1
     # main FOR loop; train the model for multiple epochs (one epoch per cohort)
     # for i, (worm, single_worm_dataset) in enumerate(dataset_items):
     for i, cohort in enumerate(worm_cohorts):
+        # print("worms in cohort %s:" % i, [worm for worm, _ in cohort])  # DEBUGGING
         # create a list of loaders and masks for the cohort
-        train_loader = np.empty(len(cohort), dtype=object)
+        train_loader = np.empty(num_unique_worms, dtype=object)
         if i == 0:  # keep the validation dataset the same
-            test_loader = np.empty(len(cohort), dtype=object)
-        neurons_mask = np.empty(len(cohort), dtype=object)
+            test_loader = np.empty(num_unique_worms, dtype=object)
+        neurons_mask = np.empty(num_unique_worms, dtype=object)
         # iterate over each worm in the cohort
         for j, (worm, single_worm_dataset) in enumerate(cohort):
             # check the memo for existing loaders and masks
@@ -153,17 +159,20 @@ def train_model(
                     train_mask=train_mask,
                     test_mask=test_mask,
                 )
-            # insert train and test masks for worm into its dataset
-            dataset[worm].setdefault("train_mask", train_mask.detach())
-            dataset[worm].setdefault("test_mask", test_mask.detach())
             # get the neurons mask for this worm
             neurons_mask[j] = single_worm_dataset["named_neurons_mask"]
-        # convert loaders and masks to lists
-        train_loader = train_loader.tolist()
-        test_loader = test_loader.tolist()
-        neurons_mask = neurons_mask.tolist()
+            # update coverage mask
+            coverage_mask |= single_worm_dataset["named_neurons_mask"]
+            # mutate this worm's dataset with its train and test masks
+            dataset[worm].setdefault("train_mask", train_mask.detach())
+            dataset[worm].setdefault("test_mask", test_mask.detach())
+        # create loaders and masks lists
+        train_loader = list(train_loader)
+        test_loader = list(test_loader)
+        neurons_mask = list(neurons_mask)
         # optimize for 1 epoch per cohort
         num_epochs = 1
+        # `optimize_model` can accept single loader/mask or list of loaders/masks
         model, log = optimize_model(
             model=model,
             train_loader=train_loader,
@@ -179,28 +188,43 @@ def train_model(
         for key in data:  # pre-allocated memory for `data[key]`
             # with `num_epochs=1`, the code below is just equal to data[key][i] = log[key]
             data[key][(i * num_epochs) : (i * num_epochs) + len(log[key])] = log[key]
-        # set to next epoch
-        reset_epoch = log["epochs"][-1] + 1
-        # outputs
+        # get what neurons have been covered so far
+        _ = torch.nonzero(coverage_mask).squeeze().numpy()
+        covered_neurons = set(np.array(NEURONS_302)[_])
+        # print(
+        #     "cumulative number of neurons covered: %s" % len(covered_neurons)
+        # )  # DEBUGGING
+        # saving model checkpoints
         if (i % config.train.save_freq == 0) or (i + 1 == config.train.epochs):
             # display progress
-            print("num. worms trained on:", i + 1, "\nprevious worm:", worm, end="\n\n")
+            print(
+                "Saving a model checkpoint.\n\tnum. worms trained on:",
+                i + 1,
+                "\n\tprevious worm:",
+                worm,
+                end="\n\n",
+            )
             # save model checkpoints
-            chkpt_name = "{}_epochs_{}_worms.pt".format(reset_epoch - 1, i + 1)
+            chkpt_name = "{}_epochs_{}_worms.pt".format(reset_epoch, i + 1)
             torch.save(
                 {
-                    "epoch": reset_epoch - 1,
+                    "epoch": reset_epoch,
                     "dataset_name": dataset_name,
                     "model_name": model_class_name,
                     "timestamp": timestamp,
+                    "covered_neurons": covered_neurons,
                     "input_size": model.get_input_size(),
                     "hidden_size": model.get_hidden_size(),
-                    "num_worms": i + 1,
+                    "num_cohorts": i + 1,
+                    "num_worms": (i + 1) * num_unique_worms,
                     "model_state_dict": model.state_dict(),
                     "optimizer_state_dict": optimizer.state_dict(),
                 },
                 os.path.join(log_dir, "checkpoints", chkpt_name),
             )
+        # set to next epoch before continuing
+        reset_epoch = log["epochs"][-1] + 1
+        continue
     # save loss curves
     pd.DataFrame(data=data).to_csv(
         os.path.join(log_dir, "loss_curves.csv"),

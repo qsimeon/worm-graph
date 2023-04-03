@@ -25,6 +25,7 @@ def train(
     Returns:
         losses: dict w/ keys train_loss and base_train_loss
     """
+    # create a list of loaders and masks if only one
     if isinstance(loader, torch.utils.data.DataLoader):
         loaders = [loader]
         masks = [mask]
@@ -103,6 +104,7 @@ def test(
     Returns:
         losses: dict w/ keys test_loss and base_test_loss
     """
+    # create a list of loaders and masks if only one is given
     if isinstance(loader, torch.utils.data.DataLoader):
         loaders = [loader]
         masks = [masks]
@@ -356,7 +358,7 @@ def optimize_model(
         # print to standard output
         if (num_epochs < 10) or (epoch % (num_epochs // 10) == 0):
             print(
-                f"Epoch: {epoch:03d}, Train Loss: {centered_train_loss:.4f}, Val. Loss: {centered_test_loss:.4f}",
+                f"\nEpoch: {epoch:03d}, Train Loss: {centered_train_loss:.4f}, Val. Loss: {centered_test_loss:.4f}",
                 end="\n\n",
             )
     # garbage collection
