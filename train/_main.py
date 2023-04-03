@@ -116,12 +116,10 @@ def train_model(
     # memoize creation of data loaders and masks for speedup
     memo_loaders_masks = dict()
     # train for config.train.num_epochs
-    reset_epoch = 0
-    # reset_epoch = 1
+    reset_epoch = 0  # 1
     # main FOR loop; train the model for multiple epochs (one epoch per cohort)
-    # for i, (worm, single_worm_dataset) in enumerate(dataset_items):
     for i, cohort in enumerate(worm_cohorts):
-        # print("worms in cohort %s:" % i, [worm for worm, _ in cohort])  # DEBUGGING
+        print("\nworms in cohort %s:" % i, [worm for worm, _ in cohort])  # DEBUGGING
         # create a list of loaders and masks for the cohort
         train_loader = np.empty(num_unique_worms, dtype=object)
         if i == 0:  # keep the validation dataset the same
@@ -191,21 +189,22 @@ def train_model(
         # get what neurons have been covered so far
         _ = torch.nonzero(coverage_mask).squeeze().numpy()
         covered_neurons = set(np.array(NEURONS_302)[_])
-        # print(
-        #     "cumulative number of neurons covered: %s" % len(covered_neurons)
-        # )  # DEBUGGING
+        print(
+            "\ncumulative number of neurons covered: %s" % len(covered_neurons),
+            end="\n\n\n",
+        )  # DEBUGGING
         # saving model checkpoints
         if (i % config.train.save_freq == 0) or (i + 1 == config.train.epochs):
             # display progress
             print(
-                "Saving a model checkpoint.\n\tnum. worms trained on:",
+                "Saving a model checkpoint.\n\tnum. worm cohorts trained on:",
                 i + 1,
                 "\n\tprevious worm:",
                 worm,
                 end="\n\n",
             )
             # save model checkpoints
-            chkpt_name = "{}_epochs_{}_worms.pt".format(reset_epoch, i + 1)
+            chkpt_name = "{}_epochs_{}_cohorts.pt".format(reset_epoch, i + 1)
             torch.save(
                 {
                     "epoch": reset_epoch,

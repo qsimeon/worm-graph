@@ -3,9 +3,9 @@ from govfunc._utils import *
 
 
 def train(
-    loader: Union[list[torch.Tensor], torch.Tensor],
+    loader: Union[list[torch.utils.data.DataLoader], torch.utils.data.DataLoader],
     model: torch.nn.Module,
-    mask: torch.Tensor,
+    mask: Union[list[torch.Tensor], torch.Tensor],
     optimizer: torch.optim.Optimizer,
     no_grad: bool = False,
     use_residual: bool = False,
@@ -39,7 +39,9 @@ def train(
     num_train_samples = 0
     # Iterate in batches over the training dataset.
     i = 0
+    # each worm in cohort has its own dataloader
     for loader, mask in zip(loaders, masks):
+        # each data loader has samples from a single worm
         for data in loader:
             i += 1
             (
@@ -85,9 +87,9 @@ def train(
 
 @torch.no_grad()
 def test(
-    loader: Union[list[torch.Tensor], torch.Tensor],
+    loader: Union[list[torch.utils.data.DataLoader], torch.utils.data.DataLoader],
     model: torch.nn.Module,
-    mask: torch.Tensor,
+    mask: Union[list[torch.Tensor], torch.Tensor],
     use_residual: bool = False,
 ) -> dict:
     """Evaluate a model.
@@ -118,7 +120,9 @@ def test(
     num_test_samples = 0
     # Iterate in batches over the validation dataset.
     i = 0
+    # each worm in cohort has its own dataloader
     for loader, mask in zip(loaders, masks):
+        # each data loader has samples from a single worm
         for data in loader:
             i += 1
             X_test, Y_test, metadata = data  # X, Y: (batch_size, seq_len, num_neurons)

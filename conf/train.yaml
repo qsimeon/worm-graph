@@ -8,8 +8,8 @@ train:
   smooth_data: False # if True use the smoothed calcium data as input
   reverse: False # if True reverse the order of generation of the samples (sequences)
   batch_size: 64 # maximum number of samples (sequences) per batch
-  train_size: 1000 # number of samples (sequences) of training data per epoch
-  test_size: 1000 # number of samples (sequences) of validation data per epoch
+  train_size: 1000 # approx. number of samples (sequences) of training data per epoch
+  test_size: 1000 # approx. number of samples (sequences) of validation data per epoch
   # constraint: batch_size <= min(train_size, test_size)
   shuffle: True # whether to shuffle samples from each worm
   tau_in: 1 # offset of target seqeunce from input sequence that we wish to train with
