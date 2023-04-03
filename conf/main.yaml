@@ -22,7 +22,7 @@ hydra:
     subdir: ${hydra.job.num}
   sweeper:
     params:
-      train.epochs: 50 #100, 300, 500, 700
+      train.epochs: 100, 200, 300 #500
       train.seq_len: 99 #9, 99, 199, 299
       train.k_splits: 2 #2, 5, 9
       train.batch_size: 64 #32, 64, 128
@@ -31,9 +31,9 @@ hydra:
       train.train_size: 1000
       train.test_size: 1000
       train.optimizer: Adam #Adam, SGD
-      # model.type: NetworkLSTM #NeuralCFC, NetworkLSTM
+      model.type: NetworkLSTM #NeuralCFC, NetworkLSTM
       model.hidden_size: 128 #32, 64, 128, 512
       globals.shuffle: False #True, False
       globals.use_residual: False #True, False
-      dataset.name: Uzel2022, Skora2018, Flavell2023 #Kato2015, Nichols2017, Skora2018, Kaplan2020, Uzel2022, Flavell2023
+      dataset.name: Uzel2022 #Kato2015, Nichols2017, Skora2018, Kaplan2020, Uzel2022, Flavell2023
       
