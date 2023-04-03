@@ -22,15 +22,15 @@ hydra:
     subdir: ${hydra.job.num}
   sweeper:
     params:
-      # train.epochs: 100, 300, 500, 700
-      train.seq_len: 9, 199, 299
+      train.epochs: 500 #100, 300, 500, 700
+      train.seq_len: 99 #9, 99, 199, 299
       # train.k_splits: 2, 5, 9
-      # train.batch_size: 32, 64, 128
+      train.batch_size: 32 #32, 64, 128
       # train.tau_in: 1, 10, 100
       # train.tau_out: 1, 10, 100
       # model.type: NetworkLSTM #NeuralCFC, NetworkLSTM
-      model.hidden_size: 32, 128, 512
-      # globals.shuffle: True, False
+      model.hidden_size: 64 #32, 64, 128, 512
+      globals.shuffle: True #True, False
       # globals.use_residual: True, False
-      # dataset.name: Kato2015, Nichols2017, Skora2018, Kaplan2020, Uzel2022, Flavell2023
+      dataset.name: Kato2015, Nichols2017, Skora2018, Kaplan2020, Uzel2022, Flavell2023
       

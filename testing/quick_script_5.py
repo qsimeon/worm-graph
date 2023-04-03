@@ -18,13 +18,13 @@ if __name__ == "__main__":
                 learn_rate=0.01,
                 seq_len=69,
                 k_splits=2,
-                epochs=100,
+                epochs=10,
                 save_freq=100,
                 smooth_data=False,
                 batch_size=128,
                 train_size=1654,
                 test_size=1654,
-                shuffle=True,  # whether to shuffle samples
+                shuffle=False,  # whether to shuffle samples
                 tau_in=1,
                 tau_out=1,
                 optimizer="SGD",
@@ -35,7 +35,6 @@ if __name__ == "__main__":
     # load a dataset (multiple worms)
     dataset = load_Uzel2022()
     # create a model
-    # model = NetworkLSTM(302, 64).double()
     model = NetworkLSTM(302, 64)
     # run the full train pipeline
     model, log_dir = train_model(model, dataset, config)

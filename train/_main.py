@@ -5,7 +5,7 @@ def train_model(
     model: torch.nn.Module,
     dataset: dict,
     config: DictConfig,
-    shuffle: bool = True,  # whether to shuffle worms
+    shuffle: bool = True,  # whether to shuffle all worms
     log_dir: Union[str, None] = None,  # hydra passes
 ) -> tuple[torch.nn.Module, str]:
     """
@@ -38,13 +38,15 @@ def train_model(
     # )
     # # remake dataset with only selected worms
     # dataset = dict(dataset_items)
+    # cycle the dataset until the desired number epochs obtained
     dataset_items = sorted(dataset.items()) * config.train.epochs
-    # shuffle the worms in the dataset (without replacement)
+    # shuffle (without replacement) the worms (including duplicates) in the dataset
     if shuffle == True:
         dataset_items = random.sample(dataset_items, k=len(dataset_items))
-    # split the worms into cohorts per epoch
+    # split the dataset into cohorts of worms - one cohort per epoch
     worm_cohorts = np.array_split(dataset_items, config.train.epochs)
     worm_cohorts = [_.tolist() for _ in worm_cohorts]
+    assert len(worm_cohorts) == config.train.epochs, "Invalid number of cohorts."
     # instantiate the optimizer
     opt_param = config.train.optimizer
     learn_rate = config.train.learn_rate
@@ -72,16 +74,27 @@ def train_model(
         smooth_data = False
     # train/test loss metrics
     data = {
-        "epochs": np.zeros(len(dataset_items), dtype=int),
-        "num_train_samples": np.zeros(len(dataset_items), dtype=int),
-        "num_test_samples": np.zeros(len(dataset_items), dtype=int),
-        "base_train_losses": np.zeros(len(dataset_items), dtype=np.float32),
-        "base_test_losses": np.zeros(len(dataset_items), dtype=np.float32),
-        "train_losses": np.zeros(len(dataset_items), dtype=np.float32),
-        "test_losses": np.zeros(len(dataset_items), dtype=np.float32),
-        "centered_train_losses": np.zeros(len(dataset_items), dtype=np.float32),
-        "centered_test_losses": np.zeros(len(dataset_items), dtype=np.float32),
+        "epochs": np.zeros(config.train.epochs, dtype=int),
+        "num_train_samples": np.zeros(config.train.epochs, dtype=int),
+        "num_test_samples": np.zeros(config.train.epochs, dtype=int),
+        "base_train_losses": np.zeros(config.train.epochs, dtype=np.float32),
+        "base_test_losses": np.zeros(config.train.epochs, dtype=np.float32),
+        "train_losses": np.zeros(config.train.epochs, dtype=np.float32),
+        "test_losses": np.zeros(config.train.epochs, dtype=np.float32),
+        "centered_train_losses": np.zeros(config.train.epochs, dtype=np.float32),
+        "centered_test_losses": np.zeros(config.train.epochs, dtype=np.float32),
     }
+    # data = {
+    #     "epochs": np.zeros(len(dataset_items), dtype=int),
+    #     "num_train_samples": np.zeros(len(dataset_items), dtype=int),
+    #     "num_test_samples": np.zeros(len(dataset_items), dtype=int),
+    #     "base_train_losses": np.zeros(len(dataset_items), dtype=np.float32),
+    #     "base_test_losses": np.zeros(len(dataset_items), dtype=np.float32),
+    #     "train_losses": np.zeros(len(dataset_items), dtype=np.float32),
+    #     "test_losses": np.zeros(len(dataset_items), dtype=np.float32),
+    #     "centered_train_losses": np.zeros(len(dataset_items), dtype=np.float32),
+    #     "centered_test_losses": np.zeros(len(dataset_items), dtype=np.float32),
+    # }
     # train the model for multiple cyles
     kwargs = dict(  # args to `split_train_test`
         k_splits=config.train.k_splits,
@@ -91,7 +104,7 @@ def train_model(
         # test_size=config.train.test_size,
         train_size=config.train.train_size // num_unique_worms,
         test_size=config.train.test_size // num_unique_worms,
-        shuffle=config.train.shuffle,  # whether to shuffle the samples from a worm
+        shuffle=config.train.shuffle,  # whether to shuffle samples from each cohort
         reverse=False,
         tau=config.train.tau_in,
         use_residual=use_residual,
@@ -112,11 +125,10 @@ def train_model(
     reset_epoch = 1
     # main FOR loop
     # for i, (worm, single_worm_dataset) in enumerate(dataset_items):
-    # keep the validation dataset the same
     for i, cohort in enumerate(worm_cohorts):
         # create a list of loaders and masks for the cohort
         train_loader = np.empty(len(cohort), dtype=object)
-        if i is 0:
+        if i == 0:  # keep the validation dataset the same
             test_loader = np.empty(len(cohort), dtype=object)
         neurons_mask = np.empty(len(cohort), dtype=object)
         # iterate over each worm in the cohort
@@ -124,7 +136,7 @@ def train_model(
             # check the memo for existing loaders and masks
             if worm in memo_loaders_masks:
                 train_loader[j] = memo_loaders_masks[worm]["train_loader"]
-                if i is 0:
+                if i == 0:  # keep the validation dataset the same
                     test_loader[j] = memo_loaders_masks[worm]["test_loader"]
                 train_mask = memo_loaders_masks[worm]["train_mask"]
                 test_mask = memo_loaders_masks[worm]["test_mask"]
@@ -132,7 +144,7 @@ def train_model(
             else:
                 (
                     train_loader[j],
-                    _,
+                    tmp_test_loader,
                     train_mask,
                     test_mask,
                 ) = split_train_test(
@@ -142,12 +154,12 @@ def train_model(
                     ),  # time vector
                     **kwargs,
                 )
-                if i is 0:
-                    test_loader[j] = _
+                if i == 0:  # keep the validation dataset the same
+                    test_loader[j] = tmp_test_loader
                 # add to memo
                 memo_loaders_masks[worm] = dict(
                     train_loader=train_loader[j],
-                    test_loader=_,
+                    test_loader=tmp_test_loader,
                     train_mask=train_mask,
                     test_mask=test_mask,
                 )
@@ -206,7 +218,6 @@ def train_model(
         dataset,
         log_dir,
         tau=config.train.tau_out,
-        # tau=config.train.tau_in,
         use_residual=use_residual,
         smooth_data=smooth_data,
     )
