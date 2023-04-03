@@ -33,13 +33,6 @@ def train_model(
     config.setdefault("num_unique_worms", num_unique_worms)
     # save config to log directory
     OmegaConf.save(config, os.path.join(log_dir, "config.yaml"))
-    # cycle the dataset until the desired number epochs (i.e. worms) obtained
-    # dataset_items = (
-    #     sorted(dataset.items()) * (config.train.epochs // num_unique_worms)
-    #     + sorted(dataset.items())[: (config.train.epochs % num_unique_worms)]
-    # )
-    # # remake dataset with only selected worms
-    # dataset = dict(dataset_items)
     # cycle the dataset until the desired number epochs obtained
     dataset_items = sorted(dataset.items()) * config.train.epochs
     assert (

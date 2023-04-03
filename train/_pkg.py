@@ -14,7 +14,7 @@ from multiprocessing import Pool, cpu_count
 from hydra.core.hydra_config import HydraConfig
 from omegaconf import DictConfig
 from omegaconf import OmegaConf
-from utils import DEVICE, LOGS_DIR
+from utils import DEVICE, LOGS_DIR, NEURONS_302
 from tqdm import tqdm
 from torch.utils.data.dataloader import default_collate
 from torch.utils.data import ConcatDataset, DataLoader
