@@ -141,7 +141,7 @@ def plot_loss_curves(log_dir):
     dataset_name = config.dataset.name
     model_name = config.model.type
     timestamp = config.timestamp
-    plt_title = "Loss curves\nmodel: {}, dataset: {}\ntime: {}".format(
+    plt_title = "Loss curves\nmodel: {}\ndataset: {}\ntime: {}".format(
         model_name,
         dataset_name,
         timestamp,
@@ -172,7 +172,7 @@ def plot_loss_curves(log_dir):
     sns.lineplot(x="epochs", y="centered_test_losses", data=loss_df, label="test")
     plt.legend()
     plt.title(plt_title)
-    plt.xlabel("Epoch (# worms)")
+    plt.xlabel("Epoch (# worm cohorts)")
     plt.ylabel("Loss - Baseline")
     plt.savefig(os.path.join(log_dir, "loss_curves.png"))
     plt.close()
@@ -189,7 +189,7 @@ def plot_before_after_weights(log_dir: str) -> None:
     dataset_name = config.dataset.name
     model_name = config.model.type
     timestamp = config.timestamp
-    plt_title = "Model readout weights\nmodel: {}, dataset: {}\ntime: {}".format(
+    plt_title = "Model readout weights\nmodel: {}\ndataset: {}\ntime: {}".format(
         model_name,
         dataset_name,
         timestamp,
@@ -262,7 +262,7 @@ def plot_targets_predictions(
         plt_title = (
             "Neural activity "
             + signal_str
-            + " (GCaMP fluorescence) \nworm: {}, neuron: {}\nmodel: {}, dataset: {}\ntime: {}".format(
+            + " (GCaMP fluorescence) \nworm: {}, neuron: {}\nmodel: {}\ndataset: {}\ntime: {}".format(
                 worm,
                 _neuron_,
                 model_name,
@@ -368,7 +368,7 @@ def plot_correlation_scatterplot(
     # plot helper
     def func(_neuron_):
         os.makedirs(os.path.join(log_dir, worm, "figures"), exist_ok=True)
-        plt_title = "Scatterplot of predicted vs target residuals\nworm: {}, neuron: {}\nmodel: {}, dataset: {}\ntime: {}".format(
+        plt_title = "Scatterplot of predicted vs target residuals\nworm: {}, neuron: {}\nmodel: {}\ndataset: {}\ntime: {}".format(
             worm,
             _neuron_,
             model_name,

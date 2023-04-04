@@ -28,7 +28,10 @@ def train_model(
     # modify the config file
     config = OmegaConf.structured(OmegaConf.to_yaml(config))
     config.setdefault("dataset", {"name": dataset_name})
+    config.dataset.name = dataset_name
     config.setdefault("model", {"type": model_class_name})
+    config.setdefault("visualize", {"log_dir": log_dir})
+    config.visualize.log_dir = log_dir
     config.setdefault("timestamp", timestamp)
     config.setdefault("num_unique_worms", num_unique_worms)
     # save config to log directory
@@ -85,15 +88,26 @@ def train_model(
         "centered_train_losses": np.zeros(config.train.epochs, dtype=np.float32),
         "centered_test_losses": np.zeros(config.train.epochs, dtype=np.float32),
     }
-    # args to be passed to the `split_train_test` function
+    # arguments passed to the `split_train_test` function
+    Tr = max(1, config.train.train_size // num_unique_worms)
+    Te = max(1, config.train.test_size // num_unique_worms)
+    B = max(1, Tr // 4)
+    print(
+        "per worm train size:",
+        Tr,
+        "\nper worm test size:",
+        Te,
+        "\nper worm batch size:",
+        B,
+        end="\n\n",
+    )
     kwargs = dict(
         k_splits=config.train.k_splits,
         seq_len=config.train.seq_len,
-        batch_size=config.train.batch_size,
-        train_size=config.train.train_size
-        // num_unique_worms,  # keeps training set size constant per epoch (cohort)
-        test_size=config.train.test_size
-        // num_unique_worms,  # keeps validation set size constant per epoch (cohort)
+        batch_size=B,  # `batch_size` as a function of `train_size`
+        # batch_size=config.train.batch_size,
+        train_size=Tr,  # keeps training set size constant per epoch (cohort)
+        test_size=Te,  # keeps validation set size constant per epoch (cohort)
         shuffle=config.train.shuffle,  # shuffle samples from each cohort
         reverse=config.train.reverse,  # generate samples backward from the end of data
         tau=config.train.tau_in,
@@ -117,7 +131,7 @@ def train_model(
     memo_loaders_masks = dict()
     # train for config.train.num_epochs
     reset_epoch = 0  # 1
-    # main FOR loop; train the model for multiple epochs (one epoch per cohort)
+    # main FOR loop; train the model for multiple epochs (one cohort epoch)
     for i, cohort in enumerate(worm_cohorts):
         # create a list of loaders and masks for the cohort
         train_loader = np.empty(num_unique_worms, dtype=object)
@@ -190,9 +204,10 @@ def train_model(
         covered_neurons = set(np.array(NEURONS_302)[_])
         if i == 0:
             print(
-                "\ncumulative number of neurons covered: %s" % len(covered_neurons),
-                end="\n\n\n",
-            )  # DEBUGGING
+                "number of neurons covered:",
+                len(covered_neurons),
+                end="\n\n",
+            )  # TODO: remove this print statement.
         # saving model checkpoints
         if (i % config.train.save_freq == 0) or (i + 1 == config.train.epochs):
             # display progress
@@ -204,7 +219,9 @@ def train_model(
                 end="\n\n",
             )
             # save model checkpoints
-            chkpt_name = "{}_epochs_{}_cohorts.pt".format(reset_epoch, i + 1)
+            chkpt_name = "{}_epochs_{}_worms.pt".format(
+                reset_epoch, (i + 1) * num_unique_worms
+            )
             torch.save(
                 {
                     "epoch": reset_epoch,

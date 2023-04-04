@@ -65,6 +65,8 @@ def train(
             # Compute training loss.
             loss = criterion(Y_tr[:, :, mask], Y_train[:, :, mask]) / (1 + tau)
             loss.backward()  # Derive gradients.
+            # Clip gradients to norm 1.
+            torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
             # No backprop on epoch 0.
             if no_grad:
                 optimizer.zero_grad()
@@ -207,9 +209,9 @@ def split_train_test(
     if (2 * tau >= len(split_datasets[-1])) or (len(split_datasets[-1]) < seq_len):
         split_datasets = split_datasets[:-1]
         split_times = split_times[:-1]
+    # make dataset splits
     train_splits, train_times = split_datasets[::2], split_times[::2]
     test_splits, test_times = split_datasets[1::2], split_times[1::2]
-    # make datasets
     # train dataset
     train_datasets = [
         NeuralActivityDataset(
@@ -261,8 +263,8 @@ def split_train_test(
 
 def optimize_model(
     model: torch.nn.Module,
-    train_loader: Union[list[torch.Tensor], torch.Tensor],
-    test_loader: Union[list[torch.Tensor], torch.Tensor],
+    train_loader: Union[list[torch.utils.data.DataLoader], torch.utils.data.DataLoader],
+    test_loader: Union[list[torch.utils.data.DataLoaderr], torch.utils.data.DataLoader],
     neurons_mask: Union[list[Union[torch.Tensor, None]], torch.Tensor, None] = None,
     optimizer: Union[torch.optim.Optimizer, None] = None,
     start_epoch: int = 1,
@@ -319,10 +321,10 @@ def optimize_model(
         "centered_train_losses": np.zeros(num_epochs, dtype=np.float32),
         "centered_test_losses": np.zeros(num_epochs, dtype=np.float32),
     }
-    # iterate over the training data multiple times
+    # iterate over the training data for `num_epochs`
     iter_range = range(start_epoch, num_epochs + start_epoch)
     for i, epoch in enumerate(iter_range):
-        # train the model
+        # train and validate the model
         train_log = train(
             train_loader,
             model,
@@ -337,6 +339,7 @@ def optimize_model(
             neurons_mask,
             use_residual=use_residual,
         )
+        # retrieve losses
         base_train_loss, train_loss, num_train_samples = (
             train_log["base_train_loss"],
             train_log["train_loss"],

@@ -12,15 +12,11 @@ def get_model(config: DictConfig) -> torch.nn.Module:
         num_layers=1,
         loss=config.model.loss,
     )
-    if config.model.type.lower() == "networklstm":
+    if config.model.type == "NetworkLSTM":
         model = NetworkLSTM(**args)
-    elif config.model.type.lower() == "variationallstm":
-        model = VariationalLSTM(**args)
-    elif config.model.type.lower() == "neuralcfc":
+    elif config.model.type == "NeuralCFC":
         model = NeuralCFC(**args)
-    elif config.model.type.lower() == "densecfc":
-        model = DenseCFC(**args)
-    elif config.model.type.lower() == "linearnn":
+    elif config.model.type == "LinearNN":
         model = LinearNN(**args)
     else:  # default to "linear" model
         model = LinearNN(**args)

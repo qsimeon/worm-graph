@@ -7,6 +7,10 @@ __pycache__/
 *.py[cod]
 *$py.class
 
+# Temporary files
+*tempCodeRunnerFile.py
+*/tempCodeRunnerFile.py
+
 # Large files
 opensource_data.zip
 opensource_data/
