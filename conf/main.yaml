@@ -19,7 +19,7 @@ hydra:
     dir: logs/hydra/${now:%Y_%m_%d_%H_%M_%S}
   sweep:
     dir: logs/hydra/${now:%Y_%m_%d_%H_%M_%S}
-    subdir: ${hydra.job.num}
+    subdir: ${hydra.job.override_dirname}
   sweeper:
     params:
       train.epochs: 100, 200, 300 #500
@@ -36,4 +36,4 @@ hydra:
       globals.shuffle: False #True, False
       globals.use_residual: False #True, False
       dataset.name: Uzel2022 #Kato2015, Nichols2017, Skora2018, Kaplan2020, Uzel2022, Flavell2023
-      
+
