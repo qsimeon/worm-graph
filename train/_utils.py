@@ -264,7 +264,7 @@ def split_train_test(
 def optimize_model(
     model: torch.nn.Module,
     train_loader: Union[list[torch.utils.data.DataLoader], torch.utils.data.DataLoader],
-    test_loader: Union[list[torch.utils.data.DataLoaderr], torch.utils.data.DataLoader],
+    test_loader: Union[list[torch.utils.data.DataLoader], torch.utils.data.DataLoader],
     neurons_mask: Union[list[Union[torch.Tensor, None]], torch.Tensor, None] = None,
     optimizer: Union[torch.optim.Optimizer, None] = None,
     start_epoch: int = 1,

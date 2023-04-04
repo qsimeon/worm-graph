@@ -194,10 +194,10 @@ class NetworkLSTM(torch.nn.Module):
         # re-initialize LSTM recurrent hidden to hidden weights
         for ind in range(self.num_layers):
             weight_hh = getattr(self.lstm, "weight_hh_l{}".format(ind))
-            torch.nn.init.eye_(weight_hh)
-            # torch.nn.init.kaiming_uniform_(
-            #     weight_hh, mode="fan_in", nonlinearity="relu"
-            # )
+            # torch.nn.init.eye_(weight_hh)
+            torch.nn.init.kaiming_uniform_(
+                weight_hh, mode="fan_in", nonlinearity="relu"
+            )
         # Readout
         self.linear = torch.nn.Linear(self.hidden_size, self.output_size)
 
