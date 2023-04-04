@@ -1,70 +1,103 @@
 # worm-graph
 ## Simulating the _C. elegans_ whole brain with neural networks.
 
+`tree -L 2 worm-graph/`
 ```
-├── analysis/
-   ├── jpyEDM/
-   ├── takens/
-   ├── MPNsNeurogym.ipynb
-├── conf/
-   ├── analysis.yaml
-   ├── dataset.yaml
-   ├── main.yaml
-   ├── model.yaml.py
-   ├── preprocess.yaml
-   ├── simulate.yaml
-   ├── task.yaml
-   ├── train.yaml
-   └── visualize.yaml
-├── data/
-   ├── processes/
-   ├── raw/
-   ├── _main.py
-   ├── _pkg.py
-   ├── _utils.py
-   └── PlotRealData.ipynb
-├── logs/
-   ├── multirun/
-   └── run/
-├── models/
-   ├── _main.py
-   ├── _pkg.py
-   └── _utils.py
-├── preprocess/
-   ├── _main.py
-   ├── _pkg.py
-   ├── _utils.py
-   └── export_nodes_edges.m
-├── tasks/
-   ├── _main.py
-   ├── _pkg.py
-   └── _utils.py
-├── testing/
-   ├── quick_script_1.py
-   ├── quick_script_2.py
-   ├── quick_script_3.py
-   ├── quick_script_4.py
-   └── FuturePredictionCElegansNNs.ipynb
-├── train/
-   ├── _main.py
-   ├── _pkg.py
-   ├── _utils.py
-   ├── GNNLossCurves.ipynb
-   └── LossBaselines.ipynb
-├── visualization/
-   ├── _main.py
-   ├── _pkg.py
-   ├── _utils.py
-   ├── DrawConnectome.ipynb
-   └── PipeLineExplorer.ipynb
+.
+├── LICENSE
+├── README.md
 ├── __init__.py
+├── __pycache__
+│   └── utils.cpython-39.pyc
+├── analysis
+│   ├── MPNsNeurogym.ipynb
+│   ├── jpyEDM
+│   └── takens
+├── conf
+│   ├── analysis.yaml
+│   ├── dataset.yaml
+│   ├── govfunc.yaml
+│   ├── main.yaml
+│   ├── model.yaml
+│   ├── preprocess.yaml
+│   ├── simulate.yaml
+│   ├── slurm_default.yaml
+│   ├── task.yaml
+│   ├── test_config.yaml
+│   ├── train.yaml
+│   └── visualize.yaml
+├── data
+│   ├── _main.py
+│   ├── _pkg.py
+│   ├── _utils.py
+│   ├── create_sine_dataset.py
+│   ├── processed
+│   └── raw
+├── environment_complete.yml
+├── environment_minimal.yml
+├── govfunc
+│   ├── Flavell2023
+│   ├── Kaplan2020
+│   ├── Kato2015
+│   ├── Nichols2017
+│   ├── Skora2018
+│   ├── Uzel2022
+│   ├── _main.py
+│   ├── _pkg 2.py
+│   ├── _pkg.py
+│   ├── _utils.py
+│   ├── correlation 2.png
+│   ├── correlation.png
+│   ├── govfunc_lorenz
+│   ├── rsa_analysis_Uzel2022 2.ipynb
+│   ├── rsa_analysis_Uzel2022.ipynb
+│   ├── worm_response_pred.png
+│   └── worm_response_target.png
 ├── main.py
+├── models
+│   ├── _main.py
+│   ├── _pkg.py
+│   └── _utils.py
 ├── pkg.py
-├── main.py
+├── preprocess
+│   ├── __pycache__
+│   ├── _main.py
+│   ├── _pkg.py
+│   ├── _utils.py
+│   └── export_nodes_edges.m
+├── tasks
+│   ├── _main.py
+│   ├── _pkg.py
+│   └── _utils.py
+├── tempCodeRunnerFile.py
+├── testing
+│   ├── FuturePredictionCElegansNNs.ipynb
+│   ├── GNNLossCurves.ipynb
+│   ├── LossBaselines.ipynb
+│   ├── PlotRealData.ipynb
+│   ├── analyze_logs_test.ipynb
+│   ├── ivy_scripts
+│   ├── quick_script_1.py
+│   ├── quick_script_2.py
+│   ├── quick_script_3.py
+│   ├── quick_script_5.py
+│   ├── quick_script_6.py
+│   ├── tempCodeRunnerFile.py
+│   └── test_config.py
+├── train
+│   ├── _main.py
+│   ├── _pkg.py
+│   ├── _utils.py
+│   └── train_vis_main.py
 ├── utils.py
-├── environment_minimal.yaml
-├── environment_complete.yaml
-└── README.md
+└── visualization
+    ├── DrawConnectome.ipynb
+    ├── PipelineExplorer.ipynb
+    ├── _main.py
+    ├── _pkg.py
+    ├── _utils.py
+    ├── plot_for_atlas
+    └── tempCodeRunnerFile.py
  ```
  
 ## Create the environment from the `environment.yml` file

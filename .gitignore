@@ -23,6 +23,9 @@ raw_data/
 *.pickle
 */.processed
 
+# PyCharm
+.idea/
+
 # VSCode
 .vscode/ 
 
