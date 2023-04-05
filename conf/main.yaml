@@ -19,17 +19,19 @@ hydra:
     dir: logs/hydra/${now:%Y_%m_%d_%H_%M_%S}
   sweep:
     dir: logs/hydra/${now:%Y_%m_%d_%H_%M_%S}
-    subdir: ${hydra.job.override_dirname}
+    # subdir: ${hydra.job.override_dirname} # this gives a filename too long error
+    subdir: ${hydra.job.num}
   sweeper:
     params:
-      train.epochs: 50 #100, 200, 300
+      train.epochs: 10 #100, 200, 300
       train.seq_len: 99 #9, 99, 199, 299
       train.k_splits: 2 #2, 5, 7
       train.tau_out: 1 #1, 10, 100, 200
-      train.train_size: 2000 #100, 500, 1000, 5000, 10000, 50000
-      train.test_size: 1000
+      train.train_size: 1000 #100, 500, 1000, 5000, 10000, 50000
+      train.test_size: 500
       train.optimizer: Adam #Adam, SGD
-      model.type: NetworkLSTM #NeuralCFC, NetworkLSTM
+      model.type: NeuralCFC #LinearNN, NetworkLSTM, NeuralCFC
       model.hidden_size: 128 #32, 64, 128, 512
+      model.num_layers: 1 #1, 2, 3, 4, 5
       dataset.name: [Kato2015, Nichols2017, Skora2018, Kaplan2020, Uzel2022] #Kato2015, Nichols2017, Skora2018, Kaplan2020, Uzel2022, Flavell2023
       

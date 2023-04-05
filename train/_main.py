@@ -30,8 +30,8 @@ def train_model(
     config.setdefault("dataset", {"name": dataset_name})
     config.dataset.name = dataset_name
     config.setdefault("model", {"type": model_class_name})
-    config.setdefault("visualize", {"log_dir": log_dir})
-    config.visualize.log_dir = log_dir
+    config.setdefault("visualize", {"log_dir": log_dir.split("worm-graph/")[-1]})
+    config.visualize.log_dir = log_dir.split("worm-graph/")[-1]
     config.setdefault("timestamp", timestamp)
     config.setdefault("num_unique_worms", num_unique_worms)
     # save config to log directory
@@ -89,9 +89,10 @@ def train_model(
         "centered_test_losses": np.zeros(config.train.epochs, dtype=np.float32),
     }
     # arguments passed to the `split_train_test` function
-    Tr = max(1, config.train.train_size // num_unique_worms)
-    Te = max(1, config.train.test_size // num_unique_worms)
-    B = max(1, Tr // 4)
+    Tr = max(1, config.train.train_size // num_unique_worms)  # per worm train size
+    Te = max(1, config.train.test_size // num_unique_worms)  # per worm test size
+    num_batches = 16  # TODO: make `num_batches` a parameter in config.train
+    B = max(1, Tr // num_batches) # per worm batch size
     print(
         "per worm train size:",
         Tr,
@@ -199,6 +200,8 @@ def train_model(
         for key in data:  # pre-allocated memory for `data[key]`
             # with `num_epochs=1`, the code below is just equal to data[key][i] = log[key]
             data[key][(i * num_epochs) : (i * num_epochs) + len(log[key])] = log[key]
+        # extract the latest validation loss
+        val_loss = data["centered_test_losses"][-1]
         # get what neurons have been covered so far
         _ = torch.nonzero(coverage_mask).squeeze().numpy()
         covered_neurons = set(np.array(NEURONS_302)[_])
@@ -213,26 +216,31 @@ def train_model(
             # display progress
             print(
                 "Saving a model checkpoint.\n\tnum. worm cohorts trained on:",
-                i + 1,
+                i,
                 "\n\tprevious worm:",
                 worm,
                 end="\n\n",
             )
             # save model checkpoints
             chkpt_name = "{}_epochs_{}_worms.pt".format(
-                reset_epoch, (i + 1) * num_unique_worms
+                reset_epoch, i * num_unique_worms
             )
+
             torch.save(
                 {
                     "epoch": reset_epoch,
+                    "loss": val_loss,
                     "dataset_name": dataset_name,
                     "model_name": model_class_name,
+                    "optimizer_name": opt_param,
+                    "learning_rate": learn_rate,
                     "timestamp": timestamp,
                     "covered_neurons": covered_neurons,
                     "input_size": model.get_input_size(),
                     "hidden_size": model.get_hidden_size(),
-                    "num_cohorts": i + 1,
-                    "num_worms": (i + 1) * num_unique_worms,
+                    "num_layers": model.get_num_layers(),
+                    "num_cohorts": i,
+                    "num_worms": i * num_unique_worms,
                     "model_state_dict": model.state_dict(),
                     "optimizer_state_dict": optimizer.state_dict(),
                 },

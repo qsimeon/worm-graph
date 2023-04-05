@@ -41,11 +41,15 @@ class LinearNN(torch.nn.Module):
         # Input and hidden layers
         self.input_hidden = (
             torch.nn.Linear(self.input_size, self.hidden_size),
-            torch.nn.ReLU(),
+            # torch.nn.ReLU(),
+            torch.nn.ELU(),
+            torch.nn.LayerNorm(self.hidden_size),
         )
         self.hidden_hidden = (self.num_layers - 1) * (
             torch.nn.Linear(self.hidden_size, self.hidden_size),
-            torch.nn.ReLU(),
+            # torch.nn.ReLU(),
+            torch.nn.ELU(),
+            torch.nn.LayerNorm(self.hidden_size),
         )
         # Readout
         self.linear = torch.nn.Linear(self.hidden_size, self.output_size)
@@ -67,6 +71,9 @@ class LinearNN(torch.nn.Module):
 
     def get_hidden_size(self):
         return self.hidden_size
+
+    def get_num_layers(self):
+        return self.num_layers
 
     def forward(self, input, tau=1):
         """
@@ -118,6 +125,8 @@ class NeuralCFC(torch.nn.Module):
             self.hidden_size,
         )
         self.rnn = CfC(self.input_size, self.wiring)
+        # Layer norm
+        self.layer_norm = torch.nn.LayerNorm(self.hidden_size)
         # Readout
         self.linear = torch.nn.Linear(self.hidden_size, self.output_size)
 
@@ -133,6 +142,9 @@ class NeuralCFC(torch.nn.Module):
     def get_hidden_size(self):
         return self.hidden_size
 
+    def get_num_layers(self):
+        return self.num_layers
+
     def forward(self, input, tau=1):
         """
         Propagate input through the continuous time NN.
@@ -140,12 +152,14 @@ class NeuralCFC(torch.nn.Module):
         tau: time offset of target
         """
         rnn_out, self.hidden = self.rnn(input)
+        rnn_out = self.layer_norm(rnn_out)  # layer normalization
         readout = self.linear(rnn_out)  # projection
         rnn_out = readout
         # repeat for target with tau>0 offset
         for i in range(1, tau):
             rnn_out, self.hidden = self.rnn(rnn_out, self.hidden)
-            readout = self.linear(rnn_out)
+            rnn_out = self.layer_norm(rnn_out)  # layer normalization
+            readout = self.linear(rnn_out)  # projection
             rnn_out = readout
         return rnn_out
 
@@ -198,6 +212,8 @@ class NetworkLSTM(torch.nn.Module):
             torch.nn.init.kaiming_uniform_(
                 weight_hh, mode="fan_in", nonlinearity="relu"
             )
+        # Layer norm
+        self.layer_norm = torch.nn.LayerNorm(self.hidden_size)
         # Readout
         self.linear = torch.nn.Linear(self.hidden_size, self.output_size)
 
@@ -213,6 +229,9 @@ class NetworkLSTM(torch.nn.Module):
     def get_hidden_size(self):
         return self.hidden_size
 
+    def get_num_layers(self):
+        return self.num_layers
+
     def forward(self, input: torch.Tensor, tau: int = 1):
         """
         Propagate input through the LSTM.
@@ -220,12 +239,14 @@ class NetworkLSTM(torch.nn.Module):
         tau: time offset of target
         """
         lstm_out, self.hidden = self.lstm(input)
+        lstm_out = self.layer_norm(lstm_out)  # layer normalization
         readout = self.linear(lstm_out)  # projection
         lstm_out = readout
         # repeat for target with tau>0 offset
         for i in range(1, tau):
             lstm_out, self.hidden = self.lstm(lstm_out, self.hidden)
-            readout = self.linear(lstm_out)
+            lstm_out = self.layer_norm(lstm_out)  # layer normalization
+            readout = self.linear(lstm_out)  # projection
             lstm_out = readout
         return lstm_out
 

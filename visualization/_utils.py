@@ -137,10 +137,22 @@ def plot_loss_curves(log_dir):
     Plot the loss curves stored in the given log directory.
     """
     # process the config.yaml file inside the log folder
-    config = OmegaConf.structured(OmegaConf.load(os.path.join(log_dir, "config.yaml")))
+    cfg_path = os.path.join(log_dir, "config.yaml")
+    if os.path.exists(cfg_path):
+        config = OmegaConf.structured(OmegaConf.load(cfg_path))
+    else:
+        config = OmegaConf.structured(
+            {
+                "dataset": {"name": "unknown"},
+                "model": {"type": "unknown"},
+                "timestamp": "unknown",
+            }
+        )
+    # get strings for plot title
     dataset_name = config.dataset.name
     model_name = config.model.type
     timestamp = config.timestamp
+    # create the plot title
     plt_title = "Loss curves\nmodel: {}\ndataset: {}\ntime: {}".format(
         model_name,
         dataset_name,
@@ -185,10 +197,22 @@ def plot_before_after_weights(log_dir: str) -> None:
     Plot the model's readout weigths from before and after training.
     """
     # process the config.yaml file inside the log folder
-    config = OmegaConf.structured(OmegaConf.load(os.path.join(log_dir, "config.yaml")))
+    cfg_path = os.path.join(log_dir, "config.yaml")
+    if os.path.exists(cfg_path):
+        config = OmegaConf.structured(OmegaConf.load(cfg_path))
+    else:
+        config = OmegaConf.structured(
+            {
+                "dataset": {"name": "unknown"},
+                "model": {"type": "unknown"},
+                "timestamp": "unknown",
+            }
+        )
+    # get strings for plot title
     dataset_name = config.dataset.name
     model_name = config.model.type
     timestamp = config.timestamp
+    # create the plot title
     plt_title = "Model readout weights\nmodel: {}\ndataset: {}\ntime: {}".format(
         model_name,
         dataset_name,
@@ -231,9 +255,21 @@ def plot_targets_predictions(
     with the predicted calcium or calcium residual time series of a single
     neuron in a given worm.
     """
+    # whether using residual or calcium signal
     signal_str = "residual" if use_residual else "calcium"
     # process the config.yaml file inside the log folder
-    config = OmegaConf.structured(OmegaConf.load(os.path.join(log_dir, "config.yaml")))
+    cfg_path = os.path.join(log_dir, "config.yaml")
+    if os.path.exists(cfg_path):
+        config = OmegaConf.structured(OmegaConf.load(cfg_path))
+    else:
+        config = OmegaConf.structured(
+            {
+                "dataset": {"name": "unknown"},
+                "model": {"type": "unknown"},
+                "timestamp": "unknown",
+            }
+        )
+    # get strings for plot title
     dataset_name = config.dataset.name
     model_name = config.model.type
     timestamp = config.timestamp
@@ -342,9 +378,21 @@ def plot_correlation_scatterplot(
     Create a scatterpot of the target and predicted calcium or calcium residual
     colored by train and test sample.
     """
+    # whether using residual or calcium signal
     signal_str = "residual" if use_residual else "calcium"
     # process the config.yaml file inside the log folder
-    config = OmegaConf.structured(OmegaConf.load(os.path.join(log_dir, "config.yaml")))
+    cfg_path = os.path.join(log_dir, "config.yaml")
+    if os.path.exists(cfg_path):
+        config = OmegaConf.structured(OmegaConf.load(cfg_path))
+    else:
+        config = OmegaConf.structured(
+            {
+                "dataset": {"name": "unknown"},
+                "model": {"type": "unknown"},
+                "timestamp": "unknown",
+            }
+        )
+    # get strings for plot title
     dataset_name = config.dataset.name
     model_name = config.model.type
     timestamp = config.timestamp
@@ -388,7 +436,8 @@ def plot_correlation_scatterplot(
             hue="label",
             legend=True,
             palette={"test": "magenta", "train": "cyan"},
-            scatter_kws={"alpha": 0.5},
+            scatter_kws={"alpha": 0.1},
+            # line_kws={"color": "black"},
         )
         plt.suptitle(plt_title)
         plt.axis("equal")

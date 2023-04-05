@@ -58,15 +58,15 @@ def train(
                 (0 if use_residual else 1) * X_train[:, :, mask], Y_train[:, :, mask]
             ) / (1 + tau)
             # Train
-            Y_tr = model(X_train * mask)  # Forward pass.
+            Y_tr = model(X_train * mask, tau)  # Forward pass.
             # Register hook.
             Y_tr.retain_grad()
             Y_tr.register_hook(lambda grad: grad * mask)
             # Compute training loss.
             loss = criterion(Y_tr[:, :, mask], Y_train[:, :, mask]) / (1 + tau)
             loss.backward()  # Derive gradients.
-            # Clip gradients to norm 1.
-            torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
+            # # Clip gradients to norm 1. TODO: is this necessary?
+            # torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
             # No backprop on epoch 0.
             if no_grad:
                 optimizer.zero_grad()
@@ -130,12 +130,12 @@ def test(
             X_test, Y_test, metadata = data  # X, Y: (batch_size, seq_len, num_neurons)
             X_test, Y_test = X_test.to(DEVICE), Y_test.to(DEVICE)
             tau = metadata["tau"][0]  # penalize longer delays
-            # Baseline: loss if the model predicted the residual to be 0.
+            # Baseline: loss if the model predicted value at next timestep equal to current value.
             base = criterion(
                 (0 if use_residual else 1) * X_test[:, :, mask], Y_test[:, :, mask]
             ) / (1 + tau)
             # Test
-            Y_te = model(X_test * mask)  # Forward pass.
+            Y_te = model(X_test * mask, tau)  # Forward pass.
             # Compute the validation loss.
             loss = criterion(Y_te[:, :, mask], Y_test[:, :, mask]) / (1 + tau)
             # Store test and baseline loss.
@@ -281,10 +281,10 @@ def optimize_model(
     # check the train and test loader input
     assert isinstance(
         train_loader, (list, torch.utils.data.DataLoader)
-    ), "Wrong input type for train_loader."
+    ), "Wrong input type for `train_loader`."
     assert isinstance(
         test_loader, (list, torch.utils.data.DataLoader)
-    ), "Wrong input type for test_loader."
+    ), "Wrong input type for `test_loader`."
     if isinstance(train_loader, list):
         batch_in, _, _ = next(iter(train_loader[0]))
     elif isinstance(train_loader, torch.utils.data.DataLoader):
@@ -410,12 +410,16 @@ def make_predictions(
         time_in_seconds = single_worm_dataset["time_in_seconds"]
         if time_in_seconds is None:
             time_in_seconds = torch.arange(len(calcium_data)).double()
-        train_mask = single_worm_dataset["train_mask"]
+        train_mask = single_worm_dataset.setdefault(
+            "train_mask", torch.zeros(len(calcium_data), dtype=torch.bool)
+        )
+        test_mask = single_worm_dataset.setdefault("test_mask", ~train_mask)
         # detach computation from tensors
         calcium_data = calcium_data.detach()
         named_neurons_mask = named_neurons_mask.detach()
         time_in_seconds = time_in_seconds.detach()
         train_mask = train_mask.detach()
+        test_mask.detach()
         # labels and columns
         labels = np.expand_dims(np.where(train_mask, "train", "test"), axis=-1)
         columns = list(named_neuron_to_idx) + [
