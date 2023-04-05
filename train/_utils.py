@@ -3,9 +3,9 @@ from govfunc._utils import *
 
 
 def train(
-    loader: torch.utils.data.DataLoader,
+    loader: Union[list[torch.utils.data.DataLoader], torch.utils.data.DataLoader],
     model: torch.nn.Module,
-    mask: torch.Tensor,
+    mask: Union[list[torch.Tensor], torch.Tensor],
     optimizer: torch.optim.Optimizer,
     no_grad: bool = False,
     use_residual: bool = False,
@@ -25,38 +25,56 @@ def train(
     Returns:
         losses: dict w/ keys train_loss and base_train_loss
     """
+    # create a list of loaders and masks if only one
+    if isinstance(loader, torch.utils.data.DataLoader):
+        loaders = [loader]
+        masks = [mask]
+    else:  # list
+        loaders = loader
+        masks = mask
     # Set model to train mode.
     model.train()
     criterion = model.loss_fn()
     base_loss, train_loss = 0, 0
     num_train_samples = 0
     # Iterate in batches over the training dataset.
-    for i, data in enumerate(loader):
-        X_train, Y_train, metadata = data  # X, Y: (batch_size, seq_len, num_neurons)
-        X_train, Y_train = X_train.to(DEVICE), Y_train.to(DEVICE)
-        tau = metadata["tau"].detach()[0]  # penalize longer delays
-        # Clear optimizer gradients.
-        optimizer.zero_grad()
-        # Baseline: loss if the model predicted value at next timestep equal to current value.
-        base = criterion(
-            (0 if use_residual else 1) * X_train[:, :, mask], Y_train[:, :, mask]
-        ) / (1 + tau)
-        # Train
-        Y_tr = model(X_train * mask)  # Forward pass.
-        # Register hook.
-        Y_tr.retain_grad()
-        Y_tr.register_hook(lambda grad: grad * mask)
-        # Compute training loss.
-        loss = criterion(Y_tr[:, :, mask], Y_train[:, :, mask]) / (1 + tau)
-        loss.backward()  # Derive gradients.
-        # No backprop on epoch 0.
-        if no_grad:
+    i = 0
+    # each worm in cohort has its own dataloader
+    for loader, mask in zip(loaders, masks):
+        # each data loader has samples from a single worm
+        for data in loader:
+            i += 1
+            (
+                X_train,
+                Y_train,
+                metadata,
+            ) = data  # X, Y: (batch_size, seq_len, num_neurons)
+            X_train, Y_train = X_train.to(DEVICE), Y_train.to(DEVICE)
+            tau = metadata["tau"].detach()[0]  # penalize longer delays
+            # Clear optimizer gradients.
             optimizer.zero_grad()
-        optimizer.step()  # Update parameters based on gradients.
-        # Store train and baseline loss.
-        base_loss += base.detach().item()
-        train_loss += loss.detach().item()
-        num_train_samples += X_train.detach().size(0)
+            # Baseline: loss if the model predicted value at next timestep equal to current value.
+            base = criterion(
+                (0 if use_residual else 1) * X_train[:, :, mask], Y_train[:, :, mask]
+            ) / (1 + tau)
+            # Train
+            Y_tr = model(X_train * mask, tau)  # Forward pass.
+            # Register hook.
+            Y_tr.retain_grad()
+            Y_tr.register_hook(lambda grad: grad * mask)
+            # Compute training loss.
+            loss = criterion(Y_tr[:, :, mask], Y_train[:, :, mask]) / (1 + tau)
+            loss.backward()  # Derive gradients.
+            # # Clip gradients to norm 1. TODO: is this necessary?
+            # torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
+            # No backprop on epoch 0.
+            if no_grad:
+                optimizer.zero_grad()
+            optimizer.step()  # Update parameters based on gradients.
+            # Store train and baseline loss.
+            base_loss += base.detach().item()
+            train_loss += loss.detach().item()
+            num_train_samples += X_train.detach().size(0)
     # Average train and baseline losses.
     losses = {
         "train_loss": train_loss / (i + 1),
@@ -71,9 +89,9 @@ def train(
 
 @torch.no_grad()
 def test(
-    loader: torch.utils.data.DataLoader,
+    loader: Union[list[torch.utils.data.DataLoader], torch.utils.data.DataLoader],
     model: torch.nn.Module,
-    mask: torch.Tensor,
+    mask: Union[list[torch.Tensor], torch.Tensor],
     use_residual: bool = False,
 ) -> dict:
     """Evaluate a model.
@@ -90,28 +108,40 @@ def test(
     Returns:
         losses: dict w/ keys test_loss and base_test_loss
     """
+    # create a list of loaders and masks if only one is given
+    if isinstance(loader, torch.utils.data.DataLoader):
+        loaders = [loader]
+        masks = [masks]
+    else:  # list
+        loaders = loader
+        masks = mask
     # Set model to inference mode.
     model.eval()
     criterion = model.loss_fn()
     base_loss, test_loss = 0, 0
     num_test_samples = 0
     # Iterate in batches over the validation dataset.
-    for i, data in enumerate(loader):
-        X_test, Y_test, metadata = data  # X, Y: (batch_size, seq_len, num_neurons)
-        X_test, Y_test = X_test.to(DEVICE), Y_test.to(DEVICE)
-        tau = metadata["tau"][0]  # penalize longer delays
-        # Baseline: loss if the model predicted the residual to be 0.
-        base = criterion(
-            (0 if use_residual else 1) * X_test[:, :, mask], Y_test[:, :, mask]
-        ) / (1 + tau)
-        # Test
-        Y_te = model(X_test * mask)  # Forward pass.
-        # Compute the validation loss.
-        loss = criterion(Y_te[:, :, mask], Y_test[:, :, mask]) / (1 + tau)
-        # Store test and baseline loss.
-        base_loss += base.detach().item()
-        test_loss += loss.detach().item()
-        num_test_samples += X_test.detach().size(0)
+    i = 0
+    # each worm in cohort has its own dataloader
+    for loader, mask in zip(loaders, masks):
+        # each data loader has samples from a single worm
+        for data in loader:
+            i += 1
+            X_test, Y_test, metadata = data  # X, Y: (batch_size, seq_len, num_neurons)
+            X_test, Y_test = X_test.to(DEVICE), Y_test.to(DEVICE)
+            tau = metadata["tau"][0]  # penalize longer delays
+            # Baseline: loss if the model predicted value at next timestep equal to current value.
+            base = criterion(
+                (0 if use_residual else 1) * X_test[:, :, mask], Y_test[:, :, mask]
+            ) / (1 + tau)
+            # Test
+            Y_te = model(X_test * mask, tau)  # Forward pass.
+            # Compute the validation loss.
+            loss = criterion(Y_te[:, :, mask], Y_test[:, :, mask]) / (1 + tau)
+            # Store test and baseline loss.
+            base_loss += base.detach().item()
+            test_loss += loss.detach().item()
+            num_test_samples += X_test.detach().size(0)
     # Average test and baseline losses.
     losses = {
         "test_loss": test_loss / (i + 1),
@@ -153,11 +183,13 @@ def split_train_test(
     ), "Invalid `seq_len` entered."
     # make time vector
     if time_vec is None:
-        time_vec = torch.arange(len(data)).double()
+        time_vec = torch.arange(len(data), dtype=torch.float32)
+    else:
+        time_vec = time_vec.to(torch.float32)
     assert torch.is_tensor(time_vec) and len(time_vec) == len(
         data
     ), "Enter a time vector with same length as data."
-    # detach comutation graph from tensors
+    # detach computation graph from tensors
     time_vec = time_vec.detach()
     data = data.detach()
     # split dataset into train and test sections
@@ -177,9 +209,9 @@ def split_train_test(
     if (2 * tau >= len(split_datasets[-1])) or (len(split_datasets[-1]) < seq_len):
         split_datasets = split_datasets[:-1]
         split_times = split_times[:-1]
+    # make dataset splits
     train_splits, train_times = split_datasets[::2], split_times[::2]
     test_splits, test_times = split_datasets[1::2], split_times[1::2]
-    # make datasets
     # train dataset
     train_datasets = [
         NeuralActivityDataset(
@@ -225,15 +257,15 @@ def split_train_test(
     )
     # garbage collection
     gc.collect()
-    # return data loaders and masks
+    # return datasets and masks
     return train_loader, test_loader, train_mask, test_mask
 
 
 def optimize_model(
     model: torch.nn.Module,
-    train_loader: torch.utils.data.DataLoader,
-    test_loader: torch.utils.data.DataLoader,
-    neurons_mask: Union[torch.Tensor, None] = None,
+    train_loader: Union[list[torch.utils.data.DataLoader], torch.utils.data.DataLoader],
+    test_loader: Union[list[torch.utils.data.DataLoader], torch.utils.data.DataLoader],
+    neurons_mask: Union[list[Union[torch.Tensor, None]], torch.Tensor, None] = None,
     optimizer: Union[torch.optim.Optimizer, None] = None,
     start_epoch: int = 1,
     learn_rate: float = 0.01,
@@ -246,19 +278,34 @@ def optimize_model(
     model for specified number of epochs. Returns the trained
     model and a dictionary with log information including losses.
     """
-    batch_in, _, _ = next(iter(train_loader))
+    # check the train and test loader input
+    assert isinstance(
+        train_loader, (list, torch.utils.data.DataLoader)
+    ), "Wrong input type for `train_loader`."
+    assert isinstance(
+        test_loader, (list, torch.utils.data.DataLoader)
+    ), "Wrong input type for `test_loader`."
+    if isinstance(train_loader, list):
+        batch_in, _, _ = next(iter(train_loader[0]))
+    elif isinstance(train_loader, torch.utils.data.DataLoader):
+        batch_in, _, _ = next(iter(train_loader))
     NUM_NEURONS = batch_in.size(-1)
     # create the neurons/feature mask
-    if neurons_mask is None:
-        neurons_mask = torch.ones(NUM_NEURONS, dtype=torch.bool)
-    assert (
-        neurons_mask.size(0) == NUM_NEURONS and neurons_mask.dtype == torch.bool
-    ), "Please use a valid boolean mask for neurons."
-    # detach comutation graph from tensors
-    neurons_mask = neurons_mask.detach()
-    # put model and neurons mask on device
+    if isinstance(neurons_mask, torch.Tensor):
+        assert (
+            neurons_mask.size(0) == NUM_NEURONS and neurons_mask.dtype == torch.bool
+        ), "Please use a valid boolean mask for neurons."
+        neurons_mask = neurons_mask.detach().to(DEVICE)
+    elif isinstance(neurons_mask, list):
+        for i, mask in enumerate(neurons_mask):
+            assert (
+                mask.size(0) == NUM_NEURONS and mask.dtype == torch.bool
+            ), "Please use a valid boolean mask for neurons."
+            neurons_mask[i] = neurons_mask[i].detach().to(DEVICE)
+    else:
+        neurons_mask = torch.ones(NUM_NEURONS, dtype=torch.bool).detach().to(DEVICE)
+    # put model on device
     model = model.to(DEVICE)
-    neurons_mask = neurons_mask.to(DEVICE)
     # create optimizer
     if optimizer is None:
         optimizer = torch.optim.SGD(model.parameters(), lr=learn_rate)
@@ -274,10 +321,10 @@ def optimize_model(
         "centered_train_losses": np.zeros(num_epochs, dtype=np.float32),
         "centered_test_losses": np.zeros(num_epochs, dtype=np.float32),
     }
-    # iterate over the training data multiple times
+    # iterate over the training data for `num_epochs`
     iter_range = range(start_epoch, num_epochs + start_epoch)
     for i, epoch in enumerate(iter_range):
-        # train the model
+        # train and validate the model
         train_log = train(
             train_loader,
             model,
@@ -292,6 +339,7 @@ def optimize_model(
             neurons_mask,
             use_residual=use_residual,
         )
+        # retrieve losses
         base_train_loss, train_loss, num_train_samples = (
             train_log["base_train_loss"],
             train_log["train_loss"],
@@ -317,7 +365,7 @@ def optimize_model(
         # print to standard output
         if (num_epochs < 10) or (epoch % (num_epochs // 10) == 0):
             print(
-                f"Epoch: {epoch:03d}, Train Loss: {centered_train_loss:.4f}, Val. Loss: {centered_test_loss:.4f}",
+                f"\nEpoch: {epoch:03d}, Train Loss: {centered_train_loss:.4f}, Val. Loss: {centered_test_loss:.4f}",
                 end="\n\n",
             )
     # garbage collection
@@ -362,12 +410,16 @@ def make_predictions(
         time_in_seconds = single_worm_dataset["time_in_seconds"]
         if time_in_seconds is None:
             time_in_seconds = torch.arange(len(calcium_data)).double()
-        train_mask = single_worm_dataset["train_mask"]
+        train_mask = single_worm_dataset.setdefault(
+            "train_mask", torch.zeros(len(calcium_data), dtype=torch.bool)
+        )
+        test_mask = single_worm_dataset.setdefault("test_mask", ~train_mask)
         # detach computation from tensors
         calcium_data = calcium_data.detach()
         named_neurons_mask = named_neurons_mask.detach()
         time_in_seconds = time_in_seconds.detach()
         train_mask = train_mask.detach()
+        test_mask.detach()
         # labels and columns
         labels = np.expand_dims(np.where(train_mask, "train", "test"), axis=-1)
         columns = list(named_neuron_to_idx) + [
@@ -424,7 +476,8 @@ def model_predict(
     calcium data tensor using a trained model.
     """
     NUM_NEURONS = calcium_data.size(1)
-    model = model.double().to(DEVICE)
+    # model = model.double().to(DEVICE)
+    model = model.to(DEVICE)
     model.eval()
     # model in/out
     calcium_data = calcium_data.squeeze(0)

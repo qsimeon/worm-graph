@@ -137,11 +137,23 @@ def plot_loss_curves(log_dir):
     Plot the loss curves stored in the given log directory.
     """
     # process the config.yaml file inside the log folder
-    config = OmegaConf.structured(OmegaConf.load(os.path.join(log_dir, "config.yaml")))
+    cfg_path = os.path.join(log_dir, "config.yaml")
+    if os.path.exists(cfg_path):
+        config = OmegaConf.structured(OmegaConf.load(cfg_path))
+    else:
+        config = OmegaConf.structured(
+            {
+                "dataset": {"name": "unknown"},
+                "model": {"type": "unknown"},
+                "timestamp": "unknown",
+            }
+        )
+    # get strings for plot title
     dataset_name = config.dataset.name
     model_name = config.model.type
     timestamp = config.timestamp
-    plt_title = "Loss curves\nmodel: {}, dataset: {}\ntime: {}".format(
+    # create the plot title
+    plt_title = "Loss curves\nmodel: {}\ndataset: {}\ntime: {}".format(
         model_name,
         dataset_name,
         timestamp,
@@ -172,7 +184,7 @@ def plot_loss_curves(log_dir):
     sns.lineplot(x="epochs", y="centered_test_losses", data=loss_df, label="test")
     plt.legend()
     plt.title(plt_title)
-    plt.xlabel("Epoch (# worms)")
+    plt.xlabel("Epoch (# worm cohorts)")
     plt.ylabel("Loss - Baseline")
     plt.savefig(os.path.join(log_dir, "loss_curves.png"))
     plt.close()
@@ -185,11 +197,23 @@ def plot_before_after_weights(log_dir: str) -> None:
     Plot the model's readout weigths from before and after training.
     """
     # process the config.yaml file inside the log folder
-    config = OmegaConf.structured(OmegaConf.load(os.path.join(log_dir, "config.yaml")))
+    cfg_path = os.path.join(log_dir, "config.yaml")
+    if os.path.exists(cfg_path):
+        config = OmegaConf.structured(OmegaConf.load(cfg_path))
+    else:
+        config = OmegaConf.structured(
+            {
+                "dataset": {"name": "unknown"},
+                "model": {"type": "unknown"},
+                "timestamp": "unknown",
+            }
+        )
+    # get strings for plot title
     dataset_name = config.dataset.name
     model_name = config.model.type
     timestamp = config.timestamp
-    plt_title = "Model readout weights\nmodel: {}, dataset: {}\ntime: {}".format(
+    # create the plot title
+    plt_title = "Model readout weights\nmodel: {}\ndataset: {}\ntime: {}".format(
         model_name,
         dataset_name,
         timestamp,
@@ -231,9 +255,21 @@ def plot_targets_predictions(
     with the predicted calcium or calcium residual time series of a single
     neuron in a given worm.
     """
+    # whether using residual or calcium signal
     signal_str = "residual" if use_residual else "calcium"
     # process the config.yaml file inside the log folder
-    config = OmegaConf.structured(OmegaConf.load(os.path.join(log_dir, "config.yaml")))
+    cfg_path = os.path.join(log_dir, "config.yaml")
+    if os.path.exists(cfg_path):
+        config = OmegaConf.structured(OmegaConf.load(cfg_path))
+    else:
+        config = OmegaConf.structured(
+            {
+                "dataset": {"name": "unknown"},
+                "model": {"type": "unknown"},
+                "timestamp": "unknown",
+            }
+        )
+    # get strings for plot title
     dataset_name = config.dataset.name
     model_name = config.model.type
     timestamp = config.timestamp
@@ -262,7 +298,7 @@ def plot_targets_predictions(
         plt_title = (
             "Neural activity "
             + signal_str
-            + " (GCaMP fluorescence) \nworm: {}, neuron: {}\nmodel: {}, dataset: {}\ntime: {}".format(
+            + " (GCaMP fluorescence) \nworm: {}, neuron: {}\nmodel: {}\ndataset: {}\ntime: {}".format(
                 worm,
                 _neuron_,
                 model_name,
@@ -342,9 +378,21 @@ def plot_correlation_scatterplot(
     Create a scatterpot of the target and predicted calcium or calcium residual
     colored by train and test sample.
     """
+    # whether using residual or calcium signal
     signal_str = "residual" if use_residual else "calcium"
     # process the config.yaml file inside the log folder
-    config = OmegaConf.structured(OmegaConf.load(os.path.join(log_dir, "config.yaml")))
+    cfg_path = os.path.join(log_dir, "config.yaml")
+    if os.path.exists(cfg_path):
+        config = OmegaConf.structured(OmegaConf.load(cfg_path))
+    else:
+        config = OmegaConf.structured(
+            {
+                "dataset": {"name": "unknown"},
+                "model": {"type": "unknown"},
+                "timestamp": "unknown",
+            }
+        )
+    # get strings for plot title
     dataset_name = config.dataset.name
     model_name = config.model.type
     timestamp = config.timestamp
@@ -368,7 +416,7 @@ def plot_correlation_scatterplot(
     # plot helper
     def func(_neuron_):
         os.makedirs(os.path.join(log_dir, worm, "figures"), exist_ok=True)
-        plt_title = "Scatterplot of predicted vs target residuals\nworm: {}, neuron: {}\nmodel: {}, dataset: {}\ntime: {}".format(
+        plt_title = "Scatterplot of predicted vs target residuals\nworm: {}, neuron: {}\nmodel: {}\ndataset: {}\ntime: {}".format(
             worm,
             _neuron_,
             model_name,
@@ -388,7 +436,8 @@ def plot_correlation_scatterplot(
             hue="label",
             legend=True,
             palette={"test": "magenta", "train": "cyan"},
-            scatter_kws={"alpha": 0.5},
+            scatter_kws={"alpha": 0.1},
+            # line_kws={"color": "black"},
         )
         plt.suptitle(plt_title)
         plt.axis("equal")

@@ -1,16 +1,19 @@
 train:
   learn_rate: 0.01 # learning rate
-  seq_len: 99 # length of sequences to train
-  k_splits: 2 # number of interleaved train/test splits per single worm
-  epochs: 500 # number of single worms (including repeats) processed
+  seq_len: 99 # length of time-series sequences to train
+  k_splits: 2 # number of interleaved train/test splits per single worm data
+  epochs: 100 # number of epochs (worm cohorts) the model will be trained for
   save_freq: 100 # frequency (in epochs) with which to save model checkpoints
-  # constraint: epochs >= num_worms &&  save_freq < epochs
-  smooth_data: False # if True use the smoothed calcium data as input
-  batch_size: 32 # maximum number of samples per batch
-  train_size: 1654 # number of samples (sequences) of training data per epoch
-  test_size: 1654 # number of samples (sequences) of validation data per epoch
-  # constraint: batch_size <= min(train_size, test_size)
+  # constraint: epochs: int > 0  &&  save_freq: int <= epochs: int
+  smooth_data: True # if True use the smoothed calcium data as input
+  reverse: False # if True reverse the order of generation of the samples (sequences)
+  # TODO: change batch_size parameter to num_batches (number of batches per epoch)
+  batch_size: 128 # maximum number of samples (sequences) per batch (currently unused)
+  train_size: 5000 # approx. number of samples (sequences) of training data per epoch
+  test_size: 1000 # approx. number of samples (sequences) of validation data per epoch
+  # constraint: batch_size: int <= min(train_size: int, test_size: int)
   shuffle: True # whether to shuffle samples from each worm
-  tau_in: 1 # offset of target seqeunce from input sequence that we wish to train with
+  tau_in: 1 # offset of target seqeunce from input sequence that we wish to train with 
   tau_out: 1 # offset of target seqeunce from input sequence that we wish to make predictions with
+  # constraint: tau_in: int == 1, tau_out: int > 0
   optimizer: Adam # which Pytorch optimizer to use; options: Adam, SGD, None

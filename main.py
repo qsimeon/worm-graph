@@ -2,7 +2,7 @@ from pkg import *
 
 
 @hydra.main(version_base=None, config_path="conf", config_name="main")
-def pipeline(config: DictConfig) -> None:
+def pipeline(config: DictConfig,) -> None:
     """
     Runs a complete pipeline using the parameters in main.yaml.
     Calls the below subroutines with parameters in their
