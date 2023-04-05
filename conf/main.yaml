@@ -25,13 +25,13 @@ hydra:
     params:
       train.epochs: 10 #100, 200, 300
       train.seq_len: 99 #9, 99, 199, 299
-      train.k_splits: 2 #2, 5, 7
+      train.k_splits: 2, 5 #2, 5, 7
       train.tau_out: 1 #1, 10, 100, 200
-      train.train_size: 1000 #100, 500, 1000, 5000, 10000, 50000
+      train.train_size: 5000, 10000 #100, 500, 1000, 5000, 10000, 50000
       train.test_size: 500
       train.optimizer: Adam #Adam, SGD
-      model.type: NeuralCFC #LinearNN, NetworkLSTM, NeuralCFC
-      model.hidden_size: 128 #32, 64, 128, 512
-      model.num_layers: 1 #1, 2, 3, 4, 5
-      dataset.name: [Kato2015, Nichols2017, Skora2018, Kaplan2020, Uzel2022] #Kato2015, Nichols2017, Skora2018, Kaplan2020, Uzel2022, Flavell2023
+      model.type: NetworkLSTM #LinearNN, NetworkLSTM, NeuralCFC
+      model.hidden_size: 64 #32, 64, 128, 512
+      model.num_layers: 1, 2 #1, 2, 3, 4, 5
+      dataset.name: [Kato2015, Skora2018, Uzel2022] #Kato2015, Nichols2017, Skora2018, Kaplan2020, Uzel2022, Flavell2023
       
