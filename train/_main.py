@@ -92,7 +92,7 @@ def train_model(
     Tr = max(1, config.train.train_size // num_unique_worms)  # per worm train size
     Te = max(1, config.train.test_size // num_unique_worms)  # per worm test size
     num_batches = 16  # TODO: make `num_batches` a parameter in config.train
-    B = max(1, Tr // num_batches) # per worm batch size
+    B = max(1, Tr // num_batches)  # per worm batch size
     print(
         "per worm train size:",
         Tr,
@@ -234,6 +234,7 @@ def train_model(
                     "model_name": model_class_name,
                     "optimizer_name": opt_param,
                     "learning_rate": learn_rate,
+                    "smooth_data": smooth_data,
                     "timestamp": timestamp,
                     "covered_neurons": covered_neurons,
                     "input_size": model.get_input_size(),
