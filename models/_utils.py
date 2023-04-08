@@ -1,28 +1,28 @@
 from models._pkg import *
 
-# how my variable names (# commented) map onto the transformer variables
-block_size = 32
-# seq_len = block_size # 32
-max_iters = 100
-# epochs = max_iters
-batch_size = 16
-# batch_size = batch_size
-n_embd = 302  # number of neurons (features; each neuron is a feature)
-# input_size = n_embd
-learn_rate = 1e-3
-# learning_rate = learn_rate
-n_layer = 4
-# num_layers = n_layer
-n_head = 2  # needs to be divisor of input_size
-# head_size = n_embd // n_head # 151
-dropout = 0.0
-# DEVICE = device
+# # how my variable names (# commented) map onto the transformer variables
+# block_size = 32
+# # seq_len = block_size # 32
+# max_iters = 100
+# # epochs = max_iters
+# batch_size = 16
+# # batch_size = batch_size
+# n_embd = 302  # number of neurons (features; each neuron is a feature)
+# # input_size = n_embd
+# learn_rate = 1e-3
+# # learning_rate = learn_rate
+# n_layer = 4
+# # num_layers = n_layer
+# n_head = 2  # needs to be divisor of input_size
+# # head_size = n_embd // n_head # 151
+# dropout = 0.0
+# # DEVICE = device
 
 
 class Head(torch.nn.Module):
     """one head of self-attention"""
 
-    def __init__(self, head_size, dropout=0.0):
+    def __init__(self, head_size, n_embd=302, block_size=32, dropout=0.0):
         super().__init__()
         self.key = torch.nn.Linear(n_embd, head_size, bias=False)
         self.query = torch.nn.Linear(n_embd, head_size, bias=False)
@@ -48,7 +48,7 @@ class Head(torch.nn.Module):
 class MultiHeadAttention(torch.nn.Module):
     """multiple heads of self-attention in parallel"""
 
-    def __init__(self, num_heads, head_size):
+    def __init__(self, num_heads, head_size, n_embd, dropout):
         super().__init__()
         self.heads = torch.nn.ModuleList([Head(head_size) for _ in range(num_heads)])
         self.proj = torch.nn.Linear(n_embd, n_embd)
@@ -63,7 +63,7 @@ class MultiHeadAttention(torch.nn.Module):
 class FeedFoward(torch.nn.Module):
     """a simple linear layer followed by a non-linearity"""
 
-    def __init__(self, n_embd):
+    def __init__(self, n_embd, dropout):
         super().__init__()
         self.net = torch.nn.Sequential(
             torch.nn.Linear(n_embd, 4 * n_embd),
@@ -79,12 +79,12 @@ class FeedFoward(torch.nn.Module):
 class Block(torch.nn.Module):
     """Transformer block: communication followed by computation"""
 
-    def __init__(self, n_embd, n_head):
+    def __init__(self, n_embd, n_head, dropout):
         # n_embd: embedding dimension, n_head: the number of heads we'd like
         super().__init__()
         head_size = n_embd // n_head
-        self.sa = MultiHeadAttention(n_head, head_size)
-        self.ffwd = FeedFoward(n_embd)
+        self.sa = MultiHeadAttention(n_head, head_size, n_embd, dropout)
+        self.ffwd = FeedFoward(n_embd, dropout)
         self.ln1 = torch.nn.LayerNorm(n_embd)
         self.ln2 = torch.nn.LayerNorm(n_embd)
 
@@ -161,7 +161,14 @@ class NeuralTransformer(torch.nn.Module):
             dropout=0.0,
         )
         self.blocks = torch.nn.Sequential(
-            *(Block(self.input_size, n_head=self.n_head) for _ in range(num_layers))
+            *(
+                Block(
+                    n_embd=self.input_size,
+                    n_head=self.n_head,
+                    dropout=0.0,
+                )
+                for _ in range(self.num_layers)
+            )
         )
         self.ln_f = torch.nn.LayerNorm(self.input_size)  # final layer norm
         # Readout
@@ -169,51 +176,36 @@ class NeuralTransformer(torch.nn.Module):
             self.input_size, self.output_size
         )  # linear readout
 
-    def forward(self, input, tau=0):  # targets = shifted calcium_data
-        B, T, C = input.shape  # (batch_size, max_time, input_size)
-        x = self.position_encoding(input)  # (B,T,C)
-        x = self.blocks(x)  # (B,T,C)
-        x = self.ln_f(x)  # (B,T,C)
-        readout = self.linear(x)  # (B,T,C)
-        output = readout
+    def forward(self, input, tau=0):
+        """
+        (B, T, C) = input.shape = (batch_size, max_time, input_size)
+        """
+        if tau < 1:
+            output = self.identity(input)
+        else:
+            x = self.position_encoding(input)  # (B,T,C)
+            x = self.blocks(x)  # (B,T,C)
+            x = self.ln_f(x)  # (B,T,C)
+            readout = self.linear(x)  # (B,T,C)
+            output = readout
+        # repeat for target with tau>0 offset
+        for i in range(1, tau):
+            x = self.position_encoding(output)  # (B,T,C)
+            x = self.blocks(x)  # (B,T,C)
+            x = self.ln_f(x)  # (B,T,C)
+            readout = self.linear(x)  # (B,T,C)
+            output = readout
         return output
 
-        # # calculate the loss
-        # targets = None  # targets is shifted calcium data
-        # if targets is None:
-        #     loss = None
-        # else:
-        #     B, T, C = logits.shape
-        #     logits = logits.view(B*T, C)
-        #     targets = targets.view(B*T)
-        #     loss = F.cross_entropy(logits, targets)
-        # if targets is None:
-        #     loss = None
-        # else:
-        #     B, T, C = logits.shape
-        #     logits = logits.view(B * T, C)
-        #     targets = targets.view(B * T, C)
-        #     loss = torch.nn.functional.mse_loss(logits, targets)
+    def loss_fn(self):
+        """
+        The loss function to be used with this model.
+        """
+        return self.loss()
+        # def func(input, target, **kwargs):
+        #     return self.elbo_loss + self.loss(**kwargs)(input, target)
 
-    def generate(self, input, tau):
-        """
-        The input is a (B, T, C) array of neural data which is
-        considered to be already embedded data in the current context.
-        """
-        for _ in range(tau):
-            # crop input to the last block_size tokens
-            input_cond = input[:, -self.block_size :, :]
-            # get the predictions
-            logits = self(input_cond)  # call forward method
-            # focus only on the last time step
-            logits = logits[:, -1, :]  # becomes (B, C)
-            # apply softmax to get probabilities
-            probs = torch.nn.functional.softmax(logits, dim=-1)  # (B, C)
-            # sample from the distribution
-            input_next = torch.multinomial(probs, num_samples=1)  # (B, 1)
-            # append sampled index to the running sequence
-            input = torch.cat((input, input_next), dim=1)  # (B, T+1)
-        return input
+        # return func
 
 
 class LinearNN(torch.nn.Module):

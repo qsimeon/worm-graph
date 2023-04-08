@@ -12,7 +12,9 @@ def get_model(config: DictConfig) -> torch.nn.Module:
         num_layers=1,
         loss=config.model.loss,
     )
-    if config.model.type == "NetworkLSTM":
+    if config.model.type == "NeuralTransformer":
+         model = NeuralTransformer(**args)
+    elif config.model.type == "NetworkLSTM":
         model = NetworkLSTM(**args)
     elif config.model.type == "NeuralCFC":
         model = NeuralCFC(**args)

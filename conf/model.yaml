@@ -1,5 +1,5 @@
 model:
-  type: NetworkLSTM # options: LinearNN, NetworkLSTM, NeuralCFC
+  type: NeuralTransformer # options: LinearNN, NetworkLSTM, NeuralCFC, NeuralTransformer
   input_size: 302 # keep this fixed
   hidden_size: 128 # options: int > 0
   num_layers: 1 # keep this fixed
