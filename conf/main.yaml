@@ -23,7 +23,7 @@ hydra:
     subdir: ${hydra.job.num}
   sweeper:
     params:
-      train.epochs: 2 #100, 200, 300
+      train.epochs: 15 #100, 200, 300
       train.seq_len: 99 #9, 99, 199, 299
       train.k_splits: 5 #2, 5, 7
       train.tau_out: 1 #0, 1, 10, 100, 200
@@ -31,8 +31,8 @@ hydra:
       train.test_size: 500 #100, 500, 1000, 5000, 10000, 50000
       train.optimizer: SGD #Adam, SGD
       train.smooth_data: True #True, False
-      model.type: NetworkLSTM #LinearNN, NetworkLSTM, NeuralCFC
+      model.type: NeuralTransformer #LinearNN, NetworkLSTM, NeuralCFC, NeuralTransformer
       model.hidden_size: 128 #32, 64, 128, 512
       model.num_layers: 1 #1, 2, 3, 4, 5
-      dataset.name: [Kato2015, Skora2018, Uzel2022] #Kato2015, Nichols2017, Skora2018, Kaplan2020, Uzel2022, Flavell2023
+      dataset.name: Uzel2022 #[Kato2015, Skora2018, Uzel2022] #Kato2015, Nichols2017, Skora2018, Kaplan2020, Uzel2022, Flavell2023
       

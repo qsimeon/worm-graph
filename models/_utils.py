@@ -1,28 +1,10 @@
 from models._pkg import *
 
-# # how my variable names (# commented) map onto the transformer variables
-# block_size = 32
-# # seq_len = block_size # 32
-# max_iters = 100
-# # epochs = max_iters
-# batch_size = 16
-# # batch_size = batch_size
-# n_embd = 302  # number of neurons (features; each neuron is a feature)
-# # input_size = n_embd
-# learn_rate = 1e-3
-# # learning_rate = learn_rate
-# n_layer = 4
-# # num_layers = n_layer
-# n_head = 2  # needs to be divisor of input_size
-# # head_size = n_embd // n_head # 151
-# dropout = 0.0
-# # DEVICE = device
-
 
 class Head(torch.nn.Module):
     """one head of self-attention"""
 
-    def __init__(self, head_size, n_embd=302, block_size=32, dropout=0.0):
+    def __init__(self, head_size, n_embd, block_size, dropout):
         super().__init__()
         self.key = torch.nn.Linear(n_embd, head_size, bias=False)
         self.query = torch.nn.Linear(n_embd, head_size, bias=False)
@@ -48,9 +30,11 @@ class Head(torch.nn.Module):
 class MultiHeadAttention(torch.nn.Module):
     """multiple heads of self-attention in parallel"""
 
-    def __init__(self, num_heads, head_size, n_embd, dropout):
+    def __init__(self, n_head, head_size, n_embd, block_size, dropout):
         super().__init__()
-        self.heads = torch.nn.ModuleList([Head(head_size) for _ in range(num_heads)])
+        self.heads = torch.nn.ModuleList(
+            [Head(head_size, n_embd, block_size, dropout) for _ in range(n_head)]
+        )
         self.proj = torch.nn.Linear(n_embd, n_embd)
         self.dropout = torch.nn.Dropout(dropout)
 
@@ -79,11 +63,11 @@ class FeedFoward(torch.nn.Module):
 class Block(torch.nn.Module):
     """Transformer block: communication followed by computation"""
 
-    def __init__(self, n_embd, n_head, dropout):
+    def __init__(self, n_embd, block_size, n_head, dropout):
         # n_embd: embedding dimension, n_head: the number of heads we'd like
         super().__init__()
         head_size = n_embd // n_head
-        self.sa = MultiHeadAttention(n_head, head_size, n_embd, dropout)
+        self.sa = MultiHeadAttention(n_head, head_size, n_embd, block_size, dropout)
         self.ffwd = FeedFoward(n_embd, dropout)
         self.ln1 = torch.nn.LayerNorm(n_embd)
         self.ln2 = torch.nn.LayerNorm(n_embd)
@@ -127,7 +111,7 @@ class NeuralTransformer(torch.nn.Module):
     def __init__(
         self,
         input_size,
-        hidden_size,
+        hidden_size,  # currently unused
         num_layers=1,
         loss=None,
     ):
@@ -151,7 +135,7 @@ class NeuralTransformer(torch.nn.Module):
         self.hidden_size = hidden_size  # currently unused
         self.num_layers = num_layers
         self.n_head = 2  # TODO: make a function of hidden_size
-        self.block_size = 5000
+        self.block_size = 10000  # maximum attention block (i.e. context) size
         # Identity layer
         self.identity = torch.nn.Identity()
         # Transformer parts
@@ -164,6 +148,7 @@ class NeuralTransformer(torch.nn.Module):
             *(
                 Block(
                     n_embd=self.input_size,
+                    block_size=self.block_size,
                     n_head=self.n_head,
                     dropout=0.0,
                 )
@@ -206,6 +191,15 @@ class NeuralTransformer(torch.nn.Module):
         #     return self.elbo_loss + self.loss(**kwargs)(input, target)
 
         # return func
+
+    def get_input_size(self):
+        return self.input_size
+
+    def get_hidden_size(self):
+        return self.hidden_size
+
+    def get_num_layers(self):
+        return self.num_layers
 
 
 class LinearNN(torch.nn.Module):
