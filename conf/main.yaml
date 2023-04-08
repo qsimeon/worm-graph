@@ -23,12 +23,12 @@ hydra:
     subdir: ${hydra.job.num}
   sweeper:
     params:
-      train.epochs: 200 #100, 200, 300
-      train.seq_len: 199 #9, 99, 199, 299
+      train.epochs: 2 #100, 200, 300
+      train.seq_len: 99 #9, 99, 199, 299
       train.k_splits: 5 #2, 5, 7
-      train.tau_out: 1 #1, 10, 100, 200
-      train.train_size: 25000 #100, 500, 1000, 5000, 10000, 50000
-      train.test_size: 1000
+      train.tau_out: 1 #0, 1, 10, 100, 200
+      train.train_size: 1000 #100, 500, 1000, 5000, 10000, 50000
+      train.test_size: 500 #100, 500, 1000, 5000, 10000, 50000
       train.optimizer: SGD #Adam, SGD
       train.smooth_data: True #True, False
       model.type: NetworkLSTM #LinearNN, NetworkLSTM, NeuralCFC

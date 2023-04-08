@@ -53,15 +53,12 @@ def train_model(
     ), "Invalid cohort size."
     # instantiate the optimizer
     opt_param = config.train.optimizer
+    optim_name = "torch.optim." + opt_param
     learn_rate = config.train.learn_rate
     if config.train.optimizer is not None:
         if isinstance(opt_param, str):
             optimizer = eval(
-                "torch.optim."
-                + opt_param
-                + "(model.parameters(), lr="
-                + str(learn_rate)
-                + ")"
+                optim_name + "(model.parameters(), lr=" + str(learn_rate) + ")"
             )
         assert isinstance(
             optimizer, torch.optim.Optimizer
@@ -232,7 +229,7 @@ def train_model(
                     "loss": val_loss,
                     "dataset_name": dataset_name,
                     "model_name": model_class_name,
-                    "optimizer_name": opt_param,
+                    "optimizer_name": optim_name,
                     "learning_rate": learn_rate,
                     "smooth_data": smooth_data,
                     "timestamp": timestamp,
@@ -240,8 +237,8 @@ def train_model(
                     "input_size": model.get_input_size(),
                     "hidden_size": model.get_hidden_size(),
                     "num_layers": model.get_num_layers(),
-                    "num_cohorts": i,
-                    "num_worms": i * num_unique_worms,
+                    "num_worm_cohorts": i,
+                    "num_unique_worms": num_unique_worms,
                     "model_state_dict": model.state_dict(),
                     "optimizer_state_dict": optimizer.state_dict(),
                 },

@@ -65,7 +65,7 @@ def train(
             # Compute training loss.
             loss = criterion(Y_tr[:, :, mask], Y_train[:, :, mask]) / (1 + tau)
             loss.backward()  # Derive gradients.
-            # # Clip gradients to norm 1. TODO: is this necessary?
+            # # Clip gradients to norm 1. TODO: is this needed?
             # torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
             # No backprop on epoch 0.
             if no_grad:

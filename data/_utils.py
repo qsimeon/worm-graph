@@ -20,7 +20,7 @@ class NeuralActivityDataset(torch.utils.data.Dataset):
         neurons=None,
         time_vec=None,
         reverse=False,
-        tau=1,  # deprecated
+        tau=1,
         use_residual=False,
     ):
         """
