@@ -53,15 +53,12 @@ def train_model(
     ), "Invalid cohort size."
     # instantiate the optimizer
     opt_param = config.train.optimizer
+    optim_name = "torch.optim." + opt_param
     learn_rate = config.train.learn_rate
     if config.train.optimizer is not None:
         if isinstance(opt_param, str):
             optimizer = eval(
-                "torch.optim."
-                + opt_param
-                + "(model.parameters(), lr="
-                + str(learn_rate)
-                + ")"
+                optim_name + "(model.parameters(), lr=" + str(learn_rate) + ")"
             )
         assert isinstance(
             optimizer, torch.optim.Optimizer
@@ -91,8 +88,7 @@ def train_model(
     # arguments passed to the `split_train_test` function
     Tr = max(1, config.train.train_size // num_unique_worms)  # per worm train size
     Te = max(1, config.train.test_size // num_unique_worms)  # per worm test size
-    num_batches = 16  # TODO: make `num_batches` a parameter in config.train
-    B = max(1, Tr // num_batches)  # per worm batch size
+    B = max(1, Tr // config.train.num_batches)  # per worm batch size
     print(
         "per worm train size:",
         Tr,
@@ -106,7 +102,6 @@ def train_model(
         k_splits=config.train.k_splits,
         seq_len=config.train.seq_len,
         batch_size=B,  # `batch_size` as a function of `train_size`
-        # batch_size=config.train.batch_size,
         train_size=Tr,  # keeps training set size constant per epoch (cohort)
         test_size=Te,  # keeps validation set size constant per epoch (cohort)
         shuffle=config.train.shuffle,  # shuffle samples from each cohort
@@ -232,7 +227,7 @@ def train_model(
                     "loss": val_loss,
                     "dataset_name": dataset_name,
                     "model_name": model_class_name,
-                    "optimizer_name": opt_param,
+                    "optimizer_name": optim_name,
                     "learning_rate": learn_rate,
                     "smooth_data": smooth_data,
                     "timestamp": timestamp,
@@ -240,8 +235,8 @@ def train_model(
                     "input_size": model.get_input_size(),
                     "hidden_size": model.get_hidden_size(),
                     "num_layers": model.get_num_layers(),
-                    "num_cohorts": i,
-                    "num_worms": i * num_unique_worms,
+                    "num_worm_cohorts": i,
+                    "num_unique_worms": num_unique_worms,
                     "model_state_dict": model.state_dict(),
                     "optimizer_state_dict": optimizer.state_dict(),
                 },

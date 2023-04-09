@@ -4,7 +4,7 @@ model on data from a single worm.
 """
 
 import matplotlib.pyplot as plt
-from models._utils import NetworkLSTM
+from models._utils import NetworkLSTM, NeuralTransformer
 from train._utils import model_predict
 from data._utils import load_sine_seq_noise
 
@@ -16,9 +16,9 @@ if __name__ == "__main__":
     calcium_data = single_worm_dataset["calcium_data"]
     time_in_seconds = single_worm_dataset.get("time_in_seconds", None)
     # create a model
-    model = NetworkLSTM(302, 64).double()
+    model = NeuralTransformer(302, 64).double()
     # make 0-step (i.e. identity) prediction with untrained model
-    tau_out = 0
+    tau_out = 1
     targets, predictions = model_predict(model, calcium_data, tau=tau_out)
     print("Targets:", targets.shape, "\nPredictions:", predictions.shape, end="\n\n")
     # pick a neuron idx
@@ -32,7 +32,7 @@ if __name__ == "__main__":
     axs[0].set_ylabel("Input size")
     # neuron targets and predictions
     axs[1].plot(time_in_seconds, targets[:, neuron], label="target")
-    axs[1].plot(time_in_seconds, predictions[:, neuron], alpha=0.8, label="prediction")
+    axs[1].plot(time_in_seconds, predictions[:, neuron], alpha=0.5, label="prediction")
     axs[1].legend()
     axs[1].set_title(
         "Neuron %s target and prediction ($\\tau = %s$)" % (neuron, tau_out)
