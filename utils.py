@@ -7,7 +7,7 @@ os.environ["CUDA_LAUNCH_BLOCKING"] = "1"
 
 NUM_NEURONS = 302
 
-RAW_DATA_URL = "https://www.dropbox.com/s/45yqpvtsncx4095/raw_data.zip?dl=1"
+RAW_DATA_URL = "https://www.dropbox.com/s/lw9cblxawqsbr2w/opensource_data.zip?dl=1"
 
 RAW_FILES = [
     "GHermChem_Edges.csv",
@@ -31,10 +31,11 @@ VALID_DATASETS = {
     "Uzel2022",
     "Skora2018",
     "Nichols2017",
-    # "Nguyen2017",  # no named neurons!
+    "Nguyen2017",  # no named neurons! DON'T use.
     "Kato2015",
     "Kaplan2020",
-    "Flavell2023",  # something wrong with this
+    "Leifer2023",
+    "Flavell2023",  # something wrong with worm0.
     # test datasets
     "sine",
     "sine_seq",
