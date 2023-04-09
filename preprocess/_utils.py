@@ -794,6 +794,25 @@ class create_four_sine_datasets:
         return
 
 
+def str_to_float(str_num):
+    """
+    Change textual scientific notation
+    into a floating-point number.
+    """
+    before_e = float(str_num.split("e")[0])
+    sign = str_num.split("e")[1][:1]
+    after_e = int(str_num.split("e")[1][1:])
+
+    if sign == "+":
+        float_num = before_e * math.pow(10, after_e)
+    elif sign == "-":
+        float_num = before_e * math.pow(10, -after_e)
+    else:
+        float_num = None
+        print("error: unknown sign")
+    return float_num
+
+
 def pickle_neural_data(
     url,
     zipfile,
@@ -2136,5 +2155,115 @@ def pickle_Flavell2023(transform, smooth_method="fft"):
 
 
 def pickle_Leifer2023(transform, smooth_method="fft"):
-    data_dict = 0
-    return
+    """
+    Pickles the worm neural activity data from Randi, ..., Leifer et al.,
+    bioRxiv 2023, Neural signal propagation atlas of C. elegans.
+    """
+    data_dict = dict()
+    data_dir = os.path.join(source_path, "Leifer2023")
+    files = os.listdir(data_dir)
+    num_worms = int(len(files) / 6)  # every worm has 6 txt files
+
+    for i in range(0, num_worms):
+        worm = "worm" + str(i)
+
+        real_data = []
+        with open(os.path.join(data_dir, str(i) + "_gcamp.txt"), "r") as f:
+            for line in f.readlines():
+                cal = list(map(float, line.split(" ")))
+                real_data.append(cal)
+        real_data = np.array(real_data)  # format: (time, neuron)
+
+        label_list = []
+        with open(os.path.join(data_dir, str(i) + "_labels.txt"), "r") as f:
+            for line in f.readlines():
+                l = line.strip("\n")
+                label_list.append(l)
+
+        num_unnamed = 0
+        label_list = label_list[: real_data.shape[1]]
+        for j, item in enumerate(label_list):
+            previous_list = label_list[:j]
+            # if the neuron is unnamed, give it a name
+            if item == "" or item == "smthng else":
+                label_list[j] = str(j + 300)
+                num_unnamed += 1
+            elif item in previous_list:
+                label_list[j] = str(j + 300)
+                num_unnamed += 1
+            else:
+                label_list[j] = item
+
+        neuron_to_idx = dict()
+        for k, item in enumerate(label_list):
+            neuron_to_idx[item] = k
+
+        sc = transform  # normalize data
+        real_data = sc.fit_transform(real_data)
+        real_data = torch.tensor(
+            real_data, dtype=torch.float32
+        )  # add a feature dimension and convert to tensor
+        smooth_real_data, residual, smooth_residual = smooth_data_preprocess(
+            real_data, smooth_method
+        )
+
+        timeVectorSeconds = []
+        with open(os.path.join(data_dir, str(i) + "_t.txt"), "r") as f:
+            for line in f.readlines():
+                l = line.strip("\n")
+                timeVectorSeconds.append(str_to_float(l))
+
+        time_in_seconds = np.array(timeVectorSeconds)
+        time_in_seconds = torch.tensor(time_in_seconds).to(torch.float32)
+        dt = torch.zeros_like(time_in_seconds).to(torch.float32)
+        dt[1:] = time_in_seconds[1:] - time_in_seconds[:-1]
+
+        num_neurons = real_data.shape[1]
+        num_named = num_neurons - num_unnamed
+        max_time = real_data.shape[0]
+
+        print(
+            "len. Ca recording %s, total num. neurons %s, num. ID'd neurons %s"
+            % (max_time, num_neurons, num_named),
+            end="\n\n",
+        )
+
+        data_dict.update(
+            {
+                worm: {
+                    "dataset": "Leifer2023",
+                    "worm": worm,
+                    "calcium_data": real_data,
+                    "smooth_calcium_data": smooth_real_data,
+                    "residual_calcium": residual,
+                    "smooth_residual_calcium": smooth_residual,
+                    "neuron_to_idx": neuron_to_idx,
+                    "idx_to_neuron": dict((v, k) for k, v in neuron_to_idx.items()),
+                    "max_time": int(max_time),
+                    "time_in_seconds": time_in_seconds,
+                    "dt": dt,
+                    "num_neurons": int(num_neurons),
+                    "num_named_neurons": num_named,
+                    "num_unknown_neurons": num_unnamed,
+                },
+            }
+        )
+
+        # standardize the shape of calcium data to 302 x time
+        data_dict[worm] = reshape_calcium_data(data_dict[worm])
+        data_dict[worm]["num_named_neurons"] = (
+            data_dict[worm]["named_neurons_mask"].sum().item()
+        )
+        data_dict[worm]["num_unknown_neurons"] = (
+            data_dict[worm]["num_neurons"] - data_dict[worm]["num_named_neurons"]
+        )
+
+    # pickle the data
+    file = os.path.join(processed_path, "Leifer2023.pickle")
+    pickle_out = open(file, "wb")
+    pickle.dump(data_dict, pickle_out)
+    pickle_out.close()
+    pickle_in = open(file, "rb")
+    Leifer2023 = pickle.load(pickle_in)
+    print(Leifer2023.keys(), end="\n\n")
+    return data_dict

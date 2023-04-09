@@ -43,7 +43,7 @@ VALID_DATASETS = {
     "sine_noise",
     "sum_sine",
     "sum_sine_noise",
-}  # TODO: set an option for pooling all datasets
+}
 
 # list of all 302 hermaphrodite neurons
 NEURONS_302 = sorted(
