@@ -1,13 +1,12 @@
 name: worm-graph
-prefix: /om2/user/kyzhao/worm_conda/env/worm-graph
 channels:
   - conda-forge
   - defaults
 dependencies:
   - matplotlib
   # - pytorch-gpu
-  - scikit-learn
   - pytorch=1.13
+  - scikit-learn
   - black
   - networkx
   - black-jupyter

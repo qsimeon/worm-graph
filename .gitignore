@@ -9,20 +9,15 @@ __pycache__/
 
 # Temporary files
 *tempCodeRunnerFile.py
-*/tempCodeRunnerFile.py
 nohup.out
 
 # Large files
 opensource_data.zip
 opensource_data/
-worm_data_colab.zip
-worm_data_colab
-worm_data_colab.zip
-worm_data_colab/
 raw_data.zip
 raw_data/
 *.pickle
-*/.processed
+*.processed
 
 # PyCharm
 .idea/
@@ -105,8 +100,7 @@ docs/_build/
 target/
 
 # Jupyter Notebook
-.ipynb_checkpoints
-*/.ipynb_checkpoints/*
+*.ipynb_checkpoints
 
 # IPython
 profile_default/
