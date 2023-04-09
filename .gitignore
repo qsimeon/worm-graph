@@ -10,6 +10,7 @@ __pycache__/
 # Temporary files
 *tempCodeRunnerFile.py
 */tempCodeRunnerFile.py
+nohup.out
 
 # Large files
 opensource_data.zip
