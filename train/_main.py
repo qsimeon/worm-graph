@@ -88,8 +88,7 @@ def train_model(
     # arguments passed to the `split_train_test` function
     Tr = max(1, config.train.train_size // num_unique_worms)  # per worm train size
     Te = max(1, config.train.test_size // num_unique_worms)  # per worm test size
-    num_batches = 16  # TODO: make `num_batches` a parameter in config.train
-    B = max(1, Tr // num_batches)  # per worm batch size
+    B = max(1, Tr // config.train.num_batches)  # per worm batch size
     print(
         "per worm train size:",
         Tr,
@@ -103,7 +102,6 @@ def train_model(
         k_splits=config.train.k_splits,
         seq_len=config.train.seq_len,
         batch_size=B,  # `batch_size` as a function of `train_size`
-        # batch_size=config.train.batch_size,
         train_size=Tr,  # keeps training set size constant per epoch (cohort)
         test_size=Te,  # keeps validation set size constant per epoch (cohort)
         shuffle=config.train.shuffle,  # shuffle samples from each cohort
