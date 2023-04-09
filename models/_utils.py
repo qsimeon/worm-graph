@@ -136,13 +136,14 @@ class NeuralTransformer(torch.nn.Module):
         self.num_layers = num_layers
         self.n_head = 2  # TODO: make a function of hidden_size
         self.block_size = 10000  # maximum attention block (i.e. context) size
+        self.dropout = 0.1
         # Identity layer
         self.identity = torch.nn.Identity()
         # Transformer parts
         self.position_encoding = PositionalEncoding(
             self.input_size,
             max_len=self.block_size,
-            dropout=0.0,
+            dropout=self.dropout,
         )
         self.blocks = torch.nn.Sequential(
             *(
@@ -150,7 +151,7 @@ class NeuralTransformer(torch.nn.Module):
                     n_embd=self.input_size,
                     block_size=self.block_size,
                     n_head=self.n_head,
-                    dropout=0.0,
+                    dropout=self.dropout,
                 )
                 for _ in range(self.num_layers)
             )
