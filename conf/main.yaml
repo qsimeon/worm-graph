@@ -40,7 +40,7 @@ hydra:
       train.reverse: False #True, False
       # MODEL
       model.type: NetworkLSTM #LinearNN, NetworkLSTM, NeuralCFC, NeuralTransformer
-      model.hidden_size: 128 #8, 16, 32, 64, 128, 512, 1024
+      model.hidden_size: 128 #8, 16, 32, 64, 128, 512, 1024, 2048
       model.num_layers: 1 #1, 2, 3, 4, 5
       # DATASET
       dataset.name: [Kato2015, Nichols2017, Skora2018, Kaplan2020, Flavell2023] #Kato2015, Nichols2017, Skora2018, Kaplan2020, Uzel2022, Flavell2023
