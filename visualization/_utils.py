@@ -317,7 +317,7 @@ def plot_targets_predictions(
             x=targets_df.time_in_seconds,
             y=predictions_df[_neuron_],
             label="predict",
-            alpha=0.8,
+            alpha=0.5,
         )
         ylo, yhi = plt.gca().get_ylim()
         plt.gca().fill_between(

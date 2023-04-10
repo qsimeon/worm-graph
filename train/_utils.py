@@ -65,7 +65,7 @@ def train(
             # Compute training loss.
             loss = criterion(Y_tr[:, :, mask], Y_train[:, :, mask]) / (1 + tau)
             loss.backward()  # Derive gradients.
-            # # Clip gradients to norm 1. TODO: is this necessary?
+            # # Clip gradients to norm 1. TODO: is this needed?
             # torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
             # No backprop on epoch 0.
             if no_grad:
@@ -218,7 +218,7 @@ def split_train_test(
             _data.detach(),
             seq_len=seq_len,
             # keep per worm train size constant
-            num_samples=train_size // len(train_splits),
+            num_samples=max(1, train_size // len(train_splits)),
             reverse=reverse,
             time_vec=train_times[i],
             tau=tau,
@@ -233,7 +233,7 @@ def split_train_test(
             _data.detach(),
             seq_len=seq_len,
             # keep per worm test size constant
-            num_samples=test_size // len(test_splits),
+            num_samples=max(1, test_size // len(test_splits)),
             reverse=(not reverse),
             time_vec=test_times[i],
             tau=tau,

@@ -31,10 +31,11 @@ VALID_DATASETS = {
     "Uzel2022",
     "Skora2018",
     "Nichols2017",
-    # "Nguyen2017",  # no named neurons!
+    "Nguyen2017",  # no named neurons! DON'T use.
     "Kato2015",
     "Kaplan2020",
-    "Flavell2023",  # something wrong with this
+    "Leifer2023",
+    "Flavell2023",  # something wrong with worm0.
     # test datasets
     "sine",
     "sine_seq",
@@ -42,7 +43,7 @@ VALID_DATASETS = {
     "sine_noise",
     "sum_sine",
     "sum_sine_noise",
-}  # TODO: set an option for pooling all datasets
+}
 
 # list of all 302 hermaphrodite neurons
 NEURONS_302 = sorted(

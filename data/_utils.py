@@ -20,7 +20,7 @@ class NeuralActivityDataset(torch.utils.data.Dataset):
         neurons=None,
         time_vec=None,
         reverse=False,
-        tau=1,  # deprecated
+        tau=1,
         use_residual=False,
     ):
         """
@@ -48,9 +48,7 @@ class NeuralActivityDataset(torch.utils.data.Dataset):
         super(NeuralActivityDataset, self).__init__()
         # check the inputs
         assert torch.is_tensor(data), "Recast the data as type `torch.tensor`."
-        assert data.ndim == 2 and data.size(0) > data.size(
-            1
-        ), "Reshape the data tensor as (time, neurons)"
+        assert data.ndim == 2, "Reshape the data tensor as (time, neurons)"
         assert isinstance(seq_len, int) and 0 < seq_len <= data.size(
             0
         ), "Enter an integer sequence length 0 < `seq_len` <= max_time."

@@ -7,13 +7,14 @@ train:
   # constraint: epochs: int > 0  &&  save_freq: int <= epochs: int
   smooth_data: True # if True use the smoothed calcium data as input
   reverse: False # if True reverse the order of generation of the samples (sequences)
-  # TODO: change batch_size parameter to num_batches (number of batches per epoch)
-  batch_size: 128 # maximum number of samples (sequences) per batch (currently unused)
+  # interpretation: larger num. batches corresponds to smaller batch size;
+  # thus, smaller num. batches corresponds to greater parallelization
+  num_batches: 4 # total number of batches per epoch (worm cohorts)
   train_size: 5000 # approx. number of samples (sequences) of training data per epoch
-  test_size: 1000 # approx. number of samples (sequences) of validation data per epoch
+  test_size: 500 # approx. number of samples (sequences) of validation data per epoch
   # constraint: batch_size: int <= min(train_size: int, test_size: int)
   shuffle: True # whether to shuffle samples from each worm
-  tau_in: 1 # offset of target seqeunce from input sequence that we wish to train with 
-  tau_out: 1 # offset of target seqeunce from input sequence that we wish to make predictions with
+  tau_in: 1 # offset of target sequence from input sequence that we wish to train with 
+  tau_out: 1 # offset of target sequence from input sequence that we wish to make predictions with
   # constraint: tau_in: int == 1, tau_out: int > 0
-  optimizer: Adam # which Pytorch optimizer to use; options: Adam, SGD, None
+  optimizer: SGD # which Pytorch optimizer to use; options: Adam, SGD, None
