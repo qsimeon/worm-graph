@@ -7,7 +7,7 @@ os.environ["CUDA_LAUNCH_BLOCKING"] = "1"
 
 NUM_NEURONS = 302
 
-RAW_DATA_URL = "https://www.dropbox.com/s/lw9cblxawqsbr2w/opensource_data.zip?dl=1"
+RAW_DATA_URL = "https://www.dropbox.com/s/45yqpvtsncx4095/raw_data.zip?dl=1"
 
 RAW_FILES = [
     "GHermChem_Edges.csv",
