@@ -7,7 +7,9 @@ train:
   # constraint: epochs: int > 0  &&  save_freq: int <= epochs: int
   smooth_data: True # if True use the smoothed calcium data as input
   reverse: False # if True reverse the order of generation of the samples (sequences)
-  num_batches: 32 # total number of batches per epoch (i.e. per cohort of worms)
+  # interpretation: larger num. batches corresponds to smaller batch size;
+  # thus, smaller num. batches corresponds to greater parallelization
+  num_batches: 4 # total number of batches per epoch (worm cohorts)
   train_size: 5000 # approx. number of samples (sequences) of training data per epoch
   test_size: 500 # approx. number of samples (sequences) of validation data per epoch
   # constraint: batch_size: int <= min(train_size: int, test_size: int)

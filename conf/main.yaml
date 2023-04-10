@@ -28,7 +28,7 @@ hydra:
       train.save_freq: 100
       train.seq_len: 99 #9, 99, 199, 299
       train.k_splits: 5 #2, 5, 7
-      train.num_batches: 32 #16, 32, 64, 128, 256
+      train.num_batches: 2 #4, 8, 16, 32
       train.tau_in: 1 #1, 11, 111
       train.tau_out: 1 #0, 1, 11, 111
       train.train_size: 5000 #100, 500, 1000, 5000, 10000, 50000
@@ -40,7 +40,7 @@ hydra:
       train.reverse: False #True, False
       # MODEL
       model.type: NetworkLSTM #LinearNN, NetworkLSTM, NeuralCFC, NeuralTransformer
-      model.hidden_size: 128 #8, 16, 32, 64, 128, 512
+      model.hidden_size: 128 #8, 16, 32, 64, 128, 512, 1024, 2048
       model.num_layers: 1 #1, 2, 3, 4, 5
       # DATASET
       dataset.name: [Kato2015, Nichols2017, Skora2018, Kaplan2020, Flavell2023] #Kato2015, Nichols2017, Skora2018, Kaplan2020, Uzel2022, Flavell2023
