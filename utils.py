@@ -31,7 +31,7 @@ VALID_DATASETS = {
     "Uzel2022",
     "Skora2018",
     "Nichols2017",
-    "Nguyen2017",  # no named neurons! DON'T use.
+    "Nguyen2017",  # no named neurons. DON'T use!
     "Kato2015",
     "Kaplan2020",
     "Leifer2023",
