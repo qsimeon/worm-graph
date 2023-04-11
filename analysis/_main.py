@@ -24,7 +24,7 @@ def analysis(config: DictConfig,):
     # print(type(d))
     # print(OmegaConf.to_yaml(d))
 
-    plot_loss_vs_parameter_hydra(configs)
+    plot_loss_vs_parameter_sorted(configs, param_names=config.analysis.param_names)
 
 
     # plotting predictions
@@ -33,7 +33,7 @@ def analysis(config: DictConfig,):
             yaml_file = yaml.safe_load(f)
             plot_targets_predictions(
                 log_dir,
-                "worm1",
+                "worm0",
                 "AVAL",
                 get_config_value(yaml_file, 'global.use_residuals'),
             )
