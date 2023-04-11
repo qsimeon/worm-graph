@@ -111,9 +111,7 @@ def plot_loss_vs_parameter_sorted(configs, param_names):
             loss_path = os.path.join(config_path, 'loss_curves.csv')
             if os.path.exists(loss_path):
                 loss_df = pd.read_csv(loss_path)
-                # calculate the number of worm
-                num_worms = len([item for item in os.listdir(config_path) if item.startswith('worm')])
-                trailing_avg = loss_df['centered_test_losses'][-num_worms:].mean()
+                trailing_avg = loss_df['centered_test_losses'].min()
                 trailing_avg_values.append(trailing_avg)
 
         param_values_tuple = tuple(param_values_combination)
@@ -122,8 +120,8 @@ def plot_loss_vs_parameter_sorted(configs, param_names):
     # Plot trailing averages as scatter plot with regression line and confidence intervals
     plt.figure()
     plt.xlabel(', '.join(param_names))
-    plt.ylabel('Mean Trailing Avg. Validation Loss')
-    plt.title('Mean Trailing Avg. Validation Loss vs. {}'.format(', '.join(param_names)))
+    plt.ylabel('Trailing Validation Loss')
+    plt.title('Trailing Validation Loss vs. {}'.format(', '.join(param_names)))
     param_values_tuples = list(trailing_averages.keys())
     param_values_lists = [list(t) for t in param_values_tuples]
     sorted_x, sorted_y = zip(*sorted(zip(param_values_lists, list(trailing_averages.values()))))
