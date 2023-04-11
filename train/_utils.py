@@ -482,7 +482,7 @@ def model_predict(
     # model in/out
     calcium_data = calcium_data.squeeze(0)
     assert (
-        calcium_data.ndim == 2 and calcium_data.size(0) >= NUM_NEURONS
+        calcium_data.ndim == 2 and calcium_data.size(1) >= NUM_NEURONS
     ), "Calcium data has incorrect shape!"
     # get input and output
     input = calcium_data.detach().to(DEVICE)
