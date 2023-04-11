@@ -497,6 +497,19 @@ def load_Flavell2023():
     Flavell2023 = pickle.load(pickle_in)
     return Flavell2023
 
+def load_Leifer2023():
+    """
+    Loads the worm neural activity datasets from from Leifer et al., bioRxiv 2023,
+    Neural signal propagation atlas of C. elegans.
+    """
+    # ensure the data has been preprocessed
+    file = os.path.join(ROOT_DIR, "data", "processed", "neural", "Leifer2023.pickle")
+    assert os.path.exists(file)
+    pickle_in = open(file, "rb")
+    # unpickle the data
+    Leifer2023 = pickle.load(pickle_in)
+    return Leifer2023
+
 
 def graph_inject_data(single_worm_dataset, connectome_graph):
     """

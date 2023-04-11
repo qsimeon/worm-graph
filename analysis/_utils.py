@@ -131,3 +131,4 @@ def plot_loss_vs_parameter_sorted(configs, param_names):
     plt.legend()
     plt.savefig(os.path.join(os.getcwd()+"/analysis/figures/", "val_loss_on_[" + str(param_names[0]) + "_" + str(time_stamp) + "].png"))
     plt.show()
+
