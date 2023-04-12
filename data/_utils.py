@@ -13,15 +13,15 @@ class NeuralActivityDataset(torch.utils.data.Dataset):
     """
 
     def __init__(
-        self,
-        data,
-        seq_len=17,
-        num_samples=1024,
-        neurons=None,
-        time_vec=None,
-        reverse=False,
-        tau=1,
-        use_residual=False,
+            self,
+            data,
+            seq_len=17,
+            num_samples=1024,
+            neurons=None,
+            time_vec=None,
+            reverse=False,
+            tau=1,
+            use_residual=False,
     ):
         """
         Args:
@@ -53,7 +53,7 @@ class NeuralActivityDataset(torch.utils.data.Dataset):
             0
         ), "Enter an integer sequence length 0 < `seq_len` <= max_time."
         assert (
-            isinstance(tau, int) and 0 <= tau < data.size(0) // 2
+                isinstance(tau, int) and 0 <= tau < data.size(0) // 2
         ), "Enter a integer offset `0 <= tau < max_time // 2`."
         # create time vector
         if time_vec is not None:
@@ -102,7 +102,7 @@ class NeuralActivityDataset(torch.utils.data.Dataset):
         # data samples: input (X_tau) and target (Y_tau)
         X_tau = self.data[start:end, self.neurons].detach().clone()
         Y_tau = (
-            self.data[start + self.tau : end + self.tau, self.neurons].detach().clone()
+            self.data[start + self.tau: end + self.tau, self.neurons].detach().clone()
         )  # overlap
         # calculate the residual (forward first derivative)
         Res_tau = (Y_tau - X_tau).detach() / (avg_dt * max(1, self.tau))
@@ -147,11 +147,11 @@ class NeuralActivityDataset(torch.utils.data.Dataset):
 
 class CElegansConnectome(InMemoryDataset):
     def __init__(
-        self,
-        root=os.path.join(ROOT_DIR, "data"),
-        transform=None,
-        pre_transform=None,
-        pre_filter=None,
+            self,
+            root=os.path.join(ROOT_DIR, "data"),
+            transform=None,
+            pre_transform=None,
+            pre_filter=None,
     ):
         """
         Defines CElegansConnectome as a subclass of a PyG InMemoryDataset.
@@ -236,9 +236,9 @@ def pick_worm(dataset, wormid):
         dataset = load_dataset(dataset)
     else:
         assert (
-            isinstance(dataset, dict)
-            and ("name" in dataset.keys())
-            and ("worm0" in set(dataset["generator"]))
+                isinstance(dataset, dict)
+                and ("name" in dataset.keys())
+                and ("worm0" in set(dataset["generator"]))
         ), "Not a valid worm datset!"
     avail_worms = set(dataset["generator"])
     if isinstance(wormid, str) and wormid.startswith("worm"):
@@ -268,7 +268,7 @@ def load_dataset(name):
     Loads the dataset with the specified name.
     """
     assert (
-        name in VALID_DATASETS
+            name in VALID_DATASETS
     ), "Unrecognized dataset! Please pick one from:\n{}".format(list(VALID_DATASETS))
     loader = eval("load_" + name)
     return loader()
@@ -486,7 +486,7 @@ def load_Uzel2022():
 
 def load_Flavell2023():
     """
-    Loads the worm neural activity datasets from from Flavell et al., bioRxiv 2023,
+    Loads the worm neural activity datasets from Flavell et al., bioRxiv 2023,
     Brain-wide representations of behavior spanning multiple timescales and states in C. elegans.
     """
     # ensure the data has been preprocessed
@@ -496,6 +496,20 @@ def load_Flavell2023():
     # unpickle the data
     Flavell2023 = pickle.load(pickle_in)
     return Flavell2023
+
+
+def load_Leifer2023():
+    """
+    Loads the worm neural activity datasets from Leifer et al., bioRxiv 2023,
+    Neural signal propagation atlas of C. elegans.
+    """
+    # ensure the data has been preprocessed
+    file = os.path.join(ROOT_DIR, "data", "processed", "neural", "Leifer2023.pickle")
+    assert os.path.exists(file)
+    pickle_in = open(file, "rb")
+    # unpickle the data
+    Leifer2023 = pickle.load(pickle_in)
+    return Leifer2023
 
 
 def graph_inject_data(single_worm_dataset, connectome_graph):

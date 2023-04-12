@@ -20,7 +20,7 @@ hydra:
   sweep:
     dir: logs/hydra/${now:%Y_%m_%d_%H_%M_%S}
     # subdir: ${hydra.job.override_dirname} # this gives a filename too long error
-    subdir: ${hydra.job.num}
+    subdir: ${hydra.job.override_dirname}
   sweeper:
     params:
       # TRAIN

@@ -35,6 +35,7 @@ def pipeline(config: DictConfig,) -> None:
     )
 
     # plot figures
+    config.visualize.log_dir = log_dir
     plot_figures(config, log_dir)
     ## TODO: analysis
     # analyze_outputs(config, log_dir)
