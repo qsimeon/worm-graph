@@ -2165,7 +2165,14 @@ def pickle_Leifer2023(transform, smooth_method="fft"):
     num_worms = int(len(files) / 6)  # every worm has 6 txt files
 
     for i in range(0, num_worms):
-        worm = "worm" + str(i)
+        # worm27 doesn't have neuron labels
+        if i == 27:
+            continue
+
+        if i < 27:
+            worm = "worm" + str(i)
+        else:
+            worm = "worm" + str(i - 1)
 
         real_data = []
         with open(os.path.join(data_dir, str(i) + "_gcamp.txt"), "r") as f:
@@ -2182,27 +2189,46 @@ def pickle_Leifer2023(transform, smooth_method="fft"):
 
         num_unnamed = 0
         label_list = label_list[: real_data.shape[1]]
+        neuron_to_idx = dict()
+
         for j, item in enumerate(label_list):
             previous_list = label_list[:j]
-            # if the neuron is unnamed, give it a name
+            # if the neuron is unnamed, give it a number larger than 302
             if item == "" or item == "smthng else":
-                label_list[j] = str(j + 300)
+                label_list[j] = str(j + 302)
                 num_unnamed += 1
-            elif item in previous_list:
-                label_list[j] = str(j + 300)
-                num_unnamed += 1
+                neuron_to_idx[str(j + 302)] = j
             else:
-                label_list[j] = item
-
-        neuron_to_idx = dict()
-        for k, item in enumerate(label_list):
-            neuron_to_idx[item] = k
+                # if the neuron is named, and the name is unique, add it to the dictionary
+                if item in NEURONS_302 and item not in previous_list:
+                    neuron_to_idx[item] = j
+                # if the neuron is named, but the name is not unique, give it a number larger than 302
+                elif item in NEURONS_302 and item in previous_list:
+                    label_list[j] = str(j + 302)
+                    num_unnamed += 1
+                    neuron_to_idx[str(j + 302)] = j
+                else:
+                    # if the neuron is recorded without L or R, choose one valid name for it
+                    if str(item + "L") in NEURONS_302 and str(item + "L") not in previous_list:
+                        label_list[j] = str(item + "L")
+                        neuron_to_idx[str(item + "L")] = j
+                    elif str(item + "R") in NEURONS_302 and str(item + "R") not in previous_list:
+                        label_list[j] = str(item + "R")
+                        neuron_to_idx[str(item + "R")] = j
+                    else:
+                        label_list[j] = str(j + 302)
+                        num_unnamed += 1
+                        neuron_to_idx[str(j + 302)] = j
 
         sc = transform  # normalize data
         real_data = sc.fit_transform(real_data)
         real_data = torch.tensor(
             real_data, dtype=torch.float32
         )  # add a feature dimension and convert to tensor
+
+        # replace nan and inf with 0
+        real_data = torch.nan_to_num(real_data, nan=0.0, posinf=0.0, neginf=0.0)
+
         smooth_real_data, residual, smooth_residual = smooth_data_preprocess(
             real_data, smooth_method
         )
@@ -2214,7 +2240,7 @@ def pickle_Leifer2023(transform, smooth_method="fft"):
                 timeVectorSeconds.append(str_to_float(l))
 
         time_in_seconds = np.array(timeVectorSeconds)
-        time_in_seconds = torch.tensor(time_in_seconds).to(torch.float32)
+        time_in_seconds = torch.tensor(time_in_seconds).to(torch.float32).unsqueeze(1)
         dt = torch.zeros_like(time_in_seconds).to(torch.float32)
         dt[1:] = time_in_seconds[1:] - time_in_seconds[:-1]
 

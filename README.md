@@ -43,13 +43,10 @@
 │   ├── Skora2018
 │   ├── Uzel2022
 │   ├── _main.py
-│   ├── _pkg 2.py
 │   ├── _pkg.py
 │   ├── _utils.py
-│   ├── correlation 2.png
 │   ├── correlation.png
 │   ├── govfunc_lorenz
-│   ├── rsa_analysis_Uzel2022 2.ipynb
 │   ├── rsa_analysis_Uzel2022.ipynb
 │   ├── worm_response_pred.png
 │   └── worm_response_target.png
