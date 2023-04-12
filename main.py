@@ -2,7 +2,9 @@ from pkg import *
 
 
 @hydra.main(version_base=None, config_path="conf", config_name="main")
-def pipeline(config: DictConfig,) -> None:
+def pipeline(
+    config: DictConfig,
+) -> None:
     """
     Runs a complete pipeline using the parameters in main.yaml.
     Calls the below subroutines with parameters in their
@@ -15,7 +17,7 @@ def pipeline(config: DictConfig,) -> None:
         TODO: analyze_outputs: analysis.yaml
     """
     # print Pytorch device
-    print("\ntorch device: %s"%(DEVICE), end="\n\n")
+    print("\ntorch device: %s" % (DEVICE), end="\n\n")
 
     # skips if data already preprocessed
     process_data(config)
@@ -35,7 +37,6 @@ def pipeline(config: DictConfig,) -> None:
     )
 
     # plot figures
-    config.visualize.log_dir = log_dir
     plot_figures(config, log_dir)
     ## TODO: analysis
     # analyze_outputs(config, log_dir)
