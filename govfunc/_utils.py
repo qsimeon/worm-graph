@@ -131,11 +131,11 @@ def poolData(yin, nVars, polyorder, usesine):
                         for m in range(l, nVars):
                             yout = np.c_[yout, np.ones(n)]
                             yout[:, ind] = (
-                                    yin[:, i]
-                                    * yin[:, j]
-                                    * yin[:, k]
-                                    * yin[:, l]
-                                    * yin[:, m]
+                                yin[:, i]
+                                * yin[:, j]
+                                * yin[:, k]
+                                * yin[:, l]
+                                * yin[:, m]
                             )
                             ind += 1
 
@@ -191,7 +191,9 @@ def calculas(y0, y_hat):
 
 def plot_coefficient_no_save(data, w, sorted):
     plt.figure(figsize=(40, 40))
-    sns.heatmap(data=data, square=True, cmap="RdBu_r", center=0)  # , linecolor='grey', linewidths=0.01)
+    sns.heatmap(
+        data=data, square=True, cmap="RdBu_r", center=0
+    )  # , linecolor='grey', linewidths=0.01)
     if sorted:
         plt.title("(sourted) Coefficient of neurons activities of " + w)
     else:
@@ -201,21 +203,29 @@ def plot_coefficient_no_save(data, w, sorted):
 
 def plot_coefficient(data, sorted, w, path):
     plt.figure(figsize=(40, 40))
-    sns.heatmap(data=data, square=True, cmap="RdBu_r", center=0)  # , linecolor='grey', linewidths=0.01)
+    sns.heatmap(
+        data=data, square=True, cmap="RdBu_r", center=0
+    )  # , linecolor='grey', linewidths=0.01)
     if sorted:
         plt.title("(sourted) Coefficient of neurons activities of " + w)
-        plt.savefig(os.path.join(path, 'sorted_coeff_' + w + '.png'))
+        plt.savefig(os.path.join(path, "sorted_coeff_" + w + ".png"))
     else:
         plt.title("(unsourted) Coefficient of neurons activities of " + w)
-        plt.savefig(os.path.join(path, 'coeff_' + w + '.png'))
+        plt.savefig(os.path.join(path, "coeff_" + w + ".png"))
 
 
 def coef_analysis(dataset_name, worm_name, n_cluster, folder):
     def plot_dendrogram_scipy(clusters, labels):
         plt.figure(figsize=(30, 8))
-        dendrogram = hierarchy.dendrogram(clusters, labels=labels, p=6, orientation="top", leaf_font_size=5,
-                                          leaf_rotation=360)
-        plt.ylabel('Euclidean Distance')
+        dendrogram = hierarchy.dendrogram(
+            clusters,
+            labels=labels,
+            p=6,
+            orientation="top",
+            leaf_font_size=5,
+            leaf_rotation=360,
+        )
+        plt.ylabel("Euclidean Distance")
         plt.show()
         return dendrogram["ivl"], dendrogram["leaves_color_list"]
 

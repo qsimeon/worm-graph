@@ -2,6 +2,7 @@ import os
 import hydra
 from omegaconf import OmegaConf, DictConfig
 
+
 @hydra.main(version_base=None, config_path="../../conf", config_name="testing")
 def main(cfg: DictConfig) -> None:
     print("Working directory:", os.getcwd(), end="\n\n")

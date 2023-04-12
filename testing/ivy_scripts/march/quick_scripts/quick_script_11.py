@@ -60,21 +60,29 @@ if __name__ == "__main__":
 
     for i in range(0, single_worm_dataset["max_time"], tau):
         if i == 0:
-            calcium_data = single_worm_dataset["smooth_calcium_data"][i:i + tau, neuron_inds]
+            calcium_data = single_worm_dataset["smooth_calcium_data"][
+                i : i + tau, neuron_inds
+            ]
         else:
-            calcium_data = predictions[i - tau:i, neuron_inds]
+            calcium_data = predictions[i - tau : i, neuron_inds]
         t, p = model_predict(model, calcium_data * named_neurons_mask)
-        predictions[i:i + p.shape[0], neuron_inds] = p
+        predictions[i : i + p.shape[0], neuron_inds] = p
 
-    targets[0:single_worm_dataset["max_time"], :] = single_worm_dataset["calcium_data"]
+    targets[0 : single_worm_dataset["max_time"], :] = single_worm_dataset[
+        "calcium_data"
+    ]
     print("Targets:", targets.shape, "\nPredictions:", predictions.shape, end="\n\n")
 
-   
     for neuron in range(0, 20):
         if single_worm_dataset["named_neurons_mask"][neuron].item():
             plt.figure()
             plt.plot(range(targets.shape[0]), targets[:, neuron], label="target")
-            plt.plot(range(tau, tau + predictions.shape[0]), predictions[:, neuron], alpha=0.8, label="prediction")
+            plt.plot(
+                range(tau, tau + predictions.shape[0]),
+                predictions[:, neuron],
+                alpha=0.8,
+                label="prediction",
+            )
             plt.legend()
             plt.title("Neuron %s target and prediction" % neuron)
             plt.xlabel("Time")

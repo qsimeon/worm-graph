@@ -18,9 +18,13 @@ class Net(nn.Module):
     def weight_exp(self, input):
         # input shape: [batch_size, neurons, seq_len]
         seq_len = input.shape[2]
-        matrix = np.array([math.e ** (-p * 1.0 / self.tau) for p in range(1, seq_len + 1)])
+        matrix = np.array(
+            [math.e ** (-p * 1.0 / self.tau) for p in range(1, seq_len + 1)]
+        )
         sum_result = matrix.sum()
-        coef = [math.e ** (-q * 1.0 / self.tau) / sum_result for q in range(1, seq_len + 1)]
+        coef = [
+            math.e ** (-q * 1.0 / self.tau) / sum_result for q in range(1, seq_len + 1)
+        ]
         coef = torch.tensor(coef).to(torch.float32)
         return coef
 
@@ -48,12 +52,13 @@ if __name__ == "__main__":
     list_save = []
     for no in neuron_range:
         if no is not name_mask:
-            residual = single_worm_dataset["residual_calcium"][:, no].reshape(
-                single_worm_dataset["residual_calcium"].shape[0], 1).to(
-                torch.float32)
+            residual = (
+                single_worm_dataset["residual_calcium"][:, no]
+                .reshape(single_worm_dataset["residual_calcium"].shape[0], 1)
+                .to(torch.float32)
+            )
         else:
-            residual = single_worm_dataset["residual_calcium"][:, no].to(
-                torch.float32)
+            residual = single_worm_dataset["residual_calcium"][:, no].to(torch.float32)
 
         alpha_list = []
         for half_seq_len in half_life_seq_len_range:
@@ -66,12 +71,14 @@ if __name__ == "__main__":
                 input_group = []
                 target_group = []
                 for t in range(length, residual.shape[0] - 1):
-                    cal_input = residual[t - length:t].T
-                    target = residual[t:t + 1].T.squeeze()
+                    cal_input = residual[t - length : t].T
+                    target = residual[t : t + 1].T.squeeze()
                     input_group.append(np.array(cal_input))
                     target_group.append(np.array(target))
-                train_dataset = torch.utils.data.TensorDataset(torch.tensor(np.array(input_group)),
-                                                               torch.tensor(np.array(target_group)))
+                train_dataset = torch.utils.data.TensorDataset(
+                    torch.tensor(np.array(input_group)),
+                    torch.tensor(np.array(target_group)),
+                )
                 train_loader = torch.utils.data.DataLoader(
                     dataset=train_dataset,
                     batch_size=128,
@@ -86,7 +93,12 @@ if __name__ == "__main__":
                         optimizer.zero_grad()
                         loss.backward()
                         optimizer.step()
-            print("half_seq_len = ", half_seq_len, "alpha = ", net.state_dict()["alpha"].item())
+            print(
+                "half_seq_len = ",
+                half_seq_len,
+                "alpha = ",
+                net.state_dict()["alpha"].item(),
+            )
             alpha_list.append(net.state_dict()["alpha"].item())
         # for each neuron: for each tau model had an optimal alpha
         list_save.append(alpha_list)

@@ -2209,10 +2209,16 @@ def pickle_Leifer2023(transform, smooth_method="fft"):
                     neuron_to_idx[str(j + 302)] = j
                 else:
                     # if the neuron is recorded without L or R, choose one valid name for it
-                    if str(item + "L") in NEURONS_302 and str(item + "L") not in previous_list:
+                    if (
+                        str(item + "L") in NEURONS_302
+                        and str(item + "L") not in previous_list
+                    ):
                         label_list[j] = str(item + "L")
                         neuron_to_idx[str(item + "L")] = j
-                    elif str(item + "R") in NEURONS_302 and str(item + "R") not in previous_list:
+                    elif (
+                        str(item + "R") in NEURONS_302
+                        and str(item + "R") not in previous_list
+                    ):
                         label_list[j] = str(item + "R")
                         neuron_to_idx[str(item + "R")] = j
                     else:

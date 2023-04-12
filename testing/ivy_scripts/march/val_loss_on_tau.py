@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # encoding: utf-8
-'''
+"""
 @author: ivy
 @contact: ivyivyzhao77@gmail.com
 @software: PyCharm 2022.3
@@ -11,16 +11,16 @@ visualize the relationship between val_loss - baseline and tau_train, and
 quantitative meature two different criteria for "baseline":
 (1).    use y_t(current) as the prediction
 (2).    use the average of data[t + tau: t + tau + seq_len]
-'''
+"""
 
 from train._utils import *
 
 
 def train_model(
-        model: torch.nn.Module,
-        dataset: dict,
-        config: DictConfig,
-        shuffle: bool = True,  # whether to shuffle worms
+    model: torch.nn.Module,
+    dataset: dict,
+    config: DictConfig,
+    shuffle: bool = True,  # whether to shuffle worms
 ) -> tuple[torch.nn.Module, str]:
     """
     Trains a model on a multi-worm dataset. Returns the trained model
@@ -206,7 +206,7 @@ if __name__ == "__main__":
     model_config = OmegaConf.load("conf/model.yaml")
     # model_config.model.input_size = dataset["worm0"]["named_neurons_mask"].shape[0]
     model = get_model(model_config)
-    
+
     # if not all worms are needed, e.g. here we only choose one worm
     for i in range(len(dataset) - 1):
         d = dataset.popitem()
@@ -239,17 +239,39 @@ if __name__ == "__main__":
         ori_val_loss.append(loss_df["test_losses"].get(config.train.epochs - 1))
 
         targets, predictions = model_predict(model, calcium_data)
-        print("Targets:", targets.shape, "\nPredictions:", predictions.shape, end="\n\n")
+        print(
+            "Targets:", targets.shape, "\nPredictions:", predictions.shape, end="\n\n"
+        )
 
         for neuron in [12, 22]:
             plt.figure()
             plt.plot(targets[:, neuron], label="target")
-            plt.plot(range(t, t+predictions[:, neuron].shape[0]), predictions[:, neuron], alpha=0.8, label="prediction")
+            plt.plot(
+                range(t, t + predictions[:, neuron].shape[0]),
+                predictions[:, neuron],
+                alpha=0.8,
+                label="prediction",
+            )
             plt.legend()
-            plt.title("Neuron " + str(neuron)+ " target and prediction on tau = " + str(t) + "\n baseline = current")
+            plt.title(
+                "Neuron "
+                + str(neuron)
+                + " target and prediction on tau = "
+                + str(t)
+                + "\n baseline = current"
+            )
             plt.xlabel("Time")
             plt.ylabel("$Ca^{2+} \Delta F / F$")
-            plt.savefig(os.path.join(path, "Neuron " + str(neuron)+ " target and prediction on tau = " + str(t) + ".png"))
+            plt.savefig(
+                os.path.join(
+                    path,
+                    "Neuron "
+                    + str(neuron)
+                    + " target and prediction on tau = "
+                    + str(t)
+                    + ".png",
+                )
+            )
 
     plt.figure()
     plt.plot(tau_range, val_loss)
@@ -257,6 +279,7 @@ if __name__ == "__main__":
     plt.legend(["cen_loss", "ori_loss"], loc="upper right")
     plt.ylabel("MSE loss")
     plt.xlabel("tau (tau_in == tau_out == tau)")
-    plt.title("val_loss - baseline on tau \n baseline: current  worm: worm0  dataset: Uzel2022")
+    plt.title(
+        "val_loss - baseline on tau \n baseline: current  worm: worm0  dataset: Uzel2022"
+    )
     plt.show()
-

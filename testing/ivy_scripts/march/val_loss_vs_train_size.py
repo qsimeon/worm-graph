@@ -1,15 +1,16 @@
 #!/usr/bin/env python
 # encoding: utf-8
-'''
+"""
 @author: ivy
 @contact: ivyivyzhao77@gmail.com
 @software: PyCharm 2022.3
 @file: val_loss_vs_train_size.py
 @time: 2023/3/30 15:25
-'''
+"""
 
 from train._main import *
 import matplotlib.pyplot as plt
+
 
 def specific_log(x, y, timestamp, log_dir):
     hyper_log = dict()
@@ -19,7 +20,7 @@ def specific_log(x, y, timestamp, log_dir):
         {
             str(x): x,
             str(y): loss_df[str(y)][-1],
-        }
+        },
     )
     return hyper_log
 
@@ -42,7 +43,7 @@ if __name__ == "__main__":
 
         for train_size in train_size_range:
             config.train.train_size = train_size
-            
+
             timestamp = datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
             time_range.append(timestamp)
 
@@ -56,14 +57,18 @@ if __name__ == "__main__":
 
             loss_df = pd.read_csv(os.path.join(log_dir, "loss_curves.csv"), index_col=0)
 
-            val_loss = np.array(loss_df["centered_test_losses"])[-len(dataset):].mean()
+            val_loss = np.array(loss_df["centered_test_losses"])[-len(dataset) :].mean()
             hyper_log.append(val_loss)
         plt.plot(train_size_range, hyper_log)
-    
+
     plt.ylabel("validation loss - baseline")
     plt.xlabel("train_size")
     plt.title("model = LSTM(_, 64, 1), seq_len=tau=100, epoch=100")
     plt.legend(datasets)
-    plt.savefig(os.path.join(os.getcwd()+"/testing/ivy_scripts/figures/", "train_size_small_adam_avg.png"))
+    plt.savefig(
+        os.path.join(
+            os.getcwd() + "/testing/ivy_scripts/figures/",
+            "train_size_small_adam_avg.png",
+        )
+    )
     plt.show()
-

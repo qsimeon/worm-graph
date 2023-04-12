@@ -27,8 +27,8 @@ def alpha_relation(velocity, residual, alpha, seq_len, tau):
     val_loss_history = []
     loss_func = torch.nn.MSELoss()
     for t in range(seq_len, train_border - tau):
-        input = residual[t - seq_len: t].T
-        target = residual[t:t + tau].T
+        input = residual[t - seq_len : t].T
+        target = residual[t : t + tau].T
         prediction = input @ coef
         # print(coef.shape, input.shape, target.shape, prediction.shape)
         loss = loss_func(prediction, target)
@@ -48,8 +48,8 @@ def seq_diff(velocity, residual, seq_len, tau, epoch):
     train_border = 3000
     for e in range(epoch):
         for t in range(seq_len, train_border - seq_len):
-            input = velocity[t - seq_len: t].T
-            target = residual[t: t + tau].T
+            input = velocity[t - seq_len : t].T
+            target = residual[t : t + tau].T
             prediction = net.forward(input)
             loss = loss_func(prediction, target)
             optimizer.zero_grad()
@@ -66,8 +66,8 @@ def seq_diff(velocity, residual, seq_len, tau, epoch):
     net.eval()
     val_loss_history = []
     for t in range(train_border, residual.shape[0] - tau - seq_len):
-        input = velocity[t: t + seq_len].T
-        target = residual[t + seq_len + 1: t + seq_len + 1 + tau].T
+        input = velocity[t : t + seq_len].T
+        target = residual[t + seq_len + 1 : t + seq_len + 1 + tau].T
         prediction = net.forward(input)
         loss = loss_func(prediction, target)
         val_loss_history.append(loss.detach().numpy())
@@ -89,11 +89,17 @@ if __name__ == "__main__":
 
     seq_for_neurons = []
     for i in range(len(dict_setting)):
-        calcium_data = single_worm_dataset["calcium_data"][:, dict_setting[i]].to(torch.float32)
-        residual = single_worm_dataset["residual_calcium"][:, dict_setting[i]].to(torch.float32)
+        calcium_data = single_worm_dataset["calcium_data"][:, dict_setting[i]].to(
+            torch.float32
+        )
+        residual = single_worm_dataset["residual_calcium"][:, dict_setting[i]].to(
+            torch.float32
+        )
 
         dx_nan = torch.div(residual, single_worm_dataset["dt"])
-        velocity = torch.where(torch.isnan(dx_nan), torch.full_like(dx_nan, 0), dx_nan).to(torch.float32)
+        velocity = torch.where(
+            torch.isnan(dx_nan), torch.full_like(dx_nan, 0), dx_nan
+        ).to(torch.float32)
         cols_with_data_mask = name_mask
         labels_neurons_with_data = [
             single_worm_dataset["slot_to_neuron"][slot]
@@ -111,7 +117,9 @@ if __name__ == "__main__":
                 alpha_range.append(alpha)
                 loss = alpha_relation(velocity, residual, alpha, seq_len, tau)
                 mean_val_loss.append(loss)
-            alpha_for_one_seq.append(alpha_range[mean_val_loss.index(np.array(mean_val_loss).min())])
+            alpha_for_one_seq.append(
+                alpha_range[mean_val_loss.index(np.array(mean_val_loss).min())]
+            )
         seq_for_neurons.append(alpha_for_one_seq)
 
     plt.xlabel("seq_len")
@@ -120,7 +128,9 @@ if __name__ == "__main__":
     for k in range(len(dict_setting)):
         if k is not len(dict_setting) - 1:
             plt.plot(seq_range, seq_for_neurons[k])
-            list_neuron_name.append(single_worm_dataset["slot_to_neuron"][dict_setting[k]])
+            list_neuron_name.append(
+                single_worm_dataset["slot_to_neuron"][dict_setting[k]]
+            )
         else:
             plt.plot(seq_range, seq_for_neurons[k])
             list_neuron_name.append("all named neurons")
