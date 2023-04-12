@@ -193,3 +193,4 @@ dmypy.json
 ./data/processed/neural/Leifer2023.pickle
 ./data/processed/neural/sine.pickle
 *.sh
+nohup.out
