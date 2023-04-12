@@ -27,7 +27,6 @@ if __name__ == "__main__":
     plt.plot(calcium_data)
     plt.show()
 
-
     time_vec = single_worm_dataset.get("time_in_seconds", None)
     # create a model
     model = NetworkLSTM(num_neurons, 64, 1).double()
@@ -68,7 +67,12 @@ if __name__ == "__main__":
         if single_worm_dataset["named_neurons_mask"][neuron].item():
             plt.figure()
             plt.plot(range(targets.shape[0]), targets[:, neuron], label="target")
-            plt.plot(range(tau_test, tau_test + predictions.shape[0]), predictions[:, neuron], alpha=0.8, label="prediction")
+            plt.plot(
+                range(tau_test, tau_test + predictions.shape[0]),
+                predictions[:, neuron],
+                alpha=0.8,
+                label="prediction",
+            )
             plt.legend()
             plt.title("Neuron %s target and prediction" % neuron)
             plt.xlabel("Time")

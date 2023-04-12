@@ -11,12 +11,13 @@
 from govfunc._utils import *
 
 
-def main(dataset: dict,
-         config: DictConfig,
-         folder,
-         optimizer: Union[torch.optim.Optimizer, None] = None,
-         shuffle: bool = False,
-         ):
+def main(
+    dataset: dict,
+    config: DictConfig,
+    folder,
+    optimizer: Union[torch.optim.Optimizer, None] = None,
+    shuffle: bool = False,
+):
     # single_worm_dataset = dataset["worm0"]
     # calcium_data = dataset["worm0"]["calcium_data"]
     # residual = dataset["worm0"]["residual_calcium"]
@@ -62,12 +63,16 @@ def main(dataset: dict,
         start = config.govfunc.start
         tau = config.govfunc.tau
         seq_len = dataset[worm]["max_time"] - tau - start - 1
-        assert seq_len + start + tau < dataset[worm]["max_time"], "exceed the max_time length"
+        assert (
+            seq_len + start + tau < dataset[worm]["max_time"]
+        ), "exceed the max_time length"
 
         # cal to res, tau = 1
-        x = calcium_data[start:start + seq_len]
-        residual = residual[start + tau:start + seq_len + tau]
-        dx_nan = torch.div(residual, dataset[worm]["dt"][start + tau:start + seq_len + tau])
+        x = calcium_data[start : start + seq_len]
+        residual = residual[start + tau : start + seq_len + tau]
+        dx_nan = torch.div(
+            residual, dataset[worm]["dt"][start + tau : start + seq_len + tau]
+        )
         dx = torch.where(torch.isnan(dx_nan), torch.full_like(dx_nan, 0), dx_nan)
 
         # # cal to cal, tau = 10, start:end = start:(start+seq_len)
@@ -105,11 +110,22 @@ def main(dataset: dict,
         if not isExist:
             os.mkdir(parent_path)
 
-        path = os.getcwd() + "/govfunc" + folder + "/coefficient_CalToRes_tau_" + str(tau)
+        path = (
+            os.getcwd() + "/govfunc" + folder + "/coefficient_CalToRes_tau_" + str(tau)
+        )
         isExist = os.path.exists(path)
         if not isExist:
             os.mkdir(path)
-        data.to_hdf("./govfunc" + folder + "/coefficient_CalToRes_tau_" + str(tau) + "/coef_" + worm + '.hdf', "test")
+        data.to_hdf(
+            "./govfunc"
+            + folder
+            + "/coefficient_CalToRes_tau_"
+            + str(tau)
+            + "/coef_"
+            + worm
+            + ".hdf",
+            "test",
+        )
     return
 
     # # true calcium_data: worm[0]["calcium_data"]
@@ -142,7 +158,10 @@ if __name__ == "__main__":
     main(dataset, config, folder=f)
 
     for i in range(0, len(dataset)):
-        data, sorted_np = coef_analysis(dataset_name=dataset["worm0"]["dataset"], worm_name="worm" + str(i),
-                                        n_cluster=3,
-                                        folder=f + "/coefficient_CalToRes_tau_" + str(config.govfunc.tau))
+        data, sorted_np = coef_analysis(
+            dataset_name=dataset["worm0"]["dataset"],
+            worm_name="worm" + str(i),
+            n_cluster=3,
+            folder=f + "/coefficient_CalToRes_tau_" + str(config.govfunc.tau),
+        )
         print(sorted_np)

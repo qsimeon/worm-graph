@@ -40,5 +40,7 @@ if __name__ == "__main__":
     plt.legend(["cen_loss", "ori_loss"], loc="upper right")
     plt.ylabel("MSE loss")
     plt.xlabel("tau")
-    plt.title("val_loss - baseline on tau \n baseline: current  worm: worm0  dataset: Uzel2022")
+    plt.title(
+        "val_loss - baseline on tau \n baseline: current  worm: worm0  dataset: Uzel2022"
+    )
     plt.show()

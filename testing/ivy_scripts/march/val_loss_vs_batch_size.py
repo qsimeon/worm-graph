@@ -4,6 +4,7 @@
 from train._main import *
 import matplotlib.pyplot as plt
 
+
 def specific_log(x, y, timestamp, log_dir):
     hyper_log = dict()
     loss_df = pd.read_csv(os.path.join(log_dir, "loss_curves.csv"), index_col=0)
@@ -12,7 +13,7 @@ def specific_log(x, y, timestamp, log_dir):
         {
             str(x): x,
             str(y): loss_df[str(y)][-1],
-        }
+        },
     )
     return hyper_log
 
@@ -36,7 +37,7 @@ if __name__ == "__main__":
             config.train.batch_size = batch_size
 
             timestamp = datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
-            
+
             model, log_dir = train_model(
                 model,
                 dataset,
@@ -47,14 +48,17 @@ if __name__ == "__main__":
 
             loss_df = pd.read_csv(os.path.join(log_dir, "loss_curves.csv"), index_col=0)
 
-            val_loss = np.array(loss_df["centered_test_losses"])[-len(dataset):].mean()
+            val_loss = np.array(loss_df["centered_test_losses"])[-len(dataset) :].mean()
             hyper_log.append(val_loss)
 
         plt.plot(batch_size_range, hyper_log)
-    
+
     plt.ylabel("validation loss - baseline")
     plt.xlabel("batch_size")
     plt.legend(datasets)
-    plt.savefig(os.path.join(os.getcwd()+"/testing/ivy_scripts/figures/", "batch_size_datasets.png"))
+    plt.savefig(
+        os.path.join(
+            os.getcwd() + "/testing/ivy_scripts/figures/", "batch_size_datasets.png"
+        )
+    )
     plt.show()
-

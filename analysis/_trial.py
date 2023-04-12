@@ -1,12 +1,12 @@
 #!/usr/bin/env python
 # encoding: utf-8
-'''
+"""
 @author: ivy
 @contact: ivyivyzhao77@gmail.com
 @software: PyCharm 2022.3
 @file: _trial.py
 @time: 2023/4/11 19:05
-'''
+"""
 
 from analysis._utils import *
 from utils import *
@@ -28,7 +28,11 @@ num_layers = checkpoint["num_layers"]
 smooth_data = checkpoint["smooth_data"]
 epoch = checkpoint["epoch"]
 
-print("{} model was trained on dataset {} for {} epochs.".format(model_name, dataset_name, epoch))
+print(
+    "{} model was trained on dataset {} for {} epochs.".format(
+        model_name, dataset_name, epoch
+    )
+)
 
 # load model checkpoint
 model = eval(model_name)(input_size, hidden_size, num_layers)
@@ -43,5 +47,7 @@ dataset = get_dataset(config)
 # neurons_on_category(model, dataset, True, 1)
 # print("end")
 
-plot_trailing_loss_vs_parameter_legend("logs/single_dataset", "train.train_size", "dataset.name")
+plot_trailing_loss_vs_parameter_legend(
+    "logs/single_dataset", "train.train_size", "dataset.name"
+)
 print("double end")

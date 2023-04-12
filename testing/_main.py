@@ -14,7 +14,6 @@ def test_config(config: DictConfig) -> None:
     new_cfg.model = None
     # display the modified config
     print("modified config yaml:\n", OmegaConf.to_yaml(new_cfg), end="\n\n")
-    
 
 
 if __name__ == "__main__":

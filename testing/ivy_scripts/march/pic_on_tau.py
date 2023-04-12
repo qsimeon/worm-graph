@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # encoding: utf-8
-'''
+"""
 @author: ivy
 @contact: ivyivyzhao77@gmail.com
 @software: PyCharm 2022.3
@@ -11,17 +11,17 @@ visualize the relationship between val_loss - baseline and tau_train, and
 quantitative meature two different criteria for "baseline":
 (1).    use y_t(current) as the prediction
 (2).    use the average of data[t + tau: t + tau + seq_len]
-'''
+"""
 
 from train._utils import *
 from visualization._main import *
 
 
 def train_model(
-        model: torch.nn.Module,
-        dataset: dict,
-        config: DictConfig,
-        shuffle: bool = True,  # whether to shuffle worms
+    model: torch.nn.Module,
+    dataset: dict,
+    config: DictConfig,
+    shuffle: bool = True,  # whether to shuffle worms
 ) -> tuple[torch.nn.Module, str]:
     """
     Trains a model on a multi-worm dataset. Returns the trained model
@@ -205,7 +205,7 @@ if __name__ == "__main__":
     print("config:", OmegaConf.to_yaml(config), end="\n\n")
     model = get_model(OmegaConf.load("conf/model.yaml"))
     dataset = get_dataset(OmegaConf.load("conf/dataset.yaml"))
-    
+
     # if not all worms are needed, e.g. here we only choose one worm
     for i in range(len(dataset) - 1):
         d = dataset.popitem()
@@ -224,14 +224,11 @@ if __name__ == "__main__":
         loss_df = pd.read_csv(os.path.join(log_dir, "loss_curves.csv"), index_col=0)
         val_loss.append(loss_df["centered_test_losses"].get(config.train.epochs - 1))
         ori_val_loss.append(loss_df["test_losses"].get(config.train.epochs - 1))
-        
+
         config_vis = OmegaConf.load("conf/visualize.yaml")
         config_vis.visualize.log_dir = log_dir
         print("config:", OmegaConf.to_yaml(config_vis), end="\n\n")
         plot_figures(config_vis)
-
-
-
 
     plt.figure()
     plt.plot(tau_range, val_loss)
@@ -239,6 +236,7 @@ if __name__ == "__main__":
     plt.legend(["cen_loss", "ori_loss"], loc="upper right")
     plt.ylabel("MSE loss")
     plt.xlabel("tau (tau_in == tau_out == tau)")
-    plt.title("val_loss - baseline on tau \n baseline: current  worm: worm0  dataset: Uzel2022")
+    plt.title(
+        "val_loss - baseline on tau \n baseline: current  worm: worm0  dataset: Uzel2022"
+    )
     plt.show()
-

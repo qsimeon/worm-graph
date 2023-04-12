@@ -4,6 +4,7 @@
 from train._main import *
 import matplotlib.pyplot as plt
 
+
 def specific_log(x, y, timestamp, log_dir):
     hyper_log = dict()
     loss_df = pd.read_csv(os.path.join(log_dir, "loss_curves.csv"), index_col=0)
@@ -12,7 +13,7 @@ def specific_log(x, y, timestamp, log_dir):
         {
             str(x): x,
             str(y): loss_df[str(y)][-1],
-        }
+        },
     )
     return hyper_log
 
@@ -32,9 +33,8 @@ if __name__ == "__main__":
         config_data.dataset.name = d
         dataset = get_dataset(config_data)
 
-
         timestamp = datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
-        
+
         model, log_dir = train_model(
             model,
             dataset,
@@ -45,10 +45,13 @@ if __name__ == "__main__":
 
         loss_df = pd.read_csv(os.path.join(log_dir, "loss_curves.csv"), index_col=0)
         plt.plot(range(config.train.epochs), loss_df["centered_test_losses"])
-    
+
     plt.ylabel("validation loss - baseline")
     plt.xlabel("epoch")
     plt.legend(datasets)
-    plt.savefig(os.path.join(os.getcwd()+"/testing/ivy_scripts/figures/", "epoch_datasets.png"))
+    plt.savefig(
+        os.path.join(
+            os.getcwd() + "/testing/ivy_scripts/figures/", "epoch_datasets.png"
+        )
+    )
     plt.show()
-
