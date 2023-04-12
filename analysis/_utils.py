@@ -3,7 +3,9 @@
 
 from analysis._pkg import *
 from visualization._utils import *
+from train._utils import *
 import utils
+
 
 def find_config_files(root_dir):
     for file in os.listdir(root_dir):
@@ -13,6 +15,7 @@ def find_config_files(root_dir):
         elif os.path.isdir(file_path) and not file.startswith('.'):
             for config_file in find_config_files(file_path):
                 yield config_file
+
 
 def get_config_value(config, key):
     if '.' in key:
@@ -45,7 +48,8 @@ def plot_loss_vs_parameter(configs, param_names):
     for param_values_combination in itertools.product(*param_values.values()):
         matching_configs = {}
         for config_path, config in configs.items():
-            if all(get_config_value(config, param_name) == param_value for param_name, param_value in zip(param_names, param_values_combination)):
+            if all(get_config_value(config, param_name) == param_value for param_name, param_value in
+                   zip(param_names, param_values_combination)):
                 matching_configs[config_path] = config
 
         if not matching_configs:
@@ -56,7 +60,7 @@ def plot_loss_vs_parameter(configs, param_names):
             loss_path = os.path.join(config_path, 'loss_curves.csv')
             if os.path.exists(loss_path):
                 loss_df = pd.read_csv(loss_path)
-                num_worms = len(os.listdir(config_path)) - 3 # Subtract 3 for .hydra, config.yaml, and loss_curves.csv
+                num_worms = len(os.listdir(config_path)) - 3  # Subtract 3 for .hydra, config.yaml, and loss_curves.csv
                 trailing_avg = loss_df['centered_test_losses'][-num_worms:].mean()
                 trailing_avg_values.append(trailing_avg)
 
@@ -72,7 +76,7 @@ def plot_loss_vs_parameter(configs, param_names):
     param_values_lists = [list(t) for t in param_values_tuples]
     sns.regplot(x=param_values_lists, y=list(trailing_averages.values()), scatter=True, ci=95, order=2, label='Data')
     plt.legend()
-    plt.savefig(os.path.join(os.getcwd()+"/analysis/figures/", "val_loss_on_[" + str(time_stamp) + "].png"))
+    plt.savefig(os.path.join(os.getcwd() + "/analysis/figures/", "val_loss_on_[" + str(time_stamp) + "].png"))
     plt.show()
 
 
@@ -101,7 +105,8 @@ def plot_loss_vs_parameter_sorted(configs, param_names):
     for param_values_combination in itertools.product(*param_values.values()):
         matching_configs = {}
         for config_path, config in configs.items():
-            if all(get_config_value(config, param_name) == param_value for param_name, param_value in zip(param_names, param_values_combination)):
+            if all(get_config_value(config, param_name) == param_value for param_name, param_value in
+                   zip(param_names, param_values_combination)):
                 matching_configs[config_path] = config
 
         if not matching_configs:
@@ -128,9 +133,9 @@ def plot_loss_vs_parameter_sorted(configs, param_names):
     sorted_x, sorted_y = zip(*sorted(zip(param_values_lists, list(trailing_averages.values()))))
     plt.plot(sorted_x, sorted_y, label='loss')
     plt.legend()
-    plt.savefig(os.path.join(os.getcwd()+"/analysis/figures/", "val_loss_on_[" + str(param_names[0]) + "_" + str(time_stamp) + "].png"))
+    plt.savefig(os.path.join(os.getcwd() + "/analysis/figures/",
+                             "val_loss_on_[" + str(param_names[0]) + "_" + str(time_stamp) + "].png"))
     plt.show()
-
 
 
 def neurons_on_category(model, dataset, smooth_data, tau_out):
@@ -149,10 +154,7 @@ def neurons_on_category(model, dataset, smooth_data, tau_out):
         save the figures about the loss based on neuron category, across worms
     '''
 
-
     neuron_type = ["inter", "motor", "other", "pharynx", "sensory", "sexspec"]
-
-    color_list = []
 
     model.eval()
 
@@ -178,7 +180,8 @@ def neurons_on_category(model, dataset, smooth_data, tau_out):
         # get the type of named neurons
         category_neuron = [graph.y[item].item() for item in named_neuron_inds]
 
-        targets, predictions = model_predict(model, calcium_data[:max_time//2, :] * named_neurons_mask, tau=tau_out)
+        # make predictions with final model
+        targets, predictions = model_predict(model, calcium_data[:max_time // 2, :] * named_neuron_mask, tau=tau_out)
         loss_prediction = [criterion(predictions[:, idx], targets[:, idx]).detach().item() for idx in named_neuron_inds]
         # print(len(named_neuron_inds), len(loss_prediction))
 
@@ -191,7 +194,6 @@ def neurons_on_category(model, dataset, smooth_data, tau_out):
                 (named_neuron_inds[k], loss_prediction[k]),
                 category_neuron[k]
             )
-
 
         # reverse_dict is a dict
         # key: neuron_category
@@ -239,10 +241,65 @@ def neurons_on_category(model, dataset, smooth_data, tau_out):
             # label=worm[0],
         )
     plt.xticks(range(6), neuron_type)
-
+    plt.legend(loc="upper right", fontsize=2)
     plt.ylabel("categorized prediction loss")
     plt.xlabel("category of neurons")
     plt.title("Analysis on neuron-type and prediction-loss \n Dataset: " + dataset["worm0"]["dataset"])
-    plt.savefig(os.path.join(ROOT_DIR, "analysis", "figures", "category_" + datetime.now().strftime("%Y_%m_%d_%H_%M_%S") + ".png"))
+    plt.savefig(os.path.join(ROOT_DIR, "analysis", "figures",
+                             "category_" + datetime.now().strftime("%Y_%m_%d_%H_%M_%S") + ".png"))
 
     return multi_worm_category_loss
+
+
+def plot_trailing_loss_vs_parameter_legend(config_pardir, parameter, legend):
+    '''
+    Plot the trailing loss vs parameter with legend
+    Args:
+        config_pardir: the parent directory of the config files that you want to plot
+        parameter: specify the parameter on the x-axis, e.g. "model_params.hidden_size"
+        legend: specify the parameter on legend, e.g. "dataset.name"
+
+    Returns:
+        None
+
+    '''
+
+    configs = {}
+    # go through all the config files and get the parameters and the loss
+    for file_path in find_config_files(config_pardir):
+        with open(file_path, 'r') as f:
+            data = yaml.safe_load(f)
+            parent_dir = os.path.dirname(file_path)
+            if os.path.exists(os.path.join(parent_dir, "loss_curves.csv")):
+                loss_df = pd.read_csv(os.path.join(parent_dir, "loss_curves.csv"), index_col=0)
+                loss = loss_df["centered_test_losses"][loss_df["centered_test_losses"].idxmin()]
+                configs[os.path.dirname(file_path)] = (loss, OmegaConf.create(data))
+
+    parameters = parameter.split(".")
+    param_name = parameters[1]
+    legends = legend.split(".")
+
+    # get the trailing loss for each parameter value
+    trailing_dict = {}
+    for key, value in configs.items():
+        legend_name = value[1][legends[0]][legends[1]]
+        param_value = value[1][parameters[0]][parameters[1]]
+        loss = value[0]
+        print(f"{legend_name} {param_value} {loss}")
+        if legend_name in trailing_dict.keys():
+            trailing_dict[legend_name].update({param_value: loss})
+        else:
+            trailing_dict[legend_name] = {param_value: loss}
+
+    # plot the trailing loss for each parameter value
+    x = []
+    for para_n, val_dict in trailing_dict.items():
+        sorted_x, sorted_y = zip(*sorted(zip(list(val_dict.keys()), list(val_dict.values()))))
+        x = sorted_x
+        plt.plot(sorted_x, sorted_y, label=para_n)
+
+    plt.legend()
+    plt.xlabel(str(param_name) + str(x))
+    plt.ylabel("Trailing Loss")
+    plt.title("Analysis on " + str(param_name) + " \n Trailing Losses for Different " + str(legends[1]) + "s")
+    plt.savefig("analysis/figures/trailing_loss_on_" + str(parameter) + "_legend_" + str(legend) + ".png")
