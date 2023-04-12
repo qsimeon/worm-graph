@@ -324,14 +324,14 @@ class NeuralCFC(torch.nn.Module):
         # Setup
         self.input_size = input_size
         self.output_size = input_size
-        self.hidden_size = hidden_size  # currently unused
-        self.num_layers = num_layers
+        self.hidden_size = hidden_size
+        self.num_layers = num_layers  # currently unused
         # Identity layer
         self.identity = torch.nn.Identity()
         # NCP wired CfC
         self.wiring = AutoNCP(
-            (1 + self.num_layers),
-            self.hidden_size,
+            self.hidden_size + 3,
+            self.hidden_size, # output size must be less than the number of units-2
         )
         self.rnn = CfC(self.input_size, self.wiring)
         # Initialize hidden state
