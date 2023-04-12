@@ -192,3 +192,4 @@ dmypy.json
 ./data/processed/neural/sine_noise.pickle
 ./data/processed/neural/Leifer2023.pickle
 ./data/processed/neural/sine.pickle
+*.sh
