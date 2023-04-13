@@ -194,10 +194,6 @@ def train_model(
             true_train_size = int(data["num_train_samples"][0])
             true_test_size = int(data["num_test_samples"][0])
             worm_timesteps = config.train.seq_len * true_train_size
-            # print what neurons have been covered so far
-            # TODO: remove these print statements.
-            print("number of neurons covered:", len(covered_neurons))
-            print("neurons:", covered_neurons, end="\n\n")
         # saving model checkpoints
         if (i % config.train.save_freq == 0) or (i + 1 == config.train.epochs):
             # display progress
@@ -224,6 +220,7 @@ def train_model(
                     "smooth_data": smooth_data,
                     "timestamp": timestamp,
                     "covered_neurons": covered_neurons,
+                    "worm_timesteps": worm_timesteps,
                     "input_size": model.get_input_size(),
                     "hidden_size": model.get_hidden_size(),
                     "num_layers": model.get_num_layers(),
@@ -261,6 +258,7 @@ def train_model(
     config.visualize.log_dir = log_dir.split("worm-graph/")[-1]
     config.setdefault("timestamp", timestamp)
     config.setdefault("num_unique_worms", num_unique_worms)
+    config.set_default("num_covered_neurons", len(covered_neurons))
     # replace with actual number of samples used
     config.train.train_size = true_train_size
     config.train.test_size = true_test_size
