@@ -25,17 +25,6 @@ def train_model(
     os.makedirs(log_dir, exist_ok=True)
     # create a model checkpoints folder
     os.makedirs(os.path.join(log_dir, "checkpoints"), exist_ok=True)
-    # modify the config file
-    config = OmegaConf.structured(OmegaConf.to_yaml(config))
-    config.setdefault("dataset", {"name": dataset_name})
-    config.dataset.name = dataset_name
-    config.setdefault("model", {"type": model_class_name})
-    config.setdefault("visualize", {"log_dir": log_dir.split("worm-graph/")[-1]})
-    config.visualize.log_dir = log_dir.split("worm-graph/")[-1]
-    config.setdefault("timestamp", timestamp)
-    config.setdefault("num_unique_worms", num_unique_worms)
-    # save config to log directory
-    OmegaConf.save(config, os.path.join(log_dir, "config.yaml"))
     # cycle the dataset until the desired number epochs obtained
     dataset_items = sorted(dataset.items()) * config.train.epochs
     assert (
@@ -178,7 +167,7 @@ def train_model(
         test_loader = list(test_loader)
         neurons_mask = list(neurons_mask)
         # optimize for 1 epoch per cohort
-        num_epochs = 1
+        num_epochs = 1  # 1 cohort = 1 epoch
         # `optimize_model` can accept single loader/mask or list of loaders/masks
         model, log = optimize_model(
             model=model,
@@ -200,12 +189,15 @@ def train_model(
         # get what neurons have been covered so far
         _ = torch.nonzero(coverage_mask).squeeze().numpy()
         covered_neurons = set(np.array(NEURONS_302)[_])
+        # some things to do on first epoch
         if i == 0:
-            print(
-                "number of neurons covered:",
-                len(covered_neurons),
-                end="\n\n",
-            )  # TODO: remove this print statement.
+            true_train_size = int(data["num_train_samples"][0])
+            true_test_size = int(data["num_test_samples"][0])
+            worm_timesteps = config.train.seq_len * true_train_size
+            # print what neurons have been covered so far
+            # TODO: remove these print statements.
+            print("number of neurons covered:", len(covered_neurons))
+            print("neurons:", covered_neurons, end="\n\n")
         # saving model checkpoints
         if (i % config.train.save_freq == 0) or (i + 1 == config.train.epochs):
             # display progress
@@ -260,6 +252,26 @@ def train_model(
         use_residual=use_residual,
         smooth_data=smooth_data,
     )
+    # modify the config file
+    config = OmegaConf.structured(OmegaConf.to_yaml(config))
+    config.setdefault("dataset", {"name": dataset_name})
+    config.dataset.name = dataset_name
+    config.setdefault("model", {"type": model_class_name})
+    config.setdefault("visualize", {"log_dir": log_dir.split("worm-graph/")[-1]})
+    config.visualize.log_dir = log_dir.split("worm-graph/")[-1]
+    config.setdefault("timestamp", timestamp)
+    config.setdefault("num_unique_worms", num_unique_worms)
+    # replace with actual number of samples used
+    config.train.train_size = true_train_size
+    config.train.test_size = true_test_size
+    # calculate the worm timsteps per epoch
+    config.setdefault("worm_timesteps", worm_timesteps)
+    # save config to log directory
+    OmegaConf.save(config, os.path.join(log_dir, "config.yaml"))
+    # delete the original (not updated) hydra config file
+    og_cfg_file = os.path.join(log_dir, ".hydra", "config.yaml")
+    if os.path.exists(og_cfg_file):
+        os.remove(og_cfg_file)
     # garbage collection
     gc.collect()
     # returned trained model and a path to log directory

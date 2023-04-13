@@ -79,6 +79,7 @@ def train(
     losses = {
         "train_loss": train_loss / (i + 1),
         "base_train_loss": base_loss / (i + 1),
+        "centered_train_loss": (train_loss - base_loss) / (i + 1),
         "num_train_samples": num_train_samples,
     }
     # garbage collection
@@ -146,6 +147,7 @@ def test(
     losses = {
         "test_loss": test_loss / (i + 1),
         "base_test_loss": base_loss / (i + 1),
+        "centered_test_loss": (test_loss - base_loss) / (i + 1),
         "num_test_samples": num_test_samples,
     }
     # garbage collection
@@ -218,7 +220,7 @@ def split_train_test(
             _data.detach(),
             seq_len=seq_len,
             # keep per worm train size constant
-            num_samples=max(1, train_size // len(train_splits)),
+            num_samples=min(max(1, train_size // len(train_splits)), len(_data)),
             reverse=reverse,
             time_vec=train_times[i],
             tau=tau,
@@ -233,7 +235,7 @@ def split_train_test(
             _data.detach(),
             seq_len=seq_len,
             # keep per worm test size constant
-            num_samples=max(1, test_size // len(test_splits)),
+            num_samples=min(max(1, test_size // len(test_splits)), len(_data)),
             reverse=(not reverse),
             time_vec=test_times[i],
             tau=tau,
@@ -340,18 +342,18 @@ def optimize_model(
             use_residual=use_residual,
         )
         # retrieve losses
-        base_train_loss, train_loss, num_train_samples = (
+        centered_train_loss, base_train_loss, train_loss, num_train_samples = (
+            train_log["centered_train_loss"],
             train_log["base_train_loss"],
             train_log["train_loss"],
             train_log["num_train_samples"],
         )
-        base_test_loss, test_loss, num_test_samples = (
+        centered_test_loss, base_test_loss, test_loss, num_test_samples = (
+            test_log["centered_test_loss"],
             test_log["base_test_loss"],
             test_log["test_loss"],
             test_log["num_test_samples"],
         )
-        centered_train_loss = train_loss - base_train_loss
-        centered_test_loss = test_loss - base_test_loss
         # save epochs, losses and batch counts
         log["epochs"][i] = epoch
         log["base_train_losses"][i] = base_train_loss
