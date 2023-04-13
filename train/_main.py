@@ -189,6 +189,7 @@ def train_model(
         # get what neurons have been covered so far
         _ = torch.nonzero(coverage_mask).squeeze().numpy()
         covered_neurons = set(np.array(NEURONS_302)[_])
+        num_covered_neurons = len(covered_neurons)
         # some things to do on first epoch
         if i == 0:
             true_train_size = int(data["num_train_samples"][0])
@@ -256,14 +257,15 @@ def train_model(
     config.setdefault("model", {"type": model_class_name})
     config.setdefault("visualize", {"log_dir": log_dir.split("worm-graph/")[-1]})
     config.visualize.log_dir = log_dir.split("worm-graph/")[-1]
-    config.setdefault("timestamp", timestamp)
-    config.setdefault("num_unique_worms", num_unique_worms)
-    config.set_default("num_covered_neurons", len(covered_neurons))
     # replace with actual number of samples used
     config.train.train_size = true_train_size
     config.train.test_size = true_test_size
-    # calculate the worm timsteps per epoch
-    config.setdefault("worm_timesteps", worm_timesteps)
+    # add some global variables
+    config.setdefault("globals", {"use_residual": False, "shuffle": False})
+    config.globals.timestamp = timestamp
+    config.globals.num_unique_worms = num_unique_worms
+    config.num_covered_neurons = num_covered_neurons
+    config.globals.worm_timesteps = worm_timesteps
     # save config to log directory
     OmegaConf.save(config, os.path.join(log_dir, "config.yaml"))
     # delete the original (not updated) hydra config file

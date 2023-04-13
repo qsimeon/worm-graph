@@ -145,13 +145,13 @@ def plot_loss_curves(log_dir):
             {
                 "dataset": {"name": "unknown"},
                 "model": {"type": "unknown"},
-                "timestamp": "unknown",
+                "globals": {"timestamp": "unknown"},
             }
         )
     # get strings for plot title
     dataset_name = config.dataset.name
     model_name = config.model.type
-    timestamp = config.timestamp
+    timestamp = config.globals.timestamp
     # create the plot title
     plt_title = "Loss curves\nmodel: {}\ndataset: {}\ntime: {}".format(
         model_name,
@@ -205,13 +205,13 @@ def plot_before_after_weights(log_dir: str) -> None:
             {
                 "dataset": {"name": "unknown"},
                 "model": {"type": "unknown"},
-                "timestamp": "unknown",
+                "globals": {"timestamp": "unknown"},
             }
         )
     # get strings for plot title
     dataset_name = config.dataset.name
     model_name = config.model.type
-    timestamp = config.timestamp
+    timestamp = config.globals.timestamp
     # create the plot title
     plt_title = "Model readout weights\nmodel: {}\ndataset: {}\ntime: {}".format(
         model_name,
@@ -266,13 +266,13 @@ def plot_targets_predictions(
             {
                 "dataset": {"name": "unknown"},
                 "model": {"type": "unknown"},
-                "timestamp": "unknown",
+                "globals": {"timestamp": "unknown"},
             }
         )
     # get strings for plot title
     dataset_name = config.dataset.name
     model_name = config.model.type
-    timestamp = config.timestamp
+    timestamp = config.globals.timestamp
     # recursive call for all worms
     if (worm is None) or (worm.lower() == "all"):
         all_worms = [fname for fname in os.listdir(log_dir) if fname.startswith("worm")]
@@ -389,13 +389,13 @@ def plot_correlation_scatterplot(
             {
                 "dataset": {"name": "unknown"},
                 "model": {"type": "unknown"},
-                "timestamp": "unknown",
+                "globals": {"timestamp": "unknown"},
             }
         )
     # get strings for plot title
     dataset_name = config.dataset.name
     model_name = config.model.type
-    timestamp = config.timestamp
+    timestamp = config.globals.timestamp
     # recursive call for all worms
     if (worm is None) or (worm.lower() == "all"):
         all_worms = [fname for fname in os.listdir(log_dir) if fname.startswith("worm")]
