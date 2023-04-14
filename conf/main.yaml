@@ -31,7 +31,7 @@ hydra:
       train.num_batches: 1
       train.tau_in: 1 #1, 11, 111
       train.tau_out: 1 #0, 1, 11, 111
-      train.train_size: 1, 5, 10, 50, 100, 500, 1000, 5000, 10000, 50000, 100000
+      train.train_size: 1, 5, 10, 50, 100, 500, 1000, 5000, 10000
       train.test_size: 500
       train.learn_rate: 0.01 #0.0001, 0.001, 0.01, 0.1, 1.0
       train.optimizer: SGD #Adam, SGD
