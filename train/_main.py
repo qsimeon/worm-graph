@@ -265,7 +265,7 @@ def train_model(
     config.setdefault("globals", {"use_residual": False, "shuffle": False})
     config.globals.timestamp = timestamp
     config.globals.num_unique_worms = num_unique_worms
-    config.num_covered_neurons = num_covered_neurons
+    config.globals.num_covered_neurons = num_covered_neurons
     config.globals.worm_timesteps = worm_timesteps
     # save config to log directory
     OmegaConf.save(config, os.path.join(log_dir, "config.yaml"))
