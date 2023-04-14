@@ -33,8 +33,6 @@ def get_dataset(config: DictConfig):
         ),
         end="\n\n",
     )
-    # garbage collection
-    gc.collect()
     return combined_dataset
 
 
