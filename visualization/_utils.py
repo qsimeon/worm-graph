@@ -188,7 +188,6 @@ def plot_loss_curves(log_dir):
     plt.ylabel("Loss - Baseline")
     plt.savefig(os.path.join(log_dir, "loss_curves.png"))
     plt.close()
-    plt.close()
     return None
 
 
