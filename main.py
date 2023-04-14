@@ -1,4 +1,4 @@
-from utils import *
+from pkg import *
 
 
 @hydra.main(version_base=None, config_path="conf", config_name="main")
@@ -20,9 +20,7 @@ def pipeline(
     print("\ntorch device: %s" % (DEVICE), end="\n\n")
 
     # intialize random seeds
-    np.random.seed(config.globals.random_seed)
-    torch.manual_seed(config.globals.random_seed)
-    random.seed(config.globals.random_seed)
+    init_random_seeds(config.globals.random_seed)
 
     # skips if data already preprocessed
     process_data(config)

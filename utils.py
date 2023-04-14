@@ -1,4 +1,8 @@
-from pkg import *
+import os
+import torch
+import random
+import numpy as np
+import pandas as pd
 
 os.environ["HYDRA_FULL_ERROR"] = "1"
 os.environ["CUDA_LAUNCH_BLOCKING"] = "1"
@@ -52,3 +56,13 @@ NEURONS_302 = sorted(
         names=["neuron"],
     ).neuron
 )
+
+
+def init_random_seeds(seed=0):
+    """
+    Initialize random seeds for numpy, torch, and random.
+    """
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    random.seed(seed)
+    return None

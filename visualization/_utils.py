@@ -324,7 +324,7 @@ def plot_targets_predictions(
             ylo,
             yhi,
             where=predictions_df["train_test_label"] == "train",
-            alpha=0.1,
+            alpha=0.3,
             facecolor="cyan",
             label="train",
         )

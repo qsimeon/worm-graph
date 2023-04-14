@@ -19,6 +19,7 @@ def train_model(
     model_class_name = model.__class__.__name__
     timestamp = datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
     num_unique_worms = len(dataset)
+    train_epochs = config.train.epochs + 1
     # hydra changes the working directory to log directory
     if log_dir is None:
         log_dir = os.getcwd()
@@ -26,17 +27,17 @@ def train_model(
     # create a model checkpoints folder
     os.makedirs(os.path.join(log_dir, "checkpoints"), exist_ok=True)
     # cycle the dataset until the desired number epochs obtained
-    dataset_items = sorted(dataset.items()) * config.train.epochs
+    dataset_items = sorted(dataset.items()) * train_epochs
     assert (
-        len(dataset_items) == config.train.epochs * num_unique_worms
+        len(dataset_items) == train_epochs * num_unique_worms
     ), "Invalid number of worms."
     # shuffle (without replacement) the worms (including duplicates) in the dataset
     if shuffle == True:
         dataset_items = random.sample(dataset_items, k=len(dataset_items))
     # split the dataset into cohorts of worms; there should be one cohort per epoch
-    worm_cohorts = np.array_split(dataset_items, config.train.epochs)
+    worm_cohorts = np.array_split(dataset_items, train_epochs)
     worm_cohorts = [_.tolist() for _ in worm_cohorts]  # convert cohort arrays to lists
-    assert len(worm_cohorts) == config.train.epochs, "Invalid number of cohorts."
+    assert len(worm_cohorts) == train_epochs, "Invalid number of cohorts."
     assert all(
         [len(cohort) == num_unique_worms for cohort in worm_cohorts]
     ), "Invalid cohort size."
@@ -64,15 +65,15 @@ def train_model(
         smooth_data = False
     # initialize train/test loss metrics arrays
     data = {
-        "epochs": np.zeros(config.train.epochs, dtype=int),
-        "num_train_samples": np.zeros(config.train.epochs, dtype=int),
-        "num_test_samples": np.zeros(config.train.epochs, dtype=int),
-        "base_train_losses": np.zeros(config.train.epochs, dtype=np.float32),
-        "base_test_losses": np.zeros(config.train.epochs, dtype=np.float32),
-        "train_losses": np.zeros(config.train.epochs, dtype=np.float32),
-        "test_losses": np.zeros(config.train.epochs, dtype=np.float32),
-        "centered_train_losses": np.zeros(config.train.epochs, dtype=np.float32),
-        "centered_test_losses": np.zeros(config.train.epochs, dtype=np.float32),
+        "epochs": np.zeros(train_epochs, dtype=int),
+        "num_train_samples": np.zeros(train_epochs, dtype=int),
+        "num_test_samples": np.zeros(train_epochs, dtype=int),
+        "base_train_losses": np.zeros(train_epochs, dtype=np.float32),
+        "base_test_losses": np.zeros(train_epochs, dtype=np.float32),
+        "train_losses": np.zeros(train_epochs, dtype=np.float32),
+        "test_losses": np.zeros(train_epochs, dtype=np.float32),
+        "centered_train_losses": np.zeros(train_epochs, dtype=np.float32),
+        "centered_test_losses": np.zeros(train_epochs, dtype=np.float32),
     }
     # arguments passed to the `split_train_test` function
     Tr = max(1, config.train.train_size // num_unique_worms)  # per worm train size
@@ -196,7 +197,7 @@ def train_model(
             true_test_size = int(data["num_test_samples"][0])
             worm_timesteps = config.train.seq_len * true_train_size
         # saving model checkpoints
-        if (i % config.train.save_freq == 0) or (i + 1 == config.train.epochs):
+        if (i % config.train.save_freq == 0) or (i + 1 == train_epochs):
             # display progress
             print(
                 "Saving a model checkpoint.\n\tnum. worm cohorts trained on:",
