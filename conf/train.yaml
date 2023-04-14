@@ -9,7 +9,7 @@ train:
   reverse: False # if True reverse the order of generation of the samples (sequences)
   # interpretation: larger num. batches corresponds to smaller batch size;
   # thus, smaller num. batches corresponds to more parallelization
-  num_batches: 4 # total number of batches per epoch (worm cohorts)
+  num_batches: 1 # total number of batches per epoch (worm cohorts)
   train_size: 5000 # approx. number of samples (sequences) of training data per epoch
   test_size: 500 # approx. number of samples (sequences) of validation data per epoch
   # constraint: batch_size: int <= min(train_size: int, test_size: int)

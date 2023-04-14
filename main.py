@@ -19,12 +19,16 @@ def pipeline(
     # print Pytorch device
     print("\ntorch device: %s" % (DEVICE), end="\n\n")
 
+    # intialize random seeds
+    init_random_seeds(config.globals.random_seed)
+
     # skips if data already preprocessed
     process_data(config)
 
     # returns a generator of single worm datasets
     dataset = get_dataset(config)
 
+    # get the model to train
     model = get_model(config)
 
     # train model is the bulk of the pipeline code

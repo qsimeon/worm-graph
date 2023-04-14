@@ -3,7 +3,7 @@ from preprocess._pkg import *
 
 class DiffTVR:
     def __init__(self, n: int, dx: float):
-        """Differentiate with TVR.
+        """Initialize DiffTVR class to differentiate with TVR.
 
         Args:
             n (int): Number of points in data.
@@ -17,24 +17,28 @@ class DiffTVR:
         self.a_mat_t = self._make_a_mat_t()
 
     def _make_d_mat(self) -> np.array:
-        """Make differentiation matrix with central differences. NOTE: not efficient!
+        """Construct differentiation matrix using central differences.
+
+        Note:
+            This method is not efficient.
 
         Returns:
-            np.array: N x N+1
+            np.array: Differentiation matrix of shape (N, N+1)
         """
-
         arr = np.zeros((self.n, self.n + 1))
         for i in range(0, self.n):
             arr[i, i] = -1.0
             arr[i, i + 1] = 1.0
         return arr / self.dx
 
-    # TODO: improve these matrix constructors
     def _make_a_mat(self) -> np.array:
-        """Make integration matrix with trapezoidal rule. NOTE: not efficient!
+        """Construct integration matrix using trapezoidal rule.
+
+        Note:
+            This method is not efficient.
 
         Returns:
-            np.array: N x N+1
+            np.array: Integration matrix of shape (N, N+1)
         """
         arr = np.zeros((self.n + 1, self.n + 1))
         for i in range(0, self.n + 1):
@@ -51,10 +55,13 @@ class DiffTVR:
         return arr[1:] * self.dx
 
     def _make_a_mat_t(self) -> np.array:
-        """Transpose of the integration matirx with trapezoidal rule. NOTE: not efficient!
+        """Construct transpose of the integration matrix using trapezoidal rule.
+
+        Note:
+            This method is not efficient.
 
         Returns:
-            np.array: N+1 x N
+            np.array: Transpose of the integration matrix of shape (N+1, N)
         """
         smat = np.ones((self.n + 1, self.n))
 
@@ -70,33 +77,37 @@ class DiffTVR:
         return (smat - combmat) * self.dx
 
     def make_en_mat(self, deriv_curr: np.array) -> np.array:
-        """Diffusion matrix
+        """Create diffusion matrix.
 
         Args:
             deriv_curr (np.array): Current derivative of length N+1
 
         Returns:
-            np.array: N x N
+            np.array: Diffusion matrix of shape (N, N)
         """
         eps = pow(10, -6)
         vec = 1.0 / np.sqrt(pow(self.d_mat @ deriv_curr, 2) + eps)
         return np.diag(vec)
 
     def make_ln_mat(self, en_mat: np.array) -> np.array:
-        """Diffusivity term
+        """Calculate diffusivity term.
 
         Args:
             en_mat (np.array): Result from make_en_mat
 
         Returns:
-            np.array: N+1 x N+1
+            np.array: Diffusivity term of shape (N+1, N+1)
         """
         return self.dx * np.transpose(self.d_mat) @ en_mat @ self.d_mat
 
     def make_gn_vec(
-        self, deriv_curr: np.array, data: np.array, alpha: float, ln_mat: np.array
+        self,
+        deriv_curr: np.array,
+        data: np.array,
+        alpha: float,
+        ln_mat: np.array,
     ) -> np.array:
-        """Negative right hand side of linear problem
+        """Calculate the negative right hand side of the linear problem.
 
         Args:
             deriv_curr (np.array): Current derivative of size N+1
@@ -114,31 +125,33 @@ class DiffTVR:
         )
 
     def make_hn_mat(self, alpha: float, ln_mat: np.array) -> np.array:
-        """Matrix in linear problem
+        """Construct matrix in linear problem.
 
         Args:
             alpha (float): Regularization parameter
             ln_mat (np.array): Diffusivity term from make_ln_mat
 
         Returns:
-            np.array: N+1 x N+1
+            np.array: Matrix of shape (N+1, N+1)
         """
         return self.a_mat_t @ self.a_mat + alpha * ln_mat
 
     def get_deriv_tvr_update(
-        self, data: np.array, deriv_curr: np.array, alpha: float
+        self,
+        data: np.array,
+        deriv_curr: np.array,
+        alpha: float,
     ) -> np.array:
-        """Get the TVR update
+        """Compute the TVR update.
 
         Args:
             data (np.array): Data of size N
-            deriv_curr (np.array): Current deriv of size N+1
+            deriv_curr (np.array): Current derivative of size N+1
             alpha (float): Regularization parameter
 
         Returns:
             np.array: Update vector of size N+1
         """
-
         n = len(data)
 
         en_mat = self.make_en_mat(deriv_curr=deriv_curr)
@@ -162,20 +175,23 @@ class DiffTVR:
         return_progress: bool = False,
         return_interval: int = 1,
     ) -> Tuple[np.array, np.array]:
-        """Get derivative via TVR over optimization steps
+        """Compute derivative using TVR over optimization steps.
 
         Args:
             data (np.array): Data of size N
             deriv_guess (np.array): Guess for derivative of size N+1
             alpha (float): Regularization parameter
-            no_opt_steps (int): No. opt steps to run
-            return_progress (bool, optional): True to return derivative progress during optimization. Defaults to False.
-            return_interval (int, optional): Interval at which to store derivative if returning. Defaults to 1.
+            no_opt_steps (int): Number of optimization steps to run
+            return_progress (bool, optional): If True, return derivative progress during optimization.
+                                              Defaults to False.
+            return_interval (int, optional): Interval at which to store derivative if returning progress.
+                                              Defaults to 1.
 
         Returns:
-            Tuple[np.array,np.array]: First is the final derivative of size N+1, second is the stored derivatives if return_progress=True of size no_opt_steps+1 x N+1, else [].
+            Tuple[np.array,np.array]: First element is the final derivative of size N+1, second element is
+                                      the stored derivatives if return_progress=True of shape
+                                      (no_opt_steps+1, N+1), else an empty array.
         """
-
         deriv_curr = deriv_guess
 
         if return_progress:

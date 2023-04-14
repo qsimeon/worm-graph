@@ -3,101 +3,34 @@
 
 `tree -L 2 worm-graph/`
 ```
-.
 ├── LICENSE
 ├── README.md
 ├── __init__.py
 ├── __pycache__
-│   └── utils.cpython-39.pyc
 ├── analysis
-│   ├── MPNsNeurogym.ipynb
-│   ├── jpyEDM
-│   └── takens
 ├── conf
-│   ├── analysis.yaml
-│   ├── dataset.yaml
-│   ├── govfunc.yaml
-│   ├── main.yaml
-│   ├── model.yaml
-│   ├── preprocess.yaml
-│   ├── simulate.yaml
-│   ├── slurm_default.yaml
-│   ├── task.yaml
-│   ├── test_config.yaml
-│   ├── train.yaml
-│   └── visualize.yaml
 ├── data
-│   ├── _main.py
-│   ├── _pkg.py
-│   ├── _utils.py
-│   ├── create_sine_dataset.py
-│   ├── processed
-│   └── raw
 ├── environment_complete.yml
 ├── environment_minimal.yml
 ├── govfunc
-│   ├── Flavell2023
-│   ├── Kaplan2020
-│   ├── Kato2015
-│   ├── Nichols2017
-│   ├── Skora2018
-│   ├── Uzel2022
-│   ├── _main.py
-│   ├── _pkg.py
-│   ├── _utils.py
-│   ├── correlation.png
-│   ├── govfunc_lorenz
-│   ├── rsa_analysis_Uzel2022.ipynb
-│   ├── worm_response_pred.png
-│   └── worm_response_target.png
+├── logs
 ├── main.py
 ├── models
-│   ├── _main.py
-│   ├── _pkg.py
-│   └── _utils.py
 ├── pkg.py
 ├── preprocess
-│   ├── __pycache__
-│   ├── _main.py
-│   ├── _pkg.py
-│   ├── _utils.py
-│   └── export_nodes_edges.m
-├── tasks
-│   ├── _main.py
-│   ├── _pkg.py
-│   └── _utils.py
-├── tempCodeRunnerFile.py
 ├── testing
-│   ├── FuturePredictionCElegansNNs.ipynb
-│   ├── GNNLossCurves.ipynb
-│   ├── LossBaselines.ipynb
-│   ├── PlotRealData.ipynb
-│   ├── analyze_logs_test.ipynb
-│   ├── ivy_scripts
-│   ├── quick_script_1.py
-│   ├── quick_script_2.py
-│   ├── quick_script_3.py
-│   ├── quick_script_5.py
-│   ├── quick_script_6.py
-│   ├── tempCodeRunnerFile.py
-│   └── test_config.py
 ├── train
-│   ├── _main.py
-│   ├── _pkg.py
-│   ├── _utils.py
-│   └── train_vis_main.py
 ├── utils.py
 └── visualization
-    ├── DrawConnectome.ipynb
-    ├── PipelineExplorer.ipynb
-    ├── _main.py
-    ├── _pkg.py
-    ├── _utils.py
-    ├── plot_for_atlas
-    └── tempCodeRunnerFile.py
- ```
- 
-## Create the environment from the `environment.yml` file
+```
+## Table of Contents
+1. [Environment Setup](#environment-setup)
+2. [Getting Started](#getting-started)
+3. [File Naming Conventions](#file-naming-conventions)
+4. [Code Style Conventions](#code-style-conventions)
+5. [Future Tasks](#future-tasks)
+
+## Environment Setup
 
 `cd` into the `worm-graph` directory on your local machine: `cd worm-graph`
 
@@ -114,7 +47,7 @@ Verify that the new environment was installed correctly: `conda env list`
  
 Always activate the environment before working on the project: `conda activate worm-graph`
 
-## Get started with the pipeline in one line
+## Getting Started
 
 `python -u main.py`
 
@@ -123,10 +56,7 @@ For one multi-worm dataset of neural activity, this pipeline will:
 2. Train a neural network model to predict future calcium activity from previous activity.
 3. Plot the train and validation loss curves for the model and its predictions on test data.
 
-## TODO: How to add models and datasets
-
-
-## File naming conventions
+## File Naming Conventions
 
 For folders and script files, use the `lower_case_with_underscores` naming style.
 **Example:** `my_folder`, `my_script.py`.
@@ -134,25 +64,28 @@ For folders and script files, use the `lower_case_with_underscores` naming style
 For Jupyter notebooks, use the `CamelCase` naming style.
 **Example:** `MyAnalysisNotebook.ipynb`.
 
-## Code style conventions
+## Code Style Conventions
 
-Aim to make every runnable script (e.g. Python files with a `if __name__ == "__main__":` section) not significantly longer than 100 lines. If your code is getting longer than this, it probably is a good idea to modularize things by encapsulating certain processes in helper functions and moving those to a separare file like `_utils.py`. 
+- Aim to keep every runnable script (e.g. Python files with a `if __name__ == "__main__":` section) not significantly longer than 100 lines. If your code is getting longer than this, consider modularizing by encapsulating certain processes in helper functions and moving them to a separate file like `_utils.py`.
 
-Note the orgaization structure of this project. Each self-contained (sub-)module is in its own folder containing the files: `_main.py`, `_utils.py` and `_pkg.py`. 
-   - `_main.py` holds the main code that module executes, typically as a single function that gets called in `if __name__ == "__main__":` part. 
-   - `_pkg.py` is exclusively for placing all package imports that the module needs. 
-   - `_utils.py` is the bulk of the module's code as it contains the definitions for all custom classes and helper functions to be used by the module.
-   - there may be other miscellaneous subfolders and files that are important and specific to that module (e.g. the `processed/` and `raw/` folders inside `data/`) or just something that is a work in progress.
+- Follow the organization structure of this project, where each self-contained (sub-)module has its own folder containing the files: `_main.py`, `_utils.py`, and `_pkg.py`.
+  - `_main.py` holds the main code that the module executes, typically as a single function that gets called in the `if __name__ == "__main__":` part.
+  - `_pkg.py` is exclusively for placing all package imports that the module needs.
+  - `_utils.py` contains the definitions for all custom classes and helper functions to be used by the module.
 
-Use the [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black) formatter. Before a commit, run the command `black .` in the Terminal from the repository's root directory `worm-graph`. This will automatically reformat all code according to the [Black Code Style](https://github.com/psf/black). 
+- Use the [Black Code Style](https://github.com/psf/black) formatter:
+  - Before committing, run the command `black .` in the Terminal from the repository's root directory `worm-graph`.
+  - This will automatically reformat all code according to the Black Code Style.
 
-Use the [Google Python Style Guide](https://google.github.io/styleguide/pyguide.html) for comments, documentation strings and unit tests.
+- Follow the [Google Python Style Guide](https://google.github.io/styleguide/pyguide.html) for comments, documentation strings, and unit tests.
 
-When in doubt about anything else style related that's not addressed by the previous two points, reference the [Python Enhancement Protocols (PEP8)](https://peps.python.org/pep-0008/).
+- When in doubt about anything else style-related that's not addressed by the previous two points, reference the [Python Enhancement Protocols (PEP8)](https://peps.python.org/pep-0008/).
 
-Always shape neural data matrices as `(time, neurons, [features])`. The braces `[]` indicate that the last `features` dimension is optional, as the `neurons` currently serve as the features for our models. 
+- Always shape neural data matrices as `(time, neurons, [features])`. The braces `[]` indicate that the last `features` dimension is optional, as the `neurons` currently serve as the features for our models.
 
-## Things to TODO.
+<!-- [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black) -->
+
+## Future Tasks
 
 - Urgent TODOs: 
    - scaling law plots.

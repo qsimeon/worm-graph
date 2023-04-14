@@ -1,4 +1,4 @@
 visualize:
   log_dir: logs
-  worm: worm1
+  worm: worm2
   neuron: AVAL

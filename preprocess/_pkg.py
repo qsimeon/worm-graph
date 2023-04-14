@@ -1,4 +1,5 @@
 import torch
+import random
 import os
 import re
 import math
@@ -22,5 +23,4 @@ from torch_geometric.data import Data, download_url, extract_zip
 from scipy.signal import savgol_filter
 from scipy.linalg import solve
 from typing import Tuple, Union
-import random
 from torch.autograd import Variable

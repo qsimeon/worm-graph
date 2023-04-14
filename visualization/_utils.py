@@ -145,13 +145,13 @@ def plot_loss_curves(log_dir):
             {
                 "dataset": {"name": "unknown"},
                 "model": {"type": "unknown"},
-                "timestamp": "unknown",
+                "globals": {"timestamp": "unknown"},
             }
         )
     # get strings for plot title
     dataset_name = config.dataset.name
     model_name = config.model.type
-    timestamp = config.timestamp
+    timestamp = config.globals.timestamp
     # create the plot title
     plt_title = "Loss curves\nmodel: {}\ndataset: {}\ntime: {}".format(
         model_name,
@@ -188,7 +188,6 @@ def plot_loss_curves(log_dir):
     plt.ylabel("Loss - Baseline")
     plt.savefig(os.path.join(log_dir, "loss_curves.png"))
     plt.close()
-    plt.close()
     return None
 
 
@@ -205,13 +204,13 @@ def plot_before_after_weights(log_dir: str) -> None:
             {
                 "dataset": {"name": "unknown"},
                 "model": {"type": "unknown"},
-                "timestamp": "unknown",
+                "globals": {"timestamp": "unknown"},
             }
         )
     # get strings for plot title
     dataset_name = config.dataset.name
     model_name = config.model.type
-    timestamp = config.timestamp
+    timestamp = config.globals.timestamp
     # create the plot title
     plt_title = "Model readout weights\nmodel: {}\ndataset: {}\ntime: {}".format(
         model_name,
@@ -266,13 +265,13 @@ def plot_targets_predictions(
             {
                 "dataset": {"name": "unknown"},
                 "model": {"type": "unknown"},
-                "timestamp": "unknown",
+                "globals": {"timestamp": "unknown"},
             }
         )
     # get strings for plot title
     dataset_name = config.dataset.name
     model_name = config.model.type
-    timestamp = config.timestamp
+    timestamp = config.globals.timestamp
     # recursive call for all worms
     if (worm is None) or (worm.lower() == "all"):
         all_worms = [fname for fname in os.listdir(log_dir) if fname.startswith("worm")]
@@ -325,7 +324,7 @@ def plot_targets_predictions(
             ylo,
             yhi,
             where=predictions_df["train_test_label"] == "train",
-            alpha=0.1,
+            alpha=0.3,
             facecolor="cyan",
             label="train",
         )
@@ -389,13 +388,13 @@ def plot_correlation_scatterplot(
             {
                 "dataset": {"name": "unknown"},
                 "model": {"type": "unknown"},
-                "timestamp": "unknown",
+                "globals": {"timestamp": "unknown"},
             }
         )
     # get strings for plot title
     dataset_name = config.dataset.name
     model_name = config.model.type
-    timestamp = config.timestamp
+    timestamp = config.globals.timestamp
     # recursive call for all worms
     if (worm is None) or (worm.lower() == "all"):
         all_worms = [fname for fname in os.listdir(log_dir) if fname.startswith("worm")]
