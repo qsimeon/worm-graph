@@ -541,6 +541,11 @@ def reshape_calcium_data(single_worm_dataset):
             "neuron_to_slot": dict((v, k) for k, v in slot_to_neuron.items()),
         }
     )
+    # delete all original index mappings
+    keys_to_delete = [key for key in single_worm_dataset if "idx" in key]
+    for key in keys_to_delete:
+        single_worm_dataset.pop(key, None)
+    # return the dataset for this worm
     return single_worm_dataset
 
 
