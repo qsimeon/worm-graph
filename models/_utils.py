@@ -164,7 +164,7 @@ class NeuralTransformer(torch.nn.Module):
 
     def forward(self, input, tau=0):
         """
-        (B, T, C) = input.shape = (batch_size, max_time, input_size)
+        (B, T, C) = input.shape = (batch_size, max_timesteps, input_size)
         """
         if tau < 1:
             output = self.identity(input)
