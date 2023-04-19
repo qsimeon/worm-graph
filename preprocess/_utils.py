@@ -833,6 +833,40 @@ def str_to_float(str_num):
         print("error: unknown sign")
     return float_num
 
+def interpolate_data(time, data, target_dt):
+    """
+    Interpolate data using np.interp, with support for torch.Tensor inputs.
+
+    Parameters:
+    time (torch.Tensor): A 1D tensor containing the time points corresponding to the data.
+    data (torch.Tensor): A 2D tensor containing the data to be interpolated, with shape (time, neurons).
+    target_dt (float): The desired time interval between the interpolated data points.
+
+    Returns:
+    torch.Tensor, torch.Tensor: Two tensors containing the interpolated time points and data.
+    """
+    # If target_dt is None, return the original data
+    if target_dt is None:
+        return time, data
+    
+    # Convert input tensors to NumPy arrays
+    time_np = time.squeeze().numpy()
+    data_np = data.numpy()
+
+    # Interpolate the data
+    target_time_np = np.arange(time_np.min(), time_np.max(), target_dt)
+    num_neurons = data_np.shape[1]
+    interpolated_data_np = np.zeros((len(target_time_np), num_neurons))
+
+    for i in range(num_neurons):
+        interpolated_data_np[:, i] = np.interp(target_time_np, time_np, data_np[:, i])
+
+    # Convert the interpolated data and time back to torch.Tensor objects
+    target_time = torch.from_numpy(target_time_np)
+    interpolated_data = torch.from_numpy(interpolated_data_np)
+
+    return target_time, interpolated_data
+
 
 def pickle_neural_data(
     url,
@@ -840,6 +874,7 @@ def pickle_neural_data(
     dataset="all",
     transform=MinMaxScaler(feature_range=(-1, 1)),
     smooth_method="fft",
+    resample_dt=None,
 ):
     """
     Function for converting C. elegans neural data from open source
@@ -848,6 +883,7 @@ def pickle_neural_data(
     url: str, a download link to a zip file containing the opensource data in raw form.
     zipfile: str, the name of the zipfile that is being downloaded.
     """
+    print("resample_dt", resample_dt, end="\n\n")
     global source_path, processed_path
     zip_path = os.path.join(ROOT_DIR, zipfile)
     source_path = os.path.join(ROOT_DIR, zipfile.strip(".zip"))
@@ -877,7 +913,7 @@ def pickle_neural_data(
                 continue
             print("Dataset:", dataset, end="\n\n")
             pickler = eval("pickle_" + dataset)
-            pickler(transform)
+            pickler(transform, smooth_method, resample_dt)
     # (re)-Pickle a single dataset
     else:
         assert (
@@ -887,7 +923,7 @@ def pickle_neural_data(
         )
         print("Dataset:", dataset, end="\n\n")
         pickler = eval("pickle_" + dataset)
-        pickler(transform, smooth_method)
+        pickler(transform, smooth_method, resample_dt)
     # delete the downloaded raw datasets
     shutil.rmtree(source_path)  # files too large to push to GitHub
     # create a file the indicates preprocessing succesful
@@ -895,7 +931,7 @@ def pickle_neural_data(
     return None
 
 
-def pickle_Kato2015(transform, smooth_method="fft"):
+def pickle_Kato2015(transform, smooth_method="fft", resample_dt=1.0):
     """
     Pickles the worm neural activity data from Kato et al., Cell Reports 2015,
     Global Brain Dynamics Embed the Motor Command Sequence of Caenorhabditis elegans.
@@ -955,6 +991,10 @@ def pickle_Kato2015(transform, smooth_method="fft"):
         real_data = torch.tensor(
             real_data, dtype=torch.float32
         )  # add a feature dimension and convert to tensor
+        # resample the data to a fixed time step
+        time_in_seconds, real_data = interpolate_data(time_in_seconds, real_data, target_dt=resample_dt)
+        max_timesteps, num_neurons = real_data.shape
+        # smooth the data
         smooth_real_data, residual, smooth_residual = smooth_data_preprocess(
             real_data, smooth_method
         )
@@ -1040,6 +1080,10 @@ def pickle_Kato2015(transform, smooth_method="fft"):
         real_data = torch.tensor(
             real_data, dtype=torch.float32
         )  # add a feature dimension and convert to tensor
+        # resample the data to a fixed time step
+        time_in_seconds, real_data = interpolate_data(time_in_seconds, real_data, target_dt=resample_dt)
+        max_timesteps, num_neurons = real_data.shape
+        # smooth the data
         smooth_real_data, residual, smooth_residual = smooth_data_preprocess(
             real_data, smooth_method
         )
@@ -1076,7 +1120,7 @@ def pickle_Kato2015(transform, smooth_method="fft"):
     print(Kato2015.keys(), end="\n\n")
 
 
-def pickle_Nichols2017(transform, smooth_method="fft"):
+def pickle_Nichols2017(transform, smooth_method="fft", resample_dt=1.0):
     """
     Pickles the worm neural activity data from Nichols et al., Science 2017,
     A global brain state underlies C. elegans sleep behavior.
@@ -1136,6 +1180,10 @@ def pickle_Nichols2017(transform, smooth_method="fft"):
         real_data = torch.tensor(
             real_data, dtype=torch.float32
         )  # add a feature dimension and convert to tensor
+        # resample the data to a fixed time step
+        time_in_seconds, real_data = interpolate_data(time_in_seconds, real_data, target_dt=resample_dt)
+        max_timesteps, num_neurons = real_data.shape
+        # smooth the data
         smooth_real_data, residual, smooth_residual = smooth_data_preprocess(
             real_data, smooth_method
         )
@@ -1218,6 +1266,10 @@ def pickle_Nichols2017(transform, smooth_method="fft"):
         real_data = torch.tensor(
             real_data, dtype=torch.float32
         )  # add a feature dimension and convert to tensor
+        # resample the data to a fixed time step
+        time_in_seconds, real_data = interpolate_data(time_in_seconds, real_data, target_dt=resample_dt)
+        max_timesteps, num_neurons = real_data.shape
+        # smooth the data
         smooth_real_data, residual, smooth_residual = smooth_data_preprocess(
             real_data, smooth_method
         )
@@ -1300,6 +1352,10 @@ def pickle_Nichols2017(transform, smooth_method="fft"):
         real_data = torch.tensor(
             real_data, dtype=torch.float32
         )  # add a feature dimension and convert to tensor
+        # resample the data to a fixed time step
+        time_in_seconds, real_data = interpolate_data(time_in_seconds, real_data, target_dt=resample_dt)
+        max_timesteps, num_neurons = real_data.shape
+        # smooth the data
         smooth_real_data, residual, smooth_residual = smooth_data_preprocess(
             real_data, smooth_method
         )
@@ -1382,6 +1438,10 @@ def pickle_Nichols2017(transform, smooth_method="fft"):
         real_data = torch.tensor(
             real_data, dtype=torch.float32
         )  # add a feature dimension and convert to tensor
+        # resample the data to a fixed time step
+        time_in_seconds, real_data = interpolate_data(time_in_seconds, real_data, target_dt=resample_dt)
+        max_timesteps, num_neurons = real_data.shape
+        # smooth the data
         smooth_real_data, residual, smooth_residual = smooth_data_preprocess(
             real_data, smooth_method
         )
@@ -1418,7 +1478,7 @@ def pickle_Nichols2017(transform, smooth_method="fft"):
     print(Nichols2017.keys(), end="\n\n")
 
 
-def pickle_Nguyen2017(transform, smooth_method="fft"):
+def pickle_Nguyen2017(transform, smooth_method="fft", resample_dt=1.0):
     """
     Pickles the worm neural activity data from Nguyen et al., PLOS CompBio 2017,
     Automatically tracking neurons in a moving and deforming brain.
@@ -1458,6 +1518,9 @@ def pickle_Nguyen2017(transform, smooth_method="fft"):
     sc = transform
     real_data0 = sc.fit_transform(real_data0[:, :num_neurons0])
     real_data0 = torch.tensor(real_data0, dtype=torch.float32)
+    # resample the data to a fixed time step
+    time_in_seconds0, real_data0 = interpolate_data(time_in_seconds0, real_data0, target_dt=resample_dt)
+    max_time0, num_neurons0 = real_data0.shape
     # WORM 1
     # load .mat file for  worm 1
     arr1 = loadmat(
@@ -1492,6 +1555,9 @@ def pickle_Nguyen2017(transform, smooth_method="fft"):
     sc = transform
     real_data1 = sc.fit_transform(real_data1[:, :num_neurons1])
     real_data1 = torch.tensor(real_data1, dtype=torch.float32)
+    # resample the data to a fixed time step
+    time_in_seconds1, real_data1 = interpolate_data(time_in_seconds1, real_data1, target_dt=resample_dt)
+    max_time1, num_neurons1 = real_data1.shape
     # WORM 2
     # load .mat file for  worm 1
     arr2 = loadmat(
@@ -1526,7 +1592,10 @@ def pickle_Nguyen2017(transform, smooth_method="fft"):
     sc = transform
     real_data2 = sc.fit_transform(real_data2[:, :num_neurons2])
     real_data2 = torch.tensor(real_data2, dtype=torch.float32)
-
+    # resample the data to a fixed time step
+    time_in_seconds2, real_data2 = interpolate_data(time_in_seconds2, real_data2, target_dt=resample_dt)
+    max_time2, num_neurons2 = real_data2.shape
+    # smooth the data
     smooth_real_data0, residual0, smooth_residual0 = smooth_data_preprocess(
         real_data0, smooth_method
     )
@@ -1602,7 +1671,7 @@ def pickle_Nguyen2017(transform, smooth_method="fft"):
     print(Nguyen2017.keys(), end="\n\n")
 
 
-def pickle_Skora2018(transform, smooth_method="fft"):
+def pickle_Skora2018(transform, smooth_method="fft", resample_dt=1.0):
     """
     Pickles the worm neural activity data from Skora et al., Cell Reports 2018,
     Energy Scarcity Promotes a Brain-wide Sleep State Modulated by Insulin Signaling in C. elegans.
@@ -1662,6 +1731,10 @@ def pickle_Skora2018(transform, smooth_method="fft"):
         real_data = torch.tensor(
             real_data, dtype=torch.float32
         )  # add a feature dimension and convert to tensor
+        # resample the data to a fixed time step
+        time_in_seconds, real_data = interpolate_data(time_in_seconds, real_data, target_dt=resample_dt)
+        max_timesteps, num_neurons = real_data.shape
+        # smooth the data
         smooth_real_data, residual, smooth_residual = smooth_data_preprocess(
             real_data, smooth_method
         )
@@ -1744,6 +1817,10 @@ def pickle_Skora2018(transform, smooth_method="fft"):
         real_data = torch.tensor(
             real_data, dtype=torch.float32
         )  # add a feature dimension and convert to tensor
+        # resample the data to a fixed time step
+        time_in_seconds, real_data = interpolate_data(time_in_seconds, real_data, target_dt=resample_dt)
+        max_timesteps, num_neurons = real_data.shape
+        # smooth the data
         smooth_real_data, residual, smooth_residual = smooth_data_preprocess(
             real_data, smooth_method
         )
@@ -1780,7 +1857,7 @@ def pickle_Skora2018(transform, smooth_method="fft"):
     print(Skora2018.keys(), end="\n\n")
 
 
-def pickle_Kaplan2020(transform, smooth_method="fft"):
+def pickle_Kaplan2020(transform, smooth_method="fft", resample_dt=1.0):
     """
     Pickles the worm neural activity data from Kaplan et al., Neuron 2020,
     Nested Neuronal Dynamics Orchestrate a Behavioral Hierarchy across Timescales.
@@ -1834,6 +1911,10 @@ def pickle_Kaplan2020(transform, smooth_method="fft"):
         real_data = torch.tensor(
             real_data, dtype=torch.float32
         )  # add a feature dimension and convert to tensor
+        # resample the data to a fixed time step
+        time_in_seconds, real_data = interpolate_data(time_in_seconds, real_data, target_dt=resample_dt)
+        max_timesteps, num_neurons = real_data.shape
+        # smooth the data
         smooth_real_data, residual, smooth_residual = smooth_data_preprocess(
             real_data, smooth_method
         )
@@ -1910,6 +1991,10 @@ def pickle_Kaplan2020(transform, smooth_method="fft"):
         real_data = torch.tensor(
             real_data, dtype=torch.float32
         )  # add a feature dimension and convert to tensor
+        # resample the data to a fixed time step
+        time_in_seconds, real_data = interpolate_data(time_in_seconds, real_data, target_dt=resample_dt)
+        max_timesteps, num_neurons = real_data.shape
+        # smooth the data
         smooth_real_data, residual, smooth_residual = smooth_data_preprocess(
             real_data, smooth_method
         )
@@ -1986,6 +2071,10 @@ def pickle_Kaplan2020(transform, smooth_method="fft"):
         real_data = torch.tensor(
             real_data, dtype=torch.float32
         )  # add a feature dimension and convert to tensor
+        # resample the data to a fixed time step
+        time_in_seconds, real_data = interpolate_data(time_in_seconds, real_data, target_dt=resample_dt)
+        max_timesteps, num_neurons = real_data.shape
+        # smooth the data
         smooth_real_data, residual, smooth_residual = smooth_data_preprocess(
             real_data, smooth_method
         )
@@ -2022,7 +2111,7 @@ def pickle_Kaplan2020(transform, smooth_method="fft"):
     print(Kaplan2020.keys(), end="\n\n")
 
 
-def pickle_Uzel2022(transform, smooth_method="fft"):
+def pickle_Uzel2022(transform, smooth_method="fft", resample_dt=1.0):
     """
     Pickles the worm neural activity data from Uzel et al 2022., Cell CurrBio 2022,
     A set of hub neurons and non-local connectivity features support global brain dynamics in C. elegans.
@@ -2076,11 +2165,13 @@ def pickle_Uzel2022(transform, smooth_method="fft"):
         real_data = torch.tensor(
             real_data, dtype=torch.float32
         )  # add a feature dimension and convert to tensor
-
+        # resample the data to a fixed time step
+        time_in_seconds, real_data = interpolate_data(time_in_seconds, real_data, target_dt=resample_dt)
+        max_timesteps, num_neurons = real_data.shape
+        # smooth the data
         smooth_real_data, residual, smooth_residual = smooth_data_preprocess(
             real_data, smooth_method
         )
-
         data_dict.update(
             {
                 worm: {
@@ -2114,7 +2205,7 @@ def pickle_Uzel2022(transform, smooth_method="fft"):
     print(Uzel2022.keys(), end="\n\n")
 
 
-def pickle_Flavell2023(transform, smooth_method="fft"):
+def pickle_Flavell2023(transform, smooth_method="fft", resample_dt=1.0):
     """
     Pickles the worm neural activity data from Flavell et al., bioRxiv 2023,
     Brain-wide representations of behavior spanning multiple timescales and states in C. elegans.
@@ -2171,10 +2262,14 @@ def pickle_Flavell2023(transform, smooth_method="fft"):
             % (max_timesteps, num_neurons, num_named),
             end="\n\n",
         )
-        # add worm to data dictionary
+        # resample the data to a fixed time step
+        time_in_seconds, calcium_data = interpolate_data(time_in_seconds, calcium_data, target_dt=resample_dt)
+        max_timesteps, num_neurons = calcium_data.shape
+        # smooth the data
         smooth_real_data, residual, smooth_residual = smooth_data_preprocess(
             calcium_data, smooth_method
         )
+        # add worm to data dictionary
         data_dict.update(
             {
                 worm: {
@@ -2209,7 +2304,7 @@ def pickle_Flavell2023(transform, smooth_method="fft"):
     return data_dict
 
 
-def pickle_Leifer2023(transform, smooth_method="fft"):
+def pickle_Leifer2023(transform, smooth_method="fft", resample_dt=1.0):
     """
     Pickles the worm neural activity data from Randi, ..., Leifer et al.,
     bioRxiv 2023, Neural signal propagation atlas of C. elegans.
@@ -2245,6 +2340,25 @@ def pickle_Leifer2023(transform, smooth_method="fft"):
         num_unnamed = 0
         label_list = label_list[: real_data.shape[1]]
         neuron_to_idx = dict()
+
+        timeVectorSeconds = []
+        with open(os.path.join(data_dir, str(i) + "_t.txt"), "r") as f:
+            for line in f.readlines():
+                l = line.strip("\n")
+                timeVectorSeconds.append(str_to_float(l))
+
+        time_in_seconds = np.array(timeVectorSeconds)
+        time_in_seconds = torch.tensor(time_in_seconds).to(torch.float32).unsqueeze(1)
+        dt = torch.zeros_like(time_in_seconds).to(torch.float32)
+        dt[1:] = time_in_seconds[1:] - time_in_seconds[:-1]
+
+        max_timesteps, num_neurons = real_data.shape
+        num_named = num_neurons - num_unnamed
+        print(
+            "len. Ca recording %s, total num. neurons %s, num. ID'd neurons %s"
+            % (max_timesteps, num_neurons, num_named),
+            end="\n\n",
+        )
 
         for j, item in enumerate(label_list):
             previous_list = label_list[:j]
@@ -2286,33 +2400,15 @@ def pickle_Leifer2023(transform, smooth_method="fft"):
         real_data = torch.tensor(
             real_data, dtype=torch.float32
         )  # add a feature dimension and convert to tensor
-
         # replace nan and inf with 0
         real_data = torch.nan_to_num(real_data, nan=0.0, posinf=0.0, neginf=0.0)
 
+        # resample the data to a fixed time step
+        time_in_seconds, real_data = interpolate_data(time_in_seconds, real_data, target_dt=resample_dt)
+        max_timesteps, num_neurons = real_data.shape
+        # smooth the data
         smooth_real_data, residual, smooth_residual = smooth_data_preprocess(
             real_data, smooth_method
-        )
-
-        timeVectorSeconds = []
-        with open(os.path.join(data_dir, str(i) + "_t.txt"), "r") as f:
-            for line in f.readlines():
-                l = line.strip("\n")
-                timeVectorSeconds.append(str_to_float(l))
-
-        time_in_seconds = np.array(timeVectorSeconds)
-        time_in_seconds = torch.tensor(time_in_seconds).to(torch.float32).unsqueeze(1)
-        dt = torch.zeros_like(time_in_seconds).to(torch.float32)
-        dt[1:] = time_in_seconds[1:] - time_in_seconds[:-1]
-
-        num_neurons = real_data.shape[1]
-        num_named = num_neurons - num_unnamed
-        max_timesteps = real_data.shape[0]
-
-        print(
-            "len. Ca recording %s, total num. neurons %s, num. ID'd neurons %s"
-            % (max_timesteps, num_neurons, num_named),
-            end="\n\n",
         )
 
         data_dict.update(

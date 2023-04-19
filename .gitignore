@@ -195,3 +195,4 @@ dmypy.json
 *.sh
 nohup.out
 data/worm_data_long.csv
+data/worm_data_long_no_resampling.csv

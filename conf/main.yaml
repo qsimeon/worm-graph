@@ -8,8 +8,8 @@ defaults:
   - _self_
 globals:
   random_seed: 0
-  use_residual: False
-  shuffle: False # whether to shuffle worms
+  use_residual: false
+  shuffle: false # whether to shuffle worms
 # If you want your primary config to override the values of configs
 # from the Defaults List, append _self_ to the end of the Defaults List
 hydra:
@@ -37,9 +37,9 @@ hydra:
       train.test_size: 500
       train.learn_rate: 0.01 #0.0001, 0.001, 0.01, 0.1, 1.0
       train.optimizer: SGD #Adam, SGD
-      train.smooth_data: True 
-      train.shuffle: True 
-      train.reverse: False 
+      train.smooth_data: true 
+      train.shuffle: true 
+      train.reverse: false 
       # MODEL
       model.type: NetworkLSTM #LinearNN, NetworkLSTM, NeuralCFC, NeuralTransformer
       model.hidden_size: 128 #8, 16, 32, 64, 128, 512, 1024, 2048

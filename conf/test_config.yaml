@@ -5,8 +5,8 @@ defaults:
   - slurm_default
   - _self_
 globals:
-  use_residual: False
-  shuffle: False
+  use_residual: false
+  shuffle: false
 
 hydra:
   mode: RUN

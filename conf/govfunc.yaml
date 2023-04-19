@@ -4,8 +4,8 @@ govfunc:
   start: 0
   tau: 0 # offset of time steps from target
   k_splits: 2 # number of interleaved train/test splits per single worm
-  smooth_data: False # if True use the smoothed calcium data as input
+  smooth_data: false # if True use the smoothed calcium data as input
   batch_size: 128 # maximum number of samples per batch
   # constraint: batch_size < min(train_size, test_size)
-  shuffle: False # whether to shuffle samples
+  shuffle: false # whether to shuffle samples
 
