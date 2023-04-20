@@ -406,9 +406,9 @@ def make_predictions(
     for worm, single_worm_dataset in dataset.items():
         os.makedirs(os.path.join(log_dir, worm), exist_ok=True)
         # get data to save
-        named_neuron_to_idx = single_worm_dataset["named_neuron_to_idx"]
         calcium_data = single_worm_dataset[key_data]
         named_neurons_mask = single_worm_dataset["named_neurons_mask"]
+        named_neurons = np.array(NEURONS_302)[named_neurons_mask]
         time_in_seconds = single_worm_dataset["time_in_seconds"]
         if time_in_seconds is None:
             time_in_seconds = torch.arange(len(calcium_data)).double()
@@ -424,7 +424,7 @@ def make_predictions(
         test_mask.detach()
         # labels and columns
         labels = np.expand_dims(np.where(train_mask, "train", "test"), axis=-1)
-        columns = list(named_neuron_to_idx) + [
+        columns = list(named_neurons) + [
             "train_test_label",
             "time_in_seconds",
             "tau",
@@ -451,7 +451,7 @@ def make_predictions(
             index=True,
             header=True,
         )
-        columns = list(named_neuron_to_idx) + [
+        columns = list(named_neurons) + [
             "train_test_label",
             "time_in_seconds",
             "tau",

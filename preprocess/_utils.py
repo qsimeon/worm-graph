@@ -862,8 +862,8 @@ def interpolate_data(time, data, target_dt):
         interpolated_data_np[:, i] = np.interp(target_time_np, time_np, data_np[:, i])
 
     # Convert the interpolated data and time back to torch.Tensor objects
-    target_time = torch.from_numpy(target_time_np)
-    interpolated_data = torch.from_numpy(interpolated_data_np)
+    target_time = torch.from_numpy(target_time_np).to(torch.float32).unsqueeze(-1)
+    interpolated_data = torch.from_numpy(interpolated_data_np).to(torch.float32)
 
     return target_time, interpolated_data
 
