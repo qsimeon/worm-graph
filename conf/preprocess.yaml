@@ -3,5 +3,5 @@ preprocess:
   zipfile: opensource_data.zip
   dataset: all
   raw_dir: data/raw
-  resample_dt: null # The time interval (in seconds) to use for resampling; if None, no resampling is performed
-  smooth: fft # None: No signal smoothing # FFT: Fast Fourier Transform # TVR: Total Variantion Regularization # SG: Savitzky–Golay Filter
+  resample_dt: 0.5 # The time interval (in seconds) to use for resampling; if None, no resampling is performed
+  smooth: FFT # None: No signal smoothing # FFT: Fast Fourier Transform # TVR: Total Variantion Regularization # SG: Savitzky–Golay Filter

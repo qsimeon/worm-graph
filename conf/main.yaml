@@ -24,9 +24,9 @@ hydra:
   sweeper:
     params:
       # GLOBALS
-      globals.random_seed: 9 #0, 1, 2, 3, 4, 5
+      globals.random_seed: 0 #0, 1, 2, 3, 4, 5
       # TRAIN
-      train.epochs: 10 #100, 200, 300
+      train.epochs: 1 #100, 200, 300
       train.save_freq: 100
       train.seq_len: 99 #9, 99, 199, 299
       train.k_splits: 2 #2, 5, 7
@@ -45,4 +45,4 @@ hydra:
       model.hidden_size: 128 #8, 16, 32, 64, 128, 512, 1024, 2048
       model.num_layers: 1 #1, 2, 3, 4, 5
       # DATASET
-      dataset.name: Kato2015, Nichols2017, Skora2018, Kaplan2020, Uzel2022, Flavell2023, Leifer2023
+      dataset.name: Kato2015 #, Nichols2017, Skora2018, Uzel2022 #Kato2015, Nichols2017, Skora2018, Kaplan2020, Uzel2022, Flavell2023, Leifer2023
