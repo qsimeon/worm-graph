@@ -194,3 +194,5 @@ dmypy.json
 ./data/processed/neural/sine.pickle
 *.sh
 nohup.out
+data/worm_data_long.csv
+data/worm_data_long_no_resampling.csv

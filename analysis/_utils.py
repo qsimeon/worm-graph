@@ -212,7 +212,7 @@ def neurons_on_category(model, dataset, smooth_data, tau_out):
             calcium_data = single_worm_dataset["smooth_calcium_data"]
         else:
             calcium_data = single_worm_dataset["calcium_data"]
-        max_time = single_worm_dataset["max_time"]
+        max_timesteps = single_worm_dataset["max_timesteps"]
         named_neuron_mask = single_worm_dataset["named_neurons_mask"]
 
         named_neuron_inds = torch.where(named_neuron_mask)[0].numpy()
@@ -222,7 +222,7 @@ def neurons_on_category(model, dataset, smooth_data, tau_out):
 
         # make predictions with final model
         targets, predictions = model_predict(
-            model, calcium_data[: max_time // 2, :] * named_neuron_mask, tau=tau_out
+            model, calcium_data[: max_timesteps // 2, :] * named_neuron_mask, tau=tau_out
         )
         loss_prediction = [
             criterion(predictions[:, idx], targets[:, idx]).detach().item()

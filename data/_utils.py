@@ -25,17 +25,17 @@ class NeuralActivityDataset(torch.utils.data.Dataset):
     ):
         """
         Args:
-          data: torch.tensor. Data w/ shape (max_time, num_neurons).
+          data: torch.tensor. Data w/ shape (max_timesteps, num_neurons).
           seq_len: int. Sequences of length `seq_len` are generated until the dataset `size`
                     is achieved.
-          num_samples: int, 0 < num_samples <= max_time. Total number of (input, target)
+          num_samples: int, 0 < num_samples <= max_timesteps. Total number of (input, target)
                       data pairs to generate.
           neurons: None, int or array-like. Index of neuron(s) to return data for.
                   Returns data for all neurons if None.
           time_vec: None or array-like. A vector of the time (in seconds) corresponding
                     to the time axis (axis 0) of the `data` tensor.
           reverse: bool. Whether to sample sequences backward from end of the data.
-          tau: int, 0 < tau < max_time//2. The number of timesteps to the right by which the
+          tau: int, 0 < tau < max_timesteps//2. The number of timesteps to the right by which the
                 target sequence is offset from input sequence. Deprecated (unused) argument.
         Returns:
             (X, Y, metadata): tuple. Batch of data samples.
@@ -51,10 +51,10 @@ class NeuralActivityDataset(torch.utils.data.Dataset):
         assert data.ndim == 2, "Reshape the data tensor as (time, neurons)"
         assert isinstance(seq_len, int) and 0 < seq_len <= data.size(
             0
-        ), "Enter an integer sequence length 0 < `seq_len` <= max_time."
+        ), "Enter an integer sequence length 0 < `seq_len` <= max_timesteps."
         assert (
             isinstance(tau, int) and 0 <= tau < data.size(0) // 2
-        ), "Enter a integer offset `0 <= tau < max_time // 2`."
+        ), "Enter a integer offset `0 <= tau < max_timesteps // 2`."
         # create time vector
         if time_vec is not None:
             assert torch.is_tensor(
@@ -66,7 +66,7 @@ class NeuralActivityDataset(torch.utils.data.Dataset):
             self.time_vec = time_vec.squeeze()
         else:
             self.time_vec = torch.arange(data.size(0)).double()
-        self.max_time, num_neurons = data.shape
+        self.max_timesteps, num_neurons = data.shape
         self.seq_len = seq_len
         self.reverse = reverse
         self.tau = tau
@@ -129,7 +129,7 @@ class NeuralActivityDataset(torch.utils.data.Dataset):
         Private method for generating data samples.
         """
         # define length of time
-        T = self.max_time
+        T = self.max_timesteps
         # dataset will contain sequences of length `seq_len`
         L = self.seq_len
         # all start indices
@@ -524,8 +524,8 @@ def graph_inject_data(single_worm_dataset, connectome_graph):
     graph = connectome_graph
     # get the calcium data for this worm
     dataset = calcium_data.squeeze()
-    max_time, num_neurons = dataset.shape
-    assert max_time == single_worm_dataset["max_time"]
+    max_timesteps, num_neurons = dataset.shape
+    assert max_timesteps == single_worm_dataset["max_timesteps"]
     assert num_neurons == single_worm_dataset["num_neurons"]
     print("How much real data do we have?", dataset.shape)  # (time, neurons)
     print(
@@ -541,7 +541,7 @@ def graph_inject_data(single_worm_dataset, connectome_graph):
         k_ for k_, v_ in id_neuron.items() if v_ in set(graph.id_neuron.values())
     ]  # neuron indices in sparse dataset
     # 'inject' the data by creating a clone graph with the desired features
-    new_x = torch.zeros(graph.num_nodes, max_time, dtype=torch.float64)
+    new_x = torch.zeros(graph.num_nodes, max_timesteps, dtype=torch.float64)
     new_x[graph_inds, :] = dataset[:, data_inds].T
     graph = Data(
         x=new_x,

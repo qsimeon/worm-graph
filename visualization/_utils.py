@@ -132,6 +132,17 @@ def draw_connectome(
     plt.show()
 
 
+def plot_frequency_distribution(data, ax, title, dt=0.5):
+    # Compute the FFT and frequencies
+    fft_data = torch.fft.rfft(torch.tensor(data))
+    freqs = torch.fft.rfftfreq(len(data), d=dt)
+
+    # Plot the frequency distribution
+    ax.plot(freqs, torch.abs(fft_data))
+    ax.set_xlabel("Frequency (Hz)")
+    ax.set_ylabel("Amplitude")
+    ax.set_title(title)
+    
 def plot_loss_curves(log_dir):
     """
     Plot the loss curves stored in the given log directory.
