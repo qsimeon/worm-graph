@@ -29,8 +29,8 @@ hydra:
       train.epochs: 300 #100, 200, 300
       train.save_freq: 100
       train.seq_len: 99 #range(1,100,8)
-      train.k_splits: 2 #2, 5, 7, 9
-      train.num_batches: 1 # 1, 2, 3, 4, 5, 6, 7, 8, 9, *10*
+      train.k_splits: 2 #2, 5, 7, 10
+      train.num_batches: 10 # 1, 2, 3, 4, 5, 6, 7, 8, 9, *10*
       train.tau_in: 1 #range(0,99,9)
       train.tau_out: 1 #range(0,99,9)
       train.train_size: 500 #1, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 150, 200, 250, 300, 350, 400, 450, *500*
@@ -41,7 +41,7 @@ hydra:
       train.shuffle: true 
       train.reverse: false 
       # MODEL
-      model.type: NetworkLSTM #LinearNN, NetworkLSTM, *NeuralCFC*, NeuralTransformer
+      model.type: LinearNN, NeuralTransformer #LinearNN, NetworkLSTM, *NeuralCFC*, NeuralTransformer
       model.hidden_size: 1024 #8, 16, 32, 64, 128, 512, *1024*
       model.num_layers: 1 #*1*, 2, 3, 4
       # DATASET
