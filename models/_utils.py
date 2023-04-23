@@ -73,6 +73,7 @@ class Block(torch.nn.Module):
         self.ln2 = torch.nn.LayerNorm(n_embd)
 
     def forward(self, x):
+        # notice the use of residual (skip) connections
         x = x + self.sa(self.ln1(x))
         x = x + self.ffwd(self.ln2(x))
         return x
@@ -111,13 +112,17 @@ class NeuralTransformer(torch.nn.Module):
     def __init__(
         self,
         input_size,
-        hidden_size,  # currently unused
+        hidden_size, 
         num_layers=1,
         loss=None,
     ):
         """
-        Neural activity data is continuous valued so
-        we can treat as if it is already emebedded.
+        Neural activity data is continuous valued and thus
+        can naturally be treated as if it were already emebedded. 
+        However, to maintain notational similarity with the original 
+        Transformer architecture, we use a linear layer to perform 
+        expansion recoding - which acts as an embedding but is really 
+        just a projection.
         """
         super(NeuralTransformer, self).__init__()
         # Loss function
@@ -130,25 +135,28 @@ class NeuralTransformer(torch.nn.Module):
         else:
             self.loss = torch.nn.L1Loss
         # Setup
-        self.input_size = input_size
+        self.input_size = input_size # number of neurons (302)
         self.output_size = input_size
-        self.hidden_size = hidden_size  # currently unused
+        self.hidden_size = hidden_size 
         self.num_layers = num_layers
-        self.n_head = 2  # TODO: make a function of hidden_size
-        self.block_size = 10000  # maximum attention block (i.e. context) size
+        self.n_head = 2 
+        self.block_size = 5000  # maximum attention block (i.e. context) size
         self.dropout = 0.1
         # Identity layer
         self.identity = torch.nn.Identity()
-        # Transformer parts
+        # Positional encoding
         self.position_encoding = PositionalEncoding(
             self.input_size,
             max_len=self.block_size,
             dropout=self.dropout,
         )
+        # Expansion recoding (a.k.a. embedding)
+        self.expansion_recoder = torch.nn.Linear(self.input_size, self.hidden_size)
+        # Transformer blocks
         self.blocks = torch.nn.Sequential(
             *(
                 Block(
-                    n_embd=self.input_size,
+                    n_embd=self.hidden_size,
                     block_size=self.block_size,
                     n_head=self.n_head,
                     dropout=self.dropout,
@@ -156,29 +164,32 @@ class NeuralTransformer(torch.nn.Module):
                 for _ in range(self.num_layers)
             )
         )
-        self.ln_f = torch.nn.LayerNorm(self.input_size)  # final layer norm
+        self.ln_f = torch.nn.LayerNorm(self.hidden_size)  # final layer norm
         # Readout
         self.linear = torch.nn.Linear(
-            self.input_size, self.output_size
+            self.hidden_size, self.output_size
         )  # linear readout
 
     def forward(self, input, tau=0):
         """
         (B, T, C) = input.shape = (batch_size, max_timesteps, input_size)
+        (B, T, C') = embedding.shape = (batch_size, max_timesteps, hidden_size)
         """
         if tau < 1:
             output = self.identity(input)
         else:
             x = self.position_encoding(input)  # (B,T,C)
-            x = self.blocks(x)  # (B,T,C)
-            x = self.ln_f(x)  # (B,T,C)
+            x = self.expansion_recoder(x)  # (B,T,C')
+            x = self.blocks(x)  # (B,T,C')
+            x = self.ln_f(x)  # (B,T,C')
             readout = self.linear(x)  # (B,T,C)
             output = readout
         # repeat for target with tau>0 offset
         for i in range(1, tau):
             x = self.position_encoding(output)  # (B,T,C)
-            x = self.blocks(x)  # (B,T,C)
-            x = self.ln_f(x)  # (B,T,C)
+            x = self.expansion_recoder(x)  # (B,T,C')
+            x = self.blocks(x)  # (B,T,C')
+            x = self.ln_f(x)  # (B,T,C')
             readout = self.linear(x)  # (B,T,C)
             output = readout
         return output
@@ -187,11 +198,16 @@ class NeuralTransformer(torch.nn.Module):
         """
         The loss function to be used with this model.
         """
-        return self.loss()
-        # def func(input, target, **kwargs):
-        #     return self.elbo_loss + self.loss(**kwargs)(input, target)
-
-        # return func
+        def loss(input, target, **kwargs):
+            """Calculate loss with FFT regularization."""
+            original_loss = self.loss(**kwargs)(input, target)
+            # calculate FFT and take real part
+            input_fft = torch.fft.rfft(input, dim=-2)
+            target_fft = torch.fft.rfft(target, dim=-2)
+            # calculate average difference between real parts of FFTs
+            fft_loss = torch.mean(torch.abs(input_fft - target_fft))
+            return 0.5*original_loss + 0.5*fft_loss
+        return loss
 
     def get_input_size(self):
         return self.input_size
@@ -268,7 +284,16 @@ class LinearNN(torch.nn.Module):
         """
         The loss function to be used with this model.
         """
-        return self.loss()
+        def loss(input, target, **kwargs):
+            """Calculate loss with FFT regularization."""
+            original_loss = self.loss(**kwargs)(input, target)
+            # calculate FFT and take real part
+            input_fft = torch.fft.rfft(input, dim=-2)
+            target_fft = torch.fft.rfft(target, dim=-2)
+            # calculate average difference between real parts of FFTs
+            fft_loss = torch.mean(torch.abs(input_fft - target_fft))
+            return 0.5*original_loss + 0.5*fft_loss
+        return loss
 
     def get_input_size(self):
         return self.input_size
@@ -345,7 +370,16 @@ class NeuralCFC(torch.nn.Module):
         """
         The loss function to be used with this model.
         """
-        return self.loss()
+        def loss(input, target, **kwargs):
+            """Calculate loss with FFT regularization."""
+            original_loss = self.loss(**kwargs)(input, target)
+            # calculate FFT and take real part
+            input_fft = torch.fft.rfft(input, dim=-2)
+            target_fft = torch.fft.rfft(target, dim=-2)
+            # calculate average difference between real parts of FFTs
+            fft_loss = torch.mean(torch.abs(input_fft - target_fft))
+            return 0.5*original_loss + 0.5*fft_loss
+        return loss
 
     def get_input_size(self):
         return self.input_size
@@ -438,7 +472,16 @@ class NetworkLSTM(torch.nn.Module):
         """
         The loss function to be used with this model.
         """
-        return self.loss()
+        def loss(input, target, **kwargs):
+            """Calculate loss with FFT regularization."""
+            original_loss = self.loss(**kwargs)(input, target)
+            # calculate FFT and take real part
+            input_fft = torch.fft.rfft(input, dim=-2)
+            target_fft = torch.fft.rfft(target, dim=-2)
+            # calculate average difference between real parts of FFTs
+            fft_loss = torch.mean(torch.abs(input_fft - target_fft))
+            return 0.5*original_loss + 0.5*fft_loss
+        return loss
 
     def get_input_size(self):
         return self.input_size

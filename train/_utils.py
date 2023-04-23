@@ -82,8 +82,6 @@ def train(
         "centered_train_loss": (train_loss - base_loss) / (i + 1),
         "num_train_samples": num_train_samples,
     }
-    # garbage collection
-    gc.collect()
     # Return losses.
     return losses
 
@@ -150,8 +148,6 @@ def test(
         "centered_test_loss": (test_loss - base_loss) / (i + 1),
         "num_test_samples": num_test_samples,
     }
-    # garbage collection
-    gc.collect()
     # Return losses
     return losses
 
@@ -257,8 +253,6 @@ def split_train_test(
         shuffle=shuffle,
         pin_memory=True,
     )
-    # garbage collection
-    gc.collect()
     # return datasets and masks
     return train_loader, test_loader, train_mask, test_mask
 
@@ -370,8 +364,6 @@ def optimize_model(
                 f"\nEpoch: {epoch:03d}, Train Loss: {centered_train_loss:.4f}, Val. Loss: {centered_test_loss:.4f}",
                 end="\n\n",
             )
-    # garbage collection
-    gc.collect()
     # return optimized model
     return model, log
 
@@ -403,6 +395,7 @@ def make_predictions(
     signal_str = "residual" if use_residual else "calcium"
     key_data = "residual_calcium" if use_residual else "calcium_data"
     key_data = "smooth_" + key_data if smooth_data else key_data
+    # make a directory for each worm in the dataset and store the data
     for worm, single_worm_dataset in dataset.items():
         os.makedirs(os.path.join(log_dir, worm), exist_ok=True)
         # get data to save
@@ -463,8 +456,6 @@ def make_predictions(
             index=True,
             header=True,
         )
-    # garbage collection
-    gc.collect()
     return None
 
 
@@ -502,8 +493,6 @@ def model_predict(
     targets = torch.nn.functional.pad(input.detach().cpu()[tau:], (0, 0, 0, tau))
     # prediction of the input shifted by tau
     predictions = output.detach().cpu()
-    # garbage collection
-    gc.collect()
     return targets, predictions
 
 

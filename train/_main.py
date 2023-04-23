@@ -273,8 +273,6 @@ def train_model(
     og_cfg_file = os.path.join(log_dir, ".hydra", "config.yaml")
     if os.path.exists(og_cfg_file):
         os.remove(og_cfg_file)
-    # garbage collection
-    gc.collect()
     # returned trained model and a path to log directory
     return model, log_dir
 
