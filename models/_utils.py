@@ -414,10 +414,10 @@ class NeuralCFC(torch.nn.Module):
 
 class NetworkLSTM(torch.nn.Module):
     """
-    A model of the C. elegans neural network using an LSTM.
+    A model of the _C. elegans_ neural network using an LSTM.
     Given an input sequence of length $L$ and an offset $\tau$,
     this model is trained to output the sequence of length $L$
-    that occurs $tau$ steps later.
+    that occurs $tau$ time steps after the start of the input sequence.
     """
 
     def __init__(
