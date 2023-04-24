@@ -26,7 +26,7 @@ hydra:
       # GLOBALS
       globals.random_seed: 0 #range(0,10,1)
       # TRAIN
-      train.epochs: 500 #100, 200, 300, 400
+      train.epochs: 400 #100, 200, 300, 400
       train.save_freq: 100
       train.seq_len: 100 #range(1,101,9)
       train.k_splits: 2 #2, 5, 7, 10

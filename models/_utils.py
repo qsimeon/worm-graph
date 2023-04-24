@@ -202,8 +202,8 @@ class NeuralTransformer(torch.nn.Module):
             """Calculate loss with FFT regularization."""
             original_loss = self.loss(**kwargs)(input, target)
             # calculate FFT and take real part
-            input_fft = torch.fft.rfft(input, dim=-2)
-            target_fft = torch.fft.rfft(target, dim=-2)
+            input_fft = torch.fft.rfft(input, dim=-2).real
+            target_fft = torch.fft.rfft(target, dim=-2).real
             # calculate average difference between real parts of FFTs
             fft_loss = torch.mean(torch.abs(input_fft - target_fft))
             return 0.5*original_loss + 0.5*fft_loss
@@ -288,8 +288,8 @@ class LinearNN(torch.nn.Module):
             """Calculate loss with FFT regularization."""
             original_loss = self.loss(**kwargs)(input, target)
             # calculate FFT and take real part
-            input_fft = torch.fft.rfft(input, dim=-2)
-            target_fft = torch.fft.rfft(target, dim=-2)
+            input_fft = torch.fft.rfft(input, dim=-2).real
+            target_fft = torch.fft.rfft(target, dim=-2).real
             # calculate average difference between real parts of FFTs
             fft_loss = torch.mean(torch.abs(input_fft - target_fft))
             return 0.5*original_loss + 0.5*fft_loss
@@ -374,8 +374,8 @@ class NeuralCFC(torch.nn.Module):
             """Calculate loss with FFT regularization."""
             original_loss = self.loss(**kwargs)(input, target)
             # calculate FFT and take real part
-            input_fft = torch.fft.rfft(input, dim=-2)
-            target_fft = torch.fft.rfft(target, dim=-2)
+            input_fft = torch.fft.rfft(input, dim=-2).real
+            target_fft = torch.fft.rfft(target, dim=-2).real
             # calculate average difference between real parts of FFTs
             fft_loss = torch.mean(torch.abs(input_fft - target_fft))
             return 0.5*original_loss + 0.5*fft_loss
@@ -476,8 +476,8 @@ class NetworkLSTM(torch.nn.Module):
             """Calculate loss with FFT regularization."""
             original_loss = self.loss(**kwargs)(input, target)
             # calculate FFT and take real part
-            input_fft = torch.fft.rfft(input, dim=-2)
-            target_fft = torch.fft.rfft(target, dim=-2)
+            input_fft = torch.fft.rfft(input, dim=-2).real
+            target_fft = torch.fft.rfft(target, dim=-2).real
             # calculate average difference between real parts of FFTs
             fft_loss = torch.mean(torch.abs(input_fft - target_fft))
             return 0.5*original_loss + 0.5*fft_loss

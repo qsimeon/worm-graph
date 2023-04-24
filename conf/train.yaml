@@ -11,7 +11,7 @@ train:
   # thus, smaller num. batches corresponds to more parallelization; 
   # num_batches corresponds to the number of gradient updates per epoch
   num_batches: 1 # total number of batches per epoch (worm cohorts)
-  train_size: 5000 # approx. number of samples (sequences) of training data per epoch
+  train_size: 1000 # approx. number of samples (sequences) of training data per epoch
   test_size: 500 # approx. number of samples (sequences) of validation data per epoch
   # constraint: batch_size: int <= min(train_size: int, test_size: int)
   shuffle: true # whether to shuffle samples from each worm
