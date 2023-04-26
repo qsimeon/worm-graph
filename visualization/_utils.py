@@ -142,7 +142,8 @@ def plot_frequency_distribution(data, ax, title, dt=0.5):
     ax.set_xlabel("Frequency (Hz)")
     ax.set_ylabel("Amplitude")
     ax.set_title(title)
-    
+
+
 def plot_loss_curves(log_dir):
     """
     Plot the loss curves stored in the given log directory.
@@ -162,12 +163,16 @@ def plot_loss_curves(log_dir):
     # get strings for plot title
     dataset_name = config.dataset.name
     model_name = config.model.type
+    tau_in = config.train.tau_in
     timestamp = config.globals.timestamp
     # create the plot title
-    plt_title = "Loss curves\nmodel: {}\ndataset: {}\ntime: {}".format(
-        model_name,
-        dataset_name,
-        timestamp,
+    plt_title = (
+        "Loss curves\nmodel: {}\ndataset: {}\ntraining tau: {}\ntime: {}".format(
+            model_name,
+            dataset_name,
+            tau_in,
+            timestamp,
+        )
     )
     # load the loss dataframe
     loss_df = pd.read_csv(os.path.join(log_dir, "loss_curves.csv"), index_col=0)
@@ -221,11 +226,13 @@ def plot_before_after_weights(log_dir: str) -> None:
     # get strings for plot title
     dataset_name = config.dataset.name
     model_name = config.model.type
+    tau_in = config.train.tau_in
     timestamp = config.globals.timestamp
     # create the plot title
-    plt_title = "Model readout weights\nmodel: {}\ndataset: {}\ntime: {}".format(
+    plt_title = "Model readout weights\nmodel: {}\ndataset: {}\ntraining tau: {}\ntime: {}".format(
         model_name,
         dataset_name,
+        tau_in,
         timestamp,
     )
     # load the first model checkpoint
@@ -282,6 +289,8 @@ def plot_targets_predictions(
     # get strings for plot title
     dataset_name = config.dataset.name
     model_name = config.model.type
+    tau_in = config.train.tau_in
+    tau_out = config.train.tau_out
     timestamp = config.globals.timestamp
     # recursive call for all worms
     if (worm is None) or (worm.lower() == "all"):
@@ -308,11 +317,13 @@ def plot_targets_predictions(
         plt_title = (
             "Neural activity "
             + signal_str
-            + " (GCaMP fluorescence) \nworm: {}, neuron: {}\nmodel: {}\ndataset: {}\ntime: {}".format(
+            + " (GCaMP fluorescence) \nworm: {}, neuron: {}\nmodel: {}\ndataset: {}\ntraining tau: {}\nprediction tau: {}\ntime: {}".format(
                 worm,
                 _neuron_,
                 model_name,
                 dataset_name,
+                tau_in,
+                tau_out,
                 timestamp,
             )
         )
@@ -405,6 +416,8 @@ def plot_correlation_scatterplot(
     # get strings for plot title
     dataset_name = config.dataset.name
     model_name = config.model.type
+    tau_in = config.train.tau_in
+    tau_out = config.train.tau_out
     timestamp = config.globals.timestamp
     # recursive call for all worms
     if (worm is None) or (worm.lower() == "all"):
@@ -426,11 +439,13 @@ def plot_correlation_scatterplot(
     # plot helper
     def func(_neuron_):
         os.makedirs(os.path.join(log_dir, worm, "figures"), exist_ok=True)
-        plt_title = "Scatterplot of predicted vs target residuals\nworm: {}, neuron: {}\nmodel: {}\ndataset: {}\ntime: {}".format(
+        plt_title = "Scatterplot of predicted vs target residuals\nworm: {}, neuron: {}\nmodel: {}\ndataset: {}\ntraining tau: {}\nprediction tau: {}\ntime: {}".format(
             worm,
             _neuron_,
             model_name,
             dataset_name,
+            tau_in,
+            tau_out,
             timestamp,
         )
         data_dict = {

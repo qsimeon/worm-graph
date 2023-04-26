@@ -1,7 +1,6 @@
 defaults: 
   - dataset
   - model
-  - train
   - slurm_default
   - _self_
 globals:

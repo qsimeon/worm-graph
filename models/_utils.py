@@ -112,16 +112,16 @@ class NeuralTransformer(torch.nn.Module):
     def __init__(
         self,
         input_size,
-        hidden_size, 
+        hidden_size,
         num_layers=1,
         loss=None,
     ):
         """
         Neural activity data is continuous valued and thus
-        can naturally be treated as if it were already emebedded. 
-        However, to maintain notational similarity with the original 
-        Transformer architecture, we use a linear layer to perform 
-        expansion recoding - which acts as an embedding but is really 
+        can naturally be treated as if it were already emebedded.
+        However, to maintain notational similarity with the original
+        Transformer architecture, we use a linear layer to perform
+        expansion recoding - which acts as an embedding but is really
         just a projection.
         """
         super(NeuralTransformer, self).__init__()
@@ -135,11 +135,11 @@ class NeuralTransformer(torch.nn.Module):
         else:
             self.loss = torch.nn.L1Loss
         # Setup
-        self.input_size = input_size # number of neurons (302)
+        self.input_size = input_size  # number of neurons (302)
         self.output_size = input_size
-        self.hidden_size = hidden_size 
+        self.hidden_size = hidden_size
         self.num_layers = num_layers
-        self.n_head = 2 
+        self.n_head = 4
         self.block_size = 5000  # maximum attention block (i.e. context) size
         self.dropout = 0.1
         # Identity layer
@@ -164,7 +164,7 @@ class NeuralTransformer(torch.nn.Module):
                 for _ in range(self.num_layers)
             )
         )
-        self.ln_f = torch.nn.LayerNorm(self.hidden_size)  # final layer norm
+        self.layer_norm = torch.nn.LayerNorm(self.hidden_size)  # final layer norm
         # Readout
         self.linear = torch.nn.Linear(
             self.hidden_size, self.output_size
@@ -181,7 +181,7 @@ class NeuralTransformer(torch.nn.Module):
             x = self.position_encoding(input)  # (B,T,C)
             x = self.expansion_recoder(x)  # (B,T,C')
             x = self.blocks(x)  # (B,T,C')
-            x = self.ln_f(x)  # (B,T,C')
+            x = self.layer_norm(x)  # (B,T,C')
             readout = self.linear(x)  # (B,T,C)
             output = readout
         # repeat for target with tau>0 offset
@@ -189,7 +189,7 @@ class NeuralTransformer(torch.nn.Module):
             x = self.position_encoding(output)  # (B,T,C)
             x = self.expansion_recoder(x)  # (B,T,C')
             x = self.blocks(x)  # (B,T,C')
-            x = self.ln_f(x)  # (B,T,C')
+            x = self.layer_norm(x)  # (B,T,C')
             readout = self.linear(x)  # (B,T,C)
             output = readout
         return output
@@ -198,6 +198,7 @@ class NeuralTransformer(torch.nn.Module):
         """
         The loss function to be used with this model.
         """
+
         def loss(input, target, **kwargs):
             """Calculate loss with FFT regularization."""
             original_loss = self.loss(**kwargs)(input, target)
@@ -206,7 +207,8 @@ class NeuralTransformer(torch.nn.Module):
             target_fft = torch.fft.rfft(target, dim=-2).real
             # calculate average difference between real parts of FFTs
             fft_loss = torch.mean(torch.abs(input_fft - target_fft))
-            return 0.5*original_loss + 0.5*fft_loss
+            return 0.0 * original_loss + 1.0 * fft_loss
+
         return loss
 
     def get_input_size(self):
@@ -284,6 +286,7 @@ class LinearNN(torch.nn.Module):
         """
         The loss function to be used with this model.
         """
+
         def loss(input, target, **kwargs):
             """Calculate loss with FFT regularization."""
             original_loss = self.loss(**kwargs)(input, target)
@@ -292,7 +295,8 @@ class LinearNN(torch.nn.Module):
             target_fft = torch.fft.rfft(target, dim=-2).real
             # calculate average difference between real parts of FFTs
             fft_loss = torch.mean(torch.abs(input_fft - target_fft))
-            return 0.5*original_loss + 0.5*fft_loss
+            return 0.0 * original_loss + 1.0 * fft_loss
+
         return loss
 
     def get_input_size(self):
@@ -356,7 +360,7 @@ class NeuralCFC(torch.nn.Module):
         # NCP wired CfC
         self.wiring = AutoNCP(
             self.hidden_size + 3,
-            self.hidden_size, # output size must be less than the number of units-2
+            self.hidden_size,  # output size must be less than the number of units-2
         )
         self.rnn = CfC(self.input_size, self.wiring)
         # Initialize hidden state
@@ -370,6 +374,7 @@ class NeuralCFC(torch.nn.Module):
         """
         The loss function to be used with this model.
         """
+
         def loss(input, target, **kwargs):
             """Calculate loss with FFT regularization."""
             original_loss = self.loss(**kwargs)(input, target)
@@ -378,7 +383,8 @@ class NeuralCFC(torch.nn.Module):
             target_fft = torch.fft.rfft(target, dim=-2).real
             # calculate average difference between real parts of FFTs
             fft_loss = torch.mean(torch.abs(input_fft - target_fft))
-            return 0.5*original_loss + 0.5*fft_loss
+            return 0.0 * original_loss + 1.0 * fft_loss
+
         return loss
 
     def get_input_size(self):
@@ -472,6 +478,7 @@ class NetworkLSTM(torch.nn.Module):
         """
         The loss function to be used with this model.
         """
+
         def loss(input, target, **kwargs):
             """Calculate loss with FFT regularization."""
             original_loss = self.loss(**kwargs)(input, target)
@@ -480,7 +487,8 @@ class NetworkLSTM(torch.nn.Module):
             target_fft = torch.fft.rfft(target, dim=-2).real
             # calculate average difference between real parts of FFTs
             fft_loss = torch.mean(torch.abs(input_fft - target_fft))
-            return 0.5*original_loss + 0.5*fft_loss
+            return 0.0 * original_loss + 1.0 * fft_loss
+
         return loss
 
     def get_input_size(self):

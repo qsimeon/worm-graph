@@ -75,28 +75,22 @@ def train_model(
         "centered_train_losses": np.zeros(train_epochs, dtype=np.float32),
         "centered_test_losses": np.zeros(train_epochs, dtype=np.float32),
     }
-    # arguments passed to the `split_train_test` function
-    Tr = max(1, config.train.train_size // num_unique_worms)  # per worm train size
-    Te = max(1, config.train.test_size // num_unique_worms)  # per worm test size
-    B = max(1, Tr // config.train.num_batches)  # per worm batch size
-    print(
-        "per worm train size:",
-        Tr,
-        "\nper worm test size:",
-        Te,
-        "\nper worm batch size:",
-        B,
-        end="\n\n",
+    # caclulate the batch size per worm
+    batch_size = max(1, num_unique_worms // config.train.num_batches)
+    # make a list of tau_in values
+    tau_in = (
+        [config.train.tau_in]
+        if isinstance(config.train.tau_in, int)
+        else list(config.train.tau_in)
     )
+    # create keyword arguments for `split_train_test`
     kwargs = dict(
         k_splits=config.train.k_splits,
         seq_len=config.train.seq_len,
-        batch_size=B,  # `batch_size` as a function of `train_size`
-        train_size=Tr,  # keeps training set size constant per epoch (cohort)
-        test_size=Te,  # keeps validation set size constant per epoch (cohort)
+        batch_size=batch_size,  # `batch_size` as a function of `train_size`
         shuffle=config.train.shuffle,  # shuffle samples from each cohort
         reverse=config.train.reverse,  # generate samples backward from the end of data
-        tau=config.train.tau_in,
+        tau=tau_in,
         use_residual=use_residual,
     )
     # choose whether to use calcium or residual data
@@ -116,7 +110,9 @@ def train_model(
     # memoize creation of data loaders and masks for speedup
     memo_loaders_masks = dict()
     # train for config.train.num_epochs
-    reset_epoch = 0  # 1
+    reset_epoch = 0
+    # keep track of the amount of train data per epoch (in timesteps)
+    worm_timesteps = 0
     # main FOR loop; train the model for multiple epochs (one cohort epoch)
     for i, cohort in enumerate(worm_cohorts):
         # create a list of loaders and masks for the cohort
@@ -163,6 +159,9 @@ def train_model(
             # mutate this worm's dataset with its train and test masks
             dataset[worm].setdefault("train_mask", train_mask.detach())
             dataset[worm].setdefault("test_mask", test_mask.detach())
+            # increment the count of the amt. of train data (measure in timesteps) of one epoch
+            if i == 0:
+                worm_timesteps += train_mask.sum().item()
         # create loaders and masks lists
         train_loader = list(train_loader)
         test_loader = list(test_loader)
@@ -181,39 +180,35 @@ def train_model(
             num_epochs=num_epochs,
             use_residual=use_residual,
         )
+
         # retrieve losses and sample counts
         for key in data:  # pre-allocated memory for `data[key]`
-            # with `num_epochs=1`, the code below is just equal to data[key][i] = log[key]
+            # with `num_epochs=1`, this is just data[key][i] = log[key]
             data[key][(i * num_epochs) : (i * num_epochs) + len(log[key])] = log[key]
         # extract the latest validation loss
         val_loss = data["centered_test_losses"][-1]
         # get what neurons have been covered so far
-        _ = torch.nonzero(coverage_mask).squeeze().numpy()
-        covered_neurons = set(np.array(NEURONS_302)[_])
+        covered_neurons = set(
+            np.array(NEURONS_302)[torch.nonzero(coverage_mask).squeeze().numpy()]
+        )
         num_covered_neurons = len(covered_neurons)
-        # some things to do on first epoch
-        if i == 0:
-            true_train_size = int(data["num_train_samples"][0])
-            true_test_size = int(data["num_test_samples"][0])
-            worm_timesteps = config.train.seq_len * true_train_size
         # saving model checkpoints
         if (i % config.train.save_freq == 0) or (i + 1 == train_epochs):
             # display progress
             print(
                 "Saving a model checkpoint.\n\tnum. worm cohorts trained on:",
                 i,
-                "\n\tprevious worm:",
-                worm,
                 end="\n\n",
             )
             # save model checkpoints
             chkpt_name = "{}_epochs_{}_worms.pt".format(
                 reset_epoch, i * num_unique_worms
             )
-
             torch.save(
                 {
                     "epoch": reset_epoch,
+                    "seq_len": config.train.seq_len,
+                    "tau": config.train.tau_in,
                     "loss": val_loss,
                     "dataset_name": dataset_name,
                     "model_name": model_class_name,
@@ -258,9 +253,6 @@ def train_model(
     config.setdefault("model", {"type": model_class_name})
     config.setdefault("visualize", {"log_dir": log_dir.split("worm-graph/")[-1]})
     config.visualize.log_dir = log_dir.split("worm-graph/")[-1]
-    # replace with actual number of samples used
-    config.train.train_size = true_train_size
-    config.train.test_size = true_test_size
     # add some global variables
     config.setdefault("globals", {"use_residual": False, "shuffle": False})
     config.globals.timestamp = timestamp

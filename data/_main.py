@@ -26,10 +26,9 @@ def get_dataset(config: DictConfig):
                 combined_dataset[worm]["dataset"] = "_".join(dataset_names)
     # display the dataset
     print(
-        "\nChosen dataset(s): {}\nNum. worms: {}\nWorm names: {}\n".format(
+        "Chosen dataset(s): {}\nNum. worms: {}".format(
             dataset_names,
             len(combined_dataset),
-            list(combined_dataset.keys()),
         ),
         end="\n\n",
     )

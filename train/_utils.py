@@ -56,14 +56,14 @@ def train(
             # Baseline: loss if the model predicted value at next timestep equal to current value.
             base = criterion(
                 (0 if use_residual else 1) * X_train[:, :, mask], Y_train[:, :, mask]
-            ) / (1 + tau)
+            )
             # Train
             Y_tr = model(X_train * mask, tau)  # Forward pass.
             # Register hook.
             Y_tr.retain_grad()
             Y_tr.register_hook(lambda grad: grad * mask)
             # Compute training loss.
-            loss = criterion(Y_tr[:, :, mask], Y_train[:, :, mask]) / (1 + tau)
+            loss = criterion(Y_tr[:, :, mask], Y_train[:, :, mask])
             loss.backward()  # Derive gradients.
             # # Clip gradients to norm 1. TODO: is this needed?
             # torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
@@ -132,11 +132,11 @@ def test(
             # Baseline: loss if the model predicted value at next timestep equal to current value.
             base = criterion(
                 (0 if use_residual else 1) * X_test[:, :, mask], Y_test[:, :, mask]
-            ) / (1 + tau)
+            )
             # Test
             Y_te = model(X_test * mask, tau)  # Forward pass.
             # Compute the validation loss.
-            loss = criterion(Y_te[:, :, mask], Y_test[:, :, mask]) / (1 + tau)
+            loss = criterion(Y_te[:, :, mask], Y_test[:, :, mask])
             # Store test and baseline loss.
             base_loss += base.detach().item()
             test_loss += loss.detach().item()
@@ -155,14 +155,12 @@ def test(
 def split_train_test(
     data: torch.Tensor,
     k_splits: int = 2,
-    seq_len: int = 101,
+    seq_len: int = 100,
     batch_size: int = 32,
-    train_size: int = 1024,
-    test_size: int = 1024,
     time_vec: Union[torch.Tensor, None] = None,
     shuffle: bool = True,
     reverse: bool = True,
-    tau: int = 1,
+    tau: Union[int, list] = 1,
     use_residual: bool = False,
 ) -> tuple[
     torch.utils.data.DataLoader,
@@ -171,14 +169,17 @@ def split_train_test(
     torch.Tensor,
 ]:
     """
-    Create neural activity train and test datasets.
-    Returns train and test data loaders and masks.
+    Create the train and test dataloaders and masks
+    for neural activity from a single single worm.
     """
     # argument checking
     assert isinstance(k_splits, int) and k_splits > 1, "Ensure that `k_splits` > 1."
     assert isinstance(seq_len, int) and seq_len < len(
         data
     ), "Invalid `seq_len` entered."
+    assert isinstance(tau, list) and all(
+        [0 < t < len(data) - seq_len for t in tau]
+    ), "Invalid `tau` entered."
     # make time vector
     if time_vec is None:
         time_vec = torch.arange(len(data), dtype=torch.float32)
@@ -204,25 +205,27 @@ def split_train_test(
     ).detach()
     test_mask = ~train_mask.detach()
     # drop last split if too small. important that this is after making train/test masks
-    if (2 * tau >= len(split_datasets[-1])) or (len(split_datasets[-1]) < seq_len):
+    len_last = len(split_datasets[-1])
+    if any(t >= len_last // 2 for t in tau) or (len_last < seq_len):
         split_datasets = split_datasets[:-1]
         split_times = split_times[:-1]
     # make dataset splits
     train_splits, train_times = split_datasets[::2], split_times[::2]
     test_splits, test_times = split_datasets[1::2], split_times[1::2]
+    # pick a random tau from the list
+    _tau = random.choice(tau)
     # train dataset
     train_datasets = [
         NeuralActivityDataset(
             _data.detach(),
             seq_len=seq_len,
-            # keep per worm train size constant
-            num_samples=min(max(1, train_size // len(train_splits)), len(_data)),
             reverse=reverse,
             time_vec=train_times[i],
-            tau=tau,
+            tau=_tau,
             use_residual=use_residual,
         )
         for i, _data in enumerate(train_splits)
+        # for t in tau
     ]
     train_dataset = ConcatDataset(train_datasets)
     # tests dataset
@@ -230,14 +233,13 @@ def split_train_test(
         NeuralActivityDataset(
             _data.detach(),
             seq_len=seq_len,
-            # keep per worm test size constant
-            num_samples=min(max(1, test_size // len(test_splits)), len(_data)),
             reverse=(not reverse),
             time_vec=test_times[i],
-            tau=tau,
+            tau=_tau,
             use_residual=use_residual,
         )
         for i, _data in enumerate(test_splits)
+        # for t in tau
     ]
     test_dataset = ConcatDataset(test_datasets)
     # make data loaders
@@ -456,6 +458,8 @@ def make_predictions(
             index=True,
             header=True,
         )
+        # TODO: Only make predictions on individual specified worm
+        break
     return None
 
 
