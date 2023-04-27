@@ -26,13 +26,13 @@ hydra:
       # GLOBALS
       globals.random_seed: 0 #range(0,10,1)
       # TRAIN
-      train.epochs: 1, 10 #100, 200, 300, 400
+      train.epochs: 1 #100, 200, 300, 400
       train.save_freq: 100
       train.seq_len: 200 #range(1,101,9)
       train.k_splits: 2 #2, 5, 7, 10
       train.num_batches: 8 #1, 2, 3, 4, 5, 6, 7, 8, 9, *10*
       train.num_samples: 32
-      train.tau_in: [1, 10, 100]
+      train.tau_in: 1
       train.tau_out: 1 
       train.learn_rate: 0.01 #0.0001, 0.001, 0.01, 0.1, 1.0
       train.optimizer: SGD #Adam, *SGD*
