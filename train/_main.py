@@ -75,7 +75,9 @@ def train_model(
         "centered_train_losses": np.zeros(train_epochs, dtype=np.float32),
         "centered_test_losses": np.zeros(train_epochs, dtype=np.float32),
     }
-    # caclulate the batch size per worm
+    # the number of train / test samples per worm
+    num_samples = config.train.num_samples
+    # calculate the batch size per worm
     batch_size = max(1, num_unique_worms // config.train.num_batches)
     # make a list of tau_in values
     tau_in = (
@@ -87,6 +89,7 @@ def train_model(
     kwargs = dict(
         k_splits=config.train.k_splits,
         seq_len=config.train.seq_len,
+        num_samples=num_samples,
         batch_size=batch_size,  # `batch_size` as a function of `train_size`
         shuffle=config.train.shuffle,  # shuffle samples from each cohort
         reverse=config.train.reverse,  # generate samples backward from the end of data
@@ -138,9 +141,7 @@ def train_model(
                     test_mask,
                 ) = split_train_test(
                     data=single_worm_dataset[key_data],
-                    time_vec=single_worm_dataset.get(
-                        "time_in_seconds", None
-                    ),  # time vector
+                    time_vec=single_worm_dataset["time_in_seconds"],  # time vector
                     **kwargs,
                 )
                 if i == 0:  # keep the validation dataset the same

@@ -156,6 +156,7 @@ def split_train_test(
     data: torch.Tensor,
     k_splits: int = 2,
     seq_len: int = 100,
+    num_samples: int = 100,
     batch_size: int = 32,
     time_vec: Union[torch.Tensor, None] = None,
     shuffle: bool = True,
@@ -219,6 +220,7 @@ def split_train_test(
         NeuralActivityDataset(
             _data.detach(),
             seq_len=seq_len,
+            num_samples=num_samples,
             reverse=reverse,
             time_vec=train_times[i],
             tau=_tau,
@@ -233,6 +235,7 @@ def split_train_test(
         NeuralActivityDataset(
             _data.detach(),
             seq_len=seq_len,
+            num_samples=num_samples,
             reverse=(not reverse),
             time_vec=test_times[i],
             tau=_tau,

@@ -16,6 +16,7 @@ class NeuralActivityDataset(torch.utils.data.Dataset):
         self,
         data,
         seq_len=1,
+        num_samples=100,
         neurons=None,
         time_vec=None,
         reverse=False,
@@ -26,6 +27,8 @@ class NeuralActivityDataset(torch.utils.data.Dataset):
         Args:
           data: torch.tensor. Data w/ shape (max_timesteps, num_neurons).
           seq_len: int. Sequences of length `seq_len` are generated until the dataset size is achieved.
+          num_samples: int, 0 < num_samples <= max_timesteps. Total number of (input, target)
+                      data pairs to generate.
           neurons: None, int or array-like. Index of neuron(s) to return data for.
                   Returns data for all neurons if None.
           time_vec: None or array-like. A vector of the time (in seconds) corresponding
@@ -74,8 +77,11 @@ class NeuralActivityDataset(torch.utils.data.Dataset):
             self.neurons = np.arange(num_neurons)  # use all the neurons
         self.num_neurons = self.neurons.size
         self.data = data
+        self.num_samples = num_samples
         self.data_samples = self.__data_generator()
-        self.num_samples = len(self.data_samples)
+        assert self.num_samples == len(
+            self.data_samples
+        ), "Wrong number of sequences generated!"
 
     def __len__(self):
         """Denotes the total number of samples."""
@@ -130,11 +136,11 @@ class NeuralActivityDataset(torch.utils.data.Dataset):
         L = self.seq_len
         # all start indices
         start_range = (
-            np.arange(0, T - L - self.tau + 1, dtype=int)
+            np.linspace(0, T - L - self.tau, self.num_samples, dtype=int)
             if not self.reverse  # generate from start to end
-            else np.flip(
-                np.arange(0, T - L - self.tau + 1, dtype=int)
-            )  # generate from end to start
+            else np.linspace(  # generate from end to start
+                T - L - self.tau, 0, self.num_samples, dtype=int
+            )
         )
         # sequential processing
         data_samples = list(map(self.parfor_func, start_range))
