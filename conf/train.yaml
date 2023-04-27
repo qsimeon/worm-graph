@@ -7,7 +7,7 @@ train:
   # constraint: epochs: int > 0  &&  save_freq: int <= epochs: int
   smooth_data: true # if True use the smoothed calcium data as input
   reverse: false # if True reverse the order of generation of the samples (sequences)
-  num_samples: 100 # the number of samples (sequences) per worm
+  num_samples: 32 # the number of samples (sequences) per worm
   # interpretation: larger num. batches corresponds to smaller batch size;
   # thus, smaller num. batches corresponds to more parallelization; 
   # num_batches corresponds to the number of gradient updates per epoch
