@@ -4,4 +4,4 @@ model:
   hidden_size: 512 # options: int > 0
   num_layers: 1 # keep this fixed; our experiments show that deeper networks do not improve performance
   loss: MSE # options: MSE, Huber, L1
-  checkpoint_path: logs/hydra/2023_04_27_10_09_32/checkpoints/1_epochs_87_worms.pt # options: null, path/to/pretrained/model
+  checkpoint_path: false # options: null, path/to/pretrained/model

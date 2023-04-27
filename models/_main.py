@@ -12,8 +12,8 @@ def get_model(config: DictConfig) -> torch.nn.Module:
         num_layers=1,
         loss=config.model.loss,
     )
-    PATH = os.path.join(ROOT_DIR, config.model.checkpoint_path)
-    if PATH is not None:
+    if config.model.checkpoint_path:
+        PATH = os.path.join(ROOT_DIR, config.model.checkpoint_path)
         checkpoint = torch.load(PATH, map_location=torch.device(DEVICE))
         model_name = checkpoint["model_name"]
         input_size = checkpoint["input_size"]
