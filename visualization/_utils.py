@@ -199,7 +199,7 @@ def plot_loss_curves(log_dir):
     sns.lineplot(x="epochs", y="centered_train_losses", data=loss_df, label="train")
     sns.lineplot(x="epochs", y="centered_test_losses", data=loss_df, label="test")
     plt.legend()
-    plt.title(plt_title)
+    plt.suptitle(plt_title)
     plt.xlabel("Epoch (# worm cohorts)")
     plt.ylabel("Loss - Baseline")
     plt.savefig(os.path.join(log_dir, "loss_curves.png"))
