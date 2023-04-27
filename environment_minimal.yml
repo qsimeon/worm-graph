@@ -4,7 +4,7 @@ channels:
   - defaults
 dependencies:
   - matplotlib
-  # - pytorch-gpu
+  - pytorch-gpu # comment this out if no GPU
   - pytorch=1.13
   - scikit-learn
   - black
@@ -25,11 +25,11 @@ dependencies:
   - omegaconf
   - h5py
   - notebook
-  - mat73
   - tqdm
   - jupyterlab
   - pip:
       - torch-geometric
       - hydra-submitit-launcher
       - hydra-joblib-launcher
+      - mat73
       - ncps
