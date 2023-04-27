@@ -139,7 +139,7 @@ class NeuralTransformer(torch.nn.Module):
         self.output_size = input_size
         self.hidden_size = hidden_size
         self.num_layers = num_layers
-        self.n_head = 4
+        self.n_head = 2
         self.block_size = 5000  # maximum attention block (i.e. context) size
         self.dropout = 0.1
         # Identity layer

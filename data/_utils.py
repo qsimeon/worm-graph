@@ -130,10 +130,10 @@ class NeuralActivityDataset(torch.utils.data.Dataset):
         L = self.seq_len
         # all start indices
         start_range = (
-            np.arange(0, T - L - self.tau + 1, self.tau, dtype=int)
+            np.arange(0, T - L - self.tau + 1, dtype=int)
             if not self.reverse  # generate from start to end
             else np.flip(
-                np.arange(0, T - L - self.tau + 1, self.tau, dtype=int)
+                np.arange(0, T - L - self.tau + 1, dtype=int)
             )  # generate from end to start
         )
         # sequential processing
