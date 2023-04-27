@@ -7,11 +7,11 @@ train:
   # constraint: epochs: int > 0  &&  save_freq: int <= epochs: int
   smooth_data: true # if True use the smoothed calcium data as input
   reverse: false # if True reverse the order of generation of the samples (sequences)
+  num_samples: 100 # the number of samples (sequences) per worm
   # interpretation: larger num. batches corresponds to smaller batch size;
   # thus, smaller num. batches corresponds to more parallelization; 
   # num_batches corresponds to the number of gradient updates per epoch
-  num_batches: 4 # total number of batches per epoch (worm cohorts)
-  num_samples: 100 # the number of samples (sequences) per worm
+  num_batches: 4 # the number of batches per worm
   shuffle: true # whether to shuffle samples from each worm
   tau_in: [1, 10, 20] # offset of target sequence from input sequence that we wish to train with 
   tau_out: 1 # offset of target sequence from input sequence that we wish to make predictions with

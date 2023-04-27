@@ -78,7 +78,7 @@ def train_model(
     # the number of train / test samples per worm
     num_samples = max(1, config.train.num_samples)
     # calculate the batch size per worm
-    batch_size = max(1, num_unique_worms // config.train.num_batches)
+    batch_size = max(1, config.train.num_samples // config.train.num_batches)
     # make a list of tau_in values
     tau_in = (
         [config.train.tau_in]
