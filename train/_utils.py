@@ -223,11 +223,11 @@ def split_train_test(
             num_samples=num_samples,
             reverse=reverse,
             time_vec=train_times[i],
-            tau=t,
+            tau=_tau,
             use_residual=use_residual,
         )
         for i, _data in enumerate(train_splits)
-        for t in tau
+        # for t in tau
     ]
     train_dataset = ConcatDataset(train_datasets)
     # tests dataset
@@ -238,11 +238,11 @@ def split_train_test(
             num_samples=num_samples,
             reverse=(not reverse),
             time_vec=test_times[i],
-            tau=t,
+            tau=_tau,
             use_residual=use_residual,
         )
         for i, _data in enumerate(test_splits)
-        for t in tau
+        # for t in tau
     ]
     test_dataset = ConcatDataset(test_datasets)
     # make data loaders
