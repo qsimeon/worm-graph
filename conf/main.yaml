@@ -24,15 +24,15 @@ hydra:
   sweeper:
     params:
       # GLOBALS
-      globals.random_seed: 0 #range(0,10,1)
+      globals.random_seed: range(0,5,1)
       # TRAIN
       train.optimizer: SGD #Adam, SGD
       train.learn_rate: 0.0001, 0.001, 0.01, 0.1, 1.0
       train.epochs: 1 
       train.save_freq: 100
-      train.seq_len: range(1,300,50)
+      train.seq_len: range(1,200,50)
       train.k_splits: 2, 5, 7, 10
-      train.num_samples: 2, 4, 8, 16, 32, 64, 128, 256
+      train.num_samples: 64, 128, 256, 512
       train.num_batches: 2, 4, 8, 16, 32
       train.tau_in: 1
       train.tau_out: 100 
@@ -41,7 +41,7 @@ hydra:
       train.reverse: false 
       # MODEL
       model.type: NeuralTransformer, LinearNN, NetworkLSTM, NeuralCFC
-      model.hidden_size: 8, 16, 32, 64, 128, 512, 1024
+      model.hidden_size: 32, 64, 128, 512, 1024
       model.num_layers: 1, 2, 3, 4
       model.checkpoint_path: false
       # DATASET
