@@ -11,7 +11,7 @@ train:
   # thus, smaller num. batches corresponds to more parallelization; 
   # num_batches corresponds to the number of gradient updates per epoch
   num_batches: 4 # total number of batches per epoch (worm cohorts)
-  num_samples: 100 # the number of samples (sequences) per worm
+  num_samples: 10 # the number of samples (sequences) per worm
   shuffle: true # whether to shuffle samples from each worm
   tau_in: [1, 10] # offset of target sequence from input sequence that we wish to train with 
   tau_out: 1 # offset of target sequence from input sequence that we wish to make predictions with
