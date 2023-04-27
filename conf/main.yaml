@@ -26,23 +26,23 @@ hydra:
       # GLOBALS
       globals.random_seed: 0 #range(0,10,1)
       # TRAIN
-      train.epochs: 1 #100, 200, 300, 400
+      train.optimizer: SGD #Adam, SGD
+      train.epochs: 100 #1, 100, 200, 300, 400
       train.save_freq: 100
-      train.seq_len: 200 #range(1,101,9)
+      train.seq_len: 100 # range(1,300,10)
       train.k_splits: 2 #2, 5, 7, 10
-      train.num_batches: 8 #1, 2, 3, 4, 5, 6, 7, 8, 9, *10*
-      train.num_samples: 32
+      train.num_samples: 32 # 2, 4, 8, 16, 32, 64, 128, 512
+      train.num_batches: 2 #  2, 4, 8, 16, 32, 64
       train.tau_in: 1
-      train.tau_out: 1 
+      train.tau_out: 100 
       train.learn_rate: 0.01 #0.0001, 0.001, 0.01, 0.1, 1.0
-      train.optimizer: SGD #Adam, *SGD*
       train.smooth_data: true 
       train.shuffle: true 
       train.reverse: false 
       # MODEL
       model.checkpoint_path: false
-      model.type: NeuralTransformer, LinearNN, NetworkLSTM #NeuralCFC
-      model.hidden_size: 1024 #8, 16, 32, 64, 128, 512, *1024*
-      model.num_layers: 1 #*1*, 2, 3, 4
+      model.type: NeuralTransformer #LinearNN, NetworkLSTM #NeuralCFC
+      model.hidden_size: 1024 #8, 16, 32, 64, 128, 512, 1024
+      model.num_layers: 1 #1, 2, 3, 4
       # DATASET
-      dataset.name: Kato2015, Nichols2017, Skora2018, Kaplan2020 #Uzel2022, Leifer2023, Flavell2023
+      dataset.name: [Kato2015, Nichols2017, Skora2018, Kaplan2020] #Uzel2022, Leifer2023, Flavell2023
