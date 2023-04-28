@@ -181,7 +181,6 @@ def train_model(
             num_epochs=num_epochs,
             use_residual=use_residual,
         )
-
         # retrieve losses and sample counts
         for key in data:  # pre-allocated memory for `data[key]`
             # with `num_epochs=1`, this is just data[key][i] = log[key]
@@ -244,7 +243,7 @@ def train_model(
     config.setdefault("dataset", {"name": dataset_name})
     config.dataset.name = dataset_name
     config.setdefault("model", {"type": model_class_name})
-    # # TODO: add modificaiton for prediction
+    # # TODO: add modification for prediction
     # config.setdefault("predict", {"model": {"checkpoint_path": checkpoint_path}})
     config.setdefault("visualize", {"log_dir": log_dir.split("worm-graph/")[-1]})
     config.visualize.log_dir = log_dir.split("worm-graph/")[-1]

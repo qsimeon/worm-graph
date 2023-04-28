@@ -39,7 +39,7 @@ def train(
     num_train_samples = 0
     # Iterate in batches over the training dataset.
     i = 0
-    # each worm in cohort has its own dataloader
+    # each worm in a cohort has its own dataloader
     for loader, mask in zip(loaders, masks):
         # each data loader has samples from a single worm
         for data in loader:

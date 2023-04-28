@@ -36,7 +36,7 @@ def draw_connectome(
         pos = network.pos
     # pos = nx.kamada_kawai_layout(G)
     if labels is None:
-        labels = network.id_neuron
+        labels = network.idx_to_neuron
     options = {"edgecolors": "tab:gray", "node_size": 500, "alpha": 0.5}
     ## draw nodes
     nx.draw_networkx_edges(
@@ -157,6 +157,8 @@ def plot_loss_curves(log_dir):
             {
                 "dataset": {"name": "unknown"},
                 "model": {"type": "unknown"},
+                "train": {"tau_in": "unknown"},
+                "predict": {"tau_out": "unknown"},
                 "globals": {"timestamp": "unknown"},
             }
         )
@@ -164,6 +166,7 @@ def plot_loss_curves(log_dir):
     dataset_name = config.dataset.name
     model_name = config.model.type
     tau_in = config.train.tau_in
+    tau_out = config.predict.tau_out
     timestamp = config.globals.timestamp
     # create the plot title
     plt_title = (
@@ -174,8 +177,13 @@ def plot_loss_curves(log_dir):
             timestamp,
         )
     )
+    # return if no loss curves file found
+    loss_curves_csv = os.path.join(log_dir, "loss_curves.csv")
+    if not os.path.exists(loss_curves_csv):
+        print("No loss curves found in log directory.")
+        return None
     # load the loss dataframe
-    loss_df = pd.read_csv(os.path.join(log_dir, "loss_curves.csv"), index_col=0)
+    loss_df = pd.read_csv(loss_curves_csv, index_col=0)
     # plot loss vs epochs
     plt.figure()
     sns.lineplot(
@@ -220,6 +228,8 @@ def plot_before_after_weights(log_dir: str) -> None:
             {
                 "dataset": {"name": "unknown"},
                 "model": {"type": "unknown"},
+                "train": {"tau_in": "unknown"},
+                "predict": {"tau_out": "unknown"},
                 "globals": {"timestamp": "unknown"},
             }
         )
@@ -227,6 +237,7 @@ def plot_before_after_weights(log_dir: str) -> None:
     dataset_name = config.dataset.name
     model_name = config.model.type
     tau_in = config.train.tau_in
+    tau_out = config.predict.tau_out
     timestamp = config.globals.timestamp
     # create the plot title
     plt_title = "Model readout weights\nmodel: {}\ndataset: {}\ntraining tau: {}\ntime: {}".format(
@@ -235,8 +246,12 @@ def plot_before_after_weights(log_dir: str) -> None:
         tau_in,
         timestamp,
     )
-    # load the first model checkpoint
+    # return if no checkpoints found
     chkpt_dir = os.path.join(log_dir, "checkpoints")
+    if not os.path.exists(chkpt_dir):
+        print("No checkpoints found in log directory.")
+        return None
+    # load the first model checkpoint
     chkpts = sorted(os.listdir(chkpt_dir), key=lambda x: int(x.split("_")[0]))
     first_chkpt = torch.load(os.path.join(chkpt_dir, chkpts[0]))
     last_chkpt = torch.load(os.path.join(chkpt_dir, chkpts[-1]))
@@ -283,6 +298,8 @@ def plot_targets_predictions(
             {
                 "dataset": {"name": "unknown"},
                 "model": {"type": "unknown"},
+                "train": {"tau_in": "unknown"},
+                "predict": {"tau_out": "unknown"},
                 "globals": {"timestamp": "unknown"},
             }
         )
@@ -290,7 +307,7 @@ def plot_targets_predictions(
     dataset_name = config.dataset.name
     model_name = config.model.type
     tau_in = config.train.tau_in
-    tau_out = config.train.tau_out
+    tau_out = config.predict.tau_out
     timestamp = config.globals.timestamp
     # recursive call for all worms
     if (worm is None) or (worm.lower() == "all"):
@@ -301,15 +318,17 @@ def plot_targets_predictions(
     else:
         assert worm in set(os.listdir(log_dir)), "No data for requested worm found."
 
+    # return if no targets or predicitions files found
+    predictions_csv = os.path.join(log_dir, worm, "predicted_" + signal_str + ".csv")
+    targets_csv = os.path.join(log_dir, worm, "target_" + signal_str + ".csv")
+    if (not os.path.exists(predictions_csv)) or (not os.path.exists(targets_csv)):
+        print("No targets or predictions found in log directory.")
+        return None
     # load predictions dataframe
-    predictions_df = pd.read_csv(
-        os.path.join(log_dir, worm, "predicted_" + signal_str + ".csv"), index_col=0
-    )
+    predictions_df = pd.read_csv(predictions_csv, index_col=0)
     tau = predictions_df["tau"][0]
     # load targets dataframe
-    targets_df = pd.read_csv(
-        os.path.join(log_dir, worm, "target_" + signal_str + ".csv"), index_col=0
-    )
+    targets_df = pd.read_csv(targets_csv, index_col=0)
 
     # plot helper
     def func(_neuron_):
@@ -410,6 +429,8 @@ def plot_correlation_scatterplot(
             {
                 "dataset": {"name": "unknown"},
                 "model": {"type": "unknown"},
+                "train": {"tau_in": "unknown"},
+                "predict": {"tau_out": "unknown"},
                 "globals": {"timestamp": "unknown"},
             }
         )
@@ -417,7 +438,7 @@ def plot_correlation_scatterplot(
     dataset_name = config.dataset.name
     model_name = config.model.type
     tau_in = config.train.tau_in
-    tau_out = config.train.tau_out
+    tau_out = config.predict.tau_out
     timestamp = config.globals.timestamp
     # recursive call for all worms
     if (worm is None) or (worm.lower() == "all"):
