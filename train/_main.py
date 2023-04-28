@@ -6,7 +6,7 @@ def train_model(
     dataset: dict,
     config: DictConfig,
     shuffle: bool = True,  # whether to shuffle all worms
-    log_dir: Union[str, None] = None,  # hydra passes
+    log_dir: Union[str, None] = None,  # hydra passes this in
 ) -> tuple[torch.nn.Module, str]:
     """
     Trains a model on a multi-worm dataset. Returns the trained model
@@ -205,6 +205,7 @@ def train_model(
             chkpt_name = "{}_epochs_{}_worms.pt".format(
                 reset_epoch, i * num_unique_worms
             )
+            checkpoint_path = os.path.join(log_dir, "checkpoints", chkpt_name)
             torch.save(
                 {
                     "epoch": reset_epoch,
@@ -227,7 +228,7 @@ def train_model(
                     "model_state_dict": model.state_dict(),
                     "optimizer_state_dict": optimizer.state_dict(),
                 },
-                os.path.join(log_dir, "checkpoints", chkpt_name),
+                checkpoint_path,
             )
         # set to next epoch before continuing
         reset_epoch = log["epochs"][-1] + 1
@@ -238,20 +239,13 @@ def train_model(
         index=True,
         header=True,
     )
-    # make predictions with last saved model
-    make_predictions(
-        model,
-        dataset,
-        log_dir,
-        tau=config.train.tau_out,
-        use_residual=use_residual,
-        smooth_data=smooth_data,
-    )
     # modify the config file
     config = OmegaConf.structured(OmegaConf.to_yaml(config))
     config.setdefault("dataset", {"name": dataset_name})
     config.dataset.name = dataset_name
     config.setdefault("model", {"type": model_class_name})
+    # # TODO: add modificaiton for prediction
+    # config.setdefault("predict", {"model": {"checkpoint_path": checkpoint_path}})
     config.setdefault("visualize", {"log_dir": log_dir.split("worm-graph/")[-1]})
     config.visualize.log_dir = log_dir.split("worm-graph/")[-1]
     # add some global variables
@@ -272,7 +266,7 @@ def train_model(
 
 if __name__ == "__main__":
     config = OmegaConf.load("conf/train.yaml")
-    print("\nconfig:\n\t", OmegaConf.to_yaml(config), end="\n\n")
+    print("config:", OmegaConf.to_yaml(config), end="\n\n")
     model = get_model(OmegaConf.load("conf/model.yaml"))
     dataset = get_dataset(OmegaConf.load("conf/dataset.yaml"))
     timestamp = datetime.now().strftime("%Y_%m_%d_%H_%M_%S")

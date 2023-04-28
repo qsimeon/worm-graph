@@ -9,7 +9,7 @@ def get_model(config: DictConfig) -> torch.nn.Module:
     args = dict(
         input_size=config.model.input_size,
         hidden_size=config.model.hidden_size,
-        num_layers=1,
+        num_layers=config.model.num_layers,
         loss=config.model.loss,
     )
     if config.model.checkpoint_path:

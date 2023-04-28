@@ -1,5 +1,4 @@
 train:
-  
   optimizer: SGD # which Pytorch optimizer to use; options: Adam, SGD, None (defaults to SGD)
   learn_rate: 0.01 # learning rate
   epochs: 1 # number of epochs (worm cohorts) the model will be trained for
@@ -7,11 +6,11 @@ train:
   seq_len: 100 # length of time-series sequences to train
   k_splits: 2 # number of interleaved train/test splits per single worm data
   # constraint: epochs: int > 0  and  save_freq: int <= epochs: int
-  num_samples: 32 # the number of samples (sequences) per worm
-  num_batches: 2 # the number of batches per worm
+  num_samples: 16 # the number of sampled sequences per worm
+  num_batches: 1 # the number of batches per worm
+  # constraint: num_samples: int > 0  and  num_batches: 0 < int <= num_samples
   # interpretation: larger num. batches <-> smaller batch size; smaller num. batches <-> more parallelization; 
   tau_in: 1 # offset of target sequence from input sequence that we wish to train with 
-  tau_out: 1 # offset of target sequence from input sequence that we wish to make predictions with
   # constraint: tau_in: int > 0 or list[int > 0] and tau_out: int > 0
   smooth_data: true # if True use the smoothed calcium data as input
   shuffle: true # whether to shuffle samples from each worm

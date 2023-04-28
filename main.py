@@ -40,12 +40,19 @@ def pipeline(
         log_dir=None,  # hydra changes working directory to log directory
     )
 
-    # TODO: make `prediction` a separate module with mainn function `predict_with_model`
+    # use trained model to make predictions on the dataset
+    make_predictions(
+        config,
+        model,
+        dataset,
+        log_dir,
+        use_residual=config.globals.use_residual,
+        smooth_data=config.globals.smooth_data,
+    )
 
     # plot figures
     plot_figures(config, log_dir)
 
-    
     ## TODO: analysis
     # analyze_outputs(config, log_dir)
     return None

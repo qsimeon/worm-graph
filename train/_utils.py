@@ -156,7 +156,7 @@ def split_train_test(
     data: torch.Tensor,
     k_splits: int = 2,
     seq_len: int = 100,
-    num_samples: int = 100,
+    num_samples: int = 10,
     batch_size: int = 32,
     time_vec: Union[torch.Tensor, None] = None,
     shuffle: bool = True,
@@ -371,136 +371,6 @@ def optimize_model(
             )
     # return optimized model
     return model, log
-
-
-def make_predictions(
-    model: torch.nn.Module,
-    dataset: dict,
-    log_dir: str,
-    tau: int = 1,
-    use_residual: bool = False,
-    smooth_data: bool = False,
-) -> None:
-    """Make predicitons on a dataset with a trained model.
-
-    Saves in the provdied log directory a .csv file for each of the following:
-        * calcium neural activty
-        * target calcium residuals
-        * predicted calcium residuals
-    Each .csv file has a column for each named neuron in the dataset plus two
-    additional columns for the train mask and test mask respectively.
-
-    Args:
-        model: torch.nn.Module, Trained model.
-        dataset: dict, Multi-worm dataset.
-
-    Returns:
-        None.
-    """
-    signal_str = "residual" if use_residual else "calcium"
-    key_data = "residual_calcium" if use_residual else "calcium_data"
-    key_data = "smooth_" + key_data if smooth_data else key_data
-    # make a directory for each worm in the dataset and store the data
-    for worm, single_worm_dataset in dataset.items():
-        os.makedirs(os.path.join(log_dir, worm), exist_ok=True)
-        # get data to save
-        calcium_data = single_worm_dataset[key_data]
-        named_neurons_mask = single_worm_dataset["named_neurons_mask"]
-        named_neurons = np.array(NEURONS_302)[named_neurons_mask]
-        time_in_seconds = single_worm_dataset["time_in_seconds"]
-        if time_in_seconds is None:
-            time_in_seconds = torch.arange(len(calcium_data)).double()
-        train_mask = single_worm_dataset.setdefault(
-            "train_mask", torch.zeros(len(calcium_data), dtype=torch.bool)
-        )
-        test_mask = single_worm_dataset.setdefault("test_mask", ~train_mask)
-        # detach computation from tensors
-        calcium_data = calcium_data.detach()
-        named_neurons_mask = named_neurons_mask.detach()
-        time_in_seconds = time_in_seconds.detach()
-        train_mask = train_mask.detach()
-        test_mask.detach()
-        # labels and columns
-        labels = np.expand_dims(np.where(train_mask, "train", "test"), axis=-1)
-        columns = list(named_neurons) + [
-            "train_test_label",
-            "time_in_seconds",
-            "tau",
-        ]
-        # make predictions with final model
-        targets, predictions = model_predict(
-            model,
-            calcium_data * named_neurons_mask,
-            tau=tau,
-        )
-        # save dataframes
-        tau_expand = np.full(time_in_seconds.shape, tau)
-        data = calcium_data[:, named_neurons_mask].numpy()
-        data = np.hstack((data, labels, time_in_seconds, tau_expand))
-        pd.DataFrame(data=data, columns=columns).to_csv(
-            os.path.join(log_dir, worm, signal_str + "_activity.csv"),
-            index=True,
-            header=True,
-        )
-        data = targets[:, named_neurons_mask].detach().numpy()
-        data = np.hstack((data, labels, time_in_seconds, tau_expand))
-        pd.DataFrame(data=data, columns=columns).to_csv(
-            os.path.join(log_dir, worm, "target_" + signal_str + ".csv"),
-            index=True,
-            header=True,
-        )
-        columns = list(named_neurons) + [
-            "train_test_label",
-            "time_in_seconds",
-            "tau",
-        ]
-        data = predictions[:, named_neurons_mask].detach().numpy()
-        data = np.hstack((data, labels, time_in_seconds, tau_expand))
-        pd.DataFrame(data=data, columns=columns).to_csv(
-            os.path.join(log_dir, worm, "predicted_" + signal_str + ".csv"),
-            index=True,
-            header=True,
-        )
-        # TODO: Only make predictions on individual specified worm
-        break
-    return None
-
-
-def model_predict(
-    model: torch.nn.Module,
-    calcium_data: torch.Tensor,
-    tau: int = 1,
-) -> tuple[torch.Tensor, torch.Tensor]:
-    """
-    Makes predictions for all neurons in the
-    calcium data tensor using a trained model.
-    """
-    NUM_NEURONS = calcium_data.size(1)
-    # model = model.double().to(DEVICE)
-    model = model.to(DEVICE)
-    model.eval()
-    # model in/out
-    calcium_data = calcium_data.squeeze(0)
-    assert (
-        calcium_data.ndim == 2 and calcium_data.size(1) >= NUM_NEURONS
-    ), "Calcium data has incorrect shape!"
-    # get input and output
-    input = calcium_data.detach().to(DEVICE)
-    # TODO: Why does this make such a big difference in prediction?
-    # output = model(
-    #     input.unsqueeze(1), tau,
-    # ).squeeze(1)  # (max_timesteps, 1, NUM_NEURONS), batch_size = max_timesteps, seq_len = 1
-    output = model(
-        input.unsqueeze(0),
-        tau=tau,
-    ).squeeze(
-        0
-    )  # (1, max_timesteps, NUM_NEURONS),  batch_size = 1, seq_len = max_timesteps
-    # targets and predictions
-    targets = torch.nn.functional.pad(input.detach().cpu()[tau:], (0, 0, 0, tau))
-    # prediction of the input shifted by tau
-    predictions = output.detach().cpu()
-    return targets, predictions
 
 
 def gnn_train_val_mask(graph, train_ratio=0.7, train_mask=None):
