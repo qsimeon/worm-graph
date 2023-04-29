@@ -9,6 +9,7 @@ import networkx as nx
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 from typing import Union
+from datetime import datetime
 from omegaconf import OmegaConf, DictConfig
 from matplotlib.lines import Line2D
 from data._utils import NeuralActivityDataset

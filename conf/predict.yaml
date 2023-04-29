@@ -2,12 +2,6 @@ predict:
   tau_out: 10 # offset of target sequence from input sequence that we wish to make predictions with
   # constraint: tau_out: int > 0
   model: # a pretrained model to make predictions with
-    checkpoint_path: false # path to a trained model checkpoint to load
-    # parameters for a default untrained model if no checkpoint is provided
-    type: LinearNN
-    input_size: 302 
-    hidden_size: 512 
-    num_layers: 1 
-    loss: MSE 
+    checkpoint_path: models/example_saved_model.pt # path to a trained model checkpoint to load
   dataset:
     name: Uzel2022 # dataset to make predictions on

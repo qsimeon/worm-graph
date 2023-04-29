@@ -5,13 +5,8 @@ def get_model(config: DictConfig) -> torch.nn.Module:
     """
     Returns a new model of the type and size specified in 'model.yaml'.
     """
-    # create the model
-    args = dict(
-        input_size=config.model.input_size,
-        hidden_size=config.model.hidden_size,
-        num_layers=config.model.num_layers,
-        loss=config.model.loss,
-    )
+
+    # load a saved model
     if config.model.checkpoint_path:
         PATH = os.path.join(ROOT_DIR, config.model.checkpoint_path)
         checkpoint = torch.load(PATH, map_location=torch.device(DEVICE))
@@ -23,7 +18,17 @@ def get_model(config: DictConfig) -> torch.nn.Module:
         model = eval(model_name)(input_size, hidden_size, num_layers)
         model.load_state_dict(model_state_dict)
         print("Model checkpoint path:", PATH, end="\n\n")
+    # create a new model
     else:
+        assert "type" in config.model, ValueError(
+            "No model type or checkpoint path specified."
+        )
+        args = dict(
+            input_size=config.model.input_size,
+            hidden_size=config.model.hidden_size,
+            num_layers=config.model.num_layers,
+            loss=config.model.loss,
+        )
         if config.model.type == "NeuralTransformer":
             model = NeuralTransformer(**args)
         elif config.model.type == "NetworkLSTM":

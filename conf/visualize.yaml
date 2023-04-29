@@ -1,4 +1,4 @@
 visualize:
-  log_dir: logs
+  log_dir: logs/playground
   worm: worm0
   neuron: AVAL

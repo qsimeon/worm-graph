@@ -28,6 +28,8 @@ def make_predictions(
     # hydra changes the working directory to log directory
     if log_dir is None:
         log_dir = os.getcwd()
+    else:
+        os.makedirs(log_dir, exist_ok=True)
     # replace model and dataset with those in config file
     if model is None:
         model = get_model(config.predict)
@@ -108,9 +110,8 @@ def make_predictions(
 if __name__ == "__main__":
     config = OmegaConf.load("conf/predict.yaml")
     print("config:", OmegaConf.to_yaml(config), end="\n\n")
-    timestamp = datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
     # make predictions on all worms in the given dataset with a saved model
     make_predictions(
         config,
-        log_dir=os.path.join("logs", "{}".format(timestamp)),
+        log_dir=os.path.join("logs", "playground"),
     )

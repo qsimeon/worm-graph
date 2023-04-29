@@ -158,7 +158,7 @@ def plot_loss_curves(log_dir):
                 "dataset": {"name": "unknown"},
                 "model": {"type": "unknown"},
                 "train": {"tau_in": "unknown"},
-                "globals": {"timestamp": "unknown"},
+                "globals": {"timestamp": datetime.now().strftime("%Y_%m_%d_%H_%M_%S")},
             }
         )
     # get strings for plot title
@@ -227,7 +227,7 @@ def plot_before_after_weights(log_dir: str) -> None:
                 "dataset": {"name": "unknown"},
                 "model": {"type": "unknown"},
                 "train": {"tau_in": "unknown"},
-                "globals": {"timestamp": "unknown"},
+                "globals": {"timestamp": datetime.now().strftime("%Y_%m_%d_%H_%M_%S")},
             }
         )
     # get strings for plot title
@@ -296,7 +296,7 @@ def plot_targets_predictions(
                 "model": {"type": "unknown"},
                 "train": {"tau_in": "unknown"},
                 "predict": {"tau_out": "unknown", "dataset": {"name": "unknown"}},
-                "globals": {"timestamp": "unknown"},
+                "globals": {"timestamp": datetime.now().strftime("%Y_%m_%d_%H_%M_%S")},
             }
         )
     # get strings for plot title
@@ -323,7 +323,7 @@ def plot_targets_predictions(
         return None
     # load predictions dataframe
     predictions_df = pd.read_csv(predictions_csv, index_col=0)
-    tau = predictions_df["tau"][0]
+    tau_out = predictions_df["tau"][0]
     # load targets dataframe
     targets_df = pd.read_csv(targets_csv, index_col=0)
 
@@ -377,7 +377,7 @@ def plot_targets_predictions(
             label="test",
         )
         plt.gca().fill_between(
-            targets_df.time_in_seconds.to_numpy()[-tau:],
+            targets_df.time_in_seconds.to_numpy()[-tau_out:],
             ylo,
             yhi,
             alpha=0.3,
@@ -429,7 +429,7 @@ def plot_correlation_scatterplot(
                 "model": {"type": "unknown"},
                 "train": {"tau_in": "unknown"},
                 "predict": {"tau_out": "unknown", "dataset": {"name": "unknown"}},
-                "globals": {"timestamp": "unknown"},
+                "globals": {"timestamp": datetime.now().strftime("%Y_%m_%d_%H_%M_%S")},
             }
         )
     # get strings for plot title
@@ -451,6 +451,7 @@ def plot_correlation_scatterplot(
     predictions_df = pd.read_csv(
         os.path.join(log_dir, worm, "predicted_" + signal_str + ".csv"), index_col=0
     )
+    tau_out = predictions_df["tau"][0]
     # load targets dataframe
     targets_df = pd.read_csv(
         os.path.join(log_dir, worm, "target_" + signal_str + ".csv"), index_col=0
