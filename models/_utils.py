@@ -328,13 +328,14 @@ class LinearNN(torch.nn.Module):
 class NeuralCFC(torch.nn.Module):
     """
     Neural Circuit Policy (NCP) Closed-form continuous time (CfC) model.
+    TODO: Do not use!; this model uses up all the torch memory; why?
     """
 
     def __init__(
         self,
         input_size: int,
         hidden_size: int,
-        num_layers: int = 1, # unused by this model
+        num_layers: int = 1,  # unused by this model
         loss: Callable = None,
     ):
         """
