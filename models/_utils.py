@@ -354,7 +354,7 @@ class NeuralCFC(torch.nn.Module):
         # Setup
         self.input_size = input_size
         self.output_size = input_size
-        self.hidden_size = hidden_size
+        self.hidden_size = hidden_size // 2  # CfC uses 2x hidden size
         self.num_layers = num_layers  # currently unused
         # Identity layer
         self.identity = torch.nn.Identity()
