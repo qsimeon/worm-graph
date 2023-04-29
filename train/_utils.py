@@ -271,12 +271,14 @@ def split_train_test(
         batch_size=batch_size,
         shuffle=shuffle,
         pin_memory=True,
+        num_workers=2,
     )
     test_loader = DataLoader(
         test_dataset,
         batch_size=batch_size,
         shuffle=shuffle,
         pin_memory=True,
+        num_workers=2,
     )
     # return datasets and masks
     return train_loader, test_loader, train_mask, test_mask
