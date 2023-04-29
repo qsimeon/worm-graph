@@ -28,7 +28,6 @@ def make_predictions(
     # hydra changes the working directory to log directory
     if log_dir is None:
         log_dir = os.getcwd()
-    print(log_dir)
     # replace model and dataset with those in config file
     if model is None:
         model = get_model(config.predict)

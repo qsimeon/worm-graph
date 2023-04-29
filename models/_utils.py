@@ -334,7 +334,7 @@ class NeuralCFC(torch.nn.Module):
         self,
         input_size: int,
         hidden_size: int,
-        num_layers: int = 1,
+        num_layers: int = 1, # unused by this model
         loss: Callable = None,
     ):
         """

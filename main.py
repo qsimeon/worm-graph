@@ -33,9 +33,9 @@ def pipeline(
 
     # train model is the bulk of the pipeline code
     model, log_dir = train_model(
+        config,
         model,
         dataset,
-        config,
         shuffle=config.globals.shuffle,  # shuffle worms
         log_dir=None,  # hydra changes working directory to log directory
     )

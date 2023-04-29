@@ -2,9 +2,9 @@ from train._utils import *
 
 
 def train_model(
+    config: DictConfig,
     model: torch.nn.Module,
     dataset: dict,
-    config: DictConfig,
     shuffle: bool = True,  # whether to shuffle all worms
     log_dir: Union[str, None] = None,  # hydra passes this in
 ) -> tuple[torch.nn.Module, str]:
@@ -12,7 +12,7 @@ def train_model(
     Trains a model on a multi-worm dataset. Returns the trained model
     and a path to the directory with training and evaluation logs.
     """
-    # a worm dataset must have at least one worm: "worm0"
+    # a valid worm dataset must have at least one worm: "worm0"
     assert "worm0" in dataset, "Not a valid dataset object."
     # get some helpful variables
     dataset_name = dataset["worm0"]["dataset"]
@@ -59,7 +59,7 @@ def train_model(
     # get other config params
     if config.get("globals"):
         use_residual = config.globals.use_residual
-        smooth_data = config.train.smooth_data
+        smooth_data = config.globals.smooth_data
     else:
         use_residual = False
         smooth_data = False
@@ -75,25 +75,15 @@ def train_model(
         "centered_train_losses": np.zeros(train_epochs, dtype=np.float32),
         "centered_test_losses": np.zeros(train_epochs, dtype=np.float32),
     }
-    # the number of train / test samples per worm
-    num_samples = max(1, config.train.num_samples)
-    # calculate the batch size per worm
-    batch_size = max(1, config.train.num_samples // config.train.num_batches)
-    # make a list of tau_in values
-    tau_in = (
-        [config.train.tau_in]
-        if isinstance(config.train.tau_in, int)
-        else list(config.train.tau_in)
-    )
     # create keyword arguments for `split_train_test`
     kwargs = dict(
         k_splits=config.train.k_splits,
         seq_len=config.train.seq_len,
-        num_samples=num_samples,
-        batch_size=batch_size,  # `batch_size` as a function of `train_size`
+        num_samples=config.train.num_samples,  # number of samples per worm
+        num_batches=config.train.num_batches,  # number of batches per worm
         shuffle=config.train.shuffle,  # shuffle samples from each cohort
         reverse=config.train.reverse,  # generate samples backward from the end of data
-        tau=tau_in,
+        tau=config.train.tau_in,
         use_residual=use_residual,
     )
     # choose whether to use calcium or residual data
@@ -243,8 +233,11 @@ def train_model(
     config.setdefault("dataset", {"name": dataset_name})
     config.dataset.name = dataset_name
     config.setdefault("model", {"type": model_class_name})
-    # # TODO: add modification for prediction
-    # config.setdefault("predict", {"model": {"checkpoint_path": checkpoint_path}})
+    config.setdefault(
+        "predict",
+        {"model": {"checkpoint_path": checkpoint_path.split("worm-graph/")[-1]}},
+    )
+    config.predict.model.checkpoint_path = checkpoint_path.split("worm-graph/")[-1]
     config.setdefault("visualize", {"log_dir": log_dir.split("worm-graph/")[-1]})
     config.visualize.log_dir = log_dir.split("worm-graph/")[-1]
     # add some global variables
@@ -259,7 +252,7 @@ def train_model(
     og_cfg_file = os.path.join(log_dir, ".hydra", "config.yaml")
     if os.path.exists(og_cfg_file):
         os.remove(og_cfg_file)
-    # returned trained model and a path to log directory
+    # returned trained model and a path to the log directory
     return model, log_dir
 
 

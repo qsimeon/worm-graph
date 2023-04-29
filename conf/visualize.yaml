@@ -1,4 +1,4 @@
 visualize:
-  log_dir: logs/2023_04_28_16_40_10 #logs
+  log_dir: logs
   worm: worm0
   neuron: AVAL

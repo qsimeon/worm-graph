@@ -1,7 +1,8 @@
 predict:
   tau_out: 10 # offset of target sequence from input sequence that we wish to make predictions with
+  # constraint: tau_out: int > 0
   model: # a pretrained model to make predictions with
-    checkpoint_path: null # path to a trained model checkpoint to load
+    checkpoint_path: false # path to a trained model checkpoint to load
     # parameters for a default untrained model if no checkpoint is provided
     type: LinearNN
     input_size: 302 

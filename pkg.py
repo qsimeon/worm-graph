@@ -1,7 +1,7 @@
 # All imports for main module
 import hydra
 from utils import *
-from omegaconf import DictConfig
+from omegaconf import DictConfig, OmegaConf
 from preprocess._main import process_data
 from models._main import get_model
 from data._main import get_dataset

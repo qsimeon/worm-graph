@@ -158,7 +158,6 @@ def plot_loss_curves(log_dir):
                 "dataset": {"name": "unknown"},
                 "model": {"type": "unknown"},
                 "train": {"tau_in": "unknown"},
-                "predict": {"tau_out": "unknown"},
                 "globals": {"timestamp": "unknown"},
             }
         )
@@ -166,7 +165,6 @@ def plot_loss_curves(log_dir):
     dataset_name = config.dataset.name
     model_name = config.model.type
     tau_in = config.train.tau_in
-    tau_out = config.predict.tau_out
     timestamp = config.globals.timestamp
     # create the plot title
     plt_title = (
@@ -207,7 +205,7 @@ def plot_loss_curves(log_dir):
     sns.lineplot(x="epochs", y="centered_train_losses", data=loss_df, label="train")
     sns.lineplot(x="epochs", y="centered_test_losses", data=loss_df, label="test")
     plt.legend()
-    plt.suptitle(plt_title)
+    plt.suptitle(plt_title, fontsize="small")
     plt.xlabel("Epoch (# worm cohorts)")
     plt.ylabel("Loss - Baseline")
     plt.savefig(os.path.join(log_dir, "loss_curves.png"))
@@ -229,7 +227,6 @@ def plot_before_after_weights(log_dir: str) -> None:
                 "dataset": {"name": "unknown"},
                 "model": {"type": "unknown"},
                 "train": {"tau_in": "unknown"},
-                "predict": {"tau_out": "unknown"},
                 "globals": {"timestamp": "unknown"},
             }
         )
@@ -237,7 +234,6 @@ def plot_before_after_weights(log_dir: str) -> None:
     dataset_name = config.dataset.name
     model_name = config.model.type
     tau_in = config.train.tau_in
-    tau_out = config.predict.tau_out
     timestamp = config.globals.timestamp
     # create the plot title
     plt_title = "Model readout weights\nmodel: {}\ndataset: {}\ntraining tau: {}\ntime: {}".format(
@@ -270,7 +266,7 @@ def plot_before_after_weights(log_dir: str) -> None:
     axs[1].imshow(model.linear.weight.detach().cpu().T)
     axs[1].set_title("Trained")
     axs[1].set_xlabel("Output size")
-    plt.suptitle(plt_title)
+    plt.suptitle(plt_title, fontsize="small")
     plt.savefig(os.path.join(log_dir, "readout_weights.png"))
     plt.close()
     return None
@@ -299,12 +295,13 @@ def plot_targets_predictions(
                 "dataset": {"name": "unknown"},
                 "model": {"type": "unknown"},
                 "train": {"tau_in": "unknown"},
-                "predict": {"tau_out": "unknown"},
+                "predict": {"tau_out": "unknown", "dataset": {"name": "unknown"}},
                 "globals": {"timestamp": "unknown"},
             }
         )
     # get strings for plot title
-    dataset_name = config.dataset.name
+    train_dataset_name = config.dataset.name
+    predict_dataset_name = config.predict.dataset.name
     model_name = config.model.type
     tau_in = config.train.tau_in
     tau_out = config.predict.tau_out
@@ -336,11 +333,12 @@ def plot_targets_predictions(
         plt_title = (
             "Neural activity "
             + signal_str
-            + " (GCaMP fluorescence) \nworm: {}, neuron: {}\nmodel: {}\ndataset: {}\ntraining tau: {}\nprediction tau: {}\ntime: {}".format(
+            + " (GCaMP fluorescence) \nworm: {}, neuron: {}\nmodel: {}\ntrain dataset: {}\npredict dataset: {}\ntraining tau: {}\nprediction tau: {}\ntime: {}".format(
                 worm,
                 _neuron_,
                 model_name,
-                dataset_name,
+                train_dataset_name,
+                predict_dataset_name,
                 tau_in,
                 tau_out,
                 timestamp,
@@ -387,7 +385,7 @@ def plot_targets_predictions(
             label="predict",
         )
         plt.legend(loc="upper left", fontsize=6)
-        plt.suptitle(plt_title)
+        plt.suptitle(plt_title, fontsize="small")
         plt.xlabel("Time (seconds)")
         plt.ylabel(signal_str.capitalize() + " ($\Delta F / F$)")
         plt.savefig(
@@ -430,12 +428,13 @@ def plot_correlation_scatterplot(
                 "dataset": {"name": "unknown"},
                 "model": {"type": "unknown"},
                 "train": {"tau_in": "unknown"},
-                "predict": {"tau_out": "unknown"},
+                "predict": {"tau_out": "unknown", "dataset": {"name": "unknown"}},
                 "globals": {"timestamp": "unknown"},
             }
         )
     # get strings for plot title
-    dataset_name = config.dataset.name
+    train_dataset_name = config.dataset.name
+    predict_dataset_name = config.predict.dataset.name
     model_name = config.model.type
     tau_in = config.train.tau_in
     tau_out = config.predict.tau_out
@@ -460,11 +459,12 @@ def plot_correlation_scatterplot(
     # plot helper
     def func(_neuron_):
         os.makedirs(os.path.join(log_dir, worm, "figures"), exist_ok=True)
-        plt_title = "Scatterplot of predicted vs target residuals\nworm: {}, neuron: {}\nmodel: {}\ndataset: {}\ntraining tau: {}\nprediction tau: {}\ntime: {}".format(
+        plt_title = "Scatterplot of predicted vs target residuals\nworm: {}, neuron: {}\nmodel: {}\ntrain dataset: {}\npredict dataset: {}\ntraining tau: {}\nprediction tau: {}\ntime: {}".format(
             worm,
             _neuron_,
             model_name,
-            dataset_name,
+            train_dataset_name,
+            predict_dataset_name,
             tau_in,
             tau_out,
             timestamp,
@@ -485,7 +485,7 @@ def plot_correlation_scatterplot(
             scatter_kws={"alpha": 0.1},
             # line_kws={"color": "black"},
         )
-        plt.suptitle(plt_title)
+        plt.suptitle(plt_title, fontsize="small")
         plt.axis("equal")
         plt.gca().set_ylim(plt.gca().get_xlim())
         plt.xlabel("Target " + signal_str + " ($\Delta F / F$)")

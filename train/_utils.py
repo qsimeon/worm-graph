@@ -155,13 +155,13 @@ def test(
 def split_train_test(
     data: torch.Tensor,
     k_splits: int = 2,
-    seq_len: int = 100,
+    seq_len: Union[int, list[int]] = 100,  # TODO: allow a list of `seq_len`s
     num_samples: int = 10,
-    batch_size: int = 32,
+    num_batches: int = 2,
     time_vec: Union[torch.Tensor, None] = None,
     shuffle: bool = True,
     reverse: bool = True,
-    tau: Union[int, list] = 1,
+    tau: Union[int, list[int]] = 1,
     use_residual: bool = False,
 ) -> tuple[
     torch.utils.data.DataLoader,
@@ -171,16 +171,28 @@ def split_train_test(
 ]:
     """
     Create the train and test dataloaders and masks
-    for neural activity from a single single worm.
+    for neural activity from a single worm.
     """
     # argument checking
     assert isinstance(k_splits, int) and k_splits > 1, "Ensure that `k_splits` > 1."
-    assert isinstance(seq_len, int) and seq_len < len(
-        data
-    ), "Invalid `seq_len` entered."
-    assert isinstance(tau, list) and all(
-        [0 < t < len(data) - seq_len for t in tau]
-    ), "Invalid `tau` entered."
+    if isinstance(seq_len, int):
+        assert seq_len < len(data), "Invalid `seq_len` integer entered."
+        seq_len = [seq_len]  # convert`seq_len` to a list
+    else:
+        seq_len = list(seq_len)
+        assert isinstance(seq_len, list) and all(
+            [0 < sl < len(data) for sl in seq_len]
+        ), "Invalid `seq_len` list entered."
+    if isinstance(tau, int):
+        assert all(
+            tau < len(data) - sl for sl in seq_len
+        ), "Invalid `tau` integer entered."
+        tau = [tau]  # convert`tau` to a list
+    else:
+        tau = list(tau)
+        assert isinstance(tau, list) and all(
+            [0 < t < len(data) - sl for t in tau for sl in seq_len]
+        ), "Invalid `tau` list entered."
     # make time vector
     if time_vec is None:
         time_vec = torch.arange(len(data), dtype=torch.float32)
@@ -207,44 +219,52 @@ def split_train_test(
     test_mask = ~train_mask.detach()
     # drop last split if too small. important that this is after making train/test masks
     len_last = len(split_datasets[-1])
-    if any(t >= len_last // 2 for t in tau) or (len_last < seq_len):
+    if any(t >= len_last // 2 for t in tau) or any(len_last < sl for sl in seq_len):
         split_datasets = split_datasets[:-1]
         split_times = split_times[:-1]
     # make dataset splits
     train_splits, train_times = split_datasets[::2], split_times[::2]
     test_splits, test_times = split_datasets[1::2], split_times[1::2]
-    # pick a random tau from the list
+    # pick a random `tau` and `seq_len` from the lists
     _tau = random.choice(tau)
+    _seq_len = random.choice(seq_len)
+    # calculate number of train/ test samples per split
+    train_size_per_split = (num_samples // len(train_splits)) + (
+        num_samples % len(train_splits)
+    )
+    test_size_per_split = (num_samples // len(test_splits)) + (
+        num_samples % len(test_splits)
+    )
     # train dataset
     train_datasets = [
         NeuralActivityDataset(
             _data.detach(),
-            seq_len=seq_len,
-            num_samples=num_samples,
+            seq_len=_seq_len,
+            num_samples=train_size_per_split,
             reverse=reverse,
             time_vec=train_times[i],
             tau=_tau,
             use_residual=use_residual,
         )
         for i, _data in enumerate(train_splits)
-        # for t in tau
     ]
     train_dataset = ConcatDataset(train_datasets)
-    # tests dataset
+    # test dataset
     test_datasets = [
         NeuralActivityDataset(
             _data.detach(),
-            seq_len=seq_len,
-            num_samples=num_samples,
+            seq_len=_seq_len,
+            num_samples=test_size_per_split,
             reverse=(not reverse),
             time_vec=test_times[i],
             tau=_tau,
             use_residual=use_residual,
         )
         for i, _data in enumerate(test_splits)
-        # for t in tau
     ]
     test_dataset = ConcatDataset(test_datasets)
+    # calculate the batch size
+    batch_size = max(1, num_samples // num_batches)
     # make data loaders
     train_loader = DataLoader(
         train_dataset,
