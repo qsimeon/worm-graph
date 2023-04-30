@@ -207,7 +207,7 @@ class NeuralTransformer(torch.nn.Module):
             target_fft = torch.fft.rfft(target, dim=-2).real
             # calculate average difference between real parts of FFTs
             fft_loss = torch.mean(torch.abs(input_fft - target_fft))
-            return 0.0 * original_loss + 1.0 * fft_loss
+            return 0.5 * original_loss + 0.5 * fft_loss
 
         return loss
 
@@ -295,7 +295,7 @@ class LinearNN(torch.nn.Module):
             target_fft = torch.fft.rfft(target, dim=-2).real
             # calculate average difference between real parts of FFTs
             fft_loss = torch.mean(torch.abs(input_fft - target_fft))
-            return 0.0 * original_loss + 1.0 * fft_loss
+            return 0.5 * original_loss + 0.5 * fft_loss
 
         return loss
 
@@ -380,7 +380,7 @@ class NeuralCFC(torch.nn.Module):
             target_fft = torch.fft.rfft(target, dim=-2).real
             # calculate average difference between real parts of FFTs
             fft_loss = torch.mean(torch.abs(input_fft - target_fft))
-            return 0.0 * original_loss + 1.0 * fft_loss
+            return 0.5 * original_loss + 0.5 * fft_loss
 
         return loss
 
@@ -484,7 +484,7 @@ class NetworkLSTM(torch.nn.Module):
             target_fft = torch.fft.rfft(target, dim=-2).real
             # calculate average difference between real parts of FFTs
             fft_loss = torch.mean(torch.abs(input_fft - target_fft))
-            return 0.0 * original_loss + 1.0 * fft_loss
+            return 0.5 * original_loss + 0.5 * fft_loss
 
         return loss
 
