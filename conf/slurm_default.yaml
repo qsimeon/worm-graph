@@ -13,4 +13,4 @@ defaults:
 #     array_parallelism: 800
 #     timeout_min: 1440 # 24 hours by default
 #     exclude: dgx001, dgx002
-#     constraint: any-A100
+#     constraint: high-capacity #any-A100
