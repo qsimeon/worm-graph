@@ -41,8 +41,8 @@ hydra:
       train.save_freq: 100
       train.seq_len: 100 # range(1,200,50)
       train.k_splits: 2 #2, 5, 7, 10
-      train.num_samples: 8, 16, 32, 64, 128, 256
-      train.num_batches: 1 #1, 2, 4, 8
+      train.num_samples: 128 #8, 16, 32, 64, 128
+      train.num_batches: 1, 2, 4, 8
       train.tau_in: [1, 9]
       train.shuffle: true 
       train.reverse: false 
