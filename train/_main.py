@@ -55,7 +55,7 @@ def train_model(
         ), "Please use an instance of torch.optim.Optimizer."
     else:
         optimizer = torch.optim.SGD(model.parameters(), lr=learn_rate)
-    print("\nOptimizer:\n\t", optimizer, end="\n\n")
+    print("Optimizer:", optimizer, end="\n\n")
     # get other config params
     if config.get("globals"):
         use_residual = config.globals.use_residual

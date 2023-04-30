@@ -59,9 +59,9 @@ def train(
             )
             # Train
             Y_tr = model(X_train * mask, tau)  # Forward pass.
-            # Register hook.
-            Y_tr.retain_grad()
-            Y_tr.register_hook(lambda grad: grad * mask)
+            # # Register hook.
+            # Y_tr.retain_grad()
+            # Y_tr.register_hook(lambda grad: grad * mask)
             # Compute training loss.
             loss = criterion(Y_tr[:, :, mask], Y_train[:, :, mask])
             loss.backward()  # Derive gradients.
@@ -342,10 +342,11 @@ def optimize_model(
         "centered_train_losses": np.zeros(num_epochs, dtype=np.float32),
         "centered_test_losses": np.zeros(num_epochs, dtype=np.float32),
     }
-    # iterate over the training data for `num_epochs`
+    # iterate over the training data for `num_epochs` (usually 1)
     iter_range = range(start_epoch, num_epochs + start_epoch)
     for i, epoch in enumerate(iter_range):
         # train and validate the model
+        # TODO: how can I run the train and test loops in parallel?
         train_log = train(
             train_loader,
             model,
