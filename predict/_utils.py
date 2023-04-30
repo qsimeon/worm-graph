@@ -22,19 +22,12 @@ def model_predict(
     # get input and output
     input = calcium_data.detach().to(DEVICE)
     with torch.no_grad():
-        # TODO: Why does this make such a big difference in prediction?
         output = model(
-            input.unsqueeze(1),
+            input.unsqueeze(0),
             tau=tau,
         ).squeeze(
-            1
-        )  # (max_timesteps, 1, NUM_NEURONS), batch_size = max_timesteps, seq_len = 1
-        # output = model(
-        #     input.unsqueeze(0),
-        #     tau=tau,
-        # ).squeeze(
-        #     0
-        # )  # (1, max_timesteps, NUM_NEURONS),  batch_size = 1, seq_len = max_timesteps
+            0
+        )  # (1, max_timesteps, NUM_NEURONS),  batch_size = 1, seq_len = max_timesteps
     # targets and predictions
     targets = torch.nn.functional.pad(input.detach().cpu()[tau:], (0, 0, 0, tau))
     # prediction of the input shifted by tau
