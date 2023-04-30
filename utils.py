@@ -7,6 +7,7 @@ import pandas as pd
 os.environ["HYDRA_FULL_ERROR"] = "1"
 os.environ["CUDA_LAUNCH_BLOCKING"] = "1"
 os.environ["OC_CAUSE"] = "1"
+os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "max_split_size_mb:32"
 
 NUM_NEURONS = 302
 
