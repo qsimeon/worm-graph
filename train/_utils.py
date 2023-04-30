@@ -59,6 +59,9 @@ def train(
             )
             # Train
             Y_tr = model(X_train * mask, tau)  # Forward pass.
+            # # Register hook. TODO: is this needed?
+            # Y_tr.retain_grad()
+            # Y_tr.register_hook(lambda grad: grad * mask)
             # Compute training loss.
             loss = criterion(Y_tr[:, :, mask], Y_train[:, :, mask])
             loss.backward()  # Derive gradients.
