@@ -24,7 +24,7 @@ def model_predict(
     with torch.no_grad():
         # TODO: Why does this make such a big difference in prediction?
         # output = model(
-        #     input.unsqueeze(1), tau,
+        #     input.unsqueeze(1), tau=tau,
         # ).squeeze(1)  # (max_timesteps, 1, NUM_NEURONS), batch_size = max_timesteps, seq_len = 1
         output = model(
             input.unsqueeze(0),

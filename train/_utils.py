@@ -59,14 +59,9 @@ def train(
             )
             # Train
             Y_tr = model(X_train * mask, tau)  # Forward pass.
-            # # Register hook.
-            # Y_tr.retain_grad()
-            # Y_tr.register_hook(lambda grad: grad * mask)
             # Compute training loss.
             loss = criterion(Y_tr[:, :, mask], Y_train[:, :, mask])
             loss.backward()  # Derive gradients.
-            # # Clip gradients to norm 1. TODO: is this needed?
-            # torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
             # No backprop on epoch 0.
             if no_grad:
                 optimizer.zero_grad()
