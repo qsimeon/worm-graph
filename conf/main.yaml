@@ -29,7 +29,7 @@ hydra:
       # GLOBALS
       globals.random_seed: 0 #range(0,3,1)
       # MODEL
-      model.type: NetworkLSTM #LinearNN, NeuralTransformer, NetworkLSTM, NeuralCFC
+      model.type: NeuralTransformer #LinearNN, NeuralTransformer, NetworkLSTM, NeuralCFC
       model.loss: MSE #MSE, Huber, L1
       model.hidden_size: 512 #32, 64, 128, 256, 512, 1024
       model.num_layers: 1 #1, 2, 3, 4
@@ -49,5 +49,5 @@ hydra:
       train.shuffle: false # whether to shuffle sequences
       train.reverse: false 
       # PREDICT
-      predict.tau_out: 500
+      predict.tau_out: 100
       predict.dataset.name: Uzel2022
