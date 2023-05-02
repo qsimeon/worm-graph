@@ -246,8 +246,8 @@ def split_train_test(
 
 def optimize_model(
     model: torch.nn.Module,
-    train_loader: Union[list[torch.utils.data.DataLoader], torch.utils.data.DataLoader],
-    test_loader: Union[list[torch.utils.data.DataLoader], torch.utils.data.DataLoader],
+    train_loader: torch.utils.data.DataLoader,
+    test_loader: torch.utils.data.DataLoader,
     neurons_mask: Union[list[Union[torch.Tensor, None]], torch.Tensor, None] = None,
     optimizer: Union[torch.optim.Optimizer, None] = None,
     start_epoch: int = 1,
@@ -263,17 +263,17 @@ def optimize_model(
     """
     # check the train and test loader input
     assert isinstance(
-        train_loader, (list, torch.utils.data.DataLoader)
+        train_loader, torch.utils.data.DataLoader
     ), "Wrong input type for `train_loader`."
     assert isinstance(
-        test_loader, (list, torch.utils.data.DataLoader)
+        test_loader, torch.utils.data.DataLoader
     ), "Wrong input type for `test_loader`."
-    if isinstance(train_loader, list):
-        batch_in, _, _ = next(iter(train_loader[0]))
-    elif isinstance(train_loader, torch.utils.data.DataLoader):
-        batch_in, _, _ = next(iter(train_loader))
+    assert isinstance(
+        neurons_mask, (list, torch.Tensor)
+    ), "Wrong input type for `neurons_mask`."
+    batch_in, _, _ = next(iter(train_loader))
     NUM_NEURONS = batch_in.size(-1)
-    # create the neurons/feature mask
+    # create the neurons (feature dimension) mask
     if isinstance(neurons_mask, torch.Tensor):
         assert (
             neurons_mask.size(0) == NUM_NEURONS and neurons_mask.dtype == torch.bool

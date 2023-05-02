@@ -164,7 +164,6 @@ class NeuralTransformer(torch.nn.Module):
                 for _ in range(self.num_layers)
             )
         )
-        # self.layer_norm = torch.nn.LayerNorm(self.hidden_size)  # final layer norm
         # Readout
         self.linear = torch.nn.Linear(
             self.hidden_size, self.output_size
@@ -181,7 +180,6 @@ class NeuralTransformer(torch.nn.Module):
             x = self.position_encoding(input)  # (B,T,C)
             x = self.expansion_recoder(x)  # (B,T,C')
             x = self.blocks(x)  # (B,T,C')
-            # x = self.layer_norm(x)  # (B,T,C')
             readout = self.linear(x)  # (B,T,C)
             output = readout
         # repeat for target with tau>0 offset
@@ -189,7 +187,6 @@ class NeuralTransformer(torch.nn.Module):
             x = self.position_encoding(output)  # (B,T,C)
             x = self.expansion_recoder(x)  # (B,T,C')
             x = self.blocks(x)  # (B,T,C')
-            # x = self.layer_norm(x)  # (B,T,C')
             readout = self.linear(x)  # (B,T,C)
             output = readout
         return output
@@ -207,7 +204,7 @@ class NeuralTransformer(torch.nn.Module):
             target_fft = torch.fft.rfft(target, dim=-2).real
             # calculate average difference between real parts of FFTs
             fft_loss = torch.mean(torch.abs(input_fft - target_fft))
-            return 0.5 * original_loss + 0.5 * fft_loss
+            return 0.0 * original_loss + 1.0 * fft_loss
 
         return loss
 
@@ -295,7 +292,7 @@ class LinearNN(torch.nn.Module):
             target_fft = torch.fft.rfft(target, dim=-2).real
             # calculate average difference between real parts of FFTs
             fft_loss = torch.mean(torch.abs(input_fft - target_fft))
-            return 0.5 * original_loss + 0.5 * fft_loss
+            return 0.0 * original_loss + 1.0 * fft_loss
 
         return loss
 
@@ -380,7 +377,7 @@ class NeuralCFC(torch.nn.Module):
             target_fft = torch.fft.rfft(target, dim=-2).real
             # calculate average difference between real parts of FFTs
             fft_loss = torch.mean(torch.abs(input_fft - target_fft))
-            return 0.5 * original_loss + 0.5 * fft_loss
+            return 0.0 * original_loss + 1.0 * fft_loss
 
         return loss
 
@@ -489,7 +486,7 @@ class NetworkLSTM(torch.nn.Module):
             target_fft = torch.fft.rfft(target, dim=-2).real
             # calculate average difference between real parts of FFTs
             fft_loss = torch.mean(torch.abs(input_fft - target_fft))
-            return 0.5 * original_loss + 0.5 * fft_loss
+            return 0.0 * original_loss + 1.0 * fft_loss
 
         return loss
 

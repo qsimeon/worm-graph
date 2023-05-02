@@ -7,13 +7,14 @@ defaults:
   - visualize
   - slurm_default
   - _self_
+# if you want your primary config to override the values of configs
+# from the defaults List, append _self_ to the end of the defaults List
 globals:
   random_seed: 0
   use_residual: false
   smooth_data: true # whether to use smoothed signal data
   shuffle: false # whether to shuffle worms
-# If you want your primary config to override the values of configs
-# from the Defaults List, append _self_ to the end of the Defaults List
+
 hydra:
   mode: MULTIRUN # options: RUN, MULTIRUN
   job:
@@ -29,6 +30,7 @@ hydra:
       globals.random_seed: 0 #range(0,3,1)
       # MODEL
       model.type: NetworkLSTM #LinearNN, NeuralTransformer, NetworkLSTM, NeuralCFC
+      model.loss: MSE #MSE, Huber, L1
       model.hidden_size: 512 #32, 64, 128, 256, 512, 1024
       model.num_layers: 1 #1, 2, 3, 4
       model.checkpoint_path: false
