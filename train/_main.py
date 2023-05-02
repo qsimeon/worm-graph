@@ -2,17 +2,17 @@ from train._utils import *
 
 
 def train_model(
+    config: DictConfig,
     model: torch.nn.Module,
     dataset: dict,
-    config: DictConfig,
     shuffle: bool = True,  # whether to shuffle all worms
-    log_dir: Union[str, None] = None,  # hydra passes
+    log_dir: Union[str, None] = None,  # hydra passes this in
 ) -> tuple[torch.nn.Module, str]:
     """
     Trains a model on a multi-worm dataset. Returns the trained model
     and a path to the directory with training and evaluation logs.
     """
-    # a worm dataset must have at least one worm: "worm0"
+    # a valid worm dataset must have at least one worm: "worm0"
     assert "worm0" in dataset, "Not a valid dataset object."
     # get some helpful variables
     dataset_name = dataset["worm0"]["dataset"]
@@ -20,6 +20,9 @@ def train_model(
     timestamp = datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
     num_unique_worms = len(dataset)
     train_epochs = config.train.epochs + 1
+    shuffle_worms = shuffle
+    shuffle_sequences = config.train.shuffle
+    batch_size = config.train.num_samples // config.train.num_batches
     # hydra changes the working directory to log directory
     if log_dir is None:
         log_dir = os.getcwd()
@@ -32,7 +35,7 @@ def train_model(
         len(dataset_items) == train_epochs * num_unique_worms
     ), "Invalid number of worms."
     # shuffle (without replacement) the worms (including duplicates) in the dataset
-    if shuffle == True:
+    if shuffle_worms == True:
         dataset_items = random.sample(dataset_items, k=len(dataset_items))
     # split the dataset into cohorts of worms; there should be one cohort per epoch
     worm_cohorts = np.array_split(dataset_items, train_epochs)
@@ -55,11 +58,11 @@ def train_model(
         ), "Please use an instance of torch.optim.Optimizer."
     else:
         optimizer = torch.optim.SGD(model.parameters(), lr=learn_rate)
-    print("\nOptimizer:\n\t", optimizer, end="\n\n")
+    print("Optimizer:", optimizer, end="\n\n")
     # get other config params
     if config.get("globals"):
         use_residual = config.globals.use_residual
-        smooth_data = config.train.smooth_data
+        smooth_data = config.globals.smooth_data
     else:
         use_residual = False
         smooth_data = False
@@ -75,26 +78,11 @@ def train_model(
         "centered_train_losses": np.zeros(train_epochs, dtype=np.float32),
         "centered_test_losses": np.zeros(train_epochs, dtype=np.float32),
     }
-    # arguments passed to the `split_train_test` function
-    Tr = max(1, config.train.train_size // num_unique_worms)  # per worm train size
-    Te = max(1, config.train.test_size // num_unique_worms)  # per worm test size
-    B = max(1, Tr // config.train.num_batches)  # per worm batch size
-    print(
-        "per worm train size:",
-        Tr,
-        "\nper worm test size:",
-        Te,
-        "\nper worm batch size:",
-        B,
-        end="\n\n",
-    )
+    # create keyword arguments for `split_train_test`
     kwargs = dict(
         k_splits=config.train.k_splits,
         seq_len=config.train.seq_len,
-        batch_size=B,  # `batch_size` as a function of `train_size`
-        train_size=Tr,  # keeps training set size constant per epoch (cohort)
-        test_size=Te,  # keeps validation set size constant per epoch (cohort)
-        shuffle=config.train.shuffle,  # shuffle samples from each cohort
+        num_samples=config.train.num_samples,  # number of samples per worm
         reverse=config.train.reverse,  # generate samples backward from the end of data
         tau=config.train.tau_in,
         use_residual=use_residual,
@@ -116,60 +104,79 @@ def train_model(
     # memoize creation of data loaders and masks for speedup
     memo_loaders_masks = dict()
     # train for config.train.num_epochs
-    reset_epoch = 0  # 1
+    reset_epoch = 0
+    # keep track of the amount of train data per epoch (in timesteps)
+    worm_timesteps = 0
     # main FOR loop; train the model for multiple epochs (one cohort epoch)
     for i, cohort in enumerate(worm_cohorts):
-        # create a list of loaders and masks for the cohort
-        train_loader = np.empty(num_unique_worms, dtype=object)
+        # create a array of datasets and masks for the cohort
+        train_datasets = np.empty(num_unique_worms, dtype=object)
         if i == 0:  # keep the validation dataset the same
-            test_loader = np.empty(num_unique_worms, dtype=object)
-        neurons_mask = np.empty(num_unique_worms, dtype=object)
+            test_datasets = np.empty(num_unique_worms, dtype=object)
+        neurons_masks = np.empty(num_unique_worms, dtype=object)
         # iterate over each worm in the cohort
         for j, (worm, single_worm_dataset) in enumerate(cohort):
             # check the memo for existing loaders and masks
             if worm in memo_loaders_masks:
-                train_loader[j] = memo_loaders_masks[worm]["train_loader"]
+                train_datasets[j] = memo_loaders_masks[worm]["train_dataset"]
                 if i == 0:  # keep the validation dataset the same
-                    test_loader[j] = memo_loaders_masks[worm]["test_loader"]
+                    test_datasets[j] = memo_loaders_masks[worm]["test_dataset"]
                 train_mask = memo_loaders_masks[worm]["train_mask"]
                 test_mask = memo_loaders_masks[worm]["test_mask"]
             # create data loaders and train/test masks only once per worm
             else:
                 (
-                    train_loader[j],
-                    tmp_test_loader,
+                    train_datasets[j],
+                    tmp_test_dataset,
                     train_mask,
                     test_mask,
                 ) = split_train_test(
                     data=single_worm_dataset[key_data],
-                    time_vec=single_worm_dataset.get(
-                        "time_in_seconds", None
-                    ),  # time vector
+                    time_vec=single_worm_dataset["time_in_seconds"],  # time vector
                     **kwargs,
                 )
                 if i == 0:  # keep the validation dataset the same
-                    test_loader[j] = tmp_test_loader
+                    test_datasets[j] = tmp_test_dataset
                 # add to memo
                 memo_loaders_masks[worm] = dict(
-                    train_loader=train_loader[j],
-                    test_loader=tmp_test_loader,
+                    train_dataset=train_datasets[j],
+                    test_dataset=tmp_test_dataset,
                     train_mask=train_mask,
                     test_mask=test_mask,
                 )
             # get the neurons mask for this worm
-            neurons_mask[j] = single_worm_dataset["named_neurons_mask"]
+            neurons_masks[j] = single_worm_dataset["named_neurons_mask"]
             # update coverage mask
             coverage_mask |= single_worm_dataset["named_neurons_mask"]
             # mutate this worm's dataset with its train and test masks
             dataset[worm].setdefault("train_mask", train_mask.detach())
             dataset[worm].setdefault("test_mask", test_mask.detach())
-        # create loaders and masks lists
-        train_loader = list(train_loader)
-        test_loader = list(test_loader)
-        neurons_mask = list(neurons_mask)
+            # increment the count of the amt. of train data (measure in timesteps) of one epoch
+            if i == 0:
+                worm_timesteps += train_mask.sum().item()
+        # create full datasets and masks for the cohort
+        neurons_mask = list(neurons_masks)
+        train_dataset = ConcatDataset(list(train_datasets))
+        test_dataset = ConcatDataset(list(test_datasets))
+        train_loader = DataLoader(
+            train_dataset,
+            batch_size=batch_size,
+            shuffle=shuffle_sequences,  # shuffle sampled seqeuences
+            pin_memory=True,
+            num_workers=0,
+        )
+        test_loader = DataLoader(
+            test_dataset,
+            batch_size=batch_size,
+            shuffle=shuffle_sequences,  # shuffle sampled seqeuences
+            pin_memory=True,
+            num_workers=0,
+        )
         # optimize for 1 epoch per cohort
         num_epochs = 1  # 1 cohort = 1 epoch
-        # `optimize_model` can accept single loader/mask or list of loaders/masks
+        # Get the starting timestamp
+        start_time = time.perf_counter()
+        # `optimize_model` can accepts the train and test data loaders and the neuron masks
         model, log = optimize_model(
             model=model,
             train_loader=train_loader,
@@ -181,39 +188,40 @@ def train_model(
             num_epochs=num_epochs,
             use_residual=use_residual,
         )
+        # Get the ending timestamp
+        end_time = time.perf_counter()
+        # Calculate the elapsed time
+        elapsed_time = end_time - start_time
+        print(f"Time to `optimize_model` for 1 epoch: {elapsed_time:.5f} seconds\n")
         # retrieve losses and sample counts
         for key in data:  # pre-allocated memory for `data[key]`
-            # with `num_epochs=1`, the code below is just equal to data[key][i] = log[key]
+            # with `num_epochs=1`, this is just data[key][i] = log[key]
             data[key][(i * num_epochs) : (i * num_epochs) + len(log[key])] = log[key]
         # extract the latest validation loss
         val_loss = data["centered_test_losses"][-1]
         # get what neurons have been covered so far
-        _ = torch.nonzero(coverage_mask).squeeze().numpy()
-        covered_neurons = set(np.array(NEURONS_302)[_])
+        covered_neurons = set(
+            np.array(NEURONS_302)[torch.nonzero(coverage_mask).squeeze().numpy()]
+        )
         num_covered_neurons = len(covered_neurons)
-        # some things to do on first epoch
-        if i == 0:
-            true_train_size = int(data["num_train_samples"][0])
-            true_test_size = int(data["num_test_samples"][0])
-            worm_timesteps = config.train.seq_len * true_train_size
         # saving model checkpoints
         if (i % config.train.save_freq == 0) or (i + 1 == train_epochs):
             # display progress
             print(
                 "Saving a model checkpoint.\n\tnum. worm cohorts trained on:",
                 i,
-                "\n\tprevious worm:",
-                worm,
                 end="\n\n",
             )
             # save model checkpoints
             chkpt_name = "{}_epochs_{}_worms.pt".format(
                 reset_epoch, i * num_unique_worms
             )
-
+            checkpoint_path = os.path.join(log_dir, "checkpoints", chkpt_name)
             torch.save(
                 {
                     "epoch": reset_epoch,
+                    "seq_len": config.train.seq_len,
+                    "tau": config.train.tau_in,
                     "loss": val_loss,
                     "dataset_name": dataset_name,
                     "model_name": model_class_name,
@@ -231,7 +239,7 @@ def train_model(
                     "model_state_dict": model.state_dict(),
                     "optimizer_state_dict": optimizer.state_dict(),
                 },
-                os.path.join(log_dir, "checkpoints", chkpt_name),
+                checkpoint_path,
             )
         # set to next epoch before continuing
         reset_epoch = log["epochs"][-1] + 1
@@ -242,25 +250,18 @@ def train_model(
         index=True,
         header=True,
     )
-    # make predictions with last saved model
-    make_predictions(
-        model,
-        dataset,
-        log_dir,
-        tau=config.train.tau_out,
-        use_residual=use_residual,
-        smooth_data=smooth_data,
-    )
     # modify the config file
     config = OmegaConf.structured(OmegaConf.to_yaml(config))
     config.setdefault("dataset", {"name": dataset_name})
     config.dataset.name = dataset_name
     config.setdefault("model", {"type": model_class_name})
+    config.setdefault(
+        "predict",
+        {"model": {"checkpoint_path": checkpoint_path.split("worm-graph/")[-1]}},
+    )
+    config.predict.model.checkpoint_path = checkpoint_path.split("worm-graph/")[-1]
     config.setdefault("visualize", {"log_dir": log_dir.split("worm-graph/")[-1]})
     config.visualize.log_dir = log_dir.split("worm-graph/")[-1]
-    # replace with actual number of samples used
-    config.train.train_size = true_train_size
-    config.train.test_size = true_test_size
     # add some global variables
     config.setdefault("globals", {"use_residual": False, "shuffle": False})
     config.globals.timestamp = timestamp
@@ -273,15 +274,13 @@ def train_model(
     og_cfg_file = os.path.join(log_dir, ".hydra", "config.yaml")
     if os.path.exists(og_cfg_file):
         os.remove(og_cfg_file)
-    # garbage collection
-    gc.collect()
-    # returned trained model and a path to log directory
+    # returned trained model and a path to the log directory
     return model, log_dir
 
 
 if __name__ == "__main__":
     config = OmegaConf.load("conf/train.yaml")
-    print("\nconfig:\n\t", OmegaConf.to_yaml(config), end="\n\n")
+    print("config:", OmegaConf.to_yaml(config), end="\n\n")
     model = get_model(OmegaConf.load("conf/model.yaml"))
     dataset = get_dataset(OmegaConf.load("conf/dataset.yaml"))
     timestamp = datetime.now().strftime("%Y_%m_%d_%H_%M_%S")

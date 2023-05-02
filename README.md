@@ -10,8 +10,8 @@
 ├── analysis
 ├── conf
 ├── data
-├── environment_complete.yml
-├── environment_minimal.yml
+├── environment_cluster.yml
+├── environment_local.yml
 ├── govfunc
 ├── logs
 ├── main.py
@@ -34,7 +34,7 @@
 
 `cd` into the `worm-graph` directory on your local machine: `cd worm-graph`
 
-Using the terminal or an Anaconda Prompt: `conda env create -f environment_minimal.yml`
+Using the terminal or an Anaconda Prompt: `conda env create -f environment_cluster.yml`
    <br>The first line of the `yml` file sets the new environment's name.
 
 Activate the new environment: `conda activate worm-graph`

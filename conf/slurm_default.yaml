@@ -11,4 +11,6 @@ defaults:
 #     mem_gb: 64
 #     nodes: 1
 #     array_parallelism: 800
-#     timeout_min: 1440 # 12 hours by default
+#     timeout_min: 1440 # 24 hours by default
+#     exclude: dgx001, dgx002
+#     constraint: high-capacity #any-A100

@@ -14,6 +14,7 @@ def plot_figures(
     # get default hyperparams for plotting
     if log_dir is None:
         log_dir = config.visualize.log_dir
+        os.makedirs(log_dir, exist_ok=True)
     if worm is None:
         worm = config.visualize.worm
     if neuron is None:

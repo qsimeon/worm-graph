@@ -36,7 +36,7 @@ def draw_connectome(
         pos = network.pos
     # pos = nx.kamada_kawai_layout(G)
     if labels is None:
-        labels = network.id_neuron
+        labels = network.idx_to_neuron
     options = {"edgecolors": "tab:gray", "node_size": 500, "alpha": 0.5}
     ## draw nodes
     nx.draw_networkx_edges(
@@ -142,7 +142,8 @@ def plot_frequency_distribution(data, ax, title, dt=0.5):
     ax.set_xlabel("Frequency (Hz)")
     ax.set_ylabel("Amplitude")
     ax.set_title(title)
-    
+
+
 def plot_loss_curves(log_dir):
     """
     Plot the loss curves stored in the given log directory.
@@ -156,21 +157,31 @@ def plot_loss_curves(log_dir):
             {
                 "dataset": {"name": "unknown"},
                 "model": {"type": "unknown"},
-                "globals": {"timestamp": "unknown"},
+                "train": {"tau_in": "unknown"},
+                "globals": {"timestamp": datetime.now().strftime("%Y_%m_%d_%H_%M_%S")},
             }
         )
     # get strings for plot title
     dataset_name = config.dataset.name
     model_name = config.model.type
+    tau_in = config.train.tau_in
     timestamp = config.globals.timestamp
     # create the plot title
-    plt_title = "Loss curves\nmodel: {}\ndataset: {}\ntime: {}".format(
-        model_name,
-        dataset_name,
-        timestamp,
+    plt_title = (
+        "Loss curves\nmodel: {}\ndataset: {}\ntraining tau: {}\ntime: {}".format(
+            model_name,
+            dataset_name,
+            tau_in,
+            timestamp,
+        )
     )
+    # return if no loss curves file found
+    loss_curves_csv = os.path.join(log_dir, "loss_curves.csv")
+    if not os.path.exists(loss_curves_csv):
+        print("No loss curves found in log directory.")
+        return None
     # load the loss dataframe
-    loss_df = pd.read_csv(os.path.join(log_dir, "loss_curves.csv"), index_col=0)
+    loss_df = pd.read_csv(loss_curves_csv, index_col=0)
     # plot loss vs epochs
     plt.figure()
     sns.lineplot(
@@ -194,7 +205,7 @@ def plot_loss_curves(log_dir):
     sns.lineplot(x="epochs", y="centered_train_losses", data=loss_df, label="train")
     sns.lineplot(x="epochs", y="centered_test_losses", data=loss_df, label="test")
     plt.legend()
-    plt.title(plt_title)
+    plt.suptitle(plt_title, fontsize="small")
     plt.xlabel("Epoch (# worm cohorts)")
     plt.ylabel("Loss - Baseline")
     plt.savefig(os.path.join(log_dir, "loss_curves.png"))
@@ -215,21 +226,28 @@ def plot_before_after_weights(log_dir: str) -> None:
             {
                 "dataset": {"name": "unknown"},
                 "model": {"type": "unknown"},
-                "globals": {"timestamp": "unknown"},
+                "train": {"tau_in": "unknown"},
+                "globals": {"timestamp": datetime.now().strftime("%Y_%m_%d_%H_%M_%S")},
             }
         )
     # get strings for plot title
     dataset_name = config.dataset.name
     model_name = config.model.type
+    tau_in = config.train.tau_in
     timestamp = config.globals.timestamp
     # create the plot title
-    plt_title = "Model readout weights\nmodel: {}\ndataset: {}\ntime: {}".format(
+    plt_title = "Model readout weights\nmodel: {}\ndataset: {}\ntraining tau: {}\ntime: {}".format(
         model_name,
         dataset_name,
+        tau_in,
         timestamp,
     )
-    # load the first model checkpoint
+    # return if no checkpoints found
     chkpt_dir = os.path.join(log_dir, "checkpoints")
+    if not os.path.exists(chkpt_dir):
+        print("No checkpoints found in log directory.")
+        return None
+    # load the first model checkpoint
     chkpts = sorted(os.listdir(chkpt_dir), key=lambda x: int(x.split("_")[0]))
     first_chkpt = torch.load(os.path.join(chkpt_dir, chkpts[0]))
     last_chkpt = torch.load(os.path.join(chkpt_dir, chkpts[-1]))
@@ -248,7 +266,7 @@ def plot_before_after_weights(log_dir: str) -> None:
     axs[1].imshow(model.linear.weight.detach().cpu().T)
     axs[1].set_title("Trained")
     axs[1].set_xlabel("Output size")
-    plt.suptitle(plt_title)
+    plt.suptitle(plt_title, fontsize="small")
     plt.savefig(os.path.join(log_dir, "readout_weights.png"))
     plt.close()
     return None
@@ -276,12 +294,17 @@ def plot_targets_predictions(
             {
                 "dataset": {"name": "unknown"},
                 "model": {"type": "unknown"},
-                "globals": {"timestamp": "unknown"},
+                "train": {"tau_in": "unknown"},
+                "predict": {"tau_out": "unknown", "dataset": {"name": "unknown"}},
+                "globals": {"timestamp": datetime.now().strftime("%Y_%m_%d_%H_%M_%S")},
             }
         )
     # get strings for plot title
-    dataset_name = config.dataset.name
+    train_dataset_name = config.dataset.name
+    predict_dataset_name = config.predict.dataset.name
     model_name = config.model.type
+    tau_in = config.train.tau_in
+    tau_out = config.predict.tau_out
     timestamp = config.globals.timestamp
     # recursive call for all worms
     if (worm is None) or (worm.lower() == "all"):
@@ -292,15 +315,17 @@ def plot_targets_predictions(
     else:
         assert worm in set(os.listdir(log_dir)), "No data for requested worm found."
 
+    # return if no targets or predicitions files found
+    predictions_csv = os.path.join(log_dir, worm, "predicted_" + signal_str + ".csv")
+    targets_csv = os.path.join(log_dir, worm, "target_" + signal_str + ".csv")
+    if (not os.path.exists(predictions_csv)) or (not os.path.exists(targets_csv)):
+        print("No targets or predictions found in log directory.")
+        return None
     # load predictions dataframe
-    predictions_df = pd.read_csv(
-        os.path.join(log_dir, worm, "predicted_" + signal_str + ".csv"), index_col=0
-    )
-    tau = predictions_df["tau"][0]
+    predictions_df = pd.read_csv(predictions_csv, index_col=0)
+    tau_out = predictions_df["tau"][0]
     # load targets dataframe
-    targets_df = pd.read_csv(
-        os.path.join(log_dir, worm, "target_" + signal_str + ".csv"), index_col=0
-    )
+    targets_df = pd.read_csv(targets_csv, index_col=0)
 
     # plot helper
     def func(_neuron_):
@@ -308,11 +333,14 @@ def plot_targets_predictions(
         plt_title = (
             "Neural activity "
             + signal_str
-            + " (GCaMP fluorescence) \nworm: {}, neuron: {}\nmodel: {}\ndataset: {}\ntime: {}".format(
+            + " (GCaMP fluorescence) \nworm: {}, neuron: {}\nmodel: {}\ntrain dataset: {}\npredict dataset: {}\ntraining tau: {}\nprediction tau: {}\ntime: {}".format(
                 worm,
                 _neuron_,
                 model_name,
-                dataset_name,
+                train_dataset_name,
+                predict_dataset_name,
+                tau_in,
+                tau_out,
                 timestamp,
             )
         )
@@ -327,7 +355,7 @@ def plot_targets_predictions(
             x=targets_df.time_in_seconds,
             y=predictions_df[_neuron_],
             label="predict",
-            alpha=0.5,
+            alpha=0.7,
         )
         ylo, yhi = plt.gca().get_ylim()
         plt.gca().fill_between(
@@ -349,15 +377,15 @@ def plot_targets_predictions(
             label="test",
         )
         plt.gca().fill_between(
-            targets_df.time_in_seconds.to_numpy()[-tau:],
+            targets_df.time_in_seconds.to_numpy()[-tau_out:],
             ylo,
             yhi,
-            alpha=0.3,
+            alpha=0.1,
             facecolor="red",
             label="predict",
         )
         plt.legend(loc="upper left", fontsize=6)
-        plt.suptitle(plt_title)
+        plt.suptitle(plt_title, fontsize="small")
         plt.xlabel("Time (seconds)")
         plt.ylabel(signal_str.capitalize() + " ($\Delta F / F$)")
         plt.savefig(
@@ -399,12 +427,17 @@ def plot_correlation_scatterplot(
             {
                 "dataset": {"name": "unknown"},
                 "model": {"type": "unknown"},
-                "globals": {"timestamp": "unknown"},
+                "train": {"tau_in": "unknown"},
+                "predict": {"tau_out": "unknown", "dataset": {"name": "unknown"}},
+                "globals": {"timestamp": datetime.now().strftime("%Y_%m_%d_%H_%M_%S")},
             }
         )
     # get strings for plot title
-    dataset_name = config.dataset.name
+    train_dataset_name = config.dataset.name
+    predict_dataset_name = config.predict.dataset.name
     model_name = config.model.type
+    tau_in = config.train.tau_in
+    tau_out = config.predict.tau_out
     timestamp = config.globals.timestamp
     # recursive call for all worms
     if (worm is None) or (worm.lower() == "all"):
@@ -418,6 +451,7 @@ def plot_correlation_scatterplot(
     predictions_df = pd.read_csv(
         os.path.join(log_dir, worm, "predicted_" + signal_str + ".csv"), index_col=0
     )
+    tau_out = predictions_df["tau"][0]
     # load targets dataframe
     targets_df = pd.read_csv(
         os.path.join(log_dir, worm, "target_" + signal_str + ".csv"), index_col=0
@@ -426,11 +460,14 @@ def plot_correlation_scatterplot(
     # plot helper
     def func(_neuron_):
         os.makedirs(os.path.join(log_dir, worm, "figures"), exist_ok=True)
-        plt_title = "Scatterplot of predicted vs target residuals\nworm: {}, neuron: {}\nmodel: {}\ndataset: {}\ntime: {}".format(
+        plt_title = "Scatterplot of predicted vs target residuals\nworm: {}, neuron: {}\nmodel: {}\ntrain dataset: {}\npredict dataset: {}\ntraining tau: {}\nprediction tau: {}\ntime: {}".format(
             worm,
             _neuron_,
             model_name,
-            dataset_name,
+            train_dataset_name,
+            predict_dataset_name,
+            tau_in,
+            tau_out,
             timestamp,
         )
         data_dict = {
@@ -449,7 +486,7 @@ def plot_correlation_scatterplot(
             scatter_kws={"alpha": 0.1},
             # line_kws={"color": "black"},
         )
-        plt.suptitle(plt_title)
+        plt.suptitle(plt_title, fontsize="small")
         plt.axis("equal")
         plt.gca().set_ylim(plt.gca().get_xlim())
         plt.xlabel("Target " + signal_str + " ($\Delta F / F$)")

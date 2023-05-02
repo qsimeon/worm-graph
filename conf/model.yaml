@@ -1,6 +1,7 @@
 model:
-  type: NetworkLSTM # options: LinearNN, NetworkLSTM, NeuralCFC, NeuralTransformer
-  input_size: 302 # keep this fixed
-  hidden_size: 128 # options: int > 0
-  num_layers: 1 # keep this fixed
-  loss: l1 # options: MSE, Huber, L1
+  type: NeuralTransformer # options: LinearNN, NetworkLSTM, NeuralCFC, NeuralTransformer
+  input_size: 302 # keep this fixed; it is the number of neurons in the C. elegans hermaphrodite adult nervous system
+  hidden_size: 512 # options: int > 0
+  num_layers: 1 # keep this fixed; our experiments show that deeper networks do not improve performance
+  loss: MSE # options: MSE, Huber, L1
+  checkpoint_path: false # options: null, path/to/pretrained/model

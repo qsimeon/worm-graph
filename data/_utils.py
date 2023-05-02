@@ -15,8 +15,8 @@ class NeuralActivityDataset(torch.utils.data.Dataset):
     def __init__(
         self,
         data,
-        seq_len=17,
-        num_samples=1024,
+        seq_len=1,
+        num_samples=100,
         neurons=None,
         time_vec=None,
         reverse=False,
@@ -26,8 +26,7 @@ class NeuralActivityDataset(torch.utils.data.Dataset):
         """
         Args:
           data: torch.tensor. Data w/ shape (max_timesteps, num_neurons).
-          seq_len: int. Sequences of length `seq_len` are generated until the dataset `size`
-                    is achieved.
+          seq_len: int. Sequences of length `seq_len` are generated until the dataset size is achieved.
           num_samples: int, 0 < num_samples <= max_timesteps. Total number of (input, target)
                       data pairs to generate.
           neurons: None, int or array-like. Index of neuron(s) to return data for.
@@ -80,10 +79,13 @@ class NeuralActivityDataset(torch.utils.data.Dataset):
         self.data = data
         self.num_samples = num_samples
         self.data_samples = self.__data_generator()
+        assert self.num_samples == len(
+            self.data_samples
+        ), "Wrong number of sequences generated!"
 
     def __len__(self):
         """Denotes the total number of samples."""
-        return len(self.data_samples)
+        return self.num_samples
 
     def __getitem__(self, index):
         """Generates one sample of data."""
@@ -139,7 +141,7 @@ class NeuralActivityDataset(torch.utils.data.Dataset):
             else np.linspace(  # generate from end to start
                 T - L - self.tau, 0, self.num_samples, dtype=int
             )
-        )  # overlapping windows
+        )
         # sequential processing
         data_samples = list(map(self.parfor_func, start_range))
         return data_samples
