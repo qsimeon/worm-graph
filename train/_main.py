@@ -20,6 +20,9 @@ def train_model(
     timestamp = datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
     num_unique_worms = len(dataset)
     train_epochs = config.train.epochs + 1
+    shuffle_worms = shuffle
+    shuffle_sequences = config.train.shuffle
+    batch_size = config.train.num_samples // config.train.num_batches
     # hydra changes the working directory to log directory
     if log_dir is None:
         log_dir = os.getcwd()
@@ -32,7 +35,7 @@ def train_model(
         len(dataset_items) == train_epochs * num_unique_worms
     ), "Invalid number of worms."
     # shuffle (without replacement) the worms (including duplicates) in the dataset
-    if shuffle == True:
+    if shuffle_worms == True:
         dataset_items = random.sample(dataset_items, k=len(dataset_items))
     # split the dataset into cohorts of worms; there should be one cohort per epoch
     worm_cohorts = np.array_split(dataset_items, train_epochs)
@@ -80,8 +83,6 @@ def train_model(
         k_splits=config.train.k_splits,
         seq_len=config.train.seq_len,
         num_samples=config.train.num_samples,  # number of samples per worm
-        num_batches=config.train.num_batches,  # number of batches per worm
-        shuffle=config.train.shuffle,  # shuffle samples from each cohort
         reverse=config.train.reverse,  # generate samples backward from the end of data
         tau=config.train.tau_in,
         use_residual=use_residual,
@@ -108,25 +109,25 @@ def train_model(
     worm_timesteps = 0
     # main FOR loop; train the model for multiple epochs (one cohort epoch)
     for i, cohort in enumerate(worm_cohorts):
-        # create a list of loaders and masks for the cohort
-        train_loader = np.empty(num_unique_worms, dtype=object)
+        # create a array of datasets and masks for the cohort
+        train_datasets = np.empty(num_unique_worms, dtype=object)
         if i == 0:  # keep the validation dataset the same
-            test_loader = np.empty(num_unique_worms, dtype=object)
-        neurons_mask = np.empty(num_unique_worms, dtype=object)
+            test_datasets = np.empty(num_unique_worms, dtype=object)
+        neurons_masks = np.empty(num_unique_worms, dtype=object)
         # iterate over each worm in the cohort
         for j, (worm, single_worm_dataset) in enumerate(cohort):
             # check the memo for existing loaders and masks
             if worm in memo_loaders_masks:
-                train_loader[j] = memo_loaders_masks[worm]["train_loader"]
+                train_datasets[j] = memo_loaders_masks[worm]["train_dataset"]
                 if i == 0:  # keep the validation dataset the same
-                    test_loader[j] = memo_loaders_masks[worm]["test_loader"]
+                    test_datasets[j] = memo_loaders_masks[worm]["test_dataset"]
                 train_mask = memo_loaders_masks[worm]["train_mask"]
                 test_mask = memo_loaders_masks[worm]["test_mask"]
             # create data loaders and train/test masks only once per worm
             else:
                 (
-                    train_loader[j],
-                    tmp_test_loader,
+                    train_datasets[j],
+                    tmp_test_dataset,
                     train_mask,
                     test_mask,
                 ) = split_train_test(
@@ -135,16 +136,16 @@ def train_model(
                     **kwargs,
                 )
                 if i == 0:  # keep the validation dataset the same
-                    test_loader[j] = tmp_test_loader
+                    test_datasets[j] = tmp_test_dataset
                 # add to memo
                 memo_loaders_masks[worm] = dict(
-                    train_loader=train_loader[j],
-                    test_loader=tmp_test_loader,
+                    train_dataset=train_datasets[j],
+                    test_dataset=tmp_test_dataset,
                     train_mask=train_mask,
                     test_mask=test_mask,
                 )
             # get the neurons mask for this worm
-            neurons_mask[j] = single_worm_dataset["named_neurons_mask"]
+            neurons_masks[j] = single_worm_dataset["named_neurons_mask"]
             # update coverage mask
             coverage_mask |= single_worm_dataset["named_neurons_mask"]
             # mutate this worm's dataset with its train and test masks
@@ -153,13 +154,28 @@ def train_model(
             # increment the count of the amt. of train data (measure in timesteps) of one epoch
             if i == 0:
                 worm_timesteps += train_mask.sum().item()
-        # create loaders and masks lists
-        train_loader = list(train_loader)
-        test_loader = list(test_loader)
-        neurons_mask = list(neurons_mask)
+        # create full datasets and masks for the cohort
+        neurons_mask = list(neurons_masks)
+        train_dataset = ConcatDataset(list(train_datasets))
+        test_dataset = ConcatDataset(list(test_datasets))
+        print("batch_size:", batch_size, end="\n\n")
+        train_loader = DataLoader(
+            train_dataset,
+            batch_size=batch_size,
+            shuffle=shuffle_sequences,  # shuffle sampled seqeuences
+            pin_memory=True,
+        )
+        test_loader = DataLoader(
+            test_dataset,
+            batch_size=batch_size,
+            shuffle=shuffle_sequences,  # shuffle sampled seqeuences
+            pin_memory=True,
+        )
         # optimize for 1 epoch per cohort
         num_epochs = 1  # 1 cohort = 1 epoch
-        # `optimize_model` can accept single loader/mask or list of loaders/masks
+        # Get the starting timestamp
+        start_time = time.perf_counter()
+        # `optimize_model` can accepts the train and test data loaders and the neuron masks
         model, log = optimize_model(
             model=model,
             train_loader=train_loader,
@@ -171,6 +187,11 @@ def train_model(
             num_epochs=num_epochs,
             use_residual=use_residual,
         )
+        # Get the ending timestamp
+        end_time = time.perf_counter()
+        # Calculate the elapsed time
+        elapsed_time = end_time - start_time
+        print(f"Time to `optimize_model` for 1 epoch: {elapsed_time:.5f} seconds\n")
         # retrieve losses and sample counts
         for key in data:  # pre-allocated memory for `data[key]`
             # with `num_epochs=1`, this is just data[key][i] = log[key]

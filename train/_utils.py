@@ -3,7 +3,7 @@ from govfunc._utils import *
 
 
 def train(
-    loader: Union[list[torch.utils.data.DataLoader], torch.utils.data.DataLoader],
+    loader: torch.utils.data.DataLoader,
     model: torch.nn.Module,
     mask: Union[list[torch.Tensor], torch.Tensor],
     optimizer: torch.optim.Optimizer,
@@ -25,12 +25,10 @@ def train(
     Returns:
         losses: dict w/ keys train_loss and base_train_loss
     """
-    # create a list of loaders and masks if only one
-    if isinstance(loader, torch.utils.data.DataLoader):
-        loaders = [loader]
-        masks = [mask]
-    else:  # list
-        loaders = loader
+    # create a list of masks if only one is given
+    if isinstance(mask, torch.Tensor):
+        masks = [mask] * len(loader)
+    else:
         masks = mask
     # Set model to train mode.
     model.train()
@@ -39,40 +37,38 @@ def train(
     num_train_samples = 0
     # Iterate in batches over the training dataset.
     i = 0
-    # each worm in a cohort has its own dataloader
-    for loader, mask in zip(loaders, masks):
-        # each data loader has samples from a single worm
-        for data in loader:
-            i += 1
-            (
-                X_train,
-                Y_train,
-                metadata,
-            ) = data  # X, Y: (batch_size, seq_len, num_neurons)
-            X_train, Y_train = X_train.to(DEVICE), Y_train.to(DEVICE)
-            tau = metadata["tau"].detach()[0]  # penalize longer delays
-            # Clear optimizer gradients.
+    # each data loader has samples from a single worm
+    for data, mask in zip(loader, masks):
+        i += 1
+        (
+            X_train,
+            Y_train,
+            metadata,
+        ) = data  # X, Y: (batch_size, seq_len, num_neurons)
+        X_train, Y_train = X_train.to(DEVICE), Y_train.to(DEVICE)
+        tau = metadata["tau"].detach()[0]  # penalize longer delays
+        # Clear optimizer gradients.
+        optimizer.zero_grad()
+        # Baseline: loss if the model predicted value at next timestep equal to current value.
+        base = criterion(
+            (0 if use_residual else 1) * X_train[:, :, mask], Y_train[:, :, mask]
+        )
+        # Train
+        Y_tr = model(X_train * mask, tau)  # Forward pass.
+        # # Register hook. TODO: is this needed?
+        # Y_tr.retain_grad()
+        # Y_tr.register_hook(lambda grad: grad * mask)
+        # Compute training loss.
+        loss = criterion(Y_tr[:, :, mask], Y_train[:, :, mask])
+        loss.backward()  # Derive gradients.
+        # No backprop on epoch 0.
+        if no_grad:
             optimizer.zero_grad()
-            # Baseline: loss if the model predicted value at next timestep equal to current value.
-            base = criterion(
-                (0 if use_residual else 1) * X_train[:, :, mask], Y_train[:, :, mask]
-            )
-            # Train
-            Y_tr = model(X_train * mask, tau)  # Forward pass.
-            # # Register hook. TODO: is this needed?
-            # Y_tr.retain_grad()
-            # Y_tr.register_hook(lambda grad: grad * mask)
-            # Compute training loss.
-            loss = criterion(Y_tr[:, :, mask], Y_train[:, :, mask])
-            loss.backward()  # Derive gradients.
-            # No backprop on epoch 0.
-            if no_grad:
-                optimizer.zero_grad()
-            optimizer.step()  # Update parameters based on gradients.
-            # Store train and baseline loss.
-            base_loss += base.detach().item()
-            train_loss += loss.detach().item()
-            num_train_samples += X_train.detach().size(0)
+        optimizer.step()  # Update parameters based on gradients.
+        # Store train and baseline loss.
+        base_loss += base.detach().item()
+        train_loss += loss.detach().item()
+        num_train_samples += X_train.detach().size(0)
     # Average train and baseline losses.
     losses = {
         "train_loss": train_loss / (i + 1),
@@ -105,12 +101,10 @@ def test(
     Returns:
         losses: dict w/ keys test_loss and base_test_loss
     """
-    # create a list of loaders and masks if only one is given
-    if isinstance(loader, torch.utils.data.DataLoader):
-        loaders = [loader]
-        masks = [masks]
-    else:  # list
-        loaders = loader
+    # create a list of masks if only one is given
+    if isinstance(mask, torch.Tensor):
+        masks = [mask] * len(loader)
+    else:
         masks = mask
     # Set model to inference mode.
     model.eval()
@@ -119,26 +113,24 @@ def test(
     num_test_samples = 0
     # Iterate in batches over the validation dataset.
     i = 0
-    # each worm in cohort has its own dataloader
-    for loader, mask in zip(loaders, masks):
-        # each data loader has samples from a single worm
-        for data in loader:
-            i += 1
-            X_test, Y_test, metadata = data  # X, Y: (batch_size, seq_len, num_neurons)
-            X_test, Y_test = X_test.to(DEVICE), Y_test.to(DEVICE)
-            tau = metadata["tau"][0]  # penalize longer delays
-            # Baseline: loss if the model predicted value at next timestep equal to current value.
-            base = criterion(
-                (0 if use_residual else 1) * X_test[:, :, mask], Y_test[:, :, mask]
-            )
-            # Test
-            Y_te = model(X_test * mask, tau)  # Forward pass.
-            # Compute the validation loss.
-            loss = criterion(Y_te[:, :, mask], Y_test[:, :, mask])
-            # Store test and baseline loss.
-            base_loss += base.detach().item()
-            test_loss += loss.detach().item()
-            num_test_samples += X_test.detach().size(0)
+    # each data loader has samples from a single worm
+    for data, mask in zip(loader, masks):
+        i += 1
+        X_test, Y_test, metadata = data  # X, Y: (batch_size, seq_len, num_neurons)
+        X_test, Y_test = X_test.to(DEVICE), Y_test.to(DEVICE)
+        tau = metadata["tau"][0]  # penalize longer delays
+        # Baseline: loss if the model predicted value at next timestep equal to current value.
+        base = criterion(
+            (0 if use_residual else 1) * X_test[:, :, mask], Y_test[:, :, mask]
+        )
+        # Test
+        Y_te = model(X_test * mask, tau)  # Forward pass.
+        # Compute the validation loss.
+        loss = criterion(Y_te[:, :, mask], Y_test[:, :, mask])
+        # Store test and baseline loss.
+        base_loss += base.detach().item()
+        test_loss += loss.detach().item()
+        num_test_samples += X_test.detach().size(0)
     # Average test and baseline losses.
     losses = {
         "test_loss": test_loss / (i + 1),
@@ -153,11 +145,9 @@ def test(
 def split_train_test(
     data: torch.Tensor,
     k_splits: int = 2,
-    seq_len: Union[int, list[int]] = 100,  # TODO: allow a list of `seq_len`s
+    seq_len: int = 100,
     num_samples: int = 10,
-    num_batches: int = 2,
     time_vec: Union[torch.Tensor, None] = None,
-    shuffle: bool = True,
     reverse: bool = True,
     tau: Union[int, list[int]] = 1,
     use_residual: bool = False,
@@ -172,24 +162,17 @@ def split_train_test(
     for neural activity from a single worm.
     """
     # argument checking
-    assert isinstance(k_splits, int) and k_splits > 1, "Ensure that `k_splits` > 1."
-    if isinstance(seq_len, int):
-        assert seq_len < len(data), "Invalid `seq_len` integer entered."
-        seq_len = [seq_len]  # convert`seq_len` to a list
-    else:
-        seq_len = list(seq_len)
-        assert isinstance(seq_len, list) and all(
-            [0 < sl < len(data) for sl in seq_len]
-        ), "Invalid `seq_len` list entered."
+    assert isinstance(k_splits, int) and k_splits > 1, "Ensure that `k_splits`:int > 1."
+    assert isinstance(seq_len, int) and 0 < seq_len < len(
+        data
+    ), "Ensure that `seq_len`:int < len(data)."
     if isinstance(tau, int):
-        assert all(
-            tau < len(data) - sl for sl in seq_len
-        ), "Invalid `tau` integer entered."
+        assert tau < len(data) - seq_len, "Invalid `tau` integer entered."
         tau = [tau]  # convert`tau` to a list
     else:
         tau = list(tau)
         assert isinstance(tau, list) and all(
-            [0 < t < len(data) - sl for t in tau for sl in seq_len]
+            [0 < t < len(data) - seq_len for t in tau]
         ), "Invalid `tau` list entered."
     # make time vector
     if time_vec is None:
@@ -217,15 +200,14 @@ def split_train_test(
     test_mask = ~train_mask.detach()
     # drop last split if too small. important that this is after making train/test masks
     len_last = len(split_datasets[-1])
-    if any(t >= len_last // 2 for t in tau) or any(len_last < sl for sl in seq_len):
+    if any(t >= len_last // 2 for t in tau) or (len_last < seq_len):
         split_datasets = split_datasets[:-1]
         split_times = split_times[:-1]
     # make dataset splits
     train_splits, train_times = split_datasets[::2], split_times[::2]
     test_splits, test_times = split_datasets[1::2], split_times[1::2]
-    # pick a random `tau` and `seq_len` from the lists
+    # pick a random `tau` from the list
     _tau = random.choice(tau)
-    _seq_len = random.choice(seq_len)
     # calculate number of train/ test samples per split
     train_size_per_split = (num_samples // len(train_splits)) + (
         num_samples % len(train_splits)
@@ -237,7 +219,7 @@ def split_train_test(
     train_datasets = [
         NeuralActivityDataset(
             _data.detach(),
-            seq_len=_seq_len,
+            seq_len=seq_len,
             num_samples=train_size_per_split,
             reverse=reverse,
             time_vec=train_times[i],
@@ -251,7 +233,7 @@ def split_train_test(
     test_datasets = [
         NeuralActivityDataset(
             _data.detach(),
-            seq_len=_seq_len,
+            seq_len=seq_len,
             num_samples=test_size_per_split,
             reverse=(not reverse),
             time_vec=test_times[i],
@@ -261,23 +243,8 @@ def split_train_test(
         for i, _data in enumerate(test_splits)
     ]
     test_dataset = ConcatDataset(test_datasets)
-    # calculate the batch size
-    batch_size = max(1, num_samples // num_batches)
-    # make data loaders
-    train_loader = DataLoader(
-        train_dataset,
-        batch_size=batch_size,
-        shuffle=shuffle,
-        pin_memory=True,
-    )
-    test_loader = DataLoader(
-        test_dataset,
-        batch_size=batch_size,
-        shuffle=shuffle,
-        pin_memory=True,
-    )
     # return datasets and masks
-    return train_loader, test_loader, train_mask, test_mask
+    return train_dataset, test_dataset, train_mask, test_mask
 
 
 def optimize_model(
@@ -345,6 +312,8 @@ def optimize_model(
     for i, epoch in enumerate(iter_range):
         # train and validate the model
         # TODO: how can I run the train and test loops in parallel?
+        # Get the starting timestamp
+        start_time = time.perf_counter()
         train_log = train(
             train_loader,
             model,
@@ -353,12 +322,24 @@ def optimize_model(
             no_grad=(epoch == 0),
             use_residual=use_residual,
         )
+        # Get the ending timestamp
+        end_time = time.perf_counter()
+        # Calculate the elapsed time
+        elapsed_time = end_time - start_time
+        print(f"Time to `train`: {elapsed_time:.5f} seconds\n")
+        # Get the starting timestamp
+        start_time = time.perf_counter()
         test_log = test(
             test_loader,
             model,
             neurons_mask,
             use_residual=use_residual,
         )
+        # Get the ending timestamp
+        end_time = time.perf_counter()
+        # Calculate the elapsed time
+        elapsed_time = end_time - start_time
+        print(f"Time to `test`: {elapsed_time:.5f} seconds\n")
         # retrieve losses
         centered_train_loss, base_train_loss, train_loss, num_train_samples = (
             train_log["centered_train_loss"],

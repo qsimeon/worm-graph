@@ -19,17 +19,27 @@ def model_predict(
     assert (
         calcium_data.ndim == 2 and calcium_data.size(1) >= NUM_NEURONS
     ), "Calcium data has incorrect shape!"
+    # get target
+    target = calcium_data[tau:, :]
     # get input and output
-    input = calcium_data.detach().to(DEVICE)
+    input = calcium_data.to(DEVICE)[:-tau, :]
     with torch.no_grad():
-        output = model(
+        # TODO: identify when the speedup from the first approach is worth the accuracy trade-off
+        # output = model( # WRONG approach
+        #     input.unsqueeze(1),
+        #     tau=tau,
+        # ).squeeze(
+        #     1
+        # )  # (max_timesteps, 1, NUM_NEURONS),  batch_size = max_timesteps, seq_len = 1
+        output = model(  # CORRECT approach
             input.unsqueeze(0),
             tau=tau,
         ).squeeze(
             0
         )  # (1, max_timesteps, NUM_NEURONS),  batch_size = 1, seq_len = max_timesteps
-    # targets and predictions
-    targets = torch.nn.functional.pad(input.detach().cpu()[tau:], (0, 0, 0, tau))
-    # prediction of the input shifted by tau
-    predictions = output.detach().cpu()
-    return targets, predictions
+    # inputs, predictions, and targets
+    inputs = torch.nn.functional.pad(input.detach().cpu(), (0, 0, 0, tau))
+    predictions = torch.nn.functional.pad(output.detach().cpu(), (0, 0, tau, 0))
+    targets = torch.nn.functional.pad(target.detach().cpu(), (0, 0, tau, 0))
+    # returned seqeuences are all the same shape as the input `calcium_data`
+    return inputs, predictions, targets

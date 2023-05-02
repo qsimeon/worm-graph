@@ -164,7 +164,7 @@ class NeuralTransformer(torch.nn.Module):
                 for _ in range(self.num_layers)
             )
         )
-        self.layer_norm = torch.nn.LayerNorm(self.hidden_size)  # final layer norm
+        # self.layer_norm = torch.nn.LayerNorm(self.hidden_size)  # final layer norm
         # Readout
         self.linear = torch.nn.Linear(
             self.hidden_size, self.output_size
@@ -181,7 +181,7 @@ class NeuralTransformer(torch.nn.Module):
             x = self.position_encoding(input)  # (B,T,C)
             x = self.expansion_recoder(x)  # (B,T,C')
             x = self.blocks(x)  # (B,T,C')
-            x = self.layer_norm(x)  # (B,T,C')
+            # x = self.layer_norm(x)  # (B,T,C')
             readout = self.linear(x)  # (B,T,C)
             output = readout
         # repeat for target with tau>0 offset
@@ -189,7 +189,7 @@ class NeuralTransformer(torch.nn.Module):
             x = self.position_encoding(output)  # (B,T,C)
             x = self.expansion_recoder(x)  # (B,T,C')
             x = self.blocks(x)  # (B,T,C')
-            x = self.layer_norm(x)  # (B,T,C')
+            # x = self.layer_norm(x)  # (B,T,C')
             readout = self.linear(x)  # (B,T,C)
             output = readout
         return output
@@ -399,19 +399,24 @@ class NeuralCFC(torch.nn.Module):
         input: batch of data
         tau: time offset of target
         """
-        if tau < 1:
+        if tau < 1:  # return the input sequence
             rnn_out = self.identity(input)
-        else:
-            rnn_out, self.hidden = self.rnn(input)
-            rnn_out = self.layer_norm(rnn_out)  # layer normalization
-            readout = self.linear(rnn_out)  # projection
-            rnn_out = readout
-        # repeat for target with tau>0 offset
+        else:  # do one-step prediction
+            _, self.hidden = self.rnn(input)
+            hidden_out = self.layer_norm(self.hidden)  # use the last hidden state
+            readout = self.linear(hidden_out)  # projection
+            rnn_out = torch.cat(
+                [input[:, 1:, :], readout.unsqueeze(1)], dim=1
+            )  # input to predict next iteration
+        # do the remaining tau-1 steps of prediction
         for i in range(1, tau):
-            rnn_out, self.hidden = self.rnn(rnn_out, self.hidden)
-            rnn_out = self.layer_norm(rnn_out)  # layer normalization
-            readout = self.linear(rnn_out)  # projection
-            rnn_out = readout
+            # # using the full sequence as input to the rnn
+            # _, self.hidden = self.rnn(rnn_out, self.hidden)
+            # using the last readout as input to the rnn
+            _, self.hidden = self.rnn(readout.unsqueeze(1), self.hidden)
+            hidden_out = self.layer_norm(self.hidden)
+            readout = self.linear(hidden_out)  # projection
+            rnn_out = torch.cat([rnn_out[:, 1:, :], readout.unsqueeze(1)], dim=1)
         return rnn_out
 
 
@@ -444,8 +449,8 @@ class NetworkLSTM(torch.nn.Module):
         else:
             self.loss = torch.nn.L1Loss
         # Setup
-        self.input_size = input_size
-        self.output_size = input_size
+        self.input_size = input_size  # input network dimension (302)
+        self.output_size = input_size  # output network dimension (302)
         self.hidden_size = hidden_size
         self.num_layers = num_layers
         # Identity layer
@@ -503,19 +508,26 @@ class NetworkLSTM(torch.nn.Module):
         input: batch of data
         tau: time offset of target
         """
-        if tau < 1:
+        if tau < 1:  # return the input sequence
             lstm_out = self.identity(input)
-        else:
-            lstm_out, self.hidden = self.lstm(input)
-            lstm_out = self.layer_norm(lstm_out)  # layer normalization
-            readout = self.linear(lstm_out)  # projection
-            lstm_out = readout
-        # repeat for target with tau>0 offset
+        else:  # do one-step prediction
+            _, self.hidden = self.lstm(input)
+            hidden_out = self.layer_norm(
+                self.hidden[0][-1]
+            )  # use the last hidden state
+            readout = self.linear(hidden_out)  # prediction of the next time step
+            lstm_out = torch.cat(
+                [input[:, 1:, :], readout.unsqueeze(1)], dim=1
+            )  # input to predict next iteration
+        # do the remaining tau-1 steps of prediction
         for i in range(1, tau):
-            lstm_out, self.hidden = self.lstm(lstm_out, self.hidden)
-            lstm_out = self.layer_norm(lstm_out)  # layer normalization
-            readout = self.linear(lstm_out)  # projection
-            lstm_out = readout
+            # # using the full sequence as input to the lstm
+            # _, self.hidden = self.lstm(lstm_out, self.hidden)
+            # using the last readout as input to the lstm
+            _, self.hidden = self.lstm(readout.unsqueeze(1), self.hidden)
+            hidden_out = self.layer_norm(self.hidden[0][-1])
+            readout = self.linear(hidden_out)
+            lstm_out = torch.cat([lstm_out[:, 1:, :], readout.unsqueeze(1)], dim=1)
         return lstm_out
 
 

@@ -69,32 +69,22 @@ def make_predictions(
             "tau",
         ]
         # make predictions with final model
-        targets, predictions = model_predict(
+        inputs, predictions, targets = model_predict(
             model,
             calcium_data * named_neurons_mask,
             tau=tau,
         )
         # save dataframes
+        # inputs dataframe
         tau_expand = np.full(time_in_seconds.shape, tau)
-        data = calcium_data[:, named_neurons_mask].numpy()
+        data = inputs[:, named_neurons_mask].numpy()
         data = np.hstack((data, labels, time_in_seconds, tau_expand))
         pd.DataFrame(data=data, columns=columns).to_csv(
             os.path.join(log_dir, worm, signal_str + "_activity.csv"),
             index=True,
             header=True,
         )
-        data = targets[:, named_neurons_mask].detach().numpy()
-        data = np.hstack((data, labels, time_in_seconds, tau_expand))
-        pd.DataFrame(data=data, columns=columns).to_csv(
-            os.path.join(log_dir, worm, "target_" + signal_str + ".csv"),
-            index=True,
-            header=True,
-        )
-        columns = list(named_neurons) + [
-            "train_test_label",
-            "time_in_seconds",
-            "tau",
-        ]
+        # predictions dataframe
         data = predictions[:, named_neurons_mask].detach().numpy()
         data = np.hstack((data, labels, time_in_seconds, tau_expand))
         pd.DataFrame(data=data, columns=columns).to_csv(
@@ -102,6 +92,15 @@ def make_predictions(
             index=True,
             header=True,
         )
+        # targets dataframe
+        data = targets[:, named_neurons_mask].detach().numpy()
+        data = np.hstack((data, labels, time_in_seconds, tau_expand))
+        pd.DataFrame(data=data, columns=columns).to_csv(
+            os.path.join(log_dir, worm, "target_" + signal_str + ".csv"),
+            index=True,
+            header=True,
+        )
+
         # TODO: remove this break to do predict for all worms in dataset
         break
     return None
