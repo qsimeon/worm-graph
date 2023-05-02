@@ -4,7 +4,9 @@ from models._pkg import *
 # Tranformer Parts
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
 class Head(torch.nn.Module):
-    """one head of self-attention"""
+    """
+    One head of self-attention.
+    """
 
     def __init__(self, head_size, n_embd, block_size, dropout):
         super().__init__()
@@ -30,7 +32,9 @@ class Head(torch.nn.Module):
 
 
 class MultiHeadAttention(torch.nn.Module):
-    """multiple heads of self-attention in parallel"""
+    """
+    Multiple heads of self-attention in parallel.
+    """
 
     def __init__(self, n_head, head_size, n_embd, block_size, dropout):
         super().__init__()
@@ -47,7 +51,9 @@ class MultiHeadAttention(torch.nn.Module):
 
 
 class FeedFoward(torch.nn.Module):
-    """a simple linear layer followed by a non-linearity"""
+    """
+    A simple linear layer followed by a non-linearity.
+    """
 
     def __init__(self, n_embd, dropout):
         super().__init__()
@@ -63,7 +69,9 @@ class FeedFoward(torch.nn.Module):
 
 
 class Block(torch.nn.Module):
-    """Transformer block: communication followed by computation"""
+    """
+    Transformer block: communication followed by computation.
+    """
 
     def __init__(self, n_embd, block_size, n_head, dropout):
         # n_embd: embedding dimension, n_head: the number of heads we'd like
@@ -214,21 +222,23 @@ class LinearNN(Model):
 
     def forward(self, input, tau=0):
         """Forward method for simple linear regression model.
-        input: batch of data
-        tau: time offset of target
+        Arguments:
+            input: batch of data
+            tau: time offset of target
         """
         if tau < 1:
             output = self.identity(input)
         else:
             readout = self.model(input)
+            # output = readout
             # focus only on the last time step
             last_timestep = readout[:, -1, :].unsqueeze(1)
-            output = torch.cat(
-                [input[:, 1:, :], last_timestep], dim=1
-            )  # input to predict next iteration
+            output = torch.cat([input[:, 1:, :], last_timestep], dim=1)
         # repeat for target with tau>0 offset
         for i in range(1, tau):
             readout = self.model(output)
+            # output = readout
+            # focus only on the last time step
             last_timestep = readout[:, -1, :].unsqueeze(1)
             output = torch.cat([output[:, 1:, :], last_timestep], dim=1)
         return output
@@ -281,34 +291,24 @@ class NeuralTransformer(Model):
             self.expansion_recoder,  # (B,T,C')
             self.position_encoding,  # (B,T,C')
             self.blocks,  # (B,T,C')
-            self.linear,  # (B,T,C)
+            self.linear,  # output has shape (B,T,C)
         )
 
     def forward(self, input, tau=0):
         """Forward method for a transformer model.
-        (B, T, C) = input.shape = (batch_size, max_timesteps, input_size)
-        (B, T, C') = embedding.shape = (batch_size, max_timesteps, hidden_size)
+        Arguments:
+            (B, T, C) = input.shape = (batch_size, max_timesteps, input_size)
+            (B, T, C') = embedding.shape = (batch_size, max_timesteps, hidden_size)
         """
         if tau < 1:
             output = self.identity(input)
         else:
-            # # input has shape (B, T, C)
-            # x = self.expansion_recoder(input)  # (B,T,C')
-            # x = self.position_encoding(x)  # (B,T,C')
-            # x = self.blocks(x)  # (B,T,C')
-            # # get predictions
-            # readout = self.linear(x)  # (B,T,C)
             readout = self.model(input)
             # focus only on the last time step
             last_timestep = readout[:, -1, :].unsqueeze(1)  # becomes (B, 1, C)
             output = torch.cat([input[:, 1:, :], last_timestep], dim=1)  # (B, T, C)
         # repeat for target with tau>0 offset
         for i in range(1, tau):
-            # # output has shape (B, T, C)
-            # x = self.expansion_recoder(output)  # (B,T,C')
-            # x = self.position_encoding(x)  # (B,T,C')
-            # x = self.blocks(x)  # (B,T,C')
-            # readout = self.linear(x)  # (B,T,C)
             readout = self.model(output)
             # focus only on the last time step
             last_timestep = readout[:, -1, :].unsqueeze(1)  # becomes (B, 1, C)
@@ -317,9 +317,7 @@ class NeuralTransformer(Model):
 
 
 class NeuralCFC(Model):
-    """
-    Neural Circuit Policy (NCP) Closed-form continuous time (CfC) model.
-    """
+    """Neural Circuit Policy (NCP) Closed-form continuous time (CfC) model."""
 
     def __init__(
         self,
@@ -342,8 +340,7 @@ class NeuralCFC(Model):
         self.layer_norm = torch.nn.LayerNorm(self.hidden_size)
 
     def forward(self, input, tau=0):
-        """
-        Propagate input through the continuous time NN.
+        """Propagate input through the continuous time NN.
         input: batch of data
         tau: time offset of target
         """
@@ -407,8 +404,7 @@ class NetworkLSTM(Model):
         self.layer_norm = torch.nn.LayerNorm(self.hidden_size)
 
     def forward(self, input, tau=0):
-        """
-        Propagate input through the LSTM.
+        """Propagate input through the LSTM.
         input: batch of data
         tau: time offset of target
         """
