@@ -24,13 +24,6 @@ def model_predict(
     # get input and output
     input = calcium_data.to(DEVICE)[:-tau, :]
     with torch.no_grad():
-        # TODO: identify when the speedup from the first approach is worth the accuracy trade-off
-        # output = model( # WRONG approach
-        #     input.unsqueeze(1),
-        #     tau=tau,
-        # ).squeeze(
-        #     1
-        # )  # (max_timesteps, 1, NUM_NEURONS),  batch_size = max_timesteps, seq_len = 1
         output = model(  # CORRECT approach
             input.unsqueeze(0),
             tau=tau,
@@ -41,5 +34,5 @@ def model_predict(
     inputs = torch.nn.functional.pad(input.detach().cpu(), (0, 0, 0, tau))
     predictions = torch.nn.functional.pad(output.detach().cpu(), (0, 0, tau, 0))
     targets = torch.nn.functional.pad(target.detach().cpu(), (0, 0, tau, 0))
-    # returned seqeuences are all the same shape as the input `calcium_data`
+    # returned sequences are all the same shape as the input `calcium_data`
     return inputs, predictions, targets

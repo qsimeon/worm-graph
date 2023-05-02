@@ -37,7 +37,7 @@ hydra:
       # TRAIN
       train.optimizer: SGD #Adam, SGD
       train.learn_rate: 0.01 # 0.0001, 0.001, 0.01, 0.1, 1.0
-      train.epochs: 5
+      train.epochs: 3
       train.save_freq: 100
       train.seq_len: 100 # range(1,200,50)
       train.k_splits: 2 #2, 5, 7, 10

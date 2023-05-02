@@ -55,9 +55,6 @@ def train(
         )
         # Train
         Y_tr = model(X_train * mask, tau)  # Forward pass.
-        # # Register hook. TODO: is this needed?
-        # Y_tr.retain_grad()
-        # Y_tr.register_hook(lambda grad: grad * mask)
         # Compute training loss.
         loss = criterion(Y_tr[:, :, mask], Y_train[:, :, mask])
         loss.backward()  # Derive gradients.
@@ -311,35 +308,25 @@ def optimize_model(
     iter_range = range(start_epoch, num_epochs + start_epoch)
     for i, epoch in enumerate(iter_range):
         # train and validate the model
-        # TODO: how can I run the train and test loops in parallel?
-        # Get the starting timestamp
-        start_time = time.perf_counter()
-        train_log = train(
-            train_loader,
-            model,
-            neurons_mask,
-            optimizer,
-            no_grad=(epoch == 0),
-            use_residual=use_residual,
-        )
-        # Get the ending timestamp
-        end_time = time.perf_counter()
-        # Calculate the elapsed time
-        elapsed_time = end_time - start_time
-        print(f"Time to `train`: {elapsed_time:.5f} seconds\n")
-        # Get the starting timestamp
-        start_time = time.perf_counter()
-        test_log = test(
-            test_loader,
-            model,
-            neurons_mask,
-            use_residual=use_residual,
-        )
-        # Get the ending timestamp
-        end_time = time.perf_counter()
-        # Calculate the elapsed time
-        elapsed_time = end_time - start_time
-        print(f"Time to `test`: {elapsed_time:.5f} seconds\n")
+        with ThreadPoolExecutor(max_workers=2) as executor:  # parallel train and test
+            train_future = executor.submit(
+                train,
+                train_loader,
+                model,
+                neurons_mask,
+                optimizer,
+                no_grad=(epoch == 0),
+                use_residual=use_residual,
+            )
+            test_future = executor.submit(
+                test,
+                test_loader,
+                model,
+                neurons_mask,
+                use_residual=use_residual,
+            )
+            train_log = train_future.result()
+            test_log = test_future.result()
         # retrieve losses
         centered_train_loss, base_train_loss, train_loss, num_train_samples = (
             train_log["centered_train_loss"],

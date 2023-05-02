@@ -158,18 +158,19 @@ def train_model(
         neurons_mask = list(neurons_masks)
         train_dataset = ConcatDataset(list(train_datasets))
         test_dataset = ConcatDataset(list(test_datasets))
-        print("batch_size:", batch_size, end="\n\n")
         train_loader = DataLoader(
             train_dataset,
             batch_size=batch_size,
             shuffle=shuffle_sequences,  # shuffle sampled seqeuences
             pin_memory=True,
+            num_workers=0,
         )
         test_loader = DataLoader(
             test_dataset,
             batch_size=batch_size,
             shuffle=shuffle_sequences,  # shuffle sampled seqeuences
             pin_memory=True,
+            num_workers=0,
         )
         # optimize for 1 epoch per cohort
         num_epochs = 1  # 1 cohort = 1 epoch

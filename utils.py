@@ -3,7 +3,12 @@ import torch
 import random
 import numpy as np
 import pandas as pd
+import torch.multiprocessing
 
+# set the start method for multiprocessing
+torch.multiprocessing.set_start_method("spawn", force=True)
+
+# set some environment variables
 os.environ["HYDRA_FULL_ERROR"] = "1"
 os.environ["CUDA_LAUNCH_BLOCKING"] = "1"
 os.environ["OC_CAUSE"] = "1"
