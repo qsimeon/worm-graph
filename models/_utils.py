@@ -1,6 +1,8 @@
 from models._pkg import *
 
 
+# Tranformer Parts
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
 class Head(torch.nn.Module):
     """one head of self-attention"""
 
@@ -108,7 +110,131 @@ class PositionalEncoding(torch.nn.Module):
         return self.dropout(x)
 
 
-class NeuralTransformer(torch.nn.Module):
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
+
+
+# Models (super class and sub classes)
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
+class Model(torch.nn.Module):
+    """Super class for all models.
+    For all our models:
+        1. The output will be the same shape as the input.
+        2. A method called `loss_fn` that specifies the specific
+            loss function to be used by the model. The default
+            loss function we use is `torch.nn.MSELoss()`.
+        3. A readout layer is implemented and will always be
+            called `self.linear`.
+        4. There is at least 1 hidden layer. The value of the
+            argument `num_layers` specifies the number of hidden layers.
+        5. When it is possible for a model to be multi-layered,
+            the `num_layers` argument is used to create the desired number
+            of layers. Otherwise `num_layers` defaults to 1.
+        6. TODO: A method called `sample` or `generate` should be implemented to allow
+            sampling spontaneous neural activity from the network.
+            Need to read the literature on generative models, score-/energy-based
+            models, and diffusion models to understand out how to implement this.
+        7. Getter methods for the input size, hidden size, and number of layers called
+            `get_input_size`, `get_hidden_size`, and `get_num_layers`, respectively."""
+
+    def __init__(self, input_size, hidden_size, num_layers=1, loss=None):
+        """Defines attributes common to all models."""
+        super(Model, self).__init__()
+        # Loss function
+        if (loss is None) or (str(loss).lower() == "l1"):
+            self.loss = torch.nn.L1Loss
+        elif str(loss).lower() == "mse":
+            self.loss = torch.nn.MSELoss
+        elif str(loss).lower() == "huber":
+            self.loss == torch.nn.HuberLoss
+        else:
+            self.loss = torch.nn.L1Loss
+        # Setup
+        self.input_size = input_size  # number of neurons (302)
+        self.output_size = input_size
+        self.hidden_size = hidden_size
+        self.num_layers = num_layers
+        # Identity layer
+        self.identity = torch.nn.Identity()
+        # Linear readout
+        self.linear = torch.nn.Linear(self.hidden_size, self.output_size)
+
+    def loss_fn(self):
+        """
+        The loss function to be used with the model.
+        """
+
+        def loss(input, target, **kwargs):
+            """Calculate loss with FFT regularization."""
+            original_loss = self.loss(**kwargs)(input, target)
+            # calculate FFT and take real part
+            input_fft = torch.fft.rfft(input, dim=-2).real
+            target_fft = torch.fft.rfft(target, dim=-2).real
+            # calculate average difference between real parts of FFTs
+            fft_loss = torch.mean(torch.abs(input_fft - target_fft))
+            return 0.0 * original_loss + 1.0 * fft_loss
+
+        return loss
+
+    def get_input_size(self):
+        return self.input_size
+
+    def get_hidden_size(self):
+        return self.hidden_size
+
+    def get_num_layers(self):
+        return self.num_layers
+
+
+class LinearNN(Model):
+    """
+    A simple linear regression model to use as a baseline.
+    """
+
+    def __init__(self, input_size, hidden_size, num_layers=1, loss=None):
+        super(LinearNN, self).__init__(input_size, hidden_size, num_layers, loss)
+        # Input and hidden layers
+        self.input_hidden = (
+            torch.nn.Linear(self.input_size, self.hidden_size),
+            # torch.nn.ReLU(),
+            torch.nn.ELU(),
+            torch.nn.LayerNorm(self.hidden_size),
+        )
+        self.hidden_hidden = (self.num_layers - 1) * (
+            torch.nn.Linear(self.hidden_size, self.hidden_size),
+            # torch.nn.ReLU(),
+            torch.nn.ELU(),
+            torch.nn.LayerNorm(self.hidden_size),
+        )
+        # Full model
+        self.model = torch.nn.Sequential(
+            *self.input_hidden,
+            *self.hidden_hidden,
+            self.linear,
+        )
+
+    def forward(self, input, tau=0):
+        """Forward method for simple linear regression model.
+        input: batch of data
+        tau: time offset of target
+        """
+        if tau < 1:
+            output = self.identity(input)
+        else:
+            readout = self.model(input)
+            # focus only on the last time step
+            last_timestep = readout[:, -1, :].unsqueeze(1)
+            output = torch.cat(
+                [input[:, 1:, :], last_timestep], dim=1
+            )  # input to predict next iteration
+        # repeat for target with tau>0 offset
+        for i in range(1, tau):
+            readout = self.model(output)
+            last_timestep = readout[:, -1, :].unsqueeze(1)
+            output = torch.cat([output[:, 1:, :], last_timestep], dim=1)
+        return output
+
+
+class NeuralTransformer(Model):
     def __init__(
         self,
         input_size,
@@ -124,29 +250,15 @@ class NeuralTransformer(torch.nn.Module):
         expansion recoding - which acts as an embedding but is really
         just a projection.
         """
-        super(NeuralTransformer, self).__init__()
-        # Loss function
-        if (loss is None) or (str(loss).lower() == "l1"):
-            self.loss = torch.nn.L1Loss
-        elif str(loss).lower() == "mse":
-            self.loss = torch.nn.MSELoss
-        elif str(loss).lower() == "huber":
-            self.loss == torch.nn.HuberLoss
-        else:
-            self.loss = torch.nn.L1Loss
-        # Setup
-        self.input_size = input_size  # number of neurons (302)
-        self.output_size = input_size
-        self.hidden_size = hidden_size
-        self.num_layers = num_layers
+        super(NeuralTransformer, self).__init__(
+            input_size, hidden_size, num_layers, loss
+        )
         self.n_head = 4  # number of attention heads
         self.block_size = 5000  # maximum attention block (i.e. context) size
-        self.dropout = 0.1
-        # Identity layer
-        self.identity = torch.nn.Identity()
+        self.dropout = 0.1  # dropout rate
         # Positional encoding
         self.position_encoding = PositionalEncoding(
-            self.input_size,
+            self.hidden_size,
             max_len=self.block_size,
             dropout=self.dropout,
         )
@@ -164,168 +276,49 @@ class NeuralTransformer(torch.nn.Module):
                 for _ in range(self.num_layers)
             )
         )
-        # Readout
-        self.linear = torch.nn.Linear(
-            self.hidden_size, self.output_size
-        )  # linear readout
+        # Full model
+        self.model = torch.nn.Sequential(  # input has shape (B, T, C)
+            self.expansion_recoder,  # (B,T,C')
+            self.position_encoding,  # (B,T,C')
+            self.blocks,  # (B,T,C')
+            self.linear,  # (B,T,C)
+        )
 
     def forward(self, input, tau=0):
-        """
+        """Forward method for a transformer model.
         (B, T, C) = input.shape = (batch_size, max_timesteps, input_size)
         (B, T, C') = embedding.shape = (batch_size, max_timesteps, hidden_size)
         """
         if tau < 1:
             output = self.identity(input)
         else:
-            x = self.position_encoding(input)  # (B,T,C)
-            x = self.expansion_recoder(x)  # (B,T,C')
-            x = self.blocks(x)  # (B,T,C')
-            readout = self.linear(x)  # (B,T,C)
-            output = readout
-        # repeat for target with tau>0 offset
-        for i in range(1, tau):
-            x = self.position_encoding(output)  # (B,T,C)
-            x = self.expansion_recoder(x)  # (B,T,C')
-            x = self.blocks(x)  # (B,T,C')
-            readout = self.linear(x)  # (B,T,C)
-            output = readout
-        return output
-
-    def loss_fn(self):
-        """
-        The loss function to be used with this model.
-        """
-
-        def loss(input, target, **kwargs):
-            """Calculate loss with FFT regularization."""
-            original_loss = self.loss(**kwargs)(input, target)
-            # calculate FFT and take real part
-            input_fft = torch.fft.rfft(input, dim=-2).real
-            target_fft = torch.fft.rfft(target, dim=-2).real
-            # calculate average difference between real parts of FFTs
-            fft_loss = torch.mean(torch.abs(input_fft - target_fft))
-            return 0.0 * original_loss + 1.0 * fft_loss
-
-        return loss
-
-    def get_input_size(self):
-        return self.input_size
-
-    def get_hidden_size(self):
-        return self.hidden_size
-
-    def get_num_layers(self):
-        return self.num_layers
-
-
-class LinearNN(torch.nn.Module):
-    """
-    A simple linear regression model to use as a baseline.
-    For all our models:
-        1. The output will be the same shape as the input.
-        2. A method called `loss_fn` that specifies the specific
-            loss function to be used by the model. The default
-            loss function we use is `torch.nn.MSELoss()`.
-        3. A readout layer is implemented and will always be
-            called `self.linear`.
-        4. There is at least 1 hidden layer. The value of the
-            argument `num_layers` specifies the number of hidden layers.
-        5. When it is possible for a model to be multi-layered,
-            the `num_layers` argument is used to create the desired number
-            of layers. Otherwise `num_layers` defaults to 1.
-        6. TODO: A method called `sample` or `generate` should be implemented to allow
-            sampling spontaneous neural activity from the network.
-            Need to read the literature on generative models, score-/energy-based
-            models, and diffusion models to understand out how to implement this.
-    """
-
-    def __init__(self, input_size, hidden_size, num_layers=1, loss=None):
-        super(LinearNN, self).__init__()
-        # Loss function
-        if (loss is None) or (str(loss).lower() == "l1"):
-            self.loss = torch.nn.L1Loss
-        elif str(loss).lower() == "mse":
-            self.loss = torch.nn.MSELoss
-        elif str(loss).lower() == "huber":
-            self.loss == torch.nn.HuberLoss
-        else:
-            self.loss = torch.nn.L1Loss
-        # Setup
-        self.input_size = input_size
-        self.output_size = input_size
-        self.hidden_size = hidden_size
-        self.num_layers = num_layers
-        # Identity layer
-        self.identity = torch.nn.Identity()
-        # Input and hidden layers
-        self.input_hidden = (
-            torch.nn.Linear(self.input_size, self.hidden_size),
-            # torch.nn.ReLU(),
-            torch.nn.ELU(),
-            torch.nn.LayerNorm(self.hidden_size),
-        )
-        self.hidden_hidden = (self.num_layers - 1) * (
-            torch.nn.Linear(self.hidden_size, self.hidden_size),
-            # torch.nn.ReLU(),
-            torch.nn.ELU(),
-            torch.nn.LayerNorm(self.hidden_size),
-        )
-        # Readout
-        self.linear = torch.nn.Linear(self.hidden_size, self.output_size)
-        # Full model
-        self.model = torch.nn.Sequential(
-            *self.input_hidden,
-            *self.hidden_hidden,
-            self.linear,
-        )
-
-    def loss_fn(self):
-        """
-        The loss function to be used with this model.
-        """
-
-        def loss(input, target, **kwargs):
-            """Calculate loss with FFT regularization."""
-            original_loss = self.loss(**kwargs)(input, target)
-            # calculate FFT and take real part
-            input_fft = torch.fft.rfft(input, dim=-2).real
-            target_fft = torch.fft.rfft(target, dim=-2).real
-            # calculate average difference between real parts of FFTs
-            fft_loss = torch.mean(torch.abs(input_fft - target_fft))
-            return 0.0 * original_loss + 1.0 * fft_loss
-
-        return loss
-
-    def get_input_size(self):
-        return self.input_size
-
-    def get_hidden_size(self):
-        return self.hidden_size
-
-    def get_num_layers(self):
-        return self.num_layers
-
-    def forward(self, input, tau=0):
-        """
-        input: batch of data
-        tau: time offset of target
-        """
-        if tau < 1:
-            output = self.identity(input)
-        else:
+            # # input has shape (B, T, C)
+            # x = self.expansion_recoder(input)  # (B,T,C')
+            # x = self.position_encoding(x)  # (B,T,C')
+            # x = self.blocks(x)  # (B,T,C')
+            # # get predictions
+            # readout = self.linear(x)  # (B,T,C)
             readout = self.model(input)
-            output = readout
+            # focus only on the last time step
+            last_timestep = readout[:, -1, :].unsqueeze(1)  # becomes (B, 1, C)
+            output = torch.cat([input[:, 1:, :], last_timestep], dim=1)  # (B, T, C)
         # repeat for target with tau>0 offset
         for i in range(1, tau):
+            # # output has shape (B, T, C)
+            # x = self.expansion_recoder(output)  # (B,T,C')
+            # x = self.position_encoding(x)  # (B,T,C')
+            # x = self.blocks(x)  # (B,T,C')
+            # readout = self.linear(x)  # (B,T,C)
             readout = self.model(output)
-            output = readout
+            # focus only on the last time step
+            last_timestep = readout[:, -1, :].unsqueeze(1)  # becomes (B, 1, C)
+            output = torch.cat([output[:, 1:, :], last_timestep], dim=1)  # (B, T, C)
         return output
 
 
-class NeuralCFC(torch.nn.Module):
+class NeuralCFC(Model):
     """
     Neural Circuit Policy (NCP) Closed-form continuous time (CfC) model.
-    TODO: Do not use!; this model uses up all the torch memory; why?
     """
 
     def __init__(
@@ -337,58 +330,16 @@ class NeuralCFC(torch.nn.Module):
     ):
         """
         The output size will be the same as the input size.
+        The num_layers parameter is not being used in this model.
+        TODO: Implement a way to use the num_layers parameter.
         """
-        super(NeuralCFC, self).__init__()
-        # Loss function
-        if (loss is None) or (str(loss).lower() == "l1"):
-            self.loss = torch.nn.L1Loss
-        elif str(loss).lower() == "mse":
-            self.loss = torch.nn.MSELoss
-        elif str(loss).lower() == "huber":
-            self.loss == torch.nn.HuberLoss
-        else:
-            self.loss = torch.nn.L1Loss
-        # Setup
-        self.input_size = input_size
-        self.output_size = input_size
-        self.hidden_size = hidden_size
-        self.num_layers = num_layers  # currently unused
-        # Identity layer
-        self.identity = torch.nn.Identity()
+        super(NeuralCFC, self).__init__(input_size, hidden_size, num_layers, loss)
         # Recurrent layer
         self.rnn = CfC(self.input_size, self.hidden_size)
         # Initialize hidden state
         self.hidden = None
-        # Layer norm
+        # Normalization layer
         self.layer_norm = torch.nn.LayerNorm(self.hidden_size)
-        # Readout
-        self.linear = torch.nn.Linear(self.hidden_size, self.output_size)
-
-    def loss_fn(self):
-        """
-        The loss function to be used with this model.
-        """
-
-        def loss(input, target, **kwargs):
-            """Calculate loss with FFT regularization."""
-            original_loss = self.loss(**kwargs)(input, target)
-            # calculate FFT and take real part
-            input_fft = torch.fft.rfft(input, dim=-2).real
-            target_fft = torch.fft.rfft(target, dim=-2).real
-            # calculate average difference between real parts of FFTs
-            fft_loss = torch.mean(torch.abs(input_fft - target_fft))
-            return 0.0 * original_loss + 1.0 * fft_loss
-
-        return loss
-
-    def get_input_size(self):
-        return self.input_size
-
-    def get_hidden_size(self):
-        return self.hidden_size
-
-    def get_num_layers(self):
-        return self.num_layers
 
     def forward(self, input, tau=0):
         """
@@ -417,7 +368,7 @@ class NeuralCFC(torch.nn.Module):
         return rnn_out
 
 
-class NetworkLSTM(torch.nn.Module):
+class NetworkLSTM(Model):
     """
     A model of the _C. elegans_ neural network using an LSTM.
     Given an input sequence of length $L$ and an offset $\tau$,
@@ -435,23 +386,7 @@ class NetworkLSTM(torch.nn.Module):
         """
         The output size will be the same as the input size.
         """
-        super(NetworkLSTM, self).__init__()
-        # Loss function
-        if (loss is None) or (str(loss).lower() == "l1"):
-            self.loss = torch.nn.L1Loss
-        elif str(loss).lower() == "mse":
-            self.loss = torch.nn.MSELoss
-        elif str(loss).lower() == "huber":
-            self.loss == torch.nn.HuberLoss
-        else:
-            self.loss = torch.nn.L1Loss
-        # Setup
-        self.input_size = input_size  # input network dimension (302)
-        self.output_size = input_size  # output network dimension (302)
-        self.hidden_size = hidden_size
-        self.num_layers = num_layers
-        # Identity layer
-        self.identity = torch.nn.Identity()
+        super(NetworkLSTM, self).__init__(input_size, hidden_size, num_layers, loss)
         # LSTM
         self.lstm = torch.nn.LSTM(
             input_size=self.input_size,
@@ -468,36 +403,8 @@ class NetworkLSTM(torch.nn.Module):
             )
         # Initialize hidden state
         self.hidden = None
-        # Layer norm
+        # Normalization layer
         self.layer_norm = torch.nn.LayerNorm(self.hidden_size)
-        # Readout
-        self.linear = torch.nn.Linear(self.hidden_size, self.output_size)
-
-    def loss_fn(self):
-        """
-        The loss function to be used with this model.
-        """
-
-        def loss(input, target, **kwargs):
-            """Calculate loss with FFT regularization."""
-            original_loss = self.loss(**kwargs)(input, target)
-            # calculate FFT and take real part
-            input_fft = torch.fft.rfft(input, dim=-2).real
-            target_fft = torch.fft.rfft(target, dim=-2).real
-            # calculate average difference between real parts of FFTs
-            fft_loss = torch.mean(torch.abs(input_fft - target_fft))
-            return 0.0 * original_loss + 1.0 * fft_loss
-
-        return loss
-
-    def get_input_size(self):
-        return self.input_size
-
-    def get_hidden_size(self):
-        return self.hidden_size
-
-    def get_num_layers(self):
-        return self.num_layers
 
     def forward(self, input, tau=0):
         """
@@ -528,6 +435,11 @@ class NetworkLSTM(torch.nn.Module):
         return lstm_out
 
 
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
+
+
+# Graph Neural Network models
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
 class GraphNN(torch.nn.Module):
     """
     Applies a single graph convolutional layer separately to the
@@ -557,3 +469,6 @@ class GraphNN(torch.nn.Module):
         hidden = torch.cat([elec_hid, chem_hid], dim=-1)
         output = self.linear(hidden)
         return output
+
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
