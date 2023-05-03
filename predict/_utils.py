@@ -24,7 +24,7 @@ def model_predict(
     # get input and output
     input = calcium_data.to(DEVICE)[:-tau, :]
     with torch.no_grad():
-        output = model(  # CORRECT approach
+        output = model(
             input.unsqueeze(0),
             tau=tau,
         ).squeeze(
