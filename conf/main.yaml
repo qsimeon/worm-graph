@@ -29,7 +29,7 @@ hydra:
       # GLOBALS
       globals.random_seed: 0 #range(0,3,1)
       # MODEL
-      model.type: NeuralCFC #LinearNN, NeuralTransformer, NetworkLSTM, NeuralCFC
+      model.type: LinearNN #LinearNN, NeuralTransformer, NetworkLSTM, NeuralCFC
       model.loss: MSE #MSE, Huber, L1
       model.reg_param: 1.0 #0.0, 0.1, 0.5, 1.0
       model.hidden_size: 1024 #32, 64, 128, 256, 512, 1024
@@ -40,7 +40,7 @@ hydra:
       # TRAIN
       train.optimizer: SGD #Adam, SGD
       train.learn_rate: 0.01 # 0.0001, 0.001, 0.01, 0.1, 1.0
-      train.epochs: 20
+      train.epochs: 100
       train.save_freq: 100
       train.seq_len: 100 # range(1,200,50)
       train.k_splits: 2 #2, 5, 7, 10
