@@ -308,6 +308,7 @@ def optimize_model(
     for i, epoch in enumerate(iter_range):
         # train and validate the model
         with ThreadPoolExecutor(max_workers=2) as executor:  # parallel train and test
+            model.train()
             train_future = executor.submit(
                 train,
                 train_loader,
@@ -317,6 +318,8 @@ def optimize_model(
                 no_grad=(epoch == 0),
                 use_residual=use_residual,
             )
+            train_log = train_future.result()
+            model.eval()
             test_future = executor.submit(
                 test,
                 test_loader,
@@ -324,7 +327,6 @@ def optimize_model(
                 neurons_mask,
                 use_residual=use_residual,
             )
-            train_log = train_future.result()
             test_log = test_future.result()
         # retrieve losses
         centered_train_loss, base_train_loss, train_loss, num_train_samples = (
