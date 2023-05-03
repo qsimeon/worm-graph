@@ -183,6 +183,40 @@ class Model(torch.nn.Module):
 
         return loss
 
+    def generate(self, input: torch.Tensor, timesteps: int = 1):
+        """Generate future timesteps of neural activity.
+        Arguments:
+            input: a batch of neural activity data.
+            timesteps: the numbe rof new timesteps to generate neural activity for.
+        """
+        # check dimensions of input
+        if input.ndim == 2:
+            input = input.unsqueeze(0)
+        assert input.ndim == 3, "Input must have shape (B, T, C)."
+        # copy the input to avoid modifying it
+        output = input.detach().clone()
+        # use the full sequence as the context
+        context_len = len(output[1])
+        # generate future timesteps
+        for _ in range(timesteps):
+            # condition on the previous context_len timesteps
+            input_cond = output[:, -context_len:, :]
+            # get the prediction of next timestep
+            input_forward = self.forward(input_cond, tau=1)
+            # focus only on the last time step
+            next_timestep = input_forward[:, -1, :]  # (B, C)
+            # append predicted next timestep to the running sequence
+            output = torch.cat(
+                [output, next_timestep.unsqueeze(1)], dim=1
+            )  # (B, T+1, C)
+        return output
+
+    def sample(self, length):
+        """
+        Sample spontaneous neural activity from the network.
+        """
+        return None
+
     def get_input_size(self):
         return self.input_size
 
