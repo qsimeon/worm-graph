@@ -107,6 +107,10 @@ def train_model(
     reset_epoch = 0
     # keep track of the amount of train data per epoch (in timesteps)
     worm_timesteps = 0
+    # keep track of the total optimization time
+    cumsum_seconds = 0
+    # keep track of the average optimization time per epoch
+    seconds_per_epoch = 0
     # main FOR loop; train the model for multiple epochs (one cohort epoch)
     for i, cohort in enumerate(worm_cohorts):
         # create a array of datasets and masks for the cohort
@@ -174,7 +178,7 @@ def train_model(
         )
         # optimize for 1 epoch per cohort
         num_epochs = 1  # 1 cohort = 1 epoch
-        # Get the starting timestamp
+        # get the starting timestamp
         start_time = time.perf_counter()
         # `optimize_model` can accepts the train and test data loaders and the neuron masks
         model, log = optimize_model(
@@ -188,11 +192,13 @@ def train_model(
             num_epochs=num_epochs,
             use_residual=use_residual,
         )
-        # Get the ending timestamp
+        # get the ending timestamp
         end_time = time.perf_counter()
-        # Calculate the elapsed time
-        elapsed_time = end_time - start_time
-        print(f"Time to `optimize_model` for 1 epoch: {elapsed_time:.5f} seconds\n")
+        # calculate the elapsed and average time
+        n = i + 1
+        seconds = end_time - start_time
+        cumsum_seconds += seconds
+        seconds_per_epoch = (n - 1) / n * seconds_per_epoch + 1 / n * seconds
         # retrieve losses and sample counts
         for key in data:  # pre-allocated memory for `data[key]`
             # with `num_epochs=1`, this is just data[key][i] = log[key]
@@ -219,25 +225,33 @@ def train_model(
             checkpoint_path = os.path.join(log_dir, "checkpoints", chkpt_name)
             torch.save(
                 {
+                    # state dictionaries
+                    "model_state_dict": model.state_dict(),
+                    "optimizer_state_dict": optimizer.state_dict(),
+                    # names
+                    "dataset_name": dataset_name,
+                    "model_name": model_class_name,
+                    "optimizer_name": optim_name,
+                    # training params
                     "epoch": reset_epoch,
                     "seq_len": config.train.seq_len,
                     "tau": config.train.tau_in,
                     "loss": val_loss,
-                    "dataset_name": dataset_name,
-                    "model_name": model_class_name,
-                    "optimizer_name": optim_name,
                     "learning_rate": learn_rate,
                     "smooth_data": smooth_data,
-                    "timestamp": timestamp,
-                    "covered_neurons": covered_neurons,
-                    "worm_timesteps": worm_timesteps,
+                    # model instance params
                     "input_size": model.get_input_size(),
                     "hidden_size": model.get_hidden_size(),
                     "num_layers": model.get_num_layers(),
+                    "loss_name": model.get_loss_name(),
+                    "reg_param": model.get_reg_param(),
+                    # other variables
+                    "timestamp": timestamp,
+                    "elapsed_time_seconds": cumsum_seconds,
+                    "covered_neurons": covered_neurons,
+                    "worm_timesteps": worm_timesteps,
                     "num_worm_cohorts": i,
                     "num_unique_worms": num_unique_worms,
-                    "model_state_dict": model.state_dict(),
-                    "optimizer_state_dict": optimizer.state_dict(),
                 },
                 checkpoint_path,
             )
@@ -268,6 +282,7 @@ def train_model(
     config.globals.num_unique_worms = num_unique_worms
     config.globals.num_covered_neurons = num_covered_neurons
     config.globals.worm_timesteps = worm_timesteps
+    config.globals.seconds_per_epoch = seconds_per_epoch
     # save config to log directory
     OmegaConf.save(config, os.path.join(log_dir, "config.yaml"))
     # delete the original (not updated) hydra config file

@@ -4,4 +4,5 @@ model:
   hidden_size: 512 # options: int > 0
   num_layers: 1 # keep this fixed; our experiments show that deeper networks do not improve performance
   loss: MSE # options: MSE, Huber, L1
+  reg_param: 1.0 # how much to regularize the loss by the FFT distribution; options: 0.0 <= float <= 1.0
   checkpoint_path: false # options: null, path/to/pretrained/model
