@@ -209,10 +209,11 @@ class Model(torch.nn.Module):
         if input.ndim == 2:
             input = input.unsqueeze(0)
         assert input.ndim == 3, "Input must have shape (B, T, C)."
+        # use the full sequence as the context
+        # TODO: investigate making this the same as the `seq_len` used for training
+        context_len = input.size(1)
         # copy the input to avoid modifying it
         output = input.detach().clone()
-        # use the full sequence as the context
-        context_len = output.size(1)
         # generate future timesteps
         for _ in range(timesteps):
             # condition on the previous context_len timesteps
@@ -296,21 +297,11 @@ class LinearNN(Model):
         if tau < 1:
             output = self.identity(input)
         else:
-            # # focus only on the last time step
-            # readout = self.model(input)
-            # last_timestep = readout[:, -1, :].unsqueeze(1)
-            # output = torch.cat([input[:, 1:, :], last_timestep], dim=1)
-            # ... OR ...
             # ... use the full sequence
             readout = self.model(input)
             output = readout
         # repeat for target with tau>0 offset
         for i in range(1, tau):
-            # # focus only on the last time step
-            # readout = self.model(output)
-            # last_timestep = readout[:, -1, :].unsqueeze(1)
-            # output = torch.cat([output[:, 1:, :], last_timestep], dim=1)
-            # ... OR ...
             # ... use the full sequence
             readout = self.model(output)
             output = readout
@@ -375,24 +366,14 @@ class NeuralTransformer(Model):
             (B, T, C) = input.shape = (batch_size, max_timesteps, input_size)
             (B, T, C') = embedding.shape = (batch_size, max_timesteps, hidden_size)
         """
-        if tau < 1:
+        if tau < 1:  # return the input sequence
             output = self.identity(input)
-        else:
-            # # focus only on the last time step ...
-            # readout = self.model(input)
-            # last_timestep = readout[:, -1, :].unsqueeze(1)  # becomes (B, 1, C)
-            # output = torch.cat([input[:, 1:, :], last_timestep], dim=1)  # (B, T, C)
-            # ... OR ...
+        else:  # do one-step prediction
             # ... use the full sequence
             readout = self.model(input)
             output = readout
-        # repeat for target with tau>0 offset
+        # do the remaining tau-1 steps of prediction
         for i in range(1, tau):
-            # # focus only on the last time step ...
-            # readout = self.model(output)
-            # last_timestep = readout[:, -1, :].unsqueeze(1)  # becomes (B, 1, C)
-            # output = torch.cat([output[:, 1:, :], last_timestep], dim=1)  # (B, T, C)
-            # ... OR ...
             # ... use the full sequence
             readout = self.model(output)
             output = readout
@@ -435,22 +416,12 @@ class NeuralCFC(Model):
             output = self.identity(input)
         else:  # do one-step prediction
             rnn_out, self.hidden = self.rnn(input)
-            # # focus only on the last time step
-            # hidden_out = self.layer_norm(self.hidden)
-            # readout = self.linear(hidden_out)
-            # output = torch.cat([input[:, 1:, :], readout.unsqueeze(1)], dim=1)
-            # ... OR ...
             # ... use the full sequence
             readout = self.linear(rnn_out)
             output = readout
         # do the remaining tau-1 steps of prediction
         for i in range(1, tau):
             rnn_out, self.hidden = self.rnn(output, self.hidden)
-            # # focus only on the last time step
-            # hidden_out = self.layer_norm(self.hidden)
-            # readout = self.linear(hidden_out)
-            # output = torch.cat([output[:, 1:, :], readout.unsqueeze(1)], dim=1)
-            # ... OR ...
             # ... use the full sequence
             readout = self.linear(rnn_out)
             output = readout
@@ -507,22 +478,12 @@ class NetworkLSTM(Model):
             output = self.identity(input)
         else:  # do one-step prediction
             lstm_out, self.hidden = self.lstm(input)
-            # # focus only on the last time step
-            # hidden_out = self.layer_norm(self.hidden[0][-1])
-            # readout = self.linear(hidden_out)
-            # output = torch.cat([input[:, 1:, :], readout.unsqueeze(1)], dim=1)
-            # ... OR ...
             # ... use the full sequence
             readout = self.linear(lstm_out)
             output = readout
         # do the remaining tau-1 steps of prediction
         for i in range(1, tau):
             lstm_out, self.hidden = self.lstm(output, self.hidden)
-            # # focus only on the last time step
-            # hidden_out = self.layer_norm(self.hidden[0][-1])
-            # readout = self.linear(hidden_out)
-            # output = torch.cat([output[:, 1:, :], readout.unsqueeze(1)], dim=1)
-            # ... OR ...
             # ... use the full sequence
             readout = self.linear(lstm_out)
             output = readout

@@ -46,7 +46,7 @@ def get_model(config: DictConfig) -> torch.nn.Module:
             model = NeuralCFC(**args)
         elif config.model.type == "LinearNN":
             model = LinearNN(**args)
-        else:  # default to "linear" model
+        else:  # default to "LinearNN" model
             model = LinearNN(**args)
         print("Initialized a new model.", end="\n\n")
     print("Model:", model, end="\n\n")
