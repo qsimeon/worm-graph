@@ -1,7 +1,7 @@
 from models._pkg import *
 
 
-# Tranformer Parts
+# Transformer Parts
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
 class Head(torch.nn.Module):
     """

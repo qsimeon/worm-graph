@@ -29,25 +29,25 @@ hydra:
       # GLOBALS
       globals.random_seed: 0 #range(0,3,1)
       # MODEL
-      model.type: LinearNN #LinearNN, NeuralTransformer, NetworkLSTM, NeuralCFC
+      model.type: NetworkLSTM #LinearNN, NeuralTransformer, NetworkLSTM, NeuralCFC
       model.loss: MSE #MSE, Huber, L1
       model.hidden_size: 1024 #32, 64, 128, 256, 512, 1024
       model.num_layers: 1 #1, 2, 3, 4
       model.checkpoint_path: false
       # DATASET
-      dataset.name: [Kato2015, Skora2018, Kaplan2020, Nichols2017] #Uzel2022, Leifer2023, Flavell2023
+      dataset.name: Kato2015, Skora2018, Kaplan2020, Nichols2017, Uzel2022, Leifer2023, Flavell2023
       # TRAIN
       train.optimizer: SGD #Adam, SGD
       train.learn_rate: 0.01 # 0.0001, 0.001, 0.01, 0.1, 1.0
-      train.epochs: 400
+      train.epochs: 50
       train.save_freq: 100
       train.seq_len: 100 # range(1,200,50)
       train.k_splits: 2 #2, 5, 7, 10
-      train.num_samples: 16 #8, 16, 32, 64, 128
+      train.num_samples: 128 #8, 16, 32, 64, 128
       train.num_batches: 4 #1, 2, 4, 8
       train.tau_in: 1 
       train.shuffle: false # whether to shuffle sequences
       train.reverse: false 
       # PREDICT
-      predict.tau_out: 500
+      predict.tau_out: 3
       predict.dataset.name: Uzel2022
