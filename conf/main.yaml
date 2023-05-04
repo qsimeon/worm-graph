@@ -10,7 +10,7 @@ defaults:
 # if you want your primary config to override the values of configs
 # from the defaults List, append _self_ to the end of the defaults List
 globals:
-  random_seed: 0
+  random_seed: 0 # rang(0,1,3)
   use_residual: false
   smooth_data: true # whether to use smoothed signal data
   shuffle: false # whether to shuffle worms
