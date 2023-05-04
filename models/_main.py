@@ -32,8 +32,16 @@ def get_model(config: DictConfig) -> torch.nn.Module:
         input_size = checkpoint["input_size"]
         hidden_size = checkpoint["hidden_size"]
         num_layers = checkpoint["num_layers"]
+        loss_name = checkpoint["loss_name"]
+        reg_param = checkpoint["reg_param"]
         model_state_dict = checkpoint["model_state_dict"]
-        model = eval(model_name)(input_size, hidden_size, num_layers)
+        model = eval(model_name)(
+            input_size,
+            hidden_size,
+            num_layers,
+            loss=loss_name,
+            reg_param=reg_param,
+        )
         model.load_state_dict(model_state_dict)
         print("Model checkpoint path:", PATH, end="\n\n")
     # create a new model
@@ -46,6 +54,7 @@ def get_model(config: DictConfig) -> torch.nn.Module:
             hidden_size=config.model.hidden_size,
             num_layers=config.model.num_layers,
             loss=config.model.loss,
+            reg_param=config.model.reg_param,
         )
         if config.model.type == "NeuralTransformer":
             model = NeuralTransformer(**args)
@@ -55,7 +64,7 @@ def get_model(config: DictConfig) -> torch.nn.Module:
             model = NeuralCFC(**args)
         elif config.model.type == "LinearNN":
             model = LinearNN(**args)
-        else:  # default to "linear" model
+        else:  # default to "LinearNN" model
             model = LinearNN(**args)
         print("Initialized a new model.", end="\n\n")
     print("Model:", model, end="\n\n")

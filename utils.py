@@ -14,6 +14,8 @@ os.environ["CUDA_LAUNCH_BLOCKING"] = "1"
 os.environ["OC_CAUSE"] = "1"
 os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "max_split_size_mb:32"
 
+USER = "qsimeon"  # OpenMind username
+
 NUM_NEURONS = 302
 
 RAW_DATA_URL = "https://www.dropbox.com/s/45yqpvtsncx4095/raw_data.zip?dl=1"

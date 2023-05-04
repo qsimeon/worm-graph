@@ -144,23 +144,36 @@ class Model(torch.nn.Module):
         7. Getter methods for the input size, hidden size, and number of layers called
             `get_input_size`, `get_hidden_size`, and `get_num_layers`, respectively."""
 
-    def __init__(self, input_size, hidden_size, num_layers=1, loss=None):
+    def __init__(
+        self,
+        input_size: int,
+        hidden_size: int,
+        num_layers: int = 1,
+        loss: Union[Callable, None] = None,
+        reg_param: float = 1.0,
+    ):
         """Defines attributes common to all models."""
         super(Model, self).__init__()
+        assert (
+            isinstance(reg_param, float) and 0.0 <= reg_param <= 1.0
+        ), "The regularization parameter `reg_param` must be a float between 0.0 and 1.0."
         # Loss function
         if (loss is None) or (str(loss).lower() == "l1"):
             self.loss = torch.nn.L1Loss
         elif str(loss).lower() == "mse":
             self.loss = torch.nn.MSELoss
         elif str(loss).lower() == "huber":
-            self.loss == torch.nn.HuberLoss
+            self.loss = torch.nn.HuberLoss
         else:
             self.loss = torch.nn.L1Loss
+        # Name of original loss function
+        self.loss_name = self.loss.__name__.strip("Loss")
         # Setup
         self.input_size = input_size  # number of neurons (302)
         self.output_size = input_size
         self.hidden_size = hidden_size
         self.num_layers = num_layers
+        self.reg_param = reg_param
         # Identity layer
         self.identity = torch.nn.Identity()
         # Linear readout
@@ -169,6 +182,9 @@ class Model(torch.nn.Module):
     def loss_fn(self):
         """
         The loss function to be used with the model.
+        We regularize all losses with a term that encourages
+        the frequency distribution of the model's output to
+        match that of the target data.
         """
 
         def loss(input, target, **kwargs):
@@ -179,30 +195,32 @@ class Model(torch.nn.Module):
             target_fft = torch.fft.rfft(target, dim=-2).real
             # calculate average difference between real parts of FFTs
             fft_loss = torch.mean(torch.abs(input_fft - target_fft))
-            return 0.0 * original_loss + 1.0 * fft_loss
+            return (1 - self.reg_param) * original_loss + self.reg_param * fft_loss
 
         return loss
 
     def generate(self, input: torch.Tensor, timesteps: int = 1):
         """Generate future timesteps of neural activity.
         Arguments:
-            input: a batch of neural activity data.
-            timesteps: the numbe rof new timesteps to generate neural activity for.
+            input: a batch of neural activity data with shape (B, T, C).
+            timesteps: the number of new timesteps to generate neural activity for.
         """
         # check dimensions of input
         if input.ndim == 2:
             input = input.unsqueeze(0)
         assert input.ndim == 3, "Input must have shape (B, T, C)."
+        # use the full sequence as the context
+        # TODO: investigate making this the same as the `seq_len` used for training
+        context_len = input.size(1)
         # copy the input to avoid modifying it
         output = input.detach().clone()
-        # use the full sequence as the context
-        context_len = len(output[1])
         # generate future timesteps
         for _ in range(timesteps):
             # condition on the previous context_len timesteps
-            input_cond = output[:, -context_len:, :]
+            input_cond = output[:, -context_len:, :]  # (B, T, C)
             # get the prediction of next timestep
-            input_forward = self.forward(input_cond, tau=1)
+            with torch.no_grad():
+                input_forward = self.forward(input_cond, tau=1)
             # focus only on the last time step
             next_timestep = input_forward[:, -1, :]  # (B, C)
             # append predicted next timestep to the running sequence
@@ -214,9 +232,11 @@ class Model(torch.nn.Module):
     def sample(self, length):
         """
         Sample spontaneous neural activity from the network.
+        TODO: Figure out how to use diffusion models to sample from the network.
         """
         return None
 
+    # Getter functions for returning all attributes needed to reinstantiate a similar model
     def get_input_size(self):
         return self.input_size
 
@@ -226,14 +246,29 @@ class Model(torch.nn.Module):
     def get_num_layers(self):
         return self.num_layers
 
+    def get_loss_name(self):
+        return self.loss_name
+
+    def get_reg_param(self):
+        return self.reg_param
+
 
 class LinearNN(Model):
     """
     A simple linear regression model to use as a baseline.
     """
 
-    def __init__(self, input_size, hidden_size, num_layers=1, loss=None):
-        super(LinearNN, self).__init__(input_size, hidden_size, num_layers, loss)
+    def __init__(
+        self,
+        input_size: int,
+        hidden_size: int,
+        num_layers: int = 1,
+        loss: Union[Callable, None] = None,
+        reg_param: float = 1.0,
+    ):
+        super(LinearNN, self).__init__(
+            input_size, hidden_size, num_layers, loss, reg_param
+        )
         # Input and hidden layers
         self.input_hidden = (
             torch.nn.Linear(self.input_size, self.hidden_size),
@@ -254,7 +289,7 @@ class LinearNN(Model):
             self.linear,
         )
 
-    def forward(self, input, tau=0):
+    def forward(self, input: torch.Tensor, tau: int = 1):
         """Forward method for simple linear regression model.
         Arguments:
             input: batch of data
@@ -263,21 +298,11 @@ class LinearNN(Model):
         if tau < 1:
             output = self.identity(input)
         else:
-            # # focus only on the last time step
-            # readout = self.model(input)
-            # last_timestep = readout[:, -1, :].unsqueeze(1)
-            # output = torch.cat([input[:, 1:, :], last_timestep], dim=1)
-            # ... OR ...
             # ... use the full sequence
             readout = self.model(input)
             output = readout
         # repeat for target with tau>0 offset
         for i in range(1, tau):
-            # # focus only on the last time step
-            # readout = self.model(output)
-            # last_timestep = readout[:, -1, :].unsqueeze(1)
-            # output = torch.cat([output[:, 1:, :], last_timestep], dim=1)
-            # ... OR ...
             # ... use the full sequence
             readout = self.model(output)
             output = readout
@@ -287,21 +312,23 @@ class LinearNN(Model):
 class NeuralTransformer(Model):
     def __init__(
         self,
-        input_size,
-        hidden_size,
-        num_layers=1,
-        loss=None,
+        input_size: int,
+        hidden_size: int,
+        num_layers: int = 1,
+        loss: Union[Callable, None] = None,
+        reg_param: float = 1.0,
     ):
         """
+        TODO: Cite Andrej Kaparthy's tutorial on "How to code GPT from scratch".
         Neural activity data is continuous valued and thus
         can naturally be treated as if it were already emebedded.
         However, to maintain notational similarity with the original
         Transformer architecture, we use a linear layer to perform
         expansion recoding - which acts as an embedding but is really
-        just a projection.
+        just a linear projection.
         """
         super(NeuralTransformer, self).__init__(
-            input_size, hidden_size, num_layers, loss
+            input_size, hidden_size, num_layers, loss, reg_param
         )
         self.n_head = 4  # number of attention heads
         self.block_size = 5000  # maximum attention block (i.e. context) size
@@ -334,30 +361,20 @@ class NeuralTransformer(Model):
             self.linear,  # output has shape (B,T,C)
         )
 
-    def forward(self, input, tau=0):
+    def forward(self, input: torch.Tensor, tau: int = 1):
         """Forward method for a transformer model.
         Arguments:
             (B, T, C) = input.shape = (batch_size, max_timesteps, input_size)
             (B, T, C') = embedding.shape = (batch_size, max_timesteps, hidden_size)
         """
-        if tau < 1:
+        if tau < 1:  # return the input sequence
             output = self.identity(input)
-        else:
-            # # focus only on the last time step ...
-            # readout = self.model(input)
-            # last_timestep = readout[:, -1, :].unsqueeze(1)  # becomes (B, 1, C)
-            # output = torch.cat([input[:, 1:, :], last_timestep], dim=1)  # (B, T, C)
-            # ... OR ...
+        else:  # do one-step prediction
             # ... use the full sequence
             readout = self.model(input)
             output = readout
-        # repeat for target with tau>0 offset
+        # do the remaining tau-1 steps of prediction
         for i in range(1, tau):
-            # # focus only on the last time step ...
-            # readout = self.model(output)
-            # last_timestep = readout[:, -1, :].unsqueeze(1)  # becomes (B, 1, C)
-            # output = torch.cat([output[:, 1:, :], last_timestep], dim=1)  # (B, T, C)
-            # ... OR ...
             # ... use the full sequence
             readout = self.model(output)
             output = readout
@@ -365,21 +382,25 @@ class NeuralTransformer(Model):
 
 
 class NeuralCFC(Model):
-    """Neural Circuit Policy (NCP) Closed-form continuous time (CfC) model."""
+    """Neural Circuit Policy (NCP) Closed-form continuous time (CfC) model.
+    TODO: Cite the paper by Daniela Rus and collaborators."""
 
     def __init__(
         self,
         input_size: int,
         hidden_size: int,
-        num_layers: int = 1,  # unused by this model
-        loss: Callable = None,
+        num_layers: int = 1,  # unused
+        loss: Union[Callable, None] = None,
+        reg_param: float = 1.0,
     ):
         """
         The output size will be the same as the input size.
         The num_layers parameter is not being used in this model.
         TODO: Implement a way to use the num_layers parameter.
         """
-        super(NeuralCFC, self).__init__(input_size, hidden_size, num_layers, loss)
+        super(NeuralCFC, self).__init__(
+            input_size, hidden_size, num_layers, loss, reg_param
+        )
         # Recurrent layer
         self.rnn = CfC(self.input_size, self.hidden_size)
         # Initialize hidden state
@@ -387,7 +408,7 @@ class NeuralCFC(Model):
         # Normalization layer
         self.layer_norm = torch.nn.LayerNorm(self.hidden_size)
 
-    def forward(self, input, tau=0):
+    def forward(self, input: torch.Tensor, tau: int = 1):
         """Propagate input through the continuous time NN.
         input: batch of data
         tau: time offset of target
@@ -396,22 +417,12 @@ class NeuralCFC(Model):
             output = self.identity(input)
         else:  # do one-step prediction
             rnn_out, self.hidden = self.rnn(input)
-            # # focus only on the last time step
-            # hidden_out = self.layer_norm(self.hidden)
-            # readout = self.linear(hidden_out)
-            # output = torch.cat([input[:, 1:, :], readout.unsqueeze(1)], dim=1)
-            # ... OR ...
             # ... use the full sequence
             readout = self.linear(rnn_out)
             output = readout
         # do the remaining tau-1 steps of prediction
         for i in range(1, tau):
             rnn_out, self.hidden = self.rnn(output, self.hidden)
-            # # focus only on the last time step
-            # hidden_out = self.layer_norm(self.hidden)
-            # readout = self.linear(hidden_out)
-            # output = torch.cat([output[:, 1:, :], readout.unsqueeze(1)], dim=1)
-            # ... OR ...
             # ... use the full sequence
             readout = self.linear(rnn_out)
             output = readout
@@ -431,12 +442,15 @@ class NetworkLSTM(Model):
         input_size: int,
         hidden_size: int,
         num_layers: int = 1,
-        loss: Callable = None,
+        loss: Union[Callable, None] = None,
+        reg_param: float = 1.0,
     ):
         """
         The output size will be the same as the input size.
         """
-        super(NetworkLSTM, self).__init__(input_size, hidden_size, num_layers, loss)
+        super(NetworkLSTM, self).__init__(
+            input_size, hidden_size, num_layers, loss, reg_param
+        )
         # LSTM
         self.lstm = torch.nn.LSTM(
             input_size=self.input_size,
@@ -456,7 +470,7 @@ class NetworkLSTM(Model):
         # Normalization layer
         self.layer_norm = torch.nn.LayerNorm(self.hidden_size)
 
-    def forward(self, input, tau=0):
+    def forward(self, input: torch.Tensor, tau: int = 1):
         """Propagate input through the LSTM.
         input: batch of data
         tau: time offset of target
@@ -465,22 +479,12 @@ class NetworkLSTM(Model):
             output = self.identity(input)
         else:  # do one-step prediction
             lstm_out, self.hidden = self.lstm(input)
-            # # focus only on the last time step
-            # hidden_out = self.layer_norm(self.hidden[0][-1])
-            # readout = self.linear(hidden_out)
-            # output = torch.cat([input[:, 1:, :], readout.unsqueeze(1)], dim=1)
-            # ... OR ...
             # ... use the full sequence
             readout = self.linear(lstm_out)
             output = readout
         # do the remaining tau-1 steps of prediction
         for i in range(1, tau):
             lstm_out, self.hidden = self.lstm(output, self.hidden)
-            # # focus only on the last time step
-            # hidden_out = self.layer_norm(self.hidden[0][-1])
-            # readout = self.linear(hidden_out)
-            # output = torch.cat([output[:, 1:, :], readout.unsqueeze(1)], dim=1)
-            # ... OR ...
             # ... use the full sequence
             readout = self.linear(lstm_out)
             output = readout
