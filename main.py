@@ -55,6 +55,12 @@ def pipeline(
 
     ## TODO: analysis
     # analyze_outputs(config, log_dir)
+
+    # # NOTE: when on OpenMind, uncomment the line below to move the log directory
+    # dirname = log_dir.split("logs/")[-1]
+    # destination = "/om/user/%s/logs/%s" % (USER, dirname)
+    # shutil.move(log_dir, destination)
+
     return None
 
 

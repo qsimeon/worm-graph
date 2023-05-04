@@ -163,7 +163,7 @@ class Model(torch.nn.Module):
         elif str(loss).lower() == "mse":
             self.loss = torch.nn.MSELoss
         elif str(loss).lower() == "huber":
-            self.loss == torch.nn.HuberLoss
+            self.loss = torch.nn.HuberLoss
         else:
             self.loss = torch.nn.L1Loss
         # Name of original loss function
