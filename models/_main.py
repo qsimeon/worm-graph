@@ -2,8 +2,26 @@ from models._utils import *
 
 
 def get_model(config: DictConfig) -> torch.nn.Module:
-    """
-    Returns a new model of the type and size specified in 'model.yaml'.
+    """Instantiate or load a model as specified in 'model.yaml'.
+
+    This function can either create a new model of the specified type
+    and size or load a saved model from a checkpoint file. The configuration
+    is provided as a DictConfig object, which should include information
+    about the model type, size, and other relevant parameters.
+
+    Parameters
+    ----------
+    config : DictConfig
+    A Hydra configuration object containing the model specifications.
+
+    Returns:
+    torch.nn.Module: A new or loaded model instance, moved to the appropriate device and cast to torch.float32 data type.
+
+    Raises:
+    ValueError: If no model type or checkpoint path is specified in the configuration.
+
+    Example:
+    >>> model = get_model(config)
     """
 
     # load a saved model

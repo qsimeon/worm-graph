@@ -229,27 +229,46 @@ def find_reliable_neurons(multi_worm_dataset):
 
 
 def pick_worm(dataset, wormid):
-    """
-    Function for getting a single worm dataset.
-    dataset: str or dict worm dataset to select a worm from.
-    wormid: str or int, 'worm{i}' or {i} where i indexes the worm.
+    """Function for getting a single worm dataset.
+
+    Outdated or in development.
+
+    Parameters
+    ----------
+    dataset : str or dict 
+        Worm dataset to select a worm from.
+    wormid : str or int
+        'worm{i}' or {i} where i indexes the worm.
+
+    Raises
+    ------
+    AssertionError
+        If the dataset is not a valid worm dataset.
+        
+    Returns
+    -------
+    single_worm_dataset : dict
+        A single worm dataset.
     """
     if isinstance(dataset, str):
         dataset = load_dataset(dataset)
     else:
+        # Exeption if the dataset is not a valid worm dataset
         assert (
             isinstance(dataset, dict)
             and ("name" in dataset.keys())
             and ("worm0" in set(dataset["generator"]))
         ), "Not a valid worm datset!"
-    avail_worms = set(dataset["generator"])
+    avail_worms = set(dataset["generator"]) # get the available worms
     if isinstance(wormid, str) and wormid.startswith("worm"):
-        wormid = wormid.strip("worm")
+        wormid = wormid.strip("worm") # get the worm number
+        # Exeption if the worm number is not valid
         assert wormid.isnumeric() and int(wormid) <= len(
             avail_worms
         ), "Choose a worm from: {}".format(avail_worms)
         worm = "worm" + wormid
     else:
+        # Exeption if the worm number is not valid
         assert isinstance(worm, int) and worm <= len(
             avail_worms
         ), "Choose a worm from: {}".format(avail_worms)
@@ -266,13 +285,35 @@ def load_connectome():
 
 
 def load_dataset(name):
+    """Load a specified dataset by name.
+
+    This function takes a dataset name as input, checks whether it is in
+    the list of valid datasets, and then loads the dataset using the
+    corresponding loader function. The loader function is defined in the
+    form 'load_{name}', where '{name}' is replaced by the actual dataset name.
+
+    Parameters
+    ----------
+    name : str
+        The name of the dataset to load. Must be one of the valid dataset names.
+
+    Calls
+    -----
+    load_{dataset} : function in data/_utils.py
+        Where dataset = {Kato2015, Nichols2017, Nguyen2017, Skora2018, 
+                         Kaplan2020, Uzel2022, Flavell2023, Leifer2023}
+
+    Returns
+    -------
+    loader():
+        The loaded dataset.
     """
-    Loads the dataset with the specified name.
-    """
+
     assert (
         name in VALID_DATASETS
     ), "Unrecognized dataset! Please pick one from:\n{}".format(list(VALID_DATASETS))
-    loader = eval("load_" + name)
+    loader = eval("load_" + name) # call the "load" functions below
+
     return loader()
 
 

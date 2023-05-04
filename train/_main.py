@@ -161,14 +161,14 @@ def train_model(
         train_loader = DataLoader(
             train_dataset,
             batch_size=batch_size,
-            shuffle=shuffle_sequences,  # shuffle sampled seqeuences
+            shuffle=shuffle_sequences,  # shuffle sampled sequences
             pin_memory=True,
             num_workers=0,
         )
         test_loader = DataLoader(
             test_dataset,
             batch_size=batch_size,
-            shuffle=shuffle_sequences,  # shuffle sampled seqeuences
+            shuffle=shuffle_sequences,  # shuffle sampled sequences
             pin_memory=True,
             num_workers=0,
         )
@@ -285,9 +285,9 @@ if __name__ == "__main__":
     dataset = get_dataset(OmegaConf.load("conf/dataset.yaml"))
     timestamp = datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
     model, log_dir = train_model(
-        model,
-        dataset,
-        config,
+        model=model,
+        dataset=dataset,
+        config=config,
         shuffle=config.train.shuffle,
         log_dir=os.path.join("logs", "{}".format(timestamp)),
     )
