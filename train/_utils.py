@@ -153,11 +153,57 @@ def split_train_test(
     torch.Tensor,
     torch.Tensor,
 ]:
+    """Splits data into train and test sets for a single worm.
+    
+    This function creates train and test DataLoaders and corresponding
+    masks for a given neural activity dataset from a single worm. The
+    data is split into 'k_splits' chunks, and the train and test sets are
+    created by interleaving these chunks.
+
+    Parameters
+    ----------
+    data : torch.Tensor
+        Single worm data input tensor.
+    k_splits : int, optional, default=2
+        The number of chunks to split the data into for creating train
+        and test sets (half chuncks train, half test).
+    seq_len : int, optional, default=100
+        The length of the time-series sequences to train.
+    num_samples : int, optional, default=10
+        Total number of (input, target) data pairs to generate.
+    time_vec : torch.Tensor or None, optional, default=None
+        An optional tensor representing the time vector (in seconds)
+        associated with the data. If not provided, a default time vector
+        will be generated.
+    reverse : bool, optional, default=True
+        Whether to sample sequences backward from end of the data.
+    tau : int or list[int], optional, default=1
+        The number of timesteps to the right by which the target sequence
+        is offset from input sequence. Deprecated (unused) argument.
+    use_residual : bool, optional, default=False
+        Whether to use calcium data or residual calcium data.
+
+    Calls
+    -----
+    NeuralActivityDataset : function in data/_utils.py
+        A custom neural activity time-series prediction dataset.
+    
+    Returns
+    -------
+    train_dataset : torch.utils.data.DataLoader
+        The DataLoader for the training dataset.
+    test_dataset : torch.utils.data.DataLoader
+        The DataLoader for the test dataset.
+    train_mask : torch.Tensor
+        A boolean mask for the train set (same length as the input data).
+    test_mask : torch.Tensor
+        A boolean mask for the test set (same length as the input data).
+
+    Notes
+    -----
     """
-    Create the train and test dataloaders and masks
-    for neural activity from a single worm.
-    """
-    # argument checking
+
+    # Argument checking
     assert isinstance(k_splits, int) and k_splits > 1, "Ensure that `k_splits`:int > 1."
     assert isinstance(seq_len, int) and 0 < seq_len < len(
         data
@@ -170,48 +216,59 @@ def split_train_test(
         assert isinstance(tau, list) and all(
             [0 < t < len(data) - seq_len for t in tau]
         ), "Invalid `tau` list entered."
-    # make time vector
+
+    # Make time vector
     if time_vec is None:
         time_vec = torch.arange(len(data), dtype=torch.float32)
+        # [0, 1, ..., len(data)-1)]
     else:
         time_vec = time_vec.to(torch.float32)
+
     assert torch.is_tensor(time_vec) and len(time_vec) == len(
         data
     ), "Enter a time vector with same length as data."
-    # detach computation graph from tensors
+
+    # Detach computation graph from tensors
     time_vec = time_vec.detach()
     data = data.detach()
-    # split dataset into train and test sections
+
+    # Split dataset into train and test sections
     chunk_size = len(data) // k_splits
-    split_datasets = torch.split(data, chunk_size, dim=0)  # length k_splits list
+    split_datasets = torch.split(data, chunk_size, dim=0)  # length: k_splits list
     split_times = torch.split(time_vec, chunk_size, dim=0)
-    # create train and test masks. important that this is before dropping last split
+
+    # Create train and test masks. Important that this is before dropping last split
     train_mask = torch.cat(
         [
-            # split as train-test-train-test- ...
+            # Split as train-test-train-test-...
             (True if i % 2 == 0 else False) * torch.ones(len(section), dtype=torch.bool)
             for i, section in enumerate(split_datasets)
         ]
     ).detach()
     test_mask = ~train_mask.detach()
-    # drop last split if too small. important that this is after making train/test masks
+
+    # Drop last split if too small. Important that this is after making train/test masks
     len_last = len(split_datasets[-1])
     if any(t >= len_last // 2 for t in tau) or (len_last < seq_len):
         split_datasets = split_datasets[:-1]
         split_times = split_times[:-1]
-    # make dataset splits
+
+    # Make dataset splits
     train_splits, train_times = split_datasets[::2], split_times[::2]
     test_splits, test_times = split_datasets[1::2], split_times[1::2]
-    # pick a random `tau` from the list
+
+    # Pick a random `tau` from the list
     _tau = random.choice(tau)
-    # calculate number of train/ test samples per split
+
+    # Calculate number of train/test samples per split
     train_size_per_split = (num_samples // len(train_splits)) + (
         num_samples % len(train_splits)
     )
     test_size_per_split = (num_samples // len(test_splits)) + (
         num_samples % len(test_splits)
     )
-    # train dataset
+
+    # Train dataset
     train_datasets = [
         NeuralActivityDataset(
             _data.detach(),
@@ -225,7 +282,8 @@ def split_train_test(
         for i, _data in enumerate(train_splits)
     ]
     train_dataset = ConcatDataset(train_datasets)
-    # test dataset
+
+    # Test dataset
     test_datasets = [
         NeuralActivityDataset(
             _data.detach(),
@@ -239,7 +297,8 @@ def split_train_test(
         for i, _data in enumerate(test_splits)
     ]
     test_dataset = ConcatDataset(test_datasets)
-    # return datasets and masks
+
+    # Return datasets and masks
     return train_dataset, test_dataset, train_mask, test_mask
 
 

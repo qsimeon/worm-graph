@@ -12,19 +12,27 @@ def get_model(config: DictConfig) -> torch.nn.Module:
     Parameters
     ----------
     config : DictConfig
-    A Hydra configuration object containing the model specifications.
+        A Hydra configuration object.
+    
+    Calls
+    -----
+    NeuralTransformer : class in models/_utils.py
+    NetworkLSTM : class in models/_utils.py
+    NeuralCFC : class in models/_utils.py
+    LinearNN : class in models/_utils.py
+        If no model type is specified, LinearNN is used by default.
 
-    Returns:
-    torch.nn.Module: A new or loaded model instance, moved to the appropriate device and cast to torch.float32 data type.
+    Returns
+    -------
+    model : torch.nn.Module
+        A new or loaded model instance, moved to the appropriate device and
+        cast to torch.float32 data type.
 
-    Raises:
-    ValueError: If no model type or checkpoint path is specified in the configuration.
-
-    Example:
-    >>> model = get_model(config)
+    Notes
+    -----
     """
 
-    # load a saved model
+    # If a checkpoint is given (True), load a saved model
     if config.model.checkpoint_path:
         PATH = os.path.join(ROOT_DIR, config.model.checkpoint_path)
         checkpoint = torch.load(PATH, map_location=torch.device(DEVICE))
@@ -44,7 +52,8 @@ def get_model(config: DictConfig) -> torch.nn.Module:
         )
         model.load_state_dict(model_state_dict)
         print("Model checkpoint path:", PATH, end="\n\n")
-    # create a new model
+
+    # Otherwise, instantiate a new model
     else:
         assert "type" in config.model, ValueError(
             "No model type or checkpoint path specified."
@@ -67,7 +76,9 @@ def get_model(config: DictConfig) -> torch.nn.Module:
         else:  # default to "LinearNN" model
             model = LinearNN(**args)
         print("Initialized a new model.", end="\n\n")
+
     print("Model:", model, end="\n\n")
+
     return model.to(torch.float32)
 
 

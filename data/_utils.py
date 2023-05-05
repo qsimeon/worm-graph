@@ -2,8 +2,8 @@ from data._pkg import *
 
 
 class NeuralActivityDataset(torch.utils.data.Dataset):
-    """
-    A custom neural activity time-series prediction dataset.
+    """A custom neural activity time-series prediction dataset.
+
     Using NeuralActivityDataset will ensure that sequences are generated
     in a principled and deterministic way, and that every sample
     generated is unique. A map-style dataset implements the `__getitem__()`
@@ -23,29 +23,47 @@ class NeuralActivityDataset(torch.utils.data.Dataset):
         tau=1,
         use_residual=False,
     ):
+        """Initializes a new instance of the NeuralActivityDataset.
+
+        Parameters
+        ----------
+        data : torch.tensor
+            Data with shape (max_timesteps, num_neurons).
+        seq_len : int, default=1
+            Sequences of length `seq_len` are generated until the dataset
+            size is achieved.
+        num_samples : int, default=100
+            Total number of (input, target) data pairs to generate.
+            0 < num_samples <= max_timesteps
+        neurons : None, int or array-like, default=None
+            Index of neuron(s) to return data for. Returns data for all
+            neurons if None.
+        time_vec : None or array-like, default=None
+            A vector of the time (in seconds) corresponding to the time
+            axis (axis=0) of the `data` tensor.
+        reverse : bool, default=False
+            Whether to sample sequences backward from end of the data.
+        tau : int, default=1, Deprecated (unused) argument.
+            The number of timesteps to the right by which the target
+            sequence is offset from input sequence.
+            0 < tau < max_timesteps//2
+
+        Returns
+        -------
+        (X, Y, metadata) : tuple
+            Batch of data samples, where
+        X : torch.tensor
+            Input tensor with shape (batch_size, seq_len, num_neurons)
+        Y: torch.tensor
+            Target tensor with same shape as X
+        metadata : dict
+            Metadata information about samples.
+            keys: 'seq_len', 'start' index , 'end' index
         """
-        Args:
-          data: torch.tensor. Data w/ shape (max_timesteps, num_neurons).
-          seq_len: int. Sequences of length `seq_len` are generated until the dataset size is achieved.
-          num_samples: int, 0 < num_samples <= max_timesteps. Total number of (input, target)
-                      data pairs to generate.
-          neurons: None, int or array-like. Index of neuron(s) to return data for.
-                  Returns data for all neurons if None.
-          time_vec: None or array-like. A vector of the time (in seconds) corresponding
-                    to the time axis (axis 0) of the `data` tensor.
-          reverse: bool. Whether to sample sequences backward from end of the data.
-          tau: int, 0 < tau < max_timesteps//2. The number of timesteps to the right by which the
-                target sequence is offset from input sequence. Deprecated (unused) argument.
-        Returns:
-            (X, Y, metadata): tuple. Batch of data samples.
-            X: torch.tensor. Input tensor w/ shape (batch_size, seq_len,
-                                                  num_neurons)
-            Y: torch.tensor. Target tensor w/ same shape as X
-            metadata: dict. Metadata information about samples.
-                        keys: 'seq_len', 'start' index , 'end' index
-        """
+
         super(NeuralActivityDataset, self).__init__()
-        # check the inputs
+
+        # Check the inputs
         assert torch.is_tensor(data), "Recast the data as type `torch.tensor`."
         assert data.ndim == 2, "Reshape the data tensor as (time, neurons)"
         assert isinstance(seq_len, int) and 0 < seq_len <= data.size(
@@ -54,7 +72,8 @@ class NeuralActivityDataset(torch.utils.data.Dataset):
         assert (
             isinstance(tau, int) and 0 <= tau < data.size(0) // 2
         ), "Enter a integer offset `0 <= tau < max_timesteps // 2`."
-        # create time vector
+
+        # Create time vector if not provided
         if time_vec is not None:
             assert torch.is_tensor(
                 time_vec
@@ -65,20 +84,24 @@ class NeuralActivityDataset(torch.utils.data.Dataset):
             self.time_vec = time_vec.squeeze()
         else:
             self.time_vec = torch.arange(data.size(0)).double()
+
         self.max_timesteps, num_neurons = data.shape
         self.seq_len = seq_len
         self.reverse = reverse
         self.tau = tau
         self.use_residual = use_residual
-        # select out requested neurons
+
+        # Select out requested neurons
         if neurons is not None:
             self.neurons = np.array(neurons)  # use the subset of neurons given
         else:  # neurons is None
             self.neurons = np.arange(num_neurons)  # use all the neurons
+        
         self.num_neurons = self.neurons.size
         self.data = data
         self.num_samples = num_samples
         self.data_samples = self.__data_generator()
+
         assert self.num_samples == len(
             self.data_samples
         ), "Wrong number of sequences generated!"
@@ -92,23 +115,29 @@ class NeuralActivityDataset(torch.utils.data.Dataset):
         return self.data_samples[index]
 
     def parfor_func(self, start):
+        """Helper function for parallelizing `__data_generator`.
+        
+        This function is applied to each `start` index in the
+        `__data_generator` method.
         """
-        Helper function for parallelizing `__data_generator`.
-        """
-        # define an end index
+
+        # Define an end index
         end = start + self.seq_len
-        # get the time vector
+        # Get the time vector
         time_vec = self.time_vec[start:end].detach().clone()
-        # calculate the average dt
+        # Calculate the average dt
         avg_dt = torch.diff(time_vec).mean()
-        # data samples: input (X_tau) and target (Y_tau)
+
+        # Data samples: input (X_tau) and target (Y_tau)
         X_tau = self.data[start:end, self.neurons].detach().clone()
         Y_tau = (
             self.data[start + self.tau : end + self.tau, self.neurons].detach().clone()
-        )  # overlap
-        # calculate the residual (forward first derivative)
+        )  # Overlap
+
+        # Calculate the residual (forward first derivative)
         Res_tau = (Y_tau - X_tau).detach() / (avg_dt * max(1, self.tau))
-        # store metadata about the sample
+
+        # Store metadata about the sample
         input = "calcium"
         target = "residual" if self.use_residual else "calcium"
         metadata = dict(
@@ -121,20 +150,27 @@ class NeuralActivityDataset(torch.utils.data.Dataset):
             target=target,
             time_vec=time_vec,
         )
-        # return sample
+
+        # Return sample
         if self.use_residual:
             Y_tau = Res_tau
+        
         return X_tau, Y_tau, metadata
 
     def __data_generator(self):
+        """Private method for generating data samples.
+        
+        This function split the data into sequences of length `seq_len`
+        by calling `parfor_func` in parallel.
+        
         """
-        Private method for generating data samples.
-        """
-        # define length of time
+
+        # Define length of time
         T = self.max_timesteps
-        # dataset will contain sequences of length `seq_len`
+        # Dataset will contain sequences of length `seq_len`
         L = self.seq_len
-        # all start indices
+
+        # All start indices
         start_range = (
             np.linspace(0, T - L - self.tau, self.num_samples, dtype=int)
             if not self.reverse  # generate from start to end
@@ -142,8 +178,9 @@ class NeuralActivityDataset(torch.utils.data.Dataset):
                 T - L - self.tau, 0, self.num_samples, dtype=int
             )
         )
-        # sequential processing
+        # Sequential processing (applying the function to each element)
         data_samples = list(map(self.parfor_func, start_range))
+
         return data_samples
 
 

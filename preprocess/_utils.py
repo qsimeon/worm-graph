@@ -286,6 +286,12 @@ def preprocess_connectome(raw_dir, raw_files):
     raw_files : list
         Contain the names of the raw connectome data to preprocess
 
+    Returns
+    -------
+    None
+        This function does not return anything, but it does save the
+        graph tensors in the 'data/processed/connectome' folder.
+
     Notes
     -----
     * A connectome is a comprehensive map of the neural connections within
@@ -296,10 +302,6 @@ def preprocess_connectome(raw_dir, raw_files):
       If the raw data isn't found, please download it at this link:
       https://wormwiring.org/matlab%20scripts/Premaratne%20MATLAB-ready%20files%20.zip
       and drop in the data/raw folder.
-
-    Returns
-    -------
-    None
     """
 
     # Check if the raw connectome data exists
