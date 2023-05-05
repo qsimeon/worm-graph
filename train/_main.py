@@ -36,7 +36,7 @@ def train_model(
     split_train_test : function in train/_utils.py
         Splits data into train and test sets for a single worm.
     optimize_model : function in train/_utils.py
-        TODO
+        Trains and validates the model for the specified number of epochs.
 
     Returns
     -------
