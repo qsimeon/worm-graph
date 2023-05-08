@@ -10,6 +10,10 @@ class NeuralActivityDataset(torch.utils.data.Dataset):
     and `__len__()` protocols, and represents a map from indices/keys to
     data samples. Accesing with `dataset[idx]` reads the `idx`-th time-series
     and the corresponding target from memory.
+
+    Notes
+    -----
+    * The generated samples can have overlapped time steps
     """
 
     def __init__(
@@ -162,6 +166,10 @@ class NeuralActivityDataset(torch.utils.data.Dataset):
         
         This function split the data into sequences of length `seq_len`
         by calling `parfor_func` in parallel.
+
+        Notes
+        -----
+        * The samples can have overlapped time steps
         
         """
 

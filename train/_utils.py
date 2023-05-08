@@ -424,7 +424,7 @@ def optimize_model(
     train : function in train/_utils.py
         Train a model
     test : function in test/_utils.py
-        TODO
+        Test a model
 
     Returns
     -------

@@ -170,6 +170,7 @@ def train_model(
     seconds_per_epoch = 0
 
     # Main FOR loop; train the model for multiple epochs (one cohort = one epoch)
+    # In one epoch we process all worms
     for i, cohort in enumerate(worm_cohorts):
         # Create a array of datasets and masks for the cohort
         train_datasets = np.empty(num_unique_worms, dtype=object)
@@ -250,7 +251,8 @@ def train_model(
         # Get the starting timestamp
         start_time = time.perf_counter()
 
-        # `optimize_model` can accepts the train and test data loaders and the neuron masks
+        # `optimize_model` can accepts the train and test data loaders,
+        # the neuron masks and optimize for num_epochs
         model, log = optimize_model(
             model=model,
             train_loader=train_loader,
