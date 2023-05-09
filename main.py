@@ -41,7 +41,6 @@ def pipeline(
     )
 
     # use trained model to make predictions on the dataset
-    print(config.predict)
     make_predictions(
         config,  # `train_model` injected the appropriate `predict` params into config`
         model=None,
