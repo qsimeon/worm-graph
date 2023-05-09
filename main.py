@@ -32,7 +32,7 @@ def pipeline(
     model = get_model(config)
 
     # train model is the bulk of the pipeline code
-    model, log_dir = train_model(
+    model, log_dir, config = train_model(
         config,
         model,
         dataset,
@@ -41,10 +41,12 @@ def pipeline(
     )
 
     # use trained model to make predictions on the dataset
-    print("DEBUG", config.predict, end="\n\n")
+    print(config.predict)
     make_predictions(
         config,  # `train_model` injected the appropriate `predict` params into config`
-        log_dir,
+        model=None,
+        dataset=None,
+        log_dir=log_dir,
         use_residual=config.globals.use_residual,
         smooth_data=config.globals.smooth_data,
     )

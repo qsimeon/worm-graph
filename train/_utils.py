@@ -183,6 +183,7 @@ def split_train_test(
     data = data.detach()
     # split dataset into train and test sections
     chunk_size = len(data) // k_splits
+    assert seq_len < chunk_size, "The entered `seq_len` is too long for this dataset!"
     split_datasets = torch.split(data, chunk_size, dim=0)  # length k_splits list
     split_times = torch.split(time_vec, chunk_size, dim=0)
     # create train and test masks. important that this is before dropping last split
@@ -199,17 +200,21 @@ def split_train_test(
     if any(t >= len_last // 2 for t in tau) or (len_last < seq_len):
         split_datasets = split_datasets[:-1]
         split_times = split_times[:-1]
+    if len(split_datasets) == 1 or len(split_times) == 1:
+        split_times *= 2
+        split_datasets *= 2
+    # TODO: pad splits if shorter than `seq_len`
     # make dataset splits
     train_splits, train_times = split_datasets[::2], split_times[::2]
     test_splits, test_times = split_datasets[1::2], split_times[1::2]
     # pick a random `tau` from the list
     _tau = random.choice(tau)
     # calculate number of train/ test samples per split
-    train_size_per_split = (num_samples // len(train_splits)) + (
-        num_samples % len(train_splits)
+    train_size_per_split = (num_samples // max(1, len(train_splits))) + (
+        num_samples % max(1, len(train_splits))
     )
-    test_size_per_split = (num_samples // len(test_splits)) + (
-        num_samples % len(test_splits)
+    test_size_per_split = (num_samples // max(1, len(train_splits))) + (
+        num_samples % max(1, len(train_splits))
     )
     # train dataset
     train_datasets = [
