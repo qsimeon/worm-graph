@@ -1,16 +1,16 @@
 defaults:
-  - override hydra/launcher: joblib
-#   # NOTE: WHEN ON OPENMIND, UNCOMMENT LINES BELOW TO RUN MULTIPLE SLURM JOBS
-#   - override /hydra/launcher: submitit_slurm
+  # - override hydra/launcher: joblib
+  # NOTE: WHEN ON OPENMIND, UNCOMMENT LINES BELOW TO RUN MULTIPLE SLURM JOBS
+  - override /hydra/launcher: submitit_slurm
   
-# hydra:
-#   launcher:
-#     cpus_per_task: 1
-#     gpus_per_node: 1
-#     tasks_per_node: 1
-#     mem_gb: 64
-#     nodes: 1
-#     array_parallelism: 800
-#     timeout_min: 1440 # 24 hours by default
-#     exclude: dgx001, dgx002
-#     constraint: high-capacity #any-A100
+hydra:
+  launcher:
+    cpus_per_task: 1
+    gpus_per_node: 1
+    tasks_per_node: 1
+    mem_gb: 64
+    nodes: 1
+    array_parallelism: 800
+    timeout_min: 1440 # 24 hours by default
+    exclude: dgx001, dgx002
+    constraint: high-capacity #any-A100

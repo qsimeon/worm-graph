@@ -41,10 +41,9 @@ def pipeline(
     )
 
     # use trained model to make predictions on the dataset
+    print("DEBUG", config.predict, end="\n\n")
     make_predictions(
-        config,
-        model,
-        dataset,
+        config,  # `train_model` injected the appropriate `predict` params into config`
         log_dir,
         use_residual=config.globals.use_residual,
         smooth_data=config.globals.smooth_data,
