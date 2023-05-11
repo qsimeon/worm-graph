@@ -372,9 +372,8 @@ def train_model(
     og_cfg_file = os.path.join(log_dir, ".hydra", "config.yaml")
     if os.path.exists(og_cfg_file):
         os.remove(og_cfg_file)
-
-    # Return trained model and a path to the log directory
-    return model, log_dir
+    # returned trained model, a path to the log directory, and the updated config
+    return model, log_dir, config
 
 
 if __name__ == "__main__":
@@ -383,10 +382,10 @@ if __name__ == "__main__":
     model = get_model(OmegaConf.load("conf/model.yaml"))
     dataset = get_dataset(OmegaConf.load("conf/dataset.yaml"))
     timestamp = datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
-    model, log_dir = train_model(
-        model=model,
-        dataset=dataset,
-        config=config,
+    model, log_dir, config = train_model(
+        model,
+        dataset,
+        config,
         shuffle=config.train.shuffle,
         log_dir=os.path.join("logs", "{}".format(timestamp)),
     )
