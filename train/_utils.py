@@ -55,6 +55,7 @@ def train(
       function, where the first epoch is used to compute the baseline
       loss (i.e. the loss if the model predicted value at next timestep
       equal to current value). (?)
+    * X_train and Y_train dimensions: (batch_size, seq_len, num_neurons)
     """
 
     # Create a list of masks if only one is given

@@ -236,7 +236,7 @@ def train_model(
             shuffle=shuffle_sequences,  # shuffle sampled sequences
             pin_memory=True,
             num_workers=0,
-        )
+        ) # (X, Y, Dict)
 
         test_loader = DataLoader(
             test_dataset,
@@ -244,7 +244,7 @@ def train_model(
             shuffle=shuffle_sequences,  # shuffle sampled sequences
             pin_memory=True,
             num_workers=0,
-        )
+        ) # (X, Y, Dict)
 
         # Optimize for 1 epoch per cohort
         num_epochs = 1  # 1 cohort = 1 epoch
