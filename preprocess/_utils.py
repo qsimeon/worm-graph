@@ -473,8 +473,12 @@ def reshape_calcium_data(single_worm_dataset):
     unknown_neurons_mask = torch.zeros(302, dtype=torch.bool)
     # create the new calcium data structure
     # len(residual) = len(data) - 1
-    standard_calcium_data = torch.zeros(max_timesteps, 302, dtype=origin_calcium_data.dtype)
-    standard_residual_calcium = torch.zeros(max_timesteps, 302, dtype=residual_calcium.dtype)
+    standard_calcium_data = torch.zeros(
+        max_timesteps, 302, dtype=origin_calcium_data.dtype
+    )
+    standard_residual_calcium = torch.zeros(
+        max_timesteps, 302, dtype=residual_calcium.dtype
+    )
     standard_smooth_calcium_data = torch.zeros(
         max_timesteps, 302, dtype=smooth_calcium_data.dtype
     )
@@ -833,6 +837,7 @@ def str_to_float(str_num):
         print("error: unknown sign")
     return float_num
 
+
 def interpolate_data(time, data, target_dt):
     """
     Interpolate data using np.interp, with support for torch.Tensor inputs.
@@ -848,7 +853,7 @@ def interpolate_data(time, data, target_dt):
     # If target_dt is None, return the original data
     if target_dt is None:
         return time, data
-    
+
     # Convert input tensors to NumPy arrays
     time_np = time.squeeze().numpy()
     data_np = data.numpy()
@@ -984,7 +989,9 @@ def pickle_Kato2015(transform, smooth_method="fft", resample_dt=1.0):
             real_data, dtype=torch.float32
         )  # add a feature dimension and convert to tensor
         # resample the data to a fixed time step
-        time_in_seconds, real_data = interpolate_data(time_in_seconds, real_data, target_dt=resample_dt)
+        time_in_seconds, real_data = interpolate_data(
+            time_in_seconds, real_data, target_dt=resample_dt
+        )
         # caclucate the time step
         dt = torch.zeros_like(time_in_seconds).to(torch.float32)
         dt[1:] = time_in_seconds[1:] - time_in_seconds[:-1]
@@ -1074,7 +1081,9 @@ def pickle_Kato2015(transform, smooth_method="fft", resample_dt=1.0):
             real_data, dtype=torch.float32
         )  # add a feature dimension and convert to tensor
         # resample the data to a fixed time step
-        time_in_seconds, real_data = interpolate_data(time_in_seconds, real_data, target_dt=resample_dt)
+        time_in_seconds, real_data = interpolate_data(
+            time_in_seconds, real_data, target_dt=resample_dt
+        )
         # caclucate the time step
         dt = torch.zeros_like(time_in_seconds).to(torch.float32)
         dt[1:] = time_in_seconds[1:] - time_in_seconds[:-1]
@@ -1175,7 +1184,9 @@ def pickle_Nichols2017(transform, smooth_method="fft", resample_dt=1.0):
             real_data, dtype=torch.float32
         )  # add a feature dimension and convert to tensor
         # resample the data to a fixed time step
-        time_in_seconds, real_data = interpolate_data(time_in_seconds, real_data, target_dt=resample_dt)
+        time_in_seconds, real_data = interpolate_data(
+            time_in_seconds, real_data, target_dt=resample_dt
+        )
         # calculate the time step
         dt = torch.zeros_like(time_in_seconds)
         dt[1:] = time_in_seconds[1:] - time_in_seconds[:-1]
@@ -1262,7 +1273,9 @@ def pickle_Nichols2017(transform, smooth_method="fft", resample_dt=1.0):
             real_data, dtype=torch.float32
         )  # add a feature dimension and convert to tensor
         # resample the data to a fixed time step
-        time_in_seconds, real_data = interpolate_data(time_in_seconds, real_data, target_dt=resample_dt)
+        time_in_seconds, real_data = interpolate_data(
+            time_in_seconds, real_data, target_dt=resample_dt
+        )
         # calculate the time step
         dt = torch.zeros_like(time_in_seconds)
         dt[1:] = time_in_seconds[1:] - time_in_seconds[:-1]
@@ -1349,7 +1362,9 @@ def pickle_Nichols2017(transform, smooth_method="fft", resample_dt=1.0):
             real_data, dtype=torch.float32
         )  # add a feature dimension and convert to tensor
         # resample the data to a fixed time step
-        time_in_seconds, real_data = interpolate_data(time_in_seconds, real_data, target_dt=resample_dt)
+        time_in_seconds, real_data = interpolate_data(
+            time_in_seconds, real_data, target_dt=resample_dt
+        )
         # calculate the time step
         dt = torch.zeros_like(time_in_seconds)
         dt[1:] = time_in_seconds[1:] - time_in_seconds[:-1]
@@ -1436,7 +1451,9 @@ def pickle_Nichols2017(transform, smooth_method="fft", resample_dt=1.0):
             real_data, dtype=torch.float32
         )  # add a feature dimension and convert to tensor
         # resample the data to a fixed time step
-        time_in_seconds, real_data = interpolate_data(time_in_seconds, real_data, target_dt=resample_dt)
+        time_in_seconds, real_data = interpolate_data(
+            time_in_seconds, real_data, target_dt=resample_dt
+        )
         # calculate the time step
         dt = torch.zeros_like(time_in_seconds)
         dt[1:] = time_in_seconds[1:] - time_in_seconds[:-1]
@@ -1517,7 +1534,9 @@ def pickle_Nguyen2017(transform, smooth_method="fft", resample_dt=1.0):
     real_data0 = sc.fit_transform(real_data0)
     real_data0 = torch.tensor(real_data0, dtype=torch.float32)
     # resample the data to a fixed time step
-    time_in_seconds0, real_data0 = interpolate_data(time_in_seconds0, real_data0, target_dt=resample_dt)
+    time_in_seconds0, real_data0 = interpolate_data(
+        time_in_seconds0, real_data0, target_dt=resample_dt
+    )
     # calculate the time step
     dt0 = torch.zeros_like(time_in_seconds0)
     dt0[1:] = time_in_seconds0[1:] - time_in_seconds0[:-1]
@@ -1555,7 +1574,9 @@ def pickle_Nguyen2017(transform, smooth_method="fft", resample_dt=1.0):
     real_data1 = sc.fit_transform(real_data1)
     real_data1 = torch.tensor(real_data1, dtype=torch.float32)
     # resample the data to a fixed time step
-    time_in_seconds1, real_data1 = interpolate_data(time_in_seconds1, real_data1, target_dt=resample_dt)
+    time_in_seconds1, real_data1 = interpolate_data(
+        time_in_seconds1, real_data1, target_dt=resample_dt
+    )
     # calculate the time step
     dt1 = torch.zeros_like(time_in_seconds1)
     dt1[1:] = time_in_seconds1[1:] - time_in_seconds1[:-1]
@@ -1593,7 +1614,9 @@ def pickle_Nguyen2017(transform, smooth_method="fft", resample_dt=1.0):
     real_data2 = sc.fit_transform(real_data2)
     real_data2 = torch.tensor(real_data2, dtype=torch.float32)
     # resample the data to a fixed time step
-    time_in_seconds2, real_data2 = interpolate_data(time_in_seconds2, real_data2, target_dt=resample_dt)
+    time_in_seconds2, real_data2 = interpolate_data(
+        time_in_seconds2, real_data2, target_dt=resample_dt
+    )
     # calculate the time step
     dt2 = torch.zeros_like(time_in_seconds2)
     dt2[1:] = time_in_seconds2[1:] - time_in_seconds2[:-1]
@@ -1733,7 +1756,9 @@ def pickle_Skora2018(transform, smooth_method="fft", resample_dt=1.0):
             real_data, dtype=torch.float32
         )  # add a feature dimension and convert to tensor
         # resample the data to a fixed time step
-        time_in_seconds, real_data = interpolate_data(time_in_seconds, real_data, target_dt=resample_dt)
+        time_in_seconds, real_data = interpolate_data(
+            time_in_seconds, real_data, target_dt=resample_dt
+        )
         # calulate the time step
         dt = torch.zeros_like(time_in_seconds)
         dt[1:] = time_in_seconds[1:] - time_in_seconds[:-1]
@@ -1820,7 +1845,9 @@ def pickle_Skora2018(transform, smooth_method="fft", resample_dt=1.0):
             real_data, dtype=torch.float32
         )  # add a feature dimension and convert to tensor
         # resample the data to a fixed time step
-        time_in_seconds, real_data = interpolate_data(time_in_seconds, real_data, target_dt=resample_dt)
+        time_in_seconds, real_data = interpolate_data(
+            time_in_seconds, real_data, target_dt=resample_dt
+        )
         # calulate the time step
         dt = torch.zeros_like(time_in_seconds)
         dt[1:] = time_in_seconds[1:] - time_in_seconds[:-1]
@@ -1915,7 +1942,9 @@ def pickle_Kaplan2020(transform, smooth_method="fft", resample_dt=1.0):
             real_data, dtype=torch.float32
         )  # add a feature dimension and convert to tensor
         # resample the data to a fixed time step
-        time_in_seconds, real_data = interpolate_data(time_in_seconds, real_data, target_dt=resample_dt)
+        time_in_seconds, real_data = interpolate_data(
+            time_in_seconds, real_data, target_dt=resample_dt
+        )
         # calulate the time step
         dt = torch.zeros_like(time_in_seconds)
         dt[1:] = time_in_seconds[1:] - time_in_seconds[:-1]
@@ -1996,7 +2025,9 @@ def pickle_Kaplan2020(transform, smooth_method="fft", resample_dt=1.0):
             real_data, dtype=torch.float32
         )  # add a feature dimension and convert to tensor
         # resample the data to a fixed time step
-        time_in_seconds, real_data = interpolate_data(time_in_seconds, real_data, target_dt=resample_dt)
+        time_in_seconds, real_data = interpolate_data(
+            time_in_seconds, real_data, target_dt=resample_dt
+        )
         # calulate the time step
         dt = torch.zeros_like(time_in_seconds)
         dt[1:] = time_in_seconds[1:] - time_in_seconds[:-1]
@@ -2077,7 +2108,9 @@ def pickle_Kaplan2020(transform, smooth_method="fft", resample_dt=1.0):
             real_data, dtype=torch.float32
         )  # add a feature dimension and convert to tensor
         # resample the data to a fixed time step
-        time_in_seconds, real_data = interpolate_data(time_in_seconds, real_data, target_dt=resample_dt)
+        time_in_seconds, real_data = interpolate_data(
+            time_in_seconds, real_data, target_dt=resample_dt
+        )
         # calulate the time step
         dt = torch.zeros_like(time_in_seconds)
         dt[1:] = time_in_seconds[1:] - time_in_seconds[:-1]
@@ -2172,7 +2205,9 @@ def pickle_Uzel2022(transform, smooth_method="fft", resample_dt=1.0):
             real_data, dtype=torch.float32
         )  # add a feature dimension and convert to tensor
         # resample the data to a fixed time step
-        time_in_seconds, real_data = interpolate_data(time_in_seconds, real_data, target_dt=resample_dt)
+        time_in_seconds, real_data = interpolate_data(
+            time_in_seconds, real_data, target_dt=resample_dt
+        )
         # calulate the time step
         dt = torch.zeros_like(time_in_seconds)
         dt[1:] = time_in_seconds[1:] - time_in_seconds[:-1]
@@ -2270,7 +2305,9 @@ def pickle_Flavell2023(transform, smooth_method="fft", resample_dt=1.0):
         calcium_data = sc.fit_transform(calcium_data)
         calcium_data = torch.tensor(calcium_data, dtype=torch.float32)
         # resample the data to a fixed time step
-        time_in_seconds, calcium_data = interpolate_data(time_in_seconds, calcium_data, target_dt=resample_dt)
+        time_in_seconds, calcium_data = interpolate_data(
+            time_in_seconds, calcium_data, target_dt=resample_dt
+        )
         # calculate the time step
         dt = torch.zeros_like(time_in_seconds)
         dt[1:] = time_in_seconds[1:] - time_in_seconds[:-1]
@@ -2346,6 +2383,9 @@ def pickle_Leifer2023(transform, smooth_method="fft", resample_dt=1.0):
                 cal = list(map(float, line.split(" ")))
                 real_data.append(cal)
         real_data = np.array(real_data)  # format: (time, neuron)
+        # skip worms with very short recordings
+        if real_data.shape[0] < 1000:
+            continue
 
         label_list = []
         with open(os.path.join(data_dir, str(i) + "_labels.txt"), "r") as f:
@@ -2413,7 +2453,9 @@ def pickle_Leifer2023(transform, smooth_method="fft", resample_dt=1.0):
         real_data = torch.nan_to_num(real_data, nan=0.0, posinf=0.0, neginf=0.0)
 
         # resample the data to a fixed time step
-        time_in_seconds, real_data = interpolate_data(time_in_seconds, real_data, target_dt=resample_dt)
+        time_in_seconds, real_data = interpolate_data(
+            time_in_seconds, real_data, target_dt=resample_dt
+        )
         # calculate the time step
         dt = torch.zeros_like(time_in_seconds)
         dt[1:] = time_in_seconds[1:] - time_in_seconds[:-1]

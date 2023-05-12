@@ -219,7 +219,8 @@ class Model(torch.nn.Module):
             # condition on the previous context_len timesteps
             input_cond = output[:, -context_len:, :]  # (B, T, C)
             # get the prediction of next timestep
-            input_forward = self.forward(input_cond, tau=1)
+            with torch.no_grad():
+                input_forward = self.forward(input_cond, tau=1)
             # focus only on the last time step
             next_timestep = input_forward[:, -1, :]  # (B, C)
             # append predicted next timestep to the running sequence

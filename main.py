@@ -32,7 +32,7 @@ def pipeline(
     model = get_model(config)
 
     # train model is the bulk of the pipeline code
-    model, log_dir = train_model(
+    model, log_dir, config = train_model(
         config,
         model,
         dataset,
@@ -42,10 +42,10 @@ def pipeline(
 
     # use trained model to make predictions on the dataset
     make_predictions(
-        config,
-        model,
-        dataset,
-        log_dir,
+        config,  # `train_model` injected the appropriate `predict` params into config`
+        model=None,
+        dataset=None,
+        log_dir=log_dir,
         use_residual=config.globals.use_residual,
         smooth_data=config.globals.smooth_data,
     )
@@ -55,11 +55,6 @@ def pipeline(
 
     ## TODO: analysis
     # analyze_outputs(config, log_dir)
-
-    # # NOTE: when on OpenMind, uncomment the line below to move the log directory
-    # dirname = log_dir.split("logs/")[-1]
-    # destination = "/om/user/%s/logs/%s" % (USER, dirname)
-    # shutil.move(log_dir, destination)
 
     return None
 

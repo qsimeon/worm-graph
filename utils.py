@@ -45,8 +45,8 @@ VALID_DATASETS = {
     "Nguyen2017",  # no named neurons. no time vectors. DON'T use!
     "Kato2015",
     "Kaplan2020",
-    "Leifer2023",
-    "Flavell2023",  # something wrong with worm0.
+    "Leifer2023",  # TODO: something wrong with the dataset.
+    "Flavell2023",  # TODO: something wrong with worm0.
     # test datasets
     "sine",
     "sine_seq",
