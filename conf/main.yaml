@@ -30,22 +30,43 @@ hydra:
       globals.random_seed: 0
       # MODEL
       model.type: LinearNN #, NeuralTransformer, NetworkLSTM, NeuralCFC
-      model.loss: L1 #, MSE, Huber
-      model.reg_param: 1.0 #, 0.0, 0.5, 1.0
-      model.hidden_size: 1024 #, 64, 128, 256, 512, 1024, 2048
+      model.loss: L1, MSE, Huber
+      model.reg_param: 0.0, 0.5, 1.0
+      model.hidden_size: 64, 128, 256, 512, 1024, 2048
       model.num_layers: 1
       model.checkpoint_path: false
       # DATASET
-      dataset.name: Kato2015, Nichols2017, Skora2018, Kaplan2020, Uzel2022, Flavell2023, Leifer2023, [Kato2015, Nichols2017], [Nichols2017, Skora2018], [Skora2018, Kaplan2020], [Kaplan2020, Flavell2023], [Flavell2023, Leifer2023], [Kato2015, Nichols2017, Skora2018], [Nichols2017, Skora2018, Kaplan2020], [Skora2018, Kaplan2020, Flavell2023], [Kaplan2020, Flavell2023, Leifer2023] #, Uzel2022
+      dataset.name: 
+        - Kato2015
+        - Nichols2017
+        - Skora2018
+        - Kaplan2020
+        - Flavell2023
+        - Leifer2023
+        - [Kato2015, Nichols2017]
+        - [Nichols2017, Skora2018]
+        - [Skora2018, Kaplan2020]
+        - [Kaplan2020, Flavell2023]
+        - [Flavell2023, Leifer2023]
+        - [Kato2015, Nichols2017, Skora2018]
+        - [Nichols2017, Skora2018, Kaplan2020]
+        - [Skora2018, Kaplan2020, Flavell2023]
+        - [Kaplan2020, Flavell2023, Leifer2023]
+        - [Kato2015, Nichols2017, Skora2018, Kaplan2020]
+        - [Nichols2017, Skora2018, Kaplan2020, Flavell2023]
+        - [Skora2018, Kaplan2020, Flavell2023, Leifer2023]
+        - [Kato2015, Nichols2017, Skora2018, Kaplan2020, Flavell2023]
+        - [Nichols2017, Skora2018, Kaplan2020, Flavell2023, Leifer2023]
+        - [Kato2015, Nichols2017, Skora2018, Kaplan2020, Flavell2023, Leifer2023]
       # TRAIN
-      train.optimizer: SGD #, AdamW, Adagrad, Adadelta, Adam, RMSprop
-      train.learn_rate: 0.001 #, 0.0001, 0.001, 0.01, 0.1, 1.0
-      train.epochs: 900
-      train.save_freq: 300
+      train.optimizer: SGD, AdamW, Adagrad, Adadelta, Adam, RMSprop
+      train.learn_rate: 0.0001, 0.001, 0.01, 0.1, 1.0
+      train.epochs: 1000
+      train.save_freq: 500
       train.seq_len: 200 #, 50, 100, 200
       train.k_splits: 2 #, 2, 5, 7
       train.num_samples: 128 # 16, 32, 64, 128
-      train.num_batches: 4 #, 1, 2, 4, 8
+      train.num_batches: 2 #, 1, 2, 4, 8
       train.tau_in: 1 
       train.shuffle: false 
       train.reverse: false 
