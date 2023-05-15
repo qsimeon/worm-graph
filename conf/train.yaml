@@ -7,7 +7,7 @@ train:
   # constraint: seq_len: 0 < int < len(data) 
   k_splits: 2 # number of interleaved train/test splits per single worm data
   # constraint: epochs: int > 0  and  save_freq: int <= epochs: int
-  num_samples: 64 # the number of sampled sequences per worm
+  num_samples: 128 # the number of sampled sequences per worm
   num_batches: 4 # the number of batches per worm
   # constraint: num_samples: int > 0  and  num_batches: 0 < int <= num_samples
   # interpretation: larger num. batches <-> smaller batch size; smaller num. batches <-> more parallelization; 
