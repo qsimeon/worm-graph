@@ -5,30 +5,53 @@ from pkg import *
 def pipeline(
     config: DictConfig,
 ) -> None:
+    """Runs a complete pipeline to train a model and make predictions.
+
+    Can be configured using the main.yaml file in the conf directory.
+    
+    Parameters
+    ----------
+    config: DictConfig
+        Hydra configuration object.
+
+    Calls
+    -----
+    process_data : function in preprocess/_main.py
+        Configuration file in conf/preprocess.yaml
+
+    get_dataset : function in datasets/_main.py
+        Configuration file in conf/dataset.yaml
+
+    get_model : function in models/_main.py
+        Configuration file in conf/model.yaml
+
+    train_model : function in train/_main.py
+        Configuration file in conf/train.yaml
+
+    plot_figures : function in visualization/_main.py
+        Configuration file in conf/visualize.yaml
+
+    TODO: analyze_outputs : function in analysis/_main.py
+    TODO:    Configuration file in conf/analysis.yaml
+
+    Notes
+    -----
+    * Use mode: RUN if you are having a UserWarning with MULTIRUN
+
     """
-    Runs a complete pipeline using the parameters in main.yaml.
-    Calls the below subroutines with parameters in their
-    corresponding config files:
-        process_data: preprocess.yaml
-        get_dataset: dataset.yaml
-        get_model: model.yaml
-        train_model: train.yaml
-        plot_figures: visualize.yaml
-        TODO: analyze_outputs: analysis.yaml
-    """
-    # print Pytorch device
+    # Print Pytorch device
     print("\ntorch device: %s" % (DEVICE), end="\n\n")
 
-    # intialize random seeds
+    # Intialize random seeds
     init_random_seeds(config.globals.random_seed)
 
-    # skips if data already preprocessed
+    # Skips if data already preprocessed
     process_data(config)
 
-    # returns a generator of single worm datasets
+    # Returns a generator of single worm datasets
     dataset = get_dataset(config)
 
-    # get the model to train
+    # Get the model to train
     model = get_model(config)
 
     # train model is the bulk of the pipeline code

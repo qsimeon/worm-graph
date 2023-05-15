@@ -125,6 +125,7 @@ class PositionalEncoding(torch.nn.Module):
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
 class Model(torch.nn.Module):
     """Super class for all models.
+    
     For all our models:
         1. The output will be the same shape as the input.
         2. A method called `loss_fn` that specifies the specific
@@ -166,11 +167,12 @@ class Model(torch.nn.Module):
             self.loss = torch.nn.HuberLoss
         else:
             self.loss = torch.nn.L1Loss
+
         # Name of original loss function
-        self.loss_name = self.loss.__name__.strip("Loss")
+        self.loss_name = self.loss.__name__[:-4]
         # Setup
-        self.input_size = input_size  # number of neurons (302)
-        self.output_size = input_size
+        self.input_size = input_size # Number of neurons (302)
+        self.output_size = input_size # Number of neurons (302)
         self.hidden_size = hidden_size
         self.num_layers = num_layers
         self.reg_param = reg_param
@@ -182,17 +184,21 @@ class Model(torch.nn.Module):
     def loss_fn(self):
         """
         The loss function to be used with the model.
-        We regularize all losses with a term that encourages
-        the frequency distribution of the model's output to
+
+        This custom loss function combines a primary loss function with
+        an additional regularization term based on the Fast Fourier
+        Transform (FFT). The purpose of this regularization is to
+        encourage the frequency distribution of the model's output to
         match that of the target data.
+        If self.ref_param = 0.0, no regularization is applied.
         """
 
         def loss(input, target, **kwargs):
             """Calculate loss with FFT regularization."""
             original_loss = self.loss(**kwargs)(input, target)
             # calculate FFT and take real part
-            input_fft = torch.fft.rfft(input, dim=-2).real
-            target_fft = torch.fft.rfft(target, dim=-2).real
+            input_fft = torch.fft.rfft(input, dim=-2).real # (batch, seq_len, neurons)
+            target_fft = torch.fft.rfft(target, dim=-2).real # (batch, seq_len, neurons)
             # calculate average difference between real parts of FFTs
             fft_loss = torch.mean(torch.abs(input_fft - target_fft))
             return (1 - self.reg_param) * original_loss + self.reg_param * fft_loss
@@ -256,6 +262,20 @@ class Model(torch.nn.Module):
 class LinearNN(Model):
     """
     A simple linear regression model to use as a baseline.
+
+    Parameters
+    ----------
+    input_size : int
+        Number of neurons
+    hidden_size : int
+        Number of hidden units
+    num_layers : int, optional
+        Number of hidden layers, default is 1
+    loss : Callable or None, optional
+        Loss function to use, default is L1
+    reg_param : float, optional
+        FFT Regularization parameter, default is 1.0
+        (full regularization)
     """
 
     def __init__(
@@ -282,6 +302,7 @@ class LinearNN(Model):
             torch.nn.ELU(),
             torch.nn.LayerNorm(self.hidden_size),
         )
+
         # Full model
         self.model = torch.nn.Sequential(
             *self.input_hidden,
@@ -291,9 +312,13 @@ class LinearNN(Model):
 
     def forward(self, input: torch.Tensor, tau: int = 1):
         """Forward method for simple linear regression model.
-        Arguments:
-            input: batch of data
-            tau: time offset of target
+
+        Parameters
+        ----------
+        input : torch.Tensor
+            Input data with shape (batch, seq_len, neurons)
+        tau : int, optional
+            Time offset of target
         """
         if tau < 1:
             output = self.identity(input)

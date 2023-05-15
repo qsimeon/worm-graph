@@ -2,11 +2,37 @@ from models._utils import *
 
 
 def get_model(config: DictConfig) -> torch.nn.Module:
-    """
-    Returns a new model of the type and size specified in 'model.yaml'.
+    """Instantiate or load a model as specified in 'model.yaml'.
+
+    This function can either create a new model of the specified type
+    and size or load a saved model from a checkpoint file. The configuration
+    is provided as a DictConfig object, which should include information
+    about the model type, size, and other relevant parameters.
+
+    Parameters
+    ----------
+    config : DictConfig
+        A Hydra configuration object.
+    
+    Calls
+    -----
+    NeuralTransformer : class in models/_utils.py
+    NetworkLSTM : class in models/_utils.py
+    NeuralCFC : class in models/_utils.py
+    LinearNN : class in models/_utils.py
+        If no model type is specified, LinearNN is used by default.
+
+    Returns
+    -------
+    model : torch.nn.Module
+        A new or loaded model instance, moved to the appropriate device and
+        cast to torch.float32 data type.
+
+    Notes
+    -----
     """
 
-    # load a saved model
+    # If a checkpoint is given (True), load a saved model
     if config.model.checkpoint_path:
         PATH = os.path.join(ROOT_DIR, config.model.checkpoint_path)
         checkpoint = torch.load(PATH, map_location=torch.device(DEVICE))
@@ -26,7 +52,8 @@ def get_model(config: DictConfig) -> torch.nn.Module:
         )
         model.load_state_dict(model_state_dict)
         print("Model checkpoint path:", PATH, end="\n\n")
-    # create a new model
+
+    # Otherwise, instantiate a new model
     else:
         assert "type" in config.model, ValueError(
             "No model type or checkpoint path specified."
@@ -49,7 +76,9 @@ def get_model(config: DictConfig) -> torch.nn.Module:
         else:  # default to "LinearNN" model
             model = LinearNN(**args)
         print("Initialized a new model.", end="\n\n")
+
     print("Model:", model, end="\n\n")
+
     return model.to(torch.float32)
 
 

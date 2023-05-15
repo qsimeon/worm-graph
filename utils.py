@@ -56,7 +56,7 @@ VALID_DATASETS = {
     "sum_sine_noise",
 }
 
-# list of all 302 hermaphrodite neurons
+# List of all 302 hermaphrodite neurons
 NEURONS_302 = sorted(
     pd.read_csv(
         os.path.join(ROOT_DIR, "data", "raw", "neurons_302.txt"),
