@@ -32,20 +32,52 @@
 
 ## Environment Setup
 
-`cd` into the `worm-graph` directory on your local machine: `cd worm-graph`
+To prepare your environment for this project, you can use either the provided `.yml` files or the `init.sh` script. Choose the option that works most efficiently for your system.
 
-Using the terminal or an Anaconda Prompt: `conda env create -f environment_cluster.yml`
-   <br>The first line of the `yml` file sets the new environment's name.
+Firstly, navigate to the `env_setup` directory. This directory contains all the necessary configuration files to set up the virtual environment. Use the following command to access the directory:
 
-Activate the new environment: `conda activate worm-graph`
+```
+cd worm-graph/env_setup
+```
 
-Add the `worm-graph` root directory to Anaconda path: `conda develop .`
-   <br>*Important:* Do not skip this step step! Otherwise you will be faced with several `ModuleNotFoundError`.
+## Option A: Setting up with the `.yml` files
 
-Verify that the new environment was installed correctly: `conda env list`
-   <br>You can also use `conda info --envs`.
- 
-Always activate the environment before working on the project: `conda activate worm-graph`
+1. Open your terminal or Anaconda Prompt, and create a new Conda environment using the `.yml` file. The first line of the `.yml` file sets the name of the new environment.
+
+    ```
+    conda env create -f environment_cluster.yml
+    ```
+
+
+## Option B: Setting up with the bash script
+
+1. Run the `init.sh` script. This will create the new `worm-graph` environment and install the required packages:
+
+    ```
+    source init.sh
+    ```
+
+2. Activate the new `worm-graph` environment:
+
+    ```
+    conda activate worm-graph
+    ```
+
+3. Install the remaining dependencies using pip:
+
+    ```
+    pip install -r requirements.txt
+    ```
+
+After finishig one of the installations above, navigate to the root directory (`worm-graph/`) and run:
+
+    conda develop .
+
+**Note:** Please ensure to carry out this step, otherwise you may encounter `ModuleNotFoundError`.
+
+*You can check if the environment was successfully installed by running `conda env list`.*
+
+**Important Reminder:** Always activate the environment before starting your work on the project using `conda activate worm-graph`.
 
 ## Getting Started
 
