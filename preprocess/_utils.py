@@ -269,37 +269,71 @@ def smooth_data_preprocess(calcium_data, smooth_method, dt=1.0):
 
 
 def preprocess_connectome(raw_dir, raw_files):
+    """Convert the raw connectome data to a graph tensor.
+    
+    This function processes raw connectome data, which includes chemical
+    synapses and gap junctions, into a format suitable for use in machine
+    learning or graph analysis. It reads the raw data in .csv format,
+    processes it to extract relevant information, and creates graph
+    tensors that represent the C. elegans connectome. The resulting 
+    graph tensors are saved in the 'data/processed/connectome' folder
+    as 'graph_tensors.pt'.
+
+    Parameters
+    ----------
+    raw_dir : str
+        Directory with raw connectome data
+    raw_files : list
+        Contain the names of the raw connectome data to preprocess
+
+    Returns
+    -------
+    None
+        This function does not return anything, but it does save the
+        graph tensors in the 'data/processed/connectome' folder.
+
+    Notes
+    -----
+    * A connectome is a comprehensive map of the neural connections within
+      an organism's brain or nervous system. It is essentially the wiring
+      diagram of the brain, detailing how neurons and their synapses are
+      interconnected.
+    * The connectome data useed here is from Cook et al., 2019.
+      If the raw data isn't found, please download it at this link:
+      https://wormwiring.org/matlab%20scripts/Premaratne%20MATLAB-ready%20files%20.zip
+      and drop in the data/raw folder.
     """
-    If the `graph_tensors.pt` file is not found, this function gets
-    called to create it from the raw open source connectome data.
-    The connectome data useed here is from Cook et al., 2019 downloaded from
-    https://wormwiring.org/matlab%20scripts/Premaratne%20MATLAB-ready%20files%20.zip.
-    The data in .mat files was processed into .csv files containing the chemical and
-    electrical connectivity for the adult hermaphrodite C. elegans.
-    """
-    # checking
+
+    # Check if the raw connectome data exists
+    # TODO: Automatic download if raw data not found (?)
     assert all([os.path.exists(os.path.join(raw_dir, rf)) for rf in raw_files])
-    # list of names of all C. elegans neurons
+
+    # List of names of all C. elegans neurons
     neurons_all = set(NEURONS_302)
-    # chemical synapses
+
+    # Chemical synapses
     GHermChem_Edges = pd.read_csv(os.path.join(raw_dir, "GHermChem_Edges.csv"))  # edges
     GHermChem_Nodes = pd.read_csv(os.path.join(raw_dir, "GHermChem_Nodes.csv"))  # nodes
-    # gap junctions
+
+    # Gap junctions
     GHermElec_Sym_Edges = pd.read_csv(
         os.path.join(raw_dir, "GHermElec_Sym_Edges.csv")
     )  # edges
     GHermElec_Sym_Nodes = pd.read_csv(
         os.path.join(raw_dir, "GHermElec_Sym_Nodes.csv")
     )  # nodes
-    # neurons involved in gap junctions
+
+    # Neurons involved in gap junctions
     df = GHermElec_Sym_Nodes
     df["Name"] = [v.replace("0", "") if not v.endswith("0") else v for v in df["Name"]]
     Ggap_nodes = df[df["Name"].isin(neurons_all)].sort_values(by=["Name"]).reset_index()
-    # neurons involved in chemical synapses
+
+    # Neurons involved in chemical synapses
     df = GHermChem_Nodes
     df["Name"] = [v.replace("0", "") if not v.endswith("0") else v for v in df["Name"]]
     Gsyn_nodes = df[df["Name"].isin(neurons_all)].sort_values(by=["Name"]).reset_index()
-    # gap junctions
+
+    # Gap junctions
     df = GHermElec_Sym_Edges
     df["EndNodes_1"] = [
         v.replace("0", "") if not v.endswith("0") else v for v in df["EndNodes_1"]
@@ -314,7 +348,8 @@ def preprocess_connectome(raw_dir, raw_files):
         and df.iloc[i]["EndNodes_2"] in set(Ggap_nodes.Name)
     ]  # indices
     Ggap_edges = df.iloc[inds].reset_index(drop=True)
-    # chemical synapses
+
+    # Chemical synapses
     df = GHermChem_Edges
     df["EndNodes_1"] = [
         v.replace("0", "") if not v.endswith("0") else v for v in df["EndNodes_1"]
@@ -329,9 +364,11 @@ def preprocess_connectome(raw_dir, raw_files):
         and df.iloc[i]["EndNodes_2"] in set(Gsyn_nodes.Name)
     ]  # indices
     Gsyn_edges = df.iloc[inds].reset_index(drop=True)
-    # map neuron names (IDs) to indices
+
+    # Map neuron names (IDs) to indices
     neuron_to_idx = dict(zip(Gsyn_nodes.Name.values, Gsyn_nodes.index.values))
     idx_to_neuron = dict(zip(Gsyn_nodes.index.values, Gsyn_nodes.Name.values))
+
     # edge_index for gap junctions
     arr = Ggap_edges[["EndNodes_1", "EndNodes_2"]].values
     ggap_edge_index = torch.empty(*arr.shape, dtype=torch.long)
@@ -340,6 +377,7 @@ def preprocess_connectome(raw_dir, raw_files):
             [neuron_to_idx[x] for x in row], dtype=torch.long
         )
     ggap_edge_index = ggap_edge_index.T  # [2, num_edges]
+
     # edge_index for chemical synapses
     arr = Gsyn_edges[["EndNodes_1", "EndNodes_2"]].values
     gsyn_edge_index = torch.empty(*arr.shape, dtype=torch.long)
@@ -348,8 +386,10 @@ def preprocess_connectome(raw_dir, raw_files):
             [neuron_to_idx[x] for x in row], dtype=torch.long
         )
     gsyn_edge_index = gsyn_edge_index.T  # [2, num_edges]
+
     # edge attributes
     num_edge_features = 2
+
     # edge_attr for gap junctions
     num_edges = len(Ggap_edges)
     ggap_edge_attr = torch.empty(
@@ -359,6 +399,7 @@ def preprocess_connectome(raw_dir, raw_files):
         ggap_edge_attr[i, :] = torch.tensor(
             [weight, 0], dtype=torch.float
         )  # electrical synapse encoded as [1,0]
+
     # edge_attr for chemical synapses
     num_edges = len(Gsyn_edges)
     gsyn_edge_attr = torch.empty(
@@ -368,13 +409,16 @@ def preprocess_connectome(raw_dir, raw_files):
         gsyn_edge_attr[i, :] = torch.tensor(
             [0, weight], dtype=torch.float
         )  # chemical synapse encoded as [0,1]
+
     # data.x node feature matrix
     num_nodes = len(Gsyn_nodes)
     num_node_features = 1024
-    # generate random data TODO: inject real data istead !
+
+    # Generate random data TODO: inject real data istead !
     x = torch.rand(
         num_nodes, num_node_features, dtype=torch.float
     )  # [num_nodes, num_node_features]
+
     # data.y target to train against
     le = preprocessing.LabelEncoder()
     le.fit(Gsyn_nodes.Group.values)
@@ -382,30 +426,37 @@ def preprocess_connectome(raw_dir, raw_files):
     y = torch.tensor(
         le.transform(Gsyn_nodes.Group.values), dtype=torch.int32
     )  # [num_nodes, 1]
-    # save the mapping of encodings to type of neuron
+
+    # Save the mapping of encodings to type of neuron
     codes = np.unique(y)
     types = np.unique(Gsyn_nodes.Group.values)
     node_type = dict(zip(codes, types))
-    # graph for electrical connectivity
+
+    # Graph for electrical connectivity
     electrical_graph = Data(
         x=x, edge_index=ggap_edge_index, edge_attr=ggap_edge_attr, y=y
-    )
-    # graph for chemical connectivity
+    ) # torch_geometric package
+
+    # Graph for chemical connectivity
     chemical_graph = Data(
         x=x, edge_index=gsyn_edge_index, edge_attr=gsyn_edge_attr, y=y
-    )
-    # merge electrical and chemical graphs into a single connectome graph
+    ) # torch_geometric package
+
+    # Merge electrical and chemical graphs into a single connectome graph
     edge_index = torch.hstack((electrical_graph.edge_index, chemical_graph.edge_index))
     edge_attr = torch.vstack((electrical_graph.edge_attr, chemical_graph.edge_attr))
     edge_index, edge_attr = coalesce(
         edge_index, edge_attr, reduce="add"
     )  # features = [elec_wt, chem_wt]
+
     assert all(chemical_graph.y == electrical_graph.y), "Node labels not matched!"
     x = chemical_graph.x
     y = chemical_graph.y
-    # basic attributes of PyG Data object
+
+    # Basic attributes of PyG Data object
     graph = Data(x=x, edge_index=edge_index, edge_attr=edge_attr, y=y)
-    # add some additional attributes to the graph
+
+    # Some additional attributes to the graph
     neurons_all = list(idx_to_neuron.values())
     df = pd.read_csv(
         os.path.join(raw_dir, "LowResAtlasWithHighResHeadsAndTails.csv"),
@@ -416,13 +467,16 @@ def preprocess_connectome(raw_dir, raw_files):
     valids = set(df.neuron)
     keys = [k for k in idx_to_neuron if idx_to_neuron[k] in valids]
     values = list(df[df.neuron.isin(valids)][["x", "z"]].values)
-    # initialize position dict then replace with atlas coordinates if available
+
+    # Initialize position dict then replace with atlas coordinates if available
     pos = dict(zip(np.arange(graph.num_nodes), np.zeros(shape=(graph.num_nodes, 2))))
     for k, v in zip(keys, values):
         pos[k] = v
-    # assign each node its global node index
+    
+    # Assign each node its global node index
     n_id = torch.arange(graph.num_nodes)
-    # save the tensors to use as raw data in the future.
+
+    # Save the tensors to use as raw data in the future.
     graph_tensors = {
         "edge_index": edge_index,
         "edge_attr": edge_attr,
@@ -434,10 +488,12 @@ def preprocess_connectome(raw_dir, raw_files):
         "node_type": node_type,
         "n_id": n_id,
     }
+
     torch.save(
         graph_tensors,
         os.path.join(ROOT_DIR, "data", "processed", "connectome", "graph_tensors.pt"),
     )
+
     return None
 
 
@@ -839,15 +895,27 @@ def str_to_float(str_num):
 
 
 def interpolate_data(time, data, target_dt):
-    """
-    Interpolate data using np.interp, with support for torch.Tensor inputs.
+    """Interpolate data using np.interp, with support for torch.Tensor.
 
-    Parameters:
-    time (torch.Tensor): A 1D tensor containing the time points corresponding to the data.
-    data (torch.Tensor): A 2D tensor containing the data to be interpolated, with shape (time, neurons).
-    target_dt (float): The desired time interval between the interpolated data points.
+    This function takes the given time points and corresponding data and
+    interpolates them to create new data points with the desired time 
+    interval. The input tensors are first converted to NumPy arrays for 
+    interpolation, and the interpolated data and time points are then 
+    converted back to torch.Tensor objects before being returned.
 
-    Returns:
+    Parameters
+    ----------
+    time : torch.Tensor
+        1D tensor containing the time points corresponding to the data.
+    data : torch.Tensor
+        A 2D tensor containing the data to be interpolated, with shape
+        (time, neurons).
+    target_dt : float
+        The desired time interval between the interpolated data points.
+        If None, no interpolation is performed.
+
+    Returns
+    -------
     torch.Tensor, torch.Tensor: Two tensors containing the interpolated time points and data.
     """
     # If target_dt is None, return the original data
@@ -881,24 +949,65 @@ def pickle_neural_data(
     smooth_method="fft",
     resample_dt=None,
 ):
+    """Converts C. elegans neural data to .pickle format.
+
+    This function downloads the open-source datasets if they are not found
+    in the root directory, extracts them, and pickles the data as necessary.
+    The processed data is saved in the data/processed/neural folder for
+    further use.
+
+    Parameters
+    ----------
+    url : str
+        Download link to a zip file containing the opensource data in raw form.
+    zipfile : str
+        The name of the zipfile that is being downloaded.
+    dataset : str, optional (default: 'all')
+        The name of the dataset(s) to be pickled.
+        If None, all datasets are pickled.
+    transform : object, optional
+        The transformation to be applied to the data.
+    smooth_method : str, optional (default: 'fft')
+        The smoothing method to apply to the data;
+        options are 'sg', 'fft', or 'tvr'.
+    resample_dt : float, optional (default: None)
+        The resampling time interval in seconds.
+        If None, no resampling is performed.
+
+    Calls
+    -----
+    pickle_{dataset} : function in preprocess/_utils.py
+        Where dataset = {Kato2015, Nichols2017, Nguyen2017, Skora2018, 
+                         Kaplan2020, Uzel2022, Flavell2023, Leifer2023}
+
+    Returns
+    -------
+    None
+        The function's primary purpose is to preprocess the data and save
+        it to disk for future use.
+
+    Notes
+    -----
+    * If you are having problems downloading the data, you can manually download
+      and place the zip file into the root directory of this repository.
     """
-    Function for converting C. elegans neural data from open source
-    datasets into a consistent and compressed form (.pickle) for
-    our purposes.
-    url: str, a download link to a zip file containing the opensource data in raw form.
-    zipfile: str, the name of the zipfile that is being downloaded.
-    """
+
     print("resample_dt", resample_dt, end="\n\n")
     global source_path, processed_path
     zip_path = os.path.join(ROOT_DIR, zipfile)
     source_path = os.path.join(ROOT_DIR, zipfile.strip(".zip"))
     processed_path = os.path.join(ROOT_DIR, "data/processed/neural")
-    # Download the curated open-source worm datasets from host server
+
+    # If .zip not found in the root directory, download the curated 
+    # open-source worm datasets from host server
     if not os.path.exists(source_path):
-        # Downloading can take up to 8 minutes depending on your network speed.
+        # ~1.8GB to download
         download_url(url=url, folder=ROOT_DIR, filename=zipfile)
-        if dataset.lower() == "all":  # extract all the datasets
-            extract_zip(zip_path, folder=source_path)  # extract zip file
+
+        # Extract all the datasets ... OR
+        if dataset.lower() == "all":
+            extract_zip(zip_path, folder=source_path)  # Extract zip file
+        # Extract just the requested datasets
         else:
             bash_command = [
                 "unzip",
@@ -907,16 +1016,18 @@ def pickle_neural_data(
                 "-d",
                 source_path,
             ]
-            std_out = subprocess.run(bash_command, text=True)
+            std_out = subprocess.run(bash_command, text=True) # Run the bash command
             print(std_out, end="\n\n")
-        os.unlink(zip_path)  # remove zip file
+
+        os.unlink(zip_path)  # Remove zip file
+
     # Pickle all the datasets ... OR
     if dataset is None or dataset.lower() == "all":
         for dataset in VALID_DATASETS:
-            # skip these test datasets
             if dataset.__contains__("sine"):
-                continue
+                continue # skip these test datasets
             print("Dataset:", dataset, end="\n\n")
+            # call the "pickle" functions in preprocess/_utils.py (functions below)
             pickler = eval("pickle_" + dataset)
             pickler(transform, smooth_method, resample_dt)
     # (re)-Pickle a single dataset
@@ -927,12 +1038,16 @@ def pickle_neural_data(
             list(VALID_DATASETS)
         )
         print("Dataset:", dataset, end="\n\n")
+        # call the "pickle" functions in preprocess/_utils.py (functions below)
         pickler = eval("pickle_" + dataset)
-        pickler(transform, smooth_method, resample_dt)
-    # delete the downloaded raw datasets
-    shutil.rmtree(source_path)  # files too large to push to GitHub
-    # create a file the indicates preprocessing succesful
+        pickler(transform, smooth_method, resample_dt) 
+
+    # Delete the downloaded raw datasets
+    shutil.rmtree(source_path)  # Files too large to push to GitHub
+
+    # Create a file to indicate that the preprocessing was succesful
     open(os.path.join(processed_path, ".processed"), "a").close()
+
     return None
 
 

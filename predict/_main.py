@@ -9,45 +9,80 @@ def make_predictions(
     use_residual: bool = False,
     smooth_data: bool = True,
 ) -> None:
-    """Make predicitons on a dataset with a trained model.
+    """Make predictions on a dataset with a trained model.
 
-    Saves in the provdied log directory a .csv file for each of the following:
-        * calcium neural activty
-        * target calcium residuals
-        * predicted calcium residuals
-    Each .csv file has a column for each named neuron in the dataset plus two
-    additional columns for the train mask and test mask respectively.
+    Saves in the provided log directory a .csv file for each of the
+    following:
+        * Calcium neural activity
+        * Target calcium residuals
+        * Predicted calcium residuals
+    Each .csv file has a column for each named neuron in the dataset
+    plus two additional columns for the train mask and test mask
+    respectively.
 
-    Args:
-        model: torch.nn.Module, Trained model.
-        dataset: dict, Multi-worm dataset.
+    Parameters:
+    ----------
+    config : DictConfig
+        Hydra configuration object.
+    model : torch.nn.Module or None, optional, default: None
+        Trained model. If not provided, will be loaded from the configuration.
+    dataset : dict or None, optional, default: None
+        Multi-worm dataset. If not provided, will be loaded from the configuration.
+    log_dir : str or None, optional, default: None
+        Log directory where the output files will be saved (logs/playground).
+    use_residual : bool, optional, default: False
+        If True, use residual calcium instead of calcium data.
+    smooth_data : bool, optional, default: True
+        If True, use smoothed data for predictions.
 
-    Returns:
-        None.
+    Calls
+    -----
+    get_model : function in model/_main.py
+        Instantiate or load a model as specified in 'model.yaml'.
+    get_dataset : function in data/_main.py
+        Returns a dict with the worm data of all requested datasets.
+    model_predict : function in predict/_utils.py
+        Make predictions for all neurons on a dataset with a trained model.
+
+    Returns
+    -------
+    None
+
+    Notes
+    -----
     """
-    # hydra changes the working directory to log directory
+
+    # Hydra changes the working directory to log directory (logs/playground)
     if log_dir is None:
         log_dir = os.getcwd()
     else:
         os.makedirs(log_dir, exist_ok=True)
-    # replace model and dataset with those in config file
+
+    # Replace model and dataset with those in config file
     if model is None:
         model = get_model(config.predict)
     if dataset is None:
         dataset = get_dataset(config.predict)
-    # get the desired output shift
+
+    # Get the desired output shift
     tau = config.predict.tau_out
-    # get the data to save
+
+    # Get the data to save
     signal_str = "residual" if use_residual else "calcium"
     key_data = "residual_calcium" if use_residual else "calcium_data"
     key_data = "smooth_" + key_data if smooth_data else key_data
-    # make a directory for each worm in the dataset and store the data
+
+    # Make a directory for each worm in the dataset and store the data
     for worm, single_worm_dataset in dataset.items():
         os.makedirs(os.path.join(log_dir, worm), exist_ok=True)
-        # get data to save
+
+        # Get data to save
         calcium_data = single_worm_dataset[key_data]
+
+        # Pick just named neurons
         named_neurons_mask = single_worm_dataset["named_neurons_mask"]
         named_neurons = np.array(NEURONS_302)[named_neurons_mask]
+
         time_in_seconds = single_worm_dataset["time_in_seconds"]
         if time_in_seconds is None:
             time_in_seconds = torch.arange(len(calcium_data)).double()
@@ -55,27 +90,30 @@ def make_predictions(
             "train_mask", torch.zeros(len(calcium_data), dtype=torch.bool)
         )
         test_mask = single_worm_dataset.setdefault("test_mask", ~train_mask)
-        # detach computation from tensors
+
+        # Detach computation from tensors
         calcium_data = calcium_data.detach()
         named_neurons_mask = named_neurons_mask.detach()
         time_in_seconds = time_in_seconds.detach()
         train_mask = train_mask.detach()
         test_mask.detach()
-        # labels and columns
+
+        # Labels and columns
         labels = np.expand_dims(np.where(train_mask, "train", "test"), axis=-1)
         columns = list(named_neurons) + [
             "train_test_label",
             "time_in_seconds",
             "tau",
         ]
-        # make predictions with final model
+
+        # Make predictions with final model
         inputs, predictions, targets = model_predict(
             model,
             calcium_data * named_neurons_mask,
             tau=tau,
         )
-        # save dataframes
-        # inputs dataframe
+
+        # Save Inputs DataFrame
         tau_expand = np.full(time_in_seconds.shape, tau)
         data = inputs[:, named_neurons_mask].numpy()
         data = np.hstack((data, labels, time_in_seconds, tau_expand))
@@ -84,7 +122,8 @@ def make_predictions(
             index=True,
             header=True,
         )
-        # predictions dataframe
+
+        # Save Predictions DataFrame
         data = predictions[:, named_neurons_mask].detach().numpy()
         data = np.hstack((data, labels, time_in_seconds, tau_expand))
         pd.DataFrame(data=data, columns=columns).to_csv(
@@ -92,7 +131,8 @@ def make_predictions(
             index=True,
             header=True,
         )
-        # targets dataframe
+
+        # Save Targets DataFrame
         data = targets[:, named_neurons_mask].detach().numpy()
         data = np.hstack((data, labels, time_in_seconds, tau_expand))
         pd.DataFrame(data=data, columns=columns).to_csv(
@@ -103,6 +143,7 @@ def make_predictions(
 
         # TODO: remove this break to do predict for all worms in dataset
         break
+
     return None
 
 
