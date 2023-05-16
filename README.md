@@ -1,22 +1,21 @@
 # worm-graph
 ## Simulating the _C. elegans_ whole brain with neural networks.
 
-`tree -L 2 worm-graph/`
+`tree -L 1 worm-graph/`
 ```
 ├── LICENSE
 ├── README.md
 ├── __init__.py
-├── __pycache__
 ├── analysis
 ├── conf
 ├── data
-├── environment_cluster.yml
-├── environment_local.yml
-├── govfunc
+├── env_setup
 ├── logs
 ├── main.py
 ├── models
+├── opensource_data
 ├── pkg.py
+├── predict
 ├── preprocess
 ├── testing
 ├── train
@@ -76,6 +75,7 @@ After finishig one of the installations above, navigate back to the root directo
     ```
     conda develop .
     ```
+
 
 **Note:** Please ensure to carry out this step, otherwise you may encounter `ModuleNotFoundError`.
 
