@@ -39,6 +39,8 @@ Firstly, navigate to the `env_setup` directory. This directory contains all the 
 cd worm-graph/env_setup
 ```
 
+**Note:** Installing the environment can take up to 2 hours!
+
 ## Option A: Setting up with the `.yml` files
 
 1. Open your terminal or Anaconda Prompt, and create a new Conda environment using the `.yml` file. The first line of the `.yml` file sets the name of the new environment.
@@ -49,8 +51,6 @@ cd worm-graph/env_setup
 
 
 ## Option B: Setting up with the bash script (recommended)
-
-**Note:** Installing the environment can take anywhere between 10 to 30 minutes.
 
 1. Run the `env.sh` script. This will create the new `worm-graph` environment and install the required packages:
 
