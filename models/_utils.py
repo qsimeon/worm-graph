@@ -125,7 +125,7 @@ class PositionalEncoding(torch.nn.Module):
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
 class Model(torch.nn.Module):
     """Super class for all models.
-    
+
     For all our models:
         1. The output will be the same shape as the input.
         2. A method called `loss_fn` that specifies the specific
@@ -171,8 +171,8 @@ class Model(torch.nn.Module):
         # Name of original loss function
         self.loss_name = self.loss.__name__[:-4]
         # Setup
-        self.input_size = input_size # Number of neurons (302)
-        self.output_size = input_size # Number of neurons (302)
+        self.input_size = input_size  # Number of neurons (302)
+        self.output_size = input_size  # Number of neurons (302)
         self.hidden_size = hidden_size
         self.num_layers = num_layers
         self.reg_param = reg_param
@@ -197,11 +197,14 @@ class Model(torch.nn.Module):
             """Calculate loss with FFT regularization."""
             original_loss = self.loss(**kwargs)(input, target)
             # calculate FFT and take real part
-            input_fft = torch.fft.rfft(input, dim=-2).real # (batch, seq_len, neurons)
-            target_fft = torch.fft.rfft(target, dim=-2).real # (batch, seq_len, neurons)
+            input_fft = torch.fft.rfft(input, dim=-2).real  # (batch, seq_len, neurons)
+            target_fft = torch.fft.rfft(
+                target, dim=-2
+            ).real  # (batch, seq_len, neurons)
             # calculate average difference between real parts of FFTs
             fft_loss = torch.mean(torch.abs(input_fft - target_fft))
-            return (1 - self.reg_param) * original_loss + self.reg_param * fft_loss
+            regularized_loss = original_loss + self.reg_param * fft_loss
+            return regularized_loss
 
         return loss
 
@@ -292,14 +295,14 @@ class LinearNN(Model):
         # Input and hidden layers
         self.input_hidden = (
             torch.nn.Linear(self.input_size, self.hidden_size),
-            # torch.nn.ReLU(),
-            torch.nn.ELU(),
+            torch.nn.ReLU(),
+            # torch.nn.ELU(),
             torch.nn.LayerNorm(self.hidden_size),
         )
         self.hidden_hidden = (self.num_layers - 1) * (
             torch.nn.Linear(self.hidden_size, self.hidden_size),
-            # torch.nn.ReLU(),
-            torch.nn.ELU(),
+            torch.nn.ReLU(),
+            # torch.nn.ELU(),
             torch.nn.LayerNorm(self.hidden_size),
         )
 
