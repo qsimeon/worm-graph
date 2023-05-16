@@ -192,7 +192,6 @@ dmypy.json
 ./data/processed/neural/sine_noise.pickle
 ./data/processed/neural/Leifer2023.pickle
 ./data/processed/neural/sine.pickle
-*.sh
 nohup.out
 data/worm_data_long.csv
 data/worm_data_long_no_resampling.csv
