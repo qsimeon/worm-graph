@@ -1,6 +1,5 @@
 from preprocess._pkg import *
 
-
 class DiffTVR:
     def __init__(self, n: int, dx: float):
         """Initialize DiffTVR class to differentiate with TVR.
@@ -214,19 +213,27 @@ class DiffTVR:
 
 
 def smooth_data_preprocess(calcium_data, smooth_method, dt=1.0):
-    """
-    Smooth the calcium data. Returns the denoised signals calcium signals
-    using FFT.
+    """Smooth the calcium data. Returns the denoised signals calcium signals using FFT.
 
-    Args:
-        calcium_data: original calcium data from dataset
-        smooth_method: the way to smooth data
-        dt: (required when use FFT as smooth_method) the sampling time (unit: sec)
+    Parameters
+    ----------
+        calcium_data: tensor
+            Raw calcium imaging data to smooth
+        smooth_method: str
+            Method to use for smoothing.
+            Options are 'sg' for Savitzky-Golay, 'fft' for FFT, or 'tvr' for 
+            Total Variation Denoising.
+        dt: float
+            Time interval between data points. Only used if FFT is used for smoothing.
 
-    Returns:
-        smooth_ca_data: calcium data that are smoothed
-        residual: original residual (calculated by calcium_data)
-        residual_smooth_ca_data: residual calculated by smoothed calcium data
+    Returns
+    -------
+        smooth_ca_data: tensor
+            Smoothed calcium data
+        residual: tensor
+            Residual from the original data (calcium_data)
+        residual_smooth_ca_data: tensor
+            Residual from the smoothed data (smooth_ca_data)
     """
     n = calcium_data.shape[0]
     # initialize the size for smooth_calcium_data
@@ -1019,7 +1026,7 @@ def pickle_neural_data(
             std_out = subprocess.run(bash_command, text=True) # Run the bash command
             print(std_out, end="\n\n")
 
-        os.unlink(zip_path)  # Remove zip file
+        #!os.unlink(zip_path)  # Remove zip file
 
     # Pickle all the datasets ... OR
     if dataset is None or dataset.lower() == "all":
@@ -1042,8 +1049,8 @@ def pickle_neural_data(
         pickler = eval("pickle_" + dataset)
         pickler(transform, smooth_method, resample_dt) 
 
-    # Delete the downloaded raw datasets
-    shutil.rmtree(source_path)  # Files too large to push to GitHub
+    #!Delete the downloaded raw datasets
+    #!shutil.rmtree(source_path)  # Files too large to push to GitHub
 
     # Create a file to indicate that the preprocessing was succesful
     open(os.path.join(processed_path, ".processed"), "a").close()
@@ -1052,20 +1059,42 @@ def pickle_neural_data(
 
 
 def pickle_Kato2015(transform, smooth_method="fft", resample_dt=1.0):
+    """Pickles the worm neural activity data.
+    
+    Dataset Reference: Kato et al., Cell Reports 2015, Global Brain 
+    Dynamics Embed the Motor Command Sequence of Caenorhabditis elegans.
+
+    Parameters
+    ----------
+    transform : object
+        The transformation to be applied to the data. (MinMaxScaler(-1, 1))
+    smooth_method : str, optional (default: 'fft')
+        The smoothing method to apply to the data
+        options are 'sg', 'fft', 'tvr' or 'raw'.
+    resample_dt : float, optional (default: 1.0)
+        The resampling time interval in seconds.
+        If None, no resampling is performed.
+
+    Returns
+    -------
+    None
+        The function's primary purpose is to preprocess the data and save
+
     """
-    Pickles the worm neural activity data from Kato et al., Cell Reports 2015,
-    Global Brain Dynamics Embed the Motor Command Sequence of Caenorhabditis elegans.
-    """
+
+    logging.info('Loading Kato2015 data')
     data_dict = dict()
     # 'WT_Stim'
-    # load the first .mat file
-    arr = mat73.loadmat(os.path.join(source_path, "Kato2015", "WT_Stim.mat"))["WT_Stim"]
-    print(list(arr.keys()), end="\n\n")
-    # get data for all worms
-    all_IDs = arr["IDs"]  # identified neuron IDs (only subset have neuron names)
-    all_traces = arr["traces"]  # neural activity traces corrected for bleaching
-    timeVectorSeconds = arr["timeVectorSeconds"]
-    print("num. worms:", len(all_IDs), end="\n\n")
+    # Load the first .mat file
+    arr = mat73.loadmat(os.path.join(source_path, "Kato2015", "WT_Stim.mat"))["WT_Stim"] # Return a dict
+    logging.info("Raw dataset keys: {}".format(list(arr.keys())))
+
+    # Get data for all worms
+    all_IDs = arr["IDs"]  # Identified neuron IDs (only subset have neuron names) # (num_worms, id_len:vary)
+    all_traces = arr["traces"]  # Neural activity traces corrected for bleaching (worms) # (num_worms, traces:vary)
+    timeVectorSeconds = arr["timeVectorSeconds"] # (num_worms, traces:vary)
+    logging.info("num. worms: {}".format(len(all_IDs)))
+
     for i, real_data in enumerate(all_traces):
         worm = "worm" + str(i)
         i_IDs = [(j[0] if isinstance(j, list) else j) for j in all_IDs[i]]

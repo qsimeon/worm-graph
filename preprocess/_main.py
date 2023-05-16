@@ -1,5 +1,12 @@
 from preprocess._utils import *
 
+logging.basicConfig(
+    level=logging.DEBUG,  # Set the logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
+    format='%(asctime)s - %(levelname)s - %(message)s',  # Define the log message format
+    datefmt='%d-%b-%y %H:%M:%S',  # Define the date/time format
+    filename=ROOT_DIR+'/logs/execution/preprocess_main.log',  # Specify the log file (optional)
+    filemode='w'  # Set the file mode (optional, default is 'a' for appending)
+)
 
 def process_data(config: DictConfig) -> None:
     """Preprocesses the raw neural and connectome data.
@@ -54,5 +61,12 @@ def process_data(config: DictConfig) -> None:
 
 if __name__ == "__main__":
     config = OmegaConf.load("conf/preprocess.yaml")
-    print("config:", OmegaConf.to_yaml(config), end="\n\n")
-    process_data(config)
+    #print("config:", OmegaConf.to_yaml(config), end="\n\n")
+    #process_data(config)
+    pickle_neural_data(
+            url=config.preprocess.url,
+            zipfile=config.preprocess.zipfile,
+            dataset=config.preprocess.dataset,
+            smooth_method=config.preprocess.smooth,
+            resample_dt=config.preprocess.resample_dt,
+            )
