@@ -45,16 +45,18 @@ cd worm-graph/env_setup
 1. Open your terminal or Anaconda Prompt, and create a new Conda environment using the `.yml` file. The first line of the `.yml` file sets the name of the new environment.
 
     ```
-    conda env create -f environment_cluster.yml
+    conda env create -f environment.yml
     ```
 
 
-## Option B: Setting up with the bash script
+## Option B: Setting up with the bash script (recommended)
 
-1. Run the `init.sh` script. This will create the new `worm-graph` environment and install the required packages:
+**Note:** Installing the environment can take anywhere between 10 to 30 minutes.
+
+1. Run the `env.sh` script. This will create the new `worm-graph` environment and install the required packages:
 
     ```
-    source init.sh
+    source env.sh
     ```
 
 2. Activate the new `worm-graph` environment:
@@ -69,13 +71,15 @@ cd worm-graph/env_setup
     pip install -r requirements.txt
     ```
 
-After finishig one of the installations above, navigate to the root directory (`worm-graph/`) and run:
+After finishig one of the installations above, navigate back to the root directory (`worm-graph/`) and run:
 
+    ```
     conda develop .
+    ```
 
 **Note:** Please ensure to carry out this step, otherwise you may encounter `ModuleNotFoundError`.
 
-*You can check if the environment was successfully installed by running `conda env list`.*
+*You can check if the environment was successfully installed by running `conda env list` or `conda info --envs`.*
 
 **Important Reminder:** Always activate the environment before starting your work on the project using `conda activate worm-graph`.
 
@@ -115,15 +119,13 @@ For Jupyter notebooks, use the `CamelCase` naming style.
 
 - Always shape neural data matrices as `(time, neurons, [features])`. The braces `[]` indicate that the last `features` dimension is optional, as the `neurons` currently serve as the features for our models.
 
-<!-- [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black) -->
+<!-- [![[Black Code Style](https://github.com/psf/black)](https://img.shields.io/badge/code%20style-black-000000.svg)] -->
 
 ## Future Tasks
 
 - Urgent TODOs: 
    - scaling law plots.
-   - search-based approach to logging .
-- Less urgent TODOs: 
-   - investigate the how large language models for NLP are structured to allow prediction of arbitrary future timesteps.
+   - search-based logging.
 - Think about canonical plots to always make:
    - hold all else constant except for a single parameter / config item.
    - color lines by values of the varied parameter / config item.
@@ -143,4 +145,4 @@ For Jupyter notebooks, use the `CamelCase` naming style.
       - is additional biological data needed?
    - perform scaling experiments:
       - varying the (train) dataset size.
-      - training on a single worm vs. multiple worms.
+      ~~- training on a single worm vs. multiple worms.~~

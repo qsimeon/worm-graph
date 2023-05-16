@@ -4,7 +4,8 @@ channels:
   - defaults
 dependencies:
   - matplotlib
-  - pytorch-gpu # comment this out if no GPU
+  ### comment this out if no GPU:
+  - pytorch-gpu 
   - pytorch=1.13
   - scikit-learn
   - black
