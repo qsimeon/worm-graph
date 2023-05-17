@@ -952,7 +952,8 @@ def interpolate_data(time, data, target_dt):
 
     Returns
     -------
-    torch.Tensor, torch.Tensor: Two tensors containing the interpolated time points and data.
+    torch.Tensor, torch.Tensor:
+        Two tensors containing the interpolated time points and data.
     """
 
     # If target_dt is None, return the original data
@@ -1096,7 +1097,7 @@ def pick_non_none(l):
             return l[i]
 
 
-def pickle_Kato2015(transform, smooth_method="fft", resample_dt=1.0):
+def pickle_Kato2015(transform, smooth_method="fft", resample_dt=1.0, norm_dim='neurons'):
     """Pickles the worm neural activity data.
     
     Dataset Reference: Kato et al., Cell Reports 2015, Global Brain 
@@ -1112,6 +1113,9 @@ def pickle_Kato2015(transform, smooth_method="fft", resample_dt=1.0):
     resample_dt : float, optional (default: 1.0)
         The resampling time interval in seconds.
         If None, no resampling is performed.
+    norm_dim : str, optional (default: 'neurons')
+        The dimension to normalize the data along.
+        Options are: 'neurons' (axis=1) or 'time' (axis=0).
 
     Returns
     -------
@@ -1178,9 +1182,15 @@ def pickle_Kato2015(transform, smooth_method="fft", resample_dt=1.0):
         )
 
         # Apply the transformation to the data
-        # TODO: normalization in the feature or in the time dimension
-        real_data = transform.fit_transform(real_data)
-        real_data = torch.tensor(real_data, dtype=torch.float32)
+        assert norm_dim in ['neurons', 'time'], "Invalid norm_dim! Please pick one from: ['neurons', 'time']"
+        if norm_dim == 'neurons':
+            logging.info('Normalizing along neurons')
+            real_data = transform.fit_transform(real_data)
+            real_data = torch.tensor(real_data, dtype=torch.float32)
+        elif norm_dim == 'time':
+            logging.info('Normalizing along time')
+            real_data = transform.fit_transform(real_data.T).T
+            real_data = torch.tensor(real_data, dtype=torch.float32)
 
         # Resample the data to a fixed time step
         time_in_seconds, real_data = interpolate_data(
@@ -1194,9 +1204,8 @@ def pickle_Kato2015(transform, smooth_method="fft", resample_dt=1.0):
         # New dimensions after resampling
         max_timesteps, num_neurons = real_data.shape
 
-        logging.info("Calcium data len: {}, Total num. neurons: {}, \
-                     Named neurons: {}".format(max_timesteps,
-                                               num_neurons, num_named))
+        logging.info("Calcium data len: {}, Total num. neurons: {}, Named neurons: {}".format(
+            max_timesteps, num_neurons, num_named))
 
         # Smooth the data
         # TODO: verify if the dt is passed correctly
@@ -1229,7 +1238,7 @@ def pickle_Kato2015(transform, smooth_method="fft", resample_dt=1.0):
         
         # Standardize the shape of calcium data to 302 x time
         data_dict[worm] = reshape_calcium_data(data_dict[worm])
-        logging.info('Finished loading Kato2015 worm{}'.format(worm))
+        logging.info('Finished loading Kato2015 {}'.format(worm))
 
     # 'WT_NoStim'
     # load the second .mat file
