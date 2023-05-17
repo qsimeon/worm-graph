@@ -1,221 +1,221 @@
 from preprocess._pkg import *
 
 
-class DiffTVR:
-    def __init__(self, n: int, dx: float):
-        """Initialize DiffTVR class to differentiate with TVR.
+# class DiffTVR:
+#     def __init__(self, n: int, dx: float):
+#         """Initialize DiffTVR class to differentiate with TVR.
 
-        Args:
-            n (int): Number of points in data.
-            dx (float): Spacing of data.
-        """
-        self.n = n
-        self.dx = dx
+#         Args:
+#             n (int): Number of points in data.
+#             dx (float): Spacing of data.
+#         """
+#         self.n = n
+#         self.dx = dx
 
-        self.d_mat = self._make_d_mat()
-        self.a_mat = self._make_a_mat()
-        self.a_mat_t = self._make_a_mat_t()
+#         self.d_mat = self._make_d_mat()
+#         self.a_mat = self._make_a_mat()
+#         self.a_mat_t = self._make_a_mat_t()
 
-    def _make_d_mat(self) -> np.array:
-        """Construct differentiation matrix using central differences.
+#     def _make_d_mat(self) -> np.array:
+#         """Construct differentiation matrix using central differences.
 
-        Note:
-            This method is not efficient.
+#         Note:
+#             This method is not efficient.
 
-        Returns:
-            np.array: Differentiation matrix of shape (N, N+1)
-        """
-        arr = np.zeros((self.n, self.n + 1))
-        for i in range(0, self.n):
-            arr[i, i] = -1.0
-            arr[i, i + 1] = 1.0
-        return arr / self.dx
+#         Returns:
+#             np.array: Differentiation matrix of shape (N, N+1)
+#         """
+#         arr = np.zeros((self.n, self.n + 1))
+#         for i in range(0, self.n):
+#             arr[i, i] = -1.0
+#             arr[i, i + 1] = 1.0
+#         return arr / self.dx
 
-    def _make_a_mat(self) -> np.array:
-        """Construct integration matrix using trapezoidal rule.
+#     def _make_a_mat(self) -> np.array:
+#         """Construct integration matrix using trapezoidal rule.
 
-        Note:
-            This method is not efficient.
+#         Note:
+#             This method is not efficient.
 
-        Returns:
-            np.array: Integration matrix of shape (N, N+1)
-        """
-        arr = np.zeros((self.n + 1, self.n + 1))
-        for i in range(0, self.n + 1):
-            if i == 0:
-                continue
-            for j in range(0, self.n + 1):
-                if j == 0:
-                    arr[i, j] = 0.5
-                elif j < i:
-                    arr[i, j] = 1.0
-                elif i == j:
-                    arr[i, j] = 0.5
+#         Returns:
+#             np.array: Integration matrix of shape (N, N+1)
+#         """
+#         arr = np.zeros((self.n + 1, self.n + 1))
+#         for i in range(0, self.n + 1):
+#             if i == 0:
+#                 continue
+#             for j in range(0, self.n + 1):
+#                 if j == 0:
+#                     arr[i, j] = 0.5
+#                 elif j < i:
+#                     arr[i, j] = 1.0
+#                 elif i == j:
+#                     arr[i, j] = 0.5
 
-        return arr[1:] * self.dx
+#         return arr[1:] * self.dx
 
-    def _make_a_mat_t(self) -> np.array:
-        """Construct transpose of the integration matrix using trapezoidal rule.
+#     def _make_a_mat_t(self) -> np.array:
+#         """Construct transpose of the integration matrix using trapezoidal rule.
 
-        Note:
-            This method is not efficient.
+#         Note:
+#             This method is not efficient.
 
-        Returns:
-            np.array: Transpose of the integration matrix of shape (N+1, N)
-        """
-        smat = np.ones((self.n + 1, self.n))
+#         Returns:
+#             np.array: Transpose of the integration matrix of shape (N+1, N)
+#         """
+#         smat = np.ones((self.n + 1, self.n))
 
-        cmat = np.zeros((self.n, self.n))
-        li = np.tril_indices(self.n)
-        cmat[li] = 1.0
+#         cmat = np.zeros((self.n, self.n))
+#         li = np.tril_indices(self.n)
+#         cmat[li] = 1.0
 
-        dmat = np.diag(np.full(self.n, 0.5))
+#         dmat = np.diag(np.full(self.n, 0.5))
 
-        vec = np.array([np.full(self.n, 0.5)])
-        combmat = np.concatenate((vec, cmat - dmat))
+#         vec = np.array([np.full(self.n, 0.5)])
+#         combmat = np.concatenate((vec, cmat - dmat))
 
-        return (smat - combmat) * self.dx
+#         return (smat - combmat) * self.dx
 
-    def make_en_mat(self, deriv_curr: np.array) -> np.array:
-        """Create diffusion matrix.
+#     def make_en_mat(self, deriv_curr: np.array) -> np.array:
+#         """Create diffusion matrix.
 
-        Args:
-            deriv_curr (np.array): Current derivative of length N+1
+#         Args:
+#             deriv_curr (np.array): Current derivative of length N+1
 
-        Returns:
-            np.array: Diffusion matrix of shape (N, N)
-        """
-        eps = pow(10, -6)
-        vec = 1.0 / np.sqrt(pow(self.d_mat @ deriv_curr, 2) + eps)
-        return np.diag(vec)
+#         Returns:
+#             np.array: Diffusion matrix of shape (N, N)
+#         """
+#         eps = pow(10, -6)
+#         vec = 1.0 / np.sqrt(pow(self.d_mat @ deriv_curr, 2) + eps)
+#         return np.diag(vec)
 
-    def make_ln_mat(self, en_mat: np.array) -> np.array:
-        """Calculate diffusivity term.
+#     def make_ln_mat(self, en_mat: np.array) -> np.array:
+#         """Calculate diffusivity term.
 
-        Args:
-            en_mat (np.array): Result from make_en_mat
+#         Args:
+#             en_mat (np.array): Result from make_en_mat
 
-        Returns:
-            np.array: Diffusivity term of shape (N+1, N+1)
-        """
-        return self.dx * np.transpose(self.d_mat) @ en_mat @ self.d_mat
+#         Returns:
+#             np.array: Diffusivity term of shape (N+1, N+1)
+#         """
+#         return self.dx * np.transpose(self.d_mat) @ en_mat @ self.d_mat
 
-    def make_gn_vec(
-        self,
-        deriv_curr: np.array,
-        data: np.array,
-        alpha: float,
-        ln_mat: np.array,
-    ) -> np.array:
-        """Calculate the negative right hand side of the linear problem.
+#     def make_gn_vec(
+#         self,
+#         deriv_curr: np.array,
+#         data: np.array,
+#         alpha: float,
+#         ln_mat: np.array,
+#     ) -> np.array:
+#         """Calculate the negative right hand side of the linear problem.
 
-        Args:
-            deriv_curr (np.array): Current derivative of size N+1
-            data (np.array): Data of size N
-            alpha (float): Regularization parameter
-            ln_mat (np.array): Diffusivity term from make_ln_mat
+#         Args:
+#             deriv_curr (np.array): Current derivative of size N+1
+#             data (np.array): Data of size N
+#             alpha (float): Regularization parameter
+#             ln_mat (np.array): Diffusivity term from make_ln_mat
 
-        Returns:
-            np.array: Vector of length N+1
-        """
-        return (
-            self.a_mat_t @ self.a_mat @ deriv_curr
-            - self.a_mat_t @ (data - data[0])
-            + alpha * ln_mat @ deriv_curr
-        )
+#         Returns:
+#             np.array: Vector of length N+1
+#         """
+#         return (
+#             self.a_mat_t @ self.a_mat @ deriv_curr
+#             - self.a_mat_t @ (data - data[0])
+#             + alpha * ln_mat @ deriv_curr
+#         )
 
-    def make_hn_mat(self, alpha: float, ln_mat: np.array) -> np.array:
-        """Construct matrix in linear problem.
+#     def make_hn_mat(self, alpha: float, ln_mat: np.array) -> np.array:
+#         """Construct matrix in linear problem.
 
-        Args:
-            alpha (float): Regularization parameter
-            ln_mat (np.array): Diffusivity term from make_ln_mat
+#         Args:
+#             alpha (float): Regularization parameter
+#             ln_mat (np.array): Diffusivity term from make_ln_mat
 
-        Returns:
-            np.array: Matrix of shape (N+1, N+1)
-        """
-        return self.a_mat_t @ self.a_mat + alpha * ln_mat
+#         Returns:
+#             np.array: Matrix of shape (N+1, N+1)
+#         """
+#         return self.a_mat_t @ self.a_mat + alpha * ln_mat
 
-    def get_deriv_tvr_update(
-        self,
-        data: np.array,
-        deriv_curr: np.array,
-        alpha: float,
-    ) -> np.array:
-        """Compute the TVR update.
+#     def get_deriv_tvr_update(
+#         self,
+#         data: np.array,
+#         deriv_curr: np.array,
+#         alpha: float,
+#     ) -> np.array:
+#         """Compute the TVR update.
 
-        Args:
-            data (np.array): Data of size N
-            deriv_curr (np.array): Current derivative of size N+1
-            alpha (float): Regularization parameter
+#         Args:
+#             data (np.array): Data of size N
+#             deriv_curr (np.array): Current derivative of size N+1
+#             alpha (float): Regularization parameter
 
-        Returns:
-            np.array: Update vector of size N+1
-        """
-        n = len(data)
+#         Returns:
+#             np.array: Update vector of size N+1
+#         """
+#         n = len(data)
 
-        en_mat = self.make_en_mat(deriv_curr=deriv_curr)
+#         en_mat = self.make_en_mat(deriv_curr=deriv_curr)
 
-        ln_mat = self.make_ln_mat(en_mat=en_mat)
+#         ln_mat = self.make_ln_mat(en_mat=en_mat)
 
-        hn_mat = self.make_hn_mat(alpha=alpha, ln_mat=ln_mat)
+#         hn_mat = self.make_hn_mat(alpha=alpha, ln_mat=ln_mat)
 
-        gn_vec = self.make_gn_vec(
-            deriv_curr=deriv_curr, data=data, alpha=alpha, ln_mat=ln_mat
-        )
+#         gn_vec = self.make_gn_vec(
+#             deriv_curr=deriv_curr, data=data, alpha=alpha, ln_mat=ln_mat
+#         )
 
-        return solve(hn_mat, -gn_vec)
+#         return solve(hn_mat, -gn_vec)
 
-    def get_deriv_tvr(
-        self,
-        data: np.array,
-        deriv_guess: np.array,
-        alpha: float,
-        no_opt_steps: int,
-        return_progress: bool = False,
-        return_interval: int = 1,
-    ) -> Tuple[np.array, np.array]:
-        """Compute derivative using TVR over optimization steps.
+#     def get_deriv_tvr(
+#         self,
+#         data: np.array,
+#         deriv_guess: np.array,
+#         alpha: float,
+#         no_opt_steps: int,
+#         return_progress: bool = False,
+#         return_interval: int = 1,
+#     ) -> Tuple[np.array, np.array]:
+#         """Compute derivative using TVR over optimization steps.
 
-        Args:
-            data (np.array): Data of size N
-            deriv_guess (np.array): Guess for derivative of size N+1
-            alpha (float): Regularization parameter
-            no_opt_steps (int): Number of optimization steps to run
-            return_progress (bool, optional): If True, return derivative progress during optimization.
-                                              Defaults to False.
-            return_interval (int, optional): Interval at which to store derivative if returning progress.
-                                              Defaults to 1.
+#         Args:
+#             data (np.array): Data of size N
+#             deriv_guess (np.array): Guess for derivative of size N+1
+#             alpha (float): Regularization parameter
+#             no_opt_steps (int): Number of optimization steps to run
+#             return_progress (bool, optional): If True, return derivative progress during optimization.
+#                                               Defaults to False.
+#             return_interval (int, optional): Interval at which to store derivative if returning progress.
+#                                               Defaults to 1.
 
-        Returns:
-            Tuple[np.array,np.array]: First element is the final derivative of size N+1, second element is
-                                      the stored derivatives if return_progress=True of shape
-                                      (no_opt_steps+1, N+1), else an empty array.
-        """
-        deriv_curr = deriv_guess
+#         Returns:
+#             Tuple[np.array,np.array]: First element is the final derivative of size N+1, second element is
+#                                       the stored derivatives if return_progress=True of shape
+#                                       (no_opt_steps+1, N+1), else an empty array.
+#         """
+#         deriv_curr = deriv_guess
 
-        if return_progress:
-            deriv_st = np.full((no_opt_steps + 1, len(deriv_guess)), 0)
-        else:
-            deriv_st = np.array([])
+#         if return_progress:
+#             deriv_st = np.full((no_opt_steps + 1, len(deriv_guess)), 0)
+#         else:
+#             deriv_st = np.array([])
 
-        for opt_step in range(0, no_opt_steps):
-            update = self.get_deriv_tvr_update(
-                data=data, deriv_curr=deriv_curr, alpha=alpha
-            )
+#         for opt_step in range(0, no_opt_steps):
+#             update = self.get_deriv_tvr_update(
+#                 data=data, deriv_curr=deriv_curr, alpha=alpha
+#             )
 
-            deriv_curr += update
+#             deriv_curr += update
 
-            if return_progress:
-                if opt_step % return_interval == 0:
-                    deriv_st[int(opt_step / return_interval)] = deriv_curr
+#             if return_progress:
+#                 if opt_step % return_interval == 0:
+#                     deriv_st[int(opt_step / return_interval)] = deriv_curr
 
-        return (deriv_curr, deriv_st)
+#         return (deriv_curr, deriv_st)
 
 
 def smooth_data_preprocess(calcium_data, smooth_method, dt=1.0):
-    """Smooths the calcium data provided as a (num_neurons, time) array `calcium_data`. 
-    
+    """Smooths the calcium data provided as a (num_neurons, time) array `calcium_data`.
+
     Returns the denoised signals calcium signals using the method specified by `smooth_method`.
 
     Args:
@@ -270,12 +270,12 @@ def smooth_data_preprocess(calcium_data, smooth_method, dt=1.0):
 
 def preprocess_connectome(raw_dir, raw_files):
     """Convert the raw connectome data to a graph tensor.
-    
+
     This function processes raw connectome data, which includes chemical
     synapses and gap junctions, into a format suitable for use in machine
     learning or graph analysis. It reads the raw data in .csv format,
     processes it to extract relevant information, and creates graph
-    tensors that represent the C. elegans connectome. The resulting 
+    tensors that represent the C. elegans connectome. The resulting
     graph tensors are saved in the 'data/processed/connectome' folder
     as 'graph_tensors.pt'.
 
@@ -435,12 +435,12 @@ def preprocess_connectome(raw_dir, raw_files):
     # Graph for electrical connectivity
     electrical_graph = Data(
         x=x, edge_index=ggap_edge_index, edge_attr=ggap_edge_attr, y=y
-    ) # torch_geometric package
+    )  # torch_geometric package
 
     # Graph for chemical connectivity
     chemical_graph = Data(
         x=x, edge_index=gsyn_edge_index, edge_attr=gsyn_edge_attr, y=y
-    ) # torch_geometric package
+    )  # torch_geometric package
 
     # Merge electrical and chemical graphs into a single connectome graph
     edge_index = torch.hstack((electrical_graph.edge_index, chemical_graph.edge_index))
@@ -472,7 +472,7 @@ def preprocess_connectome(raw_dir, raw_files):
     pos = dict(zip(np.arange(graph.num_nodes), np.zeros(shape=(graph.num_nodes, 2))))
     for k, v in zip(keys, values):
         pos[k] = v
-    
+
     # Assign each node its global node index
     n_id = torch.arange(graph.num_nodes)
 
@@ -898,9 +898,9 @@ def interpolate_data(time, data, target_dt):
     """Interpolate data using np.interp, with support for torch.Tensor.
 
     This function takes the given time points and corresponding data and
-    interpolates them to create new data points with the desired time 
-    interval. The input tensors are first converted to NumPy arrays for 
-    interpolation, and the interpolated data and time points are then 
+    interpolates them to create new data points with the desired time
+    interval. The input tensors are first converted to NumPy arrays for
+    interpolation, and the interpolated data and time points are then
     converted back to torch.Tensor objects before being returned.
 
     Parameters
@@ -977,7 +977,7 @@ def pickle_neural_data(
     Calls
     -----
     pickle_{dataset} : function in preprocess/_utils.py
-        Where dataset = {Kato2015, Nichols2017, Nguyen2017, Skora2018, 
+        Where dataset = {Kato2015, Nichols2017, Nguyen2017, Skora2018,
                          Kaplan2020, Uzel2022, Flavell2023, Leifer2023}
 
     Returns
@@ -998,7 +998,7 @@ def pickle_neural_data(
     source_path = os.path.join(ROOT_DIR, zipfile.strip(".zip"))
     processed_path = os.path.join(ROOT_DIR, "data/processed/neural")
 
-    # If .zip not found in the root directory, download the curated 
+    # If .zip not found in the root directory, download the curated
     # open-source worm datasets from host server
     if not os.path.exists(source_path):
         # ~1.8GB to download
@@ -1016,7 +1016,7 @@ def pickle_neural_data(
                 "-d",
                 source_path,
             ]
-            std_out = subprocess.run(bash_command, text=True) # Run the bash command
+            std_out = subprocess.run(bash_command, text=True)  # Run the bash command
             print(std_out, end="\n\n")
 
         os.unlink(zip_path)  # Remove zip file
@@ -1025,7 +1025,7 @@ def pickle_neural_data(
     if dataset is None or dataset.lower() == "all":
         for dataset in VALID_DATASETS:
             if dataset.__contains__("sine"):
-                continue # skip these test datasets
+                continue  # skip these test datasets
             print("Dataset:", dataset, end="\n\n")
             # call the "pickle" functions in preprocess/_utils.py (functions below)
             pickler = eval("pickle_" + dataset)
@@ -1040,7 +1040,7 @@ def pickle_neural_data(
         print("Dataset:", dataset, end="\n\n")
         # call the "pickle" functions in preprocess/_utils.py (functions below)
         pickler = eval("pickle_" + dataset)
-        pickler(transform, smooth_method, resample_dt) 
+        pickler(transform, smooth_method, resample_dt)
 
     # Delete the downloaded raw datasets
     shutil.rmtree(source_path)  # Files too large to push to GitHub
