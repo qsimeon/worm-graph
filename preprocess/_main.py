@@ -1,7 +1,7 @@
 from preprocess._utils import *
 
 logging.basicConfig(
-    level=logging.DEBUG,  # Set the logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
+    level=logging.INFO,  # Set the logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
     format='%(asctime)s - %(levelname)s - %(message)s',  # Define the log message format
     datefmt='%d-%b-%y %H:%M:%S',  # Define the date/time format
     filename=ROOT_DIR+'/logs/execution/preprocess_main.log',  # Specify the log file (optional)
