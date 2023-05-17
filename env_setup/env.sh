@@ -11,9 +11,9 @@ conda create -y -n $ENV_NAME python=3.9
 # Install PyTorch with CUDA support
 echo "Installing PyTorch with CUDA."
 echo ""
-#### use this for GPU: 
+#### uncomment line below for GPU: 
 # conda install --name $ENV_NAME -y pytorch torchvision torchaudio pytorch-cuda=11.8 -c pytorch -c nvidia
-### use this if no GPU:
+### uncomment line below if no GPU:
 conda install --name $ENV_NAME -y pytorch torchvision torchaudio -c pytorch -c nvidia
 
 # Install PyTorch Geometric

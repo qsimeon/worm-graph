@@ -214,9 +214,9 @@ class DiffTVR:
 
 
 def smooth_data_preprocess(calcium_data, smooth_method, dt=1.0):
-    """
-    Smooth the calcium data. Returns the denoised signals calcium signals
-    using FFT.
+    """Smooths the calcium data provided as a (num_neurons, time) array `calcium_data`. 
+    
+    Returns the denoised signals calcium signals using the method specified by `smooth_method`.
 
     Args:
         calcium_data: original calcium data from dataset

@@ -1,5 +1,6 @@
 defaults:
   # - override hydra/launcher: joblib
+  # - override hydra/launcher: submitit_local
   # NOTE: WHEN ON OPENMIND, UNCOMMENT LINES BELOW TO RUN MULTIPLE SLURM JOBS
   - override /hydra/launcher: submitit_slurm
   
