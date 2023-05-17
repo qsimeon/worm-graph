@@ -292,8 +292,11 @@ def fast_fourier_transform_smooth(x, dt):
 
     Parameters:
         x (ndarray): The input time series to be smoothed.
-        dt (int): The uniform time spacing (in seconds) between individual samples.
+        dt (float): The uniform time spacing (in seconds) between individual samples.
     """
+    if x.ndim == 1:
+        x = x.reshape(-1, 1)
+    x = torch.tensor(x, dtype=torch.float32)
     max_timesteps, num_neurons = x.shape
     x_smooth = torch.zeros_like(x)
     frequencies = torch.fft.rfftfreq(max_timesteps, d=dt)  # dt: sampling time
@@ -409,7 +412,7 @@ def reshape_calcium_data(single_worm_dataset):
     free_slots = list(np.where(~named_neurons_mask)[0])
     slot_to_unknown_neuron = dict(
         zip(
-            np.random.choice(free_slots, num_unknown_neurons, replace="False"),
+            np.random.choice(free_slots, num_unknown_neurons, replace=False),
             unknown_neuron_to_idx.keys(),
         )
     )
