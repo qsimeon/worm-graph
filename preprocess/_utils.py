@@ -505,36 +505,54 @@ def preprocess_connectome(raw_dir, raw_files):
 
 
 def reshape_calcium_data(single_worm_dataset):
+    """Standardizes the calcium data to a (max_timesteps, 302) shape.
+    
+    Inserts neuron masks and mappings of neuron labels to indices in the data.
+
+    Parameters
+    ----------
+    single_worm_dataset : dict
+        Dictionary containing the calcium data for a single worm.
+    
+    Returns
+    -------
+    single_worm_dataset : dict
+        Dictionary containing the reshaped dataset.
     """
-    Modifies the worm dataset to restructure calcium data
-    into a standard shape of max_timesteps x 302. Inserts neuron
-    masks and mappings of neuron labels to indices in the data.
-    """
-    # get the calcium data for this worm
+
+    # Get the calcium data for this worm
     origin_calcium_data = single_worm_dataset["calcium_data"]
     smooth_calcium_data = single_worm_dataset["smooth_calcium_data"]
     residual_calcium = single_worm_dataset["residual_calcium"]
     smooth_residual_calcium = single_worm_dataset["smooth_residual_calcium"]
-    # get the number of unidentified tracked neurons
+
+    # Get the number of unidentified tracked neurons
     num_unknown_neurons = single_worm_dataset["num_unknown_neurons"]
-    # get the neuron to idx map
+
+    # Get the neuron to idx map of this worm
     neuron_to_idx = single_worm_dataset["neuron_to_idx"]
     idx_to_neuron = single_worm_dataset["idx_to_neuron"]
-    # get the length of the time series
+
+    # Get the length of the time series
     max_timesteps = single_worm_dataset["max_timesteps"]
-    # load names of all 302 neurons
+
+    # Load names of all 302 neurons
     neurons_302 = NEURONS_302
-    # check the calcium data
+
+    # Check the calcium data
     assert len(idx_to_neuron) == origin_calcium_data.size(
         1
     ), "Number of neurons in calcium dataset does not match number of recorded neurons."
-    # create new maps of neurons to indices
+
+    # Create new maps of neurons to indices
     named_neuron_to_idx = dict()
     unknown_neuron_to_idx = dict()
-    # create masks of which neurons have data
+
+    # Create masks of which neurons have data
     named_neurons_mask = torch.zeros(302, dtype=torch.bool)
     unknown_neurons_mask = torch.zeros(302, dtype=torch.bool)
-    # create the new calcium data structure
+
+    # Create the new calcium data structure
     # len(residual) = len(data) - 1
     standard_calcium_data = torch.zeros(
         max_timesteps, 302, dtype=origin_calcium_data.dtype
@@ -548,27 +566,34 @@ def reshape_calcium_data(single_worm_dataset):
     standard_residual_smooth_calcium = torch.zeros(
         max_timesteps, 302, dtype=smooth_residual_calcium.dtype
     )
-    # fill the new calcium data structure with data from named neurons
+
+    # Fill the new calcium data structure with data from named neurons
     slot_to_named_neuron = dict((k, v) for k, v in enumerate(neurons_302))
     for slot, neuron in slot_to_named_neuron.items():
-        if neuron in neuron_to_idx:  # named neuron
-            idx = neuron_to_idx[neuron]
-            named_neuron_to_idx[neuron] = idx
+        if neuron in neuron_to_idx:
+            # If named neuron is in the dataset
+            idx = neuron_to_idx[neuron] # Extract its position in the dataset
+            named_neuron_to_idx[neuron] = idx # Include it in the named neuron map
+
+            # Add its data in the neuron standard position
             standard_calcium_data[:, slot] = origin_calcium_data[:, idx]
-            standard_residual_calcium[:, slot] = residual_calcium[:, idx]
+            standard_residual_calcium[:, slot] = residual_calcium[:, idx] 
             standard_smooth_calcium_data[:, slot] = smooth_calcium_data[:, idx]
             standard_residual_smooth_calcium[:, slot] = smooth_residual_calcium[:, idx]
-            named_neurons_mask[slot] = True
-    # randomly distribute the remaining data from unknown neurons
+            named_neurons_mask[slot] = True # Mask the named neuron as having data
+
+    # Randomly distribute the remaining data from unknown neurons
     for neuron in set(neuron_to_idx) - set(named_neuron_to_idx):
         unknown_neuron_to_idx[neuron] = neuron_to_idx[neuron]
     free_slots = list(np.where(~named_neurons_mask)[0])
+
     slot_to_unknown_neuron = dict(
         zip(
-            np.random.choice(free_slots, num_unknown_neurons, replace="False"),
-            unknown_neuron_to_idx.keys(),
+            np.random.choice(free_slots, num_unknown_neurons, replace=False).tolist(),
+            list(unknown_neuron_to_idx.keys()),
         )
     )
+
     for slot, neuron in slot_to_unknown_neuron.items():
         idx = unknown_neuron_to_idx[neuron]
         standard_calcium_data[:, slot] = origin_calcium_data[:, idx]
@@ -576,11 +601,13 @@ def reshape_calcium_data(single_worm_dataset):
         standard_smooth_calcium_data[:, slot] = smooth_calcium_data[:, idx]
         standard_residual_smooth_calcium[:, slot] = smooth_residual_calcium[:, idx]
         unknown_neurons_mask[slot] = True
-    # combined slot to neuron mapping
+
+    # Combined slot to neuron mapping
     slot_to_neuron = dict()
     slot_to_neuron.update(slot_to_named_neuron)
     slot_to_neuron.update(slot_to_unknown_neuron)
-    # modify the worm dataset to with new attributes
+
+    # Modify the worm dataset to with new attributes
     single_worm_dataset.update(
         {
             "calcium_data": standard_calcium_data,
@@ -608,11 +635,13 @@ def reshape_calcium_data(single_worm_dataset):
             "neuron_to_slot": dict((v, k) for k, v in slot_to_neuron.items()),
         }
     )
-    # delete all original index mappings
+
+    # Delete all original index mappings
     keys_to_delete = [key for key in single_worm_dataset if "idx" in key]
     for key in keys_to_delete:
         single_worm_dataset.pop(key, None)
-    # return the dataset for this worm
+
+    # Return the dataset for this worm
     return single_worm_dataset
 
 
@@ -925,6 +954,7 @@ def interpolate_data(time, data, target_dt):
     -------
     torch.Tensor, torch.Tensor: Two tensors containing the interpolated time points and data.
     """
+
     # If target_dt is None, return the original data
     if target_dt is None:
         return time, data
@@ -1058,6 +1088,14 @@ def pickle_neural_data(
     return None
 
 
+def pick_non_none(l):
+    """Returns the first non-None element in a list (l).
+    """
+    for i in range(len(l)):
+        if l[i] is not None:
+            return l[i]
+
+
 def pickle_Kato2015(transform, smooth_method="fft", resample_dt=1.0):
     """Pickles the worm neural activity data.
     
@@ -1093,24 +1131,29 @@ def pickle_Kato2015(transform, smooth_method="fft", resample_dt=1.0):
     all_IDs = arr["IDs"]  # Identified neuron IDs (only subset have neuron names) # (num_worms, id_len:vary)
     all_traces = arr["traces"]  # Neural activity traces corrected for bleaching (worms) # (num_worms, traces:vary)
     timeVectorSeconds = arr["timeVectorSeconds"] # (num_worms, traces:vary)
-    logging.info("num. worms: {}".format(len(all_IDs)))
+    logging.info("Num. worms: {}".format(len(all_IDs)))
 
     for i, real_data in enumerate(all_traces):
         worm = "worm" + str(i)
-        i_IDs = [(j[0] if isinstance(j, list) else j) for j in all_IDs[i]]
+        i_IDs = [(pick_non_none(j) if isinstance(j, list) else j) for j in all_IDs[i]] # Converting to single list
         i_IDs = [
             (str(_) if j is None or isinstance(j, np.ndarray) else str(j))
             for _, j in enumerate(i_IDs)
-        ]
+        ] # Position on the list or name of the neuron
         _, inds = np.unique(
             i_IDs, return_index=True
-        )  # only keep indices of unique neuron IDs
-        i_IDs = [i_IDs[_] for _ in inds]
-        real_data = real_data[:, inds.astype(int)]  # only get data for unique neurons
+        )  # Get unique neurons and their indices
+        i_IDs = [i_IDs[_] for _ in inds]  # Only keep indices of unique neuron IDs
+
+        real_data = real_data[:, inds.astype(int)]  # Only get data for unique neurons
+
+        # Mapping unique neuron IDs to indices
         neuron_to_idx = {
             nid: (str(nid) if (j is None or isinstance(j, np.ndarray)) else str(j))
             for nid, j in enumerate(i_IDs)
         }
+
+        # Format the neuron names if it finishes with 0
         neuron_to_idx = {
             nid: (
                 name.replace("0", "")
@@ -1119,37 +1162,49 @@ def pickle_Kato2015(transform, smooth_method="fft", resample_dt=1.0):
             )
             for nid, name in neuron_to_idx.items()
         }
+
+        # Invert the mapping
         neuron_to_idx = dict(
             (v, k) for k, v in neuron_to_idx.items()
-        )  # map should be neuron -> index
+        )
+
+        # Reshape time into a column vector
         time_in_seconds = timeVectorSeconds[i].reshape(timeVectorSeconds[i].shape[0], 1)
         time_in_seconds = torch.tensor(time_in_seconds).to(torch.float32)
+
+        # Retrieve the number of neurons that were ID'd (have name)
         num_named = len(
             [k for k in neuron_to_idx.keys() if not k.isnumeric()]
-        )  # number of neurons that were ID'd
-        sc = transform  # normalize data
-        real_data = sc.fit_transform(real_data)
-        real_data = torch.tensor(
-            real_data, dtype=torch.float32
-        )  # add a feature dimension and convert to tensor
-        # resample the data to a fixed time step
+        )
+
+        # Apply the transformation to the data
+        # TODO: normalization in the feature or in the time dimension
+        real_data = transform.fit_transform(real_data)
+        real_data = torch.tensor(real_data, dtype=torch.float32)
+
+        # Resample the data to a fixed time step
         time_in_seconds, real_data = interpolate_data(
             time_in_seconds, real_data, target_dt=resample_dt
         )
-        # caclucate the time step
+
+        # Calculate the time step
         dt = torch.zeros_like(time_in_seconds).to(torch.float32)
         dt[1:] = time_in_seconds[1:] - time_in_seconds[:-1]
-        # recalculate max_timesteps and num_neurons
+
+        # New dimensions after resampling
         max_timesteps, num_neurons = real_data.shape
-        print(
-            "len. Ca recording %s, total num. neurons %s, num. ID'd neurons %s"
-            % (max_timesteps, num_neurons, num_named),
-            end="\n\n",
-        )
-        # smooth the data
+
+        logging.info("Calcium data len: {}, Total num. neurons: {}, \
+                     Named neurons: {}".format(max_timesteps,
+                                               num_neurons, num_named))
+
+        # Smooth the data
+        # TODO: verify if the dt is passed correctly
         smooth_real_data, residual, smooth_residual = smooth_data_preprocess(
-            real_data, smooth_method
+            real_data, smooth_method, dt=resample_dt
         )
+
+        # Save the data
         data_dict.update(
             {
                 worm: {
@@ -1171,8 +1226,10 @@ def pickle_Kato2015(transform, smooth_method="fft", resample_dt=1.0):
                 },
             }
         )
-        # standardize the shape of calcium data to 302 x time
+        
+        # Standardize the shape of calcium data to 302 x time
         data_dict[worm] = reshape_calcium_data(data_dict[worm])
+        logging.info('Finished loading Kato2015 worm{}'.format(worm))
 
     # 'WT_NoStim'
     # load the second .mat file
