@@ -1,220 +1,53 @@
 from preprocess._pkg import *
 
 
-# class DiffTVR:
-#     def __init__(self, n: int, dx: float):
-#         """Initialize DiffTVR class to differentiate with TVR.
+def total_variation_regularization_smooth(x, t, alpha):
+    """
+    Total variation regularization for smoothing a multidimensional time series.
 
-#         Args:
-#             n (int): Number of points in data.
-#             dx (float): Spacing of data.
-#         """
-#         self.n = n
-#         self.dx = dx
+    Parameters:
+        x (ndarray): The input time series to be smoothed.
+        t (ndarray): The time vector corresponding to the input time series.
+        alpha (float): The regularization parameter.
 
-#         self.d_mat = self._make_d_mat()
-#         self.a_mat = self._make_a_mat()
-#         self.a_mat_t = self._make_a_mat_t()
+    Returns:
+        ndarray: The smoothed time series.
+    """
+    n = len(x)
+    dt = np.diff(t)
+    A = np.zeros((n - 1, n))
+    for i in range(n - 1):
+        A[i, i] = -1 / dt[i]
+        A[i, i + 1] = 1 / dt[i]
 
-#     def _make_d_mat(self) -> np.array:
-#         """Construct differentiation matrix using central differences.
+    def objective(g):
+        return np.sum((g - x) ** 2) + alpha * np.sum(np.abs(np.dot(A, g)))
 
-#         Note:
-#             This method is not efficient.
+    g0 = np.zeros(n)
+    res = minimize(objective, g0, method="L-BFGS-B")
+    return res.x
 
-#         Returns:
-#             np.array: Differentiation matrix of shape (N, N+1)
-#         """
-#         arr = np.zeros((self.n, self.n + 1))
-#         for i in range(0, self.n):
-#             arr[i, i] = -1.0
-#             arr[i, i + 1] = 1.0
-#         return arr / self.dx
 
-#     def _make_a_mat(self) -> np.array:
-#         """Construct integration matrix using trapezoidal rule.
+def finite_difference_smooth(x_, t_):
+    """Uses the Smoothed Finite Difference derivative from PySINDy for smoothing.
 
-#         Note:
-#             This method is not efficient.
+    Parameters:
+        x (ndarray): The input time series to be smoothed.
+        t (ndarray): The time vector corresponding to the input time series.
 
-#         Returns:
-#             np.array: Integration matrix of shape (N, N+1)
-#         """
-#         arr = np.zeros((self.n + 1, self.n + 1))
-#         for i in range(0, self.n + 1):
-#             if i == 0:
-#                 continue
-#             for j in range(0, self.n + 1):
-#                 if j == 0:
-#                     arr[i, j] = 0.5
-#                 elif j < i:
-#                     arr[i, j] = 1.0
-#                 elif i == j:
-#                     arr[i, j] = 0.5
-
-#         return arr[1:] * self.dx
-
-#     def _make_a_mat_t(self) -> np.array:
-#         """Construct transpose of the integration matrix using trapezoidal rule.
-
-#         Note:
-#             This method is not efficient.
-
-#         Returns:
-#             np.array: Transpose of the integration matrix of shape (N+1, N)
-#         """
-#         smat = np.ones((self.n + 1, self.n))
-
-#         cmat = np.zeros((self.n, self.n))
-#         li = np.tril_indices(self.n)
-#         cmat[li] = 1.0
-
-#         dmat = np.diag(np.full(self.n, 0.5))
-
-#         vec = np.array([np.full(self.n, 0.5)])
-#         combmat = np.concatenate((vec, cmat - dmat))
-
-#         return (smat - combmat) * self.dx
-
-#     def make_en_mat(self, deriv_curr: np.array) -> np.array:
-#         """Create diffusion matrix.
-
-#         Args:
-#             deriv_curr (np.array): Current derivative of length N+1
-
-#         Returns:
-#             np.array: Diffusion matrix of shape (N, N)
-#         """
-#         eps = pow(10, -6)
-#         vec = 1.0 / np.sqrt(pow(self.d_mat @ deriv_curr, 2) + eps)
-#         return np.diag(vec)
-
-#     def make_ln_mat(self, en_mat: np.array) -> np.array:
-#         """Calculate diffusivity term.
-
-#         Args:
-#             en_mat (np.array): Result from make_en_mat
-
-#         Returns:
-#             np.array: Diffusivity term of shape (N+1, N+1)
-#         """
-#         return self.dx * np.transpose(self.d_mat) @ en_mat @ self.d_mat
-
-#     def make_gn_vec(
-#         self,
-#         deriv_curr: np.array,
-#         data: np.array,
-#         alpha: float,
-#         ln_mat: np.array,
-#     ) -> np.array:
-#         """Calculate the negative right hand side of the linear problem.
-
-#         Args:
-#             deriv_curr (np.array): Current derivative of size N+1
-#             data (np.array): Data of size N
-#             alpha (float): Regularization parameter
-#             ln_mat (np.array): Diffusivity term from make_ln_mat
-
-#         Returns:
-#             np.array: Vector of length N+1
-#         """
-#         return (
-#             self.a_mat_t @ self.a_mat @ deriv_curr
-#             - self.a_mat_t @ (data - data[0])
-#             + alpha * ln_mat @ deriv_curr
-#         )
-
-#     def make_hn_mat(self, alpha: float, ln_mat: np.array) -> np.array:
-#         """Construct matrix in linear problem.
-
-#         Args:
-#             alpha (float): Regularization parameter
-#             ln_mat (np.array): Diffusivity term from make_ln_mat
-
-#         Returns:
-#             np.array: Matrix of shape (N+1, N+1)
-#         """
-#         return self.a_mat_t @ self.a_mat + alpha * ln_mat
-
-#     def get_deriv_tvr_update(
-#         self,
-#         data: np.array,
-#         deriv_curr: np.array,
-#         alpha: float,
-#     ) -> np.array:
-#         """Compute the TVR update.
-
-#         Args:
-#             data (np.array): Data of size N
-#             deriv_curr (np.array): Current derivative of size N+1
-#             alpha (float): Regularization parameter
-
-#         Returns:
-#             np.array: Update vector of size N+1
-#         """
-#         n = len(data)
-
-#         en_mat = self.make_en_mat(deriv_curr=deriv_curr)
-
-#         ln_mat = self.make_ln_mat(en_mat=en_mat)
-
-#         hn_mat = self.make_hn_mat(alpha=alpha, ln_mat=ln_mat)
-
-#         gn_vec = self.make_gn_vec(
-#             deriv_curr=deriv_curr, data=data, alpha=alpha, ln_mat=ln_mat
-#         )
-
-#         return solve(hn_mat, -gn_vec)
-
-#     def get_deriv_tvr(
-#         self,
-#         data: np.array,
-#         deriv_guess: np.array,
-#         alpha: float,
-#         no_opt_steps: int,
-#         return_progress: bool = False,
-#         return_interval: int = 1,
-#     ) -> Tuple[np.array, np.array]:
-#         """Compute derivative using TVR over optimization steps.
-
-#         Args:
-#             data (np.array): Data of size N
-#             deriv_guess (np.array): Guess for derivative of size N+1
-#             alpha (float): Regularization parameter
-#             no_opt_steps (int): Number of optimization steps to run
-#             return_progress (bool, optional): If True, return derivative progress during optimization.
-#                                               Defaults to False.
-#             return_interval (int, optional): Interval at which to store derivative if returning progress.
-#                                               Defaults to 1.
-
-#         Returns:
-#             Tuple[np.array,np.array]: First element is the final derivative of size N+1, second element is
-#                                       the stored derivatives if return_progress=True of shape
-#                                       (no_opt_steps+1, N+1), else an empty array.
-#         """
-#         deriv_curr = deriv_guess
-
-#         if return_progress:
-#             deriv_st = np.full((no_opt_steps + 1, len(deriv_guess)), 0)
-#         else:
-#             deriv_st = np.array([])
-
-#         for opt_step in range(0, no_opt_steps):
-#             update = self.get_deriv_tvr_update(
-#                 data=data, deriv_curr=deriv_curr, alpha=alpha
-#             )
-
-#             deriv_curr += update
-
-#             if return_progress:
-#                 if opt_step % return_interval == 0:
-#                     deriv_st[int(opt_step / return_interval)] = deriv_curr
-
-#         return (deriv_curr, deriv_st)
+    Returns:
+        ndarray: The smoothed time series.
+    """
+    dt = np.diff(t_, prepend=t_[0] - np.diff(t_)[0])
+    diff = differentiation.SmoothedFiniteDifference()
+    dxdt = diff._differentiate(x_, t_)
+    x_smooth = np.cumsum(dxdt) * dt
+    return x_smooth
 
 
 def smooth_data_preprocess(calcium_data, smooth_method, dt=1.0):
     """Smooths the calcium data provided as a (num_neurons, time) array `calcium_data`.
+    TODO: Change arguments to include time vector.
 
     Returns the denoised signals calcium signals using the method specified by `smooth_method`.
 
@@ -241,24 +74,14 @@ def smooth_data_preprocess(calcium_data, smooth_method, dt=1.0):
         smooth_ca_data = torch.zeros_like(calcium_data)
         max_timesteps, num_neurons = data_torch.shape
         frequencies = torch.fft.rfftfreq(max_timesteps, d=dt)  # dt: sampling time
-        threshold = torch.abs(frequencies)[int(frequencies.shape[0] * 0.1)]
+        threshold = torch.abs(frequencies)[
+            int(frequencies.shape[0] * 0.1)
+        ]  # keeps first 10% of the frequencies
         oneD_kernel = torch.abs(frequencies) < threshold
         fft_input = torch.fft.rfftn(data_torch, dim=0)
         oneD_kernel = oneD_kernel.repeat(calcium_data.shape[1], 1).T
         fft_result = torch.fft.irfftn(fft_input * oneD_kernel, dim=0)
         smooth_ca_data[0 : min(fft_result.shape[0], calcium_data.shape[0])] = fft_result
-    elif str(smooth_method).lower() == "tvr":
-        diff_tvr = DiffTVR(n, 1)
-        for i in range(0, calcium_data.shape[1]):
-            temp = np.array(calcium_data[:, i])
-            temp.reshape(len(temp), 1)
-            (item_denoise, _) = diff_tvr.get_deriv_tvr(
-                data=temp,
-                deriv_guess=np.full(n + 1, 0.0),
-                alpha=0.005,
-                no_opt_steps=100,
-            )
-            smooth_ca_data[:, i] = torch.tensor(item_denoise[: (len(item_denoise) - 1)])
     else:
         print("Wrong Input, check the config/preprocess.yml")
         exit(0)
@@ -607,272 +430,6 @@ def reshape_calcium_data(single_worm_dataset):
         single_worm_dataset.pop(key, None)
     # return the dataset for this worm
     return single_worm_dataset
-
-
-class create_four_sine_datasets:
-    def __init__(self):
-        super(create_four_sine_datasets, self).__init__()
-        self.seq_len = 3312
-        self.num_signal = 302
-        self.if_noise = True
-        self.sum = 8
-        self.num_worms = 6
-        self.ifsequence = False
-
-    def smooth_data(self, calcium_data, smooth_method, dt=1.0):
-        """
-        Smooth the calcium data. Returns the denoised signals calcium signals
-        using FFT.
-
-        Args:
-            calcium_data: original calcium data from dataset
-            smooth_method: the way to smooth data
-            dt: (required when use FFT as smooth_method) the sampling time (unit: sec)
-
-        Returns:
-            smooth_ca_data: calcium data that are smoothed
-            residual: original residual (calculated by calcium_data)
-            residual_smooth_ca_data: residual calculated by smoothed calcium data
-        """
-        n = calcium_data.shape[0]
-        # initialize the size for smooth_calcium_data
-        smooth_ca_data = torch.zeros_like(calcium_data)
-        # calculate original residual
-        # residual = torch.zeros_like(calcium_data)
-        # residual[1:] = calcium_data[1:] - calcium_data[: n - 1]
-        if str(smooth_method).lower() == "sg" or smooth_method == None:
-            smooth_ca_data = savgol_filter(calcium_data, 5, 3, mode="nearest", axis=-1)
-        elif str(smooth_method).lower() == "fft":
-            data_torch = calcium_data
-            smooth_ca_data = torch.zeros_like(calcium_data)
-            max_timesteps, num_neurons = data_torch.shape
-            frequencies = torch.fft.rfftfreq(max_timesteps, d=dt)  # dt: sampling time
-            threshold = torch.abs(frequencies)[int(frequencies.shape[0] * 0.1)]
-            oneD_kernel = torch.abs(frequencies) < threshold
-            fft_input = torch.fft.rfftn(data_torch, dim=0)
-            oneD_kernel = oneD_kernel.repeat(calcium_data.shape[1], 1).T
-            fft_result = torch.fft.irfftn(fft_input * oneD_kernel, dim=0)
-            smooth_ca_data[
-                0 : min(fft_result.shape[0], calcium_data.shape[0])
-            ] = fft_result
-        elif str(smooth_method).lower() == "tvr":
-            diff_tvr = DiffTVR(n, 1)
-            for i in range(0, calcium_data.shape[1]):
-                temp = np.array(calcium_data[:, i])
-                temp.reshape(len(temp), 1)
-                (item_denoise, _) = diff_tvr.get_deriv_tvr(
-                    data=temp,
-                    deriv_guess=np.full(n + 1, 0.0),
-                    alpha=0.005,
-                    no_opt_steps=100,
-                )
-                smooth_ca_data[:, i] = torch.tensor(
-                    item_denoise[: (len(item_denoise) - 1)]
-                )
-        else:
-            print("Wrong Input, check the config/preprocess.yml")
-            exit(0)
-        m = smooth_ca_data.shape[0]
-        # residual_smooth_ca_data = torch.zeros_like(residual)
-        # residual_smooth_ca_data[1:] = smooth_ca_data[1:] - smooth_ca_data[: m - 1]
-        return smooth_ca_data  # residual, residual_smooth_ca_data
-
-    def create_synthetic_data(self, d, n, ifnoise=False, sum=0, ifsequence=False):
-        calcium = np.zeros((d, n))
-        res = np.zeros((d, n))
-
-        assert isinstance(n, int), "wrong number for samples"
-        if ifsequence:
-            freq1 = 1.0 / d
-            phi1 = 0
-            for i in range(0, n):
-                step = np.arange(d)
-                freq = freq1 * (i + 1)
-                calcium[:, i] = np.sin(2 * np.pi * freq * step + phi1 * (np.pi / 180))
-                if ifnoise:
-                    for j in range(0, d):
-                        calcium[j, i] += +random.gauss(0, 0.02)
-                res[1:, i] = calcium[1:, i] - calcium[:-1, i]
-        else:
-            for i in range(0, n):
-                freq = 0
-                step = np.arange(d)
-                freq1 = np.random.uniform(1.0 / d, 5 * 1.0 / d)
-                freq += freq1
-                phi1 = np.random.random()
-                calcium[:, i] = np.sin(2 * np.pi * freq1 * step + phi1 * (np.pi / 180))
-                for k in range(random.randint(0, sum)):
-                    freq2 = np.random.uniform(1.0 / d, 5 * 1.0 / d)
-                    phi2 = np.random.random()
-                    calcium[:, i] += np.sin(
-                        2 * np.pi * freq2 * step + phi2 * (np.pi / 180)
-                    )
-                    freq += freq2
-                if ifnoise:
-                    for j in range(0, d):
-                        calcium[j, i] += +random.gauss(0, 0.02)
-                res[1:, i] = calcium[1:, i] - calcium[:-1, i]
-        return calcium, res
-
-    def create_dataset(self, raw_data, raw_res):
-        sine_dataset = dict()
-        for i, real_data in enumerate(raw_data):
-            worm = "worm" + str(i)
-            max_timesteps = self.seq_len
-            num_neurons = self.num_signal
-            time_in_seconds = torch.tensor(
-                np.array(np.arange(self.seq_len)).reshape(self.seq_len, 1)
-            ).to(torch.float32)
-
-            real_data = torch.tensor(real_data, dtype=torch.float32)
-            residual = torch.tensor(raw_res[i], dtype=torch.float32)
-
-            smooth_real_data = self.smooth_data(real_data, "fft")
-
-            smooth_residual_calcium = torch.zeros_like(smooth_real_data)
-            smooth_residual_calcium[1:, :] = (
-                smooth_real_data[1:, :] - smooth_real_data[:-1, :]
-            )
-
-            # randomly choose some neurons to be inactivated
-            num_unnamed = 100
-            list_random = random.sample(range(1, real_data.shape[1]), num_unnamed)
-            named_mask = torch.full((num_neurons,), True)
-
-            for i in list_random:
-                real_data[:, i] = torch.zeros_like(real_data[:, 0])
-                residual[:, i] = torch.zeros_like(residual[:, 0])
-                named_mask[i] = False
-
-            list_named = []
-            for i in range(0, num_neurons):
-                if i not in list_random:
-                    list_named.append(i)
-
-            dt = torch.ones(real_data.shape[0], 1)
-
-            sine_dataset.update(
-                {
-                    worm: {
-                        "dataset": "sine",
-                        "worm": worm,
-                        "calcium_data": real_data,
-                        "smooth_calcium_data": smooth_real_data,
-                        "residual_calcium": residual,
-                        "smooth_residual_calcium": smooth_residual_calcium,
-                        "neuron_to_idx": range(0, num_neurons),
-                        "idx_to_neuron": range(num_neurons - 1, -1, -1),
-                        "max_timesteps": int(max_timesteps),
-                        "time_in_seconds": time_in_seconds,
-                        "dt": dt,
-                        "named_neurons_mask": named_mask,
-                        "named_neuron_to_idx": list_named,
-                        "idx_to_named_neuron": list_named,
-                        "num_neurons": int(num_neurons),
-                        "num_named_neurons": int(num_neurons) - num_unnamed,
-                        "num_unknown_neurons": num_unnamed,
-                    },
-                }
-            )
-        return sine_dataset
-
-    def main_create(self):
-        # Creating signal
-        raw_data = []
-        raw_der = []
-        for j in range(self.num_worms):
-            x, dx = self.create_synthetic_data(
-                self.seq_len, self.num_signal, False, 0, False
-            )
-            x_torch = Variable(torch.from_numpy(x), requires_grad=False)
-            raw_data.append(x_torch)
-            raw_der.append(dx)
-
-        dataset = self.create_dataset(raw_data, raw_der)
-        file = open("./data/processed/neural/sine.pickle", "wb")
-        pickle.dump(dataset, file)
-        file.close()
-
-        # Creating signal
-        raw_data = []
-        raw_der = []
-        for j in range(self.num_worms):
-            x, dx = self.create_synthetic_data(
-                self.seq_len, self.num_signal, False, 0, True
-            )
-            x_torch = Variable(torch.from_numpy(x), requires_grad=False)
-            raw_data.append(x_torch)
-            raw_der.append(dx)
-
-        dataset = self.create_dataset(raw_data, raw_der)
-        file = open("./data/processed/neural/sine_seq.pickle", "wb")
-        pickle.dump(dataset, file)
-        file.close()
-
-        # Creating signal
-        raw_data = []
-        raw_der = []
-        for j in range(self.num_worms):
-            x, dx = self.create_synthetic_data(
-                self.seq_len, self.num_signal, self.if_noise, 0, True
-            )
-            x_torch = Variable(torch.from_numpy(x), requires_grad=False)
-            raw_data.append(x_torch)
-            raw_der.append(dx)
-
-        dataset = self.create_dataset(raw_data, raw_der)
-        file = open("./data/processed/neural/sine_seq_noise.pickle", "wb")
-        pickle.dump(dataset, file)
-        file.close()
-
-        # Creating signal
-        raw_data = []
-        raw_der = []
-        for j in range(self.num_worms):
-            x, dx = self.create_synthetic_data(
-                self.seq_len, self.num_signal, self.if_noise, 0, False
-            )
-            x_torch = Variable(torch.from_numpy(x), requires_grad=False)
-            raw_data.append(x_torch)
-            raw_der.append(dx)
-
-        dataset = self.create_dataset(raw_data, raw_der)
-        file = open("./data/processed/neural/sine_noise.pickle", "wb")
-        pickle.dump(dataset, file)
-        file.close()
-
-        # Creating signal
-        raw_data = []
-        raw_der = []
-        for j in range(self.num_worms):
-            x, dx = self.create_synthetic_data(
-                self.seq_len, self.num_signal, False, self.sum, False
-            )
-            x_torch = Variable(torch.from_numpy(x), requires_grad=False)
-            raw_data.append(x_torch)
-            raw_der.append(dx)
-
-        dataset = self.create_dataset(raw_data, raw_der)
-        file = open("./data/processed/neural/sum_sine.pickle", "wb")
-        pickle.dump(dataset, file)
-        file.close()
-
-        # Creating signal
-        raw_data = []
-        raw_der = []
-        for j in range(self.num_worms):
-            x, dx = self.create_synthetic_data(
-                self.seq_len, self.num_signal, self.if_noise, self.sum, False
-            )
-            x_torch = Variable(torch.from_numpy(x), requires_grad=False)
-            raw_data.append(x_torch)
-            raw_der.append(dx)
-
-        dataset = self.create_dataset(raw_data, raw_der)
-        file = open("./data/processed/neural/sum_sine_noise.pickle", "wb")
-        pickle.dump(dataset, file)
-        file.close()
-        return
 
 
 def str_to_float(str_num):
