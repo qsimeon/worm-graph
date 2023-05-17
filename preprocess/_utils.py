@@ -1,96 +1,6 @@
 from preprocess._pkg import *
 
 
-def total_variation_regularization_smooth(x, t, alpha):
-    """
-    Total variation regularization for smoothing a multidimensional time series.
-
-    Parameters:
-        x (ndarray): The input time series to be smoothed.
-        t (ndarray): The time vector corresponding to the input time series.
-        alpha (float): The regularization parameter.
-
-    Returns:
-        ndarray: The smoothed time series.
-    """
-    n = len(x)
-    dt = np.diff(t)
-    A = np.zeros((n - 1, n))
-    for i in range(n - 1):
-        A[i, i] = -1 / dt[i]
-        A[i, i + 1] = 1 / dt[i]
-
-    def objective(g):
-        return np.sum((g - x) ** 2) + alpha * np.sum(np.abs(np.dot(A, g)))
-
-    g0 = np.zeros(n)
-    res = minimize(objective, g0, method="L-BFGS-B")
-    return res.x
-
-
-def finite_difference_smooth(x_, t_):
-    """Uses the Smoothed Finite Difference derivative from PySINDy for smoothing.
-
-    Parameters:
-        x (ndarray): The input time series to be smoothed.
-        t (ndarray): The time vector corresponding to the input time series.
-
-    Returns:
-        ndarray: The smoothed time series.
-    """
-    dt = np.diff(t_, prepend=t_[0] - np.diff(t_)[0])
-    diff = differentiation.SmoothedFiniteDifference()
-    dxdt = diff._differentiate(x_, t_)
-    x_smooth = np.cumsum(dxdt) * dt
-    return x_smooth
-
-
-def smooth_data_preprocess(calcium_data, smooth_method, dt=1.0):
-    """Smooths the calcium data provided as a (num_neurons, time) array `calcium_data`.
-    TODO: Change arguments to include time vector.
-
-    Returns the denoised signals calcium signals using the method specified by `smooth_method`.
-
-    Args:
-        calcium_data: original calcium data from dataset
-        smooth_method: the way to smooth data
-        dt: (required when use FFT as smooth_method) the sampling time (unit: sec)
-
-    Returns:
-        smooth_ca_data: calcium data that are smoothed
-        residual: original residual (calculated by calcium_data)
-        residual_smooth_ca_data: residual calculated by smoothed calcium data
-    """
-    n = calcium_data.shape[0]
-    # initialize the size for smooth_calcium_data
-    smooth_ca_data = torch.zeros_like(calcium_data)
-    # calculate original residual
-    residual = torch.zeros_like(calcium_data)
-    residual[1:] = calcium_data[1:] - calcium_data[: n - 1]
-    if str(smooth_method).lower() == "sg" or smooth_method == None:
-        smooth_ca_data = savgol_filter(calcium_data, 5, 3, mode="nearest", axis=-1)
-    elif str(smooth_method).lower() == "fft":
-        data_torch = calcium_data
-        smooth_ca_data = torch.zeros_like(calcium_data)
-        max_timesteps, num_neurons = data_torch.shape
-        frequencies = torch.fft.rfftfreq(max_timesteps, d=dt)  # dt: sampling time
-        threshold = torch.abs(frequencies)[
-            int(frequencies.shape[0] * 0.1)
-        ]  # keeps first 10% of the frequencies
-        oneD_kernel = torch.abs(frequencies) < threshold
-        fft_input = torch.fft.rfftn(data_torch, dim=0)
-        oneD_kernel = oneD_kernel.repeat(calcium_data.shape[1], 1).T
-        fft_result = torch.fft.irfftn(fft_input * oneD_kernel, dim=0)
-        smooth_ca_data[0 : min(fft_result.shape[0], calcium_data.shape[0])] = fft_result
-    else:
-        print("Wrong Input, check the config/preprocess.yml")
-        exit(0)
-    m = smooth_ca_data.shape[0]
-    residual_smooth_ca_data = torch.zeros_like(residual)
-    residual_smooth_ca_data[1:] = smooth_ca_data[1:] - smooth_ca_data[: m - 1]
-    return smooth_ca_data, residual, residual_smooth_ca_data
-
-
 def preprocess_connectome(raw_dir, raw_files):
     """Convert the raw connectome data to a graph tensor.
 
@@ -318,6 +228,124 @@ def preprocess_connectome(raw_dir, raw_files):
     )
 
     return None
+
+
+def total_variation_regularization_smooth(x, t, alpha):
+    """
+    Total variation regularization for smoothing a multidimensional time series.
+
+    Parameters:
+        x (ndarray): The input time series to be smoothed (time, neurons).
+        t (ndarray): The time vector corresponding to the input time series.
+        alpha (float): The regularization parameter.
+
+    Returns:
+        ndarray: The smoothed time series.
+    """
+    if x.ndim == 1:
+        x = x.reshape(-1, 1)
+    n, num_features = x.shape
+    dt = np.diff(t)
+    A = np.zeros((n - 1, n))
+    for i in range(n - 1):
+        A[i, i] = -1 / dt[i]
+        A[i, i + 1] = 1 / dt[i]
+
+    def objective(g):
+        g = g.reshape(n, num_features)
+        return np.sum((g - x) ** 2) + alpha * np.sum(np.abs(np.dot(A, g)))
+
+    g0 = np.zeros((n, num_features))
+    res = minimize(objective, g0.ravel(), method="L-BFGS-B")
+    return res.x.reshape(n, num_features)
+
+
+def finite_difference_smooth(x_, t_):
+    """Uses the Smoothed Finite Difference derivative from PySINDy for smoothing.
+
+    Parameters:
+        x_ (ndarray): The input time series to be smoothed (time, neurons).
+        t_ (ndarray): The time vector corresponding to the input time series.
+
+    Returns:
+        ndarray: The smoothed time series.
+    """
+    if x_.ndim == 1:
+        x_ = x_.reshape(-1, 1)
+
+    n, num_features = x_.shape
+    dt = np.diff(t_, prepend=t_[0] - np.diff(t_)[0])
+    diff = SmoothedFiniteDifference()
+
+    x_smooth = np.zeros((n, num_features))
+    for i in range(num_features):
+        dxdt = diff._differentiate(x_[:, i], t_)
+        x_smooth[:, i] = np.cumsum(dxdt) * dt
+
+    return x_smooth
+
+
+def fast_fourier_transform_smooth(x, dt):
+    """Uses the FFT to smooth a multidimensional time series.
+
+    Smooths a multidimensional time series by keeping the lowest 10% of the frequencies from the FFT of the input signal.
+
+    Parameters:
+        x (ndarray): The input time series to be smoothed.
+        dt (int): The uniform time spacing (in seconds) between individual samples.
+    """
+    max_timesteps, num_neurons = x.shape
+    x_smooth = torch.zeros_like(x)
+    frequencies = torch.fft.rfftfreq(max_timesteps, d=dt)  # dt: sampling time
+    threshold = torch.abs(frequencies)[
+        int(frequencies.shape[0] * 0.1)
+    ]  # keep first 10% of the frequencies
+    oneD_kernel = torch.abs(frequencies) < threshold
+    fft_input = torch.fft.rfftn(x, dim=0)
+    oneD_kernel = oneD_kernel.repeat(num_neurons, 1).T
+    fft_result = torch.fft.irfftn(fft_input * oneD_kernel, dim=0)
+    x_smooth[0 : min(fft_result.shape[0], x_smooth.shape[0])] = fft_result
+    return x_smooth
+
+
+def smooth_data_preprocess(calcium_data, time_in_seconds, smooth_method, dt=1.0):
+    """Smooths the calcium data provided as a (time, num_neurons) array `calcium_data`.
+
+    Returns the denoised signals calcium signals using the method specified by `smooth_method`.
+
+    Args:
+        calcium_data: original calcium data from dataset
+        time_in_seconds: time vector corresponding to calcium_data
+        smooth_method: the way to smooth data
+        dt: (required when use FFT as smooth_method) the sampling time (unit: sec)
+
+    Returns:
+        smooth_ca_data: calcium data that are smoothed
+        residual: original residual (calculated by calcium_data)
+        residual_smooth_ca_data: residual calculated by smoothed calcium data
+    """
+    max_timesteps, num_neurons = calcium_data.shape
+    # initialize the size for smooth_calcium_data
+    smooth_ca_data = torch.zeros_like(calcium_data)
+    # calculate original residual
+    residual = torch.zeros_like(calcium_data)
+    residual[1:] = calcium_data[1:] - calcium_data[: num_neurons - 1]
+    if str(smooth_method).lower() == "sg" or smooth_method == None:
+        smooth_ca_data = savgol_filter(calcium_data, 5, 3, mode="nearest", axis=-1)
+    elif str(smooth_method).lower() == "fft":
+        fast_fourier_transform_smooth(calcium_data, dt)
+    elif str(smooth_method).lower() == "tvr":
+        # regularization parameter `alpha`` could be fine-tunded
+        total_variation_regularization_smooth(calcium_data, time_in_seconds, alpha=0.03)
+    elif str(smooth_method).lower() == "fd":
+        finite_difference_smooth(calcium_data, time_in_seconds)
+    else:
+        print("Wrong Input, check the config/preprocess.yml")
+        exit(0)
+    # calculate residual using smoothed calcium data
+    residual_smooth_ca_data = torch.zeros_like(residual)
+    residual_smooth_ca_data[1:] = smooth_ca_data[1:] - smooth_ca_data[: num_neurons - 1]
+    return smooth_ca_data, residual, residual_smooth_ca_data
 
 
 def reshape_calcium_data(single_worm_dataset):
