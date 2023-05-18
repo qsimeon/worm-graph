@@ -324,6 +324,7 @@ def smooth_data_preprocess(calcium_data, time_in_seconds, smooth_method, dt=1.0)
     """Smooths the calcium data provided as a (time, num_neurons) array `calcium_data`.
 
     Returns the denoised signals calcium signals using the method specified by `smooth_method`.
+    TODO: Make this function only return the smmothed calcium data.
 
     Args:
         calcium_data: original calcium data from dataset
@@ -590,6 +591,14 @@ def pickle_neural_data(
     -----
     * If you are having problems downloading the data, you can manually download
       and place the zip file into the root directory of this repository.
+    * Every called preprocess sub-routine `pickle_{dataset}` has the following
+       computation flow:
+        1. Load the raw data from the .mat file
+        2. Extract the neural data from the raw data
+        3. Smooth the neural data
+        4. Resample the neural data
+        5. Normalize the neural data
+        6. Save the processed data to .pickle format
     """
 
     print("resample_dt", resample_dt, end="\n\n")
