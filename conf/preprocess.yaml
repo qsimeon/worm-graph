@@ -4,4 +4,4 @@ preprocess:
   dataset: all
   raw_dir: data/raw
   resample_dt: 0.5 # The time interval (in seconds) to use for resampling; if None, no resampling is performed
-  smooth: FFT # None: No signal smoothing # FFT: Fast Fourier Transform # TVR: Total Variation Regularization # SG: Savitzky–Golay Filter
+  smooth: FFT # None: No signal smoothing # FFT: Fast Fourier Transform, # TVR: Total Variation Regularization, # SG: Savitzky–Golay Filter, # FD: Finite Difference

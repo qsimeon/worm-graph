@@ -233,6 +233,7 @@ def preprocess_connectome(raw_dir, raw_files):
 def total_variation_regularization_smooth(x, t, alpha):
     """
     Total variation regularization for smoothing a multidimensional time series.
+    TODO: Way too slow, need to optimize.
 
     Parameters:
         x (ndarray): The input time series to be smoothed (time, neurons).
@@ -242,10 +243,13 @@ def total_variation_regularization_smooth(x, t, alpha):
     Returns:
         ndarray: The smoothed time series.
     """
+    if isinstance(x, torch.Tensor):
+        x = x.cpu().numpy()
     if x.ndim == 1:
         x = x.reshape(-1, 1)
     n, num_features = x.shape
-    dt = np.diff(t)
+    t = t.squeeze()
+    dt = torch.diff(t)
     A = np.zeros((n - 1, n))
     for i in range(n - 1):
         A[i, i] = -1 / dt[i]
@@ -257,55 +261,60 @@ def total_variation_regularization_smooth(x, t, alpha):
 
     g0 = np.zeros((n, num_features))
     res = minimize(objective, g0.ravel(), method="L-BFGS-B")
-    return res.x.reshape(n, num_features)
+    x_smooth = torch.from_numpy(res.x.reshape(n, num_features))
+    return x_smooth
 
 
 def finite_difference_smooth(x_, t_):
     """Uses the Smoothed Finite Difference derivative from PySINDy for smoothing.
 
     Parameters:
-        x_ (ndarray): The input time series to be smoothed (time, neurons).
-        t_ (ndarray): The time vector corresponding to the input time series.
+        x_ (tensor): The input time series to be smoothed (time, neurons).
+        t_ (tensor): The time vector corresponding to the input time series.
 
     Returns:
-        ndarray: The smoothed time series.
+        tensor: The smoothed time series.
     """
+    if isinstance(x_, torch.Tensor):
+        x_ = x_.cpu().numpy()
+        t_ = t_.squeeze().cpu().numpy()
     if x_.ndim == 1:
         x_ = x_.reshape(-1, 1)
-
+        t_ = t_.squeeze()
     n, num_features = x_.shape
     dt = np.diff(t_, prepend=t_[0] - np.diff(t_)[0])
     diff = SmoothedFiniteDifference()
-
     x_smooth = np.zeros((n, num_features))
     for i in range(num_features):
         dxdt = diff._differentiate(x_[:, i], t_)
         x_smooth[:, i] = np.cumsum(dxdt) * dt
-
+    x_smooth = torch.tensor(x_smooth, dtype=torch.float32)
     return x_smooth
 
 
 def fast_fourier_transform_smooth(x, dt):
     """Uses the FFT to smooth a multidimensional time series.
 
-    Smooths a multidimensional time series by keeping the lowest 10% of the frequencies from the FFT of the input signal.
+    Smooths a multidimensional time series by keeping the lowest
+    10% of the frequencies from the FFT of the input signal.
 
     Parameters:
-        x (ndarray): The input time series to be smoothed.
+        x (tensor): The input time series to be smoothed.
         dt (float): The uniform time spacing (in seconds) between individual samples.
     """
+    if isinstance(x, np.ndarray):
+        x = torch.tensor(x, dtype=torch.float32)
     if x.ndim == 1:
         x = x.reshape(-1, 1)
-    x = torch.tensor(x, dtype=torch.float32)
-    max_timesteps, num_neurons = x.shape
+    n, num_features = x.shape
     x_smooth = torch.zeros_like(x)
-    frequencies = torch.fft.rfftfreq(max_timesteps, d=dt)  # dt: sampling time
+    frequencies = torch.fft.rfftfreq(n, d=dt)  # dt: sampling time
     threshold = torch.abs(frequencies)[
         int(frequencies.shape[0] * 0.1)
     ]  # keep first 10% of the frequencies
     oneD_kernel = torch.abs(frequencies) < threshold
     fft_input = torch.fft.rfftn(x, dim=0)
-    oneD_kernel = oneD_kernel.repeat(num_neurons, 1).T
+    oneD_kernel = oneD_kernel.repeat(num_features, 1).T
     fft_result = torch.fft.irfftn(fft_input * oneD_kernel, dim=0)
     x_smooth[0 : min(fft_result.shape[0], x_smooth.shape[0])] = fft_result
     return x_smooth
@@ -320,34 +329,36 @@ def smooth_data_preprocess(calcium_data, time_in_seconds, smooth_method, dt=1.0)
         calcium_data: original calcium data from dataset
         time_in_seconds: time vector corresponding to calcium_data
         smooth_method: the way to smooth data
-        dt: (required when use FFT as smooth_method) the sampling time (unit: sec)
+        dt: (required for FFT smooth method) the inter-sample time in seconds
 
     Returns:
-        smooth_ca_data: calcium data that are smoothed
+        smooth_ca_data: calcium data that is smoothed
         residual: original residual (calculated by calcium_data)
         residual_smooth_ca_data: residual calculated by smoothed calcium data
     """
-    max_timesteps, num_neurons = calcium_data.shape
-    # initialize the size for smooth_calcium_data
-    smooth_ca_data = torch.zeros_like(calcium_data)
     # calculate original residual
     residual = torch.zeros_like(calcium_data)
-    residual[1:] = calcium_data[1:] - calcium_data[: num_neurons - 1]
-    if str(smooth_method).lower() == "sg" or smooth_method == None:
-        smooth_ca_data = savgol_filter(calcium_data, 5, 3, mode="nearest", axis=-1)
+    residual[1:] = calcium_data[1:, :] - calcium_data[:-1, :]
+    print("residual shape:", residual.shape)
+    if str(smooth_method).lower() == "fd" or smooth_method == None:
+        smooth_ca_data = finite_difference_smooth(calcium_data, time_in_seconds)
     elif str(smooth_method).lower() == "fft":
-        fast_fourier_transform_smooth(calcium_data, dt)
+        smooth_ca_data = fast_fourier_transform_smooth(calcium_data, dt)
     elif str(smooth_method).lower() == "tvr":
         # regularization parameter `alpha`` could be fine-tunded
-        total_variation_regularization_smooth(calcium_data, time_in_seconds, alpha=0.03)
-    elif str(smooth_method).lower() == "fd":
-        finite_difference_smooth(calcium_data, time_in_seconds)
+        smooth_ca_data = total_variation_regularization_smooth(
+            calcium_data, time_in_seconds, alpha=0.03
+        )
+    elif str(smooth_method).lower() == "sg":
+        smooth_ca_data = torch.from_numpy(
+            savgol_filter(calcium_data, 5, 3, mode="nearest", axis=-1)
+        )
     else:
-        print("Wrong Input, check the config/preprocess.yml")
+        print("Wrong input! Check the `config/preprocess.yml` for available methods.")
         exit(0)
     # calculate residual using smoothed calcium data
     residual_smooth_ca_data = torch.zeros_like(residual)
-    residual_smooth_ca_data[1:] = smooth_ca_data[1:] - smooth_ca_data[: num_neurons - 1]
+    residual_smooth_ca_data[1:, :] = smooth_ca_data[1:, :] - smooth_ca_data[:-1, :]
     return smooth_ca_data, residual, residual_smooth_ca_data
 
 
@@ -534,13 +545,14 @@ def pickle_neural_data(
     zipfile,
     dataset="all",
     transform=MinMaxScaler(feature_range=(-1, 1)),
+    # transform=StandardScaler(),
     smooth_method="fft",
     resample_dt=None,
 ):
-    """Converts C. elegans neural data to .pickle format.
+    """Preprocess and then saves C. elegans neural data to .pickle format.
 
-    This function downloads the open-source datasets if they are not found
-    in the root directory, extracts them, and pickles the data as necessary.
+    This function downloads and extracts the open-source datasets if not found in the
+    root directory,  proprocesses the neural data and then saves it to .pickle format.
     The processed data is saved in the data/processed/neural folder for
     further use.
 
@@ -609,7 +621,7 @@ def pickle_neural_data(
 
         os.unlink(zip_path)  # Remove zip file
 
-    # Pickle all the datasets ... OR
+    # (re)-Pickle all the datasets ... OR
     if dataset is None or dataset.lower() == "all":
         for dataset in VALID_DATASETS:
             if dataset.__contains__("sine"):
@@ -618,7 +630,7 @@ def pickle_neural_data(
             # call the "pickle" functions in preprocess/_utils.py (functions below)
             pickler = eval("pickle_" + dataset)
             pickler(transform, smooth_method, resample_dt)
-    # (re)-Pickle a single dataset
+    # ... (re)-Pickle a single dataset
     else:
         assert (
             dataset in VALID_DATASETS
@@ -645,6 +657,7 @@ def pickle_Kato2015(transform, smooth_method="fft", resample_dt=1.0):
     Global Brain Dynamics Embed the Motor Command Sequence of Caenorhabditis elegans.
     """
     data_dict = dict()
+
     # 'WT_Stim'
     # load the first .mat file
     arr = mat73.loadmat(os.path.join(source_path, "Kato2015", "WT_Stim.mat"))["WT_Stim"]
@@ -687,7 +700,7 @@ def pickle_Kato2015(transform, smooth_method="fft", resample_dt=1.0):
             [k for k in neuron_to_idx.keys() if not k.isnumeric()]
         )  # number of neurons that were ID'd
         sc = transform  # normalize data
-        real_data = sc.fit_transform(real_data)
+        real_data = sc.fit_transform(real_data)  # samples=time, features=neurons
         real_data = torch.tensor(
             real_data, dtype=torch.float32
         )  # add a feature dimension and convert to tensor
@@ -695,7 +708,7 @@ def pickle_Kato2015(transform, smooth_method="fft", resample_dt=1.0):
         time_in_seconds, real_data = interpolate_data(
             time_in_seconds, real_data, target_dt=resample_dt
         )
-        # caclucate the time step
+        # calculate the time step
         dt = torch.zeros_like(time_in_seconds).to(torch.float32)
         dt[1:] = time_in_seconds[1:] - time_in_seconds[:-1]
         # recalculate max_timesteps and num_neurons
@@ -706,8 +719,12 @@ def pickle_Kato2015(transform, smooth_method="fft", resample_dt=1.0):
             end="\n\n",
         )
         # smooth the data
+        print("median dt", np.median(dt))
         smooth_real_data, residual, smooth_residual = smooth_data_preprocess(
-            real_data, smooth_method
+            real_data,
+            time_in_seconds,
+            smooth_method,
+            dt=np.median(dt),
         )
         data_dict.update(
             {
@@ -787,7 +804,7 @@ def pickle_Kato2015(transform, smooth_method="fft", resample_dt=1.0):
         time_in_seconds, real_data = interpolate_data(
             time_in_seconds, real_data, target_dt=resample_dt
         )
-        # caclucate the time step
+        # calculate the time step
         dt = torch.zeros_like(time_in_seconds).to(torch.float32)
         dt[1:] = time_in_seconds[1:] - time_in_seconds[:-1]
         # recalculate max_timesteps and num_neurons
@@ -799,7 +816,10 @@ def pickle_Kato2015(transform, smooth_method="fft", resample_dt=1.0):
         )
         # smooth the data
         smooth_real_data, residual, smooth_residual = smooth_data_preprocess(
-            real_data, smooth_method
+            real_data,
+            time_in_seconds,
+            smooth_method,
+            dt=np.median(dt),
         )
         data_dict.update(
             {
@@ -840,6 +860,7 @@ def pickle_Nichols2017(transform, smooth_method="fft", resample_dt=1.0):
     A global brain state underlies C. elegans sleep behavior.
     """
     data_dict = dict()
+
     # 'n2_let'
     # load the first .mat file
     arr = mat73.loadmat(os.path.join(source_path, "Nichols2017", "n2_let.mat"))[
@@ -902,7 +923,10 @@ def pickle_Nichols2017(transform, smooth_method="fft", resample_dt=1.0):
         )
         # smooth the data
         smooth_real_data, residual, smooth_residual = smooth_data_preprocess(
-            real_data, smooth_method
+            real_data,
+            time_in_seconds,
+            smooth_method,
+            dt=np.median(dt),
         )
         data_dict.update(
             {
@@ -927,6 +951,7 @@ def pickle_Nichols2017(transform, smooth_method="fft", resample_dt=1.0):
         )
         # standardize the shape of calcium data to 302 x time
         data_dict[worm] = reshape_calcium_data(data_dict[worm])
+
     # 'n2_prelet'
     # load the second .mat file
     arr = mat73.loadmat(os.path.join(source_path, "Nichols2017", "n2_prelet.mat"))[
@@ -991,7 +1016,10 @@ def pickle_Nichols2017(transform, smooth_method="fft", resample_dt=1.0):
         )
         # smooth the data
         smooth_real_data, residual, smooth_residual = smooth_data_preprocess(
-            real_data, smooth_method
+            real_data,
+            time_in_seconds,
+            smooth_method,
+            dt=np.median(dt),
         )
         data_dict.update(
             {
@@ -1016,6 +1044,7 @@ def pickle_Nichols2017(transform, smooth_method="fft", resample_dt=1.0):
         )
         # standardize the shape of calcium data to 302 x time
         data_dict[worm] = reshape_calcium_data(data_dict[worm])
+
     # 'npr1_let'
     # load the third .mat file
     arr = mat73.loadmat(os.path.join(source_path, "Nichols2017", "npr1_let.mat"))[
@@ -1080,7 +1109,10 @@ def pickle_Nichols2017(transform, smooth_method="fft", resample_dt=1.0):
         )
         # smooth the data
         smooth_real_data, residual, smooth_residual = smooth_data_preprocess(
-            real_data, smooth_method
+            real_data,
+            time_in_seconds,
+            smooth_method,
+            dt=np.median(dt),
         )
         data_dict.update(
             {
@@ -1105,6 +1137,7 @@ def pickle_Nichols2017(transform, smooth_method="fft", resample_dt=1.0):
         )
         # standardize the shape of calcium data to 302 x time
         data_dict[worm] = reshape_calcium_data(data_dict[worm])
+
     # 'npr1_prelet'
     # load the fourth .mat file
     arr = mat73.loadmat(os.path.join(source_path, "Nichols2017", "npr1_prelet.mat"))[
@@ -1169,7 +1202,10 @@ def pickle_Nichols2017(transform, smooth_method="fft", resample_dt=1.0):
         )
         # smooth the data
         smooth_real_data, residual, smooth_residual = smooth_data_preprocess(
-            real_data, smooth_method
+            real_data,
+            time_in_seconds,
+            smooth_method,
+            dt=np.median(dt),
         )
         data_dict.update(
             {
@@ -1210,6 +1246,7 @@ def pickle_Nguyen2017(transform, smooth_method="fft", resample_dt=1.0):
     Automatically tracking neurons in a moving and deforming brain.
     """
     imputer = SimpleImputer(missing_values=np.nan, strategy="median")
+
     # WORM 0
     # load .mat file for  worm 0
     arr0 = loadmat(
@@ -1250,6 +1287,7 @@ def pickle_Nguyen2017(transform, smooth_method="fft", resample_dt=1.0):
         % (max_time0, num_neurons0, num_named0),
         end="\n\n",
     )
+
     # WORM 1
     # load .mat file for  worm 1
     arr1 = loadmat(
@@ -1290,6 +1328,7 @@ def pickle_Nguyen2017(transform, smooth_method="fft", resample_dt=1.0):
         % (max_time1, num_neurons1, num_named1),
         end="\n\n",
     )
+
     # WORM 2
     # load .mat file for  worm 1
     arr2 = loadmat(
@@ -1332,13 +1371,22 @@ def pickle_Nguyen2017(transform, smooth_method="fft", resample_dt=1.0):
     )
     # smooth the data
     smooth_real_data0, residual0, smooth_residual0 = smooth_data_preprocess(
-        real_data0, smooth_method
+        real_data0,
+        time_in_seconds0,
+        smooth_method,
+        dt=np.meadian(dt0),
     )
     smooth_real_data1, residual1, smooth_residual1 = smooth_data_preprocess(
-        real_data1, smooth_method
+        real_data1,
+        time_in_seconds1,
+        smooth_method,
+        dt=np.median(dt1),
     )
     smooth_real_data2, residual2, smooth_residual2 = smooth_data_preprocess(
-        real_data2, smooth_method
+        real_data2,
+        time_in_seconds2,
+        smooth_method,
+        dt=np.median(dt2),
     )
     # pickle the data
     data_dict = {
@@ -1412,6 +1460,7 @@ def pickle_Skora2018(transform, smooth_method="fft", resample_dt=1.0):
     Energy Scarcity Promotes a Brain-wide Sleep State Modulated by Insulin Signaling in C. elegans.
     """
     data_dict = dict()
+
     # 'WT_fasted'
     # load the first .mat file
     arr = mat73.loadmat(os.path.join(source_path, "Skora2018", "WT_fasted.mat"))[
@@ -1474,7 +1523,10 @@ def pickle_Skora2018(transform, smooth_method="fft", resample_dt=1.0):
         )
         # smooth the data
         smooth_real_data, residual, smooth_residual = smooth_data_preprocess(
-            real_data, smooth_method
+            real_data,
+            time_in_seconds,
+            smooth_method,
+            dt=np.median(dt),
         )
         data_dict.update(
             {
@@ -1499,6 +1551,7 @@ def pickle_Skora2018(transform, smooth_method="fft", resample_dt=1.0):
         )
         # standardize the shape of calcium data to 302 x time
         data_dict[worm] = reshape_calcium_data(data_dict[worm])
+
     # 'WT_starved'
     # load the second .mat file
     arr = mat73.loadmat(os.path.join(source_path, "Skora2018", "WT_starved.mat"))[
@@ -1563,7 +1616,10 @@ def pickle_Skora2018(transform, smooth_method="fft", resample_dt=1.0):
         )
         # smooth the data
         smooth_real_data, residual, smooth_residual = smooth_data_preprocess(
-            real_data, smooth_method
+            real_data,
+            time_in_seconds,
+            smooth_method,
+            dt=np.median(dt),
         )
         data_dict.update(
             {
@@ -1604,6 +1660,7 @@ def pickle_Kaplan2020(transform, smooth_method="fft", resample_dt=1.0):
     Nested Neuronal Dynamics Orchestrate a Behavioral Hierarchy across Timescales.
     """
     data_dict = dict()
+
     # 'RIShisCl_Neuron2019'
     # load the first .mat file
     arr = mat73.loadmat(
@@ -1660,7 +1717,10 @@ def pickle_Kaplan2020(transform, smooth_method="fft", resample_dt=1.0):
         )
         # smooth the data
         smooth_real_data, residual, smooth_residual = smooth_data_preprocess(
-            real_data, smooth_method
+            real_data,
+            time_in_seconds,
+            smooth_method,
+            dt=np.median(dt),
         )
         data_dict.update(
             {
@@ -1685,6 +1745,7 @@ def pickle_Kaplan2020(transform, smooth_method="fft", resample_dt=1.0):
         )
         # standardize the shape of calcium data to 302 x time
         data_dict[worm] = reshape_calcium_data(data_dict[worm])
+
     # 'MNhisCl_RIShisCl_Neuron2019'
     # load the second .mat file
     arr = mat73.loadmat(
@@ -1743,7 +1804,10 @@ def pickle_Kaplan2020(transform, smooth_method="fft", resample_dt=1.0):
         )
         # smooth the data
         smooth_real_data, residual, smooth_residual = smooth_data_preprocess(
-            real_data, smooth_method
+            real_data,
+            time_in_seconds,
+            smooth_method,
+            dt=np.median(dt),
         )
         data_dict.update(
             {
@@ -1768,6 +1832,7 @@ def pickle_Kaplan2020(transform, smooth_method="fft", resample_dt=1.0):
         )
         # standardize the shape of calcium data to 302 x time
         data_dict[worm] = reshape_calcium_data(data_dict[worm])
+
     # 'MNhisCl_RIShisCl_Neuron2019'
     # load the third .mat file
     arr = mat73.loadmat(
@@ -1826,7 +1891,10 @@ def pickle_Kaplan2020(transform, smooth_method="fft", resample_dt=1.0):
         )
         # smooth the data
         smooth_real_data, residual, smooth_residual = smooth_data_preprocess(
-            real_data, smooth_method
+            real_data,
+            time_in_seconds,
+            smooth_method,
+            dt=np.median(dt),
         )
         data_dict.update(
             {
@@ -1923,7 +1991,10 @@ def pickle_Uzel2022(transform, smooth_method="fft", resample_dt=1.0):
         )
         # smooth the data
         smooth_real_data, residual, smooth_residual = smooth_data_preprocess(
-            real_data, smooth_method
+            real_data,
+            time_in_seconds,
+            smooth_method,
+            dt=np.median(dt),
         )
         data_dict.update(
             {
@@ -2023,7 +2094,10 @@ def pickle_Flavell2023(transform, smooth_method="fft", resample_dt=1.0):
         )
         # smooth the data
         smooth_real_data, residual, smooth_residual = smooth_data_preprocess(
-            calcium_data, smooth_method
+            calcium_data,
+            time_in_seconds,
+            smooth_method,
+            dt=np.median(dt),
         )
         # add worm to data dictionary
         data_dict.update(
@@ -2171,7 +2245,10 @@ def pickle_Leifer2023(transform, smooth_method="fft", resample_dt=1.0):
         )
         # smooth the data
         smooth_real_data, residual, smooth_residual = smooth_data_preprocess(
-            real_data, smooth_method
+            real_data,
+            time_in_seconds,
+            smooth_method,
+            dt=np.median(dt),
         )
 
         data_dict.update(
