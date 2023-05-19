@@ -23,5 +23,5 @@ from torch_geometric.data import Data, download_url, extract_zip
 from scipy.signal import savgol_filter
 from scipy.optimize import minimize
 from scipy.linalg import solve
-from typing import Tuple, Union
+from typing import Tuple, Union, Callable, Dict
 from torch.autograd import Variable

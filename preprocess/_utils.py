@@ -321,10 +321,10 @@ def fast_fourier_transform_smooth(x, dt):
 
 
 def smooth_data_preprocess(calcium_data, time_in_seconds, smooth_method, dt=1.0):
-    """Smooths the calcium data provided as a (time, num_neurons) array `calcium_data`.
+    """
+    Smooths the calcium data provided as a (time, num_neurons) array `calcium_data`.
 
     Returns the denoised signals calcium signals using the method specified by `smooth_method`.
-    TODO: Make this function only return the smmothed calcium data.
 
     Args:
         calcium_data: original calcium data from dataset
@@ -334,19 +334,14 @@ def smooth_data_preprocess(calcium_data, time_in_seconds, smooth_method, dt=1.0)
 
     Returns:
         smooth_ca_data: calcium data that is smoothed
-        residual: original residual (calculated by calcium_data)
-        residual_smooth_ca_data: residual calculated by smoothed calcium data
     """
-    # calculate original residual
-    residual = torch.zeros_like(calcium_data)
-    residual[1:] = calcium_data[1:, :] - calcium_data[:-1, :]
-    print("residual shape:", residual.shape)
-    if str(smooth_method).lower() == "fd" or smooth_method == None:
+
+    if str(smooth_method).lower() == "fd" or smooth_method is None:
         smooth_ca_data = finite_difference_smooth(calcium_data, time_in_seconds)
     elif str(smooth_method).lower() == "fft":
         smooth_ca_data = fast_fourier_transform_smooth(calcium_data, dt)
     elif str(smooth_method).lower() == "tvr":
-        # regularization parameter `alpha`` could be fine-tunded
+        # regularization parameter `alpha` could be fine-tuned
         smooth_ca_data = total_variation_regularization_smooth(
             calcium_data, time_in_seconds, alpha=0.03
         )
@@ -357,10 +352,8 @@ def smooth_data_preprocess(calcium_data, time_in_seconds, smooth_method, dt=1.0)
     else:
         print("Wrong input! Check the `config/preprocess.yml` for available methods.")
         exit(0)
-    # calculate residual using smoothed calcium data
-    residual_smooth_ca_data = torch.zeros_like(residual)
-    residual_smooth_ca_data[1:, :] = smooth_ca_data[1:, :] - smooth_ca_data[:-1, :]
-    return smooth_ca_data, residual, residual_smooth_ca_data
+
+    return smooth_ca_data
 
 
 def reshape_calcium_data(single_worm_dataset):
@@ -495,20 +488,18 @@ def str_to_float(str_num):
 
 
 def interpolate_data(time, data, target_dt):
-    """Interpolate data using np.interp, with support for torch.Tensor.
+    """Interpolate data using np.interp.
 
     This function takes the given time points and corresponding data and
     interpolates them to create new data points with the desired time
-    interval. The input tensors are first converted to NumPy arrays for
-    interpolation, and the interpolated data and time points are then
-    converted back to torch.Tensor objects before being returned.
+    interval.
 
     Parameters
     ----------
-    time : torch.Tensor
-        1D tensor containing the time points corresponding to the data.
-    data : torch.Tensor
-        A 2D tensor containing the data to be interpolated, with shape
+    time : numpy.ndarray
+        1D array containing the time points corresponding to the data.
+    data : numpy.ndarray
+        A 2D array containing the data to be interpolated, with shape
         (time, neurons).
     target_dt : float
         The desired time interval between the interpolated data points.
@@ -516,37 +507,31 @@ def interpolate_data(time, data, target_dt):
 
     Returns
     -------
-    torch.Tensor, torch.Tensor: Two tensors containing the interpolated time points and data.
+    numpy.ndarray, numpy.ndarray: Two arrays containing the interpolated time points and data.
     """
     # If target_dt is None, return the original data
     if target_dt is None:
         return time, data
 
-    # Convert input tensors to NumPy arrays
-    time_np = time.squeeze().numpy()
-    data_np = data.numpy()
+    # Ensure that time is a 1D array
+    time = time.squeeze()
 
     # Interpolate the data
-    target_time_np = np.arange(time_np.min(), time_np.max(), target_dt)
-    num_neurons = data_np.shape[1]
+    target_time_np = np.arange(time.min(), time.max(), target_dt)
+    num_neurons = data.shape[1]
     interpolated_data_np = np.zeros((len(target_time_np), num_neurons))
 
     for i in range(num_neurons):
-        interpolated_data_np[:, i] = np.interp(target_time_np, time_np, data_np[:, i])
+        interpolated_data_np[:, i] = np.interp(target_time_np, time, data[:, i])
 
-    # Convert the interpolated data and time back to torch.Tensor objects
-    target_time = torch.from_numpy(target_time_np).to(torch.float32).unsqueeze(-1)
-    interpolated_data = torch.from_numpy(interpolated_data_np).to(torch.float32)
-
-    return target_time, interpolated_data
+    return target_time_np, interpolated_data_np
 
 
 def pickle_neural_data(
     url,
     zipfile,
     dataset="all",
-    transform=MinMaxScaler(feature_range=(-1, 1)),
-    # transform=StandardScaler(),
+    transform=MinMaxScaler(feature_range=(-1, 1)),  # StandardScaler()
     smooth_method="fft",
     resample_dt=None,
 ):
@@ -660,1643 +645,318 @@ def pickle_neural_data(
     return None
 
 
-def pickle_Kato2015(transform, smooth_method="fft", resample_dt=1.0):
+class BasePreprocessor:
     """
-    Pickles the worm neural activity data from Kato et al., Cell Reports 2015,
-    Global Brain Dynamics Embed the Motor Command Sequence of Caenorhabditis elegans.
-    """
-    data_dict = dict()
+    This is a base class used for preprocessing different types of neurophysiological datasets.
 
-    # 'WT_Stim'
-    # load the first .mat file
-    arr = mat73.loadmat(os.path.join(source_path, "Kato2015", "WT_Stim.mat"))["WT_Stim"]
-    print(list(arr.keys()), end="\n\n")
-    # get data for all worms
-    all_IDs = arr["IDs"]  # identified neuron IDs (only subset have neuron names)
-    all_traces = arr["traces"]  # neural activity traces corrected for bleaching
-    timeVectorSeconds = arr["timeVectorSeconds"]
-    print("num. worms:", len(all_IDs), end="\n\n")
-    for i, real_data in enumerate(all_traces):
-        worm = "worm" + str(i)
-        i_IDs = [(j[0] if isinstance(j, list) else j) for j in all_IDs[i]]
-        i_IDs = [
-            (str(_) if j is None or isinstance(j, np.ndarray) else str(j))
-            for _, j in enumerate(i_IDs)
-        ]
-        _, inds = np.unique(
-            i_IDs, return_index=True
-        )  # only keep indices of unique neuron IDs
-        i_IDs = [i_IDs[_] for _ in inds]
-        real_data = real_data[:, inds.astype(int)]  # only get data for unique neurons
-        neuron_to_idx = {
-            nid: (str(nid) if (j is None or isinstance(j, np.ndarray)) else str(j))
-            for nid, j in enumerate(i_IDs)
-        }
-        neuron_to_idx = {
-            nid: (
-                name.replace("0", "")
-                if not name.endswith("0") and not name.isnumeric()
-                else name
-            )
-            for nid, name in neuron_to_idx.items()
-        }
-        neuron_to_idx = dict(
-            (v, k) for k, v in neuron_to_idx.items()
-        )  # map should be neuron -> index
-        time_in_seconds = timeVectorSeconds[i].reshape(timeVectorSeconds[i].shape[0], 1)
-        time_in_seconds = torch.tensor(time_in_seconds).to(torch.float32)
-        num_named = len(
-            [k for k in neuron_to_idx.keys() if not k.isnumeric()]
-        )  # number of neurons that were ID'd
-        sc = transform  # normalize data
-        real_data = sc.fit_transform(real_data)  # samples=time, features=neurons
-        real_data = torch.tensor(
-            real_data, dtype=torch.float32
-        )  # add a feature dimension and convert to tensor
-        # resample the data to a fixed time step
-        time_in_seconds, real_data = interpolate_data(
-            time_in_seconds, real_data, target_dt=resample_dt
-        )
-        # calculate the time step
-        dt = torch.zeros_like(time_in_seconds).to(torch.float32)
-        dt[1:] = time_in_seconds[1:] - time_in_seconds[:-1]
-        # recalculate max_timesteps and num_neurons
-        max_timesteps, num_neurons = real_data.shape
-        print(
-            "len. Ca recording %s, total num. neurons %s, num. ID'd neurons %s"
-            % (max_timesteps, num_neurons, num_named),
-            end="\n\n",
-        )
-        # smooth the data
-        print("median dt", np.median(dt))
-        smooth_real_data, residual, smooth_residual = smooth_data_preprocess(
-            real_data,
+    The class provides a template for loading, extracting, smoothing, resampling, and
+    normalizing neural data, as well as saving the processed data in pickle format.
+    Specific datasets can be processed by creating a new class that inherits from this base class
+    and overriding the methods as necessary.
+
+    Attributes:
+        raw_data (str): The path to the raw dataset.
+        processed_data (str): The path to save the processed data.
+        dataset (str): The specific dataset to be preprocessed.
+
+    Methods:
+        load_data(): Method for loading the raw data.
+        extract_data(): Method for extracting the neural data from the raw data.
+        smooth_data(): Method for smoothing the neural data.
+        resample_data(): Method for resampling the neural data.
+        normalize_data(): Method for normalizing the neural data.
+        save_data(): Method for saving the processed data to .pickle format.
+
+    Note:
+        This class is intended to be subclassed, not directly instantiated.
+        Specific datasets should implement their own versions of the `load_data`,
+        `extract_data`, `smooth_data`, `resample_data`, `normalize_data` and `save_data` methods.
+
+    Example:
+        class SpecificDatasetPreprocessor(BasePreprocessor):
+            def load_data(self):
+                # Implement dataset-specific loading logic here.
+
+    """
+
+    def __init__(self, dataset_name):
+        self.dataset = dataset_name
+        self.transform = StandardScaler()
+        self.smooth_method = "fft"
+        self.resample_dt = 1.0
+        self.raw_data_path = os.path.join(ROOT_DIR, "opensource_data")
+        self.processed_data_path = os.path.join(ROOT_DIR, "data/processed/neural")
+
+    def smooth_data(self, data, time_in_seconds, dt):
+        return smooth_data_preprocess(
+            data,
             time_in_seconds,
-            smooth_method,
+            self.smooth_method,
             dt=np.median(dt),
         )
-        data_dict.update(
-            {
-                worm: {
-                    "dataset": "Kato2015",
-                    "smooth_method": smooth_method.upper(),
-                    "worm": worm,
-                    "calcium_data": real_data,
-                    "smooth_calcium_data": smooth_real_data,
-                    "residual_calcium": residual,
-                    "smooth_residual_calcium": smooth_residual,
-                    "neuron_to_idx": neuron_to_idx,
-                    "idx_to_neuron": dict((v, k) for k, v in neuron_to_idx.items()),
-                    "max_timesteps": int(max_timesteps),
-                    "time_in_seconds": time_in_seconds,
-                    "dt": dt,
-                    "num_neurons": int(num_neurons),
-                    "num_named_neurons": num_named,
-                    "num_unknown_neurons": int(num_neurons) - num_named,
-                },
-            }
-        )
-        # standardize the shape of calcium data to 302 x time
-        data_dict[worm] = reshape_calcium_data(data_dict[worm])
 
-    # 'WT_NoStim'
-    # load the second .mat file
-    arr = mat73.loadmat(os.path.join(source_path, "Kato2015", "WT_NoStim.mat"))[
-        "WT_NoStim"
-    ]
-    print(list(arr.keys()), end="\n\n")
-    # get data for all worms
-    all_IDs = arr[
-        "NeuronNames"
-    ]  # identified neuron IDs (only subset have neuron names)
-    all_traces = arr["deltaFOverF_bc"]  # neural activity traces corrected for bleaching
-    timeVectorSeconds = arr["tv"]
-    print("num. worms:", len(all_IDs), end="\n\n")
-    for ii, real_data in enumerate(all_traces):
-        worm = "worm" + str(ii + i + 1)
-        ii_IDs = [(j[0] if isinstance(j, list) else j) for j in all_IDs[ii]]
-        ii_IDs = [
-            (str(_) if j is None or isinstance(j, np.ndarray) else str(j))
-            for _, j in enumerate(ii_IDs)
-        ]
-        _, inds = np.unique(
-            ii_IDs, return_index=True
-        )  # only keep indices of unique neuron IDs
-        ii_IDs = [ii_IDs[_] for _ in inds]
-        real_data = real_data[:, inds.astype(int)]  # only get data for unique neurons
-        neuron_to_idx = {
-            nid: (str(nid) if (j is None or isinstance(j, np.ndarray)) else str(j))
-            for nid, j in enumerate(ii_IDs)
-        }
-        neuron_to_idx = {
-            nid: (
-                name.replace("0", "")
-                if not name.endswith("0") and not name.isnumeric()
-                else name
-            )
-            for nid, name in neuron_to_idx.items()
-        }
-        neuron_to_idx = dict((v, k) for k, v in neuron_to_idx.items())
-        time_in_seconds = timeVectorSeconds[ii].reshape(
-            timeVectorSeconds[ii].shape[0], 1
-        )
-        time_in_seconds = torch.tensor(time_in_seconds).to(torch.float32)
-        num_named = len(
-            [k for k in neuron_to_idx.keys() if not k.isnumeric()]
-        )  # number of neurons that were ID'd
-        sc = transform  # normalize data
-        real_data = sc.fit_transform(real_data)
-        real_data = torch.tensor(
-            real_data, dtype=torch.float32
-        )  # add a feature dimension and convert to tensor
-        # resample the data to a fixed time step
-        time_in_seconds, real_data = interpolate_data(
-            time_in_seconds, real_data, target_dt=resample_dt
-        )
-        # calculate the time step
-        dt = torch.zeros_like(time_in_seconds).to(torch.float32)
-        dt[1:] = time_in_seconds[1:] - time_in_seconds[:-1]
-        # recalculate max_timesteps and num_neurons
-        max_timesteps, num_neurons = real_data.shape
-        print(
-            "len. Ca recording %s, total num. neurons %s, num. ID'd neurons %s"
-            % (max_timesteps, num_neurons, num_named),
-            end="\n\n",
-        )
-        # smooth the data
-        smooth_real_data, residual, smooth_residual = smooth_data_preprocess(
-            real_data,
-            time_in_seconds,
-            smooth_method,
-            dt=np.median(dt),
-        )
-        data_dict.update(
-            {
-                worm: {
-                    "dataset": "Kato2015",
-                    "smooth_method": smooth_method.upper(),
-                    "worm": worm,
-                    "calcium_data": real_data,
-                    "smooth_calcium_data": smooth_real_data,
-                    "residual_calcium": residual,
-                    "smooth_residual_calcium": smooth_residual,
-                    "neuron_to_idx": neuron_to_idx,
-                    "idx_to_neuron": dict((v, k) for k, v in neuron_to_idx.items()),
-                    "max_timesteps": int(max_timesteps),
-                    "time_in_seconds": time_in_seconds,
-                    "dt": dt,
-                    "num_neurons": int(num_neurons),
-                    "num_named_neurons": num_named,
-                    "num_unknown_neurons": int(num_neurons) - num_named,
-                },
-            }
-        )
-        # standardize the shape of calcium data to 302 x time
-        data_dict[worm] = reshape_calcium_data(data_dict[worm])
-    # pickle the data
-    file = os.path.join(processed_path, "Kato2015.pickle")
-    pickle_out = open(file, "wb")
-    pickle.dump(data_dict, pickle_out)
-    pickle_out.close()
-    pickle_in = open(file, "rb")
-    Kato2015 = pickle.load(pickle_in)
-    print(Kato2015.keys(), end="\n\n")
+    def resample_data(self, time_in_seconds, data):
+        return interpolate_data(time_in_seconds, data, target_dt=self.resample_dt)
+
+    def normalize_data(self, data):
+        return self.transform.fit_transform(data)
+
+    def save_data(self, data_dict):
+        file = os.path.join(self.processed_data_path, f"{self.dataset}.pickle")
+        with open(file, "wb") as f:
+            pickle.dump(data_dict, f)
+
+    def load_data(self):
+        raise NotImplementedError()
+
+    def extract_data(self):
+        raise NotImplementedError()
+
+    def preprocess(self):
+        raise NotImplementedError()
 
 
-def pickle_Nichols2017(transform, smooth_method="fft", resample_dt=1.0):
-    """
-    Pickles the worm neural activity data from Nichols et al., Science 2017,
-    A global brain state underlies C. elegans sleep behavior.
-    """
-    data_dict = dict()
+class Skora2018Preprocessor(BasePreprocessor):
+    def __init__(self, dataset_name):
+        super().__init__(dataset_name)
 
-    # 'n2_let'
-    # load the first .mat file
-    arr = mat73.loadmat(os.path.join(source_path, "Nichols2017", "n2_let.mat"))[
-        "n2_let"
-    ]
-    print(list(arr.keys()), end="\n\n")
-    # get data for all worms
-    all_IDs = arr["IDs"]  # identified neuron IDs (only subset have neuron names)
-    all_traces = arr["traces"]  # neural activity traces corrected for bleaching
-    timeVectorSeconds = arr["timeVectorSeconds"]
-    print("num. worms:", len(all_IDs), end="\n\n")
-    for i, real_data in enumerate(all_traces):
-        worm = "worm" + str(i)
-        i_IDs = [(j[0] if isinstance(j, list) else j) for j in all_IDs[i]]
-        i_IDs = [
-            (str(_) if j is None or isinstance(j, np.ndarray) else str(j))
-            for _, j in enumerate(i_IDs)
-        ]
-        _, inds = np.unique(
-            i_IDs, return_index=True
-        )  # only keep indices of unique neuron IDs
-        i_IDs = [i_IDs[_] for _ in inds]
-        real_data = real_data[:, inds.astype(int)]  # only get data for unique neurons
-        neuron_to_idx = {
-            nid: (str(nid) if (j is None or isinstance(j, np.ndarray)) else str(j))
-            for nid, j in enumerate(i_IDs)
-        }
-        neuron_to_idx = {
-            nid: (
-                name.replace("0", "")
-                if not name.endswith("0") and not name.isnumeric()
-                else name
-            )
-            for nid, name in neuron_to_idx.items()
-        }
-        neuron_to_idx = dict((v, k) for k, v in neuron_to_idx.items())
-        time_in_seconds = timeVectorSeconds[i].reshape(timeVectorSeconds[i].shape[0], 1)
-        time_in_seconds = torch.tensor(time_in_seconds).to(torch.float32)
-        num_named = len(
-            [k for k in neuron_to_idx.keys() if not k.isnumeric()]
-        )  # number of neurons that were ID'd
-        sc = transform  # normalize data
-        real_data = sc.fit_transform(real_data)
-        real_data = torch.tensor(
-            real_data, dtype=torch.float32
-        )  # add a feature dimension and convert to tensor
-        # resample the data to a fixed time step
-        time_in_seconds, real_data = interpolate_data(
-            time_in_seconds, real_data, target_dt=resample_dt
-        )
-        # calculate the time step
-        dt = torch.zeros_like(time_in_seconds)
-        dt[1:] = time_in_seconds[1:] - time_in_seconds[:-1]
-        # recalculate max_timesteps and num_neurons
-        max_timesteps, num_neurons = real_data.shape
-        print(
-            "len. Ca recording %s, total num. neurons %s, num. ID'd neurons %s"
-            % (max_timesteps, num_neurons, num_named),
-            end="\n\n",
-        )
-        # smooth the data
-        smooth_real_data, residual, smooth_residual = smooth_data_preprocess(
-            real_data,
-            time_in_seconds,
-            smooth_method,
-            dt=np.median(dt),
-        )
-        data_dict.update(
-            {
-                worm: {
-                    "dataset": "Nichols2017",
-                    "smooth_method": smooth_method.upper(),
-                    "worm": worm,
-                    "calcium_data": real_data,
-                    "smooth_calcium_data": smooth_real_data,
-                    "residual_calcium": residual,
-                    "smooth_residual_calcium": smooth_residual,
-                    "neuron_to_idx": neuron_to_idx,
-                    "idx_to_neuron": dict((v, k) for k, v in neuron_to_idx.items()),
-                    "max_timesteps": int(max_timesteps),
-                    "time_in_seconds": time_in_seconds,
-                    "dt": dt,
-                    "num_neurons": int(num_neurons),
-                    "num_named_neurons": num_named,
-                    "num_unknown_neurons": int(num_neurons) - num_named,
-                },
-            }
-        )
-        # standardize the shape of calcium data to 302 x time
-        data_dict[worm] = reshape_calcium_data(data_dict[worm])
+    def load_data(self, file_name):
+        return mat73.loadmat(os.path.join(self.raw_data_path, self.dataset, file_name))
 
-    # 'n2_prelet'
-    # load the second .mat file
-    arr = mat73.loadmat(os.path.join(source_path, "Nichols2017", "n2_prelet.mat"))[
-        "n2_prelet"
-    ]
-    print(list(arr.keys()), end="\n\n")
-    # get data for all worms
-    all_IDs = arr["IDs"]  # identified neuron IDs (only subset have neuron names)
-    all_traces = arr["traces"]  # neural activity traces corrected for bleaching
-    timeVectorSeconds = arr["timeVectorSeconds"]
-    print("num. worms:", len(all_IDs), end="\n\n")
-    for ii, real_data in enumerate(all_traces):
-        worm = "worm" + str(ii + i + 1)
-        ii_IDs = [(j[0] if isinstance(j, list) else j) for j in all_IDs[ii]]
-        ii_IDs = [
-            (str(_) if j is None or isinstance(j, np.ndarray) else str(j))
-            for _, j in enumerate(ii_IDs)
-        ]
-        _, inds = np.unique(
-            ii_IDs, return_index=True
-        )  # only keep indices of unique neuron IDs
-        ii_IDs = [ii_IDs[_] for _ in inds]
-        real_data = real_data[:, inds.astype(int)]  # only get data for unique neurons
-        neuron_to_idx = {
-            nid: (str(nid) if (j is None or isinstance(j, np.ndarray)) else str(j))
-            for nid, j in enumerate(ii_IDs)
-        }
-        neuron_to_idx = {
-            nid: (
-                name.replace("0", "")
-                if not name.endswith("0") and not name.isnumeric()
-                else name
-            )
-            for nid, name in neuron_to_idx.items()
-        }
-        neuron_to_idx = dict((v, k) for k, v in neuron_to_idx.items())
-        time_in_seconds = timeVectorSeconds[ii].reshape(
-            timeVectorSeconds[ii].shape[0], 1
-        )
-        time_in_seconds = torch.tensor(time_in_seconds).to(torch.float32)
-        num_named = len(
-            [k for k in neuron_to_idx.keys() if not k.isnumeric()]
-        )  # number of neurons that were ID'd
-        sc = transform  # normalize data
-        real_data = sc.fit_transform(real_data)
-        real_data = torch.tensor(
-            real_data, dtype=torch.float32
-        )  # add a feature dimension and convert to tensor
-        # resample the data to a fixed time step
-        time_in_seconds, real_data = interpolate_data(
-            time_in_seconds, real_data, target_dt=resample_dt
-        )
-        # calculate the time step
-        dt = torch.zeros_like(time_in_seconds)
-        dt[1:] = time_in_seconds[1:] - time_in_seconds[:-1]
-        # recalculate max_timesteps and num_neurons
-        max_timesteps, num_neurons = real_data.shape
-        print(
-            "len. Ca recording %s, total num. neurons %s, num. ID'd neurons %s"
-            % (max_timesteps, num_neurons, num_named),
-            end="\n\n",
-        )
-        # smooth the data
-        smooth_real_data, residual, smooth_residual = smooth_data_preprocess(
-            real_data,
-            time_in_seconds,
-            smooth_method,
-            dt=np.median(dt),
-        )
-        data_dict.update(
-            {
-                worm: {
-                    "dataset": "Nichols2017",
-                    "smooth_method": smooth_method.upper(),
-                    "worm": worm,
-                    "calcium_data": real_data,
-                    "smooth_calcium_data": smooth_real_data,
-                    "residual_calcium": residual,
-                    "smooth_residual_calcium": smooth_residual,
-                    "neuron_to_idx": neuron_to_idx,
-                    "idx_to_neuron": dict((v, k) for k, v in neuron_to_idx.items()),
-                    "max_timesteps": int(max_timesteps),
-                    "time_in_seconds": time_in_seconds,
-                    "dt": dt,
-                    "num_neurons": int(num_neurons),
-                    "num_named_neurons": num_named,
-                    "num_unknown_neurons": int(num_neurons) - num_named,
-                },
-            }
-        )
-        # standardize the shape of calcium data to 302 x time
-        data_dict[worm] = reshape_calcium_data(data_dict[worm])
+    def extract_data(self, arr):
+        all_IDs = arr["IDs"]
+        all_traces = arr["traces"]
+        timeVectorSeconds = arr["timeVectorSeconds"]
+        return all_IDs, all_traces, timeVectorSeconds
 
-    # 'npr1_let'
-    # load the third .mat file
-    arr = mat73.loadmat(os.path.join(source_path, "Nichols2017", "npr1_let.mat"))[
-        "npr1_let"
-    ]
-    print(list(arr.keys()), end="\n\n")
-    # get data for all worms
-    all_IDs = arr["IDs"]  # identified neuron IDs (only subset have neuron names)
-    all_traces = arr["traces"]  # neural activity traces corrected for bleaching
-    timeVectorSeconds = arr["timeVectorSeconds"]
-    print("num. worms:", len(all_IDs), end="\n\n")
-    for iii, real_data in enumerate(all_traces):
-        worm = "worm" + str(iii + ii + 1 + i + 1)
-        iii_IDs = [(j[0] if isinstance(j, list) else j) for j in all_IDs[iii]]
-        iii_IDs = [
-            (str(_) if j is None or isinstance(j, np.ndarray) else str(j))
-            for _, j in enumerate(iii_IDs)
-        ]
-        _, inds = np.unique(
-            iii_IDs, return_index=True
-        )  # only keep indices of unique neuron IDs
-        iii_IDs = [iii_IDs[_] for _ in inds]
-        real_data = real_data[:, inds.astype(int)]  # only get data for unique neurons
-        neuron_to_idx = {
-            nid: (str(nid) if (j is None or isinstance(j, np.ndarray)) else str(j))
-            for nid, j in enumerate(iii_IDs)
-        }
-        neuron_to_idx = {
-            nid: (
-                name.replace("0", "")
-                if not name.endswith("0") and not name.isnumeric()
-                else name
-            )
-            for nid, name in neuron_to_idx.items()
-        }
-        neuron_to_idx = dict((v, k) for k, v in neuron_to_idx.items())
-        time_in_seconds = timeVectorSeconds[iii].reshape(
-            timeVectorSeconds[iii].shape[0], 1
-        )
-        time_in_seconds = torch.tensor(time_in_seconds).to(torch.float32)
-        num_named = len(
-            [k for k in neuron_to_idx.keys() if not k.isnumeric()]
-        )  # number of neurons that were ID'd
-        sc = transform  # normalize data
-        real_data = sc.fit_transform(real_data)
-        real_data = torch.tensor(
-            real_data, dtype=torch.float32
-        )  # add a feature dimension and convert to tensor
-        # resample the data to a fixed time step
-        time_in_seconds, real_data = interpolate_data(
-            time_in_seconds, real_data, target_dt=resample_dt
-        )
-        # calculate the time step
-        dt = torch.zeros_like(time_in_seconds)
-        dt[1:] = time_in_seconds[1:] - time_in_seconds[:-1]
-        # recalculate max_timesteps and num_neurons
-        max_timesteps, num_neurons = real_data.shape
-        print(
-            "len. Ca recording %s, total num. neurons %s, num. ID'd neurons %s"
-            % (max_timesteps, num_neurons, num_named),
-            end="\n\n",
-        )
-        # smooth the data
-        smooth_real_data, residual, smooth_residual = smooth_data_preprocess(
-            real_data,
-            time_in_seconds,
-            smooth_method,
-            dt=np.median(dt),
-        )
-        data_dict.update(
-            {
-                worm: {
-                    "dataset": "Nichols2017",
-                    "smooth_method": smooth_method.upper(),
-                    "worm": worm,
-                    "calcium_data": real_data,
-                    "smooth_calcium_data": smooth_real_data,
-                    "residual_calcium": residual,
-                    "smooth_residual_calcium": smooth_residual,
-                    "neuron_to_idx": neuron_to_idx,
-                    "idx_to_neuron": dict((v, k) for k, v in neuron_to_idx.items()),
-                    "max_timesteps": int(max_timesteps),
-                    "time_in_seconds": time_in_seconds,
-                    "dt": dt,
-                    "num_neurons": int(num_neurons),
-                    "num_named_neurons": num_named,
-                    "num_unknown_neurons": int(num_neurons) - num_named,
-                },
-            }
-        )
-        # standardize the shape of calcium data to 302 x time
-        data_dict[worm] = reshape_calcium_data(data_dict[worm])
+    def preprocess(self):
+        preprocessed_data = {}
+        for file_name in ["WT_fasted.mat", "WT_starved.mat"]:
+            raw_data = self.load_data(file_name)[file_name.split(".")[0]]
+            neuron_IDs, traces, raw_timeVectorSeconds = self.extract_data(raw_data)
 
-    # 'npr1_prelet'
-    # load the fourth .mat file
-    arr = mat73.loadmat(os.path.join(source_path, "Nichols2017", "npr1_prelet.mat"))[
-        "npr1_prelet"
-    ]
-    print(list(arr.keys()), end="\n\n")
-    # get data for all worms
-    all_IDs = arr["IDs"]  # identified neuron IDs (only subset have neuron names)
-    all_traces = arr["traces"]  # neural activity traces corrected for bleaching
-    timeVectorSeconds = arr["timeVectorSeconds"]
-    print("num. worms:", len(all_IDs), end="\n\n")
-    for iv, real_data in enumerate(all_traces):
-        worm = "worm" + str(iv + iii + 1 + ii + 1 + i + 1)
-        iv_IDs = [(j[0] if isinstance(j, list) else j) for j in all_IDs[iv]]
-        iv_IDs = [
-            (str(_) if j is None or isinstance(j, np.ndarray) else str(j))
-            for _, j in enumerate(iv_IDs)
-        ]
-        _, inds = np.unique(
-            iv_IDs, return_index=True
-        )  # only keep indices of unique neuron IDs
-        iv_IDs = [iv_IDs[_] for _ in inds]
-        real_data = real_data[:, inds.astype(int)]  # only get data for unique neurons
-        neuron_to_idx = {
-            nid: (str(nid) if (j is None or isinstance(j, np.ndarray)) else str(j))
-            for nid, j in enumerate(iv_IDs)
-        }
-        neuron_to_idx = {
-            nid: (
-                name.replace("0", "")
-                if not name.endswith("0") and not name.isnumeric()
-                else name
-            )
-            for nid, name in neuron_to_idx.items()
-        }
-        neuron_to_idx = dict((v, k) for k, v in neuron_to_idx.items())
-        time_in_seconds = timeVectorSeconds[iv].reshape(
-            timeVectorSeconds[iv].shape[0], 1
-        )
-        time_in_seconds = torch.tensor(time_in_seconds).to(torch.float32)
-        num_named = len(
-            [k for k in neuron_to_idx.keys() if not k.isnumeric()]
-        )  # number of neurons that were ID'd
-        sc = transform  # normalize data
-        real_data = sc.fit_transform(real_data)
-        real_data = torch.tensor(
-            real_data, dtype=torch.float32
-        )  # add a feature dimension and convert to tensor
-        # resample the data to a fixed time step
-        time_in_seconds, real_data = interpolate_data(
-            time_in_seconds, real_data, target_dt=resample_dt
-        )
-        # calculate the time step
-        dt = torch.zeros_like(time_in_seconds)
-        dt[1:] = time_in_seconds[1:] - time_in_seconds[:-1]
-        # recalculate max_timesteps and num_neurons
-        max_timesteps, num_neurons = real_data.shape
-        print(
-            "len. Ca recording %s, total num. neurons %s, num. ID'd neurons %s"
-            % (max_timesteps, num_neurons, num_named),
-            end="\n\n",
-        )
-        # smooth the data
-        smooth_real_data, residual, smooth_residual = smooth_data_preprocess(
-            real_data,
-            time_in_seconds,
-            smooth_method,
-            dt=np.median(dt),
-        )
-        data_dict.update(
-            {
-                worm: {
-                    "dataset": "Nichols2017",
-                    "smooth_method": smooth_method.upper(),
-                    "worm": worm,
-                    "calcium_data": real_data,
-                    "smooth_calcium_data": smooth_real_data,
-                    "residual_calcium": residual,
-                    "smooth_residual_calcium": smooth_residual,
-                    "neuron_to_idx": neuron_to_idx,
-                    "idx_to_neuron": dict((v, k) for k, v in neuron_to_idx.items()),
-                    "max_timesteps": int(max_timesteps),
-                    "time_in_seconds": time_in_seconds,
-                    "dt": dt,
-                    "num_neurons": int(num_neurons),
-                    "num_named_neurons": num_named,
-                    "num_unknown_neurons": int(num_neurons) - num_named,
-                },
-            }
-        )
-        # standardize the shape of calcium data to 302 x time
-        data_dict[worm] = reshape_calcium_data(data_dict[worm])
-    # pickle the data
-    file = os.path.join(processed_path, "Nichols2017.pickle")
-    pickle_out = open(file, "wb")
-    pickle.dump(data_dict, pickle_out)
-    pickle_out.close()
-    pickle_in = open(file, "rb")
-    Nichols2017 = pickle.load(pickle_in)
-    print(Nichols2017.keys(), end="\n\n")
-
-
-def pickle_Nguyen2017(transform, smooth_method="fft", resample_dt=1.0):
-    """
-    Pickles the worm neural activity data from Nguyen et al., PLOS CompBio 2017,
-    Automatically tracking neurons in a moving and deforming brain.
-    """
-    imputer = SimpleImputer(missing_values=np.nan, strategy="median")
-
-    # WORM 0
-    # load .mat file for  worm 0
-    arr0 = loadmat(
-        os.path.join(source_path, "Nguyen2017", "heatData_worm0.mat")
-    )  # load .mat file
-    print(list(arr0.keys()), end="\n\n")
-    # get data for worm 0
-    G2 = arr0[
-        "G2"
-    ]  # the ratio signal is defined as gPhotoCorr/rPhotoCorr, the Ratio is then normalized as delta R/ R0. is the same way as R2 and G2.
-    cgIdx = arr0[
-        "cgIdx"
-    ].squeeze()  # ordered indices derived from heirarchically clustering the correlation matrix.
-    real_data0 = G2[cgIdx - 1, :].T  # to show organized traces, use Ratio2(cgIdx,:)
-    real_data0 = imputer.fit_transform(real_data0)  # impute missing values (i.e. NaNs)
-    # time vector
-    time_in_seconds0 = arr0.get("hasPointsTime", np.arange(real_data0.shape[0]))
-    time_in_seconds0 = time_in_seconds0.reshape(-1, 1)
-    time_in_seconds0 = torch.tensor(time_in_seconds0).to(torch.float32)
-    num_named0 = 0
-    worm0_ID = {i: str(i) for i in range(real_data0.shape[1])}
-    worm0_ID = dict((v, k) for k, v in worm0_ID.items())
-    # normalize the data
-    sc = transform
-    real_data0 = sc.fit_transform(real_data0)
-    real_data0 = torch.tensor(real_data0, dtype=torch.float32)
-    # resample the data to a fixed time step
-    time_in_seconds0, real_data0 = interpolate_data(
-        time_in_seconds0, real_data0, target_dt=resample_dt
-    )
-    # calculate the time step
-    dt0 = torch.zeros_like(time_in_seconds0)
-    dt0[1:] = time_in_seconds0[1:] - time_in_seconds0[:-1]
-    # recalculate max_timesteps and num_neurons
-    max_time0, num_neurons0 = real_data0.shape
-    print(
-        "len. Ca recording %s, total num. neurons %s, num. ID'd neurons %s"
-        % (max_time0, num_neurons0, num_named0),
-        end="\n\n",
-    )
-
-    # WORM 1
-    # load .mat file for  worm 1
-    arr1 = loadmat(
-        os.path.join(source_path, "Nguyen2017", "heatData_worm1.mat")
-    )  # load .mat file
-    print(list(arr1.keys()), end="\n\n")
-    # get data for worm 1
-    G2 = arr1[
-        "G2"
-    ]  # the ratio signal is defined as gPhotoCorr/rPhotoCorr, the Ratio is then normalized as delta R/ R0. is the same way as R2 and G2.
-    cgIdx = arr1[
-        "cgIdx"
-    ].squeeze()  # ordered indices derived from heirarchically clustering the correlation matrix.
-    real_data1 = G2[cgIdx - 1, :].T  # to show organized traces, use Ratio2(cgIdx,:)
-    real_data1 = imputer.fit_transform(real_data1)  # replace NaNs
-    # time vector
-    time_in_seconds1 = arr1.get("hasPointsTime", np.arange(real_data1.shape[0]))
-    time_in_seconds1 = time_in_seconds1.reshape(-1, 1)
-    time_in_seconds1 = torch.tensor(time_in_seconds1).to(torch.float32)
-    num_named1 = 0
-    worm1_ID = {i: str(i) for i in range(real_data1.shape[1])}
-    worm1_ID = dict((v, k) for k, v in worm1_ID.items())
-    # normalize the data
-    sc = transform
-    real_data1 = sc.fit_transform(real_data1)
-    real_data1 = torch.tensor(real_data1, dtype=torch.float32)
-    # resample the data to a fixed time step
-    time_in_seconds1, real_data1 = interpolate_data(
-        time_in_seconds1, real_data1, target_dt=resample_dt
-    )
-    # calculate the time step
-    dt1 = torch.zeros_like(time_in_seconds1)
-    dt1[1:] = time_in_seconds1[1:] - time_in_seconds1[:-1]
-    # recalculate max_timesteps and num_neurons
-    max_time1, num_neurons1 = real_data1.shape
-    print(
-        "len. Ca recording %s, total num. neurons %s, num. ID'd neurons %s"
-        % (max_time1, num_neurons1, num_named1),
-        end="\n\n",
-    )
-
-    # WORM 2
-    # load .mat file for  worm 1
-    arr2 = loadmat(
-        os.path.join(source_path, "Nguyen2017", "heatData_worm2.mat")
-    )  # load .mat file
-    print(list(arr2.keys()), end="\n\n")
-    # get data for worm 2
-    G2 = arr2[
-        "G2"
-    ]  # the ratio signal is defined as gPhotoCorr/rPhotoCorr, the Ratio is then normalized as delta R/ R0. is the same way as R2 and G2.
-    cgIdx = arr2[
-        "cgIdx"
-    ].squeeze()  # ordered indices derived from heirarchically clustering the correlation matrix.
-    real_data2 = G2[cgIdx - 1, :].T  # to show organized traces, use Ratio2(cgIdx,:)
-    real_data2 = imputer.fit_transform(real_data2)  # replace NaNs
-    # time vector
-    time_in_seconds2 = arr2.get("hasPointsTime", np.arange(real_data2.shape[0]))
-    time_in_seconds2 = time_in_seconds2.reshape(-1, 1)
-    time_in_seconds2 = torch.tensor(time_in_seconds2).to(torch.float32)
-    num_named2 = 0
-    worm2_ID = {i: str(i) for i in range(real_data2.shape[1])}
-    worm2_ID = dict((v, k) for k, v in worm2_ID.items())
-    # normalize the data
-    sc = transform
-    real_data2 = sc.fit_transform(real_data2)
-    real_data2 = torch.tensor(real_data2, dtype=torch.float32)
-    # resample the data to a fixed time step
-    time_in_seconds2, real_data2 = interpolate_data(
-        time_in_seconds2, real_data2, target_dt=resample_dt
-    )
-    # calculate the time step
-    dt2 = torch.zeros_like(time_in_seconds2)
-    dt2[1:] = time_in_seconds2[1:] - time_in_seconds2[:-1]
-    # recalculate max_timesteps and num_neurons
-    max_time2, num_neurons2 = real_data2.shape
-    print(
-        "len. Ca recording %s, total num. neurons %s, num. ID'd neurons %s"
-        % (max_time2, num_neurons2, num_named2),
-        end="\n\n",
-    )
-    # smooth the data
-    smooth_real_data0, residual0, smooth_residual0 = smooth_data_preprocess(
-        real_data0,
-        time_in_seconds0,
-        smooth_method,
-        dt=np.meadian(dt0),
-    )
-    smooth_real_data1, residual1, smooth_residual1 = smooth_data_preprocess(
-        real_data1,
-        time_in_seconds1,
-        smooth_method,
-        dt=np.median(dt1),
-    )
-    smooth_real_data2, residual2, smooth_residual2 = smooth_data_preprocess(
-        real_data2,
-        time_in_seconds2,
-        smooth_method,
-        dt=np.median(dt2),
-    )
-    # pickle the data
-    data_dict = {
-        "worm0": {
-            "dataset": "Nguyen2017",
-            "smooth_method": smooth_method.upper(),
-            "worm": "worm0",
-            "calcium_data": real_data0,
-            "smooth_calcium_data": smooth_real_data0,
-            "residual_calcium": residual0,
-            "smooth_residual_calcium": smooth_residual0,
-            "neuron_to_idx": worm0_ID,
-            "idx_to_neuron": dict((v, k) for k, v in worm0_ID.items()),
-            "max_timesteps": max_time0,
-            "time_in_seconds": time_in_seconds0,
-            "dt": dt0,
-            "num_neurons": num_neurons0,
-            "num_named_neurons": num_named0,
-            "num_unknown_neurons": num_neurons0 - num_named0,
-        },
-        "worm1": {
-            "dataset": "Nguyen2017",
-            "smooth_method": smooth_method.upper(),
-            "worm": "worm1",
-            "calcium_data": real_data1,
-            "smooth_calcium_data": smooth_real_data1,
-            "residual_calcium": residual1,
-            "smooth_residual_calcium": smooth_residual1,
-            "neuron_to_idx": worm1_ID,
-            "idx_to_neuron": dict((v, k) for k, v in worm1_ID.items()),
-            "max_timesteps": max_time1,
-            "time_in_seconds": time_in_seconds1,
-            "dt": dt1,
-            "num_neurons": num_neurons1,
-            "num_named_neurons": num_named1,
-            "num_unknown_neurons": num_neurons1 - num_named1,
-        },
-        "worm2": {
-            "dataset": "Nguyen2017",
-            "smooth_method": smooth_method.upper(),
-            "worm": "worm2",
-            "calcium_data": real_data2,
-            "smooth_calcium_data": smooth_real_data2,
-            "residual_calcium": residual2,
-            "smooth_residual_calcium": smooth_residual2,
-            "neuron_to_idx": worm2_ID,
-            "idx_to_neuron": dict((v, k) for k, v in worm2_ID.items()),
-            "max_timesteps": max_time2,
-            "time_in_seconds": time_in_seconds2,
-            "dt": dt2,
-            "num_neurons": num_neurons2,
-            "num_named_neurons": num_named2,
-            "num_unknown_neurons": num_neurons2 - num_named2,
-        },
-    }
-    for worm in data_dict.keys():
-        # standardize the shape of calcium data to 302 x time
-        data_dict[worm] = reshape_calcium_data(data_dict[worm])
-    file = os.path.join(processed_path, "Nguyen2017.pickle")
-    pickle_out = open(file, "wb")
-    pickle.dump(data_dict, pickle_out)
-    pickle_out.close()
-    pickle_in = open(file, "rb")
-    Nguyen2017 = pickle.load(pickle_in)
-    print(Nguyen2017.keys(), end="\n\n")
-
-
-def pickle_Skora2018(transform, smooth_method="fft", resample_dt=1.0):
-    """
-    Pickles the worm neural activity data from Skora et al., Cell Reports 2018,
-    Energy Scarcity Promotes a Brain-wide Sleep State Modulated by Insulin Signaling in C. elegans.
-    """
-    data_dict = dict()
-
-    # 'WT_fasted'
-    # load the first .mat file
-    arr = mat73.loadmat(os.path.join(source_path, "Skora2018", "WT_fasted.mat"))[
-        "WT_fasted"
-    ]
-    print(list(arr.keys()), end="\n\n")
-    # get data for all worms
-    all_IDs = arr["IDs"]  # identified neuron IDs (only subset have neuron names)
-    all_traces = arr["traces"]  # neural activity traces corrected for bleaching
-    timeVectorSeconds = arr["timeVectorSeconds"]
-    print("num. worms:", len(all_IDs), end="\n\n")
-    for i, real_data in enumerate(all_traces):
-        worm = "worm" + str(i)
-        i_IDs = [(j[0] if isinstance(j, list) else j) for j in all_IDs[i]]
-        i_IDs = [
-            (str(_) if j is None or isinstance(j, np.ndarray) else str(j))
-            for _, j in enumerate(i_IDs)
-        ]
-        _, inds = np.unique(
-            i_IDs, return_index=True
-        )  # only keep indices of unique neuron IDs
-        i_IDs = [i_IDs[_] for _ in inds]
-        real_data = real_data[:, inds.astype(int)]  # only get data for unique neurons
-        neuron_to_idx = {
-            nid: (str(nid) if (j is None or isinstance(j, np.ndarray)) else str(j))
-            for nid, j in enumerate(i_IDs)
-        }
-        neuron_to_idx = {
-            nid: (
-                name.replace("0", "")
-                if not name.endswith("0") and not name.isnumeric()
-                else name
-            )
-            for nid, name in neuron_to_idx.items()
-        }
-        neuron_to_idx = dict((v, k) for k, v in neuron_to_idx.items())
-        time_in_seconds = timeVectorSeconds[i].reshape(timeVectorSeconds[i].shape[0], 1)
-        time_in_seconds = torch.tensor(time_in_seconds).to(torch.float32)
-        num_named = len(
-            [k for k in neuron_to_idx.keys() if not k.isnumeric()]
-        )  # number of neurons that were ID'd
-        sc = transform  # normalize data
-        real_data = sc.fit_transform(real_data)
-        real_data = torch.tensor(
-            real_data, dtype=torch.float32
-        )  # add a feature dimension and convert to tensor
-        # resample the data to a fixed time step
-        time_in_seconds, real_data = interpolate_data(
-            time_in_seconds, real_data, target_dt=resample_dt
-        )
-        # calulate the time step
-        dt = torch.zeros_like(time_in_seconds)
-        dt[1:] = time_in_seconds[1:] - time_in_seconds[:-1]
-        # recalculate max_timesteps and num_neurons
-        max_timesteps, num_neurons = real_data.shape
-        print(
-            "len. Ca recording %s, total num. neurons %s, num. ID'd neurons %s"
-            % (max_timesteps, num_neurons, num_named),
-            end="\n\n",
-        )
-        # smooth the data
-        smooth_real_data, residual, smooth_residual = smooth_data_preprocess(
-            real_data,
-            time_in_seconds,
-            smooth_method,
-            dt=np.median(dt),
-        )
-        data_dict.update(
-            {
-                worm: {
-                    "dataset": "Skora2018",
-                    "smooth_method": smooth_method.upper(),
-                    "worm": worm,
-                    "calcium_data": real_data,
-                    "smooth_calcium_data": smooth_real_data,
-                    "residual_calcium": residual,
-                    "smooth_residual_calcium": smooth_residual,
-                    "neuron_to_idx": neuron_to_idx,
-                    "idx_to_neuron": dict((v, k) for k, v in neuron_to_idx.items()),
-                    "max_timesteps": int(max_timesteps),
-                    "time_in_seconds": time_in_seconds,
-                    "dt": dt,
-                    "num_neurons": int(num_neurons),
-                    "num_named_neurons": num_named,
-                    "num_unknown_neurons": int(num_neurons) - num_named,
-                },
-            }
-        )
-        # standardize the shape of calcium data to 302 x time
-        data_dict[worm] = reshape_calcium_data(data_dict[worm])
-
-    # 'WT_starved'
-    # load the second .mat file
-    arr = mat73.loadmat(os.path.join(source_path, "Skora2018", "WT_starved.mat"))[
-        "WT_starved"
-    ]
-    print(list(arr.keys()), end="\n\n")
-    # get data for all worms
-    all_IDs = arr["IDs"]  # identified neuron IDs (only subset have neuron names)
-    all_traces = arr["traces"]  # neural activity traces corrected for bleaching
-    timeVectorSeconds = arr["timeVectorSeconds"]
-    print("num. worms:", len(all_IDs), end="\n\n")
-    for ii, real_data in enumerate(all_traces):
-        worm = "worm" + str(ii + i + 1)
-        ii_IDs = [(j[0] if isinstance(j, list) else j) for j in all_IDs[ii]]
-        ii_IDs = [
-            (str(_) if j is None or isinstance(j, np.ndarray) else str(j))
-            for _, j in enumerate(ii_IDs)
-        ]
-        _, inds = np.unique(
-            ii_IDs, return_index=True
-        )  # only keep indices of unique neuron IDs
-        ii_IDs = [ii_IDs[_] for _ in inds]
-        real_data = real_data[:, inds.astype(int)]  # only get data for unique neurons
-        neuron_to_idx = {
-            nid: (str(nid) if (j is None or isinstance(j, np.ndarray)) else str(j))
-            for nid, j in enumerate(ii_IDs)
-        }
-        neuron_to_idx = {
-            nid: (
-                name.replace("0", "")
-                if not name.endswith("0") and not name.isnumeric()
-                else name
-            )
-            for nid, name in neuron_to_idx.items()
-        }
-        neuron_to_idx = dict((v, k) for k, v in neuron_to_idx.items())
-        time_in_seconds = timeVectorSeconds[ii].reshape(
-            timeVectorSeconds[ii].shape[0], 1
-        )
-        time_in_seconds = torch.tensor(time_in_seconds).to(torch.float32)
-        num_named = len(
-            [k for k in neuron_to_idx.keys() if not k.isnumeric()]
-        )  # number of neurons that were ID'd
-        sc = transform  # normalize data
-        real_data = sc.fit_transform(real_data)
-        real_data = torch.tensor(
-            real_data, dtype=torch.float32
-        )  # add a feature dimension and convert to tensor
-        # resample the data to a fixed time step
-        time_in_seconds, real_data = interpolate_data(
-            time_in_seconds, real_data, target_dt=resample_dt
-        )
-        # calulate the time step
-        dt = torch.zeros_like(time_in_seconds)
-        dt[1:] = time_in_seconds[1:] - time_in_seconds[:-1]
-        # recalculate max_timesteps and num_neurons
-        max_timesteps, num_neurons = real_data.shape
-        print(
-            "len. Ca recording %s, total num. neurons %s, num. ID'd neurons %s"
-            % (max_timesteps, num_neurons, num_named),
-            end="\n\n",
-        )
-        # smooth the data
-        smooth_real_data, residual, smooth_residual = smooth_data_preprocess(
-            real_data,
-            time_in_seconds,
-            smooth_method,
-            dt=np.median(dt),
-        )
-        data_dict.update(
-            {
-                worm: {
-                    "dataset": "Skora2018",
-                    "smooth_method": smooth_method.upper(),
-                    "worm": worm,
-                    "calcium_data": real_data,
-                    "smooth_calcium_data": smooth_real_data,
-                    "residual_calcium": residual,
-                    "smooth_residual_calcium": smooth_residual,
-                    "neuron_to_idx": neuron_to_idx,
-                    "idx_to_neuron": dict((v, k) for k, v in neuron_to_idx.items()),
-                    "max_timesteps": int(max_timesteps),
-                    "time_in_seconds": time_in_seconds,
-                    "dt": dt,
-                    "num_neurons": int(num_neurons),
-                    "num_named_neurons": num_named,
-                    "num_unknown_neurons": int(num_neurons) - num_named,
-                },
-            }
-        )
-        # standardize the shape of calcium data to 302 x time
-        data_dict[worm] = reshape_calcium_data(data_dict[worm])
-    # pickle the data
-    file = os.path.join(processed_path, "Skora2018.pickle")
-    pickle_out = open(file, "wb")
-    pickle.dump(data_dict, pickle_out)
-    pickle_out.close()
-    pickle_in = open(file, "rb")
-    Skora2018 = pickle.load(pickle_in)
-    print(Skora2018.keys(), end="\n\n")
-
-
-def pickle_Kaplan2020(transform, smooth_method="fft", resample_dt=1.0):
-    """
-    Pickles the worm neural activity data from Kaplan et al., Neuron 2020,
-    Nested Neuronal Dynamics Orchestrate a Behavioral Hierarchy across Timescales.
-    """
-    data_dict = dict()
-
-    # 'RIShisCl_Neuron2019'
-    # load the first .mat file
-    arr = mat73.loadmat(
-        os.path.join(source_path, "Kaplan2020", "Neuron2019_Data_RIShisCl.mat")
-    )["RIShisCl_Neuron2019"]
-    print(list(arr.keys()), end="\n\n")
-    # get data for all worms
-    all_IDs = arr["neuron_ID"]  # identified neuron IDs (only subset have neuron names)
-    all_traces = arr[
-        "traces_bleach_corrected"
-    ]  # neural activity traces corrected for bleaching
-    timeVectorSeconds = arr["time_vector"]
-    print("num. worms:", len(all_IDs), end="\n\n")
-    for i, real_data in enumerate(all_traces):
-        worm = "worm" + str(i)
-        _, inds = np.unique(
-            all_IDs[i], return_index=True
-        )  # only keep indices of unique neuron IDs
-        all_IDs[i] = [all_IDs[i][_] for _ in inds]
-        real_data = real_data[:, inds.astype(int)]  # only get data for unique neurons
-        neuron_to_idx = {nid: str(j) for nid, j in enumerate(all_IDs[i])}
-        neuron_to_idx = {
-            nid: (
-                name.replace("0", "")
-                if not name.endswith("0") and not name.isnumeric()
-                else name
-            )
-            for nid, name in neuron_to_idx.items()
-        }
-        neuron_to_idx = dict((v, k) for k, v in neuron_to_idx.items())
-        time_in_seconds = timeVectorSeconds[i].reshape(timeVectorSeconds[i].shape[0], 1)
-        time_in_seconds = torch.tensor(time_in_seconds).to(torch.float32)
-        num_named = len(
-            [k for k in neuron_to_idx.keys() if not k.isnumeric()]
-        )  # number of neurons that were ID'd
-        sc = transform  # normalize data
-        real_data = sc.fit_transform(real_data)
-        real_data = torch.tensor(
-            real_data, dtype=torch.float32
-        )  # add a feature dimension and convert to tensor
-        # resample the data to a fixed time step
-        time_in_seconds, real_data = interpolate_data(
-            time_in_seconds, real_data, target_dt=resample_dt
-        )
-        # calulate the time step
-        dt = torch.zeros_like(time_in_seconds)
-        dt[1:] = time_in_seconds[1:] - time_in_seconds[:-1]
-        # recalculate max_timesteps and num_neurons
-        max_timesteps, num_neurons = real_data.shape
-        print(
-            "len. Ca recording %s, total num. neurons %s, num. ID'd neurons %s"
-            % (max_timesteps, num_neurons, num_named),
-            end="\n\n",
-        )
-        # smooth the data
-        smooth_real_data, residual, smooth_residual = smooth_data_preprocess(
-            real_data,
-            time_in_seconds,
-            smooth_method,
-            dt=np.median(dt),
-        )
-        data_dict.update(
-            {
-                worm: {
-                    "dataset": "Kaplan2020",
-                    "smooth_method": smooth_method.upper(),
-                    "worm": worm,
-                    "calcium_data": real_data,
-                    "smooth_calcium_data": smooth_real_data,
-                    "residual_calcium": residual,
-                    "smooth_residual_calcium": smooth_residual,
-                    "neuron_to_idx": neuron_to_idx,
-                    "idx_to_neuron": dict((v, k) for k, v in neuron_to_idx.items()),
-                    "max_timesteps": int(max_timesteps),
-                    "time_in_seconds": time_in_seconds,
-                    "dt": dt,
-                    "num_neurons": int(num_neurons),
-                    "num_named_neurons": num_named,
-                    "num_unknown_neurons": int(num_neurons) - num_named,
-                },
-            }
-        )
-        # standardize the shape of calcium data to 302 x time
-        data_dict[worm] = reshape_calcium_data(data_dict[worm])
-
-    # 'MNhisCl_RIShisCl_Neuron2019'
-    # load the second .mat file
-    arr = mat73.loadmat(
-        os.path.join(source_path, "Kaplan2020", "Neuron2019_Data_MNhisCl_RIShisCl.mat")
-    )["MNhisCl_RIShisCl_Neuron2019"]
-    print(list(arr.keys()), end="\n\n")
-    # get data for all worms
-    all_IDs = arr["neuron_ID"]  # identified neuron IDs (only subset have neuron names)
-    all_traces = arr[
-        "traces_bleach_corrected"
-    ]  # neural activity traces corrected for bleaching
-    timeVectorSeconds = arr["time_vector"]
-    print("num. worms:", len(all_IDs), end="\n\n")
-    for ii, real_data in enumerate(all_traces):
-        worm = "worm" + str(ii + i + 1)
-        _, inds = np.unique(
-            all_IDs[ii], return_index=True
-        )  # only keep indices of unique neuron IDs
-        all_IDs[ii] = [all_IDs[ii][_] for _ in inds]
-        real_data = real_data[:, inds.astype(int)]  # only get data for unique neurons
-        neuron_to_idx = {nid: str(j) for nid, j in enumerate(all_IDs[ii])}
-        neuron_to_idx = {
-            nid: (
-                name.replace("0", "")
-                if not name.endswith("0") and not name.isnumeric()
-                else name
-            )
-            for nid, name in neuron_to_idx.items()
-        }
-        neuron_to_idx = dict((v, k) for k, v in neuron_to_idx.items())
-        time_in_seconds = timeVectorSeconds[ii].reshape(
-            timeVectorSeconds[ii].shape[0], 1
-        )
-        time_in_seconds = torch.tensor(time_in_seconds).to(torch.float32)
-        num_named = len(
-            [k for k in neuron_to_idx.keys() if not k.isnumeric()]
-        )  # number of neurons that were ID'd
-        sc = transform  # normalize data
-        real_data = sc.fit_transform(real_data)
-        real_data = torch.tensor(
-            real_data, dtype=torch.float32
-        )  # add a feature dimension and convert to tensor
-        # resample the data to a fixed time step
-        time_in_seconds, real_data = interpolate_data(
-            time_in_seconds, real_data, target_dt=resample_dt
-        )
-        # calulate the time step
-        dt = torch.zeros_like(time_in_seconds)
-        dt[1:] = time_in_seconds[1:] - time_in_seconds[:-1]
-        # recalculate max_timesteps and num_neurons
-        max_timesteps, num_neurons = real_data.shape
-        print(
-            "len. Ca recording %s, total num. neurons %s, num. ID'd neurons %s"
-            % (max_timesteps, num_neurons, num_named),
-            end="\n\n",
-        )
-        # smooth the data
-        smooth_real_data, residual, smooth_residual = smooth_data_preprocess(
-            real_data,
-            time_in_seconds,
-            smooth_method,
-            dt=np.median(dt),
-        )
-        data_dict.update(
-            {
-                worm: {
-                    "dataset": "Kaplan2020",
-                    "smooth_method": smooth_method.upper(),
-                    "worm": worm,
-                    "calcium_data": real_data,
-                    "smooth_calcium_data": smooth_real_data,
-                    "residual_calcium": residual,
-                    "smooth_residual_calcium": smooth_residual,
-                    "neuron_to_idx": neuron_to_idx,
-                    "idx_to_neuron": dict((v, k) for k, v in neuron_to_idx.items()),
-                    "max_timesteps": int(max_timesteps),
-                    "time_in_seconds": time_in_seconds,
-                    "dt": dt,
-                    "num_neurons": int(num_neurons),
-                    "num_named_neurons": num_named,
-                    "num_unknown_neurons": int(num_neurons) - num_named,
-                },
-            }
-        )
-        # standardize the shape of calcium data to 302 x time
-        data_dict[worm] = reshape_calcium_data(data_dict[worm])
-
-    # 'MNhisCl_RIShisCl_Neuron2019'
-    # load the third .mat file
-    arr = mat73.loadmat(
-        os.path.join(source_path, "Kaplan2020", "Neuron2019_Data_SMDhisCl_RIShisCl.mat")
-    )["SMDhisCl_RIShisCl_Neuron2019"]
-    print(list(arr.keys()), end="\n\n")
-    # get data for all worms
-    all_IDs = arr["neuron_ID"]  # identified neuron IDs (only subset have neuron names)
-    all_traces = arr[
-        "traces_bleach_corrected"
-    ]  # neural activity traces corrected for bleaching
-    timeVectorSeconds = arr["time_vector"]
-    print("num. worms:", len(all_IDs), end="\n\n")
-    for iii, real_data in enumerate(all_traces):
-        worm = "worm" + str(iii + ii + 1 + i + 1)
-        _, inds = np.unique(
-            all_IDs[iii], return_index=True
-        )  # only keep indices of unique neuron IDs
-        all_IDs[iii] = [all_IDs[iii][_] for _ in inds]
-        real_data = real_data[:, inds.astype(int)]  # only get data for unique neurons
-        neuron_to_idx = {nid: str(j) for nid, j in enumerate(all_IDs[iii])}
-        neuron_to_idx = {
-            nid: (
-                name.replace("0", "")
-                if not name.endswith("0") and not name.isnumeric()
-                else name
-            )
-            for nid, name in neuron_to_idx.items()
-        }
-        neuron_to_idx = dict((v, k) for k, v in neuron_to_idx.items())
-        time_in_seconds = timeVectorSeconds[iii].reshape(
-            timeVectorSeconds[iii].shape[0], 1
-        )
-        time_in_seconds = torch.tensor(time_in_seconds).to(torch.float32)
-        num_named = len(
-            [k for k in neuron_to_idx.keys() if not k.isnumeric()]
-        )  # number of neurons that were ID'd
-        sc = transform  # normalize data
-        real_data = sc.fit_transform(real_data)
-        real_data = torch.tensor(
-            real_data, dtype=torch.float32
-        )  # add a feature dimension and convert to tensor
-        # resample the data to a fixed time step
-        time_in_seconds, real_data = interpolate_data(
-            time_in_seconds, real_data, target_dt=resample_dt
-        )
-        # calulate the time step
-        dt = torch.zeros_like(time_in_seconds)
-        dt[1:] = time_in_seconds[1:] - time_in_seconds[:-1]
-        # recalculate max_timesteps and num_neurons
-        max_timesteps, num_neurons = real_data.shape
-        print(
-            "len. Ca recording %s, total num. neurons %s, num. ID'd neurons %s"
-            % (max_timesteps, num_neurons, num_named),
-            end="\n\n",
-        )
-        # smooth the data
-        smooth_real_data, residual, smooth_residual = smooth_data_preprocess(
-            real_data,
-            time_in_seconds,
-            smooth_method,
-            dt=np.median(dt),
-        )
-        data_dict.update(
-            {
-                worm: {
-                    "dataset": "Kaplan2020",
-                    "smooth_method": smooth_method.upper(),
-                    "worm": worm,
-                    "calcium_data": real_data,
-                    "smooth_calcium_data": smooth_real_data,
-                    "residual_calcium": residual,
-                    "smooth_residual_calcium": smooth_residual,
-                    "neuron_to_idx": neuron_to_idx,
-                    "idx_to_neuron": dict((v, k) for k, v in neuron_to_idx.items()),
-                    "max_timesteps": int(max_timesteps),
-                    "time_in_seconds": time_in_seconds,
-                    "dt": dt,
-                    "num_neurons": int(num_neurons),
-                    "num_named_neurons": num_named,
-                    "num_unknown_neurons": int(num_neurons) - num_named,
-                },
-            }
-        )
-        # standardize the shape of calcium data to 302 x time
-        data_dict[worm] = reshape_calcium_data(data_dict[worm])
-    # pickle the data
-    file = os.path.join(processed_path, "Kaplan2020.pickle")
-    pickle_out = open(file, "wb")
-    pickle.dump(data_dict, pickle_out)
-    pickle_out.close()
-    pickle_in = open(file, "rb")
-    Kaplan2020 = pickle.load(pickle_in)
-    print(Kaplan2020.keys(), end="\n\n")
-
-
-def pickle_Uzel2022(transform, smooth_method="fft", resample_dt=1.0):
-    """
-    Pickles the worm neural activity data from Uzel et al 2022., Cell CurrBio 2022,
-    A set of hub neurons and non-local connectivity features support global brain dynamics in C. elegans.
-    """
-    data_dict = dict()
-    # load .mat file
-    arr = mat73.loadmat(os.path.join(source_path, "Uzel2022", "Uzel_WT.mat"))[
-        "Uzel_WT"
-    ]  # load .mat file
-    print(list(arr.keys()), end="\n\n")
-    # get data for all worms
-    all_IDs = arr["IDs"]  # identified neuron IDs (only subset have neuron names)
-    all_traces = arr["traces"]  # neural activity traces corrected for bleaching
-    timeVectorSeconds = arr["tv"]
-    print("num. worms:", len(all_IDs), end="\n\n")
-    for i, real_data in enumerate(all_traces):
-        worm = "worm" + str(i)
-        i_IDs = [np.array(j).item() for j in all_IDs[i]]
-        _, inds = np.unique(
-            i_IDs, return_index=True
-        )  # only keep indices of unique neuron IDs
-        i_IDs = [i_IDs[_] for _ in inds]
-        real_data = real_data[:, inds.astype(int)]  # only get data for unique neurons
-        neuron_to_idx = {
-            nid: (str(int(j)) if type(j) != str else j) for nid, j in enumerate(i_IDs)
-        }
-        neuron_to_idx = {
-            nid: (
-                name.replace("0", "")
-                if not name.endswith("0") and not name.isnumeric()
-                else name
-            )
-            for nid, name in neuron_to_idx.items()
-        }
-        neuron_to_idx = dict((v, k) for k, v in neuron_to_idx.items())
-        time_in_seconds = timeVectorSeconds[i].reshape(timeVectorSeconds[i].shape[0], 1)
-        time_in_seconds = torch.tensor(time_in_seconds).to(torch.float32)
-        num_named = len(
-            [k for k in neuron_to_idx.keys() if not k.isnumeric()]
-        )  # number of neurons that were ID'd
-        sc = transform  # normalize data
-        real_data = sc.fit_transform(real_data)
-        real_data = torch.tensor(
-            real_data, dtype=torch.float32
-        )  # add a feature dimension and convert to tensor
-        # resample the data to a fixed time step
-        time_in_seconds, real_data = interpolate_data(
-            time_in_seconds, real_data, target_dt=resample_dt
-        )
-        # calulate the time step
-        dt = torch.zeros_like(time_in_seconds)
-        dt[1:] = time_in_seconds[1:] - time_in_seconds[:-1]
-        # recalculate max_timesteps and num_neurons
-        max_timesteps, num_neurons = real_data.shape
-        print(
-            "len. Ca recording %s, total num. neurons %s, num. ID'd neurons %s"
-            % (max_timesteps, num_neurons, num_named),
-            end="\n\n",
-        )
-        # smooth the data
-        smooth_real_data, residual, smooth_residual = smooth_data_preprocess(
-            real_data,
-            time_in_seconds,
-            smooth_method,
-            dt=np.median(dt),
-        )
-        data_dict.update(
-            {
-                worm: {
-                    "dataset": "Uzel2022",
-                    "smooth_method": smooth_method.upper(),
-                    "worm": worm,
-                    "calcium_data": real_data,
-                    "smooth_calcium_data": smooth_real_data,
-                    "residual_calcium": residual,
-                    "smooth_residual_calcium": smooth_residual,
-                    "neuron_to_idx": neuron_to_idx,
-                    "idx_to_neuron": dict((v, k) for k, v in neuron_to_idx.items()),
-                    "max_timesteps": int(max_timesteps),
-                    "time_in_seconds": time_in_seconds,
-                    "dt": dt,
-                    "num_neurons": int(num_neurons),
-                    "num_named_neurons": num_named,
-                    "num_unknown_neurons": int(num_neurons) - num_named,
-                },
-            }
-        )
-        # standardize the shape of calcium data to time x 302
-        data_dict[worm] = reshape_calcium_data(data_dict[worm])
-    # pickle the data
-    file = os.path.join(processed_path, "Uzel2022.pickle")
-    pickle_out = open(file, "wb")
-    pickle.dump(data_dict, pickle_out)
-    pickle_out.close()
-    pickle_in = open(file, "rb")
-    Uzel2022 = pickle.load(pickle_in)
-    print(Uzel2022.keys(), end="\n\n")
-
-
-def pickle_Flavell2023(transform, smooth_method="fft", resample_dt=1.0):
-    """
-    Pickles the worm neural activity data from Flavell et al., bioRxiv 2023,
-    Brain-wide representations of behavior spanning multiple timescales and states in C. elegans.
-    """
-    # imputer = SimpleImputer(missing_values=np.nan, strategy="median")
-    data_dict = dict()
-    data_dir = os.path.join(source_path, "Flavell2023")
-    # process all .h5 files in the data directory
-    for i, h5_file in enumerate(os.listdir(data_dir)):
-        if not h5_file.endswith(".h5"):
-            continue
-        # each h5 has the data for one (1) worm
-        h5_file = os.path.join(data_dir, h5_file)
-        worm = "worm" + str(i)
-        h5 = h5py.File(h5_file, "r")
-        time_in_seconds = torch.tensor(h5["timestamp_confocal"]).to(torch.float32)
-        time_in_seconds = time_in_seconds - time_in_seconds[0]  # start at 0
-        time_in_seconds = time_in_seconds.reshape((-1, 1))
-        if i == 0:
-            print(list(h5.keys()), end="\n\n")
-        print("num. worms:", 1, end="\n\n")
-        # get calcium data for this worm
-        calcium_data = np.array(
-            h5["trace_array_F20"], dtype=float
-        )  # GCaMP neural activity traced normalized by 20th percentile
-        # get neuron labels
-        neurons = np.array(
-            h5["neuropal_label"], dtype=str
-        )  # list of full labels (if neuron wasn't labeled the entry is "missing")
-        # flip a coin to chose L/R for unsure bilaterally symmetric neurons
-        neurons_copy = []
-        for neuron in neurons:
-            if neuron.replace("?", "L") not in set(neurons_copy):
-                neurons_copy.append(neuron.replace("?", "L"))
-            else:
-                neurons_copy.append(neuron.replace("?", "R"))
-        neurons = np.array(neurons_copy)
-        # extract neurons with labels
-        named_inds = np.where(neurons != "missing")[0]
-        num_named = len(named_inds)
-        neuron_to_idx = {
-            (neuron if idx in named_inds else str(idx)): idx
-            for idx, neuron in enumerate(neurons)
-        }
-        # normalize the data
-        sc = transform
-        calcium_data = sc.fit_transform(calcium_data)
-        calcium_data = torch.tensor(calcium_data, dtype=torch.float32)
-        # resample the data to a fixed time step
-        time_in_seconds, calcium_data = interpolate_data(
-            time_in_seconds, calcium_data, target_dt=resample_dt
-        )
-        # calculate the time step
-        dt = torch.zeros_like(time_in_seconds)
-        dt[1:] = time_in_seconds[1:] - time_in_seconds[:-1]
-        # recalculate max_timesteps and num_neurons
-        max_timesteps, num_neurons = calcium_data.shape
-        print(
-            "len. Ca recording %s, total num. neurons %s, num. ID'd neurons %s"
-            % (max_timesteps, num_neurons, num_named),
-            end="\n\n",
-        )
-        # smooth the data
-        smooth_real_data, residual, smooth_residual = smooth_data_preprocess(
-            calcium_data,
-            time_in_seconds,
-            smooth_method,
-            dt=np.median(dt),
-        )
-        # add worm to data dictionary
-        data_dict.update(
-            {
-                worm: {
-                    "dataset": "Flavell2023",
-                    "smooth_method": smooth_method.upper(),
-                    "worm": worm,
-                    "calcium_data": calcium_data,
-                    "smooth_calcium_data": smooth_real_data,
-                    "residual_calcium": residual,
-                    "smooth_residual_calcium": smooth_residual,
-                    "neuron_to_idx": neuron_to_idx,
-                    "idx_to_neuron": dict((v, k) for k, v in neuron_to_idx.items()),
-                    "max_timesteps": max_timesteps,
-                    "time_in_seconds": time_in_seconds,
-                    "dt": dt,
-                    "num_neurons": num_neurons,
-                    "num_named_neurons": num_named,
-                    "num_unknown_neurons": num_neurons - num_named,
+            for i, trace_data in enumerate(traces):
+                worm = "worm" + str(i)
+                unique_IDs = [
+                    (j[0] if isinstance(j, list) else j) for j in neuron_IDs[i]
+                ]
+                unique_IDs = [
+                    (str(_) if j is None or isinstance(j, np.ndarray) else str(j))
+                    for _, j in enumerate(unique_IDs)
+                ]
+                _, unique_indices = np.unique(unique_IDs, return_index=True)
+                unique_IDs = [unique_IDs[_] for _ in unique_indices]
+                trace_data = trace_data[
+                    :, unique_indices.astype(int)
+                ]  # only get data for unique neurons
+                neuron_to_idx = self._create_neuron_idx(unique_IDs)
+                time_in_seconds = raw_timeVectorSeconds[i].reshape(
+                    raw_timeVectorSeconds[i].shape[0], 1
+                )
+                time_in_seconds = np.array(time_in_seconds, dtype=np.float32)
+                num_named_neurons = len(
+                    [k for k in neuron_to_idx.keys() if not k.isnumeric()]
+                )  # number of neurons that were ID'd
+                calcium_data = self.normalize_data(trace_data)
+                dt = np.gradient(time_in_seconds, axis=0)
+                dt[dt == 0] = np.finfo(float).eps
+                residual_calcium = np.gradient(calcium_data, axis=0) / dt
+                original_time_in_seconds = time_in_seconds.copy()
+                time_in_seconds, calcium_data = self.resample_data(
+                    original_time_in_seconds, calcium_data
+                )
+                time_in_seconds, residual_calcium = self.resample_data(
+                    original_time_in_seconds, residual_calcium
+                )
+                max_timesteps, num_neurons = calcium_data.shape
+                smooth_calcium_data = self.smooth_data(
+                    calcium_data, time_in_seconds, dt=np.median(dt)
+                )
+                smooth_residual_calcium = self.smooth_data(
+                    residual_calcium, time_in_seconds, dt=np.median(dt)
+                )
+                num_unknown_neurons = int(num_neurons) - num_named_neurons
+                worm_dict = {
+                    worm: {
+                        "dataset": self.dataset,
+                        "smooth_method": self.smooth_method.upper(),
+                        "worm": worm,
+                        "calcium_data": calcium_data,
+                        "smooth_calcium_data": smooth_calcium_data,
+                        "residual_calcium": residual_calcium,
+                        "smooth_residual_calcium": smooth_residual_calcium,
+                        "neuron_to_idx": neuron_to_idx,
+                        "idx_to_neuron": dict((v, k) for k, v in neuron_to_idx.items()),
+                        "max_timesteps": int(max_timesteps),
+                        "time_in_seconds": time_in_seconds,
+                        "dt": dt,
+                        "num_neurons": int(num_neurons),
+                        "num_named_neurons": num_named_neurons,
+                        "num_unknown_neurons": num_unknown_neurons,
+                    }
                 }
-            }
+                preprocessed_data.update(worm_dict)
+        self.save_data(preprocessed_data)
+        print(f"Finished processing {self.dataset}!")
+
+    def _create_neuron_idx(self, unique_IDs):
+        neuron_to_idx = {
+            nid: (str(nid) if (j is None or isinstance(j, np.ndarray)) else str(j))
+            for nid, j in enumerate(unique_IDs)
+        }
+        neuron_to_idx = {
+            nid: (
+                name.replace("0", "")
+                if not name.endswith("0") and not name.isnumeric()
+                else name
+            )
+            for nid, name in neuron_to_idx.items()
+        }
+        neuron_to_idx = dict((v, k) for k, v in neuron_to_idx.items())
+        return neuron_to_idx
+
+
+class Kato2015Preprocessor(BasePreprocessor):
+    def __init__(self, dataset_name):
+        super().__init__(dataset_name)
+
+    def load_data(self, file_name):
+        return mat73.loadmat(os.path.join(self.raw_data_path, self.dataset, file_name))
+
+    def extract_data(self, arr):
+        all_IDs = arr["IDs"] if "IDs" in arr.keys() else arr["NeuronNames"]
+        all_traces = arr["traces"] if "traces" in arr.keys() else arr["deltaFOverF_bc"]
+        timeVectorSeconds = (
+            arr["timeVectorSeconds"] if "timeVectorSeconds" in arr.keys() else arr["tv"]
         )
-        # standardize the shape of calcium data to 302 x time
-        data_dict[worm] = reshape_calcium_data(data_dict[worm])
-    # pickle the data
-    file = os.path.join(processed_path, "Flavell2023.pickle")
-    pickle_out = open(file, "wb")
-    pickle.dump(data_dict, pickle_out)
-    pickle_out.close()
-    pickle_in = open(file, "rb")
-    Flavell2023 = pickle.load(pickle_in)
-    print(Flavell2023.keys(), end="\n\n")
-    return data_dict
+        return all_IDs, all_traces, timeVectorSeconds
+
+    def preprocess(self):
+        preprocessed_data = {}
+        for file_name in ["WT_Stim.mat", "WT_NoStim.mat"]:
+            raw_data = self.load_data(file_name)[file_name.split(".")[0]]
+            neuron_IDs, traces, raw_timeVectorSeconds = self.extract_data(raw_data)
+
+            for i, trace_data in enumerate(traces):
+                worm = "worm" + str(i)
+                unique_IDs = [
+                    (j[0] if isinstance(j, list) else j) for j in neuron_IDs[i]
+                ]
+                unique_IDs = [
+                    (str(_) if j is None or isinstance(j, np.ndarray) else str(j))
+                    for _, j in enumerate(unique_IDs)
+                ]
+                _, unique_indices = np.unique(unique_IDs, return_index=True)
+                unique_IDs = [unique_IDs[_] for _ in unique_indices]
+                trace_data = trace_data[
+                    :, unique_indices.astype(int)
+                ]  # only get data for unique neurons
+                neuron_to_idx = self._create_neuron_idx(unique_IDs)
+                time_in_seconds = raw_timeVectorSeconds[i].reshape(
+                    raw_timeVectorSeconds[i].shape[0], 1
+                )
+                time_in_seconds = np.array(time_in_seconds, dtype=np.float32)
+                num_named_neurons = len(
+                    [k for k in neuron_to_idx.keys() if not k.isnumeric()]
+                )  # number of neurons that were ID'd
+                calcium_data = self.normalize_data(trace_data)
+                dt = np.gradient(time_in_seconds, axis=0)
+                dt[dt == 0] = np.finfo(float).eps
+                residual_calcium = np.gradient(calcium_data, axis=0) / dt
+                original_time_in_seconds = time_in_seconds.copy()
+                time_in_seconds, calcium_data = self.resample_data(
+                    original_time_in_seconds, calcium_data
+                )
+                time_in_seconds, residual_calcium = self.resample_data(
+                    original_time_in_seconds, residual_calcium
+                )
+                max_timesteps, num_neurons = calcium_data.shape
+                smooth_calcium_data = self.smooth_data(
+                    calcium_data, time_in_seconds, dt=np.median(dt)
+                )
+                smooth_residual_calcium = self.smooth_data(
+                    residual_calcium, time_in_seconds, dt=np.median(dt)
+                )
+                num_unknown_neurons = int(num_neurons) - num_named_neurons
+                worm_dict = {
+                    worm: {
+                        "dataset": self.dataset,
+                        "smooth_method": self.smooth_method.upper(),
+                        "worm": worm,
+                        "calcium_data": calcium_data,
+                        "smooth_calcium_data": smooth_calcium_data,
+                        "residual_calcium": residual_calcium,
+                        "smooth_residual_calcium": smooth_residual_calcium,
+                        "neuron_to_idx": neuron_to_idx,
+                        "idx_to_neuron": dict((v, k) for k, v in neuron_to_idx.items()),
+                        "max_timesteps": int(max_timesteps),
+                        "time_in_seconds": time_in_seconds,
+                        "dt": dt,
+                        "num_neurons": int(num_neurons),
+                        "num_named_neurons": num_named_neurons,
+                        "num_unknown_neurons": num_unknown_neurons,
+                    }
+                }
+                preprocessed_data.update(worm_dict)
+        self.save_data(preprocessed_data)
+        print(f"Finished processing {self.dataset}!")
+
+    def _create_neuron_idx(self, unique_IDs):
+        neuron_to_idx = {
+            nid: (str(nid) if (j is None or isinstance(j, np.ndarray)) else str(j))
+            for nid, j in enumerate(unique_IDs)
+        }
+        neuron_to_idx = {
+            nid: (
+                name.replace("0", "")
+                if not name.endswith("0") and not name.isnumeric()
+                else name
+            )
+            for nid, name in neuron_to_idx.items()
+        }
+        neuron_to_idx = dict((v, k) for k, v in neuron_to_idx.items())
+        return neuron_to_idx
 
 
-def pickle_Leifer2023(transform, smooth_method="fft", resample_dt=1.0):
-    """
-    Pickles the worm neural activity data from Randi, ..., Leifer et al.,
-    bioRxiv 2023, Neural signal propagation atlas of C. elegans.
-    """
-    data_dict = dict()
-    data_dir = os.path.join(source_path, "Leifer2023")
-    files = os.listdir(data_dir)
-    num_worms = int(len(files) / 6)  # every worm has 6 txt files
+if __name__ == "__main__":
+    import os
+    import pickle
+    import matplotlib.pyplot as plt
+    from preprocess._utils import *
+    from sklearn.preprocessing import StandardScaler
 
-    for i in range(0, num_worms):
-        # worm27 doesn't have neuron labels
-        if i == 27:
-            continue
+    # Preprocess the dataset
+    raw_data_path = "/Users/quileesimeon/GitHub Repos/worm-graph/opensource_data"
+    processed_data_path = (
+        "/Users/quileesimeon/GitHub Repos/worm-graph/data/processed/neural"
+    )
+    transform = StandardScaler()
+    preprocessor = Kato2015Preprocessor(
+        dataset_name="Kato2015",
+    )
+    preprocessor.preprocess()
+    print("Finished processing!")
 
-        if i < 27:
-            worm = "worm" + str(i)
-        else:
-            worm = "worm" + str(i - 1)
+    # Load data from pickle file
+    with open(os.path.join(processed_data_path, "Kato2015.pickle"), "rb") as f:
+        data = pickle.load(f)
 
-        real_data = []
-        with open(os.path.join(data_dir, str(i) + "_gcamp.txt"), "r") as f:
-            for line in f.readlines():
-                cal = list(map(float, line.split(" ")))
-                real_data.append(cal)
-        real_data = np.array(real_data)  # format: (time, neuron)
-        # skip worms with very short recordings
-        if real_data.shape[0] < 1000:
-            continue
+    # Extract data for worm0
+    worm0_data = data["worm0"]
 
-        label_list = []
-        with open(os.path.join(data_dir, str(i) + "_labels.txt"), "r") as f:
-            for line in f.readlines():
-                l = line.strip("\n")
-                label_list.append(l)
+    # Extract calcium traces. The number of traces you select will depend on the structure of your data
+    calcium_traces = worm0_data[
+        "calcium_data"
+    ]  # Adjust according to your data structure
 
-        # get numbers of neurons and initialize mapping
-        num_unnamed = 0
-        num_named = real_data.shape[1] - num_unnamed
-        label_list = label_list[: real_data.shape[1]]
-        neuron_to_idx = dict()
+    # Plot the first few calcium traces
+    for i, trace in enumerate(
+        calcium_traces.T[:5]
+    ):  # Transpose may be needed depending on your data structure
+        plt.plot(worm0_data["time_in_seconds"], trace, label=f"Trace {i+1}")
 
-        # compute the time vectoy
-        timeVectorSeconds = []
-        with open(os.path.join(data_dir, str(i) + "_t.txt"), "r") as f:
-            for line in f.readlines():
-                l = line.strip("\n")
-                timeVectorSeconds.append(str_to_float(l))
-        time_in_seconds = np.array(timeVectorSeconds)
-        time_in_seconds = torch.tensor(time_in_seconds).to(torch.float32).unsqueeze(1)
-
-        # iterat through labelled neurons
-        for j, item in enumerate(label_list):
-            previous_list = label_list[:j]
-            # if the neuron is unnamed, give it a number larger than 302
-            if item == "" or item == "smthng else":
-                label_list[j] = str(j + 302)
-                num_unnamed += 1
-                neuron_to_idx[str(j + 302)] = j
-            else:
-                # if the neuron is named, and the name is unique, add it to the dictionary
-                if item in NEURONS_302 and item not in previous_list:
-                    neuron_to_idx[item] = j
-                # if the neuron is named, but the name is not unique, give it a number larger than 302
-                elif item in NEURONS_302 and item in previous_list:
-                    label_list[j] = str(j + 302)
-                    num_unnamed += 1
-                    neuron_to_idx[str(j + 302)] = j
-                else:
-                    # if the neuron is recorded without L or R, choose one valid name for it
-                    if (
-                        str(item + "L") in NEURONS_302
-                        and str(item + "L") not in previous_list
-                    ):
-                        label_list[j] = str(item + "L")
-                        neuron_to_idx[str(item + "L")] = j
-                    elif (
-                        str(item + "R") in NEURONS_302
-                        and str(item + "R") not in previous_list
-                    ):
-                        label_list[j] = str(item + "R")
-                        neuron_to_idx[str(item + "R")] = j
-                    else:
-                        label_list[j] = str(j + 302)
-                        num_unnamed += 1
-                        neuron_to_idx[str(j + 302)] = j
-
-        sc = transform  # normalize data
-        real_data = sc.fit_transform(real_data)
-        real_data = torch.tensor(
-            real_data, dtype=torch.float32
-        )  # add a feature dimension and convert to tensor
-        # replace nan and inf with 0
-        real_data = torch.nan_to_num(real_data, nan=0.0, posinf=0.0, neginf=0.0)
-
-        # resample the data to a fixed time step
-        time_in_seconds, real_data = interpolate_data(
-            time_in_seconds, real_data, target_dt=resample_dt
-        )
-        # calculate the time step
-        dt = torch.zeros_like(time_in_seconds)
-        dt[1:] = time_in_seconds[1:] - time_in_seconds[:-1]
-        # recalculate max_timesteps and num_neurons
-        max_timesteps, num_neurons = real_data.shape
-        print(
-            "len. Ca recording %s, total num. neurons %s, num. ID'd neurons %s"
-            % (max_timesteps, num_neurons, num_named),
-            end="\n\n",
-        )
-        # smooth the data
-        smooth_real_data, residual, smooth_residual = smooth_data_preprocess(
-            real_data,
-            time_in_seconds,
-            smooth_method,
-            dt=np.median(dt),
-        )
-
-        data_dict.update(
-            {
-                worm: {
-                    "dataset": "Leifer2023",
-                    "smooth_method": smooth_method.upper(),
-                    "worm": worm,
-                    "calcium_data": real_data,
-                    "smooth_calcium_data": smooth_real_data,
-                    "residual_calcium": residual,
-                    "smooth_residual_calcium": smooth_residual,
-                    "neuron_to_idx": neuron_to_idx,
-                    "idx_to_neuron": dict((v, k) for k, v in neuron_to_idx.items()),
-                    "max_timesteps": int(max_timesteps),
-                    "time_in_seconds": time_in_seconds,
-                    "dt": dt,
-                    "num_neurons": int(num_neurons),
-                    "num_named_neurons": num_named,
-                    "num_unknown_neurons": num_unnamed,
-                },
-            }
-        )
-
-        # standardize the shape of calcium data to 302 x time
-        data_dict[worm] = reshape_calcium_data(data_dict[worm])
-        data_dict[worm]["num_named_neurons"] = (
-            data_dict[worm]["named_neurons_mask"].sum().item()
-        )
-        data_dict[worm]["num_unknown_neurons"] = (
-            data_dict[worm]["num_neurons"] - data_dict[worm]["num_named_neurons"]
-        )
-
-    # pickle the data
-    file = os.path.join(processed_path, "Leifer2023.pickle")
-    pickle_out = open(file, "wb")
-    pickle.dump(data_dict, pickle_out)
-    pickle_out.close()
-    pickle_in = open(file, "rb")
-    Leifer2023 = pickle.load(pickle_in)
-    print(Leifer2023.keys(), end="\n\n")
-    return data_dict
+    plt.xlabel("Time (seconds)")
+    plt.ylabel("Calcium level")
+    plt.title("Calcium traces for worm0")
+    plt.legend()
+    plt.show()
