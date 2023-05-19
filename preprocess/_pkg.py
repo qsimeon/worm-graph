@@ -13,7 +13,7 @@ import numpy as np
 import pandas as pd
 from scipy.io import loadmat
 from omegaconf import DictConfig, OmegaConf
-from utils import ROOT_DIR, RAW_FILES, NEURONS_302, VALID_DATASETS
+from utils import ROOT_DIR, RAW_FILES, NUM_NEURONS, NEURONS_302, VALID_DATASETS
 from sklearn import preprocessing
 from pysindy.differentiation import SmoothedFiniteDifference
 from sklearn.impute import SimpleImputer
