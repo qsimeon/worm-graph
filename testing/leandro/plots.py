@@ -77,7 +77,7 @@ def compare_signals(data1, data2, x, k):
 
         ax1 = fig.add_subplot(gs[2*i, 0])
         ax1.plot(x, data1[:, idx].numpy(), label='data1', color=color)
-        ax1.legend()
+        #ax1.legend()
         ax1.set_ylim(-1.0, 1.0)
         ax1.xaxis.set_ticks([])  # remove x-axis ticks
         ax1.spines['right'].set_visible(False)  # remove right border
@@ -89,7 +89,7 @@ def compare_signals(data1, data2, x, k):
 
         ax2 = fig.add_subplot(gs[2*i + 1, 0])
         ax2.plot(x, data2[:, idx].numpy(), label='data2', color=color)
-        ax2.legend()
+        #ax2.legend()
         ax2.set_ylim(-1.0, 1.0)
         ax2.spines['right'].set_visible(False)  # remove right border
         ax2.spines['top'].set_visible(False)  # remove top border
@@ -98,6 +98,27 @@ def compare_signals(data1, data2, x, k):
         ax2.set_ylabel(f'Neuron {idx} B', rotation=45, labelpad=40, verticalalignment='center', fontsize=12)
 
     plt.tight_layout()
+    plt.show()
+
+def plot_similarities(data):
+    # Find the indices of the active neurons
+    active_neurons = np.where(data != 0)[0]
+
+    # Extract the data for the active neurons
+    active_data = data[active_neurons]
+
+    # Create a bar plot of the active data
+    plt.figure(figsize=(10, 6))
+    plt.bar(np.arange(len(active_neurons)), active_data.flatten())
+
+    # Remove the top and right contours
+    plt.gca().spines['top'].set_visible(False)
+    plt.gca().spines['right'].set_visible(False)
+
+    # Set the x label
+    plt.xlabel('Neuron Index')
+
+    # Show the plot
     plt.show()
 
 

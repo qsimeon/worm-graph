@@ -11,6 +11,7 @@ from scipy.signal import savgol_filter
 from scipy.linalg import solve
 from typing import Tuple, Union
 import pickle
+from testing.leandro.filters import *
 
 processed_path = os.path.join(ROOT_DIR, "data/processed/neural")
 
@@ -25,7 +26,7 @@ logging.basicConfig(
 class PreprocessDataset:
     """Preprocesses the data for a given dataset."""
 
-    def __init__(self, dataset, transform, smooth_method, resample_dt, norm_dim='neurons', salve_all=False):
+    def __init__(self, dataset, transform, smooth_method, resample_dt, norm_dim='neurons', pckl=True):
         # Saving the arguments
         self.dataset = dataset
         self.transform = transform
@@ -39,7 +40,7 @@ class PreprocessDataset:
             "Invalid norm_dim! Please pick one from: ['neurons', 'time']" 
         self.norm_dim = norm_dim.lower()
 
-        self.savel_all = salve_all # if True, saves all the intemeriary data
+        self.pckl = pckl # if True, saves all the intemeriary data
         self.all_raw_data = {}
         self.data = {}
 
@@ -464,11 +465,6 @@ class PreprocessDataset:
         # Return the dataset for this worm
         return single_worm_dataset
 
-    def cosine_similarity(self, signal1, signal2):
-        signal1 = signal1.detach().numpy()
-        signal2 = signal2.detach().numpy()
-        return np.sum(signal1.T @ signal2) / (np.linalg.norm(signal1) * np.linalg.norm(signal2))
-
     def preprocess_pipeline(self):
         """Preprocesses the data for each worm in the all_raw_data.
         """
@@ -532,12 +528,13 @@ class PreprocessDataset:
                     data_dict[worm]['calcium_data'].shape[0], data_dict[worm]['calcium_data'].shape[1]))
 
         # Pickle the data
-        file = os.path.join(processed_path, self.dataset+'.pickle')
-        pickle_out = open(file, "wb")
-        pickle.dump(data_dict, pickle_out)
-        pickle_out.close()
-        logging.info('{} saved into /data/processed/neural/{}.pickle'.format(
-                    self.dataset, self.dataset))
+        if self.pckl:
+            file = os.path.join(processed_path, self.dataset+'.pickle')
+            pickle_out = open(file, "wb")
+            pickle.dump(data_dict, pickle_out)
+            pickle_out.close()
+            logging.info('{} saved into /data/processed/neural/{}.pickle'.format(
+                        self.dataset, self.dataset))
         
         # Save inside the class
-        self.data = data
+        self.data = data_dict
