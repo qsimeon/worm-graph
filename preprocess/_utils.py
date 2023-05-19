@@ -531,7 +531,7 @@ def pickle_neural_data(
     url,
     zipfile,
     dataset="all",
-    transform=MinMaxScaler(feature_range=(-1, 1)),  # StandardScaler()
+    transform=StandardScaler(),  # MinMaxScaler(feature_range=(-1, 1))
     smooth_method="fft",
     resample_dt=None,
 ):
@@ -552,7 +552,7 @@ def pickle_neural_data(
         The name of the dataset(s) to be pickled.
         If None, all datasets are pickled.
     transform : object, optional
-        The transformation to be applied to the data.
+        The sklearn transformation to be applied to the data.
     smooth_method : str, optional (default: 'fft')
         The smoothing method to apply to the data;
         options are 'sg', 'fft', or 'tvr'.
@@ -655,9 +655,9 @@ class BasePreprocessor:
     and overriding the methods as necessary.
 
     Attributes:
+        dataset (str): The specific dataset to be preprocessed.
         raw_data (str): The path to the raw dataset.
         processed_data (str): The path to save the processed data.
-        dataset (str): The specific dataset to be preprocessed.
 
     Methods:
         load_data(): Method for loading the raw data.
@@ -731,12 +731,14 @@ class Skora2018Preprocessor(BasePreprocessor):
 
     def preprocess(self):
         preprocessed_data = {}
+        worm_idx = 0  # Initialize worm index outside file loop
         for file_name in ["WT_fasted.mat", "WT_starved.mat"]:
             raw_data = self.load_data(file_name)[file_name.split(".")[0]]
             neuron_IDs, traces, raw_timeVectorSeconds = self.extract_data(raw_data)
 
             for i, trace_data in enumerate(traces):
-                worm = "worm" + str(i)
+                worm = "worm" + str(worm_idx)  # Use global worm index
+                worm_idx += 1  # Increment worm index
                 unique_IDs = [
                     (j[0] if isinstance(j, list) else j) for j in neuron_IDs[i]
                 ]
@@ -833,12 +835,14 @@ class Kato2015Preprocessor(BasePreprocessor):
 
     def preprocess(self):
         preprocessed_data = {}
+        worm_idx = 0  # Initialize worm index outside file loop
         for file_name in ["WT_Stim.mat", "WT_NoStim.mat"]:
             raw_data = self.load_data(file_name)[file_name.split(".")[0]]
             neuron_IDs, traces, raw_timeVectorSeconds = self.extract_data(raw_data)
 
             for i, trace_data in enumerate(traces):
-                worm = "worm" + str(i)
+                worm = "worm" + str(worm_idx)  # Use global worm index
+                worm_idx += 1  # Increment worm index
                 unique_IDs = [
                     (j[0] if isinstance(j, list) else j) for j in neuron_IDs[i]
                 ]
@@ -918,6 +922,104 @@ class Kato2015Preprocessor(BasePreprocessor):
         return neuron_to_idx
 
 
+class Nichols2017Preprocessor(BasePreprocessor):
+    def __init__(self, dataset_name):
+        super().__init__(dataset_name)
+
+    def load_data(self, file_name):
+        return mat73.loadmat(os.path.join(self.raw_data_path, self.dataset, file_name))
+
+    def extract_data(self, arr):
+        all_IDs = arr["IDs"]  # identified neuron IDs (only subset have neuron names)
+        all_traces = arr["traces"]  # neural activity traces corrected for bleaching
+        timeVectorSeconds = arr["timeVectorSeconds"]
+        return all_IDs, all_traces, timeVectorSeconds
+
+    def _create_neuron_idx(self, unique_IDs):
+        neuron_to_idx = {
+            nid: (str(nid) if (j is None or isinstance(j, np.ndarray)) else str(j))
+            for nid, j in enumerate(unique_IDs)
+        }
+        return neuron_to_idx
+
+    def preprocess(self):
+        preprocessed_data = {}
+        worm_idx = 0  # Initialize worm index outside file loop
+        for file_name in [
+            "n2_let.mat",
+            "n2_prelet.mat",
+            "npr1_let.mat",
+            "npr1_prelet.mat",
+        ]:
+            raw_data = self.load_data(file_name)[file_name.split(".")[0]]
+            neuron_IDs, traces, raw_timeVectorSeconds = self.extract_data(raw_data)
+
+            for i, trace_data in enumerate(traces):
+                worm = "worm" + str(worm_idx)  # Use global worm index
+                worm_idx += 1  # Increment worm index
+                unique_IDs = [
+                    (j[0] if isinstance(j, list) else j) for j in neuron_IDs[i]
+                ]
+                unique_IDs = [
+                    (str(_) if j is None or isinstance(j, np.ndarray) else str(j))
+                    for _, j in enumerate(unique_IDs)
+                ]
+                _, unique_indices = np.unique(unique_IDs, return_index=True)
+                unique_IDs = [unique_IDs[_] for _ in unique_indices]
+                trace_data = trace_data[
+                    :, unique_indices.astype(int)
+                ]  # only get data for unique neurons
+                neuron_to_idx = self._create_neuron_idx(unique_IDs)
+                time_in_seconds = raw_timeVectorSeconds[i].reshape(
+                    raw_timeVectorSeconds[i].shape[0], 1
+                )
+                time_in_seconds = np.array(time_in_seconds, dtype=np.float32)
+                num_named_neurons = len(
+                    [k for k in neuron_to_idx.keys()]
+                )  # number of neurons that were ID'd
+                calcium_data = self.normalize_data(trace_data)
+                dt = np.gradient(time_in_seconds, axis=0)
+                dt[dt == 0] = np.finfo(float).eps
+                residual_calcium = np.gradient(calcium_data, axis=0) / dt
+                original_time_in_seconds = time_in_seconds.copy()
+                time_in_seconds, calcium_data = self.resample_data(
+                    original_time_in_seconds, calcium_data
+                )
+                time_in_seconds, residual_calcium = self.resample_data(
+                    original_time_in_seconds, residual_calcium
+                )
+                max_timesteps, num_neurons = calcium_data.shape
+                smooth_calcium_data = self.smooth_data(
+                    calcium_data, time_in_seconds, dt=np.median(dt)
+                )
+                smooth_residual_calcium = self.smooth_data(
+                    residual_calcium, time_in_seconds, dt=np.median(dt)
+                )
+                num_unknown_neurons = int(num_neurons) - num_named_neurons
+                worm_dict = {
+                    worm: {
+                        "dataset": self.dataset,
+                        "smooth_method": self.smooth_method.upper(),
+                        "worm": worm,
+                        "calcium_data": calcium_data,
+                        "smooth_calcium_data": smooth_calcium_data,
+                        "residual_calcium": residual_calcium,
+                        "smooth_residual_calcium": smooth_residual_calcium,
+                        "neuron_to_idx": neuron_to_idx,
+                        "idx_to_neuron": dict((v, k) for k, v in neuron_to_idx.items()),
+                        "max_timesteps": int(max_timesteps),
+                        "time_in_seconds": time_in_seconds,
+                        "dt": dt,
+                        "num_neurons": int(num_neurons),
+                        "num_named_neurons": num_named_neurons,
+                        "num_unknown_neurons": num_unknown_neurons,
+                    }
+                }
+                preprocessed_data.update(worm_dict)
+        self.save_data(preprocessed_data)
+        print(f"Finished processing {self.dataset}!")
+
+
 if __name__ == "__main__":
     import os
     import pickle
@@ -926,28 +1028,29 @@ if __name__ == "__main__":
     from sklearn.preprocessing import StandardScaler
 
     # Preprocess the dataset
-    raw_data_path = "/Users/quileesimeon/GitHub Repos/worm-graph/opensource_data"
     processed_data_path = (
         "/Users/quileesimeon/GitHub Repos/worm-graph/data/processed/neural"
     )
     transform = StandardScaler()
-    preprocessor = Kato2015Preprocessor(
-        dataset_name="Kato2015",
+    preprocessor = Nichols2017Preprocessor(
+        dataset_name="Nichols2017",
     )
     preprocessor.preprocess()
-    print("Finished processing!")
 
     # Load data from pickle file
-    with open(os.path.join(processed_data_path, "Kato2015.pickle"), "rb") as f:
+    with open(os.path.join(processed_data_path, "Nichols2017.pickle"), "rb") as f:
         data = pickle.load(f)
 
     # Extract data for worm0
     worm0_data = data["worm0"]
+    print(data.keys())
 
     # Extract calcium traces. The number of traces you select will depend on the structure of your data
     calcium_traces = worm0_data[
         "calcium_data"
     ]  # Adjust according to your data structure
+
+    print(f"Calcium traces shape: {calcium_traces.shape}")
 
     # Plot the first few calcium traces
     for i, trace in enumerate(
