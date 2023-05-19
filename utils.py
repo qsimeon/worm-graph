@@ -14,7 +14,7 @@ os.environ["CUDA_LAUNCH_BLOCKING"] = "1"
 os.environ["OC_CAUSE"] = "1"
 os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "max_split_size_mb:32"
 
-USER = "qsimeon"  # OpenMind username
+USER = "lrvenan"  # OpenMind username
 
 NUM_NEURONS = 302
 
@@ -65,6 +65,35 @@ NEURONS_302 = sorted(
         names=["neuron"],
     ).neuron
 )
+
+# List with .mat files for each dataset
+MATLAB_FILES = {
+    "Uzel2022":     [
+                    ["Uzel_WT",], # files
+                    [{"ids": "IDs", "traces": "traces", "tv": "tv"}] # features
+                    ],
+    "Skora2018":    [
+                    ["WT_fasted", "WT_starved"], # files
+                    [{"ids": "IDs", "traces": "traces", "tv": "timeVectorSeconds"} for i in range(2)] # features (x2)
+                    ],
+    "Nichols2017":  [
+                    ["n2_let", "n2_prelet", "npr1_let", "npr1_prelet"], # files
+                    [{"ids": "IDs", "traces": "traces", "tv": "timeVectorSeconds"} for i in range(4)] # features(x4)
+                    ],
+    "Nguyen2017":   [[None], [None]],
+    "Kato2015":     [
+                    ["WT_Stim", "WT_NoStim"], # files
+                    [{"ids": "IDs", "traces": "traces", "tv": "timeVectorSeconds"},
+                     {"ids": "NeuronNames", "traces": "deltaFOverF_bc", "tv": "tv"}] # features
+                    ],
+    # TODO: Change the name of the files to match the .mat files and upload to dropbox (update the link)
+    "Kaplan2020":   [
+                    ["RIShisCl_Neuron2019", "MNhisCl_RIShisCl_Neuron2019", "SMDhisCl_RIShisCl_Neuron2019"], # files
+                    [{"ids": "neuron_ID", "traces": "traces_bleach_corrected", "tv": "time_vector"} for i in range(3)] # features (x3)
+                    ],
+    "Leifer2023":   [[None], [None]],
+    "Flavell2023":  [[None], [None]],
+}
 
 
 def init_random_seeds(seed=0):

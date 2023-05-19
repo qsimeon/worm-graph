@@ -1121,10 +1121,8 @@ def pickle_Kato2015(transform, smooth_method="fft", resample_dt=1.0, norm_dim='n
     -------
     None
         The function's primary purpose is to preprocess the data and save
-
     """
 
-    
     matlabfiles = ['WT_Stim', 'WT_NoStim'] # Matlab files
     data_dict = dict() # Dictionary to store data
     worm_counter = -1 # Wormcounter for indexing
@@ -1265,11 +1263,32 @@ def pickle_Kato2015(transform, smooth_method="fft", resample_dt=1.0, norm_dim='n
     print(Kato2015.keys(), end="\n\n")
 
 
-def pickle_Nichols2017(transform, smooth_method="fft", resample_dt=1.0):
-    """
-    Pickles the worm neural activity data from Nichols et al., Science 2017,
+def pickle_Nichols2017(transform, smooth_method="fft", resample_dt=1.0, norm_dim='neurons'):
+    """Pickles the worm neural activity data.
+    
+    Dataset Reference: Nichols et al., Science 2017, 
     A global brain state underlies C. elegans sleep behavior.
+
+    Parameters
+    ----------
+    transform : object
+        The transformation to be applied to the data. (MinMaxScaler(-1, 1))
+    smooth_method : str, optional (default: 'fft')
+        The smoothing method to apply to the data
+        options are 'sg', 'fft', 'tvr' or 'raw'.
+    resample_dt : float, optional (default: 1.0)
+        The resampling time interval in seconds.
+        If None, no resampling is performed.
+    norm_dim : str, optional (default: 'neurons')
+        The dimension to normalize the data along.
+        Options are: 'neurons' (axis=1) or 'time' (axis=0).
+
+    Returns
+    -------
+    None
+        The function's primary purpose is to preprocess the data and save
     """
+
     data_dict = dict()
     # 'n2_let'
     # load the first .mat file
