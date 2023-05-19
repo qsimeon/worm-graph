@@ -729,11 +729,28 @@ class Skora2018Preprocessor(BasePreprocessor):
         timeVectorSeconds = arr["timeVectorSeconds"]
         return all_IDs, all_traces, timeVectorSeconds
 
+    def _create_neuron_idx(self, unique_IDs):
+        neuron_to_idx = {
+            nid: (str(nid) if (j is None or isinstance(j, np.ndarray)) else str(j))
+            for nid, j in enumerate(unique_IDs)
+        }
+        neuron_to_idx = {
+            nid: (
+                name.replace("0", "")
+                if not name.endswith("0") and not name.isnumeric()
+                else name
+            )
+            for nid, name in neuron_to_idx.items()
+        }
+        neuron_to_idx = dict((v, k) for k, v in neuron_to_idx.items())
+        return neuron_to_idx
+
     def preprocess(self):
         preprocessed_data = {}
         worm_idx = 0  # Initialize worm index outside file loop
         for file_name in ["WT_fasted.mat", "WT_starved.mat"]:
-            raw_data = self.load_data(file_name)[file_name.split(".")[0]]
+            data_key = file_name.split(".")[0]
+            raw_data = self.load_data(file_name)[data_key]
             neuron_IDs, traces, raw_timeVectorSeconds = self.extract_data(raw_data)
 
             for i, trace_data in enumerate(traces):
@@ -800,22 +817,6 @@ class Skora2018Preprocessor(BasePreprocessor):
                 preprocessed_data.update(worm_dict)
         self.save_data(preprocessed_data)
         print(f"Finished processing {self.dataset}!")
-
-    def _create_neuron_idx(self, unique_IDs):
-        neuron_to_idx = {
-            nid: (str(nid) if (j is None or isinstance(j, np.ndarray)) else str(j))
-            for nid, j in enumerate(unique_IDs)
-        }
-        neuron_to_idx = {
-            nid: (
-                name.replace("0", "")
-                if not name.endswith("0") and not name.isnumeric()
-                else name
-            )
-            for nid, name in neuron_to_idx.items()
-        }
-        neuron_to_idx = dict((v, k) for k, v in neuron_to_idx.items())
-        return neuron_to_idx
 
 
 class Kato2015Preprocessor(BasePreprocessor):
@@ -833,11 +834,28 @@ class Kato2015Preprocessor(BasePreprocessor):
         )
         return all_IDs, all_traces, timeVectorSeconds
 
+    def _create_neuron_idx(self, unique_IDs):
+        neuron_to_idx = {
+            nid: (str(nid) if (j is None or isinstance(j, np.ndarray)) else str(j))
+            for nid, j in enumerate(unique_IDs)
+        }
+        neuron_to_idx = {
+            nid: (
+                name.replace("0", "")
+                if not name.endswith("0") and not name.isnumeric()
+                else name
+            )
+            for nid, name in neuron_to_idx.items()
+        }
+        neuron_to_idx = dict((v, k) for k, v in neuron_to_idx.items())
+        return neuron_to_idx
+
     def preprocess(self):
         preprocessed_data = {}
         worm_idx = 0  # Initialize worm index outside file loop
         for file_name in ["WT_Stim.mat", "WT_NoStim.mat"]:
-            raw_data = self.load_data(file_name)[file_name.split(".")[0]]
+            data_key = file_name.split(".")[0]
+            raw_data = self.load_data(file_name)[data_key]
             neuron_IDs, traces, raw_timeVectorSeconds = self.extract_data(raw_data)
 
             for i, trace_data in enumerate(traces):
@@ -904,22 +922,6 @@ class Kato2015Preprocessor(BasePreprocessor):
                 preprocessed_data.update(worm_dict)
         self.save_data(preprocessed_data)
         print(f"Finished processing {self.dataset}!")
-
-    def _create_neuron_idx(self, unique_IDs):
-        neuron_to_idx = {
-            nid: (str(nid) if (j is None or isinstance(j, np.ndarray)) else str(j))
-            for nid, j in enumerate(unique_IDs)
-        }
-        neuron_to_idx = {
-            nid: (
-                name.replace("0", "")
-                if not name.endswith("0") and not name.isnumeric()
-                else name
-            )
-            for nid, name in neuron_to_idx.items()
-        }
-        neuron_to_idx = dict((v, k) for k, v in neuron_to_idx.items())
-        return neuron_to_idx
 
 
 class Nichols2017Preprocessor(BasePreprocessor):
@@ -940,6 +942,15 @@ class Nichols2017Preprocessor(BasePreprocessor):
             nid: (str(nid) if (j is None or isinstance(j, np.ndarray)) else str(j))
             for nid, j in enumerate(unique_IDs)
         }
+        neuron_to_idx = {
+            nid: (
+                name.replace("0", "")
+                if not name.endswith("0") and not name.isnumeric()
+                else name
+            )
+            for nid, name in neuron_to_idx.items()
+        }
+        neuron_to_idx = dict((v, k) for k, v in neuron_to_idx.items())
         return neuron_to_idx
 
     def preprocess(self):
@@ -951,7 +962,8 @@ class Nichols2017Preprocessor(BasePreprocessor):
             "npr1_let.mat",
             "npr1_prelet.mat",
         ]:
-            raw_data = self.load_data(file_name)[file_name.split(".")[0]]
+            data_key = file_name.split(".")[0]
+            raw_data = self.load_data(file_name)[data_key]
             neuron_IDs, traces, raw_timeVectorSeconds = self.extract_data(raw_data)
 
             for i, trace_data in enumerate(traces):
@@ -1020,6 +1032,221 @@ class Nichols2017Preprocessor(BasePreprocessor):
         print(f"Finished processing {self.dataset}!")
 
 
+class Kaplan2020Preprocessor(BasePreprocessor):
+    def __init__(self, dataset_name):
+        super().__init__(dataset_name)
+
+    def load_data(self, file_name):
+        return mat73.loadmat(os.path.join(self.raw_data_path, self.dataset, file_name))
+
+    def extract_data(self, arr):
+        all_IDs = arr["neuron_ID"]
+        all_traces = arr["traces_bleach_corrected"]
+        timeVectorSeconds = arr["time_vector"]
+        return all_IDs, all_traces, timeVectorSeconds
+
+    def _create_neuron_idx(self, unique_IDs):
+        neuron_to_idx = {
+            nid: (str(nid) if (j is None or isinstance(j, np.ndarray)) else str(j))
+            for nid, j in enumerate(unique_IDs)
+        }
+        neuron_to_idx = {
+            nid: (
+                name.replace("0", "")
+                if not name.endswith("0") and not name.isnumeric()
+                else name
+            )
+            for nid, name in neuron_to_idx.items()
+        }
+        neuron_to_idx = dict((v, k) for k, v in neuron_to_idx.items())
+        return neuron_to_idx
+
+    def preprocess(self):
+        preprocessed_data = {}
+        worm_idx = 0  # Initialize worm index outside file loop
+        for file_name in [
+            "Neuron2019_Data_MNhisCl_RIShisCl.mat",
+            "Neuron2019_Data_RIShisCl.mat",
+            "Neuron2019_Data_SMDhisCl_RIShisCl.mat",
+        ]:
+            data_key = "_".join(
+                (file_name.split(".")[0].strip("Neuron2019_Data_"), "Neuron2019")
+            )
+            raw_data = self.load_data(file_name)[data_key]
+            neuron_IDs, traces, raw_timeVectorSeconds = self.extract_data(raw_data)
+
+            for i, trace_data in enumerate(traces):
+                worm = "worm" + str(worm_idx)  # Use global worm index
+                worm_idx += 1  # Increment worm index
+
+                unique_IDs = [
+                    (j[0] if isinstance(j, list) else j) for j in neuron_IDs[i]
+                ]
+                unique_IDs = [
+                    (str(_) if j is None or isinstance(j, np.ndarray) else str(j))
+                    for _, j in enumerate(unique_IDs)
+                ]
+                _, unique_indices = np.unique(unique_IDs, return_index=True)
+                unique_IDs = [unique_IDs[_] for _ in unique_indices]
+                trace_data = trace_data[:, unique_indices.astype(int)]
+                neuron_to_idx = self._create_neuron_idx(unique_IDs)
+
+                time_in_seconds = raw_timeVectorSeconds[i].reshape(
+                    raw_timeVectorSeconds[i].shape[0], 1
+                )
+                time_in_seconds = np.array(time_in_seconds, dtype=np.float32)
+                num_named_neurons = len([k for k in neuron_to_idx.keys()])
+
+                calcium_data = self.normalize_data(trace_data)
+                dt = np.gradient(time_in_seconds, axis=0)
+                dt[dt == 0] = np.finfo(float).eps
+                residual_calcium = np.gradient(calcium_data, axis=0) / dt
+
+                original_time_in_seconds = time_in_seconds.copy()
+                time_in_seconds, calcium_data = self.resample_data(
+                    original_time_in_seconds, calcium_data
+                )
+                time_in_seconds, residual_calcium = self.resample_data(
+                    original_time_in_seconds, residual_calcium
+                )
+
+                max_timesteps, num_neurons = calcium_data.shape
+                smooth_calcium_data = self.smooth_data(
+                    calcium_data, time_in_seconds, dt=np.median(dt)
+                )
+                smooth_residual_calcium = self.smooth_data(
+                    residual_calcium, time_in_seconds, dt=np.median(dt)
+                )
+                num_unknown_neurons = int(num_neurons) - num_named_neurons
+
+                worm_dict = {
+                    worm: {
+                        "dataset": self.dataset,
+                        "smooth_method": self.smooth_method.upper(),
+                        "worm": worm,
+                        "calcium_data": calcium_data,
+                        "smooth_calcium_data": smooth_calcium_data,
+                        "residual_calcium": residual_calcium,
+                        "smooth_residual_calcium": smooth_residual_calcium,
+                        "neuron_to_idx": neuron_to_idx,
+                        "idx_to_neuron": dict((v, k) for k, v in neuron_to_idx.items()),
+                        "max_timesteps": int(max_timesteps),
+                        "time_in_seconds": time_in_seconds,
+                        "dt": dt,
+                        "num_neurons": int(num_neurons),
+                        "num_named_neurons": num_named_neurons,
+                        "num_unknown_neurons": num_unknown_neurons,
+                    }
+                }
+                preprocessed_data.update(worm_dict)
+        self.save_data(preprocessed_data)
+        print(f"Finished processing {self.dataset}!")
+
+
+class Uzel2022Preprocessor(BasePreprocessor):
+    def __init__(self, dataset_name):
+        super().__init__(dataset_name)
+
+    def load_data(self, file_name):
+        return mat73.loadmat(os.path.join(self.raw_data_path, self.dataset, file_name))
+
+    def extract_data(self, arr):
+        all_IDs = arr["IDs"]
+        all_traces = arr["traces"]
+        timeVectorSeconds = arr["tv"]
+        return all_IDs, all_traces, timeVectorSeconds
+
+    def _create_neuron_idx(self, unique_IDs):
+        neuron_to_idx = {
+            nid: (str(nid) if (j is None or isinstance(j, np.ndarray)) else str(j))
+            for nid, j in enumerate(unique_IDs)
+        }
+        neuron_to_idx = {
+            nid: (
+                name.replace("0", "")
+                if not name.endswith("0") and not name.isnumeric()
+                else name
+            )
+            for nid, name in neuron_to_idx.items()
+        }
+        neuron_to_idx = dict((v, k) for k, v in neuron_to_idx.items())
+        return neuron_to_idx
+
+    def preprocess(self):
+        preprocessed_data = {}
+        worm_idx = 0  # Initialize worm index outside file loop
+        for file_name in ["Uzel_WT.mat"]:
+            data_key = "Uzel_WT"
+            raw_data = self.load_data(file_name)[data_key]
+            neuron_IDs, traces, raw_timeVectorSeconds = self.extract_data(raw_data)
+
+            for i, trace_data in enumerate(traces):
+                worm = "worm" + str(worm_idx)  # Use global worm index
+                worm_idx += 1  # Increment worm index
+
+                unique_IDs = [
+                    (j[0] if isinstance(j, list) else j) for j in neuron_IDs[i]
+                ]
+                unique_IDs = [
+                    (str(_) if j is None or isinstance(j, np.ndarray) else str(j))
+                    for _, j in enumerate(unique_IDs)
+                ]
+                unique_IDs, unique_indices = np.unique(unique_IDs, return_index=True)
+                trace_data = trace_data[:, unique_indices]
+                neuron_to_idx = self._create_neuron_idx(unique_IDs)
+
+                time_in_seconds = raw_timeVectorSeconds[i].reshape(
+                    raw_timeVectorSeconds[i].shape[0], 1
+                )
+                time_in_seconds = np.array(time_in_seconds, dtype=np.float32)
+                num_named_neurons = len([k for k in neuron_to_idx.keys()])
+
+                calcium_data = self.normalize_data(trace_data)
+                dt = np.gradient(time_in_seconds, axis=0)
+                dt[dt == 0] = np.finfo(float).eps
+                residual_calcium = np.gradient(calcium_data, axis=0) / dt
+
+                original_time_in_seconds = time_in_seconds.copy()
+                time_in_seconds, calcium_data = self.resample_data(
+                    original_time_in_seconds, calcium_data
+                )
+                time_in_seconds, residual_calcium = self.resample_data(
+                    original_time_in_seconds, residual_calcium
+                )
+
+                max_timesteps, num_neurons = calcium_data.shape
+                smooth_calcium_data = self.smooth_data(
+                    calcium_data, time_in_seconds, dt=np.median(dt)
+                )
+                smooth_residual_calcium = self.smooth_data(
+                    residual_calcium, time_in_seconds, dt=np.median(dt)
+                )
+                num_unknown_neurons = int(num_neurons) - num_named_neurons
+
+                worm_dict = {
+                    worm: {
+                        "dataset": self.dataset,
+                        "smooth_method": self.smooth_method.upper(),
+                        "worm": worm,
+                        "calcium_data": calcium_data,
+                        "smooth_calcium_data": smooth_calcium_data,
+                        "residual_calcium": residual_calcium,
+                        "smooth_residual_calcium": smooth_residual_calcium,
+                        "neuron_to_idx": neuron_to_idx,
+                        "idx_to_neuron": dict((v, k) for k, v in neuron_to_idx.items()),
+                        "max_timesteps": int(max_timesteps),
+                        "time_in_seconds": time_in_seconds,
+                        "dt": dt,
+                        "num_neurons": int(num_neurons),
+                        "num_named_neurons": num_named_neurons,
+                        "num_unknown_neurons": num_unknown_neurons,
+                    }
+                }
+                preprocessed_data.update(worm_dict)
+        self.save_data(preprocessed_data)
+        print(f"Finished processing {self.dataset}!")
+
+
 if __name__ == "__main__":
     import os
     import pickle
@@ -1028,22 +1255,20 @@ if __name__ == "__main__":
     from sklearn.preprocessing import StandardScaler
 
     # Preprocess the dataset
-    processed_data_path = (
-        "/Users/quileesimeon/GitHub Repos/worm-graph/data/processed/neural"
-    )
-    transform = StandardScaler()
-    preprocessor = Nichols2017Preprocessor(
-        dataset_name="Nichols2017",
-    )
+    preprocessor = Uzel2022Preprocessor(dataset_name="Uzel2022")
     preprocessor.preprocess()
 
     # Load data from pickle file
-    with open(os.path.join(processed_data_path, "Nichols2017.pickle"), "rb") as f:
+    processed_data_path = (
+        "/Users/quileesimeon/GitHub Repos/worm-graph/data/processed/neural"
+    )
+    with open(os.path.join(processed_data_path, "Uzel2022.pickle"), "rb") as f:
         data = pickle.load(f)
 
     # Extract data for worm0
     worm0_data = data["worm0"]
-    print(data.keys())
+    print(data.keys(), end="\n\n")
+    print(worm0_data["neuron_to_idx"].keys(), end="\n\n")
 
     # Extract calcium traces. The number of traces you select will depend on the structure of your data
     calcium_traces = worm0_data[
