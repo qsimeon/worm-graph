@@ -1,9 +1,16 @@
 import os
 import torch
 import random
+import warnings
 import numpy as np
 import pandas as pd
 import torch.multiprocessing
+
+# Ignore sklearn's RuntimeWarnings
+warnings.filterwarnings(action="ignore", category=RuntimeWarning)
+
+# Ignore all warnings
+# warnings.filterwarnings("ignore")
 
 # set the start method for multiprocessing
 torch.multiprocessing.set_start_method("spawn", force=True)
