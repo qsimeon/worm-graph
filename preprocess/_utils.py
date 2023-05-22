@@ -1323,7 +1323,7 @@ class Leifer2023Preprocessor(BasePreprocessor):
 
 class Flavell2023Preprocessor(BasePreprocessor):
     def __init__(self, transform, smooth_method, resample_dt):
-        super().__init__("Flavel2023", transform, smooth_method, resample_dt)
+        super().__init__("Flavell2023", transform, smooth_method, resample_dt)
 
     def load_data(self, file_name):
         if file_name.endswith(".h5"):
@@ -1373,7 +1373,7 @@ class Flavell2023Preprocessor(BasePreprocessor):
             worm = "worm" + str(i)
             file_data = self.load_data(file)
             time_in_seconds, calcium_data, neurons = self.extract_data(file_data)
-            neuron_to_idx, num_named = self.create_neuron_idx(neurons)
+            neuron_to_idx, num_named_neurons = self.create_neuron_idx(neurons)
             calcium_data = self.transform.fit_transform(calcium_data)
             dt = np.gradient(time_in_seconds, axis=0)
             dt[dt == 0] = np.finfo(float).eps
@@ -1392,6 +1392,7 @@ class Flavell2023Preprocessor(BasePreprocessor):
             smooth_residual_calcium = self.smooth_data(
                 residual_calcium, time_in_seconds, dt=np.median(dt)
             )
+            num_unknown_neurons = int(num_neurons) - num_named_neurons
             worm_dict = {
                 worm: {
                     "dataset": self.dataset,
@@ -1407,8 +1408,8 @@ class Flavell2023Preprocessor(BasePreprocessor):
                     "time_in_seconds": time_in_seconds,
                     "dt": dt,
                     "num_neurons": int(num_neurons),
-                    "num_named_neurons": num_named,
-                    "num_unknown_neurons": int(num_neurons - num_named),
+                    "num_named_neurons": num_named_neurons,
+                    "num_unknown_neurons": num_unknown_neurons,
                 }
             }
             preprocessed_data.update(worm_dict)
@@ -1424,7 +1425,7 @@ if __name__ == "__main__":
     from sklearn.preprocessing import StandardScaler
 
     # Preprocess the dataset
-    preprocessor = Leifer2023Preprocessor(
+    preprocessor = Flavell2023Preprocessor(
         transform=StandardScaler(), smooth_method="FFT", resample_dt=0.1
     )
     preprocessor.preprocess()

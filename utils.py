@@ -23,7 +23,7 @@ os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "max_split_size_mb:32"
 
 USER = "qsimeon"  # OpenMind username
 
-NUM_NEURONS = 302
+NUM_NEURONS = 302  # number of neurons in the model organism
 
 RAW_DATA_URL = "https://www.dropbox.com/s/45yqpvtsncx4095/raw_data.zip?dl=1"
 
