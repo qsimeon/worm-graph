@@ -387,7 +387,6 @@ def reshape_calcium_data(single_worm_dataset):
     named_neurons_mask = torch.zeros(NUM_NEURONS, dtype=torch.bool)
     unknown_neurons_mask = torch.zeros(NUM_NEURONS, dtype=torch.bool)
     # create the new calcium data structure
-    # len(residual) = len(data) - 1
     standard_calcium_data = torch.zeros(
         max_timesteps, NUM_NEURONS, dtype=origin_calcium_data.dtype
     )
@@ -551,7 +550,6 @@ def pickle_neural_data(
         The function's primary purpose is to preprocess the data and save
         it to disk for future use.
     """
-    global source_path, processed_path
     zip_path = os.path.join(ROOT_DIR, zipfile)
     source_path = os.path.join(ROOT_DIR, zipfile.strip(".zip"))
     processed_path = os.path.join(ROOT_DIR, "data/processed/neural")
@@ -580,22 +578,15 @@ def pickle_neural_data(
 
     # (re)-Pickle all the datasets ... OR
     if dataset is None or dataset.lower() == "all":
-        for dataset_name in VALID_DATASETS:
-            if dataset_name.__contains__("sine"):
-                continue  # skip these test datasets
-            print("Dataset:", dataset_name, end="\n\n")
-            # dynamically import the corresponding {Dataset}Preprocessor class
-            preprocessor_module = __import__(
-                "preprocess." + dataset_name.lower(),
-                fromlist=[f"{dataset_name}Preprocessor"],
+        for dataset in VALID_DATASETS:
+            print("Dataset:", dataset, end="\n\n")
+            # instantiate the relevant preprocessor class
+            preprocessor = eval(dataset + "Preprocessor")(
+                transform, smooth_method, resample_dt
             )
-            DatasetPreprocessor = getattr(
-                preprocessor_module, f"{dataset_name}Preprocessor"
-            )
-            # instantiate the {Dataset}Preprocessor class
-            data_preprocessor = DatasetPreprocessor()
-            # call the preprocess method to pickle the dataset
-            data_preprocessor.preprocess(transform, smooth_method, resample_dt)
+            # call its methods
+            preprocessor.preprocess()
+            preprocessor.save_to_pickle()
     # ... (re)-Pickle a single dataset
     else:
         assert (
@@ -604,15 +595,12 @@ def pickle_neural_data(
             list(VALID_DATASETS)
         )
         print("Dataset:", dataset, end="\n\n")
-        # dynamically import the corresponding {Dataset}Preprocessor class
-        preprocessor_module = __import__(
-            "preprocess." + dataset.lower(), fromlist=[f"{dataset}Preprocessor"]
+        # instantiate the relevant preprocessor class
+        preprocessor = eval(dataset + "Preprocessor")(
+            transform, smooth_method, resample_dt
         )
-        DatasetPreprocessor = getattr(preprocessor_module, f"{dataset}Preprocessor")
-        # instantiate the {Dataset}Preprocessor class
-        data_preprocessor = DatasetPreprocessor()
-        # call the preprocess method to pickle the dataset
-        data_preprocessor.preprocess(transform, smooth_method, resample_dt)
+        # call its method
+        preprocessor.preprocess()
 
     # Delete the downloaded raw datasets
     shutil.rmtree(source_path)
@@ -621,6 +609,18 @@ def pickle_neural_data(
     open(os.path.join(processed_path, ".processed"), "a").close()
 
     return None
+
+
+def silence_errors():
+    logging.getLogger().setLevel(logging.CRITICAL)
+
+
+def restore_logging():
+    root_logger = logging.getLogger()
+    root_logger.setLevel(logging.NOTSET)
+    # set matplotlib logging level to WARNING
+    mpl_logger = logging.getLogger("matplotlib")
+    mpl_logger.setLevel(logging.WARNING)
 
 
 class BasePreprocessor:
@@ -658,11 +658,17 @@ class BasePreprocessor:
 
     """
 
-    def __init__(self, dataset_name):
+    def __init__(
+        self,
+        dataset_name,
+        transform=StandardScaler(),
+        smooth_method="FFT",
+        resample_dt=0.5,
+    ):
         self.dataset = dataset_name
-        self.transform = StandardScaler()
-        self.smooth_method = "fft"
-        self.resample_dt = 1.0
+        self.transform = transform
+        self.smooth_method = smooth_method
+        self.resample_dt = resample_dt
         self.raw_data_path = os.path.join(ROOT_DIR, "opensource_data")
         self.processed_data_path = os.path.join(ROOT_DIR, "data/processed/neural")
 
@@ -715,8 +721,8 @@ class BasePreprocessor:
 
 
 class Skora2018Preprocessor(BasePreprocessor):
-    def __init__(self, dataset_name):
-        super().__init__(dataset_name)
+    def __init__(self, transform, smooth_method, resample_dt):
+        super().__init__("Skora2018", transform, smooth_method, resample_dt)
 
     def load_data(self, file_name):
         return mat73.loadmat(os.path.join(self.raw_data_path, self.dataset, file_name))
@@ -800,8 +806,8 @@ class Skora2018Preprocessor(BasePreprocessor):
 
 
 class Kato2015Preprocessor(BasePreprocessor):
-    def __init__(self, dataset_name):
-        super().__init__(dataset_name)
+    def __init__(self, transform, smooth_method, resample_dt):
+        super().__init__("Kato2015", transform, smooth_method, resample_dt)
 
     def load_data(self, file_name):
         return mat73.loadmat(os.path.join(self.raw_data_path, self.dataset, file_name))
@@ -885,8 +891,8 @@ class Kato2015Preprocessor(BasePreprocessor):
 
 
 class Nichols2017Preprocessor(BasePreprocessor):
-    def __init__(self, dataset_name):
-        super().__init__(dataset_name)
+    def __init__(self, transform, smooth_method, resample_dt):
+        super().__init__("Nichols2017", transform, smooth_method, resample_dt)
 
     def load_data(self, file_name):
         return mat73.loadmat(os.path.join(self.raw_data_path, self.dataset, file_name))
@@ -974,11 +980,18 @@ class Nichols2017Preprocessor(BasePreprocessor):
 
 
 class Kaplan2020Preprocessor(BasePreprocessor):
-    def __init__(self, dataset_name):
-        super().__init__(dataset_name)
+    def __init__(self, transform, smooth_method, resample_dt):
+        super().__init__("Kaplan2020", transform, smooth_method, resample_dt)
 
     def load_data(self, file_name):
-        return mat73.loadmat(os.path.join(self.raw_data_path, self.dataset, file_name))
+        # silence logging during loading:
+        # ERROR:root:ERROR: MATLAB type not supported: function_handle_workspace, (uint32)
+        silence_errors()
+        # load data with mat73
+        data = mat73.loadmat(os.path.join(self.raw_data_path, self.dataset, file_name))
+        # turn on logging again after loading
+        restore_logging()
+        return data
 
     def extract_data(self, arr):
         all_IDs = arr["neuron_ID"]
@@ -1063,8 +1076,8 @@ class Kaplan2020Preprocessor(BasePreprocessor):
 
 
 class Uzel2022Preprocessor(BasePreprocessor):
-    def __init__(self, dataset_name):
-        super().__init__(dataset_name)
+    def __init__(self, transform, smooth_method, resample_dt):
+        super().__init__("Uzel2022", transform, smooth_method, resample_dt)
 
     def load_data(self, file_name):
         return mat73.loadmat(os.path.join(self.raw_data_path, self.dataset, file_name))
@@ -1145,8 +1158,8 @@ class Uzel2022Preprocessor(BasePreprocessor):
 
 
 class Leifer2023Preprocessor(BasePreprocessor):
-    def __init__(self, dataset_name):
-        super().__init__(dataset_name)
+    def __init__(self, transform, smooth_method, resample_dt):
+        super().__init__("Leifer2023", transform, smooth_method, resample_dt)
 
     def load_data(self, file_name):
         with open(os.path.join(self.raw_data_path, self.dataset, file_name), "r") as f:
@@ -1309,8 +1322,8 @@ class Leifer2023Preprocessor(BasePreprocessor):
 
 
 class Flavell2023Preprocessor(BasePreprocessor):
-    def __init__(self, dataset_name):
-        super().__init__(dataset_name)
+    def __init__(self, transform, smooth_method, resample_dt):
+        super().__init__("Flavel2023", transform, smooth_method, resample_dt)
 
     def load_data(self, file_name):
         if file_name.endswith(".h5"):
@@ -1411,14 +1424,20 @@ if __name__ == "__main__":
     from sklearn.preprocessing import StandardScaler
 
     # Preprocess the dataset
-    preprocessor = Leifer2023Preprocessor(dataset_name="Leifer2023")
+    preprocessor = Leifer2023Preprocessor(
+        transform=StandardScaler(), smooth_method="FFT", resample_dt=0.1
+    )
     preprocessor.preprocess()
+
+    print(preprocessor.dataset)
 
     # Load data from pickle file
     processed_data_path = (
         "/Users/quileesimeon/GitHub Repos/worm-graph/data/processed/neural"
     )
-    with open(os.path.join(processed_data_path, "Leifer2023.pickle"), "rb") as f:
+    with open(
+        os.path.join(processed_data_path, preprocessor.dataset + ".pickle"), "rb"
+    ) as f:
         data = pickle.load(f)
 
     print(data.keys(), end="\n\n")
