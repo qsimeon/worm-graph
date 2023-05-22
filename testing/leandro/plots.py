@@ -4,18 +4,26 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import matplotlib.gridspec as gridspec
 
-def plot_signals(data, time_tensor, num_columns):
+def plot_signals(data, time_tensor, neuron_idx=None):
     assert isinstance(data, torch.Tensor), "data must be a PyTorch tensor"
     assert isinstance(time_tensor, torch.Tensor), "time_tensor must be a PyTorch tensor"
     assert data.dim() == 2, "data must be a 2D tensor"
-    assert time_tensor.dim() == 1, "time_tensor must be a 1D tensor"
+    assert isinstance(neuron_idx, (int, list)), "neuron_idx must be an integer or list"
+
+    time_tensor = time_tensor.squeeze()
     assert data.size(0) == time_tensor.size(0), "Number of rows in data and time_tensor must match"
     
     num_neurons = data.size(1)
-    assert num_columns <= num_neurons, "num_columns cannot exceed the number of neurons"
     
-    # Randomly select the column indices
-    column_indices = np.random.choice(num_neurons, num_columns, replace=False)
+    # Randomly select the column indices if not provided
+    if isinstance(neuron_idx, int):
+        assert neuron_idx <= num_neurons, "neuron_idx cannot exceed the number of neurons"
+        column_indices = np.random.choice(num_neurons, neuron_idx, replace=False)
+    elif isinstance(neuron_idx, list):
+        assert len(neuron_idx) <= num_neurons, "neuron_idx cannot exceed the number of neurons"
+        column_indices = np.array(neuron_idx)
+
+    num_columns = len(column_indices)
     
     # Extract the selected columns from the data tensor
     selected_columns = data[:, column_indices]
@@ -59,10 +67,14 @@ def compare_signals(data1, data2, x, k):
     assert data1.shape == data2.shape, "data1 and data2 must have the same shape"
     assert len(data1.shape) == 2, "data1 and data2 must be 2D"
     assert x.shape[0] == data1.shape[0], "x must have the same number of rows as data1 and data2"
-    assert k <= data1.shape[1], "k must be less than or equal to the number of columns in data1 and data2"
-
-    # Randomly select k column indices
-    indices = torch.randperm(data1.shape[1])[:k]
+    # Randomly select the column indices if not provided
+    if isinstance(k, int):
+        assert k <= data1.shape[0], "k cannot exceed the number of neurons"
+        indices = torch.randperm(data1.shape[1])[:k]
+    elif isinstance(k, list):
+        assert len(k) <= data1.shape[0], "k cannot exceed the number of neurons"
+        indices = torch.from_numpy(np.array(k))
+        k = len(k)
 
     # Create a grid spec plot with 2 rows for each index
     fig = plt.figure(figsize=(15, int(2.5*k)))
