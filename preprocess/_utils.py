@@ -230,241 +230,428 @@ def preprocess_connectome(raw_dir, raw_files):
     return None
 
 
-def total_variation_regularization_smooth(x, t, alpha):
+def total_var_reg_smooth(x, t, alpha=1e-2):
     """
-    Total variation regularization for smoothing a multidimensional time series.
-    TODO: Way too slow, need to optimize.
+    Total variational regularization for smoothing a multidimensional time series.
 
     Parameters:
         x (ndarray): The input time series to be smoothed (time, neurons).
-        t (ndarray): The time vector corresponding to the input time series.
+        t (ndarray): The time vector (in seconds) corresponding to the input time series.
         alpha (float): The regularization parameter.
 
     Returns:
-        ndarray: The smoothed time series.
+        x_smooth (ndarray): The smoothed time series.
     """
-    if isinstance(x, torch.Tensor):
+    istensor = isinstance(x, torch.Tensor)
+    if istensor:
         x = x.cpu().numpy()
-    if x.ndim == 1:
+    dim = x.ndim
+    if dim == 1:
         x = x.reshape(-1, 1)
-    n, num_features = x.shape
     t = t.squeeze()
-    dt = torch.diff(t)
-    A = np.zeros((n - 1, n))
-    for i in range(n - 1):
-        A[i, i] = -1 / dt[i]
-        A[i, i + 1] = 1 / dt[i]
-
-    def objective(g):
-        g = g.reshape(n, num_features)
-        return np.sum((g - x) ** 2) + alpha * np.sum(np.abs(np.dot(A, g)))
-
-    g0 = np.zeros((n, num_features))
-    res = minimize(objective, g0.ravel(), method="L-BFGS-B")
-    x_smooth = torch.from_numpy(res.x.reshape(n, num_features))
+    dt = np.diff(t, prepend=t[0] - np.diff(t)[0])
+    # total variational derivative
+    dxdt_totalvar = dxdt(x, t, kind="trend_filtered", order=0, alpha=alpha, axis=0)
+    x_smooth = np.cumsum(dxdt_totalvar) * dt
+    if dim == 1:
+        x_smooth = x_smooth.squeeze(-1)
+    if istensor:
+        x_smooth = torch.from_numpy(x_smooth)
     return x_smooth
 
 
-def finite_difference_smooth(x_, t_):
-    """Uses the Smoothed Finite Difference derivative from PySINDy for smoothing.
+def finite_differences_smooth(x, t, k=1):
+    """Smoothed Finite Differences derivative for smoothing a multidimensional time series.
 
     Parameters:
-        x_ (tensor): The input time series to be smoothed (time, neurons).
-        t_ (tensor): The time vector corresponding to the input time series.
+        x (ndarray): The input time series to be smoothed (time, neurons).
+        t (ndarray): The time vector (in seconds) corresponding to the input time series.
+        k (int): The order of the derivative.
 
     Returns:
-        tensor: The smoothed time series.
+        x_smooth (ndarray): The smoothed time series.
     """
-    if isinstance(x_, torch.Tensor):
-        x_ = x_.cpu().numpy()
-        t_ = t_.squeeze().cpu().numpy()
-    if x_.ndim == 1:
-        x_ = x_.reshape(-1, 1)
-        t_ = t_.squeeze()
-    n, num_features = x_.shape
-    dt = np.diff(t_, prepend=t_[0] - np.diff(t_)[0])
-    diff = SmoothedFiniteDifference()
-    x_smooth = np.zeros((n, num_features))
-    for i in range(num_features):
-        dxdt = diff._differentiate(x_[:, i], t_)
-        x_smooth[:, i] = np.cumsum(dxdt) * dt
-    x_smooth = torch.tensor(x_smooth, dtype=torch.float32)
+    istensor = isinstance(x, torch.Tensor)
+    if istensor:
+        x = x.cpu().numpy()
+    dim = x.ndim
+    if dim == 1:
+        x = x.reshape(-1, 1)
+    t = t.squeeze()
+    dt = np.diff(t, prepend=t[0] - np.diff(t)[0])
+    # finite differences derivative
+    dxdt_findiff = dxdt(x, t, kind="finite_difference", k=k, axis=0)
+    x_smooth = np.cumsum(dxdt_findiff) * dt
+    if dim == 1:
+        x_smooth = x_smooth.squeeze(-1)
+    if istensor:
+        x_smooth = torch.from_numpy(x_smooth)
     return x_smooth
 
 
-def fast_fourier_transform_smooth(x, dt):
-    """Uses the FFT to smooth a multidimensional time series.
-
-    Smooths a multidimensional time series by keeping the lowest
-    10% of the frequencies from the FFT of the input signal.
+def savitzky_golay_smooth(x, t, order=3):
+    """Savitzy-Golay filter for smoothing a multidimensional time series.
 
     Parameters:
-        x (tensor): The input time series to be smoothed.
-        dt (float): The uniform time spacing (in seconds) between individual samples.
+        x (ndarray): The input time series to be smoothed (time, neurons).
+        t (ndarray): The time vector (in seconds) corresponding to the input time series.
+        order (int): The order of the polynomial spline.
+
+    Returns:
+        x_smooth (ndarray): The smoothed time series.
     """
-    if isinstance(x, np.ndarray):
-        x = torch.tensor(x, dtype=torch.float32)
-    if x.ndim == 1:
+    istensor = isinstance(x, torch.Tensor)
+    if istensor:
+        x = x.cpu().numpy()
+    dim = x.ndim
+    if dim == 1:
         x = x.reshape(-1, 1)
-    n, num_features = x.shape
-    x_smooth = torch.zeros_like(x)
-    frequencies = torch.fft.rfftfreq(n, d=dt)  # dt: sampling time
-    threshold = torch.abs(frequencies)[
-        int(frequencies.shape[0] * 0.1)
-    ]  # keep first 10% of the frequencies
-    oneD_kernel = torch.abs(frequencies) < threshold
-    fft_input = torch.fft.rfftn(x, dim=0)
-    oneD_kernel = oneD_kernel.repeat(num_features, 1).T
-    fft_result = torch.fft.irfftn(fft_input * oneD_kernel, dim=0)
-    x_smooth[0 : min(fft_result.shape[0], x_smooth.shape[0])] = fft_result
+    t = t.squeeze()
+    dt = np.diff(t, prepend=t[0] - np.diff(t)[0])
+    # Savitzky-Golay derivative using polynomials
+    dxdt_savgol = dxdt(
+        x, t, kind="savitzky_golay", left=0.5, right=0.5, order=order, axis=0
+    )
+    x_smooth = np.cumsum(dxdt_savgol) * dt
+    if dim == 1:
+        x_smooth = x_smooth.squeeze(-1)
+    if istensor:
+        x_smooth = torch.from_numpy(x_smooth)
     return x_smooth
 
 
-def smooth_data_preprocess(calcium_data, time_in_seconds, smooth_method, dt=1.0):
+def kalman_smooth(x, t, alpha=1):
+    """Kalman derivative for smoothing a multidimensional time series.
+
+    Parameters:
+        x (ndarray): The input time series to be smoothed (time, neurons).
+        t (ndarray): The time vector (in seconds) corresponding to the input time series.
+        alpha (int): Kernel size for the Kalman filter.
+
+    Returns:
+        x_smooth (ndarray): The smoothed time series.
     """
-    Smooths the calcium data provided as a (time, num_neurons) array `calcium_data`.
+    istensor = isinstance(x, torch.Tensor)
+    if istensor:
+        x = x.cpu().numpy()
+    dim = x.ndim
+    if dim == 1:
+        x = x.reshape(-1, 1)
+    t = t.squeeze()
+    dt = np.diff(t, prepend=t[0] - np.diff(t)[0])
+    # Kalman filter derivative
+    dxdt_kalman = dxdt(x, t, kind="kalman", alpha=alpha, axis=0)
+    x_smooth = np.cumsum(dxdt_kalman) * dt
+    if dim == 1:
+        x_smooth = x_smooth.squeeze(-1)
+    if istensor:
+        x_smooth = torch.from_numpy(x_smooth)
+    return x_smooth
+
+
+def kernel_smooth(x, t, sigma=1, lmbd=0.1, kernel="rbf"):
+    """Kernel derivative for smoothing a multidimensional time series.
+
+    Parameters:
+        x (ndarray): The input time series to be smoothed (time, neurons).
+        t (ndarray): The time vector (in seconds) corresponding to the input time series.
+        sigma (float): The kernel length-scale parameter.
+        lmbd (float): The kernel regularization parameter.
+        kernel (str): The kernel type.
+
+    Returns:
+        x_smooth (ndarray): The smoothed time series.
+    """
+    istensor = isinstance(x, torch.Tensor)
+    if istensor:
+        x = x.cpu().numpy()
+    dim = x.ndim
+    if dim == 1:
+        x = x.reshape(-1, 1)
+    t = t.squeeze()
+    dt = np.diff(t, prepend=t[0] - np.diff(t)[0])
+    # Kernel derivative
+    dxdt_kernel = dxdt(
+        x, t, kind="kernel", sigma=sigma, lmbd=lmbd, kernel=kernel, axis=0
+    )
+    x_smooth = np.cumsum(dxdt_kernel) * dt
+    if dim == 1:
+        x_smooth = x_smooth.squeeze(-1)
+    if istensor:
+        x_smooth = torch.from_numpy(x_smooth)
+    return x_smooth
+
+
+def spectral_smooth(x, t):
+    """Spectral derivative for smoothing a multidimensional time series.
+
+    Parameters:
+        x (ndarray): The input time series to be smoothed (time, neurons).
+        t (ndarray): The time vector (in seconds) corresponding to the input time series.
+
+    Returns:
+        x_smooth (ndarray): The smoothed time series.
+    """
+    istensor = isinstance(x, torch.Tensor)
+    if istensor:
+        x = x.cpu().numpy()
+    dim = x.ndim
+    if dim == 1:
+        x = x.reshape(-1, 1)
+    t = t.squeeze()
+    dt = np.diff(t, prepend=t[0] - np.diff(t)[0])
+    # Spectral derivative
+    dxdt_spectral = dxdt(x, t, kind="spectral", axis=0)
+    x_smooth = np.cumsum(dxdt_spectral) * dt
+    if dim == 1:
+        x_smooth = x_smooth.squeeze(-1)
+    if istensor:
+        x_smooth = torch.from_numpy(x_smooth)
+    return x_smooth
+
+
+def spline_smooth(x, t, s=1e-2):
+    """Spline derivative for smoothing a multidimensional time series.
+
+    Parameters:
+        x (ndarray): The input time series to be smoothed (time, neurons).
+        t (ndarray): The time vector (in seconds) corresponding to the input time series.
+        s (float): The smoothing factor.
+
+    Returns:
+        x_smooth (ndarray): The smoothed time series.
+    """
+    dtype = x.dtype
+    istensor = isinstance(x, torch.Tensor)
+    if istensor:
+        x = x.cpu().numpy()
+    dim = x.ndim
+    if dim == 1:
+        x = x.reshape(-1, 1)
+    t = t.squeeze()
+    dt = np.diff(t, prepend=t[0] - np.diff(t)[0])
+    # Spline derivative with smoothing
+    dxdt_spline = dxdt(x, t, kind="spline", s=s, axis=0)
+    x_smooth = np.cumsum(dxdt_spline) * dt
+    if dim == 1:
+        x_smooth = x_smooth.squeeze(-1)
+    if istensor:
+        x_smooth = torch.from_numpy(x_smooth)
+    return x_smooth
+
+
+def fourier_transform_smooth(x, t, percent=0.1):
+    """Uses the FFT to smooth a multidimensional time series.
+
+    Smooths a multidimensional time series by keeping the lowest `percent`
+    fraction of the maximum frequency from the FFT of the input signal.
+
+    Parameters:
+        x (ndarray): The input time series to be smoothed.
+        t (ndarray): The time vector (in seconds) corresponding to the input time series.
+        percent (float): The percentage of max frequency to keep.
+
+    Returns:
+        x_smooth (ndarray): The smoothed time series.
+    """
+    isnumpy = isinstance(x, np.ndarray)
+    if isnumpy:
+        x = torch.from_numpy(x)
+    dim = x.ndim
+    if dim == 1:
+        x = x.unsqueeze(-1)
+    t = t.squeeze()
+    dt = np.median(np.diff(t, prepend=t[0] - np.diff(t)[0]))  # sampling time
+    x_smooth = torch.zeros_like(x)
+    frequencies = torch.fft.rfftfreq(x.shape[0], d=dt)
+    threshold = torch.abs(frequencies)[
+        int(frequencies.shape[0] * percent)
+    ]  # keep lowest `percent` of frequencies
+    oneD_kernel = torch.abs(frequencies) < threshold
+    fft_input = torch.fft.rfftn(x, dim=0)
+    oneD_kernel = oneD_kernel.repeat(x.shape[1], 1).T
+    fft_result = torch.fft.irfftn(fft_input * oneD_kernel, dim=0)
+    x_smooth[0 : min(fft_result.shape[0], x_smooth.shape[0])] = fft_result
+    if dim == 1:
+        x_smooth = x_smooth.squeeze(-1)
+    if isnumpy:
+        x_smooth = x_smooth.cpu().numpy()
+    return x_smooth
+
+
+def smooth_data_preprocess(calcium_data, time_in_seconds, smooth_method):
+    """Smooths the calcium data provided as a (time, neurons) array `calcium_data`.
 
     Returns the denoised signals calcium signals using the method specified by `smooth_method`.
 
     Args:
         calcium_data: original calcium data from dataset
         time_in_seconds: time vector corresponding to calcium_data
-        smooth_method: the way to smooth data
-        dt: (required for FFT smooth method) the inter-sample time in seconds
+        smooth_method: the method used to smooth the data
 
     Returns:
         smooth_ca_data: calcium data that is smoothed
     """
 
     if str(smooth_method).lower() == "fd" or smooth_method is None:
-        smooth_ca_data = finite_difference_smooth(calcium_data, time_in_seconds)
+        smooth_ca_data = finite_differences_smooth(calcium_data, time_in_seconds)
     elif str(smooth_method).lower() == "fft":
-        smooth_ca_data = fast_fourier_transform_smooth(calcium_data, dt)
-    elif str(smooth_method).lower() == "tvr":
-        # regularization parameter `alpha` could be fine-tuned
-        smooth_ca_data = total_variation_regularization_smooth(
-            calcium_data, time_in_seconds, alpha=0.03
-        )
+        smooth_ca_data = fourier_transform_smooth(calcium_data, time_in_seconds)
+    elif str(smooth_method).lower() == "ka":
+        smooth_ca_data = kalman_smooth(calcium_data, time_in_seconds)
+    elif str(smooth_method).lower() == "ke":
+        smooth_ca_data = kernel_smooth(calcium_data, time_in_seconds)
     elif str(smooth_method).lower() == "sg":
-        smooth_ca_data = torch.from_numpy(
-            savgol_filter(calcium_data, 5, 3, mode="nearest", axis=-1)
-        )
+        smooth_ca_data = savitzky_golay_smooth(calcium_data, time_in_seconds)
+    elif str(smooth_method).lower() == "spl":
+        smooth_ca_data = spline_smooth(calcium_data, time_in_seconds)
+    elif str(smooth_method).lower() == "spt":
+        smooth_ca_data = spectral_smooth(calcium_data, time_in_seconds)
+    elif str(smooth_method).lower() == "tvr":
+        smooth_ca_data = total_var_reg_smooth(calcium_data, time_in_seconds)
     else:
-        print("Wrong input! Check the `config/preprocess.yml` for available methods.")
-        exit(0)
-
+        raise TypeError("Check `config/preprocess.yml` for available smooth methods.")
     return smooth_ca_data
 
 
-def reshape_calcium_data(single_worm_dataset):
-    """
-    Modifies the worm dataset to restructure calcium data
-    into a standard shape of max_timesteps x 302. Inserts neuron
-    masks and mappings of neuron labels to indices in the data.
-    """
-    # get the calcium data for this worm
-    origin_calcium_data = single_worm_dataset["calcium_data"]
-    smooth_calcium_data = single_worm_dataset["smooth_calcium_data"]
-    residual_calcium = single_worm_dataset["residual_calcium"]
-    smooth_residual_calcium = single_worm_dataset["smooth_residual_calcium"]
-    # get the number of unidentified tracked neurons
-    num_unknown_neurons = single_worm_dataset["num_unknown_neurons"]
-    # get the neuron to idx map
-    neuron_to_idx = single_worm_dataset["neuron_to_idx"]
-    idx_to_neuron = single_worm_dataset["idx_to_neuron"]
-    # get the length of the time series
-    max_timesteps = single_worm_dataset["max_timesteps"]
-    # load names of all 302 neurons
-    neurons_302 = NEURONS_302
-    # check the calcium data
-    assert len(idx_to_neuron) == origin_calcium_data.size(
-        1
-    ), "Number of neurons in calcium dataset does not match number of recorded neurons."
-    # create new maps of neurons to indices
-    named_neuron_to_idx = dict()
-    unknown_neuron_to_idx = dict()
-    # create masks of which neurons have data
-    named_neurons_mask = torch.zeros(NUM_NEURONS, dtype=torch.bool)
-    unknown_neurons_mask = torch.zeros(NUM_NEURONS, dtype=torch.bool)
-    # create the new calcium data structure
-    standard_calcium_data = torch.zeros(
-        max_timesteps, NUM_NEURONS, dtype=origin_calcium_data.dtype
-    )
-    standard_residual_calcium = torch.zeros(
-        max_timesteps, NUM_NEURONS, dtype=residual_calcium.dtype
-    )
-    standard_smooth_calcium_data = torch.zeros(
-        max_timesteps, NUM_NEURONS, dtype=smooth_calcium_data.dtype
-    )
-    standard_residual_smooth_calcium = torch.zeros(
-        max_timesteps, NUM_NEURONS, dtype=smooth_residual_calcium.dtype
-    )
-    # fill the new calcium data structure with data from named neurons
-    slot_to_named_neuron = dict((k, v) for k, v in enumerate(neurons_302))
-    for slot, neuron in slot_to_named_neuron.items():
-        if neuron in neuron_to_idx:  # named neuron
-            idx = neuron_to_idx[neuron]
-            named_neuron_to_idx[neuron] = idx
-            standard_calcium_data[:, slot] = origin_calcium_data[:, idx]
-            standard_residual_calcium[:, slot] = residual_calcium[:, idx]
-            standard_smooth_calcium_data[:, slot] = smooth_calcium_data[:, idx]
-            standard_residual_smooth_calcium[:, slot] = smooth_residual_calcium[:, idx]
-            named_neurons_mask[slot] = True
-    # randomly distribute the remaining data from unknown neurons
-    for neuron in set(neuron_to_idx) - set(named_neuron_to_idx):
-        unknown_neuron_to_idx[neuron] = neuron_to_idx[neuron]
-    free_slots = list(np.where(~named_neurons_mask)[0])
-    slot_to_unknown_neuron = dict(
-        zip(
-            np.random.choice(free_slots, num_unknown_neurons, replace=False),
-            unknown_neuron_to_idx.keys(),
+class CalciumDataReshaper:
+    def __init__(self, worm_dataset):
+        self.worm_dataset = worm_dataset
+        self.named_neuron_to_idx = {}
+        self.unknown_neuron_to_idx = {}
+        self.slot_to_named_neuron = {}
+        self.slot_to_unknown_neuron = {}
+        self.slot_to_neuron = {}
+        self.max_timesteps = self.worm_dataset["max_timesteps"]
+        self.dtype = torch.float16
+
+        self._init_neuron_data()
+        self._reshape_data()
+
+    def _init_neuron_data(self):
+        self.origin_calcium_data = self.worm_dataset["calcium_data"]
+        self.smooth_calcium_data = self.worm_dataset["smooth_calcium_data"]
+        self.residual_calcium = self.worm_dataset["residual_calcium"]
+        self.smooth_residual_calcium = self.worm_dataset["smooth_residual_calcium"]
+        self.num_unknown_neurons = self.worm_dataset["num_unknown_neurons"]
+        self.neuron_to_idx = self.worm_dataset["neuron_to_idx"]
+        self.idx_to_neuron = self.worm_dataset["idx_to_neuron"]
+
+    def _reshape_data(self):
+        self._prepare_initial_data()
+        self._fill_named_neurons_data()
+        self._fill_unknown_neurons_data()
+        self._update_worm_dataset()
+        self._remove_old_mappings()
+
+    def _prepare_initial_data(self):
+        assert (
+            len(self.idx_to_neuron) == self.origin_calcium_data.shape[1]
+        ), "Number of neurons in calcium dataset does not match number of recorded neurons."
+        self.named_neurons_mask = torch.zeros(NUM_NEURONS, dtype=torch.bool)
+        self.unknown_neurons_mask = torch.zeros(NUM_NEURONS, dtype=torch.bool)
+        self._init_empty_calcium_data()
+
+    def _init_empty_calcium_data(self):
+        self.standard_calcium_data = torch.zeros(
+            self.max_timesteps, NUM_NEURONS, dtype=self.dtype
         )
-    )
-    for slot, neuron in slot_to_unknown_neuron.items():
-        idx = unknown_neuron_to_idx[neuron]
-        standard_calcium_data[:, slot] = origin_calcium_data[:, idx]
-        standard_residual_calcium[:, slot] = residual_calcium[:, idx]
-        standard_smooth_calcium_data[:, slot] = smooth_calcium_data[:, idx]
-        standard_residual_smooth_calcium[:, slot] = smooth_residual_calcium[:, idx]
-        unknown_neurons_mask[slot] = True
-    # combined slot to neuron mapping
-    slot_to_neuron = dict()
-    slot_to_neuron.update(slot_to_named_neuron)
-    slot_to_neuron.update(slot_to_unknown_neuron)
-    # modify the worm dataset to with new attributes
-    single_worm_dataset.update(
-        {
-            "calcium_data": standard_calcium_data,
-            "smooth_calcium_data": standard_smooth_calcium_data,
-            "residual_calcium": standard_residual_calcium,
-            "smooth_residual_calcium": standard_residual_smooth_calcium,
-            "named_neurons_mask": named_neurons_mask,
-            "unknown_neurons_mask": unknown_neurons_mask,
-            "neurons_mask": named_neurons_mask | unknown_neurons_mask,
-            "named_neuron_to_idx": named_neuron_to_idx,
-            "idx_to_named_neuron": dict((v, k) for k, v in named_neuron_to_idx.items()),
-            "unknown_neuron_to_idx": unknown_neuron_to_idx,
-            "idx_to_unknown_neuron": dict(
-                (v, k) for k, v in unknown_neuron_to_idx.items()
-            ),
-            "slot_to_named_neuron": slot_to_named_neuron,
-            "named_neuron_to_slot": dict(
-                (v, k) for k, v in slot_to_named_neuron.items()
-            ),
-            "slot_to_unknown_neuron": slot_to_unknown_neuron,
-            "unknown_neuron_to_slot": dict(
-                (v, k) for k, v in slot_to_unknown_neuron.items()
-            ),
-            "slot_to_neuron": slot_to_neuron,
-            "neuron_to_slot": dict((v, k) for k, v in slot_to_neuron.items()),
-        }
-    )
-    # delete all original index mappings
-    keys_to_delete = [key for key in single_worm_dataset if "idx" in key]
-    for key in keys_to_delete:
-        single_worm_dataset.pop(key, None)
-    # return the dataset for this worm
-    return single_worm_dataset
+        self.standard_residual_calcium = torch.zeros(
+            self.max_timesteps, NUM_NEURONS, dtype=self.dtype
+        )
+        self.standard_smooth_calcium_data = torch.zeros(
+            self.max_timesteps, NUM_NEURONS, dtype=self.dtype
+        )
+        self.standard_residual_smooth_calcium = torch.zeros(
+            self.max_timesteps, NUM_NEURONS, dtype=self.dtype
+        )
+
+    def _fill_named_neurons_data(self):
+        for slot, neuron in enumerate(NEURONS_302):
+            if neuron in self.neuron_to_idx:  # named neuron
+                idx = self.neuron_to_idx[neuron]
+                self.named_neuron_to_idx[neuron] = idx
+                self._fill_calcium_data(idx, slot)
+                self.named_neurons_mask[slot] = True
+                self.slot_to_named_neuron[slot] = neuron
+
+    def _fill_calcium_data(self, idx, slot):
+        self.standard_calcium_data[:, slot] = torch.from_numpy(
+            self.origin_calcium_data[:, idx]
+        )
+        self.standard_residual_calcium[:, slot] = torch.from_numpy(
+            self.residual_calcium[:, idx]
+        )
+        self.standard_smooth_calcium_data[:, slot] = torch.from_numpy(
+            self.smooth_calcium_data[:, idx]
+        )
+        self.standard_residual_smooth_calcium[:, slot] = torch.from_numpy(
+            self.smooth_residual_calcium[:, idx]
+        )
+
+    def _fill_unknown_neurons_data(self):
+        free_slots = list(np.where(~self.named_neurons_mask)[0])
+        for neuron in set(self.neuron_to_idx) - set(self.named_neuron_to_idx):
+            self.unknown_neuron_to_idx[neuron] = self.neuron_to_idx[neuron]
+            slot = np.random.choice(free_slots)
+            free_slots.remove(slot)
+            self.slot_to_unknown_neuron[slot] = neuron
+            self._fill_calcium_data(self.neuron_to_idx[neuron], slot)
+            self.unknown_neurons_mask[slot] = True
+
+    def _update_worm_dataset(self):
+        self.slot_to_neuron.update(self.slot_to_named_neuron)
+        self.slot_to_neuron.update(self.slot_to_unknown_neuron)
+        self.worm_dataset.update(
+            {
+                "calcium_data": self.standard_calcium_data,
+                "smooth_calcium_data": self.standard_smooth_calcium_data,
+                "residual_calcium": self.standard_residual_calcium,
+                "smooth_residual_calcium": self.standard_residual_smooth_calcium,
+                "named_neurons_mask": self.named_neurons_mask,
+                "unknown_neurons_mask": self.unknown_neurons_mask,
+                "neurons_mask": self.named_neurons_mask | self.unknown_neurons_mask,
+                "named_neuron_to_idx": self.named_neuron_to_idx,
+                "idx_to_named_neuron": {
+                    v: k for k, v in self.named_neuron_to_idx.items()
+                },
+                "unknown_neuron_to_idx": self.unknown_neuron_to_idx,
+                "idx_to_unknown_neuron": {
+                    v: k for k, v in self.unknown_neuron_to_idx.items()
+                },
+                "slot_to_named_neuron": self.slot_to_named_neuron,
+                "named_neuron_to_slot": {
+                    v: k for k, v in self.slot_to_named_neuron.items()
+                },
+                "slot_to_unknown_neuron": self.slot_to_unknown_neuron,
+                "unknown_neuron_to_slot": {
+                    v: k for k, v in self.slot_to_unknown_neuron.items()
+                },
+                "slot_to_neuron": self.slot_to_neuron,
+                "neuron_to_slot": {v: k for k, v in self.slot_to_neuron.items()},
+            }
+        )
+
+    def _remove_old_mappings(self):
+        keys_to_delete = [key for key in self.worm_dataset if "idx" in key]
+        for key in keys_to_delete:
+            self.worm_dataset.pop(key, None)
+
+
+def reshape_calcium_data(worm_dataset):
+    """
+    Reorganizes calcium data into a standard shape of max_timesteps x 302. It
+    also creates neuron masks and mappings of neuron labels to indices in the data.
+    Converts the data to torch tensors.
+
+    Args:
+        worm_dataset (dict): Dataset for a single worm that includes calcium data and other information.
+
+    Returns:
+        dict: The modified worm dataset with restructured calcium data.
+    """
+    reshaper = CalciumDataReshaper(worm_dataset)
+    return reshaper.worm_dataset
 
 
 def interpolate_data(time, data, target_dt):
@@ -672,12 +859,11 @@ class BasePreprocessor:
         self.raw_data_path = os.path.join(ROOT_DIR, "opensource_data")
         self.processed_data_path = os.path.join(ROOT_DIR, "data/processed/neural")
 
-    def smooth_data(self, data, time_in_seconds, dt):
+    def smooth_data(self, data, time_in_seconds):
         return smooth_data_preprocess(
             data,
             time_in_seconds,
             self.smooth_method,
-            dt=np.median(dt),
         )
 
     def resample_data(self, time_in_seconds, data):
@@ -702,6 +888,10 @@ class BasePreprocessor:
                 if not name.endswith("0") and not name.isnumeric()
                 else name
             )
+            for nid, name in neuron_to_idx.items()
+        }
+        neuron_to_idx = {
+            nid: (str(nid) if name not in set(NEURONS_302) else name)
             for nid, name in neuron_to_idx.items()
         }
         neuron_to_idx = dict((v, k) for k, v in neuron_to_idx.items())
@@ -734,13 +924,13 @@ class Skora2018Preprocessor(BasePreprocessor):
         return all_IDs, all_traces, timeVectorSeconds
 
     def preprocess(self):
+        # load and preprocess data
         preprocessed_data = {}
         worm_idx = 0  # Initialize worm index outside file loop
         for file_name in ["WT_fasted.mat", "WT_starved.mat"]:
             data_key = file_name.split(".")[0]
             raw_data = self.load_data(file_name)[data_key]
             neuron_IDs, traces, raw_timeVectorSeconds = self.extract_data(raw_data)
-
             for i, trace_data in enumerate(traces):
                 worm = "worm" + str(worm_idx)  # Use global worm index
                 worm_idx += 1  # Increment worm index
@@ -774,11 +964,9 @@ class Skora2018Preprocessor(BasePreprocessor):
                     original_time_in_seconds, residual_calcium
                 )
                 max_timesteps, num_neurons = calcium_data.shape
-                smooth_calcium_data = self.smooth_data(
-                    calcium_data, time_in_seconds, dt=np.median(dt)
-                )
+                smooth_calcium_data = self.smooth_data(calcium_data, time_in_seconds)
                 smooth_residual_calcium = self.smooth_data(
-                    residual_calcium, time_in_seconds, dt=np.median(dt)
+                    residual_calcium, time_in_seconds
                 )
                 num_unknown_neurons = int(num_neurons) - num_named_neurons
                 worm_dict = {
@@ -801,6 +989,10 @@ class Skora2018Preprocessor(BasePreprocessor):
                     }
                 }
                 preprocessed_data.update(worm_dict)
+        # reshape calcium data
+        for worm in preprocessed_data.keys():
+            preprocessed_data[worm] = reshape_calcium_data(preprocessed_data[worm])
+        # save data
         self.save_data(preprocessed_data)
         print(f"Finished processing {self.dataset}!", end="\n\n")
 
@@ -821,6 +1013,7 @@ class Kato2015Preprocessor(BasePreprocessor):
         return all_IDs, all_traces, timeVectorSeconds
 
     def preprocess(self):
+        # load and preprocess data
         preprocessed_data = {}
         worm_idx = 0  # Initialize worm index outside file loop
         for file_name in ["WT_Stim.mat", "WT_NoStim.mat"]:
@@ -860,10 +1053,10 @@ class Kato2015Preprocessor(BasePreprocessor):
                 )
                 max_timesteps, num_neurons = calcium_data.shape
                 smooth_calcium_data = self.smooth_data(
-                    calcium_data, time_in_seconds, dt=np.median(dt)
+                    calcium_data, original_time_in_seconds
                 )
                 smooth_residual_calcium = self.smooth_data(
-                    residual_calcium, time_in_seconds, dt=np.median(dt)
+                    residual_calcium, time_in_seconds
                 )
                 num_unknown_neurons = int(num_neurons) - num_named_neurons
                 worm_dict = {
@@ -886,6 +1079,10 @@ class Kato2015Preprocessor(BasePreprocessor):
                     }
                 }
                 preprocessed_data.update(worm_dict)
+        # reshape calcium data
+        for worm in preprocessed_data.keys():
+            preprocessed_data[worm] = reshape_calcium_data(preprocessed_data[worm])
+        # save data
         self.save_data(preprocessed_data)
         print(f"Finished processing {self.dataset}!", end="\n\n")
 
@@ -904,6 +1101,7 @@ class Nichols2017Preprocessor(BasePreprocessor):
         return all_IDs, all_traces, timeVectorSeconds
 
     def preprocess(self):
+        # load and preprocess data
         preprocessed_data = {}
         worm_idx = 0  # Initialize worm index outside file loop
         for file_name in [
@@ -948,11 +1146,9 @@ class Nichols2017Preprocessor(BasePreprocessor):
                     original_time_in_seconds, residual_calcium
                 )
                 max_timesteps, num_neurons = calcium_data.shape
-                smooth_calcium_data = self.smooth_data(
-                    calcium_data, time_in_seconds, dt=np.median(dt)
-                )
+                smooth_calcium_data = self.smooth_data(calcium_data, time_in_seconds)
                 smooth_residual_calcium = self.smooth_data(
-                    residual_calcium, time_in_seconds, dt=np.median(dt)
+                    residual_calcium, time_in_seconds
                 )
                 num_unknown_neurons = int(num_neurons) - num_named_neurons
                 worm_dict = {
@@ -975,6 +1171,10 @@ class Nichols2017Preprocessor(BasePreprocessor):
                     }
                 }
                 preprocessed_data.update(worm_dict)
+        # reshape calcium data
+        for worm in preprocessed_data.keys():
+            preprocessed_data[worm] = reshape_calcium_data(preprocessed_data[worm])
+        # save data
         self.save_data(preprocessed_data)
         print(f"Finished processing {self.dataset}!", end="\n\n")
 
@@ -1000,6 +1200,7 @@ class Kaplan2020Preprocessor(BasePreprocessor):
         return all_IDs, all_traces, timeVectorSeconds
 
     def preprocess(self):
+        # load and preprocess data
         preprocessed_data = {}
         worm_idx = 0  # Initialize worm index outside file loop
         for file_name in [
@@ -1044,11 +1245,9 @@ class Kaplan2020Preprocessor(BasePreprocessor):
                     original_time_in_seconds, residual_calcium
                 )
                 max_timesteps, num_neurons = calcium_data.shape
-                smooth_calcium_data = self.smooth_data(
-                    calcium_data, time_in_seconds, dt=np.median(dt)
-                )
+                smooth_calcium_data = self.smooth_data(calcium_data, time_in_seconds)
                 smooth_residual_calcium = self.smooth_data(
-                    residual_calcium, time_in_seconds, dt=np.median(dt)
+                    residual_calcium, time_in_seconds
                 )
                 num_unknown_neurons = int(num_neurons) - num_named_neurons
                 worm_dict = {
@@ -1071,6 +1270,10 @@ class Kaplan2020Preprocessor(BasePreprocessor):
                     }
                 }
                 preprocessed_data.update(worm_dict)
+        # reshape calcium data
+        for worm in preprocessed_data.keys():
+            preprocessed_data[worm] = reshape_calcium_data(preprocessed_data[worm])
+        # save data
         self.save_data(preprocessed_data)
         print(f"Finished processing {self.dataset}!", end="\n\n")
 
@@ -1089,6 +1292,7 @@ class Uzel2022Preprocessor(BasePreprocessor):
         return all_IDs, all_traces, timeVectorSeconds
 
     def preprocess(self):
+        # load and preprocess data
         preprocessed_data = {}
         worm_idx = 0  # Initialize worm index outside file loop
         for file_name in ["Uzel_WT.mat"]:
@@ -1126,11 +1330,9 @@ class Uzel2022Preprocessor(BasePreprocessor):
                     original_time_in_seconds, residual_calcium
                 )
                 max_timesteps, num_neurons = calcium_data.shape
-                smooth_calcium_data = self.smooth_data(
-                    calcium_data, time_in_seconds, dt=np.median(dt)
-                )
+                smooth_calcium_data = self.smooth_data(calcium_data, time_in_seconds)
                 smooth_residual_calcium = self.smooth_data(
-                    residual_calcium, time_in_seconds, dt=np.median(dt)
+                    residual_calcium, time_in_seconds
                 )
                 num_unknown_neurons = int(num_neurons) - num_named_neurons
                 worm_dict = {
@@ -1153,6 +1355,10 @@ class Uzel2022Preprocessor(BasePreprocessor):
                     }
                 }
                 preprocessed_data.update(worm_dict)
+        # reshape calcium data
+        for worm in preprocessed_data.keys():
+            preprocessed_data[worm] = reshape_calcium_data(preprocessed_data[worm])
+        # save data
         self.save_data(preprocessed_data)
         print(f"Finished processing {self.dataset}!", end="\n\n")
 
@@ -1194,16 +1400,16 @@ class Leifer2023Preprocessor(BasePreprocessor):
         for j, item in enumerate(label_list):
             previous_list = label_list[:j]
             if not item.isalnum():
-                label_list[j] = str(j + 302)
+                label_list[j] = str(j)
                 num_unnamed_neurons += 1
-                neuron_to_idx[str(j + 302)] = j
+                neuron_to_idx[str(j)] = j
             else:
                 if item in NEURONS_302 and item not in previous_list:
                     neuron_to_idx[item] = j
                 elif item in NEURONS_302 and item in previous_list:
-                    label_list[j] = str(j + 302)
+                    label_list[j] = str(j)
                     num_unnamed_neurons += 1
-                    neuron_to_idx[str(j + 302)] = j
+                    neuron_to_idx[str(j)] = j
                 else:
                     if (
                         str(item + "L") in NEURONS_302
@@ -1218,9 +1424,9 @@ class Leifer2023Preprocessor(BasePreprocessor):
                         label_list[j] = str(item + "R")
                         neuron_to_idx[str(item + "R")] = j
                     else:
-                        label_list[j] = str(j + 302)
+                        label_list[j] = str(j)
                         num_unnamed_neurons += 1
-                        neuron_to_idx[str(j + 302)] = j
+                        neuron_to_idx[str(j)] = j
         num_named_neurons = len(
             [k for k in neuron_to_idx.keys() if not k.isnumeric()]
         )  # number of neurons that were labeled with a name
@@ -1243,7 +1449,7 @@ class Leifer2023Preprocessor(BasePreprocessor):
             float_num = before_e * math.pow(10, -after_e)
         else:
             float_num = None
-            raise TypeError("Flaot has unknown sign.")
+            raise TypeError("Float has unknown sign.")
         return float_num
 
     def load_labels(self, file_path):
@@ -1260,6 +1466,7 @@ class Leifer2023Preprocessor(BasePreprocessor):
         return timeVectorSeconds
 
     def preprocess(self):
+        # load and preprocess data
         preprocessed_data = {}
         data_dir = os.path.join(self.raw_data_path, self.dataset)
         files = os.listdir(data_dir)
@@ -1292,11 +1499,9 @@ class Leifer2023Preprocessor(BasePreprocessor):
                 original_time_in_seconds, residual_calcium
             )
             max_timesteps, num_neurons = calcium_data.shape
-            smooth_calcium_data = self.smooth_data(
-                calcium_data, time_in_seconds, dt=np.median(dt)
-            )
+            smooth_calcium_data = self.smooth_data(calcium_data, time_in_seconds)
             smooth_residual_calcium = self.smooth_data(
-                residual_calcium, time_in_seconds, dt=np.median(dt)
+                residual_calcium, time_in_seconds
             )
             num_unknown_neurons = int(num_neurons) - num_named_neurons
             worm_dict = {
@@ -1317,6 +1522,10 @@ class Leifer2023Preprocessor(BasePreprocessor):
                 }
             }
             preprocessed_data.update(worm_dict)
+        # reshape calcium data
+        for worm in preprocessed_data.keys():
+            preprocessed_data[worm] = reshape_calcium_data(preprocessed_data[worm])
+        # save data
         self.save_data(preprocessed_data)
         print(f"Finished processing {self.dataset}!", end="\n\n")
 
@@ -1363,8 +1572,8 @@ class Flavell2023Preprocessor(BasePreprocessor):
         return time_in_seconds, calcium_data, neurons
 
     def preprocess(self):
+        # load and preprocess data
         preprocessed_data = {}
-
         for i, file in enumerate(
             os.listdir(os.path.join(self.raw_data_path, self.dataset))
         ):
@@ -1386,11 +1595,9 @@ class Flavell2023Preprocessor(BasePreprocessor):
                 original_time_in_seconds, residual_calcium
             )
             max_timesteps, num_neurons = calcium_data.shape
-            smooth_calcium_data = self.smooth_data(
-                calcium_data, time_in_seconds, dt=np.median(dt)
-            )
+            smooth_calcium_data = self.smooth_data(calcium_data, time_in_seconds)
             smooth_residual_calcium = self.smooth_data(
-                residual_calcium, time_in_seconds, dt=np.median(dt)
+                residual_calcium, time_in_seconds
             )
             num_unknown_neurons = int(num_neurons) - num_named_neurons
             worm_dict = {
@@ -1413,24 +1620,22 @@ class Flavell2023Preprocessor(BasePreprocessor):
                 }
             }
             preprocessed_data.update(worm_dict)
+        # reshape calcium data
+        for worm in preprocessed_data.keys():
+            preprocessed_data[worm] = reshape_calcium_data(preprocessed_data[worm])
+        # save data
         self.save_data(preprocessed_data)
         print(f"Finished processing {self.dataset}!", end="\n\n")
 
 
 if __name__ == "__main__":
-    import os
-    import pickle
-    import matplotlib.pyplot as plt
-    from preprocess._utils import *
-    from sklearn.preprocessing import StandardScaler
-
     # Preprocess the dataset
-    preprocessor = Flavell2023Preprocessor(
-        transform=StandardScaler(), smooth_method="FFT", resample_dt=0.1
+    preprocessor = Uzel2022Preprocessor(
+        transform=StandardScaler(), smooth_method="KA", resample_dt=0.1
     )
     preprocessor.preprocess()
 
-    print(preprocessor.dataset)
+    print("DATASET", preprocessor.dataset, end="\n\n")
 
     # Load data from pickle file
     processed_data_path = (
@@ -1441,26 +1646,31 @@ if __name__ == "__main__":
     ) as f:
         data = pickle.load(f)
 
-    print(data.keys(), end="\n\n")
+    print("WORMS", list(data.keys()), end="\n\n")
 
     # Extract data for worm0
     worm0_data = data["worm0"]
 
-    print(list(worm0_data["neuron_to_idx"].keys()), end="\n\n")
+    print("NEURONS", list(worm0_data["neuron_to_slot"].keys()), end="\n\n")
 
     # Extract calcium traces. The number of traces you select will depend on the structure of your data
     calcium_traces = worm0_data[
-        "calcium_data"
+        "smooth_calcium_data"
     ]  # Adjust according to your data structure
+    slot_to_neuronID = worm0_data["slot_to_named_neuron"]
 
-    print(f"Calcium traces shape: {calcium_traces.shape}", end="\n\n")
+    print(
+        f"CALCIUM DATA: {calcium_traces.shape}, {calcium_traces.dtype}",
+        end="\n\n",
+    )
+
+    import matplotlib.pyplot as plt
 
     # Plot the first few calcium traces
-    for i, trace in enumerate(
-        calcium_traces.T[:5]
-    ):  # Transpose may be needed depending on your data structure
-        plt.plot(worm0_data["time_in_seconds"], trace, label=f"Trace {i+1}")
-
+    for k, v in list(slot_to_neuronID.items())[:5]:
+        trace = calcium_traces[:, k]
+        # Transpose may be needed depending on your data structure
+        plt.plot(worm0_data["time_in_seconds"], trace, label=f"Neuron {v}")
     plt.xlabel("Time (seconds)")
     plt.ylabel("Calcium level")
     plt.title("Calcium traces for worm0")
