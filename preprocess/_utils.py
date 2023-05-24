@@ -1522,7 +1522,7 @@ class Flavell2023Preprocessor(BasePreprocessor):
 if __name__ == "__main__":
     # Preprocess the dataset
     preprocessor = Uzel2022Preprocessor(
-        transform=StandardScaler(), smooth_method="KA", resample_dt=0.5
+        transform=StandardScaler(), smooth_method="FFT", resample_dt=0.5
     )
     preprocessor.preprocess()
 
