@@ -33,5 +33,7 @@ dependencies:
       - hydra-submitit-launcher
       - hydra-joblib-launcher
       - pysindy
+      - pytest
+      - requests
       - mat73
       - ncps

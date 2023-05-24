@@ -1,7 +1,8 @@
 preprocess:
   url: https://www.dropbox.com/s/lw9cblxawqsbr2w/opensource_data.zip?dl=1
   zipfile: opensource_data.zip
-  dataset: all
+  dataset: all # any dataset in utils.VALID_DATASETS
   raw_dir: data/raw
   resample_dt: 0.5 # The time interval (in seconds) to use for resampling; if None, no resampling is performed
-  smooth: FFT # None: No signal smoothing # FFT: Fast Fourier Transform # TVR: Total Variantion Regularization # SG: Savitzky–Golay Filter
+  smooth: FFT 
+  # None: No smoothing # FFT: Fast Fourier Transform, # TVR: Total Variation Regularization, # KA: Kalman, # KE: Kernel

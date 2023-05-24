@@ -1,9 +1,16 @@
 import os
 import torch
 import random
+import warnings
 import numpy as np
 import pandas as pd
 import torch.multiprocessing
+
+# Ignore sklearn's RuntimeWarnings
+warnings.filterwarnings(action="ignore", category=RuntimeWarning)
+
+# Ignore all warnings
+# warnings.filterwarnings("ignore")
 
 # set the start method for multiprocessing
 torch.multiprocessing.set_start_method("spawn", force=True)
@@ -16,7 +23,7 @@ os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "max_split_size_mb:32"
 
 USER = "qsimeon"  # OpenMind username
 
-NUM_NEURONS = 302
+NUM_NEURONS = 302  # number of neurons in the model organism
 
 RAW_DATA_URL = "https://www.dropbox.com/s/45yqpvtsncx4095/raw_data.zip?dl=1"
 
@@ -42,18 +49,10 @@ VALID_DATASETS = {
     "Uzel2022",
     "Skora2018",
     "Nichols2017",
-    "Nguyen2017",  # no named neurons. no time vectors. DON'T use!
     "Kato2015",
     "Kaplan2020",
-    "Leifer2023",  # TODO: something wrong with the dataset.
+    "Leifer2023",  # TODO: different type of data: stimulus-response.
     "Flavell2023",  # TODO: something wrong with worm0.
-    # test datasets
-    "sine",
-    "sine_seq",
-    "sine_seq_noise",
-    "sine_noise",
-    "sum_sine",
-    "sum_sine_noise",
 }
 
 # List of all 302 hermaphrodite neurons

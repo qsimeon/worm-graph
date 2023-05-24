@@ -1,5 +1,7 @@
 omegaconf
 pysindy
+pytest
+requests
 mat73
 ncps
 hydra-core
