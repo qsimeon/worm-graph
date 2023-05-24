@@ -7,7 +7,7 @@ hydra-core
 hydra-joblib-launcher
 hydra-submitit-launcher
 matplotlib
-pytorch==1.13
+pytorch
 scikit-learn
 hydra-core
 pandas
