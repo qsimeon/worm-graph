@@ -1,12 +1,25 @@
-import unittest
-import torch
+# Built-in libraries
+import logging
 import os
-import warnings
 import pickle
-from preprocess import _utils as utils
+import shutil
+import unittest
+import warnings
+from zipfile import ZipFile
+
+# Third-party libraries
+import requests
+import torch
+from omegaconf import OmegaConf
 from sklearn.preprocessing import StandardScaler
 
+# Local libraries
+from preprocess import _utils as utils
+
+# Filter warnings and debug messages
 warnings.filterwarnings("ignore", category=DeprecationWarning)
+logging.getLogger("requests").setLevel(logging.WARNING)
+logging.getLogger("urllib3").setLevel(logging.WARNING)
 
 
 class TestPreprocessors(unittest.TestCase):
@@ -14,9 +27,39 @@ class TestPreprocessors(unittest.TestCase):
         self.processed_data_path = (
             "/Users/quileesimeon/GitHub Repos/worm-graph/data/processed/neural"
         )
+        # Load config file
+        config = OmegaConf.load("conf/preprocess.yaml")
+        preprocess_config = config.preprocess
+
+        # Download and extract zipfile
+        url = preprocess_config.url
+        zip_filename = preprocess_config.zipfile
+        dir_name = zip_filename.rsplit(".", 1)[
+            0
+        ]  # Strip off ".zip" to get directory name
+        response = requests.get(url, stream=True)
+
+        if response.status_code == 200:
+            with open(zip_filename, "wb") as f:
+                f.write(response.content)
+            with ZipFile(zip_filename, "r") as zip_ref:
+                zip_ref.extractall(dir_name)
+        else:
+            raise Exception(f"Failed to download zipfile from {url}")
+
+        return preprocess_config, zip_filename, dir_name
+
+    def tearDown(self):
+        _, zip_filename, dir_name = self.setUp()
+        # Remove directory and zipfile after tests
+        if os.path.exists(dir_name):
+            shutil.rmtree(dir_name)
+        if os.path.exists(zip_filename):
+            os.remove(zip_filename)
 
     def test_preprocessors(self):
         for dataset in utils.VALID_DATASETS:
+            # Preprocess dataset
             preprocessor_class = getattr(utils, f"{dataset}Preprocessor")
             preprocessor = preprocessor_class(
                 transform=StandardScaler(), smooth_method="FFT", resample_dt=0.5
