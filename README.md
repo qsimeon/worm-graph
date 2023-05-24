@@ -145,4 +145,3 @@ For Jupyter notebooks, use the `CamelCase` naming style.
       - is additional biological data needed?
    - perform scaling experiments:
       - varying the (train) dataset size.
-      ~~- training on a single worm vs. multiple worms.~~
