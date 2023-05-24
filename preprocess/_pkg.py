@@ -10,6 +10,7 @@ import shutil
 import subprocess
 
 # Third-party libraries
+import derivative
 import h5py
 import hydra
 import mat73
@@ -19,9 +20,6 @@ import torch
 from derivative import dxdt
 from omegaconf import DictConfig, OmegaConf
 from scipy.io import loadmat
-from scipy.linalg import solve
-from scipy.optimize import minimize
-from scipy.signal import savgol_filter
 from sklearn import preprocessing
 from sklearn.experimental import enable_iterative_imputer
 from sklearn.impute import IterativeImputer

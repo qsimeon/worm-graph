@@ -230,7 +230,7 @@ def preprocess_connectome(raw_dir, raw_files):
     return None
 
 
-def total_var_reg_smooth(x, t, alpha=1e-2):
+def total_var_reg_smooth(x, t, alpha=1e-2, order=0):
     """
     Total variational regularization for smoothing a multidimensional time series.
 
@@ -238,6 +238,7 @@ def total_var_reg_smooth(x, t, alpha=1e-2):
         x (ndarray): The input time series to be smoothed (time, neurons).
         t (ndarray): The time vector (in seconds) corresponding to the input time series.
         alpha (float): The regularization parameter.
+        order (int): The order of the total variational derivative.
 
     Returns:
         x_smooth (ndarray): The smoothed time series.
@@ -249,70 +250,14 @@ def total_var_reg_smooth(x, t, alpha=1e-2):
     if dim == 1:
         x = x.reshape(-1, 1)
     t = t.squeeze()
-    dt = np.diff(t, prepend=t[0] - np.diff(t)[0])
-    # total variational derivative
-    dxdt_totalvar = dxdt(x, t, kind="trend_filtered", order=0, alpha=alpha, axis=0)
-    x_smooth = np.cumsum(dxdt_totalvar) * dt
-    if dim == 1:
-        x_smooth = x_smooth.squeeze(-1)
-    if istensor:
-        x_smooth = torch.from_numpy(x_smooth)
-    return x_smooth
-
-
-def finite_differences_smooth(x, t, k=1):
-    """Smoothed Finite Differences derivative for smoothing a multidimensional time series.
-
-    Parameters:
-        x (ndarray): The input time series to be smoothed (time, neurons).
-        t (ndarray): The time vector (in seconds) corresponding to the input time series.
-        k (int): The order of the derivative.
-
-    Returns:
-        x_smooth (ndarray): The smoothed time series.
-    """
-    istensor = isinstance(x, torch.Tensor)
-    if istensor:
-        x = x.cpu().numpy()
-    dim = x.ndim
-    if dim == 1:
-        x = x.reshape(-1, 1)
-    t = t.squeeze()
-    dt = np.diff(t, prepend=t[0] - np.diff(t)[0])
-    # finite differences derivative
-    dxdt_findiff = dxdt(x, t, kind="finite_difference", k=k, axis=0)
-    x_smooth = np.cumsum(dxdt_findiff) * dt
-    if dim == 1:
-        x_smooth = x_smooth.squeeze(-1)
-    if istensor:
-        x_smooth = torch.from_numpy(x_smooth)
-    return x_smooth
-
-
-def savitzky_golay_smooth(x, t, order=3):
-    """Savitzy-Golay filter for smoothing a multidimensional time series.
-
-    Parameters:
-        x (ndarray): The input time series to be smoothed (time, neurons).
-        t (ndarray): The time vector (in seconds) corresponding to the input time series.
-        order (int): The order of the polynomial spline.
-
-    Returns:
-        x_smooth (ndarray): The smoothed time series.
-    """
-    istensor = isinstance(x, torch.Tensor)
-    if istensor:
-        x = x.cpu().numpy()
-    dim = x.ndim
-    if dim == 1:
-        x = x.reshape(-1, 1)
-    t = t.squeeze()
-    dt = np.diff(t, prepend=t[0] - np.diff(t)[0])
-    # Savitzky-Golay derivative using polynomials
-    dxdt_savgol = dxdt(
-        x, t, kind="savitzky_golay", left=0.5, right=0.5, order=order, axis=0
-    )
-    x_smooth = np.cumsum(dxdt_savgol) * dt
+    # Total variational derivative
+    # dt = np.diff(t, prepend=t[0] - np.diff(t)[0])
+    # dxdt_totalvar = dxdt(x, t, kind="trend_filtered", order=order, alpha=alpha, axis=0)
+    # x_smooth = np.cumsum(dxdt_totalvar, axis=0) * dt.reshape(-1, 1)
+    ###
+    diff_method = derivative.TrendFiltered(alpha=alpha, order=order)
+    x_smooth = diff_method.x(x, t, axis=0)
+    ###
     if dim == 1:
         x_smooth = x_smooth.squeeze(-1)
     if istensor:
@@ -338,10 +283,14 @@ def kalman_smooth(x, t, alpha=1):
     if dim == 1:
         x = x.reshape(-1, 1)
     t = t.squeeze()
-    dt = np.diff(t, prepend=t[0] - np.diff(t)[0])
     # Kalman filter derivative
-    dxdt_kalman = dxdt(x, t, kind="kalman", alpha=alpha, axis=0)
-    x_smooth = np.cumsum(dxdt_kalman) * dt
+    # dt = np.diff(t, prepend=t[0] - np.diff(t)[0])
+    # dxdt_kalman = dxdt(x, t, kind="kalman", alpha=alpha, axis=0)
+    # x_smooth = np.cumsum(dxdt_kalman) * dt
+    ###
+    diff_method = derivative.Kalman(alpha=alpha)
+    x_smooth = diff_method.x(x, t, axis=0)
+    ###
     if dim == 1:
         x_smooth = x_smooth.squeeze(-1)
     if istensor:
@@ -369,70 +318,16 @@ def kernel_smooth(x, t, sigma=1, lmbd=0.1, kernel="rbf"):
     if dim == 1:
         x = x.reshape(-1, 1)
     t = t.squeeze()
-    dt = np.diff(t, prepend=t[0] - np.diff(t)[0])
     # Kernel derivative
-    dxdt_kernel = dxdt(
-        x, t, kind="kernel", sigma=sigma, lmbd=lmbd, kernel=kernel, axis=0
-    )
-    x_smooth = np.cumsum(dxdt_kernel) * dt
-    if dim == 1:
-        x_smooth = x_smooth.squeeze(-1)
-    if istensor:
-        x_smooth = torch.from_numpy(x_smooth)
-    return x_smooth
-
-
-def spectral_smooth(x, t):
-    """Spectral derivative for smoothing a multidimensional time series.
-
-    Parameters:
-        x (ndarray): The input time series to be smoothed (time, neurons).
-        t (ndarray): The time vector (in seconds) corresponding to the input time series.
-
-    Returns:
-        x_smooth (ndarray): The smoothed time series.
-    """
-    istensor = isinstance(x, torch.Tensor)
-    if istensor:
-        x = x.cpu().numpy()
-    dim = x.ndim
-    if dim == 1:
-        x = x.reshape(-1, 1)
-    t = t.squeeze()
-    dt = np.diff(t, prepend=t[0] - np.diff(t)[0])
-    # Spectral derivative
-    dxdt_spectral = dxdt(x, t, kind="spectral", axis=0)
-    x_smooth = np.cumsum(dxdt_spectral) * dt
-    if dim == 1:
-        x_smooth = x_smooth.squeeze(-1)
-    if istensor:
-        x_smooth = torch.from_numpy(x_smooth)
-    return x_smooth
-
-
-def spline_smooth(x, t, s=1e-2):
-    """Spline derivative for smoothing a multidimensional time series.
-
-    Parameters:
-        x (ndarray): The input time series to be smoothed (time, neurons).
-        t (ndarray): The time vector (in seconds) corresponding to the input time series.
-        s (float): The smoothing factor.
-
-    Returns:
-        x_smooth (ndarray): The smoothed time series.
-    """
-    dtype = x.dtype
-    istensor = isinstance(x, torch.Tensor)
-    if istensor:
-        x = x.cpu().numpy()
-    dim = x.ndim
-    if dim == 1:
-        x = x.reshape(-1, 1)
-    t = t.squeeze()
-    dt = np.diff(t, prepend=t[0] - np.diff(t)[0])
-    # Spline derivative with smoothing
-    dxdt_spline = dxdt(x, t, kind="spline", s=s, axis=0)
-    x_smooth = np.cumsum(dxdt_spline) * dt
+    # dt = np.diff(t, prepend=t[0] - np.diff(t)[0])
+    # dxdt_kernel = dxdt(
+    #     x, t, kind="kernel", sigma=sigma, lmbd=lmbd, kernel=kernel, axis=0
+    # )
+    # x_smooth = np.cumsum(dxdt_kernel, axis=0) * dt.reshape(-1, 1)
+    ###
+    diff_method = derivative.Kernel(sigma=sigma, lmbd=lmbd, kernel=kernel)
+    x_smooth = diff_method.x(x, t, axis=0)
+    ###
     if dim == 1:
         x_smooth = x_smooth.squeeze(-1)
     if istensor:
@@ -471,7 +366,7 @@ def fourier_transform_smooth(x, t, percent=0.1):
     fft_input = torch.fft.rfftn(x, dim=0)
     oneD_kernel = oneD_kernel.repeat(x.shape[1], 1).T
     fft_result = torch.fft.irfftn(fft_input * oneD_kernel, dim=0)
-    x_smooth[0 : min(fft_result.shape[0], x_smooth.shape[0])] = fft_result
+    x_smooth[0 : fft_result.shape[0]] = fft_result
     if dim == 1:
         x_smooth = x_smooth.squeeze(-1)
     if isnumpy:
@@ -493,20 +388,14 @@ def smooth_data_preprocess(calcium_data, time_in_seconds, smooth_method):
         smooth_ca_data: calcium data that is smoothed
     """
 
-    if str(smooth_method).lower() == "fd" or smooth_method is None:
-        smooth_ca_data = finite_differences_smooth(calcium_data, time_in_seconds)
+    if smooth_method is None:
+        smooth_ca_data = calcium_data
     elif str(smooth_method).lower() == "fft":
         smooth_ca_data = fourier_transform_smooth(calcium_data, time_in_seconds)
     elif str(smooth_method).lower() == "ka":
         smooth_ca_data = kalman_smooth(calcium_data, time_in_seconds)
     elif str(smooth_method).lower() == "ke":
         smooth_ca_data = kernel_smooth(calcium_data, time_in_seconds)
-    elif str(smooth_method).lower() == "sg":
-        smooth_ca_data = savitzky_golay_smooth(calcium_data, time_in_seconds)
-    elif str(smooth_method).lower() == "spl":
-        smooth_ca_data = spline_smooth(calcium_data, time_in_seconds)
-    elif str(smooth_method).lower() == "spt":
-        smooth_ca_data = spectral_smooth(calcium_data, time_in_seconds)
     elif str(smooth_method).lower() == "tvr":
         smooth_ca_data = total_var_reg_smooth(calcium_data, time_in_seconds)
     else:
@@ -771,9 +660,9 @@ def pickle_neural_data(
             preprocessor = eval(dataset + "Preprocessor")(
                 transform, smooth_method, resample_dt
             )
-            # call its methods
+            # call its method
             preprocessor.preprocess()
-            preprocessor.save_to_pickle()
+
     # ... (re)-Pickle a single dataset
     else:
         assert (
@@ -972,7 +861,7 @@ class Skora2018Preprocessor(BasePreprocessor):
                 worm_dict = {
                     worm: {
                         "dataset": self.dataset,
-                        "smooth_method": self.smooth_method.upper(),
+                        "smooth_method": self.smooth_method,
                         "worm": worm,
                         "calcium_data": calcium_data,
                         "smooth_calcium_data": smooth_calcium_data,
@@ -1062,7 +951,7 @@ class Kato2015Preprocessor(BasePreprocessor):
                 worm_dict = {
                     worm: {
                         "dataset": self.dataset,
-                        "smooth_method": self.smooth_method.upper(),
+                        "smooth_method": self.smooth_method,
                         "worm": worm,
                         "calcium_data": calcium_data,
                         "smooth_calcium_data": smooth_calcium_data,
@@ -1154,7 +1043,7 @@ class Nichols2017Preprocessor(BasePreprocessor):
                 worm_dict = {
                     worm: {
                         "dataset": self.dataset,
-                        "smooth_method": self.smooth_method.upper(),
+                        "smooth_method": self.smooth_method,
                         "worm": worm,
                         "calcium_data": calcium_data,
                         "smooth_calcium_data": smooth_calcium_data,
@@ -1253,7 +1142,7 @@ class Kaplan2020Preprocessor(BasePreprocessor):
                 worm_dict = {
                     worm: {
                         "dataset": self.dataset,
-                        "smooth_method": self.smooth_method.upper(),
+                        "smooth_method": self.smooth_method,
                         "worm": worm,
                         "calcium_data": calcium_data,
                         "smooth_calcium_data": smooth_calcium_data,
@@ -1338,7 +1227,7 @@ class Uzel2022Preprocessor(BasePreprocessor):
                 worm_dict = {
                     worm: {
                         "dataset": self.dataset,
-                        "smooth_method": self.smooth_method.upper(),
+                        "smooth_method": self.smooth_method,
                         "worm": worm,
                         "calcium_data": calcium_data,
                         "smooth_calcium_data": smooth_calcium_data,
@@ -1507,6 +1396,8 @@ class Leifer2023Preprocessor(BasePreprocessor):
             worm_dict = {
                 worm: {
                     "dataset": self.dataset,
+                    "smooth_method": self.smooth_method,
+                    "worm": worm,
                     "calcium_data": calcium_data,
                     "smooth_calcium_data": smooth_calcium_data,
                     "residual_calcium": residual_calcium,
@@ -1603,7 +1494,7 @@ class Flavell2023Preprocessor(BasePreprocessor):
             worm_dict = {
                 worm: {
                     "dataset": self.dataset,
-                    "smooth_method": self.smooth_method.upper(),
+                    "smooth_method": self.smooth_method,
                     "worm": worm,
                     "calcium_data": calcium_data,
                     "smooth_calcium_data": smooth_calcium_data,
@@ -1631,7 +1522,7 @@ class Flavell2023Preprocessor(BasePreprocessor):
 if __name__ == "__main__":
     # Preprocess the dataset
     preprocessor = Uzel2022Preprocessor(
-        transform=StandardScaler(), smooth_method="KA", resample_dt=0.1
+        transform=StandardScaler(), smooth_method="KA", resample_dt=0.5
     )
     preprocessor.preprocess()
 
@@ -1655,6 +1546,7 @@ if __name__ == "__main__":
 
     # Extract calcium traces. The number of traces you select will depend on the structure of your data
     calcium_traces = worm0_data[
+        # "calcium_data"
         "smooth_calcium_data"
     ]  # Adjust according to your data structure
     slot_to_neuronID = worm0_data["slot_to_named_neuron"]
