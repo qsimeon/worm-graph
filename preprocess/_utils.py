@@ -418,6 +418,7 @@ class CalciumDataReshaper:
         self._reshape_data()
 
     def _init_neuron_data(self):
+        self.time_in_seconds = self.worm_dataset["time_in_seconds"]
         self.origin_calcium_data = self.worm_dataset["calcium_data"]
         self.smooth_calcium_data = self.worm_dataset["smooth_calcium_data"]
         self.residual_calcium = self.worm_dataset["residual_calcium"]
@@ -440,6 +441,7 @@ class CalciumDataReshaper:
         self.named_neurons_mask = torch.zeros(NUM_NEURONS, dtype=torch.bool)
         self.unknown_neurons_mask = torch.zeros(NUM_NEURONS, dtype=torch.bool)
         self._init_empty_calcium_data()
+        self._tensor_time_data()
 
     def _init_empty_calcium_data(self):
         self.standard_calcium_data = torch.zeros(
@@ -454,6 +456,12 @@ class CalciumDataReshaper:
         self.standard_residual_smooth_calcium = torch.zeros(
             self.max_timesteps, NUM_NEURONS, dtype=self.dtype
         )
+
+    def _tensor_time_data(self):
+        self.time_in_seconds = torch.from_numpy(self.time_in_seconds).to(self.dtype)
+        dt = np.gradient(self.time_in_seconds, axis=0)
+        dt[dt == 0] = np.finfo(float).eps
+        self.dt = torch.from_numpy(dt).to(self.dtype)
 
     def _fill_named_neurons_data(self):
         for slot, neuron in enumerate(NEURONS_302):
@@ -497,6 +505,8 @@ class CalciumDataReshaper:
                 "smooth_calcium_data": self.standard_smooth_calcium_data,
                 "residual_calcium": self.standard_residual_calcium,
                 "smooth_residual_calcium": self.standard_residual_smooth_calcium,
+                "time_in_seconds": self.time_in_seconds,
+                "dt": self.dt,
                 "named_neurons_mask": self.named_neurons_mask,
                 "unknown_neurons_mask": self.unknown_neurons_mask,
                 "neurons_mask": self.named_neurons_mask | self.unknown_neurons_mask,

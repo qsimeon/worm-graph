@@ -1,8 +1,8 @@
 train:
-  optimizer: SGD # which Pytorch optimizer to use; options: SGD, Adam, AdamW, Adagrad, Adadelta, RMSprop, or null (defaults to SGD)
+  optimizer: SGD # which Pytorch optimizer to use; options: null (defaults to SGD), SGD, Adam, AdamW, Adagrad, Adadelta, RMSprop
   learn_rate: 0.001 # learning rate
-  epochs: 10000 # number of epochs (worm cohorts) the model will be trained for
-  save_freq: 7000 # frequency (in epochs) with which to save model checkpoints
+  epochs: 1 # number of epochs (worm cohorts) the model will be trained for
+  save_freq: 1000 # frequency (in epochs) with which to save model checkpoints
   seq_len: 200 # length of time-series sequences to train
   # constraint: seq_len: 0 < int < len(data) 
   k_splits: 2 # number of interleaved train/test splits per single worm data

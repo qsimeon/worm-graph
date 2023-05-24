@@ -8,7 +8,7 @@ from utils import NEURONS_302
 from models._utils import NetworkLSTM
 from train._main import train_model
 from data._utils import load_Uzel2022
-from visualization._utils import plot_loss_curves, plot_targets_predictions
+from visualize._utils import plot_loss_curves, plot_targets_predictions
 
 if __name__ == "__main__":
     # specify the training config
