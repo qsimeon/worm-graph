@@ -11,8 +11,6 @@ pytorch
 scikit-learn
 hydra-core
 pandas
-nomkl
-freetype
 numpy
 scipy
 omegaconf
