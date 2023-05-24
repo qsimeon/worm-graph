@@ -1,4 +1,4 @@
-from visualization._utils import *
+from visualize._utils import *
 
 
 def plot_figures(

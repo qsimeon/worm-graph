@@ -7,7 +7,6 @@ dependencies:
   ### comment out line below out if no GPU:
   - pytorch-gpu 
   - pytorch=1.13
-  - scikit-learn
   - black
   - networkx
   - black-jupyter
