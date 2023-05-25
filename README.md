@@ -37,7 +37,7 @@ To prepare your environment for this project, you can use either the provided `.
 Firstly, navigate to the `setup` directory. This directory contains all the necessary configuration files to set up the virtual environment. Use the following command to access the directory:
 
 ```
-cd worm-graph/env_setup
+cd worm-graph/setup
 ```
 
 **Note:** Installing the environment can take up to 2 hours!
@@ -73,10 +73,7 @@ cd worm-graph/env_setup
 
 After finishig one of the installations above, navigate back to the root directory (`worm-graph/`) and run:
 
-    ```
     conda develop .
-    ```
-
 
 **Note:** Please ensure to carry out this step, otherwise you may encounter `ModuleNotFoundError`.
 
