@@ -99,8 +99,9 @@ class TestPreprocessors(unittest.TestCase):
                 time_vector = worm_data["time_in_seconds"]
                 self.assertIsInstance(time_vector, torch.Tensor)
                 self.assertEqual(
-                    time_vector.dtype, torch.half
-                )  # should be torch.float16
+                    time_vector.dtype, torch.float
+                )  # should be torch.float32
+                self.assertEqual(len(time_vector.shape), 2)  # should be 2D
 
 
 if __name__ == "__main__":

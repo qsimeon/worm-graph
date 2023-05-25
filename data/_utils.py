@@ -280,8 +280,8 @@ def pick_worm(dataset, wormid):
 
     Parameters
     ----------
-    dataset : str or dict
-        Worm dataset to select a worm from.
+    dataset : dict
+        Multi-worm dataset to select a worm from.
     wormid : str or int
         'worm{i}' or {i} where i indexes the worm.
 
@@ -295,16 +295,7 @@ def pick_worm(dataset, wormid):
     single_worm_dataset : dict
         A single worm dataset.
     """
-    if isinstance(dataset, str):
-        dataset = load_dataset(dataset)
-    else:
-        # Exeption if the dataset is not a valid worm dataset
-        assert (
-            isinstance(dataset, dict)
-            and ("name" in dataset.keys())
-            and ("worm0" in set(dataset["generator"]))
-        ), "Not a valid worm datset!"
-    avail_worms = set(dataset["generator"])  # get the available worms
+    avail_worms = set(dataset.keys())  # get the available worms
     if isinstance(wormid, str) and wormid.startswith("worm"):
         wormid = wormid.strip("worm")  # get the worm number
         # Exeption if the worm number is not valid
@@ -318,7 +309,7 @@ def pick_worm(dataset, wormid):
             avail_worms
         ), "Choose a worm from: {}".format(avail_worms)
         worm = "worm" + str(wormid)
-    single_worm_dataset = dict(dataset["generator"])[worm]
+    single_worm_dataset = dataset[worm]
     return single_worm_dataset
 
 
@@ -354,12 +345,27 @@ def load_dataset(name):
         The loaded dataset.
     """
 
-    assert (
-        name in VALID_DATASETS
-    ), "Unrecognized dataset! Please pick one from:\n{}".format(list(VALID_DATASETS))
+    assert (name in VALID_DATASETS) or (
+        name in SYNTHETIC_DATASETS
+    ), "Unrecognized dataset! Please pick one from:\n{}".format(
+        list(VALID_DATASETS | SYNTHETIC_DATASETS)
+    )
     loader = eval("load_" + name)  # call the "load" functions below
 
     return loader()
+
+
+def load_Synthetic000():
+    """
+    Loads the syntheic dataset Synthetic000.
+    """
+    # ensure the data has been created
+    file = os.path.join(ROOT_DIR, "data", "processed", "neural", "Synthetic000.pickle")
+    assert os.path.exists(file)
+    pickle_in = open(file, "rb")
+    # unpickle the data
+    Synthetic000 = pickle.load(pickle_in)
+    return Synthetic000
 
 
 def load_Kato2015():

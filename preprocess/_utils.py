@@ -412,7 +412,7 @@ class CalciumDataReshaper:
         self.slot_to_unknown_neuron = {}
         self.slot_to_neuron = {}
         self.max_timesteps = self.worm_dataset["max_timesteps"]
-        self.dtype = torch.float16
+        self.dtype = torch.float32
 
         self._init_neuron_data()
         self._reshape_data()
@@ -459,9 +459,13 @@ class CalciumDataReshaper:
 
     def _tensor_time_data(self):
         self.time_in_seconds = torch.from_numpy(self.time_in_seconds).to(self.dtype)
+        if self.time_in_seconds.ndim == 1:
+            self.time_in_seconds = self.time_in_seconds.unsqueeze(-1)
         dt = np.gradient(self.time_in_seconds, axis=0)
         dt[dt == 0] = np.finfo(float).eps
         self.dt = torch.from_numpy(dt).to(self.dtype)
+        if self.dt.ndim == 1:
+            self.dt = self.dt.unsqueeze(-1)
 
     def _fill_named_neurons_data(self):
         for slot, neuron in enumerate(NEURONS_302):

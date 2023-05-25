@@ -509,3 +509,31 @@ def plot_correlation_scatterplot(
     else:
         pass  # do nothing
     return None
+
+
+def plot_worm_data(worm_data, num_neurons=5):
+    """
+    Plot a few calcium traces from a given worm's data.
+
+    :param worm_data: The data for a single worm.
+    :param num_neurons: The number of neurons to plot.
+    """
+
+    worm = worm_data["worm"]
+    dataset = worm_data["dataset"]
+    calcium_data = worm_data["calcium_data"]
+    time_in_seconds = worm_data["time_in_seconds"]
+    slot_to_named_neuron = worm_data["slot_to_named_neuron"]
+
+    for neuron_idx in range(num_neurons):
+        neuron_name = slot_to_named_neuron.get(neuron_idx, "no data")
+        if neuron_name != "no data":
+            plt.plot(time_in_seconds, calcium_data[:, neuron_idx], label=neuron_name)
+
+    plt.xlabel("Time (seconds)")
+    plt.ylabel("Calcium Signal")
+    plt.title(
+        f"Dataset: {dataset}, Worm: {worm}\nCalcium Traces of First {num_neurons} Neurons"
+    )
+    plt.legend()
+    plt.show()
