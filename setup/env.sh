@@ -21,7 +21,7 @@ echo "Installing PyTorch Geometric."
 echo ""
 conda install --name $ENV_NAME -y pyg -c pyg
 
-# Install additional dependencies from a separate .yml file
+# Install additional dependencies 
 echo "Installing other dependencies."
 echo ""
 conda install --name $ENV_NAME -y h5py ipython jinja2 networkx matplotlib numpy
