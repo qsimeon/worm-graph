@@ -412,12 +412,13 @@ class CalciumDataReshaper:
         self.slot_to_unknown_neuron = {}
         self.slot_to_neuron = {}
         self.max_timesteps = self.worm_dataset["max_timesteps"]
-        self.dtype = torch.float16
+        self.dtype = torch.float32
 
         self._init_neuron_data()
         self._reshape_data()
 
     def _init_neuron_data(self):
+        self.time_in_seconds = self.worm_dataset["time_in_seconds"]
         self.origin_calcium_data = self.worm_dataset["calcium_data"]
         self.smooth_calcium_data = self.worm_dataset["smooth_calcium_data"]
         self.residual_calcium = self.worm_dataset["residual_calcium"]
@@ -440,6 +441,7 @@ class CalciumDataReshaper:
         self.named_neurons_mask = torch.zeros(NUM_NEURONS, dtype=torch.bool)
         self.unknown_neurons_mask = torch.zeros(NUM_NEURONS, dtype=torch.bool)
         self._init_empty_calcium_data()
+        self._tensor_time_data()
 
     def _init_empty_calcium_data(self):
         self.standard_calcium_data = torch.zeros(
@@ -454,6 +456,16 @@ class CalciumDataReshaper:
         self.standard_residual_smooth_calcium = torch.zeros(
             self.max_timesteps, NUM_NEURONS, dtype=self.dtype
         )
+
+    def _tensor_time_data(self):
+        self.time_in_seconds = torch.from_numpy(self.time_in_seconds).to(self.dtype)
+        if self.time_in_seconds.ndim == 1:
+            self.time_in_seconds = self.time_in_seconds.unsqueeze(-1)
+        dt = np.gradient(self.time_in_seconds, axis=0)
+        dt[dt == 0] = np.finfo(float).eps
+        self.dt = torch.from_numpy(dt).to(self.dtype)
+        if self.dt.ndim == 1:
+            self.dt = self.dt.unsqueeze(-1)
 
     def _fill_named_neurons_data(self):
         for slot, neuron in enumerate(NEURONS_302):
@@ -497,6 +509,8 @@ class CalciumDataReshaper:
                 "smooth_calcium_data": self.standard_smooth_calcium_data,
                 "residual_calcium": self.standard_residual_calcium,
                 "smooth_residual_calcium": self.standard_residual_smooth_calcium,
+                "time_in_seconds": self.time_in_seconds,
+                "dt": self.dt,
                 "named_neurons_mask": self.named_neurons_mask,
                 "unknown_neurons_mask": self.unknown_neurons_mask,
                 "neurons_mask": self.named_neurons_mask | self.unknown_neurons_mask,
@@ -1517,54 +1531,3 @@ class Flavell2023Preprocessor(BasePreprocessor):
         # save data
         self.save_data(preprocessed_data)
         print(f"Finished processing {self.dataset}!", end="\n\n")
-
-
-if __name__ == "__main__":
-    # Preprocess the dataset
-    preprocessor = Uzel2022Preprocessor(
-        transform=StandardScaler(), smooth_method="FFT", resample_dt=0.5
-    )
-    preprocessor.preprocess()
-
-    print("DATASET", preprocessor.dataset, end="\n\n")
-
-    # Load data from pickle file
-    processed_data_path = (
-        "/Users/quileesimeon/GitHub Repos/worm-graph/data/processed/neural"
-    )
-    with open(
-        os.path.join(processed_data_path, preprocessor.dataset + ".pickle"), "rb"
-    ) as f:
-        data = pickle.load(f)
-
-    print("WORMS", list(data.keys()), end="\n\n")
-
-    # Extract data for worm0
-    worm0_data = data["worm0"]
-
-    print("NEURONS", list(worm0_data["neuron_to_slot"].keys()), end="\n\n")
-
-    # Extract calcium traces. The number of traces you select will depend on the structure of your data
-    calcium_traces = worm0_data[
-        # "calcium_data"
-        "smooth_calcium_data"
-    ]  # Adjust according to your data structure
-    slot_to_neuronID = worm0_data["slot_to_named_neuron"]
-
-    print(
-        f"CALCIUM DATA: {calcium_traces.shape}, {calcium_traces.dtype}",
-        end="\n\n",
-    )
-
-    import matplotlib.pyplot as plt
-
-    # Plot the first few calcium traces
-    for k, v in list(slot_to_neuronID.items())[:5]:
-        trace = calcium_traces[:, k]
-        # Transpose may be needed depending on your data structure
-        plt.plot(worm0_data["time_in_seconds"], trace, label=f"Neuron {v}")
-    plt.xlabel("Time (seconds)")
-    plt.ylabel("Calcium level")
-    plt.title("Calcium traces for worm0")
-    plt.legend()
-    plt.show()

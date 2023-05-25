@@ -20,6 +20,7 @@ from preprocess import _utils as utils
 warnings.filterwarnings("ignore", category=DeprecationWarning)
 logging.getLogger("requests").setLevel(logging.WARNING)
 logging.getLogger("urllib3").setLevel(logging.WARNING)
+logging.getLogger("h5py").setLevel(logging.WARNING)
 
 
 class TestPreprocessors(unittest.TestCase):
@@ -87,12 +88,20 @@ class TestPreprocessors(unittest.TestCase):
             for worm_key in data.keys():
                 worm_data = data[worm_key]
                 self.assertIn("neuron_to_slot", worm_data.keys())
+                self.assertIn("time_in_seconds", worm_data.keys())
                 self.assertIn("smooth_calcium_data", worm_data.keys())
                 self.assertIn("slot_to_named_neuron", worm_data.keys())
 
                 calcium_traces = worm_data["smooth_calcium_data"]
                 self.assertIsInstance(calcium_traces, torch.Tensor)
                 self.assertEqual(len(calcium_traces.shape), 2)  # should be 2D
+
+                time_vector = worm_data["time_in_seconds"]
+                self.assertIsInstance(time_vector, torch.Tensor)
+                self.assertEqual(
+                    time_vector.dtype, torch.float
+                )  # should be torch.float32
+                self.assertEqual(len(time_vector.shape), 2)  # should be 2D
 
 
 if __name__ == "__main__":

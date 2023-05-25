@@ -43,17 +43,18 @@ LOGS_DIR = os.path.join(ROOT_DIR, "logs")
 # get GPU if available
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-# set of C. elegans datasets we have processed
+# set real C. elegans datasets we have processed
 VALID_DATASETS = {
-    # real worm datasets
     "Uzel2022",
     "Skora2018",
     "Nichols2017",
     "Kato2015",
     "Kaplan2020",
-    "Leifer2023",  # TODO: different type of data: stimulus-response.
+    "Leifer2023",  # different type of data: stimulus-response.
     "Flavell2023",  # TODO: something wrong with worm0.
 }
+
+SYNTHETIC_DATASETS = {"Synthetic0000"}
 
 # List of all 302 hermaphrodite neurons
 NEURONS_302 = sorted(

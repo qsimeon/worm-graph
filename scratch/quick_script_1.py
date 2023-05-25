@@ -4,7 +4,7 @@ model on data from a single worm.
 """
 
 import matplotlib.pyplot as plt
-from models._utils import NetworkLSTM, NeuralTransformer
+from models._utils import NeuralTransformer
 from train._utils import model_predict
 from data._utils import load_sine_seq_noise
 

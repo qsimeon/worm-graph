@@ -1,23 +1,24 @@
 # worm-graph
 ## Simulating the _C. elegans_ whole brain with neural networks.
 
-`tree -L 1 worm-graph/`
+`tree -L 1 worm-graph`
 ```
 ├── LICENSE
 ├── README.md
 ├── __init__.py
+├── __pycache__
 ├── analysis
 ├── conf
 ├── data
-├── env_setup
-├── logs
 ├── main.py
 ├── models
-├── opensource_data
 ├── pkg.py
 ├── predict
 ├── preprocess
-├── testing
+├── pyproject.toml
+├── scratch
+├── setup
+├── tests
 ├── train
 ├── utils.py
 └── visualization
@@ -33,7 +34,7 @@
 
 To prepare your environment for this project, you can use either the provided `.yml` files or the `init.sh` script. Choose the option that works most efficiently for your system.
 
-Firstly, navigate to the `env_setup` directory. This directory contains all the necessary configuration files to set up the virtual environment. Use the following command to access the directory:
+Firstly, navigate to the `setup` directory. This directory contains all the necessary configuration files to set up the virtual environment. Use the following command to access the directory:
 
 ```
 cd worm-graph/env_setup
@@ -145,4 +146,3 @@ For Jupyter notebooks, use the `CamelCase` naming style.
       - is additional biological data needed?
    - perform scaling experiments:
       - varying the (train) dataset size.
-      ~~- training on a single worm vs. multiple worms.~~

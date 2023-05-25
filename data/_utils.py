@@ -100,7 +100,7 @@ class NeuralActivityDataset(torch.utils.data.Dataset):
             self.neurons = np.array(neurons)  # use the subset of neurons given
         else:  # neurons is None
             self.neurons = np.arange(num_neurons)  # use all the neurons
-        
+
         self.num_neurons = self.neurons.size
         self.data = data
         self.num_samples = num_samples
@@ -120,7 +120,7 @@ class NeuralActivityDataset(torch.utils.data.Dataset):
 
     def parfor_func(self, start):
         """Helper function for parallelizing `__data_generator`.
-        
+
         This function is applied to each `start` index in the
         `__data_generator` method.
         """
@@ -158,19 +158,19 @@ class NeuralActivityDataset(torch.utils.data.Dataset):
         # Return sample
         if self.use_residual:
             Y_tau = Res_tau
-        
+
         return X_tau, Y_tau, metadata
 
     def __data_generator(self):
         """Private method for generating data samples.
-        
+
         This function split the data into sequences of length `seq_len`
         by calling `parfor_func` in parallel.
 
         Notes
         -----
         * The samples can have overlapped time steps
-        
+
         """
 
         # Define length of time
@@ -280,8 +280,8 @@ def pick_worm(dataset, wormid):
 
     Parameters
     ----------
-    dataset : str or dict 
-        Worm dataset to select a worm from.
+    dataset : dict
+        Multi-worm dataset to select a worm from.
     wormid : str or int
         'worm{i}' or {i} where i indexes the worm.
 
@@ -289,24 +289,15 @@ def pick_worm(dataset, wormid):
     ------
     AssertionError
         If the dataset is not a valid worm dataset.
-        
+
     Returns
     -------
     single_worm_dataset : dict
         A single worm dataset.
     """
-    if isinstance(dataset, str):
-        dataset = load_dataset(dataset)
-    else:
-        # Exeption if the dataset is not a valid worm dataset
-        assert (
-            isinstance(dataset, dict)
-            and ("name" in dataset.keys())
-            and ("worm0" in set(dataset["generator"]))
-        ), "Not a valid worm datset!"
-    avail_worms = set(dataset["generator"]) # get the available worms
+    avail_worms = set(dataset.keys())  # get the available worms
     if isinstance(wormid, str) and wormid.startswith("worm"):
-        wormid = wormid.strip("worm") # get the worm number
+        wormid = wormid.strip("worm")  # get the worm number
         # Exeption if the worm number is not valid
         assert wormid.isnumeric() and int(wormid) <= len(
             avail_worms
@@ -318,7 +309,7 @@ def pick_worm(dataset, wormid):
             avail_worms
         ), "Choose a worm from: {}".format(avail_worms)
         worm = "worm" + str(wormid)
-    single_worm_dataset = dict(dataset["generator"])[worm]
+    single_worm_dataset = dataset[worm]
     return single_worm_dataset
 
 
@@ -345,7 +336,7 @@ def load_dataset(name):
     Calls
     -----
     load_{dataset} : function in data/_utils.py
-        Where dataset = {Kato2015, Nichols2017, Nguyen2017, Skora2018, 
+        Where dataset = {Kato2015, Nichols2017, Nguyen2017, Skora2018,
                          Kaplan2020, Uzel2022, Flavell2023, Leifer2023}
 
     Returns
@@ -354,138 +345,27 @@ def load_dataset(name):
         The loaded dataset.
     """
 
-    assert (
-        name in VALID_DATASETS
-    ), "Unrecognized dataset! Please pick one from:\n{}".format(list(VALID_DATASETS))
-    loader = eval("load_" + name) # call the "load" functions below
+    assert (name in VALID_DATASETS) or (
+        name in SYNTHETIC_DATASETS
+    ), "Unrecognized dataset! Please pick one from:\n{}".format(
+        list(VALID_DATASETS | SYNTHETIC_DATASETS)
+    )
+    loader = eval("load_" + name)  # call the "load" functions below
 
     return loader()
 
 
-def load_sine():
-    file = os.path.join(ROOT_DIR, "data", "processed", "neural", "sine.pickle")
+def load_Synthetic000():
+    """
+    Loads the syntheic dataset Synthetic000.
+    """
+    # ensure the data has been created
+    file = os.path.join(ROOT_DIR, "data", "processed", "neural", "Synthetic000.pickle")
     assert os.path.exists(file)
     pickle_in = open(file, "rb")
     # unpickle the data
-    dataset = pickle.load(pickle_in)
-    return dataset
-
-
-def load_sine_noise():
-    file = os.path.join(ROOT_DIR, "data", "processed", "neural", "sine_noise.pickle")
-    assert os.path.exists(file)
-    pickle_in = open(file, "rb")
-    # unpickle the data
-    dataset = pickle.load(pickle_in)
-    return dataset
-
-
-def load_sum_sine():
-    file = os.path.join(ROOT_DIR, "data", "processed", "neural", "sum_sine.pickle")
-    assert os.path.exists(file)
-    pickle_in = open(file, "rb")
-    # unpickle the data
-    dataset = pickle.load(pickle_in)
-    return dataset
-
-
-def load_sum_sine_noise():
-    file = os.path.join(
-        ROOT_DIR, "data", "processed", "neural", "sum_sine_noise.pickle"
-    )
-    assert os.path.exists(file)
-    pickle_in = open(file, "rb")
-    # unpickle the data
-    dataset = pickle.load(pickle_in)
-    return dataset
-
-
-def load_sine():
-    """
-    A test dataset to evaluate models on.
-    Independent sinusoid signals.
-    Varied frequency and amplitutde.
-    """
-    file = os.path.join(ROOT_DIR, "data", "processed", "neural", "sine.pickle")
-    assert os.path.exists(file)
-    pickle_in = open(file, "rb")
-    # unpickle the data
-    dataset = pickle.load(pickle_in)
-    return dataset
-
-
-def load_sine_seq():
-    """
-    A test dataset to evaluate models on.
-    Correlated sinusoid signals.
-    Varied frequency and amplitutde.
-    """
-    file = os.path.join(ROOT_DIR, "data", "processed", "neural", "sine_seq.pickle")
-    assert os.path.exists(file)
-    pickle_in = open(file, "rb")
-    # unpickle the data
-    dataset = pickle.load(pickle_in)
-    return dataset
-
-
-def load_sine_noise():
-    """
-    A test dataset to evaluate models on.
-    Independent sinusoid signals + Gaussian noise.
-    Varied frequency, phase and noise variance.
-    """
-    file = os.path.join(ROOT_DIR, "data", "processed", "neural", "sine_noise.pickle")
-    assert os.path.exists(file)
-    pickle_in = open(file, "rb")
-    # unpickle the data
-    dataset = pickle.load(pickle_in)
-    return dataset
-
-
-def load_sine_seq_noise():
-    """
-    A test dataset to evaluate models on.
-    Correlated sinusoid signals + Gaussian noise.
-    Varied frequency, phase and noise variance.
-    """
-    file = os.path.join(
-        ROOT_DIR, "data", "processed", "neural", "sine_seq_noise.pickle"
-    )
-    assert os.path.exists(file)
-    pickle_in = open(file, "rb")
-    # unpickle the data
-    dataset = pickle.load(pickle_in)
-    return dataset
-
-
-def load_sum_sine():
-    """
-    A test dataset to evaluate models on.
-    Independent sums-of-sinusoid signals.
-    Varied frequency, phase and number of terms in sum.
-    """
-    file = os.path.join(ROOT_DIR, "data", "processed", "neural", "sum_sine.pickle")
-    assert os.path.exists(file)
-    pickle_in = open(file, "rb")
-    # unpickle the data
-    dataset = pickle.load(pickle_in)
-    return dataset
-
-
-def load_sum_sine_noise():
-    """
-    A test dataset to evaluate models on.
-    Independent sums-of-sinusoid signals + Gaussian noise.
-    Varied frequency, phase, number of terms in sum and noise variance.
-    """
-    file = os.path.join(
-        ROOT_DIR, "data", "processed", "neural", "sum_sine_noise.pickle"
-    )
-    assert os.path.exists(file)
-    pickle_in = open(file, "rb")
-    # unpickle the data
-    dataset = pickle.load(pickle_in)
-    return dataset
+    Synthetic000 = pickle.load(pickle_in)
+    return Synthetic000
 
 
 def load_Kato2015():
