@@ -1,4 +1,5 @@
 omegaconf
+pysindy
 mat73
 ncps
 hydra-core
