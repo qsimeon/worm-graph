@@ -8,6 +8,9 @@ def model_predict(
 ) -> tuple[torch.Tensor, torch.Tensor]:
     """Make predictions for all neurons on a dataset with a trained model.
 
+    This function uses a trained model to predict what the sequences of neural activity
+    in calcium_data would look like if they were propagated forward by tau time steps.
+
     Parameters
     ----------
     model : torch.nn.Module
@@ -25,19 +28,18 @@ def model_predict(
         All tensors are of the same shape as the input calcium data.
     """
 
-
     num_neurons = calcium_data.size(1)
     model = model.to(DEVICE)
     model.eval()
 
     # Model in/out
-    calcium_data = calcium_data.squeeze(0) # (max_timesteps, num_neurons)
+    calcium_data = calcium_data.squeeze(0)  # (max_timesteps, num_neurons)
     assert (
         calcium_data.ndim == 2 and calcium_data.size(1) >= num_neurons
     ), "Calcium data has incorrect shape!"
 
     # Get input and output
-    input = calcium_data.to(DEVICE)[:-tau, :] #? Why [:-tau, :] and not -1 directly?
+    input = calcium_data.to(DEVICE)[:-tau, :]  # ? Why [:-tau, :] and not -1 directly?
     with torch.no_grad():
         output = model(
             input.unsqueeze(0),
@@ -47,7 +49,7 @@ def model_predict(
         )  # (1, max_timesteps, num_neurons),  batch_size = 1, seq_len = max_timesteps
 
     # Get desired target
-    target = calcium_data[tau:, :] #? Same question again
+    target = calcium_data[tau:, :]  # ? Same question again
 
     # Inputs, predictions, and targets
     inputs = torch.nn.functional.pad(input.detach().cpu(), (0, 0, 0, tau))
