@@ -1,5 +1,5 @@
 model:
-  type: NetworkLSTM # options: LinearNN, NetworkLSTM, NeuralCFC, NeuralTransformer
+  type: LinearNN # options: LinearNN, NetworkLSTM, NeuralCFC, NeuralTransformer
   input_size: 302 # keep this fixed; it is the number of neurons in the adult C. elegans hermaphrodite 
   hidden_size: 1024 # options: int > 0
   num_layers: 1 # keep this fixed; our experiments show that deeper networks do not improve performance

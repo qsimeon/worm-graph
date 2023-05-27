@@ -3,25 +3,25 @@ channels:
   - conda-forge
   - defaults
 dependencies:
-  - matplotlib
-  - pytorch  # cpu version
-  - black
-  - networkx
-  - ipywidgets
-  - hydra-core
-  - pip
-  - pandas
-  - freetype
   - python=3.9
   - numpy
-  - seaborn
+  - pandas
+  - matplotlib
+  - networkx
   - scipy
+  - seaborn
   - scikit-learn
-  - omegaconf
   - h5py
   - notebook
-  - tqdm
   - jupyterlab
+  - tqdm
+  - pip
+  - pytorch  # cpu version
+  - hydra-core
+  - omegaconf
+  - freetype
+  - black
+  - ipywidgets
   - pip:
     - torch-geometric
     - hydra-submitit-launcher
