@@ -27,6 +27,7 @@ NUM_NEURONS = 302  # number of neurons in the model organism
 
 RAW_DATA_URL = "https://www.dropbox.com/s/45yqpvtsncx4095/raw_data.zip?dl=1"
 
+# essential raw data files that must be in the raw data directory
 RAW_FILES = [
     "GHermChem_Edges.csv",
     "GHermChem_Nodes.csv",
@@ -50,7 +51,7 @@ VALID_DATASETS = {
     "Nichols2017",
     "Kato2015",
     "Kaplan2020",
-    "Leifer2023",  # different type of data: stimulus-response.
+    "Leifer2023",  # different type of dataset: stimulus-response.
     "Flavell2023",  # TODO: something wrong with worm0.
 }
 

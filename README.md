@@ -6,10 +6,10 @@
 ├── LICENSE
 ├── README.md
 ├── __init__.py
-├── __pycache__
 ├── analysis
 ├── conf
 ├── data
+├── logs
 ├── main.py
 ├── models
 ├── pkg.py
@@ -21,7 +21,7 @@
 ├── tests
 ├── train
 ├── utils.py
-└── visualization
+└── visualize
 ```
 ## Table of Contents
 1. [Environment Setup](#environment-setup)
@@ -49,7 +49,6 @@ cd worm-graph/setup
     ```
     conda env create -f environment.yml
     ```
-
 
 ## Option B: Setting up with the bash script (recommended)
 
@@ -116,8 +115,6 @@ For Jupyter notebooks, use the `CamelCase` naming style.
 - When in doubt about anything else style-related that's not addressed by the previous two points, reference the [Python Enhancement Protocols (PEP8)](https://peps.python.org/pep-0008/).
 
 - Always shape neural data matrices as `(time, neurons, [features])`. The braces `[]` indicate that the last `features` dimension is optional, as the `neurons` currently serve as the features for our models.
-
-<!-- [![[Black Code Style](https://github.com/psf/black)](https://img.shields.io/badge/code%20style-black-000000.svg)] -->
 
 ## Future Tasks
 
