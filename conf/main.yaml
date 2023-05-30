@@ -66,7 +66,7 @@ hydra:
       train.seq_len: 200 # 100, 200, 300
       train.k_splits: 2 # 2, 5, 7
       train.num_samples: 64 # 16, 32, 64, 128
-      train.num_batches: 2 # 1, 2, 4, 8
+      train.num_batches: 1
       train.tau_in: 1 
       train.shuffle: false 
       train.reverse: false 

@@ -346,8 +346,8 @@ def split_train_test(
     train_size_per_split = (num_samples // max(1, len(train_splits))) + (
         num_samples % max(1, len(train_splits))
     )
-    test_size_per_split = (num_samples // max(1, len(train_splits))) + (
-        num_samples % max(1, len(train_splits))
+    test_size_per_split = (num_samples // max(1, len(test_splits))) + (
+        num_samples % max(1, len(test_splits))
     )
 
     # Train dataset
