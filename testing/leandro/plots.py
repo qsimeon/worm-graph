@@ -133,4 +133,11 @@ def plot_similarities(data):
     # Show the plot
     plt.show()
 
-
+def simplePlotMatrix(matrix, title=None):
+        plt.imshow(matrix, aspect= 'auto', cmap='seismic')
+        if title is not None:
+            assert type(title) == str, "Title must be a string"
+            plt.title(title)
+        plt.colorbar()
+        plt.axis('off')
+        plt.show()
