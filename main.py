@@ -78,6 +78,9 @@ def pipeline(
     ## TODO: analysis
     # analyze_outputs(config, log_dir)
 
+    # free up GPU
+    torch.cuda.empty_cache()
+
     return None
 
 

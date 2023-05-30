@@ -251,8 +251,17 @@ def plot_before_after_weights(log_dir: str) -> None:
     chkpts = sorted(os.listdir(chkpt_dir), key=lambda x: int(x.split("_")[0]))
     first_chkpt = torch.load(os.path.join(chkpt_dir, chkpts[0]))
     last_chkpt = torch.load(os.path.join(chkpt_dir, chkpts[-1]))
-    input_size, hidden_size = first_chkpt["input_size"], first_chkpt["hidden_size"]
-    model = eval(model_name)(input_size, hidden_size)
+    input_size, hidden_size, num_layers = first_chkpt["input_size"], first_chkpt["hidden_size"], first_chkpt["num_layers"]
+    loss_name, reg_param = first_chkpt["loss_name"], first_chkpt["reg_param"]
+    model = eval(model_name)(
+            input_size,
+            hidden_size,
+            num_layers,
+            loss=loss_name,
+            reg_param=reg_param,
+        )
+    model_state_dict = first_chkpt["model_state_dict"]
+    model.load_state_dict(model_state_dict)
     # plot the readout weights
     fig, axs = plt.subplots(1, 2)
     # before training
