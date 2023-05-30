@@ -97,10 +97,11 @@ class PositionalEncoding(torch.nn.Module):
     def __init__(
         self,
         n_embd: int,
-        max_len: int = 5000,
+        max_len: int = MAX_TOKEN_LEN,
         dropout: float = 0.1,
     ):
         super().__init__()
+        self.max_len =  max_len
         self.dropout = torch.nn.Dropout(p=dropout)
         position = torch.arange(max_len).unsqueeze(1)
         div_term = torch.exp(torch.arange(0, n_embd, 2) * (-math.log(10000.0) / n_embd))
@@ -109,7 +110,7 @@ class PositionalEncoding(torch.nn.Module):
         pe[0, :, 1::2] = torch.cos(position * div_term)
         self.register_buffer("pe", pe)
 
-    def forward(self, x):  # x has shape (batch_size, block_size, n_embd)
+    def forward(self, x): 
         """
         Args:
             x: Tensor, shape (batch_size, seq_len, embedding_dim)
@@ -368,7 +369,7 @@ class NeuralTransformer(Model):
             input_size, hidden_size, num_layers, loss, reg_param
         )
         self.n_head = 4  # number of attention heads
-        self.block_size = 5000  # maximum attention block (i.e. context) size
+        self.block_size = MAX_TOKEN_LEN  # maximum attention block (i.e. context) size
         self.dropout = 0.1  # dropout rate
         # Positional encoding
         self.position_encoding = PositionalEncoding(

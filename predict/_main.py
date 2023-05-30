@@ -84,8 +84,6 @@ def make_predictions(
         named_neurons = np.array(NEURONS_302)[named_neurons_mask]
 
         time_in_seconds = single_worm_dataset["time_in_seconds"]
-        if time_in_seconds is None:
-            time_in_seconds = torch.arange(len(calcium_data)).double()
         train_mask = single_worm_dataset.setdefault(
             "train_mask", torch.zeros(len(calcium_data), dtype=torch.bool)
         )
@@ -97,6 +95,12 @@ def make_predictions(
         time_in_seconds = time_in_seconds.detach()
         train_mask = train_mask.detach()
         test_mask.detach()
+
+        # shorten time series to the maximum token lengths
+        calcium_data = calcium_data[-MAX_TOKEN_LEN :, :]
+        time_in_seconds = time_in_seconds[-MAX_TOKEN_LEN :]
+        train_mask = train_mask[-MAX_TOKEN_LEN :]
+        test_mask = test_mask[-MAX_TOKEN_LEN :]
 
         # Labels and columns
         labels = np.expand_dims(np.where(train_mask, "train", "test"), axis=-1)
@@ -141,7 +145,7 @@ def make_predictions(
             header=True,
         )
 
-        # TODO: remove this break to do predict for all worms in dataset
+        # TODO: remove this break to predict for all worms in dataset instead of just "worm0"
         break
 
     return None

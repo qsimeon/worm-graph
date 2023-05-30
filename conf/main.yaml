@@ -29,10 +29,10 @@ hydra:
       # GLOBALS
       globals.random_seed: 0 # range(0,3,1)
       # MODEL
-      model.type: LinearNN, NeuralTransformer, NetworkLSTM #, NeuralCFC
-      model.loss: L1, MSE #, Huber
-      model.reg_param: 0.0, 0.5, 1.0
-      model.hidden_size: 256, 512, 1024, 2048 # 64, 128, 256, 512, 1024, 2048
+      model.type: NetworkLSTM #LinearNN, NeuralTransformer, NetworkLSTM, NeuralCFC
+      model.loss: MSE #, L1, MSE, Huber
+      model.reg_param: 0.0 # 0.0, 0.5, 1.0
+      model.hidden_size: 1024 # 256, 512, 1024, 2048 # 128, 256, 512, 1024, 2048
       model.num_layers: 1
       model.checkpoint_path: false
       # DATASET
@@ -59,14 +59,14 @@ hydra:
         # - [Nichols2017, Skora2018, Kaplan2020, Flavell2023, Leifer2023]
         # - [Kato2015, Nichols2017, Skora2018, Kaplan2020, Flavell2023, Leifer2023]
       # TRAIN
-      train.optimizer: SGD, Adam, Adagrad, RMSprop #, Adadelta, AdamW, RMSprop
-      train.learn_rate: 0.001, 0.01, 0.1, 1.0 # 0.0001, 0.001, 0.01, 0.1, 1.0
-      train.epochs: 3000
+      train.optimizer: Adam # SGD, Adam, AdamW, Adagrad, Adadelta, RMSprop 
+      train.learn_rate: 0.001 # 0.001, 0.01, 0.1, 1.0
+      train.epochs: 1000
       train.save_freq: 2000
       train.seq_len: 200 # 100, 200, 300
-      train.k_splits: 2 #, 2, 5, 7
-      train.num_samples: 16, 32, 64, 128
-      train.num_batches: 1, 4, 8 # 1, 2, 4, 8
+      train.k_splits: 2 # 2, 5, 7
+      train.num_samples: 64 # 16, 32, 64, 128
+      train.num_batches: 2 # 1, 2, 4, 8
       train.tau_in: 1 
       train.shuffle: false 
       train.reverse: false 

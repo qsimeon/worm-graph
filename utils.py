@@ -25,6 +25,8 @@ USER = "qsimeon"  # OpenMind username
 
 NUM_NEURONS = 302  # number of neurons in the model organism
 
+MAX_TOKEN_LEN = 8000 # maximum attention block size for transformer models
+
 RAW_DATA_URL = "https://www.dropbox.com/s/45yqpvtsncx4095/raw_data.zip?dl=1"
 
 # essential raw data files that must be in the raw data directory
