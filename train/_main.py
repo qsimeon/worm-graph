@@ -93,6 +93,9 @@ def train_model(
         [len(cohort) == num_unique_worms for cohort in worm_cohorts]
     ), "Invalid cohort size."
 
+    # Move model to device
+    model = model.to(DEVICE)
+    
     # Instantiate the optimizer
     opt_param = config.train.optimizer
     optim_name = "torch.optim." + opt_param
