@@ -34,7 +34,7 @@ hydra:
       model.num_layers: 1 
       model.checkpoint_path: false
       # DATASET
-      dataset.name: [Kato2015, Nichols2017, Skora2018, Kaplan2020, Flavell2023, Leifer2023]
+      dataset.name: [Kato2015, Nichols2017, Skora2018, Kaplan2020, Flavell2023] #[Nichols2017, Skora2018, Kaplan2020, Flavell2023, Leifer2023]
         # Kato2015, Nichols2017, Skora2018, Kaplan2020, Flavell2023, Leifer2023
         # [Kato2015, Nichols2017], [Nichols2017, Skora2018], [Skora2018, Kaplan2020], [Kaplan2020, Flavell2023], [Flavell2023, Leifer2023]
         # [Kato2015, Nichols2017, Skora2018], [Nichols2017, Skora2018, Kaplan2020], [Skora2018, Kaplan2020, Flavell2023], [Kaplan2020, Flavell2023, Leifer2023]
