@@ -224,7 +224,7 @@ def train_model(
             dataset[worm].setdefault("train_mask", train_mask.detach())
             dataset[worm].setdefault("test_mask", test_mask.detach())
 
-            # Increment the count of the amt. of train data (measure in timesteps) of one epoch
+            # Increment the count of the amount of train data (measured in timesteps) of one epoch
             if i == 0:
                 worm_timesteps += train_mask.sum().item()
 
