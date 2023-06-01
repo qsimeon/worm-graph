@@ -4,6 +4,9 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import matplotlib.gridspec as gridspec
 
+import matplotlib.animation as animation
+from IPython.display import HTML
+
 def plot_signals(data, time_tensor, neuron_idx=None):
     assert isinstance(data, torch.Tensor), "data must be a PyTorch tensor"
     assert isinstance(time_tensor, torch.Tensor), "time_tensor must be a PyTorch tensor"
@@ -133,11 +136,82 @@ def plot_similarities(data):
     # Show the plot
     plt.show()
 
-def simplePlotMatrix(matrix, title=None):
-        plt.imshow(matrix, aspect= 'auto', cmap='seismic')
+
+def plotHeatmap(matrix, title=None, cmap=None, xlabel=None, ylabel=None,
+                xticks=None, yticks=None, show_xticks=True, show_yticks=True,
+                center=None, vmin=None, vmax=None):
+    # Generate the heatmap
+    ax = sns.heatmap(matrix, cmap=cmap, center=center, vmin=vmin, vmax=vmax)
+    
+    # Set the title if provided
+    if title is not None:
+        ax.set_title(title)
+
+    # Set the x and y ticks if provided and show_ticks is True
+    if show_xticks:
+        if xticks is not None:
+            ax.set_xticks(np.arange(len(xticks)))
+            ax.set_xticklabels(xticks)
+    else:
+        ax.set_xticks([])
+
+    if show_yticks:
+        if yticks is not None:
+            ax.set_yticks(np.arange(len(yticks)))
+            ax.set_yticklabels(yticks)
+    else:
+        ax.set_yticks([])
+
+    if xlabel is not None:
+        ax.set_xlabel(xlabel)
+    
+    if ylabel is not None:
+        ax.set_ylabel(ylabel)
+
+    # Show the plot
+    plt.tight_layout()
+    plt.show()
+
+def dynamicHeatmap(matrices, interval=200, filename='animation.mp4',
+                       title=None, cmap=None, xlabel=None, ylabel=None, xticks=None, yticks=None,
+                       show_xticks=True, show_yticks=True, center=None, vmin=None, vmax=None):
+    fig, ax = plt.subplots()
+    
+    def update(frame):
+        # clear the current axes
+        plt.clf()
+        ax = sns.heatmap(matrices[frame], cmap=cmap, center=center, vmin=vmin, vmax=vmax)
+        
+        # Set the title if provided
         if title is not None:
-            assert type(title) == str, "Title must be a string"
-            plt.title(title)
-        plt.colorbar()
-        plt.axis('off')
-        plt.show()
+            ax.set_title(title)
+
+        # Set the x and y ticks if provided and show_ticks is True
+        if show_xticks:
+            if xticks is not None:
+                ax.set_xticks(np.arange(len(xticks)))
+                ax.set_xticklabels(xticks)
+        else:
+            ax.set_xticks([])
+
+        if show_yticks:
+            if yticks is not None:
+                ax.set_yticks(np.arange(len(yticks)))
+                ax.set_yticklabels(yticks)
+        else:
+            ax.set_yticks([])
+
+        if xlabel is not None:
+            ax.set_xlabel(xlabel)
+        
+        if ylabel is not None:
+            ax.set_ylabel(ylabel)
+
+        plt.tight_layout()
+        return ax,
+
+    ani = animation.FuncAnimation(fig, update, frames=range(len(matrices)), interval=interval, blit=False)
+    
+    ani.save(filename)
+    #return HTML(ani.to_html5_video())
+
