@@ -16,7 +16,7 @@ globals:
   shuffle: true # whether to shuffle worms
 
 hydra:
-  mode: RUN # options: RUN, MULTIRUN
+  mode: MULTIRUN # options: RUN, MULTIRUN
   job:
     chdir: true # important! this changes the working directory to the log directory
   run:
@@ -28,7 +28,7 @@ hydra:
     params:
       # MODEL
       model.type: NetworkLSTM #LinearNN, NeuralTransformer, NetworkLSTM, NeuralCFC
-      model.loss: L1, MSE, Huber
+      model.loss: MSE #L1, MSE, Huber
       model.reg_param: 1.0 #0.0, 0.5, 1.0
       model.hidden_size: 2048 #128, 256, 512, 1024, 2048
       model.num_layers: 1 
@@ -46,9 +46,9 @@ hydra:
       train.learn_rate: 0.001, 0.01, 0.1
       train.epochs: 200
       train.save_freq: 200
-      train.seq_len: 100 #100, 200
+      train.seq_len: 200 #100, 200
       train.k_splits: 2 
-      train.num_samples: 8, 16, 32
+      train.num_samples: 16 #8, 16, 32
       train.num_batches: 1 
       train.tau_in: 1 
       train.shuffle: true 
