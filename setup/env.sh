@@ -49,6 +49,6 @@ conda install --name $ENV_NAME -y black "black[jupyter]"
 
 echo ""
 echo "Run conda activate $ENV_NAME to activate the environment."
-echo "Run pip install -r requirements.txt to install other package dependencies."
+echo "Run pip install --upgrade -r requirements.txt to install other package dependencies."
 echo "Run conda develop . to install the package in development mode."
 echo ""
