@@ -1,10 +1,10 @@
-import os
-import torch
-import random
-import warnings
 import numpy as np
+import os
 import pandas as pd
+import random
+import torch
 import torch.multiprocessing
+import warnings
 
 # Ignore sklearn's RuntimeWarnings
 warnings.filterwarnings(action="ignore", category=RuntimeWarning)
@@ -24,6 +24,8 @@ os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "max_split_size_mb:32"
 USER = "qsimeon"  # OpenMind username
 
 NUM_NEURONS = 302  # number of neurons in the model organism
+
+MAX_TOKEN_LEN = 7000 # maximum attention block size for transformer models
 
 RAW_DATA_URL = "https://www.dropbox.com/s/45yqpvtsncx4095/raw_data.zip?dl=1"
 

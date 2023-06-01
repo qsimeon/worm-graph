@@ -22,6 +22,7 @@ dependencies:
   - freetype
   - black
   - ipywidgets
+  - ipykernel
   - pip:
     - torch-geometric
     - hydra-submitit-launcher

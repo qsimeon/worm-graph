@@ -1,5 +1,6 @@
 # All imports for main module
 import hydra
+import torch
 import shutil
 from utils import *
 from omegaconf import DictConfig, OmegaConf

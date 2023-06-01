@@ -101,7 +101,6 @@ def train(
         # No backprop on epoch 0.
         if no_grad:
             optimizer.zero_grad()
-
         optimizer.step()  # Update parameters based on gradients.
 
         # Store train and baseline loss.
@@ -346,8 +345,8 @@ def split_train_test(
     train_size_per_split = (num_samples // max(1, len(train_splits))) + (
         num_samples % max(1, len(train_splits))
     )
-    test_size_per_split = (num_samples // max(1, len(train_splits))) + (
-        num_samples % max(1, len(train_splits))
+    test_size_per_split = (num_samples // max(1, len(test_splits))) + (
+        num_samples % max(1, len(test_splits))
     )
 
     # Train dataset
@@ -400,6 +399,9 @@ def optimize_model(
     Returns the trained model and a dictionary with log information
     including losses.
 
+    NOTE: Must ensure that optimizer was initialized with model paramets after
+            moving to DEVICE.
+
     Parameters
     ----------
     model : torch.nn.Module
@@ -415,7 +417,7 @@ def optimize_model(
         torch.Tensor, it is a boolean mask for the neurons to be used in
         all batches.
     optimizer : torch.optim.Optimizer or None, optional
-        The optimizer to be used for training. If None, Adam is used.
+        The optimizer to be used for training. If None, SGD is used.
     start_epoch : int, optional
         The epoch to start training from. Default: 1.
     learn_rate : float, optional
@@ -470,7 +472,7 @@ def optimize_model(
             ), "Please use a valid boolean mask for neurons."
             neurons_mask[i] = neurons_mask[i].detach().to(DEVICE)
     else:
-        neurons_mask = torch.ones(NUM_NEURONS, dtype=torch.bool).detach().to(DEVICE)
+        neurons_mask = torch.ones(NUM_NEURONS, dtype=torch.bool).to(DEVICE)
 
     model = model.to(DEVICE)  # Put model on device
 
@@ -496,28 +498,47 @@ def optimize_model(
     iter_range = range(start_epoch, num_epochs + start_epoch)
     for i, epoch in enumerate(iter_range):
         # Train and validate the model
-        with ThreadPoolExecutor(max_workers=2) as executor:  # Parallel train and test
-            model.train()
-            train_future = executor.submit(
-                train,
-                train_loader,
-                model,
-                neurons_mask,
-                optimizer,
-                no_grad=(epoch == 0),
-                use_residual=use_residual,
-            )
-            train_log = train_future.result()
+        if i > 0:
+            # TODO: This could be introducing non-determinism
+            with ThreadPoolExecutor(max_workers=2) as executor:  # Parallel train and test
+                model.train()
+                train_future = executor.submit(
+                    train,
+                    train_loader,
+                    model,
+                    neurons_mask,
+                    optimizer,
+                    no_grad=(epoch == 0),
+                    use_residual=use_residual,
+                )
+                train_log = train_future.result()
 
+                model.eval()
+                test_future = executor.submit(
+                    test,
+                    test_loader,
+                    model,
+                    neurons_mask,
+                    use_residual=use_residual,
+                )
+                test_log = test_future.result()
+    
+        else:
+            model.train()
+            train_log = train(train_loader, 
+                              model, 
+                              neurons_mask,
+                              optimizer, 
+                              no_grad=(epoch == 0),
+                              use_residual=use_residual,
+                              )
+            
             model.eval()
-            test_future = executor.submit(
-                test,
-                test_loader,
-                model,
-                neurons_mask,
-                use_residual=use_residual,
-            )
-            test_log = test_future.result()
+            test_log = test(test_loader,
+                            model,
+                            neurons_mask,
+                            use_residual=use_residual,
+                            )
 
         # Retrieve losses
         centered_train_loss, base_train_loss, train_loss, num_train_samples = (

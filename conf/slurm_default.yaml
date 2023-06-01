@@ -1,8 +1,8 @@
 defaults:
   # - override hydra/launcher: submitit_local
-  # NOTE: WHEN ON OPENMIND, UNCOMMENT LINES BELOW TO RUN MULTIPLE SLURM JOBS
+  # # NOTE: When on OpenMind, COMMENT out the lines above and UNCOMMENT the lines below 
   - override /hydra/launcher: submitit_slurm
-  
+
 hydra:
   launcher:
     cpus_per_task: 1
