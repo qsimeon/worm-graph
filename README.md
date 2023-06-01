@@ -55,7 +55,7 @@ cd worm-graph/setup
 1. Run the `env.sh` script. This will create the new `worm-graph` environment and install the required packages:
 
     ```
-    source env.sh
+    bash env.sh
     ```
 
 2. Activate the new `worm-graph` environment:
@@ -67,10 +67,10 @@ cd worm-graph/setup
 3. Install the remaining dependencies using pip:
 
     ```
-    pip install -r requirements.txt
+    pip install --upgrade -r requirements.txt
     ```
 
-After finishig one of the installations above, navigate back to the root directory (`worm-graph/`) and run:
+After finishing one of the installations above, navigate back to the root directory (`worm-graph/`) and run:
 
     conda develop .
 

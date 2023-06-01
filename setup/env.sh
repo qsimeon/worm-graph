@@ -1,5 +1,7 @@
-
 #!/bin/bash
+
+# Initialize conda for bash shell
+eval "$(conda shell.bash hook)"
 
 ENV_NAME="worm-graph"
 
@@ -7,28 +9,43 @@ ENV_NAME="worm-graph"
 echo "Creating $ENV_NAME environment."
 echo ""
 conda create -y -n $ENV_NAME python=3.9
+echo ""
+conda activate $ENV_NAME
+
+python -m pip install --upgrade pip
 
 # Install PyTorch with CUDA support
 echo "Installing PyTorch with CUDA."
 echo ""
-#### uncomment line below for GPU: 
-# conda install --name $ENV_NAME -y pytorch torchvision torchaudio pytorch-cuda=11.8 -c pytorch -c nvidia
+### uncomment line below for GPU: 
+conda install --name $ENV_NAME -y pytorch torchvision torchaudio pytorch-cuda=11.8 -c pytorch -c nvidia
 ### uncomment line below if no GPU:
-conda install --name $ENV_NAME -y pytorch torchvision torchaudio -c pytorch -c nvidia
+# conda install --name $ENV_NAME -y pytorch torchvision torchaudio cpuonly -c pytorch
 
 # Install PyTorch Geometric
 echo "Installing PyTorch Geometric."
 echo ""
 conda install --name $ENV_NAME -y pyg -c pyg
 
-# Install additional dependencies 
-echo "Installing other dependencies."
+# Install large, complex dependencies
+echo "Installing large, complex dependencies."
 echo ""
-conda install --name $ENV_NAME -y h5py ipython jinja2 networkx matplotlib numpy
-conda install --name $ENV_NAME -y pandas pickleshare requests seaborn
-conda install --name $ENV_NAME -y scipy tqdm yaml conda-build typing typing_extensions
-conda install --name $ENV_NAME -y jupyter
-conda install --name $ENV_NAME -y black scikit-learn scikit-learn-intelex
+conda install --name $ENV_NAME -y numpy scipy pandas matplotlib jupyter jupyterlab notebook scikit-learn seaborn
+
+# Install dependencies with moderate complexity
+echo "Installing dependencies with moderate complexity."
+echo ""
+conda install --name $ENV_NAME -y h5py networkx ipython jinja2 typing typing_extensions
+
+# Install small, simple dependencies
+echo "Installing small, simple dependencies."
+echo ""
+conda install --name $ENV_NAME -y pickleshare requests tqdm yaml conda-build 
+
+# Install code formatting and linting tools
+echo "Installing code formatting and linting tools."
+echo ""
+conda install --name $ENV_NAME -y black "black[jupyter]"
 
 echo ""
 echo "Run conda activate $ENV_NAME to activate the environment."
