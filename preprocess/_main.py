@@ -1,13 +1,5 @@
 from preprocess._utils import *
 
-logging.basicConfig(
-    level=logging.INFO,  # Set the logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
-    format='%(asctime)s - %(levelname)s - %(message)s',  # Define the log message format
-    datefmt='%d-%b-%y %H:%M:%S',  # Define the date/time format
-    filename=ROOT_DIR+'/logs/execution/preprocess_main.log',  # Specify the log file (optional)
-    filemode='w'  # Set the file mode (optional, default is 'a' for appending)
-)
-
 def process_data(config: DictConfig) -> None:
     """Preprocesses the raw neural and connectome data.
 
