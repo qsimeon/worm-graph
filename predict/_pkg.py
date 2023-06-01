@@ -10,4 +10,4 @@ from omegaconf import DictConfig
 from omegaconf import OmegaConf
 from data._main import get_dataset
 from models._main import get_model
-from utils import DEVICE, LOGS_DIR, NEURONS_302
+from utils import DEVICE, LOGS_DIR, NEURONS_302, MAX_TOKEN_LEN

@@ -1,27 +1,27 @@
 # worm-graph
 ## Simulating the _C. elegans_ whole brain with neural networks.
 
-`tree -L 2 worm-graph/`
+`tree -L 1 worm-graph`
 ```
 ├── LICENSE
 ├── README.md
 ├── __init__.py
-├── __pycache__
 ├── analysis
 ├── conf
 ├── data
-├── environment_cluster.yml
-├── environment_local.yml
-├── govfunc
 ├── logs
 ├── main.py
 ├── models
 ├── pkg.py
+├── predict
 ├── preprocess
-├── testing
+├── pyproject.toml
+├── scratch
+├── setup
+├── tests
 ├── train
 ├── utils.py
-└── visualization
+└── visualize
 ```
 ## Table of Contents
 1. [Environment Setup](#environment-setup)
@@ -34,27 +34,28 @@
 
 To prepare your environment for this project, you can use either the provided `.yml` files or the `init.sh` script. Choose the option that works most efficiently for your system.
 
-Firstly, navigate to the `env_setup` directory. This directory contains all the necessary configuration files to set up the virtual environment. Use the following command to access the directory:
+Firstly, navigate to the `setup` directory. This directory contains all the necessary configuration files to set up the virtual environment. Use the following command to access the directory:
 
 ```
-cd worm-graph/env_setup
+cd worm-graph/setup
 ```
+
+**Note:** Installing the environment can take up to 2 hours!
 
 ## Option A: Setting up with the `.yml` files
 
 1. Open your terminal or Anaconda Prompt, and create a new Conda environment using the `.yml` file. The first line of the `.yml` file sets the name of the new environment.
 
     ```
-    conda env create -f environment_cluster.yml
+    conda env create -f environment.yml
     ```
 
+## Option B: Setting up with the bash script (recommended)
 
-## Option B: Setting up with the bash script
-
-1. Run the `init.sh` script. This will create the new `worm-graph` environment and install the required packages:
+1. Run the `env.sh` script. This will create the new `worm-graph` environment and install the required packages:
 
     ```
-    source init.sh
+    source env.sh
     ```
 
 2. Activate the new `worm-graph` environment:
@@ -69,13 +70,13 @@ cd worm-graph/env_setup
     pip install -r requirements.txt
     ```
 
-After finishig one of the installations above, navigate to the root directory (`worm-graph/`) and run:
+After finishig one of the installations above, navigate back to the root directory (`worm-graph/`) and run:
 
     conda develop .
 
 **Note:** Please ensure to carry out this step, otherwise you may encounter `ModuleNotFoundError`.
 
-*You can check if the environment was successfully installed by running `conda env list`.*
+*You can check if the environment was successfully installed by running `conda env list` or `conda info --envs`.*
 
 **Important Reminder:** Always activate the environment before starting your work on the project using `conda activate worm-graph`.
 
@@ -115,15 +116,11 @@ For Jupyter notebooks, use the `CamelCase` naming style.
 
 - Always shape neural data matrices as `(time, neurons, [features])`. The braces `[]` indicate that the last `features` dimension is optional, as the `neurons` currently serve as the features for our models.
 
-<!-- [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black) -->
-
 ## Future Tasks
 
 - Urgent TODOs: 
    - scaling law plots.
-   - search-based approach to logging .
-- Less urgent TODOs: 
-   - investigate the how large language models for NLP are structured to allow prediction of arbitrary future timesteps.
+   - search-based logging.
 - Think about canonical plots to always make:
    - hold all else constant except for a single parameter / config item.
    - color lines by values of the varied parameter / config item.
@@ -143,4 +140,3 @@ For Jupyter notebooks, use the `CamelCase` naming style.
       - is additional biological data needed?
    - perform scaling experiments:
       - varying the (train) dataset size.
-      - training on a single worm vs. multiple worms.

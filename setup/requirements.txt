@@ -1,0 +1,10 @@
+omegaconf
+pysindy
+pytest
+requests
+mat73
+ncps
+hydra-core
+hydra-joblib-launcher
+hydra-submitit-launcher
+hydra-optuna-sweeper

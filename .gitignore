@@ -10,18 +10,14 @@ __pycache__/
 # Temporary files
 *tempCodeRunnerFile.py
 nohup.out
+.processed
 
 # Large files
 opensource_data.zip
 opensource_data/
 raw_data.zip
 raw_data/
-analysis/prediction/
-analysis/figures/
 *.pickle
-*.processed
-./testing/ivy_scripts/exported_data/
-./testing/ivy_scripts/exported_data.tar.gz
 
 # PyCharm
 .idea/
@@ -79,6 +75,7 @@ coverage.xml
 *.py,cover
 .hypothesis/
 .pytest_cache/
+__pycache__/
 
 # Translations
 *.mo
@@ -159,40 +156,3 @@ dmypy.json
 
 # Zip files
 *.zip
-*.pickle
-./analysis/takens/input/weather_description.csv
-./analysis/jpyEDM/doc/jpyEDM_Introduction-2021-12-29.mp4
-./testing/ivy_scripts/exported_data.tar.gz
-
-./testing/ivy_scripts/exported_data/19_gcamp.txt
-./testing/ivy_scripts/exported_data/16_gcamp.txt
-./logs/hydra/2023_04_09_11_23_55/6/checkpoints/0_epochs_0_worms.pt
-./logs/hydra/2023_04_09_11_23_55/6/checkpoints/100_epochs_9700_worms.pt
-./logs/hydra/2023_04_09_11_23_55/6/checkpoints/199_epochs_19303_worms.pt
-./logs/hydra/199_epochs_19303_worms.pt
-./.git/objects/pack/pack-a610e6b603ff94ff0b926b5c2b2f7160ce5b4ffb.pack
-./.git/objects/f9/d8ad9bce7ad610400a8447bf2b877674b3dd12
-./.git/lfs/objects/29/6f/296fef5ad64ed8cf780c2ed3beb8353df895ab9493f7ca0b20ed0a868c1ec1dd
-./.git/lfs/objects/19/ae/19ae523cf0de291587a396eee857c7da16ffeb042106091474639bbd0c625fa2
-./.git/lfs/objects/db/e6/dbe694e330c28fc969504f9170406d5fc5400c6c2689bdde801fa6530be21428
-./.git/lfs/objects/41/75/4175b0cfd43f7edd84ddb587bc3cf768cf6c33004e4815924cd5321aec74efef
-./.git/lfs/objects/47/92/47925548a5c04423baebef2acd8525ab35c79d8a6f0bbb039840cddb8e31f545
-./.git/lfs/objects/8b/00/8b00b767fb3052b391216ff8064c34685dd5e81d99baeeba87b9968f727dc296
-./data/processed/neural/Flavell2023.pickle
-./data/processed/neural/sine_seq.pickle
-./data/processed/neural/sum_sine_noise.pickle
-./data/processed/neural/Nguyen2017.pickle
-./data/processed/neural/Nichols2017.pickle
-./data/processed/neural/Uzel2022.pickle
-./data/processed/neural/sum_sine.pickle
-./data/processed/neural/sine_seq_noise.pickle
-./data/processed/neural/Kaplan2020.pickle
-./data/processed/neural/Kato2015.pickle
-./data/processed/neural/Skora2018.pickle
-./data/processed/neural/sine_noise.pickle
-./data/processed/neural/Leifer2023.pickle
-./data/processed/neural/sine.pickle
-*.sh
-nohup.out
-data/worm_data_long.csv
-data/worm_data_long_no_resampling.csv

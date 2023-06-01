@@ -97,10 +97,11 @@ class PositionalEncoding(torch.nn.Module):
     def __init__(
         self,
         n_embd: int,
-        max_len: int = 5000,
+        max_len: int = MAX_TOKEN_LEN,
         dropout: float = 0.1,
     ):
         super().__init__()
+        self.max_len =  max_len
         self.dropout = torch.nn.Dropout(p=dropout)
         position = torch.arange(max_len).unsqueeze(1)
         div_term = torch.exp(torch.arange(0, n_embd, 2) * (-math.log(10000.0) / n_embd))
@@ -109,7 +110,7 @@ class PositionalEncoding(torch.nn.Module):
         pe[0, :, 1::2] = torch.cos(position * div_term)
         self.register_buffer("pe", pe)
 
-    def forward(self, x):  # x has shape (batch_size, block_size, n_embd)
+    def forward(self, x): 
         """
         Args:
             x: Tensor, shape (batch_size, seq_len, embedding_dim)
@@ -125,7 +126,7 @@ class PositionalEncoding(torch.nn.Module):
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
 class Model(torch.nn.Module):
     """Super class for all models.
-    
+
     For all our models:
         1. The output will be the same shape as the input.
         2. A method called `loss_fn` that specifies the specific
@@ -171,8 +172,8 @@ class Model(torch.nn.Module):
         # Name of original loss function
         self.loss_name = self.loss.__name__[:-4]
         # Setup
-        self.input_size = input_size # Number of neurons (302)
-        self.output_size = input_size # Number of neurons (302)
+        self.input_size = input_size  # Number of neurons (302)
+        self.output_size = input_size  # Number of neurons (302)
         self.hidden_size = hidden_size
         self.num_layers = num_layers
         self.reg_param = reg_param
@@ -183,25 +184,34 @@ class Model(torch.nn.Module):
 
     def loss_fn(self):
         """
-        The loss function to be used with the model.
+        The loss function to be used by all the models.
 
         This custom loss function combines a primary loss function with
-        an additional regularization term based on the Fast Fourier
-        Transform (FFT). The purpose of this regularization is to
-        encourage the frequency distribution of the model's output to
-        match that of the target data.
+        an additional regularization term based on the Fast Fourier Transform (FFT).
+        The primary loss function (specified by the `loss` parameter) computes the
+        error between the model's prediction of the next time step and the true next timestep.
+        The regularization part encourages the frequency distribution of the
+        model's seqeuence output to match that of the target sequence. We can think
+        of this as performing a frequency distribution matching (FDM) operation on the
+        model's output.
         If self.ref_param = 0.0, no regularization is applied.
         """
 
-        def loss(input, target, **kwargs):
+        def loss(prediction, target, **kwargs):
             """Calculate loss with FFT regularization."""
-            original_loss = self.loss(**kwargs)(input, target)
-            # calculate FFT and take real part
-            input_fft = torch.fft.rfft(input, dim=-2).real # (batch, seq_len, neurons)
-            target_fft = torch.fft.rfft(target, dim=-2).real # (batch, seq_len, neurons)
+            # calculate next time step prediction loss
+            original_loss = self.loss(**kwargs)(prediction, target)
+            # calculate FFT and take the real part
+            input_fft = torch.fft.rfft(
+                prediction, dim=-2
+            ).real  # (batch, seq_len, neurons)
+            target_fft = torch.fft.rfft(
+                target, dim=-2
+            ).real  # (batch, seq_len, neurons)
             # calculate average difference between real parts of FFTs
             fft_loss = torch.mean(torch.abs(input_fft - target_fft))
-            return (1 - self.reg_param) * original_loss + self.reg_param * fft_loss
+            regularized_loss = original_loss + self.reg_param * fft_loss
+            return regularized_loss
 
         return loss
 
@@ -210,6 +220,8 @@ class Model(torch.nn.Module):
         Arguments:
             input: a batch of neural activity data with shape (B, T, C).
             timesteps: the number of new timesteps to generate neural activity for.
+        Returns:
+            output: a batch of input + simulated neural activity with shape (B, T+timesteps, C).
         """
         # check dimensions of input
         if input.ndim == 2:
@@ -230,10 +242,11 @@ class Model(torch.nn.Module):
             # focus only on the last time step
             next_timestep = input_forward[:, -1, :]  # (B, C)
             # append predicted next timestep to the running sequence
+            # TODO: investigate generation if we DON'T do this
             output = torch.cat(
                 [output, next_timestep.unsqueeze(1)], dim=1
             )  # (B, T+1, C)
-        return output
+        return output  # (B, T+timesteps, C)
 
     def sample(self, length):
         """
@@ -274,7 +287,7 @@ class LinearNN(Model):
     loss : Callable or None, optional
         Loss function to use, default is L1
     reg_param : float, optional
-        FFT Regularization parameter, default is 1.0
+        FFT Regularization parameter, default is 0.0
         (full regularization)
     """
 
@@ -284,7 +297,7 @@ class LinearNN(Model):
         hidden_size: int,
         num_layers: int = 1,
         loss: Union[Callable, None] = None,
-        reg_param: float = 1.0,
+        reg_param: float = 0.0,
     ):
         super(LinearNN, self).__init__(
             input_size, hidden_size, num_layers, loss, reg_param
@@ -292,14 +305,14 @@ class LinearNN(Model):
         # Input and hidden layers
         self.input_hidden = (
             torch.nn.Linear(self.input_size, self.hidden_size),
-            # torch.nn.ReLU(),
-            torch.nn.ELU(),
+            torch.nn.ReLU(),
+            # torch.nn.ELU(),
             torch.nn.LayerNorm(self.hidden_size),
         )
         self.hidden_hidden = (self.num_layers - 1) * (
             torch.nn.Linear(self.hidden_size, self.hidden_size),
-            # torch.nn.ReLU(),
-            torch.nn.ELU(),
+            torch.nn.ReLU(),
+            # torch.nn.ELU(),
             torch.nn.LayerNorm(self.hidden_size),
         )
 
@@ -341,7 +354,7 @@ class NeuralTransformer(Model):
         hidden_size: int,
         num_layers: int = 1,
         loss: Union[Callable, None] = None,
-        reg_param: float = 1.0,
+        reg_param: float = 0.0,
     ):
         """
         TODO: Cite Andrej Kaparthy's tutorial on "How to code GPT from scratch".
@@ -356,7 +369,7 @@ class NeuralTransformer(Model):
             input_size, hidden_size, num_layers, loss, reg_param
         )
         self.n_head = 4  # number of attention heads
-        self.block_size = 5000  # maximum attention block (i.e. context) size
+        self.block_size = MAX_TOKEN_LEN  # maximum attention block (i.e. context) size
         self.dropout = 0.1  # dropout rate
         # Positional encoding
         self.position_encoding = PositionalEncoding(
@@ -416,7 +429,7 @@ class NeuralCFC(Model):
         hidden_size: int,
         num_layers: int = 1,  # unused
         loss: Union[Callable, None] = None,
-        reg_param: float = 1.0,
+        reg_param: float = 0.0,
     ):
         """
         The output size will be the same as the input size.
@@ -468,7 +481,7 @@ class NetworkLSTM(Model):
         hidden_size: int,
         num_layers: int = 1,
         loss: Union[Callable, None] = None,
-        reg_param: float = 1.0,
+        reg_param: float = 0.0,
     ):
         """
         The output size will be the same as the input size.

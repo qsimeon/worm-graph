@@ -1,0 +1,35 @@
+name: worm-graph
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.9
+  - numpy
+  - pandas
+  - matplotlib
+  - networkx
+  - scipy
+  - seaborn
+  - scikit-learn
+  - h5py
+  - notebook
+  - jupyterlab
+  - tqdm
+  - pip
+  - pytorch  # cpu version
+  - hydra-core
+  - omegaconf
+  - freetype
+  - black
+  - ipywidgets
+  - ipykernel
+  - pip:
+    - torch-geometric
+    - hydra-submitit-launcher
+    - hydra-joblib-launcher
+    - hydra-optuna-sweeper
+    - pysindy
+    - pytest
+    - requests
+    - mat73
+    - ncps

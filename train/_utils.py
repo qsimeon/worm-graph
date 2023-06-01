@@ -41,7 +41,7 @@ def train(
     -----
     * The mask variable serves the purpose of selecting specific indices
       of named neurons with data. It is used to filter the input data
-      X_train and target data Y_train during the training process. 
+      X_train and target data Y_train during the training process.
       This allows the model to focus on only those neurons with relevant
       data, ignoring others that may not have useful information.
     * The mask can be either a single tensor or a list of tensors. If a
@@ -51,7 +51,7 @@ def train(
       to the corresponding batch of data from the data loader during training.
     * Each data loader has samples from a single worm
     * The `no_grad` parameter is used to prevent backpropagation on the
-      first epoch. This is useful for training a model with a new loss    
+      first epoch. This is useful for training a model with a new loss
       function, where the first epoch is used to compute the baseline
       loss (i.e. the loss if the model predicted value at next timestep
       equal to current value). (?)
@@ -81,9 +81,9 @@ def train(
             metadata,
         ) = data  # X, Y: (batch_size, seq_len, num_neurons)
         X_train, Y_train = X_train.to(DEVICE), Y_train.to(DEVICE)
-        tau = metadata["tau"].detach()[0]  #? Penalize longer delays
+        tau = metadata["tau"].detach()[0]
 
-        optimizer.zero_grad() # Clear optimizer gradients.
+        optimizer.zero_grad()  # Clear optimizer gradients.
 
         # Baseline: loss if the model predicted value at next timestep
         # equal to current value.
@@ -93,13 +93,14 @@ def train(
 
         # Train
         Y_tr = model(X_train * mask, tau)  # Forward pass.
-        loss = criterion(Y_tr[:, :, mask], Y_train[:, :, mask]) # Compute training loss.
+        loss = criterion(
+            Y_tr[:, :, mask], Y_train[:, :, mask]
+        )  # Compute training loss.
         loss.backward()  # Derive gradients.
 
         # No backprop on epoch 0.
         if no_grad:
             optimizer.zero_grad()
-        
         optimizer.step()  # Update parameters based on gradients.
 
         # Store train and baseline loss.
@@ -154,7 +155,7 @@ def test(
     -----
     * The mask variable serves the purpose of selecting specific indices
       of named neurons with data. It is used to filter the input data
-      X_train and target data Y_train during the training process. 
+      X_train and target data Y_train during the training process.
       This allows the model to focus on only those neurons with relevant
       data, ignoring others that may not have useful information.
     * The mask can be either a single tensor or a list of tensors. If a
@@ -210,7 +211,7 @@ def test(
         "centered_test_loss": (test_loss - base_loss) / (i + 1),
         "num_test_samples": num_test_samples,
     }
-    
+
     # Return losses
     return losses
 
@@ -219,7 +220,7 @@ def split_train_test(
     data: torch.Tensor,
     k_splits: int = 2,
     seq_len: int = 100,
-    num_samples: int = 10,
+    num_samples: int = 10,  # TODO: make this optionally a tuple (num_train, num_test) samples
     time_vec: Union[torch.Tensor, None] = None,
     reverse: bool = True,
     tau: Union[int, list[int]] = 1,
@@ -231,7 +232,7 @@ def split_train_test(
     torch.Tensor,
 ]:
     """Splits data into train and test sets for a single worm.
-    
+
     This function creates train and test DataLoaders and corresponding
     masks for a given neural activity dataset from a single worm. The
     data is split into 'k_splits' chunks, and the train and test sets are
@@ -264,7 +265,7 @@ def split_train_test(
     -----
     NeuralActivityDataset : function in data/_utils.py
         A custom neural activity time-series prediction dataset.
-    
+
     Returns
     -------
     train_dataset : torch.utils.data.DataLoader
@@ -344,8 +345,8 @@ def split_train_test(
     train_size_per_split = (num_samples // max(1, len(train_splits))) + (
         num_samples % max(1, len(train_splits))
     )
-    test_size_per_split = (num_samples // max(1, len(train_splits))) + (
-        num_samples % max(1, len(train_splits))
+    test_size_per_split = (num_samples // max(1, len(test_splits))) + (
+        num_samples % max(1, len(test_splits))
     )
 
     # Train dataset
@@ -394,10 +395,13 @@ def optimize_model(
     use_residual: bool = False,
 ) -> tuple[torch.nn.Module, dict]:
     """Trains and validates the model for the specified number of epochs.
-    
+
     Returns the trained model and a dictionary with log information
-    including losses. 
-    
+    including losses.
+
+    NOTE: Must ensure that optimizer was initialized with model paramets after
+            moving to DEVICE.
+
     Parameters
     ----------
     model : torch.nn.Module
@@ -413,16 +417,16 @@ def optimize_model(
         torch.Tensor, it is a boolean mask for the neurons to be used in
         all batches.
     optimizer : torch.optim.Optimizer or None, optional
-        The optimizer to be used for training. If None, Adam is used.
+        The optimizer to be used for training. If None, SGD is used.
     start_epoch : int, optional
         The epoch to start training from. Default: 1.
-    learn_rate : float, optional    
+    learn_rate : float, optional
         The learning rate for the optimizer. Default: 0.01.
-    num_epochs : int, optional 
+    num_epochs : int, optional
         The number of epochs to train for. Default: 1.
     use_residual : bool, optional
         Whether to use residual calcium data. Default: False.
-    
+
     Calls
     -----
     train : function in train/_utils.py
@@ -450,7 +454,9 @@ def optimize_model(
         neurons_mask, (list, torch.Tensor)
     ), "Wrong input type for `neurons_mask`."
 
-    batch_in, _, _ = next(iter(train_loader)) # (input_batch, target_bach, metadata_batch)
+    batch_in, _, _ = next(
+        iter(train_loader)
+    )  # (input_batch, target_bach, metadata_batch)
     NUM_NEURONS = batch_in.size(-1)
 
     # Create the neurons (feature dimension) mask
@@ -466,12 +472,14 @@ def optimize_model(
             ), "Please use a valid boolean mask for neurons."
             neurons_mask[i] = neurons_mask[i].detach().to(DEVICE)
     else:
-        neurons_mask = torch.ones(NUM_NEURONS, dtype=torch.bool).detach().to(DEVICE)
+        neurons_mask = torch.ones(NUM_NEURONS, dtype=torch.bool).to(DEVICE)
 
-    model = model.to(DEVICE) # Put model on device
+    model = model.to(DEVICE)  # Put model on device
 
     if optimizer is None:
-        optimizer = torch.optim.SGD(model.parameters(), lr=learn_rate) # Create optimizer
+        optimizer = torch.optim.SGD(
+            model.parameters(), lr=learn_rate
+        )  # Create optimizer
 
     # Create log dictionary to return
     log = {
@@ -490,28 +498,47 @@ def optimize_model(
     iter_range = range(start_epoch, num_epochs + start_epoch)
     for i, epoch in enumerate(iter_range):
         # Train and validate the model
-        with ThreadPoolExecutor(max_workers=2) as executor:  # Parallel train and test
-            model.train()
-            train_future = executor.submit(
-                train,
-                train_loader,
-                model,
-                neurons_mask,
-                optimizer,
-                no_grad=(epoch == 0),
-                use_residual=use_residual,
-            )
-            train_log = train_future.result()
+        if i > 0:
+            # TODO: This could be introducing non-determinism
+            with ThreadPoolExecutor(max_workers=2) as executor:  # Parallel train and test
+                model.train()
+                train_future = executor.submit(
+                    train,
+                    train_loader,
+                    model,
+                    neurons_mask,
+                    optimizer,
+                    no_grad=(epoch == 0),
+                    use_residual=use_residual,
+                )
+                train_log = train_future.result()
 
+                model.eval()
+                test_future = executor.submit(
+                    test,
+                    test_loader,
+                    model,
+                    neurons_mask,
+                    use_residual=use_residual,
+                )
+                test_log = test_future.result()
+    
+        else:
+            model.train()
+            train_log = train(train_loader, 
+                              model, 
+                              neurons_mask,
+                              optimizer, 
+                              no_grad=(epoch == 0),
+                              use_residual=use_residual,
+                              )
+            
             model.eval()
-            test_future = executor.submit(
-                test,
-                test_loader,
-                model,
-                neurons_mask,
-                use_residual=use_residual,
-            )
-            test_log = test_future.result()
+            test_log = test(test_loader,
+                            model,
+                            neurons_mask,
+                            use_residual=use_residual,
+                            )
 
         # Retrieve losses
         centered_train_loss, base_train_loss, train_loss, num_train_samples = (

@@ -8,7 +8,7 @@ def pipeline(
     """Runs a complete pipeline to train a model and make predictions.
 
     Can be configured using the main.yaml file in the conf directory.
-    
+
     Parameters
     ----------
     config: DictConfig
@@ -31,8 +31,7 @@ def pipeline(
     plot_figures : function in visualization/_main.py
         Configuration file in conf/visualize.yaml
 
-    TODO: analyze_outputs : function in analysis/_main.py
-    TODO:    Configuration file in conf/analysis.yaml
+    TODO: Implement `analyze_outputs` : function in analysis/_main.py; config in conf/analysis.yaml
 
     Notes
     -----
@@ -65,7 +64,7 @@ def pipeline(
 
     # use trained model to make predictions on the dataset
     make_predictions(
-        config,  # `train_model` injected the appropriate `predict` params into config`
+        config,  # `train_model` injected the `predict` params into config`
         model=None,
         dataset=None,
         log_dir=log_dir,
@@ -78,6 +77,9 @@ def pipeline(
 
     ## TODO: analysis
     # analyze_outputs(config, log_dir)
+
+    # free up GPU
+    torch.cuda.empty_cache()
 
     return None
 
