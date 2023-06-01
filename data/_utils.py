@@ -47,7 +47,7 @@ class NeuralActivityDataset(torch.utils.data.Dataset):
             axis (axis=0) of the `data` tensor.
         reverse : bool, default=False
             Whether to sample sequences backward from end of the data.
-        tau : int, default=1, Deprecated (unused) argument.
+        tau : int, default=1
             The number of timesteps to the right by which the target
             sequence is offset from input sequence.
             0 < tau < max_timesteps//2
@@ -337,7 +337,7 @@ def load_dataset(name):
     -----
     load_{dataset} : function in data/_utils.py
         Where dataset = {Kato2015, Nichols2017, Nguyen2017, Skora2018,
-                         Kaplan2020, Uzel2022, Flavell2023, Leifer2023}
+                         Kaplan2020, Uzel2022, Flavell2023, Leifer2023} | {Synthetic0000}
 
     Returns
     -------
@@ -355,17 +355,17 @@ def load_dataset(name):
     return loader()
 
 
-def load_Synthetic000():
+def load_Synthetic0000():
     """
-    Loads the syntheic dataset Synthetic000.
+    Loads the syntheic dataset Synthetic0000.
     """
     # ensure the data has been created
-    file = os.path.join(ROOT_DIR, "data", "processed", "neural", "Synthetic000.pickle")
+    file = os.path.join(ROOT_DIR, "data", "processed", "neural", "Synthetic0000.pickle")
     assert os.path.exists(file)
     pickle_in = open(file, "rb")
     # unpickle the data
-    Synthetic000 = pickle.load(pickle_in)
-    return Synthetic000
+    Synthetic0000 = pickle.load(pickle_in)
+    return Synthetic0000
 
 
 def load_Kato2015():
