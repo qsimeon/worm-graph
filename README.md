@@ -37,7 +37,7 @@ To prepare your environment for this project, you can use either the provided `.
 Firstly, navigate to the `setup` directory. This directory contains all the necessary configuration files to set up the virtual environment. Use the following command to access the directory:
 
 ```
-cd worm-graph/setup
+cd setup
 ```
 
 **Note:** Installing the environment can take up to 2 hours!
@@ -55,7 +55,7 @@ cd worm-graph/setup
 1. Run the `env.sh` script. This will create the new `worm-graph` environment and install the required packages:
 
     ```
-    source env.sh
+    bash env.sh
     ```
 
 2. Activate the new `worm-graph` environment:
@@ -67,10 +67,10 @@ cd worm-graph/setup
 3. Install the remaining dependencies using pip:
 
     ```
-    pip install -r requirements.txt
+    pip install --upgrade -r requirements.txt
     ```
 
-After finishig one of the installations above, navigate back to the root directory (`worm-graph/`) and run:
+After finishing one of the installations above, navigate back to the root directory (`worm-graph/`) and run:
 
     conda develop .
 

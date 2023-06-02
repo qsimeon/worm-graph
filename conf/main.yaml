@@ -34,7 +34,7 @@ hydra:
       model.num_layers: 1 
       model.checkpoint_path: false
       # DATASET
-      dataset.name: [Kato2015, Nichols2017, Skora2018, Kaplan2020, Flavell2023] #[Nichols2017, Skora2018, Kaplan2020, Flavell2023, Leifer2023]
+      dataset.name: [Kato2015, Nichols2017, Skora2018, Kaplan2020, Flavell2023, Leifer2023]
         # Kato2015, Nichols2017, Skora2018, Kaplan2020, Flavell2023, Leifer2023
         # [Kato2015, Nichols2017], [Nichols2017, Skora2018], [Skora2018, Kaplan2020], [Kaplan2020, Flavell2023], [Flavell2023, Leifer2023]
         # [Kato2015, Nichols2017, Skora2018], [Nichols2017, Skora2018, Kaplan2020], [Skora2018, Kaplan2020, Flavell2023], [Kaplan2020, Flavell2023, Leifer2023]
@@ -42,8 +42,8 @@ hydra:
         # [Kato2015, Nichols2017, Skora2018, Kaplan2020, Flavell2023], [Nichols2017, Skora2018, Kaplan2020, Flavell2023, Leifer2023]
         # [Kato2015, Nichols2017, Skora2018, Kaplan2020, Flavell2023, Leifer2023]
       # TRAIN
-      train.optimizer: Adagrad #SGD, Adam, AdamW, Adagrad, Adadelta, RMSprop 
-      train.learn_rate: 0.01 #0.001, 0.01, 0.1
+      train.optimizer: SGD, Adam, AdamW, Adagrad, Adadelta, RMSprop 
+      train.learn_rate: 0.001, 0.01, 0.1
       train.epochs: 200
       train.save_freq: 200
       train.seq_len: 100 #100, 200
