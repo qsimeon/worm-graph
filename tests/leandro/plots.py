@@ -139,9 +139,17 @@ def plot_similarities(data):
 
 def plotHeatmap(matrix, title=None, cmap=None, xlabel=None, ylabel=None,
                 xticks=None, yticks=None, show_xticks=True, show_yticks=True,
-                center=None, vmin=None, vmax=None):
+                center=None, vmin=None, vmax=None, mask=None):
+    
+    # Generate the mask
+    if type(mask) is str:
+        if mask.upper() == 'UPPER_T':
+            mask = np.triu(np.ones_like(matrix))
+        elif mask.upper() == 'LOWER_T':
+            mask = np.tril(np.ones_like(matrix))
+    
     # Generate the heatmap
-    ax = sns.heatmap(matrix, cmap=cmap, center=center, vmin=vmin, vmax=vmax)
+    ax = sns.heatmap(matrix, mask=mask, cmap=cmap, center=center, vmin=vmin, vmax=vmax)
     
     # Set the title if provided
     if title is not None:
@@ -173,14 +181,25 @@ def plotHeatmap(matrix, title=None, cmap=None, xlabel=None, ylabel=None,
     plt.show()
 
 def dynamicHeatmap(matrices, interval=200, filename='animation.mp4',
-                       title=None, cmap=None, xlabel=None, ylabel=None, xticks=None, yticks=None,
+                       title=None, cmap=None,  mask=None, xlabel=None, ylabel=None, xticks=None, yticks=None,
                        show_xticks=True, show_yticks=True, center=None, vmin=None, vmax=None):
+    
+    
+    # Generate the mask
+    if type(mask) is str:
+        if mask.upper() == 'UPPER_T':
+            mask = np.triu(np.ones_like(matrices[0]))
+        elif mask.upper() == 'LOWER_T':
+            mask = np.tril(np.ones_like(matrices[0]))
+
+    # Create the figure and axes
     fig, ax = plt.subplots()
     
     def update(frame):
+
         # clear the current axes
         plt.clf()
-        ax = sns.heatmap(matrices[frame], cmap=cmap, center=center, vmin=vmin, vmax=vmax)
+        ax = sns.heatmap(matrices[frame], mask=mask, cmap=cmap, center=center, vmin=vmin, vmax=vmax)
         
         # Set the title if provided
         if title is not None:
@@ -214,4 +233,3 @@ def dynamicHeatmap(matrices, interval=200, filename='animation.mp4',
     
     ani.save(filename)
     #return HTML(ani.to_html5_video())
-
