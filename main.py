@@ -58,7 +58,7 @@ def pipeline(
         config,
         model,
         dataset,
-        shuffle=config.globals.shuffle,  # shuffle worms
+        shuffle_worms=config.globals.shuffle_worms,  # shuffle worms
         log_dir=None,  # hydra changes working directory to log directory
     )
 

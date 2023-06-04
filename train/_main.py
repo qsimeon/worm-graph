@@ -5,11 +5,11 @@ def train_model(
     config: DictConfig,
     model: torch.nn.Module,
     dataset: dict,
-    shuffle: bool = True,  # whether to shuffle all worms
+    shuffle_worms: bool = True,  # whether to shuffle all worms
     log_dir: Union[str, None] = None,  # hydra passes this in
 ) -> tuple[torch.nn.Module, str]:
     """Trains a neural network model on a multi-worm dataset.
-     
+
     he function and saves the training progress, loss curves, and model
     checkpoints during training. This function takes in a configuration
     dictionary, model, dataset, and optional parameters to control the
@@ -24,7 +24,7 @@ def train_model(
         The neural network model to be trained.
     dataset : dict
         A dictionary containing the multi-worm dataset.
-    shuffle : bool, optional
+    shuffle_worms : bool, optional
         Whether to shuffle all worms. Defaults to True.
     log_dir : str or None, optional
         Path to the directory where training and evaluation logs will be
@@ -63,13 +63,12 @@ def train_model(
     timestamp = datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
     num_unique_worms = len(dataset)
     train_epochs = config.train.epochs + 1
-    shuffle_worms = shuffle
-    shuffle_sequences = config.train.shuffle
+    shuffle_samples = config.train.shuffle_samples
     batch_size = config.train.num_samples // config.train.num_batches
 
     # Hydra changes the current directory to log directory
     if log_dir is None:
-        log_dir = os.getcwd() # logs/hydra/${now:%Y_%m_%d_%H_%M_%S}
+        log_dir = os.getcwd()  # logs/hydra/${now:%Y_%m_%d_%H_%M_%S}
     os.makedirs(log_dir, exist_ok=True)
 
     # Create a model checkpoints folder
@@ -95,7 +94,7 @@ def train_model(
 
     # Move model to device
     model = model.to(DEVICE)
-    
+
     # Instantiate the optimizer
     opt_param = config.train.optimizer
     optim_name = "torch.optim." + opt_param
@@ -121,7 +120,7 @@ def train_model(
     else:
         use_residual = False
         smooth_data = False
-    
+
     # Initialize train/test loss metrics arrays
     data = {
         "epochs": np.zeros(train_epochs, dtype=int),
@@ -144,7 +143,7 @@ def train_model(
         tau=config.train.tau_in,
         use_residual=use_residual,
     )
-    
+
     # Choose whether to use calcium or residual data
     if use_residual:
         key_data = "residual_calcium"
@@ -236,18 +235,18 @@ def train_model(
         train_loader = DataLoader(
             train_dataset,
             batch_size=batch_size,
-            shuffle=shuffle_sequences,  # shuffle sampled sequences
+            shuffle=shuffle_samples,  # shuffle sampled sequences
             pin_memory=True,
             num_workers=0,
-        ) # (X, Y, Dict)
+        )  # (X, Y, Dict)
 
         test_loader = DataLoader(
             test_dataset,
             batch_size=batch_size,
-            shuffle=shuffle_sequences,  # shuffle sampled sequences
+            shuffle=shuffle_samples,  # shuffle sampled sequences
             pin_memory=True,
             num_workers=0,
-        ) # (X, Y, Dict)
+        )  # (X, Y, Dict)
 
         # Optimize for 1 epoch per cohort
         num_epochs = 1  # 1 cohort = 1 epoch
@@ -276,7 +275,7 @@ def train_model(
         seconds = end_time - start_time
         cumsum_seconds += seconds
         seconds_per_epoch = (n - 1) / n * seconds_per_epoch + 1 / n * seconds
-        
+
         # Retrieve losses and sample counts
         for key in data:  # pre-allocated memory for `data[key]`
             # with `num_epochs=1`, this is just data[key][i] = log[key]
@@ -361,7 +360,9 @@ def train_model(
     config.visualize.log_dir = log_dir.split("worm-graph/")[-1]
 
     # Add some global variables
-    config.setdefault("globals", {"use_residual": False, "shuffle": False})
+    config.setdefault(
+        "globals", {"use_residual": use_residual, "shuffle_worms": shuffle_worms}
+    )
     config.globals.timestamp = timestamp
     config.globals.num_unique_worms = num_unique_worms
     config.globals.num_covered_neurons = num_covered_neurons
@@ -389,6 +390,6 @@ if __name__ == "__main__":
         model,
         dataset,
         config,
-        shuffle=config.train.shuffle,
+        shuffle_worms=True,
         log_dir=os.path.join("logs", "{}".format(timestamp)),
     )
