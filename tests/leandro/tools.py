@@ -1,7 +1,16 @@
 import seaborn as sns
 import numpy as np
 import matplotlib.pyplot as plt
+from data._main import *
+from omegaconf import OmegaConf
+import statsmodels as sm
 
+def get_real_data():
+    # Real data
+    config = OmegaConf.load("/home/lrvnc/projects/worm-graph/conf/dataset.yaml")
+    print("\nconfig:\n\t", OmegaConf.to_yaml(config), end="\n\n")
+    return get_dataset(config)
+    
 def correlation_matrix(data):
     correlation_matrix = np.corrcoef(data, rowvar=False)
     return correlation_matrix
