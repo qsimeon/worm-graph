@@ -27,25 +27,21 @@ def get_config_value(config, key):
 
 
 def plot_loss_vs_parameter(
-    config_dir,
-    vary_param,
-    contrast_param,
-    repeats_param,
-    ax=None,
+    config_dir, varied_param, control_param, subplot_param, ax=None
 ):
     """
-    Plots the minimum validation loss against a varied parameter (vary_param)
-    at different levels of another control parameter (contrast_param) using Seaborn.
-    The repeats_param parameter is used for the individual representations.
+    Plots the minimum validation loss against a varied parameter for different levels of a control parameter.
+    Creates a separate subplot for each unique value of a third subplot parameter.
 
     Args:
-        config_dir: The directory containing the config files.
-        vary_param: The independent variable.
-        contrast_param: The control variable.
-        repeats_param: The parameter to use for repetitions.
+        config_dir (str): Directory containing the config files.
+        varied_param (str): Parameter that is varied across the experiments.
+        control_param (str): Parameter that controls the color of the plot lines.
+        subplot_param (str): Parameter that determines the creation of separate subplots.
+        ax (matplotlib.axes.Axes, optional): Axes object to draw the plot onto, defaults to None.
 
     Returns:
-        df: A Pandas data frame containing the data used to create the plot.
+        df (pandas.DataFrame): DataFrame containing the data used to create the plot.
     """
     # Find the config files and their corresponding loss values
     configs = {}  # dict maps config file path to (loss, config)
@@ -63,76 +59,98 @@ def plot_loss_vs_parameter(
                 configs[os.path.dirname(file_path)] = (loss, OmegaConf.create(data))
 
     # Split the parameters into their components
-    vary_param = vary_param.split(".")
-    contrast_param = contrast_param.split(".")
-    repeats_param = repeats_param.split(".")
+    varied_param = varied_param.split(".")
+    control_param = control_param.split(".")
+    subplot_param = subplot_param.split(".")
 
     # Create a data frame with the relevant data
     records = []
     for cfg_path, loss_cfg_tuple in configs.items():
-        lvl = loss_cfg_tuple[1][contrast_param[0]][contrast_param[1]]
-        val = loss_cfg_tuple[1][vary_param[0]][vary_param[1]]
-        rep = loss_cfg_tuple[1][repeats_param[0]][repeats_param[1]]
+        val = loss_cfg_tuple[1][varied_param[0]][varied_param[1]]
+        lvl = loss_cfg_tuple[1][control_param[0]][control_param[1]]
+        sub = loss_cfg_tuple[1][subplot_param[0]][subplot_param[1]]
         loss = loss_cfg_tuple[0]
-        records.append((lvl, val, rep, loss))
+        records.append((val, lvl, sub, loss))
 
     df = pd.DataFrame(
         records,
         columns=[
-            ".".join(contrast_param),
-            ".".join(vary_param),
-            ".".join(repeats_param),
+            ".".join(varied_param),
+            ".".join(control_param),
+            ".".join(subplot_param),
             "loss",
         ],
     )
 
-    # TODO: Why was this here?
-    # df[".".join(contrast_param)] = "None"
+    # Sort the DataFrame by the varied parameter
+    df = df.sort_values(".".join(varied_param))
 
-    # Create the Seaborn plot
-    ax_ = ax
-    sns.set(style="white", font_scale=1.2)
-    if ax is None:
-        fig, ax = plt.subplots(figsize=(10, 6))
-    sns.lineplot(
-        data=df,
-        x=".".join(vary_param),
-        y="loss",
-        hue=".".join(contrast_param),
-        units=".".join(repeats_param),
-        estimator=None,
-        errorbar="se",
+    # Create a new DataFrame to hold the smoothed data
+    smoothed_df = pd.DataFrame()
+
+    # Loop over each unique value of the control parameter
+    for lvl in df[".".join(control_param)].unique():
+        # And each unique value of the subplot parameter
+        for sub in df[".".join(subplot_param)].unique():
+            # Filter the DataFrame for this subset of the data
+            subset_df = df[
+                (df[".".join(control_param)] == lvl)
+                & (df[".".join(subplot_param)] == sub)
+            ]
+
+            # Apply the LOWESS function to the data
+            smooth = lowess(subset_df["loss"], subset_df[".".join(varied_param)])
+
+            # Add the smoothed data to the new DataFrame
+            smoothed_subset_df = pd.DataFrame(
+                smooth, columns=[".".join(varied_param), "loss"]
+            )
+            smoothed_subset_df[".".join(control_param)] = lvl
+            smoothed_subset_df[".".join(subplot_param)] = sub
+            smoothed_df = pd.concat([smoothed_df, smoothed_subset_df])
+
+    df = smoothed_df
+
+    # Create a grid of subplots, with one row for each unique value of 'subplot_param'
+    # The grid will share the y-axis across all subplots
+    g = sns.FacetGrid(df, row=".".join(subplot_param), height=3, aspect=4, sharey=True)
+
+    # For each subplot, plot a lineplot of 'loss' against 'varied_param',
+    # with different colors for each unique value of 'control_param'
+    # 'errorbar="sd"' and 'err_style="band"' to display standard deviation as shaded areas around the mean
+    g.map(
+        sns.lineplot,
+        ".".join(varied_param),
+        "loss",
+        ".".join(control_param),
         err_style="band",
-        marker="o",
-        ax=ax,
-        # TODO: Why was this False before?
-        legend=True, 
+        errorbar="sd",
     )
 
-    # Customize plot labels and title
-    ax.set_xlabel("%s %s" % (vary_param[0], vary_param[1]))
-    ax.set_ylabel("Validation Loss")
-    ax.set_title(
+    # Customize the axis labels and title for each subplot
+    g.set_axis_labels("%s %s" % (varied_param[0], varied_param[1]), "Validation Loss")
+    g.fig.subplots_adjust(top=0.9)  # Adjust the Figure in `g`
+    g.fig.suptitle(
         "Scaling plot: loss vs {} {} \n Validation loss after training on different {} {}".format(
-            *vary_param, *contrast_param
+            *varied_param, *control_param
         )
     )
 
-    # Set the y-axis limits
-    plt.ylim([-0.1, None])
+    # Add a legend to the figure
+    g.add_legend()
+
+    # Set the y-axis limits for all subplots
+    g.set(ylim=(-0.1, None))
 
     # Set x-axis scale to log if the varied parameter is train_size or hidden_size
-    if vary_param[1] in {"worm_timesteps", "hidden_size"}:
-        ax.set_xscale("log")
+    if varied_param[1] in {"worm_timesteps", "hidden_size"}:
+        g.set(xscale="log")
 
-    # Save the plot as an image
-    if ax_ is None:
+    # Save the figure as an image if 'ax' is not provided
+    if ax is None:
         if not os.path.exists("figures"):
             os.mkdir("figures")
-        plt.savefig("figures/scaling_plot_val_loss_vs_{}_{}.png".format(*vary_param))
+        g.savefig("figures/scaling_plot_val_loss_vs_{}_{}.png".format(*varied_param))
 
-    # Return the data frame
+    # Return the DataFrame
     return df
-
-
-# TODO: write a function that categorizes neurons into sensory, inter, and motor
