@@ -282,8 +282,8 @@ def kalman_smooth(x, t, alpha=1):
     dim = x.ndim
     if dim == 1:
         x = x.reshape(-1, 1)
-    t = t.squeeze()
     # Kalman filter derivative
+    # t = t.squeeze()
     # dt = np.diff(t, prepend=t[0] - np.diff(t)[0])
     # dxdt_kalman = dxdt(x, t, kind="kalman", alpha=alpha, axis=0)
     # x_smooth = np.cumsum(dxdt_kalman) * dt
@@ -317,8 +317,8 @@ def kernel_smooth(x, t, sigma=1, lmbd=0.1, kernel="rbf"):
     dim = x.ndim
     if dim == 1:
         x = x.reshape(-1, 1)
-    t = t.squeeze()
     # Kernel derivative
+    # t = t.squeeze()
     # dt = np.diff(t, prepend=t[0] - np.diff(t)[0])
     # dxdt_kernel = dxdt(
     #     x, t, kind="kernel", sigma=sigma, lmbd=lmbd, kernel=kernel, axis=0
@@ -753,7 +753,7 @@ class BasePreprocessor:
         dataset_name,
         transform=StandardScaler(),
         smooth_method="FFT",
-        resample_dt=0.5,
+        resample_dt=0.1,
     ):
         self.dataset = dataset_name
         self.transform = transform
@@ -1377,8 +1377,6 @@ class Leifer2023Preprocessor(BasePreprocessor):
         worm_idx = 0  # Initialize worm index outside file loop
 
         for i in range(0, num_worms):
-            if i == 27:  # worm27 doesn't have neuron labels
-                continue
             worm = f"worm{str(worm_idx)}"
             worm_idx += 1
             data_file = os.path.join(data_dir, f"{str(i)}_gcamp.txt")
@@ -1388,6 +1386,7 @@ class Leifer2023Preprocessor(BasePreprocessor):
                 data_file, labels_file, time_file
             )
             if len(time_in_seconds) < 1000:  # skip worms with very short recordings
+                worm_idx -= 1
                 continue
             neuron_to_idx, num_named_neurons = self.create_neuron_idx(label_list)
             calcium_data = self.normalize_data(real_data)
