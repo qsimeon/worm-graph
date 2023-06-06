@@ -9,9 +9,6 @@ import warnings
 # Ignore sklearn's RuntimeWarnings
 warnings.filterwarnings(action="ignore", category=RuntimeWarning)
 
-# Ignore all warnings
-# warnings.filterwarnings("ignore")
-
 # set the start method for multiprocessing
 torch.multiprocessing.set_start_method("spawn", force=True)
 
@@ -25,7 +22,7 @@ USER = "lrvenan"  # OpenMind username
 
 NUM_NEURONS = 302  # number of neurons in the model organism
 
-MAX_TOKEN_LEN = 7000 # maximum attention block size for transformer models
+MAX_TOKEN_LEN = 7000  # maximum attention block size for transformer models
 
 RAW_DATA_URL = "https://www.dropbox.com/s/45yqpvtsncx4095/raw_data.zip?dl=1"
 

@@ -251,15 +251,19 @@ def plot_before_after_weights(log_dir: str) -> None:
     chkpts = sorted(os.listdir(chkpt_dir), key=lambda x: int(x.split("_")[0]))
     first_chkpt = torch.load(os.path.join(chkpt_dir, chkpts[0]))
     last_chkpt = torch.load(os.path.join(chkpt_dir, chkpts[-1]))
-    input_size, hidden_size, num_layers = first_chkpt["input_size"], first_chkpt["hidden_size"], first_chkpt["num_layers"]
+    input_size, hidden_size, num_layers = (
+        first_chkpt["input_size"],
+        first_chkpt["hidden_size"],
+        first_chkpt["num_layers"],
+    )
     loss_name, reg_param = first_chkpt["loss_name"], first_chkpt["reg_param"]
     model = eval(model_name)(
-            input_size,
-            hidden_size,
-            num_layers,
-            loss=loss_name,
-            reg_param=reg_param,
-        )
+        input_size,
+        hidden_size,
+        num_layers,
+        loss=loss_name,
+        reg_param=reg_param,
+    )
     model_state_dict = first_chkpt["model_state_dict"]
     model.load_state_dict(model_state_dict)
     # plot the readout weights
@@ -520,7 +524,7 @@ def plot_correlation_scatterplot(
     return None
 
 
-def plot_worm_data(worm_data, num_neurons=5):
+def plot_worm_data(worm_data, num_neurons=5, smooth=False):
     """
     Plot a few calcium traces from a given worm's data.
 
@@ -530,14 +534,22 @@ def plot_worm_data(worm_data, num_neurons=5):
 
     worm = worm_data["worm"]
     dataset = worm_data["dataset"]
-    calcium_data = worm_data["calcium_data"]
+    if smooth:
+        calcium_data = worm_data["smooth_calcium_data"]
+    else:
+        calcium_data = worm_data["calcium_data"]
     time_in_seconds = worm_data["time_in_seconds"]
     slot_to_named_neuron = worm_data["slot_to_named_neuron"]
+    neuron_indices = set(
+        np.random.choice(list(slot_to_named_neuron.keys()), num_neurons, replace=True)
+    )
 
-    for neuron_idx in range(num_neurons):
-        neuron_name = slot_to_named_neuron.get(neuron_idx, "no data")
-        if neuron_name != "no data":
+    for neuron_idx in neuron_indices:
+        neuron_name = slot_to_named_neuron.get(neuron_idx, None)
+        if neuron_name is not None:
             plt.plot(time_in_seconds, calcium_data[:, neuron_idx], label=neuron_name)
+        else:
+            ValueError("No neurons with data were selected.")
 
     plt.xlabel("Time (seconds)")
     plt.ylabel("Calcium Signal")

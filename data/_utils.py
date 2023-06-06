@@ -305,7 +305,7 @@ def pick_worm(dataset, wormid):
         worm = "worm" + wormid
     else:
         # Exeption if the worm number is not valid
-        assert isinstance(worm, int) and worm <= len(
+        assert isinstance(wormid, int) and wormid <= len(
             avail_worms
         ), "Choose a worm from: {}".format(avail_worms)
         worm = "worm" + str(wormid)

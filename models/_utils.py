@@ -101,7 +101,7 @@ class PositionalEncoding(torch.nn.Module):
         dropout: float = 0.1,
     ):
         super().__init__()
-        self.max_len =  max_len
+        self.max_len = max_len
         self.dropout = torch.nn.Dropout(p=dropout)
         position = torch.arange(max_len).unsqueeze(1)
         div_term = torch.exp(torch.arange(0, n_embd, 2) * (-math.log(10000.0) / n_embd))
@@ -110,7 +110,7 @@ class PositionalEncoding(torch.nn.Module):
         pe[0, :, 1::2] = torch.cos(position * div_term)
         self.register_buffer("pe", pe)
 
-    def forward(self, x): 
+    def forward(self, x):
         """
         Args:
             x: Tensor, shape (batch_size, seq_len, embedding_dim)
@@ -215,11 +215,17 @@ class Model(torch.nn.Module):
 
         return loss
 
-    def generate(self, input: torch.Tensor, timesteps: int = 1):
+    def generate(
+        self,
+        input: torch.Tensor,
+        timesteps: int = 1,
+        mask: Union[torch.Tensor, None] = None,
+    ):
         """Generate future timesteps of neural activity.
         Arguments:
             input: a batch of neural activity data with shape (B, T, C).
             timesteps: the number of new timesteps to generate neural activity for.
+            mask: a mask to apply to the neural activity data at every timestep
         Returns:
             output: a batch of input + simulated neural activity with shape (B, T+timesteps, C).
         """
@@ -227,22 +233,23 @@ class Model(torch.nn.Module):
         if input.ndim == 2:
             input = input.unsqueeze(0)
         assert input.ndim == 3, "Input must have shape (B, T, C)."
+        # create mask if none is provided
+        if mask is None:
+            mask = torch.ones(input.shape[-1], dtype=torch.bool)
         # use the full sequence as the context
-        # TODO: investigate making this the same as the `seq_len` used for training
-        context_len = input.size(1)
+        context_len = min(MAX_TOKEN_LEN, input.size(1))
         # copy the input to avoid modifying it
         output = input.detach().clone()
         # generate future timesteps
         for _ in range(timesteps):
             # condition on the previous context_len timesteps
-            input_cond = output[:, -context_len:, :]  # (B, T, C)
+            input_cond = output[:, -context_len:, :] * mask  # (B, T, C)
             # get the prediction of next timestep
             with torch.no_grad():
                 input_forward = self.forward(input_cond, tau=1)
             # focus only on the last time step
             next_timestep = input_forward[:, -1, :]  # (B, C)
             # append predicted next timestep to the running sequence
-            # TODO: investigate generation if we DON'T do this
             output = torch.cat(
                 [output, next_timestep.unsqueeze(1)], dim=1
             )  # (B, T+1, C)
