@@ -11,24 +11,7 @@ def find_config_files(root_dir):
                 yield config_file
 
 
-# TODO: rewrite function below for arbitrary nested configs
-def get_config_value(config, key):
-    if "." in key:
-        key_parts = key.split(".")
-        subconfig = config
-        for part in key_parts:
-            if part in subconfig:
-                subconfig = subconfig[part]
-            else:
-                return None
-        return subconfig
-    else:
-        return config.get(key)
-
-
-def plot_loss_vs_parameter(
-    config_dir, varied_param, control_param, subplot_param, ax=None
-):
+def plot_loss_vs_parameter(config_dir, varied_param, control_param, subplot_param):
     """
     Plots the minimum validation loss against a varied parameter for different levels of a control parameter.
     Creates a separate subplot for each unique value of a third subplot parameter.
@@ -38,7 +21,6 @@ def plot_loss_vs_parameter(
         varied_param (str): Parameter that is varied across the experiments.
         control_param (str): Parameter that controls the color of the plot lines.
         subplot_param (str): Parameter that determines the creation of separate subplots.
-        ax (matplotlib.axes.Axes, optional): Axes object to draw the plot onto, defaults to None.
 
     Returns:
         df (pandas.DataFrame): DataFrame containing the data used to create the plot.
@@ -85,32 +67,6 @@ def plot_loss_vs_parameter(
     # Sort the DataFrame by the varied parameter
     df = df.sort_values(".".join(varied_param))
 
-    # Create a new DataFrame to hold the smoothed data
-    smoothed_df = pd.DataFrame()
-
-    # Loop over each unique value of the control parameter
-    for lvl in df[".".join(control_param)].unique():
-        # And each unique value of the subplot parameter
-        for sub in df[".".join(subplot_param)].unique():
-            # Filter the DataFrame for this subset of the data
-            subset_df = df[
-                (df[".".join(control_param)] == lvl)
-                & (df[".".join(subplot_param)] == sub)
-            ]
-
-            # Apply the LOWESS function to the data
-            smooth = lowess(subset_df["loss"], subset_df[".".join(varied_param)])
-
-            # Add the smoothed data to the new DataFrame
-            smoothed_subset_df = pd.DataFrame(
-                smooth, columns=[".".join(varied_param), "loss"]
-            )
-            smoothed_subset_df[".".join(control_param)] = lvl
-            smoothed_subset_df[".".join(subplot_param)] = sub
-            smoothed_df = pd.concat([smoothed_df, smoothed_subset_df])
-
-    df = smoothed_df
-
     # Create a grid of subplots, with one row for each unique value of 'subplot_param'
     # The grid will share the y-axis across all subplots
     g = sns.FacetGrid(df, row=".".join(subplot_param), height=3, aspect=4, sharey=True)
@@ -137,7 +93,7 @@ def plot_loss_vs_parameter(
     )
 
     # Add a legend to the figure
-    g.add_legend()
+    g.add_legend(title="{} {}".format(*control_param))
 
     # Set the y-axis limits for all subplots
     g.set(ylim=(-0.1, None))
@@ -146,11 +102,10 @@ def plot_loss_vs_parameter(
     if varied_param[1] in {"worm_timesteps", "hidden_size"}:
         g.set(xscale="log")
 
-    # Save the figure as an image if 'ax' is not provided
-    if ax is None:
-        if not os.path.exists("figures"):
-            os.mkdir("figures")
-        g.savefig("figures/scaling_plot_val_loss_vs_{}_{}.png".format(*varied_param))
+    # Save the figure as an image
+    if not os.path.exists("figures"):
+        os.mkdir("figures")
+    g.savefig("figures/scaling_plot_val_loss_vs_{}_{}.png".format(*varied_param))
 
     # Return the DataFrame
     return df
