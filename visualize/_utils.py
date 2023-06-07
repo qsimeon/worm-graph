@@ -362,6 +362,7 @@ def plot_targets_predictions(
             x=targets_df.time_in_seconds,
             y=targets_df[_neuron_],
             label="target",
+            alpha=0.7,
         )
         sns.lineplot(
             data=predictions_df,

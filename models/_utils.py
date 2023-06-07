@@ -344,12 +344,14 @@ class LinearNN(Model):
             output = self.identity(input)
         else:
             # ... use the full sequence
-            readout = self.model(input)
+            # readout = self.model(input)
+            readout = input + self.model(input)  # w/ skip connection
             output = readout
         # repeat for target with tau>0 offset
         for i in range(1, tau):
             # ... use the full sequence
-            readout = self.model(output)
+            # readout = self.model(output)
+            readout = output + self.model(output)  # w/ skip connection
             output = readout
         return output
 
@@ -416,12 +418,14 @@ class NeuralTransformer(Model):
             output = self.identity(input)
         else:  # do one-step prediction
             # ... use the full sequence
-            readout = self.model(input)
+            # readout = self.model(input)
+            readout = input + self.model(input)  # w/ skip connection
             output = readout
         # do the remaining tau-1 steps of prediction
         for i in range(1, tau):
             # ... use the full sequence
-            readout = self.model(output)
+            # readout = self.model(output)
+            readout = output + self.model(output)  # w/ skip connection
             output = readout
         return output
 
@@ -463,13 +467,15 @@ class NeuralCFC(Model):
         else:  # do one-step prediction
             rnn_out, self.hidden = self.rnn(input)
             # ... use the full sequence
-            readout = self.linear(rnn_out)
+            # readout = self.linear(rnn_out)
+            readout = rnn_out + self.linear(rnn_out)  # w/ skip connection
             output = readout
         # do the remaining tau-1 steps of prediction
         for i in range(1, tau):
             rnn_out, self.hidden = self.rnn(output, self.hidden)
             # ... use the full sequence
-            readout = self.linear(rnn_out)
+            # readout = self.linear(rnn_out)
+            readout = rnn_out + self.linear(rnn_out)  # w/ skip connection
             output = readout
         return output
 
@@ -525,13 +531,15 @@ class NetworkLSTM(Model):
         else:  # do one-step prediction
             lstm_out, self.hidden = self.lstm(input)
             # ... use the full sequence
-            readout = self.linear(lstm_out)
+            # readout = self.linear(lstm_out)
+            readout = lstm_out + self.linear(lstm_out)  # w/ skip connection
             output = readout
         # do the remaining tau-1 steps of prediction
         for i in range(1, tau):
             lstm_out, self.hidden = self.lstm(output, self.hidden)
             # ... use the full sequence
-            readout = self.linear(lstm_out)
+            # readout = self.linear(lstm_out)
+            readout = lstm_out + self.linear(lstm_out)  # w/ skip connection
             output = readout
         return output
 

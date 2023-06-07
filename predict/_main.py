@@ -115,16 +115,16 @@ def make_predictions(
         calcium_data = calcium_data.to(DEVICE)
 
         # Make predictions with final model
-        inputs, predictions, targets = model_predict(
+        predictions, targets = model_predict(
             model,
-            inputs=calcium_data,
+            data=calcium_data,
             tau=future_timesteps,
             mask=named_neurons_mask,
         )
 
-        # Save Inputs DataFrame
+        # Save Calcium DataFrame
         tau_expand = np.full(time_in_seconds.shape, future_timesteps)
-        data = inputs[:, named_neurons_mask].numpy()
+        data = calcium_data[:, named_neurons_mask].numpy()
         data = np.hstack((data, train_labels, time_in_seconds, tau_expand))
         pd.DataFrame(data=data, columns=columns).to_csv(
             os.path.join(log_dir, worm, signal_str + "_activity.csv"),

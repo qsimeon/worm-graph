@@ -1,5 +1,5 @@
 predict:
-  tau_out: 200 # number of future time steps to predict
+  tau_out: 3000 # number of future time steps to predict
   # constraint: tau_out: int > 0
   model: # a pretrained model to make predictions with
     checkpoint_path: models/example_saved_model.pt # path to a trained model checkpoint to load
