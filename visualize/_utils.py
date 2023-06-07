@@ -371,7 +371,7 @@ def plot_targets_predictions(
             y=predictions_df[_neuron_],
             label="predict",
             alpha=0.9,
-            linwidth=1,
+            linewidth=1,
         )
         ylo, yhi = plt.gca().get_ylim()
         plt.gca().fill_between(
