@@ -12,8 +12,8 @@ defaults:
 globals:
   random_seed: 0 
   use_residual: false # whether to make train models on the residual signal
-  smooth_data: true # whether to use smoothed signal data
-  shuffle_worms: true # whether to shuffle worms
+  smooth_data: false # whether to use smoothed signal data
+  shuffle_worms: false # whether to shuffle worms
 
 hydra:
   mode: RUN # options: RUN, MULTIRUN
