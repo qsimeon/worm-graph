@@ -362,14 +362,16 @@ def plot_targets_predictions(
             x=targets_df.time_in_seconds,
             y=targets_df[_neuron_],
             label="target",
-            alpha=0.7,
+            alpha=0.5,
+            linewidth=2.5,
         )
         sns.lineplot(
             data=predictions_df,
             x=targets_df.time_in_seconds,
             y=predictions_df[_neuron_],
             label="predict",
-            alpha=0.5,
+            alpha=0.9,
+            linwidth=1,
         )
         ylo, yhi = plt.gca().get_ylim()
         plt.gca().fill_between(
