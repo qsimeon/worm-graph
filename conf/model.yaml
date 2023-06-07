@@ -5,5 +5,5 @@ model:
   num_layers: 1 # options: int >= 1; keep this fixed
   # constraint: 1 <= int <= 5; keep fixed at num_layers: int = 1
   loss: L1 # options: MSE, Huber, L1
-  reg_param: 1.0 # how much to regularize the loss by frequency distribution matching; options: 0.0 <= float <= 1.0
+  reg_param: 0.0 # how much to regularize the loss by frequency distribution matching; options: 0.0 <= float <= 1.0
   checkpoint_path: false # options: false, path/to/pretrained/model

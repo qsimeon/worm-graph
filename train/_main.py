@@ -10,7 +10,7 @@ def train_model(
 ) -> tuple[torch.nn.Module, str]:
     """Trains a neural network model on a multi-worm dataset.
 
-    he function and saves the training progress, loss curves, and model
+    The function saves the training progress, loss curves, and model
     checkpoints during training. This function takes in a configuration
     dictionary, model, dataset, and optional parameters to control the
     training process. It returns the trained model and the path to the

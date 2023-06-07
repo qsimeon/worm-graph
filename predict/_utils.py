@@ -4,7 +4,7 @@ from predict._pkg import *
 def model_predict(
     model: torch.nn.Module,
     data: torch.Tensor,
-    tau: int = 100,
+    tau: int = 1000,
     mask: Union[torch.Tensor, None] = None,
 ) -> tuple[torch.Tensor, torch.Tensor]:
     """Make predictions for all neurons on a dataset with a trained model.

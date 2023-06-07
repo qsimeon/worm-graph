@@ -5,7 +5,7 @@ defaults:
   - train
   - predict
   - visualize
-  - slurm_default
+  - slurm
   - _self_
 # if you want your primary config to override the values of configs
 # from the defaults List, append _self_ to the end of the defaults List
@@ -16,7 +16,7 @@ globals:
   shuffle_worms: true # whether to shuffle worms
 
 hydra:
-  mode: MULTIRUN # options: RUN, MULTIRUN
+  mode: RUN # options: RUN, MULTIRUN
   job:
     chdir: true # important! this changes the working directory to the log directory
   run:
