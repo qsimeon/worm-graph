@@ -58,7 +58,8 @@ if __name__ == "__main__":
     pickle_neural_data(
             url=config.preprocess.url,
             zipfile=config.preprocess.zipfile,
+            transform=None,
             dataset=config.preprocess.dataset,
-            smooth_method=config.preprocess.smooth,
-            resample_dt=config.preprocess.resample_dt,
+            smooth_method=None,
+            resample_dt=None,
             )
