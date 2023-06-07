@@ -1509,36 +1509,29 @@ class Flavell2023Preprocessor(BasePreprocessor):
             )
             time_in_seconds = np.array(time_in_seconds, dtype=np.float32)
 
-            if self.transform is not None:
-                calcium_data = self.normalize_data(trace_data)
-            else:
-                calcium_data = trace_data
+            calcium_data = self.normalize_data(trace_data)
 
             dt = np.gradient(time_in_seconds, axis=0)
             dt[dt == 0] = np.finfo(float).eps
             residual_calcium = np.gradient(calcium_data, axis=0) / dt
             original_time_in_seconds = time_in_seconds.copy()
 
-            if dt is not None:
-                time_in_seconds, calcium_data = self.resample_data(
-                    original_time_in_seconds, calcium_data
-                )
-                time_in_seconds, residual_calcium = self.resample_data(
-                    original_time_in_seconds, residual_calcium
-                )
+            time_in_seconds, calcium_data = self.resample_data(
+                original_time_in_seconds, calcium_data
+            )
+            time_in_seconds, residual_calcium = self.resample_data(
+                original_time_in_seconds, residual_calcium
+            )
 
             max_timesteps, num_neurons = calcium_data.shape
 
-            if self.smooth_method is not None:
-                smooth_calcium_data = self.smooth_data(
-                    calcium_data, original_time_in_seconds
-                )
-                smooth_residual_calcium = self.smooth_data(
-                    residual_calcium, time_in_seconds
-                )
-            else:
-                smooth_calcium_data = calcium_data # TODO: Return None => modify reshape_calcium_data
-                smooth_residual_calcium = calcium_data
+
+            smooth_calcium_data = self.smooth_data(
+                calcium_data, original_time_in_seconds
+            )
+            smooth_residual_calcium = self.smooth_data(
+                residual_calcium, time_in_seconds
+            )
 
             num_unknown_neurons = int(num_neurons) - num_named_neurons
             worm_dict = {
