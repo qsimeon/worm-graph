@@ -324,7 +324,8 @@ def train_model(
                     "hidden_size": model.get_hidden_size(),
                     "num_layers": model.get_num_layers(),
                     "loss_name": model.get_loss_name(),
-                    "reg_param": model.get_reg_param(),
+                    "fft_reg_param": model.get_fft_reg_param(),
+                    "l1_reg_param": model.get_l1_reg_param(),
                     # other variables
                     "timestamp": timestamp,
                     "elapsed_time_seconds": cumsum_seconds,
@@ -390,6 +391,6 @@ if __name__ == "__main__":
         config,
         model,
         dataset,
-        shuffle_worms=True,
+        shuffle_worms=False,
         log_dir=os.path.join("logs", "{}".format(timestamp)),
     )

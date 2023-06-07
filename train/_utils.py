@@ -100,9 +100,9 @@ def train(
         loss = criterion(
             Y_tr[:, :, mask], Y_train[:, :, mask]
         )  # Compute training loss.
-        loss.backward()  # Derive gradients.
-        # TODO: what if we backward on the centered loss?
-        # (loss - base).backward()  # Derive gradients.
+        # NOTE: backward using the centered loss improved convergence!
+        # loss.backward()  # Derive gradients.
+        (loss - base).backward()  # Derive gradients.
 
         # No backprop on epoch 0.
         if no_grad:

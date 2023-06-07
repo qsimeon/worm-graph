@@ -13,7 +13,7 @@ def get_model(config: DictConfig) -> torch.nn.Module:
     ----------
     config : DictConfig
         A Hydra configuration object.
-    
+
     Calls
     -----
     NeuralTransformer : class in models/_utils.py
@@ -41,14 +41,16 @@ def get_model(config: DictConfig) -> torch.nn.Module:
         hidden_size = checkpoint["hidden_size"]
         num_layers = checkpoint["num_layers"]
         loss_name = checkpoint["loss_name"]
-        reg_param = checkpoint["reg_param"]
+        fft_reg_param = checkpoint["fft_reg_param"]
+        l1_reg_param = checkpoint["l1_reg_param"]
         model_state_dict = checkpoint["model_state_dict"]
         model = eval(model_name)(
             input_size,
             hidden_size,
             num_layers,
             loss=loss_name,
-            reg_param=reg_param,
+            fft_reg_param=fft_reg_param,
+            l1_reg_param=l1_reg_param,
         )
         model.load_state_dict(model_state_dict)
         print("Model checkpoint path:", PATH, end="\n\n")
@@ -63,7 +65,8 @@ def get_model(config: DictConfig) -> torch.nn.Module:
             hidden_size=config.model.hidden_size,
             num_layers=config.model.num_layers,
             loss=config.model.loss,
-            reg_param=config.model.reg_param,
+            fft_reg_param=config.model.fft_reg_param,
+            l1_reg_param=config.model.l1_reg_param,
         )
         if config.model.type == "NeuralTransformer":
             model = NeuralTransformer(**args)
@@ -85,4 +88,5 @@ def get_model(config: DictConfig) -> torch.nn.Module:
 if __name__ == "__main__":
     config = OmegaConf.load("conf/model.yaml")
     print("config:", OmegaConf.to_yaml(config), end="\n\n")
-    get_model(config)
+    model = get_model(config)
+    print(model.parameters())

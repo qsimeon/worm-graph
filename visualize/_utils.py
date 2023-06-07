@@ -256,13 +256,18 @@ def plot_before_after_weights(log_dir: str) -> None:
         first_chkpt["hidden_size"],
         first_chkpt["num_layers"],
     )
-    loss_name, reg_param = first_chkpt["loss_name"], first_chkpt["reg_param"]
+    loss_name = first_chkpt["loss_name"]
+    fft_reg_param, l1_reg_param = (
+        first_chkpt["fft_reg_param"],
+        first_chkpt["l1_reg_param"],
+    )
     model = eval(model_name)(
         input_size,
         hidden_size,
         num_layers,
         loss=loss_name,
-        reg_param=reg_param,
+        fft_reg_param=fft_reg_param,
+        l1_reg_param=l1_reg_param,
     )
     model_state_dict = first_chkpt["model_state_dict"]
     model.load_state_dict(model_state_dict)
