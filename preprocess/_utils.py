@@ -1021,7 +1021,7 @@ class Nichols2017Preprocessor(BasePreprocessor):
                 worm = "worm" + str(worm_idx)  # Use global worm index
                 worm_idx += 1  # Increment worm index
                 unique_IDs = [
-                    (j[0] if isinstance(j, list) else j) for j in neuron_IDs[i]
+                    (j[-1] if isinstance(j, list) else j) for j in neuron_IDs[i]
                 ]
                 unique_IDs = [
                     (str(_) if j is None or isinstance(j, np.ndarray) else str(j))
@@ -1385,6 +1385,9 @@ class Leifer2023Preprocessor(BasePreprocessor):
             real_data, label_list, time_in_seconds = self.extract_data(
                 data_file, labels_file, time_file
             )
+            if len(label_list) == 0:  # skip worms with no neuron labels
+                worm_idx -= 1
+                continue
             if len(time_in_seconds) < 1000:  # skip worms with very short recordings
                 worm_idx -= 1
                 continue

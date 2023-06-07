@@ -1,5 +1,5 @@
 predict:
-  tau_out: 1 # offset of target sequence from input sequence that we wish to make predictions with
+  tau_out: 200 # number of future time steps to predict
   # constraint: tau_out: int > 0
   model: # a pretrained model to make predictions with
     checkpoint_path: models/example_saved_model.pt # path to a trained model checkpoint to load

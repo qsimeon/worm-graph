@@ -172,7 +172,7 @@ def train_model(
     seconds_per_epoch = 0
 
     # Main FOR loop; train the model for multiple epochs (one cohort = one epoch)
-    # In one epoch we process all worms
+    # In one epoch we process all worms (i.e one cohort)
     for i, cohort in enumerate(worm_cohorts):
         # Create a array of datasets and masks for the cohort
         train_datasets = np.empty(num_unique_worms, dtype=object)
@@ -250,11 +250,11 @@ def train_model(
 
         # Optimize for 1 epoch per cohort
         num_epochs = 1  # 1 cohort = 1 epoch
+
         # Get the starting timestamp
         start_time = time.perf_counter()
 
-        # `optimize_model` can accepts the train and test data loaders,
-        # the neuron masks and optimize for num_epochs
+        # `optimize_model` accepts the train and test data loaders, the neuron masks and optimizes for num_epochs
         model, log = optimize_model(
             model=model,
             train_loader=train_loader,
@@ -387,9 +387,9 @@ if __name__ == "__main__":
     dataset = get_dataset(OmegaConf.load("conf/dataset.yaml"))
     timestamp = datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
     model, log_dir, config = train_model(
+        config,
         model,
         dataset,
-        config,
         shuffle_worms=True,
         log_dir=os.path.join("logs", "{}".format(timestamp)),
     )

@@ -243,16 +243,16 @@ class Model(torch.nn.Module):
         # generate future timesteps
         for _ in range(timesteps):
             # condition on the previous context_len timesteps
-            input_cond = output[:, -context_len:, :] * mask  # (B, T, C)
+            input_cond = output[:, -context_len:, :]  # (B, T, C)
             # get the prediction of next timestep
             with torch.no_grad():
                 input_forward = self.forward(input_cond, tau=1)
             # focus only on the last time step
             next_timestep = input_forward[:, -1, :]  # (B, C)
             # append predicted next timestep to the running sequence
-            output = torch.cat(
-                [output, next_timestep.unsqueeze(1)], dim=1
-            )  # (B, T+1, C)
+            output = (
+                torch.cat([output, next_timestep.unsqueeze(1)], dim=1) * mask
+            ) * mask  # (B, T+1, C)
         return output  # (B, T+timesteps, C)
 
     def sample(self, length):

@@ -64,8 +64,8 @@ def make_predictions(
     if dataset is None:
         dataset = get_dataset(config.predict)
 
-    # Get the desired output shift
-    tau = config.predict.tau_out
+    # Get the desired future time steps to predict
+    future_timesteps = config.predict.tau_out
 
     # Get the data to save
     signal_str = "residual" if use_residual else "calcium"
@@ -97,30 +97,35 @@ def make_predictions(
         test_mask.detach()
 
         # shorten time series to the maximum token lengths
-        calcium_data = calcium_data[-MAX_TOKEN_LEN :, :]
-        time_in_seconds = time_in_seconds[-MAX_TOKEN_LEN :]
-        train_mask = train_mask[-MAX_TOKEN_LEN :]
-        test_mask = test_mask[-MAX_TOKEN_LEN :]
+        calcium_data = calcium_data[-MAX_TOKEN_LEN:, :]
+        time_in_seconds = time_in_seconds[-MAX_TOKEN_LEN:]
+        train_mask = train_mask[-MAX_TOKEN_LEN:]
+        test_mask = test_mask[-MAX_TOKEN_LEN:]
 
         # Labels and columns
-        labels = np.expand_dims(np.where(train_mask, "train", "test"), axis=-1)
+        train_labels = np.expand_dims(np.where(train_mask, "train", "test"), axis=-1)
         columns = list(named_neurons) + [
             "train_test_label",
             "time_in_seconds",
             "tau",
         ]
 
+        # Put model and data on device
+        model = model.to(DEVICE)
+        calcium_data = calcium_data.to(DEVICE)
+
         # Make predictions with final model
         inputs, predictions, targets = model_predict(
             model,
-            calcium_data * named_neurons_mask,
-            tau=tau,
+            inputs=calcium_data,
+            tau=future_timesteps,
+            mask=named_neurons_mask,
         )
 
         # Save Inputs DataFrame
-        tau_expand = np.full(time_in_seconds.shape, tau)
+        tau_expand = np.full(time_in_seconds.shape, future_timesteps)
         data = inputs[:, named_neurons_mask].numpy()
-        data = np.hstack((data, labels, time_in_seconds, tau_expand))
+        data = np.hstack((data, train_labels, time_in_seconds, tau_expand))
         pd.DataFrame(data=data, columns=columns).to_csv(
             os.path.join(log_dir, worm, signal_str + "_activity.csv"),
             index=True,
@@ -129,7 +134,7 @@ def make_predictions(
 
         # Save Predictions DataFrame
         data = predictions[:, named_neurons_mask].detach().numpy()
-        data = np.hstack((data, labels, time_in_seconds, tau_expand))
+        data = np.hstack((data, train_labels, time_in_seconds, tau_expand))
         pd.DataFrame(data=data, columns=columns).to_csv(
             os.path.join(log_dir, worm, "predicted_" + signal_str + ".csv"),
             index=True,
@@ -138,7 +143,7 @@ def make_predictions(
 
         # Save Targets DataFrame
         data = targets[:, named_neurons_mask].detach().numpy()
-        data = np.hstack((data, labels, time_in_seconds, tau_expand))
+        data = np.hstack((data, train_labels, time_in_seconds, tau_expand))
         pd.DataFrame(data=data, columns=columns).to_csv(
             os.path.join(log_dir, worm, "target_" + signal_str + ".csv"),
             index=True,
