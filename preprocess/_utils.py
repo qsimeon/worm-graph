@@ -1020,8 +1020,12 @@ class Nichols2017Preprocessor(BasePreprocessor):
             for i, trace_data in enumerate(traces):
                 worm = "worm" + str(worm_idx)  # Use global worm index
                 worm_idx += 1  # Increment worm index
+                # unique_IDs = [
+                #     (j[-1] if isinstance(j, list) else j) for j in neuron_IDs[i]
+                # ]
                 unique_IDs = [
-                    (j[-1] if isinstance(j, list) else j) for j in neuron_IDs[i]
+                    (self.pick_non_none(j) if isinstance(j, list) else j)
+                    for j in neuron_IDs[i]
                 ]
                 unique_IDs = [
                     (str(_) if j is None or isinstance(j, np.ndarray) else str(j))
@@ -1080,6 +1084,15 @@ class Nichols2017Preprocessor(BasePreprocessor):
         # save data
         self.save_data(preprocessed_data)
         print(f"Finished processing {self.dataset}!", end="\n\n")
+
+    def pick_non_none(self, l):
+        """
+        Returns the first non-None element in a list, l.
+        """
+        for i in range(len(l)):
+            if l[i] is not None:
+                return l[i]
+        return None
 
 
 class Kaplan2020Preprocessor(BasePreprocessor):
@@ -1471,11 +1484,68 @@ class Flavell2023Preprocessor(BasePreprocessor):
                 else:
                     neurons_copy.append(neuron.replace("?", "R"))
             neurons = np.array(neurons_copy)
+
         elif isinstance(file_data, dict):  # assuming JSON format
-            # TODO: Add here the extraction process for JSON format
-            pass
+            avg_time = (
+                file_data["avg_timestep"] * 60
+            )  # average time step in seconds (float)
+            raw_traces = file_data["trace_array"]  # Raw traces (list)
+            max_t = len(raw_traces[0])  # Max time steps (int)
+            number_neurons = len(raw_traces)  # Number of neurons (int)
+            ids = file_data["labeled"]  # Labels (list)
+
+            time_in_seconds = np.arange(
+                0, max_t * avg_time, avg_time
+            )  # Time vector in seconds
+            time_in_seconds = time_in_seconds.reshape((-1, 1))
+
+            calcium_data = np.zeros((max_t, number_neurons))  # All traces
+            for i, trace in enumerate(raw_traces):
+                calcium_data[:, i] = trace
+
+            neurons = [str(i) for i in range(number_neurons)]
+
+            for i in ids.keys():
+                label = ids[str(i)]["label"]
+                neurons[int(i) - 1] = label
+
+            # Treat the '?' labels
+            for i in range(number_neurons):
+                label = neurons[i]
+
+                if not label.isnumeric():
+                    if "?" in label:
+                        # Find the group which the neuron belongs to
+                        label_split = label.split("?")[0]
+                        # Verify possible labels
+                        possible_labels = [
+                            neuron_name
+                            for neuron_name in NEURONS_302
+                            if label_split in neuron_name
+                        ]
+                        # Exclude possibilities that we already have
+                        possible_labels = [
+                            neuron_name
+                            for neuron_name in possible_labels
+                            if neuron_name not in neurons
+                        ]
+                        if len(possible_labels) == 0:
+                            continue
+                        # Random pick one of the possibilities
+                        neurons[i] = np.random.choice(possible_labels)
+
+            neurons = np.array(neurons)
+
+            neurons, unique_indices = np.unique(
+                neurons, return_index=True, return_counts=False
+            )
+            calcium_data = calcium_data[
+                :, unique_indices
+            ]  # only get data for unique neurons
+
         else:
             raise ValueError(f"Unsupported data type: {type(file_data)}")
+
         return time_in_seconds, calcium_data, neurons
 
     def preprocess(self):
@@ -1489,6 +1559,7 @@ class Flavell2023Preprocessor(BasePreprocessor):
             worm = "worm" + str(i)
             file_data = self.load_data(file)
             time_in_seconds, calcium_data, neurons = self.extract_data(file_data)
+
             neuron_to_idx, num_named_neurons = self.create_neuron_idx(neurons)
             calcium_data = self.transform.fit_transform(calcium_data)
             dt = np.gradient(time_in_seconds, axis=0)
@@ -1507,6 +1578,7 @@ class Flavell2023Preprocessor(BasePreprocessor):
                 residual_calcium, time_in_seconds
             )
             num_unknown_neurons = int(num_neurons) - num_named_neurons
+
             worm_dict = {
                 worm: {
                     "dataset": self.dataset,
@@ -1527,6 +1599,7 @@ class Flavell2023Preprocessor(BasePreprocessor):
                 }
             }
             preprocessed_data.update(worm_dict)
+
         # reshape calcium data
         for worm in preprocessed_data.keys():
             preprocessed_data[worm] = reshape_calcium_data(preprocessed_data[worm])
