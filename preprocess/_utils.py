@@ -1020,9 +1020,6 @@ class Nichols2017Preprocessor(BasePreprocessor):
             for i, trace_data in enumerate(traces):
                 worm = "worm" + str(worm_idx)  # Use global worm index
                 worm_idx += 1  # Increment worm index
-                # unique_IDs = [
-                #     (j[-1] if isinstance(j, list) else j) for j in neuron_IDs[i]
-                # ]
                 unique_IDs = [
                     (self.pick_non_none(j) if isinstance(j, list) else j)
                     for j in neuron_IDs[i]
