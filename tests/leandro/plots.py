@@ -7,7 +7,7 @@ import matplotlib.gridspec as gridspec
 import matplotlib.animation as animation
 from IPython.display import HTML
 
-def plot_signals(data, time_tensor, neuron_idx=None):
+def plot_signals(data, time_tensor, neuron_idx=None, yax_limit=True):
     assert isinstance(data, torch.Tensor), "data must be a PyTorch tensor"
     assert isinstance(time_tensor, torch.Tensor), "time_tensor must be a PyTorch tensor"
     assert data.dim() == 2, "data must be a 2D tensor"
@@ -45,7 +45,8 @@ def plot_signals(data, time_tensor, neuron_idx=None):
         ax.spines['bottom'].set_visible(False)
         ax.spines['left'].set_visible(False)
         ax.yaxis.set_ticks_position('none')
-        ax.set_ylim(-1.0, 1.0)
+        if yax_limit:
+            ax.set_ylim(-1.0, 1.0)
         ax.set_ylabel("Neuron {}".format(column_indices[i]))
         
         if i < num_columns - 1:
