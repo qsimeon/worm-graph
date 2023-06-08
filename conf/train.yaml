@@ -1,7 +1,7 @@
 train:
   optimizer: Adagrad # which Pytorch optimizer to use; options: null (defaults to SGD), SGD, Adam, AdamW, Adagrad, Adadelta, RMSprop
   learn_rate: 0.01 # learning rate
-  epochs: 5 # number of epochs (worm cohorts) the model will be trained for
+  epochs: 10 # number of epochs (worm cohorts) the model will be trained for
   # constraint: epochs: int > 0 
   save_freq: 100 # frequency (in epochs) with which to save model checkpoints
   # save_freq: 0 < int <= epochs
@@ -18,4 +18,4 @@ train:
   # constraint: keep fixed at tau_in = 1
   # interpretation: using a list of tau_in values may help train a multi-timescale prediciton model
   shuffle_samples: true # whether to shuffle samples (sequences) from each worm
-  reverse: true # if True reverse the order of generation of the samples (sequences)
+  reverse: false # if True reverse the order of generation of the samples (sequences)

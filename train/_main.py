@@ -351,7 +351,13 @@ def train_model(
     config = OmegaConf.structured(OmegaConf.to_yaml(config))
     config.setdefault("dataset", {"name": dataset_name})
     config.dataset.name = dataset_name
-    config.setdefault("model", {"type": model_class_name})
+    config.setdefault(
+        "model",
+        {
+            "type": model_class_name,
+            "checkpoint_path": checkpoint_path.split("worm-graph/")[-1],
+        },
+    )
     config.setdefault(
         "predict",
         {"model": {"checkpoint_path": checkpoint_path.split("worm-graph/")[-1]}},

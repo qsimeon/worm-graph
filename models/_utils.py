@@ -211,24 +211,32 @@ class Model(torch.nn.Module):
         """
 
         def loss(prediction, target, **kwargs):
-            """Calculate loss with FFT regularization and L1 regularization on all model weights."""
+            """
+            Calculate loss with FFT regularization and
+            L1 regularization on all model weights.
+            """
             # calculate next time step prediction loss
             original_loss = self.loss(**kwargs)(prediction, target)
-            # calculate FFT and take the real part
-            input_fft = torch.fft.rfft(prediction, dim=-2).real
-            target_fft = torch.fft.rfft(target, dim=-2).real
-            # calculate average difference between real parts of FFTs
-            fft_loss = torch.mean(torch.abs(input_fft - target_fft))
-            # calculate L1 regularization term for all weights
+            # FFT regularization term
+            fft_loss = 0.0
+            if self.fft_reg_param > 0.0:
+                # calculate FFT and take the real part
+                input_fft = torch.fft.rfft(prediction, dim=-2).real
+                target_fft = torch.fft.rfft(target, dim=-2).real
+                # calculate average difference between real parts of FFTs
+                fft_loss += torch.mean(torch.abs(input_fft - target_fft))
+            # L1 regularization term
             l1_reg = 0.0
-            for param in self.parameters():
-                l1_reg += torch.sum(torch.abs(param))
+            if self.l1_reg_param > 0.0:
+                # calculate L1 regularization term for all weights
+                for param in self.parameters():
+                    l1_reg += torch.mean(torch.abs(param))
             # combine original loss with regularization terms
             regularized_loss = (
                 original_loss
                 + self.fft_reg_param * fft_loss
                 + self.l1_reg_param * l1_reg
-            )
+            ) / (1.0 + self.fft_reg_param + self.l1_reg_param)
             return regularized_loss
 
         return loss

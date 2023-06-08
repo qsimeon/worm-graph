@@ -477,6 +477,9 @@ def plot_correlation_scatterplot(
     targets_df = pd.read_csv(
         os.path.join(log_dir, worm, "target_" + signal_str + ".csv"), index_col=0
     )
+    # TODO: consider only the predictions and targets for the last tau_out indices
+    predictions_df = predictions_df.iloc[-tau_out:, :]
+    targets_df = targets_df.iloc[-tau_out:, :]
 
     # plot helper
     def func(_neuron_):

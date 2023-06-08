@@ -100,6 +100,7 @@ def train(
         loss = criterion(
             Y_tr[:, :, mask], Y_train[:, :, mask]
         )  # Compute training loss.
+
         # NOTE: backward using the centered loss improved convergence!
         # loss.backward()  # Derive gradients.
         (loss - base).backward()  # Derive gradients.
