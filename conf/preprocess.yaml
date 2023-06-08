@@ -1,7 +1,7 @@
 preprocess:
   url: https://www.dropbox.com/s/5r5cyxoads3iglz/opensource_data.zip?dl=1
   zipfile: opensource_data.zip
-  dataset: Flavell2023 #! all # any dataset in utils.VALID_DATASETS
+  dataset: Leifer2023 # any dataset in utils.VALID_DATASETS
   raw_dir: /home/lrvnc/projects/worm-graph/data/raw # Not working with relative path (why?)
   resample_dt: 0.1 # The time interval (in seconds) to use for resampling; if None, no resampling is performed
   smooth: FFT 

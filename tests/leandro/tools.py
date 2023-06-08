@@ -3,13 +3,20 @@ import numpy as np
 import matplotlib.pyplot as plt
 from data._main import *
 from omegaconf import OmegaConf
-import statsmodels as sm
 
 def get_real_data():
     # Real data
-    config = OmegaConf.load("/home/lrvnc/projects/worm-graph/conf/dataset.yaml")
+    config = OmegaConf.load("/om2/user/lrvenan/worm-graph/conf/dataset.yaml")
     print("\nconfig:\n\t", OmegaConf.to_yaml(config), end="\n\n")
     return get_dataset(config)
+
+def get_one_worm_data(dataset):
+    wormid = np.random.choice([key for key in dataset.keys()])
+    oneWorm = dataset[wormid]
+    print('Worm ID: {}'.format(wormid))
+    calcium_data = oneWorm['calcium_data']
+    time_vector = oneWorm['time_in_seconds']
+    return oneWorm, calcium_data, time_vector
     
 def correlation_matrix(data):
     correlation_matrix = np.corrcoef(data, rowvar=False)
