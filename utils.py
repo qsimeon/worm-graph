@@ -96,10 +96,25 @@ MATLAB_FILES = {
 }
 
 
+def torch_device():
+    """
+    Returns the torch device (cpu or gpu)
+    """
+    print("\ntorch device: %s" % (DEVICE), end="\n\n")
+    return None
+
+
+def clear_cache():
+    """Free up GPU memory."""
+    torch.cuda.empty_cache()
+    return None
+
+
 def init_random_seeds(seed=0):
     """
     Initialize random seeds for numpy, torch, and random.
     """
+    clear_cache()
     np.random.seed(seed)
     torch.manual_seed(seed)
     random.seed(seed)

@@ -16,7 +16,6 @@
 ├── predict
 ├── preprocess
 ├── pyproject.toml
-├── scratch
 ├── setup
 ├── tests
 ├── train

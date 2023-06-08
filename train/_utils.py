@@ -61,7 +61,7 @@ def train(
     # Create a list of masks if only one is given
     if isinstance(mask, torch.Tensor):
         masks = [mask] * len(loader)
-    else:
+    else:  # already a list
         masks = mask
 
     # Set model to train mode.
@@ -74,6 +74,10 @@ def train(
     i = 0
     # Each data loader has samples from a single worm
     for data, mask in zip(loader, masks):
+        # some masks are all False, so skip them
+        if mask.sum().item() == 0:
+            continue
+        # train on the batch
         i += 1
         (
             X_train,
@@ -81,11 +85,11 @@ def train(
             metadata,
         ) = data  # X, Y: (batch_size, seq_len, num_neurons)
         X_train, Y_train = X_train.to(DEVICE), Y_train.to(DEVICE)
-        tau = metadata["tau"].detach()[0]
+        tau = metadata["tau"].detach()[0]  # typically, tau = 1
 
         optimizer.zero_grad()  # Clear optimizer gradients.
 
-        # Baseline: loss if the model predicted value at next timestep
+        # Baseline: loss if the model predicted same value at next timestep
         # equal to current value.
         base = criterion(
             (0 if use_residual else 1) * X_train[:, :, mask], Y_train[:, :, mask]
@@ -96,7 +100,10 @@ def train(
         loss = criterion(
             Y_tr[:, :, mask], Y_train[:, :, mask]
         )  # Compute training loss.
-        loss.backward()  # Derive gradients.
+
+        # NOTE: backward using the centered loss improved convergence!
+        # loss.backward()  # Derive gradients.
+        (loss - base).backward()  # Derive gradients.
 
         # No backprop on epoch 0.
         if no_grad:
@@ -183,6 +190,10 @@ def test(
 
     # Each data loader has samples from a single worm
     for data, mask in zip(loader, masks):
+        # some masks are all False, so skip them
+        if mask.sum().item() == 0:
+            continue
+        # test on the batch
         i += 1
         X_test, Y_test, metadata = data  # X, Y: (batch_size, seq_len, num_neurons)
         X_test, Y_test = X_test.to(DEVICE), Y_test.to(DEVICE)
@@ -280,7 +291,6 @@ def split_train_test(
     Notes
     -----
     """
-
     # Argument checking
     assert isinstance(k_splits, int) and k_splits > 1, "Ensure that `k_splits`:int > 1."
     assert isinstance(seq_len, int) and 0 < seq_len < len(
@@ -399,8 +409,8 @@ def optimize_model(
     Returns the trained model and a dictionary with log information
     including losses.
 
-    NOTE: Must ensure that optimizer was initialized with model paramets after
-            moving to DEVICE.
+    NOTE: Must ensure that optimizer was initialized with model parameters
+            after the model was moved to DEVICE.
 
     Parameters
     ----------
@@ -500,7 +510,9 @@ def optimize_model(
         # Train and validate the model
         if i > 0:
             # TODO: This could be introducing non-determinism
-            with ThreadPoolExecutor(max_workers=2) as executor:  # Parallel train and test
+            with ThreadPoolExecutor(
+                max_workers=2
+            ) as executor:  # Parallel train and test
                 model.train()
                 train_future = executor.submit(
                     train,
@@ -522,23 +534,25 @@ def optimize_model(
                     use_residual=use_residual,
                 )
                 test_log = test_future.result()
-    
+
         else:
             model.train()
-            train_log = train(train_loader, 
-                              model, 
-                              neurons_mask,
-                              optimizer, 
-                              no_grad=(epoch == 0),
-                              use_residual=use_residual,
-                              )
-            
+            train_log = train(
+                train_loader,
+                model,
+                neurons_mask,
+                optimizer,
+                no_grad=(epoch == 0),
+                use_residual=use_residual,
+            )
+
             model.eval()
-            test_log = test(test_loader,
-                            model,
-                            neurons_mask,
-                            use_residual=use_residual,
-                            )
+            test_log = test(
+                test_loader,
+                model,
+                neurons_mask,
+                use_residual=use_residual,
+            )
 
         # Retrieve losses
         centered_train_loss, base_train_loss, train_loss, num_train_samples = (

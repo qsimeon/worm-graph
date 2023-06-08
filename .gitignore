@@ -27,7 +27,7 @@ raw_data/
 .idea/
 
 # VSCode
-.vscode/ 
+.vscode/
 
 # Logs
 logs/
