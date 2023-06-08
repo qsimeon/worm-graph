@@ -583,14 +583,12 @@ class NetworkLSTM(Model):
             lstm_out, self.hidden = self.lstm(input)
             # ... use the full sequence
             readout = self.linear(lstm_out)
-            # readout = input + self.linear(lstm_out)  # w/ skip connection
             output = readout
         # do the remaining tau-1 steps of prediction
         for i in range(1, tau):
             lstm_out, self.hidden = self.lstm(output, self.hidden)
             # ... use the full sequence
             readout = self.linear(lstm_out)
-            # readout = input + self.linear(lstm_out)  # w/ skip connection
             output = readout
         return output
 
