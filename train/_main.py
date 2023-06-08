@@ -10,7 +10,7 @@ def train_model(
 ) -> tuple[torch.nn.Module, str]:
     """Trains a neural network model on a multi-worm dataset.
 
-    he function and saves the training progress, loss curves, and model
+    The function saves the training progress, loss curves, and model
     checkpoints during training. This function takes in a configuration
     dictionary, model, dataset, and optional parameters to control the
     training process. It returns the trained model and the path to the
@@ -172,7 +172,7 @@ def train_model(
     seconds_per_epoch = 0
 
     # Main FOR loop; train the model for multiple epochs (one cohort = one epoch)
-    # In one epoch we process all worms
+    # In one epoch we process all worms (i.e one cohort)
     for i, cohort in enumerate(worm_cohorts):
         # Create a array of datasets and masks for the cohort
         train_datasets = np.empty(num_unique_worms, dtype=object)
@@ -250,11 +250,11 @@ def train_model(
 
         # Optimize for 1 epoch per cohort
         num_epochs = 1  # 1 cohort = 1 epoch
+
         # Get the starting timestamp
         start_time = time.perf_counter()
 
-        # `optimize_model` can accepts the train and test data loaders,
-        # the neuron masks and optimize for num_epochs
+        # `optimize_model` accepts the train and test data loaders, the neuron masks and optimizes for num_epochs
         model, log = optimize_model(
             model=model,
             train_loader=train_loader,
@@ -324,7 +324,8 @@ def train_model(
                     "hidden_size": model.get_hidden_size(),
                     "num_layers": model.get_num_layers(),
                     "loss_name": model.get_loss_name(),
-                    "reg_param": model.get_reg_param(),
+                    "fft_reg_param": model.get_fft_reg_param(),
+                    "l1_reg_param": model.get_l1_reg_param(),
                     # other variables
                     "timestamp": timestamp,
                     "elapsed_time_seconds": cumsum_seconds,
@@ -350,7 +351,13 @@ def train_model(
     config = OmegaConf.structured(OmegaConf.to_yaml(config))
     config.setdefault("dataset", {"name": dataset_name})
     config.dataset.name = dataset_name
-    config.setdefault("model", {"type": model_class_name})
+    config.setdefault(
+        "model",
+        {
+            "type": model_class_name,
+            "checkpoint_path": checkpoint_path.split("worm-graph/")[-1],
+        },
+    )
     config.setdefault(
         "predict",
         {"model": {"checkpoint_path": checkpoint_path.split("worm-graph/")[-1]}},
@@ -387,9 +394,9 @@ if __name__ == "__main__":
     dataset = get_dataset(OmegaConf.load("conf/dataset.yaml"))
     timestamp = datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
     model, log_dir, config = train_model(
+        config,
         model,
         dataset,
-        config,
-        shuffle_worms=True,
+        shuffle_worms=False,
         log_dir=os.path.join("logs", "{}".format(timestamp)),
     )

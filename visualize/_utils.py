@@ -256,13 +256,18 @@ def plot_before_after_weights(log_dir: str) -> None:
         first_chkpt["hidden_size"],
         first_chkpt["num_layers"],
     )
-    loss_name, reg_param = first_chkpt["loss_name"], first_chkpt["reg_param"]
+    loss_name = first_chkpt["loss_name"]
+    fft_reg_param, l1_reg_param = (
+        first_chkpt["fft_reg_param"],
+        first_chkpt["l1_reg_param"],
+    )
     model = eval(model_name)(
         input_size,
         hidden_size,
         num_layers,
         loss=loss_name,
-        reg_param=reg_param,
+        fft_reg_param=fft_reg_param,
+        l1_reg_param=l1_reg_param,
     )
     model_state_dict = first_chkpt["model_state_dict"]
     model.load_state_dict(model_state_dict)
@@ -362,13 +367,16 @@ def plot_targets_predictions(
             x=targets_df.time_in_seconds,
             y=targets_df[_neuron_],
             label="target",
+            alpha=0.5,
+            linewidth=2.5,
         )
         sns.lineplot(
             data=predictions_df,
             x=targets_df.time_in_seconds,
             y=predictions_df[_neuron_],
             label="predict",
-            alpha=0.5,
+            alpha=0.9,
+            linewidth=1,
         )
         ylo, yhi = plt.gca().get_ylim()
         plt.gca().fill_between(
@@ -469,6 +477,9 @@ def plot_correlation_scatterplot(
     targets_df = pd.read_csv(
         os.path.join(log_dir, worm, "target_" + signal_str + ".csv"), index_col=0
     )
+    # TODO: consider only the predictions and targets for the last tau_out indices
+    predictions_df = predictions_df.iloc[-tau_out:, :]
+    targets_df = targets_df.iloc[-tau_out:, :]
 
     # plot helper
     def func(_neuron_):

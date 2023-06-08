@@ -5,18 +5,18 @@ defaults:
   - train
   - predict
   - visualize
-  - slurm_default
+  - slurm
   - _self_
 # if you want your primary config to override the values of configs
 # from the defaults List, append _self_ to the end of the defaults List
 globals:
   random_seed: 0 
   use_residual: false # whether to make train models on the residual signal
-  smooth_data: true # whether to use smoothed signal data
-  shuffle_worms: true # whether to shuffle worms
+  smooth_data: false # whether to use smoothed signal data
+  shuffle_worms: false # whether to shuffle worms
 
 hydra:
-  mode: MULTIRUN # options: RUN, MULTIRUN
+  mode: RUN # options: RUN, MULTIRUN
   job:
     chdir: true # important! this changes the working directory to the log directory
   run:
@@ -31,7 +31,8 @@ hydra:
       # MODEL
       model.type: NetworkLSTM #LinearNN, NeuralTransformer, NetworkLSTM, NeuralCFC
       model.loss: L1 #L1, MSE, Huber
-      model.reg_param: 1.0 #0.0, 0.5, 1.0
+      model.fft_reg_param: 1.0 #0.0, 0.5, 1.0
+      model.l1_reg_param: 0.1 #0.1, 0.5, 0.9
       model.hidden_size: 2048 #128, 256, 512, 1024, 2048
       model.num_layers: 1 
       model.checkpoint_path: false

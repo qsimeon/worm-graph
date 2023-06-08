@@ -38,8 +38,8 @@ def pipeline(
     * Use mode: RUN if you are having a UserWarning with MULTIRUN
 
     """
-    # Print Pytorch device
-    print("\ntorch device: %s" % (DEVICE), end="\n\n")
+    # Display Pytorch device
+    torch_device()
 
     # Intialize random seeds
     init_random_seeds(config.globals.random_seed)
@@ -53,7 +53,7 @@ def pipeline(
     # Get the model to train
     model = get_model(config)
 
-    # train model is the bulk of the pipeline code
+    # Train model is the bulk of the pipeline code
     model, log_dir, config = train_model(
         config,
         model,
@@ -62,7 +62,7 @@ def pipeline(
         log_dir=None,  # hydra changes working directory to log directory
     )
 
-    # use trained model to make predictions on the dataset
+    # Use trained model to make predictions on the dataset
     make_predictions(
         config,  # `train_model` injected the `predict` params into config`
         model=None,
@@ -72,14 +72,14 @@ def pipeline(
         smooth_data=config.globals.smooth_data,
     )
 
-    # plot figures
+    # Plot figures
     plot_figures(config, log_dir)
 
-    ## TODO: analysis
+    ## TODO: Analysis of outputs
     # analyze_outputs(config, log_dir)
 
-    # free up GPU
-    torch.cuda.empty_cache()
+    # Free up GPU
+    clear_cache()
 
     return None
 

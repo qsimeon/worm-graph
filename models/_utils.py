@@ -152,13 +152,17 @@ class Model(torch.nn.Module):
         hidden_size: int,
         num_layers: int = 1,
         loss: Union[Callable, None] = None,
-        reg_param: float = 1.0,
+        fft_reg_param: float = 0.0,
+        l1_reg_param: float = 0.0,
     ):
         """Defines attributes common to all models."""
         super(Model, self).__init__()
         assert (
-            isinstance(reg_param, float) and 0.0 <= reg_param <= 1.0
-        ), "The regularization parameter `reg_param` must be a float between 0.0 and 1.0."
+            isinstance(fft_reg_param, float) and 0.0 <= fft_reg_param <= 1.0
+        ), "The regularization parameter `fft_reg_param` must be a float between 0.0 and 1.0."
+        assert (
+            isinstance(l1_reg_param, float) and 0.0 <= l1_reg_param <= 1.0
+        ), "The regularization parameter `l1_reg_param` must be a float between 0.0 and 1.0."
         # Loss function
         if (loss is None) or (str(loss).lower() == "l1"):
             self.loss = torch.nn.L1Loss
@@ -176,7 +180,8 @@ class Model(torch.nn.Module):
         self.output_size = input_size  # Number of neurons (302)
         self.hidden_size = hidden_size
         self.num_layers = num_layers
-        self.reg_param = reg_param
+        self.fft_reg_param = fft_reg_param
+        self.l1_reg_param = l1_reg_param
         # Identity layer
         self.identity = torch.nn.Identity()
         # Linear readout
@@ -187,30 +192,51 @@ class Model(torch.nn.Module):
         The loss function to be used by all the models.
 
         This custom loss function combines a primary loss function with
-        an additional regularization term based on the Fast Fourier Transform (FFT).
-        The primary loss function (specified by the `loss` parameter) computes the
-        error between the model's prediction of the next time step and the true next timestep.
-        The regularization part encourages the frequency distribution of the
-        model's seqeuence output to match that of the target sequence. We can think
-        of this as performing a frequency distribution matching (FDM) operation on the
-        model's output.
-        If self.ref_param = 0.0, no regularization is applied.
+        two additional regularization terms:
+
+        1. Fast Fourier Transform (FFT) matching: This regularization term encourages the frequency
+        distribution of the model's sequence output to match that of the target sequence. We can think
+        of this as performing a frequency distribution matching (FDM) operation on the model's output.
+        It may help the model to learn the inherent frequencies in the target data and thus produce
+        output sequences that are more similar to the target in the frequency domain.
+
+        2. L1 regularization on all model weights: This regularization term encourages the model to use
+        fewer parameters, effectively making the model more sparse. This can help to prevent
+        overfitting, make the model more interpretable, and improve generalization by encouraging the
+        model to use only the most important features. The L1 penalty is the sum of the absolute
+        values of the weights.
+
+        Both regularization terms are controlled by their respective regularization parameters:
+        `fft_reg_param` and `l1_reg_param`.
         """
 
         def loss(prediction, target, **kwargs):
-            """Calculate loss with FFT regularization."""
+            """
+            Calculate loss with FFT regularization and
+            L1 regularization on all model weights.
+            """
             # calculate next time step prediction loss
             original_loss = self.loss(**kwargs)(prediction, target)
-            # calculate FFT and take the real part
-            input_fft = torch.fft.rfft(
-                prediction, dim=-2
-            ).real  # (batch, seq_len, neurons)
-            target_fft = torch.fft.rfft(
-                target, dim=-2
-            ).real  # (batch, seq_len, neurons)
-            # calculate average difference between real parts of FFTs
-            fft_loss = torch.mean(torch.abs(input_fft - target_fft))
-            regularized_loss = original_loss + self.reg_param * fft_loss
+            # FFT regularization term
+            fft_loss = 0.0
+            if self.fft_reg_param > 0.0:
+                # calculate FFT and take the real part
+                input_fft = torch.fft.rfft(prediction, dim=-2).real
+                target_fft = torch.fft.rfft(target, dim=-2).real
+                # calculate average difference between real parts of FFTs
+                fft_loss += torch.mean(torch.abs(input_fft - target_fft))
+            # L1 regularization term
+            l1_reg = 0.0
+            if self.l1_reg_param > 0.0:
+                # calculate L1 regularization term for all weights
+                for param in self.parameters():
+                    l1_reg += torch.mean(torch.abs(param))
+            # combine original loss with regularization terms
+            regularized_loss = (
+                original_loss
+                + self.fft_reg_param * fft_loss
+                + self.l1_reg_param * l1_reg
+            ) / (1.0 + self.fft_reg_param + self.l1_reg_param)
             return regularized_loss
 
         return loss
@@ -243,16 +269,16 @@ class Model(torch.nn.Module):
         # generate future timesteps
         for _ in range(timesteps):
             # condition on the previous context_len timesteps
-            input_cond = output[:, -context_len:, :] * mask  # (B, T, C)
+            input_cond = output[:, -context_len:, :]  # (B, T, C)
             # get the prediction of next timestep
             with torch.no_grad():
                 input_forward = self.forward(input_cond, tau=1)
             # focus only on the last time step
             next_timestep = input_forward[:, -1, :]  # (B, C)
             # append predicted next timestep to the running sequence
-            output = torch.cat(
-                [output, next_timestep.unsqueeze(1)], dim=1
-            )  # (B, T+1, C)
+            output = (
+                torch.cat([output, next_timestep.unsqueeze(1)], dim=1) * mask
+            ) * mask  # (B, T+1, C)
         return output  # (B, T+timesteps, C)
 
     def sample(self, length):
@@ -260,7 +286,7 @@ class Model(torch.nn.Module):
         Sample spontaneous neural activity from the network.
         TODO: Figure out how to use diffusion models to sample from the network.
         """
-        return None
+        pass
 
     # Getter functions for returning all attributes needed to reinstantiate a similar model
     def get_input_size(self):
@@ -275,8 +301,11 @@ class Model(torch.nn.Module):
     def get_loss_name(self):
         return self.loss_name
 
-    def get_reg_param(self):
-        return self.reg_param
+    def get_fft_reg_param(self):
+        return self.fft_reg_param
+
+    def get_l1_reg_param(self):
+        return self.l1_reg_param
 
 
 class LinearNN(Model):
@@ -304,10 +333,16 @@ class LinearNN(Model):
         hidden_size: int,
         num_layers: int = 1,
         loss: Union[Callable, None] = None,
-        reg_param: float = 0.0,
+        fft_reg_param: float = 0.0,
+        l1_reg_param: float = 0.0,
     ):
         super(LinearNN, self).__init__(
-            input_size, hidden_size, num_layers, loss, reg_param
+            input_size,
+            hidden_size,
+            num_layers,
+            loss,
+            fft_reg_param,
+            l1_reg_param,
         )
         # Input and hidden layers
         self.input_hidden = (
@@ -345,11 +380,13 @@ class LinearNN(Model):
         else:
             # ... use the full sequence
             readout = self.model(input)
+            # readout = input + self.model(input)  # w/ skip connection
             output = readout
         # repeat for target with tau>0 offset
         for i in range(1, tau):
             # ... use the full sequence
             readout = self.model(output)
+            # readout = input + self.model(output)  # w/ skip connection
             output = readout
         return output
 
@@ -361,7 +398,8 @@ class NeuralTransformer(Model):
         hidden_size: int,
         num_layers: int = 1,
         loss: Union[Callable, None] = None,
-        reg_param: float = 0.0,
+        fft_reg_param: float = 0.0,
+        l1_reg_param: float = 0.0,
     ):
         """
         TODO: Cite Andrej Kaparthy's tutorial on "How to code GPT from scratch".
@@ -373,7 +411,12 @@ class NeuralTransformer(Model):
         just a linear projection.
         """
         super(NeuralTransformer, self).__init__(
-            input_size, hidden_size, num_layers, loss, reg_param
+            input_size,
+            hidden_size,
+            num_layers,
+            loss,
+            fft_reg_param,
+            l1_reg_param,
         )
         self.n_head = 4  # number of attention heads
         self.block_size = MAX_TOKEN_LEN  # maximum attention block (i.e. context) size
@@ -436,7 +479,8 @@ class NeuralCFC(Model):
         hidden_size: int,
         num_layers: int = 1,  # unused
         loss: Union[Callable, None] = None,
-        reg_param: float = 0.0,
+        fft_reg_param: float = 0.0,
+        l1_reg_param: float = 0.0,
     ):
         """
         The output size will be the same as the input size.
@@ -444,7 +488,12 @@ class NeuralCFC(Model):
         TODO: Implement a way to use the num_layers parameter.
         """
         super(NeuralCFC, self).__init__(
-            input_size, hidden_size, num_layers, loss, reg_param
+            input_size,
+            hidden_size,
+            num_layers,
+            loss,
+            fft_reg_param,
+            l1_reg_param,
         )
         # Recurrent layer
         self.rnn = CfC(self.input_size, self.hidden_size)
@@ -464,12 +513,14 @@ class NeuralCFC(Model):
             rnn_out, self.hidden = self.rnn(input)
             # ... use the full sequence
             readout = self.linear(rnn_out)
+            # readout = input + self.linear(rnn_out)  # w/ skip connection
             output = readout
         # do the remaining tau-1 steps of prediction
         for i in range(1, tau):
             rnn_out, self.hidden = self.rnn(output, self.hidden)
             # ... use the full sequence
             readout = self.linear(rnn_out)
+            # readout = input + self.linear(rnn_out)  # w/ skip connection
             output = readout
         return output
 
@@ -488,13 +539,19 @@ class NetworkLSTM(Model):
         hidden_size: int,
         num_layers: int = 1,
         loss: Union[Callable, None] = None,
-        reg_param: float = 0.0,
+        fft_reg_param: float = 0.0,
+        l1_reg_param: float = 0.0,
     ):
         """
         The output size will be the same as the input size.
         """
         super(NetworkLSTM, self).__init__(
-            input_size, hidden_size, num_layers, loss, reg_param
+            input_size,
+            hidden_size,
+            num_layers,
+            loss,
+            fft_reg_param,
+            l1_reg_param,
         )
         # LSTM
         self.lstm = torch.nn.LSTM(
@@ -526,12 +583,14 @@ class NetworkLSTM(Model):
             lstm_out, self.hidden = self.lstm(input)
             # ... use the full sequence
             readout = self.linear(lstm_out)
+            # readout = input + self.linear(lstm_out)  # w/ skip connection
             output = readout
         # do the remaining tau-1 steps of prediction
         for i in range(1, tau):
             lstm_out, self.hidden = self.lstm(output, self.hidden)
             # ... use the full sequence
             readout = self.linear(lstm_out)
+            # readout = input + self.linear(lstm_out)  # w/ skip connection
             output = readout
         return output
 

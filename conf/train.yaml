@@ -18,4 +18,4 @@ train:
   # constraint: keep fixed at tau_in = 1
   # interpretation: using a list of tau_in values may help train a multi-timescale prediciton model
   shuffle_samples: true # whether to shuffle samples (sequences) from each worm
-  reverse: true # if True reverse the order of generation of the samples (sequences)
+  reverse: false # if True reverse the order of generation of the samples (sequences)
