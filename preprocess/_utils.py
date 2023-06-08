@@ -1452,6 +1452,17 @@ class Flavell2023Preprocessor(BasePreprocessor):
         else:
             raise ValueError(f"Unsupported file format: {file_name}")
         return data
+    
+    def check_possible_neurons(self, label, neurons):
+        # Find the group which the neuron belongs to
+        label_split = label.split('?')[0]
+        # Verify possible labels
+        possible_labels = [neuron_name for neuron_name in NEURONS_302 if label_split in neuron_name]
+        # Exclude possibilities that we already have
+        possible_labels = [neuron_name for neuron_name in possible_labels if neuron_name not in neurons]
+        # Random pick one of the possibilities
+        print(label, possible_labels)
+        return np.random.choice(possible_labels)
 
     def extract_data(self, file_data):
         if isinstance(file_data, h5py.File):
@@ -1497,15 +1508,16 @@ class Flavell2023Preprocessor(BasePreprocessor):
                 label = neurons[i]
 
                 if not label.isnumeric():
-                    if '?' in label:
-                        # Find the group which the neuron belongs to
-                        label_split = label.split('?')[0]
-                        # Verify possible labels
-                        possible_labels = [neuron_name for neuron_name in NEURONS_302 if label_split in neuron_name]
-                        # Exclude possibilities that we already have
-                        possible_labels = [neuron_name for neuron_name in possible_labels if neuron_name not in neurons]
-                        # Random pick one of the possibilities
-                        neurons[i] = np.random.choice(possible_labels)
+                    if '?' in label and '??' not in label:
+                        neurons[i] = self.check_possible_neurons(label, neurons)
+            
+            for i in range(number_neurons):
+
+                label = neurons[i]
+
+                if not label.isnumeric():
+                    if '??' in label:
+                        neurons[i] = self.check_possible_neurons(label, neurons)
                 
             neurons = np.array(neurons)
 
@@ -1573,6 +1585,5 @@ class Flavell2023Preprocessor(BasePreprocessor):
         for worm in preprocessed_data.keys():
             preprocessed_data[worm] = reshape_calcium_data(preprocessed_data[worm])
         # save data
-        print('saving')
         self.save_data(preprocessed_data)
         print(f"Finished processing {self.dataset}!", end="\n\n")
