@@ -1514,7 +1514,7 @@ class Flavell2023Preprocessor(BasePreprocessor):
                 label = neurons[i]
 
                 if not label.isnumeric():
-                    if "?" in label:
+                    if "?" in label and "??" not in label:
                         # Find the group which the neuron belongs to
                         label_split = label.split("?")[0]
                         # Verify possible labels
@@ -1529,8 +1529,29 @@ class Flavell2023Preprocessor(BasePreprocessor):
                             for neuron_name in possible_labels
                             if neuron_name not in neurons
                         ]
-                        if len(possible_labels) == 0:
-                            continue
+                        # Random pick one of the possibilities
+                        print(label_split, possible_labels)
+                        neurons[i] = np.random.choice(possible_labels)
+
+            for i in range(number_neurons):
+                label = neurons[i]
+
+                if not label.isnumeric():
+                    if "??" in label:
+                        # Find the group which the neuron belongs to
+                        label_split = label.split("?")[0]
+                        # Verify possible labels
+                        possible_labels = [
+                            neuron_name
+                            for neuron_name in NEURONS_302
+                            if label_split in neuron_name
+                        ]
+                        # Exclude possibilities that we already have
+                        possible_labels = [
+                            neuron_name
+                            for neuron_name in possible_labels
+                            if neuron_name not in neurons
+                        ]
                         # Random pick one of the possibilities
                         neurons[i] = np.random.choice(possible_labels)
 
