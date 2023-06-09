@@ -158,11 +158,11 @@ class Model(torch.nn.Module):
         """Defines attributes common to all models."""
         super(Model, self).__init__()
         assert (
-            isinstance(fft_reg_param, float) and 0.0 <= fft_reg_param <= 1.0
-        ), "The regularization parameter `fft_reg_param` must be a float between 0.0 and 1.0."
+            isinstance(fft_reg_param, float) and 0.0 <= fft_reg_param <= 3.0
+        ), "The regularization parameter `fft_reg_param` must be a float between 0.0 and 3.0."
         assert (
-            isinstance(l1_reg_param, float) and 0.0 <= l1_reg_param <= 1.0
-        ), "The regularization parameter `l1_reg_param` must be a float between 0.0 and 1.0."
+            isinstance(l1_reg_param, float) and 0.0 <= l1_reg_param <= 3.0
+        ), "The regularization parameter `l1_reg_param` must be a float between 0.0 and 3.0."
         # Loss function
         if (loss is None) or (str(loss).lower() == "l1"):
             self.loss = torch.nn.L1Loss

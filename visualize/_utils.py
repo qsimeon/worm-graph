@@ -235,7 +235,7 @@ def plot_before_after_weights(log_dir: str) -> None:
     model_name = config.model.type
     tau_in = config.train.tau_in
     timestamp = config.globals.timestamp
-    # create the plot title
+    # Create the plot title
     plt_title = "Model readout weights\nmodel: {}\ndataset: {}\ntraining tau: {}\ntime: {}".format(
         model_name,
         dataset_name,
@@ -271,19 +271,45 @@ def plot_before_after_weights(log_dir: str) -> None:
         l1_reg_param=l1_reg_param,
     )
     # plot the readout weights
-    fig, axs = plt.subplots(1, 2)
+    # Create a figure with a larger vertical size
+    fig, axs = plt.subplots(1, 2, figsize=(10, 6))
     # before training
     model.load_state_dict(first_chkpt["model_state_dict"])
-    axs[0].imshow(model.linear.weight.detach().cpu().T)
+    weights_before = model.linear.weight.detach().cpu().T
+    # after training
+    model.load_state_dict(last_chkpt["model_state_dict"])
+    weights_after = model.linear.weight.detach().cpu().T
+
+    # find min and max across both datasets for the colormap
+    vmin = min(weights_before.min(), weights_after.min())
+    vmax = max(weights_before.max(), weights_after.max())
+
+    # plot
+    im1 = axs[0].imshow(weights_before, cmap="coolwarm", vmin=vmin, vmax=vmax)
     axs[0].set_title("Initialized")
     axs[0].set_ylabel("Hidden size")
     axs[0].set_xlabel("Output size")
-    # after training
-    model.load_state_dict(last_chkpt["model_state_dict"])
-    axs[1].imshow(model.linear.weight.detach().cpu().T)
+
+    im2 = axs[1].imshow(weights_after, cmap="coolwarm", vmin=vmin, vmax=vmax)
     axs[1].set_title("Trained")
     axs[1].set_xlabel("Output size")
-    plt.suptitle(plt_title, fontsize="small")
+
+    # create an axes on the right side of axs[1]. The width of cax will be 5%
+    # of axs[1] and the padding between cax and axs[1] will be fixed at 0.05 inch.
+    divider = make_axes_locatable(axs[1])
+    cax = divider.append_axes("right", size="5%", pad=0.05)
+    fig.colorbar(im2, cax=cax)
+
+    # After creating your subplots and setting their titles, adjust the plot layout
+    plt.tight_layout(
+        rect=[0, 0, 1, 0.92]
+    )  # Adjust the rectangle's top value as needed to give the suptitle more space
+    plt.subplots_adjust(top=0.85)  # Adjust the top to make space for the title
+    # Now add your suptitle, using the y parameter to control its vertical placement
+    plt.suptitle(
+        plt_title, fontsize="medium", y=1.02
+    )  # Adjust y as needed so the title doesn't overlap with the plot
+    # Save and close as before
     plt.savefig(os.path.join(log_dir, "readout_weights.png"))
     plt.close()
     return None
