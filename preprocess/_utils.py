@@ -1527,7 +1527,6 @@ class Flavell2023Preprocessor(BasePreprocessor):
                             if neuron_name not in neurons
                         ]
                         # Random pick one of the possibilities
-                        print(label_split, possible_labels)
                         neurons[i] = np.random.choice(possible_labels)
 
             for i in range(number_neurons):
