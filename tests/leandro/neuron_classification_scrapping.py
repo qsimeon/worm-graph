@@ -11,6 +11,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support import expected_conditions as EC
 import re
+import json
 
 # List of all 302 hermaphrodite neurons
 NEURONS_302 = sorted(
@@ -35,11 +36,11 @@ for neuron in NEURONS_302:
     neuron_group = neuron[:3]
 
     if len(neuron_group) == 2:
-         continue
+         neuron_group = neuron_group
     elif (neuron_group.startswith('P') or neuron_group.startswith('A')) and (neuron_group.endswith('R') or neuron_group.endswith('L')):
-         continue
+         neuron_group = neuron_group
     elif neuron_group == 'RIR':
-        continue
+        neuron_group = neuron_group
     elif neuron_group[-1] == 'R' or neuron_group[-1] == 'L' and (neuron_group.startswith('I') or neuron_group.startswith('M')):
         neuron_group = neuron_group[:2]
     elif neuron_group[-1].isdigit() and not neuron_group.startswith('I'):
@@ -76,9 +77,8 @@ for neuron in NEURONS_302:
 # Close the web driver
 driver.quit()
 
-import json
 json_string = json.dumps(neuron_classification)
-with open("neuron_classification_raw.json", "w") as file:
+with open("/home/lrvnc/Projects/worm-graph/tests/leandro/data/neuron_classification_raw.json", "w") as file:
     file.write(json_string)
 
 
@@ -105,5 +105,5 @@ for neuron, description in neuron_classification.items():
 
 json_string = json.dumps(new_data)
 
-with open("neuron_clusters.json", "w") as file:
+with open("/home/lrvnc/Projects/worm-graph/tests/leandro/data/neuron_clusters.json", "w") as file:
     file.write(json_string)

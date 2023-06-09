@@ -4,9 +4,9 @@ import matplotlib.pyplot as plt
 from data._main import *
 from omegaconf import OmegaConf
 
-def get_real_data():
+def get_real_data(config_path):
     # Real data
-    config = OmegaConf.load("/om2/user/lrvenan/worm-graph/conf/dataset.yaml")
+    config = OmegaConf.load(config_path)
     print("\nconfig:\n\t", OmegaConf.to_yaml(config), end="\n\n")
     return get_dataset(config)
 

@@ -140,6 +140,7 @@ def plot_similarities(data):
 
 def plotHeatmap(matrix, title=None, cmap=None, xlabel=None, ylabel=None,
                 xticks=None, yticks=None, show_xticks=True, show_yticks=True,
+                xtick_skip=None, ytick_skip=None,
                 center=None, vmin=None, vmax=None, mask=None):
     
     # Generate the mask
@@ -148,6 +149,9 @@ def plotHeatmap(matrix, title=None, cmap=None, xlabel=None, ylabel=None,
             mask = np.triu(np.ones_like(matrix))
         elif mask.upper() == 'LOWER_T':
             mask = np.tril(np.ones_like(matrix))
+
+    # Set the figure size
+    fig, ax = plt.subplots(figsize=(10, 8))
     
     # Generate the heatmap
     ax = sns.heatmap(matrix, mask=mask, cmap=cmap, center=center, vmin=vmin, vmax=vmax)
@@ -159,15 +163,15 @@ def plotHeatmap(matrix, title=None, cmap=None, xlabel=None, ylabel=None,
     # Set the x and y ticks if provided and show_ticks is True
     if show_xticks:
         if xticks is not None:
-            ax.set_xticks(np.arange(len(xticks)))
-            ax.set_xticklabels(xticks)
+            ax.set_xticks(np.arange(len(xticks))[::xtick_skip])
+            ax.set_xticklabels(xticks[::xtick_skip], fontsize='small', rotation=90)
     else:
         ax.set_xticks([])
 
     if show_yticks:
         if yticks is not None:
-            ax.set_yticks(np.arange(len(yticks)))
-            ax.set_yticklabels(yticks)
+            ax.set_yticks(np.arange(len(yticks))[::ytick_skip])
+            ax.set_yticklabels(yticks[::ytick_skip], fontsize='small', rotation=0)
     else:
         ax.set_yticks([])
 
@@ -210,14 +214,14 @@ def dynamicHeatmap(matrices, interval=200, filename='animation.mp4',
         if show_xticks:
             if xticks is not None:
                 ax.set_xticks(np.arange(len(xticks)))
-                ax.set_xticklabels(xticks)
+                ax.set_xticklabels(xticks, fontsize='small', rotation=45)
         else:
             ax.set_xticks([])
 
         if show_yticks:
             if yticks is not None:
                 ax.set_yticks(np.arange(len(yticks)))
-                ax.set_yticklabels(yticks)
+                ax.set_yticklabels(yticks, fontsize='small', rotation=45)
         else:
             ax.set_yticks([])
 
