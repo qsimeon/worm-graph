@@ -55,28 +55,6 @@ def get_model(config: DictConfig) -> torch.nn.Module:
         model.load_state_dict(model_state_dict)
         print("Model checkpoint path:", PATH, end="\n\n")
 
-    elif config.get("predict", False):
-        PATH = os.path.join(ROOT_DIR, config.predict.model.checkpoint_path)
-        checkpoint = torch.load(PATH, map_location=torch.device(DEVICE))
-        model_name = checkpoint["model_name"]
-        input_size = checkpoint["input_size"]
-        hidden_size = checkpoint["hidden_size"]
-        num_layers = checkpoint["num_layers"]
-        loss_name = checkpoint["loss_name"]
-        fft_reg_param = checkpoint["fft_reg_param"]
-        l1_reg_param = checkpoint["l1_reg_param"]
-        model_state_dict = checkpoint["model_state_dict"]
-        model = eval(model_name)(
-            input_size,
-            hidden_size,
-            num_layers,
-            loss=loss_name,
-            fft_reg_param=fft_reg_param,
-            l1_reg_param=l1_reg_param,
-        )
-        model.load_state_dict(model_state_dict)
-        print("Model checkpoint path:", PATH, end="\n\n")
-
     # Otherwise, instantiate a new model
     else:
         assert "type" in config.model, ValueError(

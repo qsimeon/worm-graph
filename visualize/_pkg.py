@@ -14,4 +14,4 @@ from omegaconf import OmegaConf, DictConfig
 from matplotlib.lines import Line2D
 from data._utils import NeuralActivityDataset
 from models._utils import *
-from utils import NEURONS_302
+from utils import NEURONS_302, DEVICE

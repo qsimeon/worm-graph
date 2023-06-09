@@ -249,8 +249,9 @@ def plot_before_after_weights(log_dir: str) -> None:
         return None
     # load the first model checkpoint
     chkpts = sorted(os.listdir(chkpt_dir), key=lambda x: int(x.split("_")[0]))
-    first_chkpt = torch.load(os.path.join(chkpt_dir, chkpts[0]))
-    last_chkpt = torch.load(os.path.join(chkpt_dir, chkpts[-1]))
+    first_chkpt = torch.load(os.path.join(chkpt_dir, chkpts[0]), map_location=DEVICE)
+    last_chkpt = torch.load(os.path.join(chkpt_dir, chkpts[-1]), map_location=DEVICE)
+    # create the model
     input_size, hidden_size, num_layers = (
         first_chkpt["input_size"],
         first_chkpt["hidden_size"],
@@ -269,8 +270,6 @@ def plot_before_after_weights(log_dir: str) -> None:
         fft_reg_param=fft_reg_param,
         l1_reg_param=l1_reg_param,
     )
-    model_state_dict = first_chkpt["model_state_dict"]
-    model.load_state_dict(model_state_dict)
     # plot the readout weights
     fig, axs = plt.subplots(1, 2)
     # before training
