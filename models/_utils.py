@@ -158,11 +158,11 @@ class Model(torch.nn.Module):
         """Defines attributes common to all models."""
         super(Model, self).__init__()
         assert (
-            isinstance(fft_reg_param, float) and 0.0 <= fft_reg_param <= 3.0
-        ), "The regularization parameter `fft_reg_param` must be a float between 0.0 and 3.0."
+            isinstance(fft_reg_param, float) and 0.0 <= fft_reg_param <= 1.0
+        ), "The regularization parameter `fft_reg_param` must be a float between 0.0 and 1.0."
         assert (
-            isinstance(l1_reg_param, float) and 0.0 <= l1_reg_param <= 3.0
-        ), "The regularization parameter `l1_reg_param` must be a float between 0.0 and 3.0."
+            isinstance(l1_reg_param, float) and 0.0 <= l1_reg_param <= 1.0
+        ), "The regularization parameter `l1_reg_param` must be a float between 0.0 and 1.0."
         # Loss function
         if (loss is None) or (str(loss).lower() == "l1"):
             self.loss = torch.nn.L1Loss
@@ -272,7 +272,7 @@ class Model(torch.nn.Module):
             input_cond = output[:, -context_len:, :]  # (B, T, C)
             # get the prediction of next timestep
             with torch.no_grad():
-                input_forward = self.forward(input_cond, tau=1)
+                input_forward = self(input_cond, tau=1)
             # focus only on the last time step
             next_timestep = input_forward[:, -1, :]  # (B, C)
             # append predicted next timestep to the running sequence

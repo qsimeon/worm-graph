@@ -27,13 +27,13 @@ hydra:
   sweeper:
     params:
       # GLOBALS
-      globals.random_seed: 0, 1, 2
+      globals.random_seed: 0, 1, 2, 3
       # MODEL
-      model.type: NetworkLSTM, NeuralTransformer #LinearNN, NeuralTransformer, NetworkLSTM, NeuralCFC
-      model.loss: L1 #L1, MSE, Huber
-      model.fft_reg_param: 0.0, 0.5, 1.0, 1.5, 2.0, 2.5, 3.0
-      model.l1_reg_param: 0.0 # 0.0, 0.5, 1.0, 1.5, 2.0, 2.5, 3.0
-      model.hidden_size: 2048 #128, 256, 512, 1024, 2048
+      model.type: NetworkLSTM #LinearNN, NeuralTransformer, NetworkLSTM, NeuralCFC
+      model.loss: MSE #L1, MSE, Huber
+      model.fft_reg_param: 0.0, 0.3, 0.5, 0.7, 1.0
+      model.l1_reg_param: 0.0 # 0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0
+      model.hidden_size: 128, 256, 512, 1024, 2048, 4096, 8192
       model.num_layers: 1 
       model.checkpoint_path: false
       # DATASET
@@ -57,5 +57,5 @@ hydra:
       train.shuffle_samples: false 
       train.reverse: false 
       # PREDICT
-      predict.tau_out: 1
+      predict.tau_out: 1000
       predict.dataset.name: Uzel2022
