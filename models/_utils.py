@@ -241,44 +241,48 @@ class Model(torch.nn.Module):
 
         return loss
 
+    def init_hidden(self, input_shape):
+        """
+        Inititializes a hidden state vector for models that use a dynamic hidden state like RNNs and LSTMs.
+        """
+        device = next(self.parameters()).device
+        batch_size = input_shape[0]  # beacuse batch_first=True
+        hidden = torch.randn(self.num_layers, batch_size, self.hidden_size).to(device)
+        return hidden
+
     def generate(
         self,
         input: torch.Tensor,
         timesteps: int = 1,
         mask: Union[torch.Tensor, None] = None,
     ):
-        """Generate future timesteps of neural activity.
-        Arguments:
-            input: a batch of neural activity data with shape (B, T, C).
-            timesteps: the number of new timesteps to generate neural activity for.
-            mask: a mask to apply to the neural activity data at every timestep
-        Returns:
-            output: a batch of input + simulated neural activity with shape (B, T+timesteps, C).
-        """
+        """Generate future timesteps of neural activity."""
         # check dimensions of input
         if input.ndim == 2:
             input = input.unsqueeze(0)
-        assert input.ndim == 3, "Input must have shape (B, T, C)."
+        else:
+            assert input.ndim == 3, "Input must have shape (B, T, C)."
         # create mask if none is provided
-        if mask is None:
-            mask = torch.ones(input.shape[-1], dtype=torch.bool)
+        mask = torch.ones(input.shape[-1], dtype=torch.bool) if mask is None else mask
         # use the full sequence as the context
         context_len = min(MAX_TOKEN_LEN, input.size(1))
-        # copy the input to avoid modifying it
-        output = input.detach().clone()
+        # initialize output tensor
+        output = torch.zeros(
+            (input.size(0), input.size(1) + timesteps, input.size(2)),
+            device=input.device,
+        )
+        output[:, : input.size(1), :] = input
         # generate future timesteps
-        for _ in range(timesteps):
-            # condition on the previous context_len timesteps
-            input_cond = output[:, -context_len:, :]  # (B, T, C)
-            # get the prediction of next timestep
-            with torch.no_grad():
+        with torch.no_grad():
+            for i in range(timesteps):
+                # condition on the previous context_len timesteps
+                input_cond = output[:, -context_len:, :]  # (B, T, C)
+                # get the prediction of next timestep
                 input_forward = self(input_cond, tau=1)
-            # focus only on the last time step
-            next_timestep = input_forward[:, -1, :]  # (B, C)
-            # append predicted next timestep to the running sequence
-            output = (
-                torch.cat([output, next_timestep.unsqueeze(1)], dim=1) * mask
-            ) * mask  # (B, T+1, C)
+                # focus only on the last time step
+                next_timestep = input_forward[:, -1, :]  # (B, C)
+                # append predicted next timestep to the running sequence
+                output[:, input.size(1) + i, :] = next_timestep * mask  # (B, T+1, C)
         return output  # (B, T+timesteps, C)
 
     def sample(self, length):
@@ -505,10 +509,15 @@ class NeuralCFC(Model):
         input: batch of data
         tau: time offset of target
         """
+        # Initialize hidden state
+        self.hidden = (
+            self.init_hidden(input.shape),
+            self.init_hidden(input.shape),
+        )
         if tau < 1:  # return the input sequence
             output = self.identity(input)
         else:  # do one-step prediction
-            rnn_out, self.hidden = self.rnn(input)
+            rnn_out, self.hidden = self.rnn(input, self.hidden)
             # ... use the full sequence
             readout = self.linear(rnn_out)
             output = readout
@@ -573,10 +582,15 @@ class NetworkLSTM(Model):
         input: batch of data
         tau: time offset of target
         """
+        # Initialize hidden state
+        self.hidden = (
+            self.init_hidden(input.shape),
+            self.init_hidden(input.shape),
+        )
         if tau < 1:  # return the input sequence
             output = self.identity(input)
         else:  # do one-step prediction
-            lstm_out, self.hidden = self.lstm(input)
+            lstm_out, self.hidden = self.lstm(input, self.hidden)
             # ... use the full sequence
             readout = self.linear(lstm_out)
             output = readout

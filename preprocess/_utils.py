@@ -335,7 +335,7 @@ def kernel_smooth(x, t, sigma=1, lmbd=0.1, kernel="rbf"):
     return x_smooth
 
 
-def fourier_transform_smooth(x, t, percent=0.1):
+def fourier_transform_smooth(x, t, percent=0.5):
     """Uses the FFT to smooth a multidimensional time series.
 
     Smooths a multidimensional time series by keeping the lowest `percent`
