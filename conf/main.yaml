@@ -16,7 +16,7 @@ globals:
   shuffle_worms: false # whether to shuffle worms
 
 hydra:
-  mode: RUN # options: RUN, MULTIRUN
+  mode: MULTIRUN # options: RUN, MULTIRUN
   job:
     chdir: true # important! this changes the working directory to the log directory
   run:
