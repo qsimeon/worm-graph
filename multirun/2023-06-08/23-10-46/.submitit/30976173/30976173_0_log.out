@@ -1,4 +1,0 @@
-submitit INFO (2023-06-08 23:10:50,955) - Starting with JobEnvironment(job_id=30976173, hostname=node031, local_rank=0(1), node=0(1), global_rank=0(1))
-submitit INFO (2023-06-08 23:10:50,955) - Loading pickle: /net/vast-storage/scratch/vast/yanglab/qsimeon/worm-graph/multirun/2023-06-08/23-10-46/.submitit/30976173/30976173_submitted.pkl
-submitit INFO (2023-06-08 23:11:03,437) - Job completed successfully
-[2023-06-08 23:11:03,437][submitit][INFO] - Job completed successfully

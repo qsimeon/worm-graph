@@ -1,7 +1,0 @@
-logs_base: logs/hydra/2023_06_08_20_29_58
-folder: '@config.yaml'
-submitit_slurm:
-  timeout_min: 60
-  mem_gb: 32
-  nodes: 1
-  gpus_per_node: 1
