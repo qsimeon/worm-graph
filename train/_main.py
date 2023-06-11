@@ -361,9 +361,9 @@ def train_model(
     config.model.checkpoint_path = checkpoint_path.split("worm-graph/")[-1]
     config.setdefault(
         "predict",
-        {"model": {"checkpoint_path": checkpoint_path.split("worm-graph/")[-1]}},
+        {"model": {"checkpoint_path": config.model.checkpoint_path}},
     )
-    config.predict.model.checkpoint_path = checkpoint_path.split("worm-graph/")[-1]
+    config.predict.model.checkpoint_path = config.model.checkpoint_path
     config.setdefault("visualize", {"log_dir": log_dir.split("worm-graph/")[-1]})
     config.visualize.log_dir = log_dir.split("worm-graph/")[-1]
 
