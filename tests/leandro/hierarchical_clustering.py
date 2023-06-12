@@ -21,7 +21,8 @@ import sklearn.metrics as sm
 def hierarchical_clustering_analysis(single_worm_data,
                                      method='complete', metric='euclidean',
                                      truncate_mode='lastp', p=12,
-                                     criterion='maxclust', criterion_value=4, verbose=False):
+                                     criterion='maxclust', criterion_value=4, verbose=False,
+                                     show_plots=True):
     """
         single_worm_data: single worm dataset
         method: linkage method
@@ -50,13 +51,13 @@ def hierarchical_clustering_analysis(single_worm_data,
     condensed_D = squareform(D)
     Z = linkage(condensed_D, method=method, metric=metric)
 
-    dendrogram(Z, truncate_mode=truncate_mode, p=p, leaf_rotation=45., leaf_font_size=10., show_contracted=True)
-
     # === Plot dendrogram ===
-    plt.title('Hierarchical Clustering Dendrogram')
-    plt.xlabel('Cluster Size')
-    plt.ylabel('Distance')
-    plt.show()
+    if show_plots:
+        dendrogram(Z, truncate_mode=truncate_mode, p=p, leaf_rotation=45., leaf_font_size=10., show_contracted=True)
+        plt.title('Hierarchical Clustering Dendrogram')
+        plt.xlabel('Cluster Size')
+        plt.ylabel('Distance')
+        plt.show()
 
     # === Cluster labels ===
     computed_cluster_labels = fcluster(Z, criterion_value, criterion=criterion)
@@ -70,8 +71,9 @@ def hierarchical_clustering_analysis(single_worm_data,
     sorted_neuron_labels = original_neuron_labels[np.argsort(computed_cluster_labels)]
     sorted_computed_cluster_labels = computed_cluster_labels[np.argsort(computed_cluster_labels)]
 
-    plotHeatmap(R, title="Original correlation matrix", xlabel="Neuron", ylabel="Neuron", xticks=original_neuron_labels, yticks=original_neuron_labels, xtick_skip=2, ytick_skip=2)
-    plotHeatmap(sorted_R, title="Sorted correlation matrix", xlabel="Neuron", ylabel="Neuron", xticks=sorted_neuron_labels, yticks=sorted_neuron_labels, xtick_skip=2, ytick_skip=2)
+    if show_plots:
+        plotHeatmap(R, title="Original correlation matrix", xlabel="Neuron", ylabel="Neuron", xticks=original_neuron_labels, yticks=original_neuron_labels, xtick_skip=2, ytick_skip=2)
+        plotHeatmap(sorted_R, title="Sorted correlation matrix", xlabel="Neuron", ylabel="Neuron", xticks=sorted_neuron_labels, yticks=sorted_neuron_labels, xtick_skip=2, ytick_skip=2)
 
     # === Metrics ===
     file_path = '/home/lrvnc/Projects/worm-graph/tests/leandro/data/neuron_clusters.json'
