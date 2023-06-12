@@ -1,5 +1,6 @@
 from train._utils import *
 
+
 def train_model(
     config: DictConfig,
     model: torch.nn.Module,

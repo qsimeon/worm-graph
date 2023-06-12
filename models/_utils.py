@@ -369,6 +369,10 @@ class LinearNN(Model):
             self.linear,
         )
 
+        # # TEST: simple linear model to check if the model is learning
+        # self.linear = torch.nn.Linear(self.input_size, self.output_size)
+        # self.model = torch.nn.Sequential(self.linear,)
+
     def forward(self, input: torch.Tensor, tau: int = 1):
         """Forward method for simple linear regression model.
 
