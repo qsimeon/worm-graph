@@ -12,7 +12,7 @@ defaults:
 globals:
   random_seed: 0 
   use_residual: false # whether to make train models on the residual signal
-  smooth_data: false # whether to use smoothed signal data
+  smooth_data: true # whether to use smoothed signal data
   shuffle_worms: false # whether to shuffle worms
 
 hydra:
@@ -29,24 +29,39 @@ hydra:
       # GLOBALS
       globals.random_seed: 0 #0, 1, 2, 3
       # MODEL
-      model.type: NetworkLSTM #LinearNN, NeuralTransformer, NetworkLSTM, NeuralCFC
+      model.type: NeuralTransformer #LinearNN, NeuralTransformer, NetworkLSTM, NeuralCFC
       model.loss: MSE #L1, MSE, Huber
-      model.fft_reg_param: 0.0, 0.3, 0.5, 0.7, 1.0
-      model.l1_reg_param: 0.0 # 0.0, 0.3, 0.5, 0.7, 1.0
+      model.fft_reg_param: 0.0 # 0.0, 0.3, 0.5, 0.7, 1.0
+      model.l1_reg_param: 0.0, 0.3, 0.5, 0.7, 1.0
       model.hidden_size: 128, 256, 512, 1024, 2048, 4096, 8192
       model.num_layers: 1 
       model.checkpoint_path: false
       # DATASET
       dataset.name: [Kato2015, Nichols2017, Skora2018, Kaplan2020, Flavell2023, Leifer2023]
-        # [Kato2015], [Nichols2017], [Skora2018], [Kaplan2020], [Flavell2023], [Leifer2023]
-        # [Kato2015, Nichols2017], [Nichols2017, Skora2018], [Skora2018, Kaplan2020], [Kaplan2020, Flavell2023], [Flavell2023, Leifer2023]
-        # [Kato2015, Nichols2017, Skora2018], [Nichols2017, Skora2018, Kaplan2020], [Skora2018, Kaplan2020, Flavell2023], [Kaplan2020, Flavell2023, Leifer2023]
-        # [Kato2015, Nichols2017, Skora2018, Kaplan2020], [Nichols2017, Skora2018, Kaplan2020, Flavell2023], [Skora2018, Kaplan2020, Flavell2023, Leifer2023]
-        # [Kato2015, Nichols2017, Skora2018, Kaplan2020, Flavell2023], [Nichols2017, Skora2018, Kaplan2020, Flavell2023, Leifer2023]
         # [Kato2015, Nichols2017, Skora2018, Kaplan2020, Flavell2023, Leifer2023]
+        # [Kato2015, Nichols2017, Skora2018, Kaplan2020, Flavell2023]
+        # [Nichols2017, Skora2018, Kaplan2020, Flavell2023, Leifer2023]
+        # [Kato2015, Nichols2017, Skora2018, Kaplan2020]
+        # [Nichols2017, Skora2018, Kaplan2020, Flavell2023]
+        # [Skora2018, Kaplan2020, Flavell2023, Leifer2023]
+        # [Kato2015, Nichols2017, Skora2018] 
+        # [Nichols2017, Skora2018, Kaplan2020]
+        # [Skora2018, Kaplan2020, Flavell2023]
+        # [Kaplan2020, Flavell2023, Leifer2023]
+        # [Kato2015, Nichols2017]
+        # [Nichols2017, Skora2018]
+        # [Skora2018, Kaplan2020]
+        # [Kaplan2020, Flavell2023]
+        # [Flavell2023, Leifer2023]
+        # [Kato2015]
+        # [Nichols2017]
+        # [Skora2018]
+        # [Kaplan2020]
+        # [Flavell2023]
+        # [Leifer2023]
       # TRAIN
       train.optimizer: Adagrad #SGD, Adam, AdamW, Adagrad, Adadelta, RMSprop 
-      train.learn_rate: 0.01 #0.001, 0.01, 0.1
+      train.learn_rate: 0.01 #0.001, 0.01, 0.1, 1.0
       train.epochs: 100 
       train.save_freq: 200
       train.seq_len: 200 #100, 200

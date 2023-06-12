@@ -117,9 +117,9 @@ def train_model(
     if config.get("globals"):
         use_residual = config.globals.use_residual
         smooth_data = config.globals.smooth_data
-    else:
+    else:  # defaults for when using RUN mode
         use_residual = False
-        smooth_data = False
+        smooth_data = True
 
     # Initialize train/test loss metrics arrays
     data = {
