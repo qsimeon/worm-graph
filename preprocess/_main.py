@@ -1,5 +1,6 @@
 from preprocess._utils import *
 
+
 def process_data(config: DictConfig) -> None:
     """Preprocesses the raw neural and connectome data.
 
