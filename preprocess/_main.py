@@ -55,10 +55,3 @@ if __name__ == "__main__":
     config = OmegaConf.load("conf/preprocess.yaml")
     print("config:", OmegaConf.to_yaml(config), end="\n\n")
     process_data(config)
-    pickle_neural_data(
-            url=config.preprocess.url,
-            zipfile=config.preprocess.zipfile,
-            dataset=config.preprocess.dataset,
-            smooth_method=config.preprocess.smooth,
-            resample_dt=config.preprocess.resample_dt,
-            )
