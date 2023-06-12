@@ -113,6 +113,7 @@ def make_predictions(
         # Put model and data on device
         model = model.to(DEVICE)
         calcium_data = calcium_data.to(DEVICE)
+        named_neurons_mask = named_neurons_mask.to(DEVICE)
 
         # Make predictions with final model
         predictions, targets = model_predict(
@@ -124,7 +125,7 @@ def make_predictions(
 
         # Save Calcium DataFrame
         tau_expand = np.full(time_in_seconds.shape, future_timesteps)
-        data = calcium_data[:, named_neurons_mask].numpy()
+        data = calcium_data[:, named_neurons_mask].cpu().numpy()
         data = np.hstack((data, train_labels, time_in_seconds, tau_expand))
         pd.DataFrame(data=data, columns=columns).to_csv(
             os.path.join(log_dir, worm, signal_str + "_activity.csv"),
@@ -133,7 +134,7 @@ def make_predictions(
         )
 
         # Save Predictions DataFrame
-        data = predictions[:, named_neurons_mask].detach().numpy()
+        data = predictions[:, named_neurons_mask].cpu().numpy()
         data = np.hstack((data, train_labels, time_in_seconds, tau_expand))
         pd.DataFrame(data=data, columns=columns).to_csv(
             os.path.join(log_dir, worm, "predicted_" + signal_str + ".csv"),
@@ -142,7 +143,7 @@ def make_predictions(
         )
 
         # Save Targets DataFrame
-        data = targets[:, named_neurons_mask].detach().numpy()
+        data = targets[:, named_neurons_mask].cpu().numpy()
         data = np.hstack((data, train_labels, time_in_seconds, tau_expand))
         pd.DataFrame(data=data, columns=columns).to_csv(
             os.path.join(log_dir, worm, "target_" + signal_str + ".csv"),
@@ -159,8 +160,11 @@ def make_predictions(
 if __name__ == "__main__":
     config = OmegaConf.load("conf/predict.yaml")
     print("config:", OmegaConf.to_yaml(config), end="\n\n")
-    # make predictions on all worms in the given dataset with a saved model
+    if config.predict.model.checkpoint_path.__contains__("checkpoints"):
+        log_dir = config.predict.model.checkpoint_path.split("checkpoints")[0]
+    else:
+        log_dir = os.path.join("logs", "playground")
     make_predictions(
         config,
-        log_dir=os.path.join("logs", "playground"),
+        log_dir=log_dir,
     )

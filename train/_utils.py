@@ -101,14 +101,10 @@ def train(
             Y_tr[:, :, mask], Y_train[:, :, mask]
         )  # Compute training loss.
 
-        # NOTE: backward using the centered loss improved convergence!
-        # loss.backward()  # Derive gradients.
-        (loss - base).backward()  # Derive gradients.
-
         # No backprop on epoch 0.
-        if no_grad:
-            optimizer.zero_grad()
-        optimizer.step()  # Update parameters based on gradients.
+        if not no_grad:
+            loss.backward()  # Derive gradients.
+            optimizer.step()  # Update parameters based on gradients.
 
         # Store train and baseline loss.
         base_loss += base.detach().item()
@@ -508,51 +504,23 @@ def optimize_model(
     iter_range = range(start_epoch, num_epochs + start_epoch)
     for i, epoch in enumerate(iter_range):
         # Train and validate the model
-        if i > 0:
-            # TODO: This could be introducing non-determinism
-            with ThreadPoolExecutor(
-                max_workers=2
-            ) as executor:  # Parallel train and test
-                model.train()
-                train_future = executor.submit(
-                    train,
-                    train_loader,
-                    model,
-                    neurons_mask,
-                    optimizer,
-                    no_grad=(epoch == 0),
-                    use_residual=use_residual,
-                )
-                train_log = train_future.result()
+        model.train()
+        train_log = train(
+            train_loader,
+            model,
+            neurons_mask,
+            optimizer,
+            no_grad=(epoch == 0),
+            use_residual=use_residual,
+        )
 
-                model.eval()
-                test_future = executor.submit(
-                    test,
-                    test_loader,
-                    model,
-                    neurons_mask,
-                    use_residual=use_residual,
-                )
-                test_log = test_future.result()
-
-        else:
-            model.train()
-            train_log = train(
-                train_loader,
-                model,
-                neurons_mask,
-                optimizer,
-                no_grad=(epoch == 0),
-                use_residual=use_residual,
-            )
-
-            model.eval()
-            test_log = test(
-                test_loader,
-                model,
-                neurons_mask,
-                use_residual=use_residual,
-            )
+        model.eval()
+        test_log = test(
+            test_loader,
+            model,
+            neurons_mask,
+            use_residual=use_residual,
+        )
 
         # Retrieve losses
         centered_train_loss, base_train_loss, train_loss, num_train_samples = (

@@ -67,9 +67,24 @@ def plot_loss_vs_parameter(config_dir, varied_param, control_param, subplot_para
     # Sort the DataFrame by the varied parameter
     df = df.sort_values(".".join(varied_param))
 
+    # Count the unique values in subplot_param to determine the number of rows (subplots)
+    num_subplots = df[".".join(subplot_param)].nunique()
+
+    # Define a base subplot height (you can adjust this as needed)
+    base_subplot_height = 2.5
+
+    # If there is only one subplot, increase the height
+    if num_subplots == 1:
+        subplot_height = 4
+    else:
+        # Otherwise, use the base height
+        subplot_height = base_subplot_height
+
     # Create a grid of subplots, with one row for each unique value of 'subplot_param'
     # The grid will share the y-axis across all subplots
-    g = sns.FacetGrid(df, row=".".join(subplot_param), height=3, aspect=4, sharey=True)
+    g = sns.FacetGrid(
+        df, row=".".join(subplot_param), height=subplot_height, aspect=4, sharey=True
+    )
 
     # For each subplot, plot a lineplot of 'loss' against 'varied_param',
     # with different colors for each unique value of 'control_param'
@@ -85,11 +100,13 @@ def plot_loss_vs_parameter(config_dir, varied_param, control_param, subplot_para
 
     # Customize the axis labels and title for each subplot
     g.set_axis_labels("%s %s" % (varied_param[0], varied_param[1]), "Validation Loss")
-    g.fig.subplots_adjust(top=0.9)  # Adjust the Figure in `g`
+    g.fig.subplots_adjust(top=0.95)  # Adjust the Figure in `g`, increased to 0.95
     g.fig.suptitle(
         "Scaling plot: loss vs {} {} \n Validation loss after training on different {} {}".format(
             *varied_param, *control_param
-        )
+        ),
+        fontsize="large",
+        y=1.11,  # Adjust y to push the title upwards a little
     )
 
     # Add a legend to the figure

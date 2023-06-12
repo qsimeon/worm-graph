@@ -335,7 +335,7 @@ def kernel_smooth(x, t, sigma=1, lmbd=0.1, kernel="rbf"):
     return x_smooth
 
 
-def fourier_transform_smooth(x, t, percent=0.1):
+def fourier_transform_smooth(x, t, percent=0.25):
     """Uses the FFT to smooth a multidimensional time series.
 
     Smooths a multidimensional time series by keeping the lowest `percent`
@@ -1021,9 +1021,6 @@ class Nichols2017Preprocessor(BasePreprocessor):
             for i, trace_data in enumerate(traces):
                 worm = "worm" + str(worm_idx)  # Use global worm index
                 worm_idx += 1  # Increment worm index
-                # unique_IDs = [
-                #     (j[-1] if isinstance(j, list) else j) for j in neuron_IDs[i]
-                # ]
                 unique_IDs = [
                     (self.pick_non_none(j) if isinstance(j, list) else j)
                     for j in neuron_IDs[i]
@@ -1542,7 +1539,6 @@ class Flavell2023Preprocessor(BasePreprocessor):
                             if neuron_name not in neurons
                         ]
                         # Random pick one of the possibilities
-                        print(label_split, possible_labels)
                         neurons[i] = np.random.choice(possible_labels)
 
             for i in range(number_neurons):
