@@ -31,8 +31,3 @@ from typing import Tuple, Union, Callable, Dict
 # Local libraries
 from utils import ROOT_DIR, RAW_FILES, NUM_NEURONS, NEURONS_302, VALID_DATASETS
 from pysindy.differentiation import SmoothedFiniteDifference
-
-from scipy.signal import savgol_filter
-from scipy.linalg import solve
-from typing import Tuple, Union
-from torch.autograd import Variable
