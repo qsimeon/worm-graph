@@ -103,8 +103,11 @@ def train(
 
         # No backprop on epoch 0.
         if not no_grad:
+            print("weights before:", model.linear.weight.data)  # before update
             loss.backward()  # Derive gradients.
+            print("gradients:", model.linear.weight.grad)  # after backward
             optimizer.step()  # Update parameters based on gradients.
+            print("weights after:", model.linear.weight.data)  # after update
 
         # Store train and baseline loss.
         base_loss += base.detach().item()
@@ -504,7 +507,6 @@ def optimize_model(
     iter_range = range(start_epoch, num_epochs + start_epoch)
     for i, epoch in enumerate(iter_range):
         # Train and validate the model
-        model.train()
         train_log = train(
             train_loader,
             model,
@@ -513,8 +515,6 @@ def optimize_model(
             no_grad=(epoch == 0),
             use_residual=use_residual,
         )
-
-        model.eval()
         test_log = test(
             test_loader,
             model,
