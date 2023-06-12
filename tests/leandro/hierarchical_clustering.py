@@ -31,8 +31,9 @@ def hierarchical_clustering_analysis(single_worm_data,
     """
 
     np.set_printoptions(precision=4, suppress=True)
-    plt.figure(figsize=(10, 3))
-    plt.style.use('seaborn-whitegrid')
+    if show_plots:
+        plt.figure(figsize=(10, 3))
+        plt.style.use('seaborn-whitegrid')
 
     X = single_worm_data['smooth_calcium_data'] # (time, all neurons)
     X = X[:, single_worm_data['named_neurons_mask']]  # (time, named and acive neurons)
