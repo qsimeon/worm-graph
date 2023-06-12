@@ -1,4 +1,3 @@
-from tests.leandro.tools import correlation_matrix
 from tests.leandro.plots import plotHeatmap
 
 import numpy as np
@@ -21,7 +20,7 @@ import sklearn.metrics as sm
 
 def hierarchical_clustering_analysis(single_worm_data,
                                      method='complete', metric='euclidean',
-                                     truncate_mode='lastp', p=12, plot_dendrogram=True,
+                                     truncate_mode='lastp', p=12,
                                      criterion='maxclust', criterion_value=4, verbose=False):
     """
         single_worm_data: single worm dataset
@@ -37,7 +36,7 @@ def hierarchical_clustering_analysis(single_worm_data,
     X = single_worm_data['smooth_calcium_data'] # (time, all neurons)
     X = X[:, single_worm_data['named_neurons_mask']]  # (time, named and acive neurons)
 
-    R = correlation_matrix(X)
+    R = np.corrcoef(X, rowvar=False)
     R = (R + R.T) / 2  # Make it symmetric (just in case) -> numerical error
     D = 1 - R # Distance matrix
     np.fill_diagonal(D, 0) # Make diagonal 0 (just in case)
@@ -53,12 +52,13 @@ def hierarchical_clustering_analysis(single_worm_data,
 
     dendrogram(Z, truncate_mode=truncate_mode, p=p, leaf_rotation=45., leaf_font_size=10., show_contracted=True)
 
-    if plot_dendrogram:
-        plt.title('Hierarchical Clustering Dendrogram')
-        plt.xlabel('Cluster Size')
-        plt.ylabel('Distance')
-        plt.show()
+    # === Plot dendrogram ===
+    plt.title('Hierarchical Clustering Dendrogram')
+    plt.xlabel('Cluster Size')
+    plt.ylabel('Distance')
+    plt.show()
 
+    # === Cluster labels ===
     computed_cluster_labels = fcluster(Z, criterion_value, criterion=criterion)
 
     # === Sorting ===
@@ -92,7 +92,3 @@ def hierarchical_clustering_analysis(single_worm_data,
     count_inside_clusters = clusters.groupby('Computed Cluster')['Reference'].value_counts().unstack().fillna(0)
 
     return clusters, count_inside_clusters
-
-
-
-
