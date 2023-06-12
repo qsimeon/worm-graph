@@ -160,3 +160,6 @@ dmypy.json
 
 # Zip files
 *.zip
+
+# Custom
+API_KEY.txt
