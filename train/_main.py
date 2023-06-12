@@ -1,6 +1,5 @@
 from train._utils import *
 
-
 def train_model(
     config: DictConfig,
     model: torch.nn.Module,
@@ -274,7 +273,9 @@ def train_model(
         n = i + 1
         seconds = end_time - start_time
         cumsum_seconds += seconds
-        seconds_per_epoch = (n - 1) / n * seconds_per_epoch + 1 / n * seconds
+        seconds_per_epoch = (
+            n - 1
+        ) / n * seconds_per_epoch + 1 / n * seconds  # running average
 
         # Retrieve losses and sample counts
         for key in data:  # pre-allocated memory for `data[key]`
@@ -284,7 +285,7 @@ def train_model(
         # Extract the latest validation loss
         val_loss = data["centered_test_losses"][-1]
 
-        # Get what neurons have been covered so far
+        # Get what neurons have been covered (i.e. seen) so far
         covered_neurons = set(
             np.array(NEURONS_302)[torch.nonzero(coverage_mask).squeeze().numpy()]
         )
