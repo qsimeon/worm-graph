@@ -133,6 +133,14 @@ def draw_connectome(
 
 
 def plot_frequency_distribution(data, ax, title, dt=0.5):
+    """Plots the frequency distribution of a signal.
+
+    Args:
+        data (list): The signal data.
+        ax (matplotlib.axes.Axes): The axes to plot on.
+        title (str): The title of the plot.
+        dt (float, optional): The time step between samples. Defaults to 0.5.
+    """
     # Compute the FFT and frequencies
     fft_data = torch.fft.rfft(torch.tensor(data))
     freqs = torch.fft.rfftfreq(len(data), d=dt)
@@ -145,8 +153,10 @@ def plot_frequency_distribution(data, ax, title, dt=0.5):
 
 
 def plot_loss_curves(log_dir):
-    """
-    Plot the loss curves stored in the given log directory.
+    """Plots the loss curves stored in a log directory.
+
+    Args:
+        log_dir (str): The path to the log directory.
     """
     # process the config.yaml file inside the log folder
     cfg_path = os.path.join(log_dir, "config.yaml")
@@ -214,8 +224,13 @@ def plot_loss_curves(log_dir):
 
 
 def plot_before_after_weights(log_dir: str) -> None:
-    """
-    Plot the model's readout weigths from before and after training.
+    """Plots the model's readout weights from before and after training.
+
+    Args:
+        log_dir (str): The path to the log directory.
+
+    Returns:
+        None
     """
     # process the config.yaml file inside the log folder
     cfg_path = os.path.join(log_dir, "config.yaml")
@@ -279,6 +294,21 @@ def plot_before_after_weights(log_dir: str) -> None:
     # after training
     model.load_state_dict(last_chkpt["model_state_dict"])
     weights_after = model.linear.weight.detach().cpu().T
+
+    # check if the weights changed very much
+    if torch.allclose(weights_before, weights_after):
+        print("Model weights did not change much during training.")
+    # print what percentage of weights are close
+    print(
+        "Model weights changed by {:.2f}% during training.".format(
+            100
+            * (
+                1
+                - torch.isclose(weights_before, weights_after, atol=1e-3).sum().item()
+                / weights_before.numel()
+            )
+        )
+    )
 
     # find min and max across both datasets for the colormap
     vmin = min(weights_before.min(), weights_after.min())
@@ -387,6 +417,9 @@ def plot_targets_predictions(
                 timestamp,
             )
         )
+        # Create a figure with a larger size. Adjust (8, 6) as per your need.
+        fig, ax = plt.subplots(figsize=(8, 6))
+
         sns.lineplot(
             data=targets_df,
             x=targets_df.time_in_seconds,
@@ -394,6 +427,7 @@ def plot_targets_predictions(
             label="target",
             alpha=0.5,
             linewidth=2.5,
+            ax=ax,
         )
         sns.lineplot(
             data=predictions_df,
@@ -402,9 +436,10 @@ def plot_targets_predictions(
             label="predict",
             alpha=0.9,
             linewidth=1,
+            ax=ax,
         )
-        ylo, yhi = plt.gca().get_ylim()
-        plt.gca().fill_between(
+        ylo, yhi = ax.get_ylim()
+        ax.fill_between(
             targets_df.time_in_seconds,
             ylo,
             yhi,
@@ -413,7 +448,7 @@ def plot_targets_predictions(
             facecolor="cyan",
             label="train",
         )
-        plt.gca().fill_between(
+        ax.fill_between(
             targets_df.time_in_seconds,
             ylo,
             yhi,
@@ -422,7 +457,7 @@ def plot_targets_predictions(
             facecolor="magenta",
             label="test",
         )
-        plt.gca().fill_between(
+        ax.fill_between(
             targets_df.time_in_seconds.to_numpy()[-tau_out:],
             ylo,
             yhi,
@@ -430,8 +465,16 @@ def plot_targets_predictions(
             facecolor="red",
             label="predict",
         )
-        plt.legend(loc="upper left", fontsize=6)
-        plt.suptitle(plt_title, fontsize="small")
+        ax.legend(loc="upper left", fontsize=6)
+        # Adjust the plot layout
+        plt.tight_layout(
+            rect=[0, 0, 1, 0.92]
+        )  # Adjust the rectangle's top value as needed to give the suptitle more space
+        plt.subplots_adjust(top=0.85)  # Adjust the top to make space for the title
+        # Now add your suptitle, using the y parameter to control its vertical placement
+        plt.suptitle(
+            plt_title, fontsize="small", y=1.02
+        )  # Adjust y as needed so the title doesn't overlap with the plot
         plt.xlabel("Time (seconds)")
         plt.ylabel(signal_str.capitalize() + " ($\Delta F / F$)")
         plt.savefig(
@@ -535,7 +578,15 @@ def plot_correlation_scatterplot(
             scatter_kws={"alpha": 0.1},
             # line_kws={"color": "black"},
         )
-        plt.suptitle(plt_title, fontsize="small")
+        # Adjust the plot layout
+        plt.tight_layout(
+            rect=[0, 0, 1, 0.92]
+        )  # Adjust the rectangle's top value as needed to give the suptitle more space
+        plt.subplots_adjust(top=0.85)  # Adjust the top to make space for the title
+        # Now add your suptitle, using the y parameter to control its vertical placement
+        plt.suptitle(
+            plt_title, fontsize="small", y=1.02
+        )  # Adjust y as needed so the title doesn't overlap with the plot
         plt.axis("equal")
         plt.gca().set_ylim(plt.gca().get_xlim())
         plt.xlabel("Target " + signal_str + " ($\Delta F / F$)")

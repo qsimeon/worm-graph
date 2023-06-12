@@ -102,9 +102,7 @@ def train(
         )  # Compute training loss.
 
         # No backprop on epoch 0.
-        if no_grad:
-            optimizer.zero_grad()
-        else:
+        if not no_grad:
             loss.backward()  # Derive gradients.
             optimizer.step()  # Update parameters based on gradients.
 

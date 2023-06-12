@@ -12,11 +12,11 @@ defaults:
 globals:
   random_seed: 0 
   use_residual: false # whether to make train models on the residual signal
-  smooth_data: false # whether to use smoothed signal data
+  smooth_data: true # whether to use smoothed signal data
   shuffle_worms: false # whether to shuffle worms
 
 hydra:
-  mode: MULTIRUN # options: RUN, MULTIRUN
+  mode: RUN # options: RUN, MULTIRUN
   job:
     chdir: true # important! this changes the working directory to the log directory
   run:
@@ -31,8 +31,8 @@ hydra:
       # MODEL
       model.type: NeuralTransformer #LinearNN, NeuralTransformer, NetworkLSTM, NeuralCFC
       model.loss: MSE #L1, MSE, Huber
-      model.fft_reg_param: 0.0, 0.3, 0.5, 0.7, 1.0
-      model.l1_reg_param: 0.0 # 0.0, 0.3, 0.5, 0.7, 1.0
+      model.fft_reg_param: 0.0 # 0.0, 0.3, 0.5, 0.7, 1.0
+      model.l1_reg_param: 0.0, 0.3, 0.5, 0.7, 1.0
       model.hidden_size: 128, 256, 512, 1024, 2048, 4096, 8192
       model.num_layers: 1 
       model.checkpoint_path: false
@@ -61,7 +61,7 @@ hydra:
         # [Leifer2023]
       # TRAIN
       train.optimizer: Adagrad #SGD, Adam, AdamW, Adagrad, Adadelta, RMSprop 
-      train.learn_rate: 0.01 #0.001, 0.01, 0.1
+      train.learn_rate: 0.01 #0.001, 0.01, 0.1, 1.0
       train.epochs: 100 
       train.save_freq: 200
       train.seq_len: 200 #100, 200
