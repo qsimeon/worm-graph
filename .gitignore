@@ -20,6 +20,10 @@ raw_data.zip
 raw_data/
 *.pickle
 
+# numpy
+*.npy
+*.npz
+
 # PyCharm
 .idea/
 
@@ -157,3 +161,6 @@ dmypy.json
 
 # Zip files
 *.zip
+
+# Custom
+API_KEY.txt
