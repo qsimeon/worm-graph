@@ -579,7 +579,6 @@ def interpolate_data(time, data, target_dt):
     -------
     numpy.ndarray, numpy.ndarray: Two arrays containing the interpolated time points and data.
     """
-
     # If target_dt is None, return the original data
     if target_dt is None:
         return time, data
@@ -665,7 +664,7 @@ def pickle_neural_data(
             std_out = subprocess.run(bash_command, text=True)  # Run the bash command
             print(std_out, end="\n\n")
 
-        #!os.unlink(zip_path)  # Remove zip file
+        os.unlink(zip_path)  # Remove zip file
 
     # (re)-Pickle all the datasets ... OR
     if dataset is None or dataset.lower() == "all":
@@ -694,7 +693,7 @@ def pickle_neural_data(
         preprocessor.preprocess()
 
     # Delete the downloaded raw datasets
-    #! shutil.rmtree(source_path)
+    shutil.rmtree(source_path)
 
     # Create a file to indicate that the preprocessing was successful
     open(os.path.join(processed_path, ".processed"), "a").close()
@@ -929,7 +928,7 @@ class Kato2015Preprocessor(BasePreprocessor):
                 worm_idx += 1  # Increment worm index
                 unique_IDs = [
                     (j[0] if isinstance(j, list) else j) for j in neuron_IDs[i]
-                ] 
+                ]
                 unique_IDs = [
                     (str(_) if j is None or isinstance(j, np.ndarray) else str(j))
                     for _, j in enumerate(unique_IDs)
@@ -1465,17 +1464,6 @@ class Flavell2023Preprocessor(BasePreprocessor):
         else:
             raise ValueError(f"Unsupported file format: {file_name}")
         return data
-    
-    def check_possible_neurons(self, label, neurons):
-        # Find the group which the neuron belongs to
-        label_split = label.split('?')[0]
-        # Verify possible labels
-        possible_labels = [neuron_name for neuron_name in NEURONS_302 if label_split in neuron_name]
-        # Exclude possibilities that we already have
-        possible_labels = [neuron_name for neuron_name in possible_labels if neuron_name not in neurons]
-        # Random pick one of the possibilities
-        print(label, possible_labels)
-        return np.random.choice(possible_labels)
 
     def extract_data(self, file_data):
         if isinstance(file_data, h5py.File):
