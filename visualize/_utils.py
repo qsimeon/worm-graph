@@ -264,8 +264,13 @@ def plot_before_after_weights(log_dir: str) -> None:
         return None
     # load the first model checkpoint
     chkpts = sorted(os.listdir(chkpt_dir), key=lambda x: int(x.split("_")[0]))
-    first_chkpt = torch.load(os.path.join(chkpt_dir, chkpts[0]), map_location=DEVICE)
-    last_chkpt = torch.load(os.path.join(chkpt_dir, chkpts[-1]), map_location=DEVICE)
+    print("Checkpoints found: {}".format(chkpts), end="\n\n")  # DEBUGGING
+    checkpoint_zero_dir = os.path.join(chkpt_dir, chkpts[0])
+    checkpoint_last_dir = os.path.join(chkpt_dir, chkpts[-1])
+    print("First checkpoint: {}".format(checkpoint_zero_dir))  # DEBUGGING
+    print("Last checkpoint: {}".format(checkpoint_last_dir), end="\n\n")  # DEBUGGING
+    first_chkpt = torch.load(checkpoint_zero_dir, map_location=DEVICE)
+    last_chkpt = torch.load(checkpoint_last_dir, map_location=DEVICE)
     # create the model
     input_size, hidden_size, num_layers = (
         first_chkpt["input_size"],
@@ -277,6 +282,10 @@ def plot_before_after_weights(log_dir: str) -> None:
         first_chkpt["fft_reg_param"],
         first_chkpt["l1_reg_param"],
     )
+    # plot the readout weights
+    # Create a figure with a larger vertical size
+    fig, axs = plt.subplots(1, 2, figsize=(10, 6))
+    # before training
     model = eval(model_name)(
         input_size,
         hidden_size,
@@ -285,29 +294,41 @@ def plot_before_after_weights(log_dir: str) -> None:
         fft_reg_param=fft_reg_param,
         l1_reg_param=l1_reg_param,
     )
-    # plot the readout weights
-    # Create a figure with a larger vertical size
-    fig, axs = plt.subplots(1, 2, figsize=(10, 6))
-    # before training
     model.load_state_dict(first_chkpt["model_state_dict"])
+    model.eval()
     weights_before = model.linear.weight.detach().cpu().T
     # after training
+    model = eval(model_name)(
+        input_size,
+        hidden_size,
+        num_layers,
+        loss=loss_name,
+        fft_reg_param=fft_reg_param,
+        l1_reg_param=l1_reg_param,
+    )
     model.load_state_dict(last_chkpt["model_state_dict"])
+    model.eval()
     weights_after = model.linear.weight.detach().cpu().T
 
     # check if the weights changed very much
+    print(
+        "check numpy array equal: ",
+        np.array_equal(weights_before.numpy(), weights_after.numpy()),
+    )
     if torch.allclose(weights_before, weights_after):
         print("Model weights did not change much during training.")
     # print what percentage of weights are close
+    print("Weights shape:", weights_before.shape)
     print(
-        "Model weights changed by {:.2f}% during training.".format(
+        "Model weights changed by {:.5f}% during training.".format(
             100
             * (
                 1
-                - torch.isclose(weights_before, weights_after, atol=1e-3).sum().item()
+                - torch.isclose(weights_before, weights_after, atol=1e-8).sum().item()
                 / weights_before.numel()
             )
-        )
+        ),
+        end="\n\n",
     )
 
     # find min and max across both datasets for the colormap

@@ -103,12 +103,9 @@ def train(
 
         # No backprop on epoch 0.
         if not no_grad:
-            print("weights before:", model.linear.weight.data)  # before update
             loss.backward()  # Derive gradients.
-            print("gradients:", model.linear.weight.grad)  # after backward
             optimizer.step()  # Update parameters based on gradients.
-            print("weights after:", model.linear.weight.data)  # after update
-
+            
         # Store train and baseline loss.
         base_loss += base.detach().item()
         train_loss += loss.detach().item()
