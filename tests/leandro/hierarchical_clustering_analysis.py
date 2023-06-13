@@ -1,4 +1,6 @@
 import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
 
 def create_total(df):
     new_df = df.copy()
@@ -28,7 +30,20 @@ def convert_to_percentages(df, decimals=2, dimension='reference'):
 
     return new_df.round(decimals=decimals)
 
-def group_by_three(df):
+# Function to randomly replace the values with equal distribution
+def random_replace(value):
+    import numpy as np
+    if ', ' in value:
+        possible_labels = value.split(', ')
+        return np.random.choice(possible_labels)
+    else:
+        return value
+
+def group_by_three(df, mode='random'):
+
+    assert mode in ['random', 'max'],\
+        f"Invalid mode: {mode} -> Must be 'random' or 'max'"
+
     # Rearrange columns to three groups -> interneuron, motor, sensory
     new_df = df.copy()
 
@@ -99,3 +114,48 @@ def group_by_four(df):
     new_df = new_df[['interneuron', 'motor', 'sensory', 'polymodal', 'total']]
 
     return new_df
+
+def neuron_distribution(df, stat='percent', group_by=None):
+
+    assert group_by in [None, 'three', 'four'],\
+        f"Invalid group_by: {group_by} -> Must be None, 'three' or 'four'"
+
+    assert stat in ['percent', 'count', 'proportion', 'density'], \
+        f"Invalid stat: {stat} -> Must be 'percent', 'count', 'proportion' or 'density'"
+
+    new_df = df.copy()
+
+    # Define the replacements
+    replacements = {
+        'interneuron': 'I',
+        'motor': 'M',
+        'sensory': 'S',
+        'motor, interneuron': 'MI',
+        'sensory, motor': 'SM',
+        'sensory, interneuron': 'SI',
+        'sensory, motor, interneuron': 'SMI',
+        'polymodal': 'P'
+    }
+
+    # Group the neurons by three or four
+    if group_by == 'four':
+        new_df.loc[new_df['Reference'].str.contains(', '), 'Reference'] = 'polymodal'
+    elif group_by == 'three':
+        new_df['Reference'] = new_df['Reference'].apply(random_replace)
+
+
+    # Replace the values in the 'Reference' column
+    new_df['Reference'] = new_df['Reference'].replace(replacements)
+
+    # Create the histogram
+    sns.histplot(data=new_df, x='Reference', stat=stat, discrete=True, kde=True)
+
+    # Set the labels and title
+    plt.title(f'Neuron distribution ({stat})')
+    plt.xlabel('Neuron type')
+
+    # Display the plot
+    plt.tight_layout()
+    plt.show()
+
+    return new_df['Reference'].value_counts().round(2)
