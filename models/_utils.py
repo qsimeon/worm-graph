@@ -255,8 +255,11 @@ class Model(torch.nn.Module):
         input: torch.Tensor,
         timesteps: int = 1,
         mask: Union[torch.Tensor, None] = None,
+        context_len: int = 200,
     ):
-        """Generate future timesteps of neural activity."""
+        """
+        Generate future timesteps of neural activity.
+        """
         # check dimensions of input
         if input.ndim == 2:
             input = input.unsqueeze(0)
@@ -265,8 +268,17 @@ class Model(torch.nn.Module):
         # create mask if none is provided
         mask = torch.ones(input.shape[-1], dtype=torch.bool) if mask is None else mask
         # use the full sequence as the context
-        # context_len = min(MAX_TOKEN_LEN, input.size(1))
-        context_len = min(200, input.size(1))  # DEBUGGING
+        context_len = min(context_len, input.size(1))
+        # TODO: remove this print statement
+        print(
+            "input length:",
+            input.size(1),
+            "timesteps",
+            "\ncontext window:",
+            context_len,
+            "timesteps",
+            end="\n\n",
+        )
         # initialize output tensor
         output = torch.zeros(
             (input.size(0), input.size(1) + timesteps, input.size(2)),
@@ -276,33 +288,16 @@ class Model(torch.nn.Module):
         # generate future timesteps
         with torch.no_grad():
             for i in range(timesteps):
-                # ###############################################################
-                # # DEBUGGING
-                # print("DUMBASS")
-                # input_cond = output[:, -context_len:, :]
-                # print("original input_cond.shape:", input_cond.shape)
-                # print("original `input_cond` (mask applied)", input_cond[:, :, mask])
-                # print("\n\n")
-                # input_cond = output[:, input.size(1) - context_len : input.size(1), :]
-                # print("corrected input_cond.shape:", input_cond.shape)
-                # print(
-                #     "corrected `input_cond` (mask_applied)",
-                #     input_cond[:, :, mask],
-                # )
-                # # DEBUGGING
-                # ###############################################################
                 # condition on the previous context_len timesteps
                 input_cond = output[
                     :, input.size(1) - context_len + i : input.size(1) + i, :
                 ]  # (B, T, C)
                 # get the prediction of next timestep
                 input_forward = self(input_cond, tau=1)
-                ###############################################################
                 # focus only on the last time step
                 next_timestep = input_forward[:, -1, :]  # (B, C)
                 # append predicted next timestep to the running sequence
                 output[:, input.size(1) + i, :] = next_timestep * mask  # (B, T+1, C)
-                ###############################################################
         return output  # (B, T+timesteps, C)
 
     def sample(self, length):
