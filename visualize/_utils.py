@@ -193,7 +193,7 @@ def plot_loss_curves(log_dir):
     # load the loss dataframe
     loss_df = pd.read_csv(loss_curves_csv, index_col=0)
     # plot loss vs epochs
-    plt.figure()
+    plt.figure(figsize=(10, 6))
     sns.lineplot(
         x="epochs",
         y="train_losses",
@@ -215,7 +215,15 @@ def plot_loss_curves(log_dir):
     sns.lineplot(x="epochs", y="centered_train_losses", data=loss_df, label="train")
     sns.lineplot(x="epochs", y="centered_test_losses", data=loss_df, label="test")
     plt.legend()
-    plt.suptitle(plt_title, fontsize="small")
+    # After creating your subplots and setting their titles, adjust the plot layout
+    plt.tight_layout(
+        rect=[0, 0, 1, 0.92]
+    )  # Adjust the rectangle's top value as needed to give the suptitle more space
+    plt.subplots_adjust(top=0.85)  # Adjust the top to make space for the title
+    # Now add your suptitle, using the y parameter to control its vertical placement
+    plt.suptitle(
+        plt_title, fontsize="medium", y=0.90
+    )  # Adjust y as needed so the title doesn't overlap with the plot
     plt.xlabel("Epoch (# worm cohorts)")
     plt.ylabel("Loss - Baseline")
     plt.savefig(os.path.join(log_dir, "loss_curves.png"))
@@ -264,11 +272,8 @@ def plot_before_after_weights(log_dir: str) -> None:
         return None
     # load the first model checkpoint
     chkpts = sorted(os.listdir(chkpt_dir), key=lambda x: int(x.split("_")[0]))
-    print("Checkpoints found: {}".format(chkpts), end="\n\n")  # DEBUGGING
     checkpoint_zero_dir = os.path.join(chkpt_dir, chkpts[0])
     checkpoint_last_dir = os.path.join(chkpt_dir, chkpts[-1])
-    print("First checkpoint: {}".format(checkpoint_zero_dir))  # DEBUGGING
-    print("Last checkpoint: {}".format(checkpoint_last_dir), end="\n\n")  # DEBUGGING
     first_chkpt = torch.load(checkpoint_zero_dir, map_location=DEVICE)
     last_chkpt = torch.load(checkpoint_last_dir, map_location=DEVICE)
     # create the model
@@ -282,45 +287,33 @@ def plot_before_after_weights(log_dir: str) -> None:
         first_chkpt["fft_reg_param"],
         first_chkpt["l1_reg_param"],
     )
+    model = eval(model_name)(
+        input_size,
+        hidden_size,
+        num_layers,
+        loss=loss_name,
+        fft_reg_param=fft_reg_param,
+        l1_reg_param=l1_reg_param,
+    )
     # plot the readout weights
     # Create a figure with a larger vertical size
     fig, axs = plt.subplots(1, 2, figsize=(10, 6))
     # before training
-    model = eval(model_name)(
-        input_size,
-        hidden_size,
-        num_layers,
-        loss=loss_name,
-        fft_reg_param=fft_reg_param,
-        l1_reg_param=l1_reg_param,
-    )
     model.load_state_dict(first_chkpt["model_state_dict"])
     model.eval()
-    weights_before = model.linear.weight.detach().cpu().T
+    weights_before = copy.deepcopy(model.linear.weight.detach().cpu().T)
+
     # after training
-    model = eval(model_name)(
-        input_size,
-        hidden_size,
-        num_layers,
-        loss=loss_name,
-        fft_reg_param=fft_reg_param,
-        l1_reg_param=l1_reg_param,
-    )
     model.load_state_dict(last_chkpt["model_state_dict"])
     model.eval()
-    weights_after = model.linear.weight.detach().cpu().T
+    weights_after = copy.deepcopy(model.linear.weight.detach().cpu().T)
 
     # check if the weights changed very much
-    print(
-        "check numpy array equal: ",
-        np.array_equal(weights_before.numpy(), weights_after.numpy()),
-    )
     if torch.allclose(weights_before, weights_after):
         print("Model weights did not change much during training.")
     # print what percentage of weights are close
-    print("Weights shape:", weights_before.shape)
     print(
-        "Model weights changed by {:.5f}% during training.".format(
+        "Model weights changed by {:.2f}% during training.".format(
             100
             * (
                 1
@@ -358,7 +351,7 @@ def plot_before_after_weights(log_dir: str) -> None:
     plt.subplots_adjust(top=0.85)  # Adjust the top to make space for the title
     # Now add your suptitle, using the y parameter to control its vertical placement
     plt.suptitle(
-        plt_title, fontsize="medium", y=1.02
+        plt_title, fontsize="medium", y=0.95
     )  # Adjust y as needed so the title doesn't overlap with the plot
     # Save and close as before
     plt.savefig(os.path.join(log_dir, "readout_weights.png"))

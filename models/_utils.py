@@ -265,24 +265,44 @@ class Model(torch.nn.Module):
         # create mask if none is provided
         mask = torch.ones(input.shape[-1], dtype=torch.bool) if mask is None else mask
         # use the full sequence as the context
-        context_len = min(MAX_TOKEN_LEN, input.size(1))
+        # context_len = min(MAX_TOKEN_LEN, input.size(1))
+        context_len = min(200, input.size(1))  # DEBUGGING
         # initialize output tensor
         output = torch.zeros(
             (input.size(0), input.size(1) + timesteps, input.size(2)),
             device=input.device,
         )
-        output[:, : input.size(1), :] = input
+        output[:, : input.size(1), :] = input * mask  # (B, T, C)
         # generate future timesteps
         with torch.no_grad():
             for i in range(timesteps):
+                # ###############################################################
+                # # DEBUGGING
+                # print("DUMBASS")
+                # input_cond = output[:, -context_len:, :]
+                # print("original input_cond.shape:", input_cond.shape)
+                # print("original `input_cond` (mask applied)", input_cond[:, :, mask])
+                # print("\n\n")
+                # input_cond = output[:, input.size(1) - context_len : input.size(1), :]
+                # print("corrected input_cond.shape:", input_cond.shape)
+                # print(
+                #     "corrected `input_cond` (mask_applied)",
+                #     input_cond[:, :, mask],
+                # )
+                # # DEBUGGING
+                # ###############################################################
                 # condition on the previous context_len timesteps
-                input_cond = output[:, -context_len:, :]  # (B, T, C)
+                input_cond = output[
+                    :, input.size(1) - context_len + i : input.size(1) + i, :
+                ]  # (B, T, C)
                 # get the prediction of next timestep
                 input_forward = self(input_cond, tau=1)
+                ###############################################################
                 # focus only on the last time step
                 next_timestep = input_forward[:, -1, :]  # (B, C)
                 # append predicted next timestep to the running sequence
                 output[:, input.size(1) + i, :] = next_timestep * mask  # (B, T+1, C)
+                ###############################################################
         return output  # (B, T+timesteps, C)
 
     def sample(self, length):
@@ -368,10 +388,6 @@ class LinearNN(Model):
             *self.hidden_hidden,
             self.linear,
         )
-
-        # # TEST: simple linear model to check if the model is learning
-        # self.linear = torch.nn.Linear(self.input_size, self.output_size)
-        # self.model = torch.nn.Sequential(self.linear,)
 
     def forward(self, input: torch.Tensor, tau: int = 1):
         """Forward method for simple linear regression model.
