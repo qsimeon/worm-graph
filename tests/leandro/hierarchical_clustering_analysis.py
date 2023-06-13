@@ -11,7 +11,7 @@ def random_replace(value):
     else:
         return value
 
-def neuron_distribution(df, stat='percent', group_by=None):
+def neuron_distribution(df, stat='percent', group_by=None, show_plots=True):
 
     assert group_by in [None, 'three', 'four'],\
         f"Invalid group_by: {group_by} -> Must be None, 'three' or 'four'"
@@ -27,16 +27,17 @@ def neuron_distribution(df, stat='percent', group_by=None):
     elif group_by == 'three':
         new_df['Reference'] = new_df['Reference'].apply(random_replace)
 
-    # Create the histogram
-    sns.histplot(data=new_df, x='Reference', stat=stat, discrete=True, kde=True)
+    if show_plots:
+        # Create the histogram
+        sns.histplot(data=new_df, x='Reference', stat=stat, discrete=True, kde=True)
 
-    # Set the labels and title
-    plt.title(f'Neuron distribution ({stat})')
-    plt.xlabel('Neuron type')
+        # Set the labels and title
+        plt.title(f'Neuron distribution ({stat})')
+        plt.xlabel('Neuron type')
 
-    # Display the plot
-    plt.tight_layout()
-    plt.show()
+        # Display the plot
+        plt.tight_layout()
+        plt.show()
 
     return new_df
 
@@ -84,3 +85,7 @@ def convert_to_percentages(df, dimension='reference'):
         new_df = new_df.div(new_df['total'], axis=0)*100
 
     return new_df.round(decimals=2)
+
+def suggest_classification(df):
+    new_df = df.copy()
+    pass
