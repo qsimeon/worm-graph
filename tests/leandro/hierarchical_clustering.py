@@ -92,6 +92,22 @@ def hierarchical_clustering_analysis(single_worm_data,
         clusters[neuron] = {'Computed Cluster': sorted_computed_cluster_labels[idx], 'Reference': ', '.join(neuron_classification[neuron])}
 
     clusters = pd.DataFrame.from_dict(clusters, orient='index')
-    count_inside_clusters = clusters.groupby('Computed Cluster')['Reference'].value_counts().unstack().fillna(0)
 
-    return clusters, count_inside_clusters
+    # Define the replacements
+    replacements = {
+        'interneuron': 'I',
+        'motor': 'M',
+        'sensory': 'S',
+        'motor, interneuron': 'MI',
+        'sensory, motor': 'SM',
+        'sensory, interneuron': 'SI',
+        'sensory, motor, interneuron': 'SMI',
+        'polymodal': 'P'
+    }
+
+    # Replace the values in the 'Reference' column
+    clusters['Reference'] = clusters['Reference'].replace(replacements)
+
+    clusters.index.name = 'Neuron'
+
+    return clusters
