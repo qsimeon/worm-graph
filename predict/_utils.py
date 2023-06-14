@@ -4,7 +4,8 @@ from predict._pkg import *
 def model_predict(
     model: torch.nn.Module,
     data: torch.Tensor,
-    tau: int = 1000,
+    timesteps: int = 1,
+    context_window: int = 100,
     mask: Union[torch.Tensor, None] = None,
 ) -> tuple[torch.Tensor, torch.Tensor]:
     """Make predictions for all neurons on a dataset with a trained model.
@@ -19,8 +20,10 @@ def model_predict(
     data : torch.Tensor
         Calcium data tensor with shape (1, max_timesteps, num_neurons) or
         (max_timesteps, num_neurons).
-    tau : int, optional, default: 1
+    timesteps : int, optional, default: 1000
         Number of future timesteps to predict.
+    context_window : int, optional, default: 100
+        Number of previous timesteps to regress on for prediction.
     mask : torch.Tensor or None, optional, default: None
         Output mask with shape (num_neurons,) to apply to the predictions.
 
@@ -36,11 +39,11 @@ def model_predict(
 
     # get desired targets and inputs to model
     targets = data[:, :]
-    inputs = data[:-tau, :]
+    inputs = data[:-timesteps, :]
 
     # get predictions from model
     model.eval()
-    predictions = model.generate(inputs, tau, mask).squeeze(0)
+    predictions = model.generate(inputs, timesteps, context_window, mask).squeeze(0)
 
     # Returned sequences are all the same shape as the input `calcium_data`
     return predictions, targets

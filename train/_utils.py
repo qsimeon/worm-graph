@@ -105,7 +105,7 @@ def train(
         if not no_grad:
             loss.backward()  # Derive gradients.
             optimizer.step()  # Update parameters based on gradients.
-            
+
         # Store train and baseline loss.
         base_loss += base.detach().item()
         train_loss += loss.detach().item()

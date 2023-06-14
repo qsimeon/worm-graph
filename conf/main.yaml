@@ -73,4 +73,5 @@ hydra:
       train.reverse: false 
       # PREDICT
       predict.tau_out: 1000
+      predict.context_len: 200
       predict.dataset.name: Uzel2022
