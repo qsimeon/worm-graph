@@ -82,15 +82,31 @@ def neuron_distribution(df, ref_dict, stat='percent', group_by=None, show_plots=
         new_df.loc[neuron, 'Reference'] = ref_dict[neuron]
 
     if show_plots:
-        # Create the histogram
-        sns.histplot(data=new_df, x='Reference', stat=stat, discrete=True, kde=True)
 
-        # Set the labels and title
-        plt.title(f'Neuron distribution ({stat})')
-        plt.xlabel('Neuron type')
+        # Create a figure with two subplots
+        fig, axes = plt.subplots(1, 2, figsize=(12, 5))
+
+        # Create the histogram (literature)
+        sns.histplot(data=new_df, x='Reference', stat=stat, discrete=True, kde=True, ax=axes[0])
+
+        # Set the labels and title for the first subplot
+        axes[0].set_title('Literature labels distribution')
+        axes[0].set_xlabel('Neuron type')
+
+        # Create the histogram (computed clusters)
+        sns.histplot(data=new_df, x='Computed Cluster', stat=stat, discrete=True, kde=True, ax=axes[1])
+
+        # Set the labels and title for the second subplot
+        axes[1].set_title('Computed cluster labels distribution')
+        axes[1].set_xlabel('Neuron type')
+        # Set xticks
+        axes[1].set_xticks(np.arange(len(set(new_df['Computed Cluster']))+1))
+        axes[1].set_ylabel('')
+
+        # Adjust the layout and spacing between subplots
+        plt.tight_layout()
 
         # Display the plot
-        plt.tight_layout()
         plt.show()
 
     return new_df
@@ -137,40 +153,25 @@ def convert_to_percentages(df, dimension='reference'):
 
     return new_df.round(decimals=2)
 
-def suggest_classification(grouped_clusters):
+def suggest_classification(computed_clusters_df):
 
-    # Suggestion matrix: (0, :, :) -> suggestion inside cluster (computed-cluster dimension) -> max: left-right
-    #                    (1, :, :) -> global suggestion (reference dimension) -> max: top-down
+    # TODO: suggestion 2
 
-    new_df = grouped_clusters.copy()
+    new_df = computed_clusters_df.copy()
 
+    # Index of the max values per columns
     count_df = delete_total(count_inside_clusters(new_df, percentage=True, dimension='reference'))
+    max_values_col = count_df.idxmax(axis=0)
 
-    suggestion_matrix = np.empty((2, count_df.shape[0], count_df.shape[1]), dtype=object)
+    # Column of the max value per row
+    count_df = delete_total(count_inside_clusters(new_df, percentage=True, dimension='computed-cluster'))
+    max_values_row = count_df.idxmax(axis=1)
 
-    # Suggestion inside cluster (computed-cluster dimension)
-    for i, _ in enumerate(count_df.index):
-        count_df = delete_total(count_inside_clusters(new_df, percentage=True, dimension='computed-cluster'))
-        suggestion_matrix[0, i, :] = count_df.columns[np.argsort(count_df.loc[i+1].values)].values
-
-    # Global suggestion (reference dimension)
-    for j, col_name in enumerate(count_df.columns):
-        count_df = delete_total(count_inside_clusters(new_df, percentage=True, dimension='reference'))
-        suggestion_matrix[1, :, j] = count_df.index[np.argsort(count_df[col_name].values)].values
-
-    suggestion_inside_cluster = {i+1: c for i, c in enumerate(suggestion_matrix[0, :, -1])}
+    # Create mapping
+    suggestion = {'hip1': {key: value for key, value in max_values_row.items()}, 
+                  'hip2': {}} # hip1: inside cluster, hip2: global
     
-    suggestion_global = {i+1: list() for i in range(suggestion_matrix.shape[1])}
-    for i, col_name in enumerate(count_df.columns):
-        suggestion_global[suggestion_matrix[1, -1, i]].append(col_name)
-
-    for key, item in suggestion_global.items():
-        if len(item) == 0:
-            suggestion_global[key] = np.nan
-        else:
-            suggestion_global[key] = ''.join(item)
-    
-    return suggestion_inside_cluster, suggestion_global
+    return suggestion
 
 def cluster2suggestion(value, suggestion):
     return suggestion[value]
@@ -181,7 +182,7 @@ def accuracy_by_neuron():
 def accuracy_by_worm():
     pass
 
-def analyse_dataset(dataset, group_by='four', method='ward', metric=None, stat='percent'):
+def analyse_dataset(dataset, ref_dict, group_by='four', method='ward', metric=None, stat='percent'):
     """
         dataset = loaded dataset
     """
@@ -213,7 +214,7 @@ def analyse_dataset(dataset, group_by='four', method='ward', metric=None, stat='
                                         criterion='maxclust', criterion_value=num_clusters,
                                         )
 
-        grouped_clusters = neuron_distribution(clusters, stat=stat, group_by=group_by, show_plots=False)
+        grouped_clusters = neuron_distribution(clusters, ref_dict=ref_dict, group_by=group_by, show_plots=False)
 
         s1, s2 = suggest_classification(grouped_clusters=grouped_clusters)
 
