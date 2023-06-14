@@ -170,8 +170,10 @@ class Model(torch.nn.Module):
             self.loss = torch.nn.MSELoss
         elif str(loss).lower() == "huber":
             self.loss = torch.nn.HuberLoss
+        elif str(loss).lower() == "poisson":
+            self.loss = torch.nn.PoissonNLLLoss
         else:
-            self.loss = torch.nn.L1Loss
+            self.loss = torch.nn.MSELoss
 
         # Name of original loss function
         self.loss_name = self.loss.__name__[:-4]
@@ -186,6 +188,11 @@ class Model(torch.nn.Module):
         self.identity = torch.nn.Identity()
         # Linear readout
         self.linear = torch.nn.Linear(self.hidden_size, self.output_size)
+        torch.nn.init.zeros_(self.linear.bias)  # initialize bias to zeros
+        # Initialize the readout weights
+        torch.nn.init.zeros_(self.linear.weight)  # Zeros Initialization
+        # torch.nn.init.xavier_uniform_(self.linear.weight) # Xavier Initialization
+        # torch.nn.init.kaiming_uniform_(self.linear.weight, nonlinearity='relu') # He Initialization
 
     def loss_fn(self):
         """
@@ -241,63 +248,54 @@ class Model(torch.nn.Module):
 
         return loss
 
-    def init_hidden(self, input_shape):
-        """
-        Inititializes a hidden state vector for models that use a dynamic hidden state like RNNs and LSTMs.
-        """
-        device = next(self.parameters()).device
-        batch_size = input_shape[0]  # beacuse batch_first=True
-        hidden = torch.randn(self.num_layers, batch_size, self.hidden_size).to(device)
-        return hidden
-
     def generate(
         self,
-        input: torch.Tensor,
-        timesteps: int = 1,
-        mask: Union[torch.Tensor, None] = None,
+        inputs: torch.Tensor,
+        future_timesteps: int = 1,
         context_len: int = 200,
+        mask: Union[torch.Tensor, None] = None,
     ):
         """
         Generate future timesteps of neural activity.
         """
         # check dimensions of input
-        if input.ndim == 2:
-            input = input.unsqueeze(0)
+        if inputs.ndim == 2:
+            inputs = inputs.unsqueeze(0)
         else:
-            assert input.ndim == 3, "Input must have shape (B, T, C)."
+            assert inputs.ndim == 3, "Inputs must have shape (B, T, C)."
         # create mask if none is provided
-        mask = torch.ones(input.shape[-1], dtype=torch.bool) if mask is None else mask
+        mask = torch.ones(inputs.shape[-1], dtype=torch.bool) if mask is None else mask
         # use the full sequence as the context
-        context_len = min(context_len, input.size(1))
+        context_len = min(context_len, inputs.size(1))
         # TODO: remove this print statement
         print(
             "input length:",
-            input.size(1),
-            "timesteps",
-            "\ncontext window:",
+            inputs.size(1),
+            "\ncontext length:",
             context_len,
-            "timesteps",
+            "\nfuture timesteps:",
+            future_timesteps,
             end="\n\n",
         )
         # initialize output tensor
         output = torch.zeros(
-            (input.size(0), input.size(1) + timesteps, input.size(2)),
-            device=input.device,
+            (inputs.size(0), inputs.size(1) + future_timesteps, inputs.size(2)),
+            device=inputs.device,
         )
-        output[:, : input.size(1), :] = input * mask  # (B, T, C)
+        output[:, : inputs.size(1), :] = inputs * mask  # (B, T, C)
         # generate future timesteps
         with torch.no_grad():
-            for i in range(timesteps):
+            for i in range(future_timesteps):
                 # condition on the previous context_len timesteps
                 input_cond = output[
-                    :, input.size(1) - context_len + i : input.size(1) + i, :
+                    :, inputs.size(1) - context_len + i : inputs.size(1) + i, :
                 ]  # (B, T, C)
                 # get the prediction of next timestep
                 input_forward = self(input_cond, tau=1)
                 # focus only on the last time step
                 next_timestep = input_forward[:, -1, :]  # (B, C)
                 # append predicted next timestep to the running sequence
-                output[:, input.size(1) + i, :] = next_timestep * mask  # (B, T+1, C)
+                output[:, inputs.size(1) + i, :] = next_timestep * mask  # (B, T+1, C)
         return output  # (B, T+timesteps, C)
 
     def sample(self, length):
@@ -514,10 +512,25 @@ class NeuralCFC(Model):
         )
         # Recurrent layer
         self.rnn = CfC(self.input_size, self.hidden_size)
+        # Initialize RNN weights
+        for name, param in self.rnn.named_parameters():
+            if "weight" in name:  # weights
+                torch.nn.init.xavier_uniform_(param.data, gain=1.0)
+            elif "bias" in name:  # biases
+                param.data.fill_(0)
         # Initialize hidden state
         self.hidden = None
         # Normalization layer
         self.layer_norm = torch.nn.LayerNorm(self.hidden_size)
+
+    def init_hidden(self, input_shape):
+        """
+        Inititializes the hidden state of the RNN.
+        """
+        device = next(self.parameters()).device
+        batch_size = input_shape[0]  # beacuse batch_first=True
+        hidden = torch.randn(batch_size, self.hidden_size).to(device)
+        return hidden
 
     def forward(self, input: torch.Tensor, tau: int = 1):
         """Propagate input through the continuous time NN.
@@ -525,20 +538,19 @@ class NeuralCFC(Model):
         tau: time offset of target
         """
         # Initialize hidden state
-        self.hidden = (
-            self.init_hidden(input.shape),
-            self.init_hidden(input.shape),
-        )
+        self.hidden = self.init_hidden(input.shape)
         if tau < 1:  # return the input sequence
             output = self.identity(input)
         else:  # do one-step prediction
             rnn_out, self.hidden = self.rnn(input, self.hidden)
+            rnn_out = self.layer_norm(rnn_out)  # Apply layer normalization
             # ... use the full sequence
             readout = self.linear(rnn_out)
             output = readout
         # do the remaining tau-1 steps of prediction
         for i in range(1, tau):
             rnn_out, self.hidden = self.rnn(output, self.hidden)
+            rnn_out = self.layer_norm(rnn_out)  # Apply layer normalization
             # ... use the full sequence
             readout = self.linear(rnn_out)
             output = readout
@@ -573,7 +585,7 @@ class NetworkLSTM(Model):
             fft_reg_param,
             l1_reg_param,
         )
-        # LSTM
+        # LSTM layer
         self.lstm = torch.nn.LSTM(
             input_size=self.input_size,
             hidden_size=self.hidden_size,
@@ -581,16 +593,28 @@ class NetworkLSTM(Model):
             bias=True,
             batch_first=True,
         )
-        # Initialize LSTM recurrent hidden to hidden weights
-        for ind in range(self.num_layers):
-            weight_hh = getattr(self.lstm, "weight_hh_l{}".format(ind))
-            torch.nn.init.kaiming_uniform_(
-                weight_hh, mode="fan_in", nonlinearity="relu"
-            )
+        # Initialize LSTM weights
+        for name, param in self.lstm.named_parameters():
+            if "weight_ih" in name:  # Input-hidden weights
+                torch.nn.init.xavier_uniform_(param.data, gain=1.0)
+            elif "weight_hh" in name:  # Hidden-hidden weights
+                torch.nn.init.orthogonal_(param.data)
+            elif "bias" in name:  # Bias weights
+                param.data.fill_(0)
         # Initialize hidden state
         self.hidden = None
         # Normalization layer
         self.layer_norm = torch.nn.LayerNorm(self.hidden_size)
+
+    def init_hidden(self, input_shape):
+        """
+        Inititializes the hidden and cell states vectors of the LSTM.
+        """
+        device = next(self.parameters()).device
+        batch_size = input_shape[0]  # because batch_first=True
+        h0 = torch.randn(self.num_layers, batch_size, self.hidden_size).to(device)
+        c0 = torch.randn(self.num_layers, batch_size, self.hidden_size).to(device)
+        return (h0, c0)
 
     def forward(self, input: torch.Tensor, tau: int = 1):
         """Propagate input through the LSTM.
@@ -598,20 +622,19 @@ class NetworkLSTM(Model):
         tau: time offset of target
         """
         # Initialize hidden state
-        self.hidden = (
-            self.init_hidden(input.shape),
-            self.init_hidden(input.shape),
-        )
+        self.hidden = self.init_hidden(input.shape)
         if tau < 1:  # return the input sequence
             output = self.identity(input)
         else:  # do one-step prediction
             lstm_out, self.hidden = self.lstm(input, self.hidden)
+            lstm_out = self.layer_norm(lstm_out)  # Apply layer normalization
             # ... use the full sequence
             readout = self.linear(lstm_out)
             output = readout
         # do the remaining tau-1 steps of prediction
         for i in range(1, tau):
             lstm_out, self.hidden = self.lstm(output, self.hidden)
+            lstm_out = self.layer_norm(lstm_out)  # Apply layer normalization
             # ... use the full sequence
             readout = self.linear(lstm_out)
             output = readout

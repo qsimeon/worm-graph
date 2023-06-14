@@ -67,6 +67,9 @@ def make_predictions(
     # Get the desired future time steps to predict
     future_timesteps = config.predict.tau_out
 
+    # Get the desired context window length
+    context_len = config.predict.context_len
+
     # Get the data to save
     signal_str = "residual" if use_residual else "calcium"
     key_data = "residual_calcium" if use_residual else "calcium_data"
@@ -119,7 +122,8 @@ def make_predictions(
         predictions, targets = model_predict(
             model,
             data=calcium_data,
-            tau=future_timesteps,
+            timesteps=future_timesteps,
+            context_window=context_len,
             mask=named_neurons_mask,
         )
 
