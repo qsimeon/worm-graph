@@ -57,21 +57,29 @@ def random_replace(value):
     else:
         return value
 
-def neuron_distribution(df, stat='percent', group_by=None, show_plots=True):
+def neuron_distribution(df, ref_dict, stat='percent', group_by=None, show_plots=True):
 
     assert group_by in [None, 'three', 'four'],\
         f"Invalid group_by: {group_by} -> Must be None, 'three' or 'four'"
 
     assert stat in ['percent', 'count', 'proportion', 'density'], \
         f"Invalid stat: {stat} -> Must be 'percent', 'count', 'proportion' or 'density'"
-
+    
     new_df = df.copy()
 
-    # Group the neurons by three or four
     if group_by == 'four':
-        new_df.loc[new_df['Reference'].str.len() > 1, 'Reference'] = 'P'
+        # assert just 4 unique keys in ref_dict
+        assert len(set(ref_dict.values())) == 4, f"Invalid ref_dict -> Must have 4 unique values"
     elif group_by == 'three':
-        new_df['Reference'] = new_df['Reference'].apply(random_replace)
+        # assert just 3 unique keys in ref_dict
+        assert len(set(ref_dict.values())) == 3, f"Invalid ref_dict -> Must have 3 unique values"
+    else:
+        # assert just 8 unique keys in ref_dict
+        assert len(set(ref_dict.values())) == 8, f"Invalid ref_dict -> Must have 8 unique values"
+
+    # Replace all references by the ref_dict ones (Group the neurons by three or four)
+    for neuron in new_df.index:
+        new_df.loc[neuron, 'Reference'] = ref_dict[neuron]
 
     if show_plots:
         # Create the histogram
@@ -99,10 +107,7 @@ def delete_total(df):
     new_df = new_df.drop('total', axis=1) # Drop column
     return new_df
 
-def count_inside_clusters(df, stat='count', dimension='reference'):
-
-    assert stat in ['count', 'percent'],\
-        f"Invalid stat: {stat} -> Must be 'count' or 'percent'"
+def count_inside_clusters(df, percentage=False, dimension='reference'):
     
     new_df = df.copy()
 
@@ -111,7 +116,7 @@ def count_inside_clusters(df, stat='count', dimension='reference'):
     new_df = new_df.astype(int)
     new_df = create_total(new_df)
 
-    if stat == 'percent':
+    if percentage:
         new_df = convert_to_percentages(new_df, dimension=dimension)
 
     return new_df
@@ -139,18 +144,18 @@ def suggest_classification(grouped_clusters):
 
     new_df = grouped_clusters.copy()
 
-    count_df = delete_total(count_inside_clusters(new_df, stat='percent', dimension='reference'))
+    count_df = delete_total(count_inside_clusters(new_df, percentage=True, dimension='reference'))
 
     suggestion_matrix = np.empty((2, count_df.shape[0], count_df.shape[1]), dtype=object)
 
     # Suggestion inside cluster (computed-cluster dimension)
     for i, _ in enumerate(count_df.index):
-        count_df = delete_total(count_inside_clusters(new_df, stat='percent', dimension='computed-cluster'))
+        count_df = delete_total(count_inside_clusters(new_df, percentage=True, dimension='computed-cluster'))
         suggestion_matrix[0, i, :] = count_df.columns[np.argsort(count_df.loc[i+1].values)].values
 
     # Global suggestion (reference dimension)
     for j, col_name in enumerate(count_df.columns):
-        count_df = delete_total(count_inside_clusters(new_df, stat='percent', dimension='reference'))
+        count_df = delete_total(count_inside_clusters(new_df, percentage=True, dimension='reference'))
         suggestion_matrix[1, :, j] = count_df.index[np.argsort(count_df[col_name].values)].values
 
     suggestion_inside_cluster = {i+1: c for i, c in enumerate(suggestion_matrix[0, :, -1])}
