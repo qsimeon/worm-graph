@@ -77,6 +77,8 @@ def hierarchical_clustering_analysis(single_worm_data,
         plotHeatmap(sorted_R, title="Sorted correlation matrix", xlabel="Neuron", ylabel="Neuron", xticks=sorted_neuron_labels, yticks=sorted_neuron_labels, xtick_skip=2, ytick_skip=2)
 
     # === Metrics ===
+    silhouette_avg = sm.silhouette_score(D, computed_cluster_labels, metric='cosine') # Quality of the clustering -> cosine distance gave best results
+
     file_path = '/home/lrvnc/Projects/worm-graph/tests/leandro/data/neuron_clusters.json'
 
     try:
@@ -110,4 +112,4 @@ def hierarchical_clustering_analysis(single_worm_data,
 
     clusters.index.name = 'Neuron'
 
-    return clusters
+    return clusters, silhouette_avg
