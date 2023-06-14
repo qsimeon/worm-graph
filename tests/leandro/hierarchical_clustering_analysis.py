@@ -2,6 +2,52 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 import numpy as np
+from .hierarchical_clustering import *
+
+def load_reference(group_by=None):
+    file_path = '/home/lrvnc/Projects/worm-graph/tests/leandro/data/neuron_clusters.json'
+
+    try:
+        with open(file_path, 'r') as f:
+            neuron_classification = json.load(f)
+    except FileNotFoundError:
+        print(f"File not found at path: {file_path}")
+    except json.JSONDecodeError as e:
+        print(f"Error while decoding JSON: {e}")
+
+    replacements = {
+        'interneuron': 'I',
+        'motor': 'M',
+        'sensory': 'S',
+        'motor, interneuron': 'MI',
+        'sensory, motor': 'SM',
+        'sensory, interneuron': 'SI',
+        'sensory, motor, interneuron': 'SMI',
+        'unknown': 'U',
+    }
+
+    for key, value in neuron_classification.items():
+            text = ', '.join(neuron_classification[key])
+            neuron_classification[key] = replacements[text]
+
+    if group_by=='four':
+        for key, value in neuron_classification.items():
+            if value == 'MI' or value == 'SM' or value == 'SI' or value == 'SMI':
+                neuron_classification[key] = 'P'
+
+            if value == 'U':
+                neuron_classification[key] = np.random.choice(['M', 'I', 'S'])
+    
+    elif group_by=='three':
+        
+        for key, value in neuron_classification.items():
+            if value == 'MI' or value == 'SM' or value == 'SI' or value == 'SMI':
+                neuron_classification[key] = np.random.choice([char for char in value])
+
+            if value == 'U':
+                neuron_classification[key] = np.random.choice(['M', 'I', 'S'])
+
+    return neuron_classification
 
 def random_replace(value):
     # Aux function to randomly replace the values with equal distribution
@@ -120,3 +166,55 @@ def suggest_classification(grouped_clusters):
             suggestion_global[key] = ''.join(item)
     
     return suggestion_inside_cluster, suggestion_global
+
+def cluster2suggestion(value, suggestion):
+    return suggestion[value]
+
+def accuracy_by_neuron():
+    pass
+
+def accuracy_by_worm():
+    pass
+
+def analyse_dataset(dataset, group_by='four', method='ward', metric=None, stat='percent'):
+    """
+        dataset = loaded dataset
+    """
+
+    if group_by == 'four':
+        groups = 4
+        num_clusters = 4
+    elif group_by == 'three':
+        groups = 3
+        num_clusters = 3
+    else:
+        groups = 7
+        num_clusters = 7
+
+    num_worms = len(dataset.keys())
+    print(f'Number of worms: {num_worms}')
+
+    # ===
+
+    silhouettes = []
+    all_worm_clusters_list = [[], []] # [[suggestion 1], [suggestion 2]]
+    count_inside_clusters_array = np.zeros((num_worms, num_clusters, groups))
+
+    # ===
+
+    for i, wormID in enumerate(dataset.keys()):
+        clusters, silhouette_avg = hierarchical_clustering_algorithm(dataset[wormID],
+                                        method=method, metric=metric, show_plots=False,
+                                        criterion='maxclust', criterion_value=num_clusters,
+                                        )
+
+        grouped_clusters = neuron_distribution(clusters, stat=stat, group_by=group_by, show_plots=False)
+
+        s1, s2 = suggest_classification(grouped_clusters=grouped_clusters)
+
+        all_worm_clusters_list[0].append(grouped_clusters['Computed Cluster'].apply(cluster2suggestion, suggestion=s1).drop(columns=['Reference']))
+        all_worm_clusters_list[1].append(grouped_clusters['Computed Cluster'].apply(cluster2suggestion, suggestion=s2).drop(columns=['Reference']))
+        silhouettes.append(silhouette_avg)
+
+        count_inside_clusters_array[i, :, :] = delete_total(count_inside_clusters(grouped_clusters, stat='count')).values
+

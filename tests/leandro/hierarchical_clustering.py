@@ -18,7 +18,7 @@ import matplotlib.pyplot as plt
 from sklearn.cluster import AgglomerativeClustering
 import sklearn.metrics as sm
 
-def hierarchical_clustering_analysis(single_worm_data,
+def hierarchical_clustering_algorithm(single_worm_data,
                                      method='complete', metric='euclidean',
                                      truncate_mode='lastp', p=12,
                                      criterion='maxclust', criterion_value=4, verbose=False,
