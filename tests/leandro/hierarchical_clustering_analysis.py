@@ -48,6 +48,11 @@ def load_reference(group_by=None):
             if value == 'U':
                 neuron_classification[key] = np.random.choice(['M', 'I', 'S'])
 
+    elif group_by==None:
+        for key, value in neuron_classification.items():
+            if value == 'U':
+                neuron_classification[key] = np.random.choice(['M', 'I', 'S'])
+
     return neuron_classification
 
 def random_replace(value):
@@ -76,7 +81,7 @@ def neuron_distribution(df, ref_dict, stat='percent', group_by=None, show_plots=
         assert len(set(ref_dict.values())) == 3, f"Invalid ref_dict -> Must have 3 unique values"
     else:
         # assert just 8 unique keys in ref_dict
-        assert len(set(ref_dict.values())) == 8, f"Invalid ref_dict -> Must have 8 unique values"
+        assert len(set(ref_dict.values())) == 7, f"Invalid ref_dict -> Must have 7 unique values"
 
     # Replace all references by the ref_dict ones (Group the neurons by three or four)
     for neuron in new_df.index:
@@ -205,13 +210,17 @@ def suggest_classification(computed_clusters_df):
 def cluster2suggestion(value, suggestion):
     return suggestion[value]
 
-def accuracy_by_neuron():
-    pass
+def create_ref_column(df, ref_dict):
+    new_df = df.copy()
+    new_df['Reference'] = [ref_dict[neuron] if neuron in ref_dict.keys() else np.NaN for neuron in df.index]
+    return new_df
 
-def accuracy_by_worm():
-    pass
+def delete_ref_column(df):
+    new_df = df.copy()
+    new_df = new_df.drop('Reference', axis=1)
+    return new_df
 
-def analyse_dataset(dataset, ref_dict, group_by='four', method='ward', metric=None, stat='percent'):
+def hierarchical_clustering_analyse_dataset(dataset, hip='hip1', group_by='four', method='ward', metric=None):
     """
         dataset = loaded dataset
     """
@@ -226,13 +235,15 @@ def analyse_dataset(dataset, ref_dict, group_by='four', method='ward', metric=No
         groups = 7
         num_clusters = 7
 
+    ref_dict = load_reference(group_by=group_by) # Create same ref dict for all worms
+
     num_worms = len(dataset.keys())
     print(f'Number of worms: {num_worms}')
 
     # ===
 
     silhouettes = []
-    all_worm_clusters_list = [[], []] # [[suggestion 1], [suggestion 2]]
+    all_worm_clusters_list = []
     count_inside_clusters_array = np.zeros((num_worms, num_clusters, groups))
 
     # ===
@@ -241,15 +252,42 @@ def analyse_dataset(dataset, ref_dict, group_by='four', method='ward', metric=No
         clusters, silhouette_avg = hierarchical_clustering_algorithm(dataset[wormID],
                                         method=method, metric=metric, show_plots=False,
                                         criterion='maxclust', criterion_value=num_clusters,
-                                        )
+                                        ) # Compute clusters
+        
+        silhouettes.append(silhouette_avg) # Save silhouette score
 
-        grouped_clusters = neuron_distribution(clusters, ref_dict=ref_dict, group_by=group_by, show_plots=False)
+        grouped_clusters = neuron_distribution(clusters, ref_dict=ref_dict, group_by=group_by, show_plots=False) # Group clusters
 
-        s1, s2 = suggest_classification(grouped_clusters=grouped_clusters)
+        sugg_dict = suggest_classification(grouped_clusters) # Suggest classification
 
-        all_worm_clusters_list[0].append(grouped_clusters['Computed Cluster'].apply(cluster2suggestion, suggestion=s1).drop(columns=['Reference']))
-        all_worm_clusters_list[1].append(grouped_clusters['Computed Cluster'].apply(cluster2suggestion, suggestion=s2).drop(columns=['Reference']))
-        silhouettes.append(silhouette_avg)
+        all_worm_clusters_list.append(grouped_clusters['Computed Cluster'].apply(cluster2suggestion, suggestion=sugg_dict[hip]).drop(columns=['Reference']))
+        
+        count_inside_clusters_array[i, :, :] = delete_total(count_inside_clusters(grouped_clusters, percentage=False)).values
+    
+    all_worm_clusters = pd.concat(all_worm_clusters_list, axis=1, keys=range(1, len(all_worm_clusters_list) + 1))
+    all_worm_clusters.columns = [f"worm{i}" for i in range(0, len(all_worm_clusters_list))]
 
-        count_inside_clusters_array[i, :, :] = delete_total(count_inside_clusters(grouped_clusters, stat='count')).values
+    all_worm_clusters = create_ref_column(all_worm_clusters, ref_dict) # Add reference column
+
+    # Accuracy of the classification for each worm
+    for wormID in all_worm_clusters.columns[:-1]:
+        # Select the wormN and reference columns
+        s = all_worm_clusters[[wormID, 'Reference']].dropna()
+        # Count +1 for each match between the wormN and reference columns
+        s['count'] = s.apply(lambda x: 1 if x[wormID] == x['Reference'] else 0, axis=1)
+        # Create row for the accuracy of the worm
+        all_worm_clusters.loc['accuracy', wormID] = s['count'].sum() / len(s)
+
+    # Accuracy of the classification for each neuron
+    for neuron in all_worm_clusters.index[:-1]:
+        # Compare the classifications of the neuron and compare to its reference
+        s = all_worm_clusters.loc[neuron].iloc[:-1].dropna().value_counts()
+        ref = all_worm_clusters.loc[neuron, 'Reference']
+        # Create row for the accuracy of the neuron
+        all_worm_clusters.loc[neuron, 'accuracy'] = s[ref] / s.sum()
+
+    all_worm_clusters = delete_ref_column(all_worm_clusters) # Delete reference column
+    all_worm_clusters = create_ref_column(all_worm_clusters, ref_dict) # Add reference column
+
+    return all_worm_clusters, count_inside_clusters_array, silhouettes
 
