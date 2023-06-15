@@ -1,5 +1,6 @@
 import pandas as pd
 import matplotlib.pyplot as plt
+from matplotlib.patches import Patch
 import seaborn as sns
 import numpy as np
 from .hierarchical_clustering import *
@@ -94,19 +95,47 @@ def neuron_distribution(df, ref_dict, stat='percent', group_by=None, show_plots=
         axes[0].set_xlabel('Neuron type')
 
         # Create the histogram (computed clusters)
-        sns.histplot(data=new_df, x='Computed Cluster', stat=stat, discrete=True, kde=True, ax=axes[1])
+        hist = sns.histplot(data=new_df, x='Computed Cluster', stat=stat, discrete=True, kde=True, ax=axes[1])
 
         # Set the labels and title for the second subplot
         axes[1].set_title('Computed cluster labels distribution')
         axes[1].set_xlabel('Neuron type')
-        # Set xticks
-        axes[1].set_xticks(np.arange(len(set(new_df['Computed Cluster']))+1))
-        axes[1].set_ylabel('')
+
+        # Change the xticks to the correct labels
+        axes[1].set_xticks(np.arange(len(set(new_df['Computed Cluster'])))+1)
+
+        # Compute the proportions of each Reference label within each bin
+        if stat == 'percent':
+            color_palette = sns.color_palette('Set1')
+            unique_references = new_df['Reference'].unique()[:len(set(new_df['Computed Cluster']))]
+            color_map = {ref: color_palette[i % len(color_palette)] for i, ref in enumerate(unique_references)}
+
+
+            for patch in hist.patches:
+                x = patch.get_x()
+                width = patch.get_width()
+                height = patch.get_height()
+                bin_label = int(x + width / 2)  # Compute the label of the bin
+                proportions = new_df[new_df['Computed Cluster'] == bin_label]['Reference'].value_counts(normalize=True)
+                cumulative_height = 0
+                for ref, proportion in proportions.items():
+                    color = color_map.get(ref, 'gray')
+                    ref_height = height * proportion
+                    axes[1].bar(
+                        x + width / 2, ref_height, width=width, bottom=cumulative_height,
+                        color=color, label=ref, alpha=0.5, edgecolor='black'
+                    )
+                    cumulative_height += ref_height
+
+            # Add legend for the first four items
+            legend_elements = [Patch(facecolor=color_map.get(ref, 'gray'), edgecolor='black', label=ref)
+                            for ref in new_df['Reference'].unique()[:len(set(new_df['Computed Cluster']))]]
+            axes[1].legend(handles=legend_elements, loc='upper right')
 
         # Adjust the layout and spacing between subplots
         plt.tight_layout()
 
-        # Display the plot
+        # Show the plot
         plt.show()
 
     return new_df
