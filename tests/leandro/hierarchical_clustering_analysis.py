@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 from matplotlib.patches import Patch
 import seaborn as sns
 import numpy as np
+from itertools import cycle
 from .hierarchical_clustering import *
 
 def load_reference(group_by=None):
@@ -220,7 +221,7 @@ def delete_ref_column(df):
     new_df = new_df.drop('Reference', axis=1)
     return new_df
 
-def hierarchical_clustering_analyse_dataset(dataset, hip='hip1', group_by='four', method='ward', metric=None):
+def hc_analyse_dataset(dataset, apply_suggestion=False, hip='hip1', group_by='four', method='ward', metric=None):
     """
         dataset = loaded dataset
     """
@@ -239,6 +240,11 @@ def hierarchical_clustering_analyse_dataset(dataset, hip='hip1', group_by='four'
 
     num_worms = len(dataset.keys())
     print(f'Number of worms: {num_worms}')
+
+    if not apply_suggestion:
+        print('No suggestion applied, ignoring hip parameter.')
+    else:
+        print(f'Suggestion applied: {hip}.')
 
     # ===
 
@@ -260,34 +266,101 @@ def hierarchical_clustering_analyse_dataset(dataset, hip='hip1', group_by='four'
 
         sugg_dict = suggest_classification(grouped_clusters) # Suggest classification
 
-        all_worm_clusters_list.append(grouped_clusters['Computed Cluster'].apply(cluster2suggestion, suggestion=sugg_dict[hip]).drop(columns=['Reference']))
+        if apply_suggestion:
+            all_worm_clusters_list.append(grouped_clusters['Computed Cluster'].apply(cluster2suggestion, suggestion=sugg_dict[hip]).drop(columns=['Reference']))
+        else:
+            all_worm_clusters_list.append(grouped_clusters['Computed Cluster'].drop(columns=['Reference']))
         
-        count_inside_clusters_array[i, :, :] = delete_total(count_inside_clusters(grouped_clusters, percentage=False)).values
+        count_inside_clusters_array[i, :, :] = delete_total(count_inside_clusters(grouped_clusters, percentage=False)).values #? Count instead of percent?
     
     all_worm_clusters = pd.concat(all_worm_clusters_list, axis=1, keys=range(1, len(all_worm_clusters_list) + 1))
     all_worm_clusters.columns = [f"worm{i}" for i in range(0, len(all_worm_clusters_list))]
 
     all_worm_clusters = create_ref_column(all_worm_clusters, ref_dict) # Add reference column
 
-    # Accuracy of the classification for each worm
-    for wormID in all_worm_clusters.columns[:-1]:
-        # Select the wormN and reference columns
-        s = all_worm_clusters[[wormID, 'Reference']].dropna()
-        # Count +1 for each match between the wormN and reference columns
-        s['count'] = s.apply(lambda x: 1 if x[wormID] == x['Reference'] else 0, axis=1)
-        # Create row for the accuracy of the worm
-        all_worm_clusters.loc['accuracy', wormID] = s['count'].sum() / len(s)
+    if apply_suggestion:
+        # Accuracy of the classification for each worm
+        for wormID in all_worm_clusters.columns[:-1]:
+            # Select the wormN and reference columns
+            s = all_worm_clusters[[wormID, 'Reference']].dropna()
+            # Count +1 for each match between the wormN and reference columns
+            s['count'] = s.apply(lambda x: 1 if x[wormID] == x['Reference'] else 0, axis=1)
+            # Create row for the accuracy of the worm
+            all_worm_clusters.loc['accuracy', wormID] = s['count'].sum() / len(s)
 
-    # Accuracy of the classification for each neuron
-    for neuron in all_worm_clusters.index[:-1]:
-        # Compare the classifications of the neuron and compare to its reference
-        s = all_worm_clusters.loc[neuron].iloc[:-1].dropna().value_counts()
-        ref = all_worm_clusters.loc[neuron, 'Reference']
-        # Create row for the accuracy of the neuron
-        all_worm_clusters.loc[neuron, 'accuracy'] = s[ref] / s.sum()
+        # Accuracy of the classification for each neuron
+        for neuron in all_worm_clusters.index[:-1]:
+            # Compare the classifications of the neuron and compare to its reference
+            s = all_worm_clusters.loc[neuron].iloc[:-1].dropna().value_counts()
+            ref = all_worm_clusters.loc[neuron, 'Reference']
+            # Create row for the accuracy of the neuron
+            all_worm_clusters.loc[neuron, 'accuracy'] = s[ref] / s.sum()
 
-    all_worm_clusters = delete_ref_column(all_worm_clusters) # Delete reference column
-    all_worm_clusters = create_ref_column(all_worm_clusters, ref_dict) # Add reference column
+        all_worm_clusters = delete_ref_column(all_worm_clusters) # Delete reference column
+        all_worm_clusters = create_ref_column(all_worm_clusters, ref_dict) # Add reference column
 
     return all_worm_clusters, count_inside_clusters_array, silhouettes
 
+
+def count_boxplot(count_inside_clusters_array):
+    # Reshape the data into a 2D array
+    reshaped_data = np.reshape(count_inside_clusters_array, (count_inside_clusters_array.shape[0], -1))
+
+    # Number of neuron types/clusters
+    ntypes = count_inside_clusters_array.shape[2]
+
+    # Create a cycle colormap using the 'Set1' color palette from seaborn
+    color_palette = cycle(sns.color_palette('Set1')[0:ntypes])
+
+    if ntypes == 4:
+        labels = ['I', 'M', 'P', 'S']
+    elif ntypes == 3:
+        labels = ['I', 'M', 'S']
+    else:
+        labels = ['I', 'M', 'MI', 'S', 'SI', 'SM', 'SMI']
+
+    # Create a box plot for the reshaped data with cycle colormap
+    fig, ax = plt.subplots(figsize=(10, 6))
+    bp = ax.boxplot(reshaped_data, patch_artist=True, boxprops={'facecolor': 'white'}, capprops={'color': 'black'},
+                    whiskerprops={'color': 'black'}, medianprops={'color': 'black'})
+
+    # Cycle through the colors for every 4 boxes
+    for i, box in enumerate(bp['boxes']):
+        color = next(color_palette)
+        box.set(facecolor=color, alpha=0.5)
+
+        if i % ntypes == 0 and i != 0:
+            ax.axvline(i + 0.5, color='gray', linestyle='dashed')
+
+    # Set the x-axis tick labels
+    ax.set_xticks(np.arange((reshaped_data.shape[1]/ntypes+1)/2, reshaped_data.shape[1], ntypes))
+    ax.set_xticklabels([f'Computed Cluster ({c+1})' for c in range(ntypes)])
+
+    # Set the title and labels for the plot
+    ax.title.set_text(f'Dispersion of number of Neurons per Cluster')
+    ax.set_ylabel("Counts")
+
+    # Add legend
+    legend = [bp['boxes'][i] for i in range(ntypes)]
+    ax.legend(legend, labels, loc='upper right')
+
+    # Adjust the layout and spacing between subplots
+    plt.tight_layout()
+
+    # Show the plot
+    plt.show()
+
+def count_clustered_times(all_worm_clusters, neuron1, neuron2):
+    # Check if both neurons are present in the DataFrame
+    if neuron1 in all_worm_clusters.index and neuron2 in all_worm_clusters.index:
+        # Get the values for the two neurons
+        values_neuron1 = all_worm_clusters.loc[neuron1].values
+        values_neuron2 = all_worm_clusters.loc[neuron2].values
+        
+        # Count the number of times they were clustered together
+        count = sum((values_neuron1 == values_neuron2) & (~pd.isnull(values_neuron1)))
+        ocurrences = sum(~pd.isnull(values_neuron1) & ~pd.isnull(values_neuron2))
+        
+        print(f"The neurons '{neuron1}' and '{neuron2}' were clustered together {count} times (out of {ocurrences}).")
+    else:
+        print("One or both of the neurons are not present in the DataFrame.")
