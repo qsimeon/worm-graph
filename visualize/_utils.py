@@ -602,7 +602,7 @@ def plot_correlation_scatterplot(
             plt_title, fontsize="small", y=1.02
         )  # Adjust y as needed so the title doesn't overlap with the plot
         plt.axis("equal")
-        plt.gca().set_ylim(plt.gca().get_xlim())
+        plt.gca().set_xlim(plt.gca().get_ylim())
         plt.xlabel("Target " + signal_str + " ($\Delta F / F$)")
         plt.ylabel("Predicted " + signal_str + " ($\Delta F / F$)")
         plt.savefig(

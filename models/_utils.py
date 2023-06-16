@@ -121,6 +121,39 @@ class PositionalEncoding(torch.nn.Module):
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
 
+# # Inner Model Parts
+# # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
+# class Linear(torch.nn.Module):
+#     """Linear model body."""
+
+#     def __init__(self, input_size, hidden_size):
+#         super().__init__()
+#         # Input to hidden transformation
+#         self.input_hidden = (
+#             torch.nn.Linear(self.input_size, self.hidden_size),
+#             # torch.nn.ReLU(),
+#             torch.nn.ELU(),
+#             torch.nn.LayerNorm(self.hidden_size),
+#         )
+#         # Hidden to hidden transformation
+#         self.hidden_hidden = (self.num_layers - 1) * (
+#             torch.nn.Linear(self.hidden_size, self.hidden_size),
+#             # torch.nn.ReLU(),
+#             torch.nn.ELU(),
+#             torch.nn.LayerNorm(self.hidden_size),
+#         )
+#         # Full inner model (before readout)
+#         self.model = torch.nn.Sequential(
+#             *self.input_hidden,
+#             *self.hidden_hidden,
+#             self.linear,
+#         )
+
+#     def forward(self, x):
+#         return self.model(x)
+
+# # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
+
 
 # Models (super class and sub classes)
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
@@ -305,6 +338,27 @@ class Model(torch.nn.Module):
         """
         pass
 
+    def forward(self, inputs, tau=1):
+        """
+        General forward method of all our models.
+        Parameters
+        ----------
+        input : torch.Tensor
+            Input data with shape (batch, seq_len, neurons)
+        tau : int, optional
+            Time offset of target
+        """
+        if tau < 1:
+            outputs = self.identity(inputs)
+        else:
+            # ... use the full sequence
+            outputs = self.model(inputs)
+        # repeat for target with tau>0 offset
+        for i in range(1, tau):
+            # ... use the full sequence
+            outputs = self.model(outputs)
+        return outputs
+
     # Getter functions for returning all attributes needed to reinstantiate a similar model
     def get_input_size(self):
         return self.input_size
@@ -364,14 +418,14 @@ class LinearNN(Model):
         # Input and hidden layers
         self.input_hidden = (
             torch.nn.Linear(self.input_size, self.hidden_size),
-            torch.nn.ReLU(),
-            # torch.nn.ELU(),
+            # torch.nn.ReLU(),
+            torch.nn.ELU(),
             torch.nn.LayerNorm(self.hidden_size),
         )
         self.hidden_hidden = (self.num_layers - 1) * (
             torch.nn.Linear(self.hidden_size, self.hidden_size),
-            torch.nn.ReLU(),
-            # torch.nn.ELU(),
+            # torch.nn.ReLU(),
+            torch.nn.ELU(),
             torch.nn.LayerNorm(self.hidden_size),
         )
 
@@ -456,11 +510,14 @@ class NeuralTransformer(Model):
                 for _ in range(self.num_layers)
             )
         )
+        # Layer normalization
+        self.layer_norm = torch.nn.LayerNorm(self.hidden_size)
         # Full model
         self.model = torch.nn.Sequential(  # input has shape (B, T, C)
             self.expansion_recoder,  # (B,T,C')
             self.position_encoding,  # (B,T,C')
             self.blocks,  # (B,T,C')
+            self.layer_norm,  # (B,T,C')
             self.linear,  # output has shape (B,T,C)
         )
 
@@ -520,8 +577,6 @@ class NeuralCFC(Model):
                 param.data.fill_(0)
         # Initialize hidden state
         self.hidden = None
-        # Normalization layer
-        self.layer_norm = torch.nn.LayerNorm(self.hidden_size)
 
     def init_hidden(self, input_shape):
         """
@@ -543,14 +598,12 @@ class NeuralCFC(Model):
             output = self.identity(input)
         else:  # do one-step prediction
             rnn_out, self.hidden = self.rnn(input, self.hidden)
-            rnn_out = self.layer_norm(rnn_out)  # Apply layer normalization
             # ... use the full sequence
             readout = self.linear(rnn_out)
             output = readout
         # do the remaining tau-1 steps of prediction
         for i in range(1, tau):
             rnn_out, self.hidden = self.rnn(output, self.hidden)
-            rnn_out = self.layer_norm(rnn_out)  # Apply layer normalization
             # ... use the full sequence
             readout = self.linear(rnn_out)
             output = readout
@@ -603,8 +656,6 @@ class NetworkLSTM(Model):
                 param.data.fill_(0)
         # Initialize hidden state
         self.hidden = None
-        # Normalization layer
-        self.layer_norm = torch.nn.LayerNorm(self.hidden_size)
 
     def init_hidden(self, input_shape):
         """
@@ -627,14 +678,12 @@ class NetworkLSTM(Model):
             output = self.identity(input)
         else:  # do one-step prediction
             lstm_out, self.hidden = self.lstm(input, self.hidden)
-            lstm_out = self.layer_norm(lstm_out)  # Apply layer normalization
             # ... use the full sequence
             readout = self.linear(lstm_out)
             output = readout
         # do the remaining tau-1 steps of prediction
         for i in range(1, tau):
             lstm_out, self.hidden = self.lstm(output, self.hidden)
-            lstm_out = self.layer_norm(lstm_out)  # Apply layer normalization
             # ... use the full sequence
             readout = self.linear(lstm_out)
             output = readout
