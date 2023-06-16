@@ -30,7 +30,7 @@ hydra:
       globals.random_seed: 0 #0, 1, 2, 3
       # MODEL
       model.type: NeuralTransformer #LinearNN, NeuralTransformer, NetworkLSTM, NeuralCFC
-      model.loss: MSE #L1, MSE, Huber
+      model.loss: MSE #L1, MSE, Huber, Poisson
       model.fft_reg_param: 0.0 # 0.0, 0.3, 0.5, 0.7, 1.0
       model.l1_reg_param: 0.0, 0.3, 0.5, 0.7, 1.0
       model.hidden_size: 128, 256, 512, 1024, 2048, 4096, 8192
