@@ -282,19 +282,22 @@ def hc_analyse_dataset(dataset, apply_suggestion=False, hip='hip1', group_by='fo
         # Accuracy of the classification for each worm
         for wormID in all_worm_clusters.columns[:-1]:
             # Select the wormN and reference columns
-            s = all_worm_clusters[[wormID, 'Reference']].dropna()
+            s = all_worm_clusters[[wormID, 'Reference']].copy().dropna()
             # Count +1 for each match between the wormN and reference columns
-            s['count'] = s.apply(lambda x: 1 if x[wormID] == x['Reference'] else 0, axis=1)
+            count = s.apply(lambda x: 1 if x[wormID] == x['Reference'] else 0, axis=1).sum()
             # Create row for the accuracy of the worm
-            all_worm_clusters.loc['accuracy', wormID] = s['count'].sum() / len(s)
+            all_worm_clusters.loc['accuracy', wormID] = count / len(s)
 
         # Accuracy of the classification for each neuron
         for neuron in all_worm_clusters.index[:-1]:
             # Compare the classifications of the neuron and compare to its reference
-            s = all_worm_clusters.loc[neuron].iloc[:-1].dropna().value_counts()
+            s = all_worm_clusters.loc[neuron].iloc[:-1].copy().dropna().value_counts()
             ref = all_worm_clusters.loc[neuron, 'Reference']
             # Create row for the accuracy of the neuron
-            all_worm_clusters.loc[neuron, 'accuracy'] = s[ref] / s.sum()
+            if ref in all_worm_clusters.loc['M4'].iloc[:-1].values:
+                all_worm_clusters.loc[neuron, 'accuracy'] = s[ref] / s.sum()
+            else:
+                all_worm_clusters.loc[neuron, 'accuracy'] = 0.0
 
         all_worm_clusters = delete_ref_column(all_worm_clusters) # Delete reference column
         all_worm_clusters = create_ref_column(all_worm_clusters, ref_dict) # Add reference column

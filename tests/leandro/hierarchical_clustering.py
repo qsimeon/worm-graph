@@ -38,9 +38,9 @@ def hierarchical_clustering_algorithm(single_worm_data,
     X = single_worm_data['smooth_calcium_data'] # (time, all neurons)
     X = X[:, single_worm_data['named_neurons_mask']]  # (time, named and acive neurons)
 
-    R = np.corrcoef(X, rowvar=False)
+    R = np.abs(np.corrcoef(X, rowvar=False)) # no correlated <- [0, 1] -> correlated
     R = (R + R.T) / 2  # Make it symmetric (just in case) -> numerical error
-    D = 1 - R # Distance matrix
+    D = 1 - R # Distance matrix: close <- [0, 1] -> far
     np.fill_diagonal(D, 0) # Make diagonal 0 (just in case)
 
     if verbose:
