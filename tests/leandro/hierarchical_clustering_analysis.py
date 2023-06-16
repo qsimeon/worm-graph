@@ -299,7 +299,7 @@ def hc_analyse_dataset(dataset, apply_suggestion=False, hip='hip1', group_by='fo
         all_worm_clusters = delete_ref_column(all_worm_clusters) # Delete reference column
         all_worm_clusters = create_ref_column(all_worm_clusters, ref_dict) # Add reference column
 
-    return all_worm_clusters, count_inside_clusters_array, silhouettes
+    return all_worm_clusters, ref_dict, count_inside_clusters_array, silhouettes
 
 
 def count_boxplot(count_inside_clusters_array):
@@ -350,7 +350,7 @@ def count_boxplot(count_inside_clusters_array):
     # Show the plot
     plt.show()
 
-def count_clustered_times(all_worms_clusters, neuron_names, verbose=False):
+def count_clustered_times(all_worms_clusters, neuron_names, verbose=True):
     new_df = all_worms_clusters.copy()
 
     # Check if all neurons are present in the DataFrame
@@ -373,7 +373,7 @@ def count_clustered_times(all_worms_clusters, neuron_names, verbose=False):
 
     return freq, count, occurrences
 
-def group_frequency(all_worm_clusters, neuron_groups=None, ocurr_threshold=5, show_plot=True):
+def group_frequency(all_worm_clusters, neuron_groups=None, ocurr_threshold=5, show_plot=True, verbose=True):
 
     new_df = all_worm_clusters.copy()
 
@@ -391,7 +391,7 @@ def group_frequency(all_worm_clusters, neuron_groups=None, ocurr_threshold=5, sh
 
             if pair_wise: # Comparing all neurons, we can take just the lower triangle
                 if row > col:
-                    freq, count, occurrences = count_clustered_times(new_df, neuron1 + [neuron2])
+                    freq, count, occurrences = count_clustered_times(new_df, neuron1 + [neuron2], verbose=False)
                     freq_matrix[row, col] = freq
                     if freq == 1 and occurrences > ocurr_threshold:
                         new_groups.append(neuron1 + [neuron2])
@@ -402,12 +402,13 @@ def group_frequency(all_worm_clusters, neuron_groups=None, ocurr_threshold=5, sh
                     freq = 1
                     continue
                 else:
-                    freq, count, occurrences = count_clustered_times(new_df, neuron1 + [neuron2])
+                    freq, count, occurrences = count_clustered_times(new_df, neuron1 + [neuron2], verbose=False)
                     freq_matrix[row, col] = freq
                     if freq == 1 and occurrences > ocurr_threshold:
                         new_groups.append(neuron1+[neuron2])
 
-    print('Number of neuron groups: {}'.format(len(new_groups)))
+    if verbose:
+        print('Number of neuron groups: {}'.format(len(new_groups)))
 
     if show_plot:
         if pair_wise:
