@@ -350,17 +350,73 @@ def count_boxplot(count_inside_clusters_array):
     # Show the plot
     plt.show()
 
-def count_clustered_times(all_worm_clusters, neuron1, neuron2):
-    # Check if both neurons are present in the DataFrame
-    if neuron1 in all_worm_clusters.index and neuron2 in all_worm_clusters.index:
-        # Get the values for the two neurons
-        values_neuron1 = all_worm_clusters.loc[neuron1].values
-        values_neuron2 = all_worm_clusters.loc[neuron2].values
-        
+def count_clustered_times(all_worms_clusters, neuron_names, verbose=False):
+    new_df = all_worms_clusters.copy()
+
+    # Check if all neurons are present in the DataFrame
+    if all(neuron in new_df.index for neuron in neuron_names):
+        # Get the values for the neurons
+        values = new_df.loc[neuron_names].values
+
         # Count the number of times they were clustered together
-        count = sum((values_neuron1 == values_neuron2) & (~pd.isnull(values_neuron1)))
-        ocurrences = sum(~pd.isnull(values_neuron1) & ~pd.isnull(values_neuron2))
-        
-        print(f"The neurons '{neuron1}' and '{neuron2}' were clustered together {count} times (out of {ocurrences}).")
+        equal_values = np.all(np.equal(values, values[0]), axis=0)
+        non_null_values = ~np.isnan(values).any(axis=0)
+        count = np.sum(equal_values & non_null_values)
+        occurrences = np.sum(non_null_values)
+        freq = count / occurrences
+
+        if verbose:
+            print(f"The neurons '{neuron_names}' were clustered together {count} times (out of {occurrences}).")
     else:
-        print("One or both of the neurons are not present in the DataFrame.")
+        if verbose:
+            print("One or more of the neurons are not present in the DataFrame.")
+
+    return freq, count, occurrences
+
+def group_frequency(all_worm_clusters, neuron_groups=None, ocurr_threshold=5, show_plot=True):
+
+    new_df = all_worm_clusters.copy()
+
+    if neuron_groups is None:
+        neuron_groups = [[neuron] for neuron in new_df.index.to_list()]
+        pair_wise = True
+    else:
+        pair_wise = False
+
+    freq_matrix = np.zeros((len(neuron_groups), len(new_df.index.to_list())))
+    new_groups = []
+
+    for row, neuron1 in enumerate(neuron_groups): # neuron groups in rows
+        for col, neuron2 in enumerate(new_df.index.to_list()): # all neurons in columns
+
+            if pair_wise: # Comparing all neurons, we can take just the lower triangle
+                if row > col:
+                    freq, count, occurrences = count_clustered_times(new_df, neuron1 + [neuron2])
+                    freq_matrix[row, col] = freq
+                    if freq == 1 and occurrences > ocurr_threshold:
+                        new_groups.append(neuron1 + [neuron2])
+                    
+            else: # Comparing neuron groups, we need to take all the values
+                if neuron2 in neuron1:
+                    freq_matrix[row, col] = 1
+                    freq = 1
+                    continue
+                else:
+                    freq, count, occurrences = count_clustered_times(new_df, neuron1 + [neuron2])
+                    freq_matrix[row, col] = freq
+                    if freq == 1 and occurrences > ocurr_threshold:
+                        new_groups.append(neuron1+[neuron2])
+
+    print('Number of neuron groups: {}'.format(len(new_groups)))
+
+    if show_plot:
+        if pair_wise:
+            plotHeatmap(freq_matrix, cmap='coolwarm', center=0.5, xlabel='Neuron', ylabel='Neuron',
+                        xticks=new_df.index.to_list(), yticks=neuron_groups, mask='UPPER_T',
+                        xtick_skip=3, ytick_skip=3, title='Neuron clustering co-occurrence frequency matrix')
+        else:
+            plotHeatmap(freq_matrix, cmap='coolwarm', center=0.5, xlabel='Neuron', ylabel='Neuron',
+                        xticks=new_df.index.to_list(), yticks=neuron_groups,
+                        xtick_skip=3, ytick_skip=2, title='Neuron clustering co-occurrence frequency matrix')
+    
+    return new_groups
