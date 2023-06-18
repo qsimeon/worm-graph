@@ -64,7 +64,7 @@ def random_replace(value):
     else:
         return value
 
-def neuron_distribution(df, ref_dict, stat='percent', group_by=None, show_plots=True):
+def neuron_distribution(df, ref_dict, stat='percent', group_by=None, show_plots=True, plot_type='both'):
 
     assert group_by in [None, 'three', 'four'],\
         f"Invalid group_by: {group_by} -> Must be None, 'three' or 'four'"
@@ -89,29 +89,39 @@ def neuron_distribution(df, ref_dict, stat='percent', group_by=None, show_plots=
         new_df.loc[neuron, 'Reference'] = ref_dict[neuron]
 
     if show_plots:
+        # Create a figure with the desired number of subplots
+        if plot_type == 'both':
+            fig, axes = plt.subplots(1, 2, figsize=(12, 5))
+        elif plot_type == 'ground-truth':
+            fig, axes = plt.subplots(1, 1, figsize=(6, 5))
+            axes = [axes]
+        elif plot_type == 'computed-cluster':
+            fig, axes = plt.subplots(1, 1, figsize=(6, 5))
+            axes = [None, axes]
 
-        # Create a figure with two subplots
-        fig, axes = plt.subplots(1, 2, figsize=(12, 5))
+        if plot_type == 'both' or plot_type=='ground-truth':
 
-        # Create the histogram (literature)
-        sns.histplot(data=new_df, x='Reference', stat=stat, discrete=True, kde=True, ax=axes[0])
+            # Create the histogram (literature)
+            sns.histplot(data=new_df, x='Reference', stat=stat, discrete=True, kde=True, ax=axes[0])
 
-        # Set the labels and title for the first subplot
-        axes[0].set_title('Literature labels distribution')
-        axes[0].set_xlabel('Neuron type')
+            # Set the labels and title for the first subplot
+            axes[0].set_title('Ground truth labels distribution')
+            axes[0].set_xlabel('Neuron type')
+        
+        if plot_type == 'both' or plot_type=='computed-cluster':
 
-        # Create the histogram (computed clusters)
-        hist = sns.histplot(data=new_df, x='Computed Cluster', stat=stat, discrete=True, kde=True, ax=axes[1])
+            # Create the histogram (computed clusters)
+            hist = sns.histplot(data=new_df, x='Computed Cluster', stat=stat, discrete=True, kde=True, ax=axes[1])
 
-        # Set the labels and title for the second subplot
-        axes[1].set_title('Computed cluster labels distribution')
-        axes[1].set_xlabel('Neuron type')
+            # Set the labels and title for the second subplot
+            axes[1].set_title('Computed cluster labels distribution')
+            axes[1].set_xlabel('Neuron type')
 
-        # Change the xticks to the correct labels
-        axes[1].set_xticks(np.arange(len(set(new_df['Computed Cluster'])))+1)
+            # Change the xticks to the correct labels
+            axes[1].set_xticks(np.arange(len(set(new_df['Computed Cluster'])))+1)
 
         # Compute the proportions of each Reference label within each bin
-        if stat == 'percent':
+        if stat == 'percent' and (plot_type == 'both' or plot_type=='computed-cluster'):
             color_palette = sns.color_palette('Set1')
             unique_references = new_df['Reference'].unique()[:len(set(new_df['Computed Cluster']))]
             color_map = {ref: color_palette[i % len(color_palette)] for i, ref in enumerate(unique_references)}
