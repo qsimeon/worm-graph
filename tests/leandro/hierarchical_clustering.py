@@ -18,7 +18,7 @@ import matplotlib.pyplot as plt
 from sklearn.cluster import AgglomerativeClustering
 import sklearn.metrics as sm
 
-def hierarchical_clustering_algorithm(single_worm_data,
+def hierarchical_clustering_algorithm(single_worm_data, distance='correlation',
                                      method='ward', metric=None,
                                      truncate_mode='lastp', p=12,
                                      criterion='maxclust', criterion_value=4, verbose=False,
@@ -38,14 +38,19 @@ def hierarchical_clustering_algorithm(single_worm_data,
     X = single_worm_data['smooth_calcium_data'] # (time, all neurons)
     X = X[:, single_worm_data['named_neurons_mask']]  # (time, named and acive neurons)
 
-    R = np.abs(np.corrcoef(X, rowvar=False)) # no correlated <- [0, 1] -> correlated
-    R = (R + R.T) / 2  # Make it symmetric (just in case) -> numerical error
-    D = 1 - R # Distance matrix: close <- [0, 1] -> far
-    np.fill_diagonal(D, 0) # Make diagonal 0 (just in case)
+    if distance == 'correlation':
+        R = np.abs(np.corrcoef(X, rowvar=False)) # no correlated <- [0, 1] -> correlated
+        R = (R + R.T) / 2  # Make it symmetric (just in case) -> numerical error
+        D = 1 - R # Distance matrix: close <- [0, 1] -> far
+        np.fill_diagonal(D, 0) # Make diagonal 0 (just in case)
+
+    elif distance == 'cosine':
+        D = X @ X.T / (np.linalg.norm(X, axis=0) * np.linalg.norm(X, axis=1)) # Distance matrix: far <- [0, 1] -> close
+        D = 1 - D # Distance matrix: close <- [0, 1] -> far
 
     if verbose:
-        print("X.shape:", X.shape)
-        print("Correlation matrix shape:", R.shape)
+            print("X.shape:", X.shape)
+            print("Distance matrix shape:", D.shape)
 
     # The linkage function takes a condensed distance matrix, which is a flat array containing the upper triangular of the distance matrix. 
     # We use squareform function to convert the matrix form to the condensed form.
