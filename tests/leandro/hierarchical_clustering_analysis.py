@@ -420,6 +420,11 @@ def group_frequency(all_worm_clusters, neuron_groups=None, ocurr_threshold=5, sh
                     if freq == 1 and occurrences > ocurr_threshold:
                         new_groups.append(neuron1+[neuron2])
 
+    new_groups = np.array(new_groups)
+    for i, ng in enumerate(new_groups):
+        new_groups[i] = np.sort(ng)
+    new_groups = np.unique(new_groups, axis=0).tolist()
+
     if verbose:
         print('Number of neuron groups: {}'.format(len(new_groups)))
 

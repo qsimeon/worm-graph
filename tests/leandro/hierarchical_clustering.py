@@ -2,14 +2,13 @@ from tests.leandro.plots import plotHeatmap
 
 import numpy as np
 import pandas as pd
-from IPython.display import display
-from tabulate import tabulate
 import json
 
 from scipy.cluster.hierarchy import dendrogram, linkage
 from scipy.cluster.hierarchy import fcluster
 from scipy.cluster.hierarchy import cophenet
-from scipy.spatial.distance import pdist, squareform
+from scipy.spatial.distance import pdist, squareform, euclidean
+from dtaidistance import dtw
 
 from pylab import rcParams
 import seaborn as sb
@@ -43,10 +42,23 @@ def hierarchical_clustering_algorithm(single_worm_data, distance='correlation',
         R = (R + R.T) / 2  # Make it symmetric (just in case) -> numerical error
         D = 1 - R # Distance matrix: close <- [0, 1] -> far
         np.fill_diagonal(D, 0) # Make diagonal 0 (just in case)
-
+        title_plot = "correlation matrix"
+        
     elif distance == 'cosine':
-        D = X @ X.T / (np.linalg.norm(X, axis=0) * np.linalg.norm(X, axis=1)) # Distance matrix: far <- [0, 1] -> close
-        D = 1 - D # Distance matrix: close <- [0, 1] -> far
+        R = np.abs(X.T @ X) # Distance matrix: far <- [0, 1] -> close
+        norms = np.linalg.norm(X, axis=0).reshape(-1,1) @ np.linalg.norm(X, axis=0).reshape(1,-1)
+        R = (R / norms).detach().numpy() # cosine similarity
+        R = (R + R.T) / 2  # Make it symmetric (just in case) -> numerical error
+        D = 1 - R # Distance matrix: close <- [0, 1] -> far
+        np.fill_diagonal(D, 0) # Make diagonal 0 (just in case)
+        title_plot = "cosine similarity matrix"
+
+    elif distance == 'dtw':
+        X = X.detach().numpy().astype(np.double).T
+        time_series = [vec for vec in X]
+        R = dtw.distance_matrix_fast(time_series, window=1000) # window: anti-phase dynamics around 50s and 100s
+        D = R
+        title_plot = "DTW matrix"
 
     if verbose:
             print("X.shape:", X.shape)
@@ -80,8 +92,8 @@ def hierarchical_clustering_algorithm(single_worm_data, distance='correlation',
     sorted_computed_cluster_labels = computed_cluster_labels[np.argsort(computed_cluster_labels)]
 
     if show_plots:
-        plotHeatmap(R, title="Original correlation matrix", xlabel="Neuron", ylabel="Neuron", xticks=original_neuron_labels, yticks=original_neuron_labels, xtick_skip=2, ytick_skip=2)
-        plotHeatmap(sorted_R, title="Sorted correlation matrix", xlabel="Neuron", ylabel="Neuron", xticks=sorted_neuron_labels, yticks=sorted_neuron_labels, xtick_skip=2, ytick_skip=2)
+        plotHeatmap(R, title="Original " + title_plot, xlabel="Neuron", ylabel="Neuron", xticks=original_neuron_labels, yticks=original_neuron_labels, xtick_skip=2, ytick_skip=2)
+        plotHeatmap(sorted_R, title="Sorted " + title_plot, xlabel="Neuron", ylabel="Neuron", xticks=sorted_neuron_labels, yticks=sorted_neuron_labels, xtick_skip=2, ytick_skip=2)
 
     # === Metrics ===
     file_path = '/home/lrvnc/Projects/worm-graph/tests/leandro/data/neuron_clusters.json'
