@@ -121,38 +121,20 @@ class PositionalEncoding(torch.nn.Module):
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
 
-# # Inner Model Parts
-# # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
-# class Linear(torch.nn.Module):
-#     """Linear model body."""
+
+# # # Inner Model Parts
+# # # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
+# class LSTM(torch.nn.Module):
+#     """Network LSTM model body."""
 
 #     def __init__(self, input_size, hidden_size):
 #         super().__init__()
-#         # Input to hidden transformation
-#         self.input_hidden = (
-#             torch.nn.Linear(self.input_size, self.hidden_size),
-#             # torch.nn.ReLU(),
-#             torch.nn.ELU(),
-#             torch.nn.LayerNorm(self.hidden_size),
-#         )
-#         # Hidden to hidden transformation
-#         self.hidden_hidden = (self.num_layers - 1) * (
-#             torch.nn.Linear(self.hidden_size, self.hidden_size),
-#             # torch.nn.ReLU(),
-#             torch.nn.ELU(),
-#             torch.nn.LayerNorm(self.hidden_size),
-#         )
-#         # Full inner model (before readout)
-#         self.model = torch.nn.Sequential(
-#             *self.input_hidden,
-#             *self.hidden_hidden,
-#             self.linear,
-#         )
 
-#     def forward(self, x):
-#         return self.model(x)
+#     def forward(self, input: torch.Tensor, tau: int = 1):
+#         return None
 
-# # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
+
+# # # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
 
 
 # Models (super class and sub classes)

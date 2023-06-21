@@ -16,7 +16,7 @@ globals:
   shuffle_worms: false # whether to shuffle worms
 
 hydra:
-  mode: RUN # options: RUN, MULTIRUN
+  mode: MULTIRUN # options: RUN, MULTIRUN
   job:
     chdir: true # important! this changes the working directory to the log directory
   run:
@@ -27,17 +27,17 @@ hydra:
   sweeper:
     params:
       # GLOBALS
-      globals.random_seed: 0 #0, 1, 2, 3
+      globals.random_seed: 0, 1 #0, 1, 2, 3
       # MODEL
-      model.type: NeuralTransformer #LinearNN, NeuralTransformer, NetworkLSTM, NeuralCFC
+      model.type: NeuralTransformer, NetworkLSTM #LinearNN, NeuralTransformer, NetworkLSTM, NeuralCFC
       model.loss: MSE #L1, MSE, Huber, Poisson
-      model.fft_reg_param: 0.0 # 0.0, 0.3, 0.5, 0.7, 1.0
-      model.l1_reg_param: 0.0, 0.3, 0.5, 0.7, 1.0
-      model.hidden_size: 128, 256, 512, 1024, 2048, 4096, 8192
+      model.fft_reg_param: 0.0 #0.0, 0.3, 0.5, 0.7, 1.0
+      model.l1_reg_param: 0.0 #0.0, 0.3, 0.5, 0.7, 1.0
+      model.hidden_size: 256 # 128, 256, 512, 1024, 2048, 4096, 8192
       model.num_layers: 1 
       model.checkpoint_path: false
       # DATASET
-      dataset.name: [Kato2015, Nichols2017, Skora2018, Kaplan2020, Flavell2023, Leifer2023]
+      dataset.name: [Kato2015, Nichols2017, Skora2018, Kaplan2020, Uzel2022, Flavell2023, Leifer2023]
         # [Kato2015, Nichols2017, Skora2018, Kaplan2020, Flavell2023, Leifer2023]
         # [Kato2015, Nichols2017, Skora2018, Kaplan2020, Flavell2023]
         # [Nichols2017, Skora2018, Kaplan2020, Flavell2023, Leifer2023]
@@ -62,11 +62,11 @@ hydra:
       # TRAIN
       train.optimizer: Adagrad #SGD, Adam, AdamW, Adagrad, Adadelta, RMSprop 
       train.learn_rate: 0.01 #0.001, 0.01, 0.1, 1.0
-      train.epochs: 100 
-      train.save_freq: 200
+      train.epochs: 1000
+      train.save_freq: 1000
       train.seq_len: 200 #100, 200
       train.k_splits: 2 
-      train.num_samples: 32 #8, 16, 32
+      train.num_samples: 16 #8, 16, 32
       train.num_batches: 1 
       train.tau_in: 1 
       train.shuffle_samples: false 
@@ -74,4 +74,4 @@ hydra:
       # PREDICT
       predict.tau_out: 1000
       predict.context_len: 200
-      predict.dataset.name: Uzel2022
+      predict.dataset.name: Flavell2023
