@@ -38,14 +38,14 @@ def hierarchical_clustering_algorithm(single_worm_data, distance='correlation',
     X = X[:, single_worm_data['named_neurons_mask']]  # (time, named and acive neurons)
 
     if distance == 'correlation':
-        R = np.abs(np.corrcoef(X, rowvar=False)) # no correlated <- [0, 1] -> correlated
+        R = np.corrcoef(X, rowvar=False) # no correlated <- [0, 1] -> correlated
         R = (R + R.T) / 2  # Make it symmetric (just in case) -> numerical error
         D = 1 - R # Distance matrix: close <- [0, 1] -> far
         np.fill_diagonal(D, 0) # Make diagonal 0 (just in case)
         title_plot = "correlation matrix"
         
     elif distance == 'cosine':
-        R = np.abs(X.T @ X) # Distance matrix: far <- [0, 1] -> close
+        R = X.T @ X # Distance matrix: far <- [0, 1] -> close
         norms = np.linalg.norm(X, axis=0).reshape(-1,1) @ np.linalg.norm(X, axis=0).reshape(1,-1)
         R = (R / norms).detach().numpy() # cosine similarity
         R = (R + R.T) / 2  # Make it symmetric (just in case) -> numerical error
