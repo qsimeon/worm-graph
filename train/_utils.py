@@ -96,7 +96,8 @@ def train(
         )
 
         # Train
-        Y_tr = model(X_train * mask, tau)  # Forward pass.
+        # Y_tr = model(X_train * mask, tau)  # Forward pass.
+        Y_tr = model(X_train * mask, mask, tau)  # Forward pass.
         loss = criterion(
             Y_tr[:, :, mask], Y_train[:, :, mask]
         )  # Compute training loss.
@@ -202,7 +203,8 @@ def test(
         )
 
         # Test
-        Y_te = model(X_test * mask, tau)  # Forward pass.
+        # Y_te = model(X_test * mask, tau)  # Forward pass.
+        Y_te = model(X_test * mask, mask, tau)  # Forward pass.
         # Compute the validation loss.
         loss = criterion(Y_te[:, :, mask], Y_test[:, :, mask])
 

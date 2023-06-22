@@ -121,17 +121,8 @@ class PositionalEncoding(torch.nn.Module):
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
 
-
 # # # Inner Model Parts
 # # # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
-# class LSTM(torch.nn.Module):
-#     """Network LSTM model body."""
-
-#     def __init__(self, input_size, hidden_size):
-#         super().__init__()
-
-#     def forward(self, input: torch.Tensor, tau: int = 1):
-#         return None
 
 
 # # # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
@@ -306,7 +297,8 @@ class Model(torch.nn.Module):
                     :, inputs.size(1) - context_len + i : inputs.size(1) + i, :
                 ]  # (B, T, C)
                 # get the prediction of next timestep
-                input_forward = self(input_cond, tau=1)
+                # input_forward = self(input_cond, tau=1)
+                input_forward = self(input_cond, mask, tau=1)
                 # focus only on the last time step
                 next_timestep = input_forward[:, -1, :]  # (B, C)
                 # append predicted next timestep to the running sequence
@@ -319,27 +311,6 @@ class Model(torch.nn.Module):
         TODO: Figure out how to use diffusion models to sample from the network.
         """
         pass
-
-    def forward(self, inputs, tau=1):
-        """
-        General forward method of all our models.
-        Parameters
-        ----------
-        input : torch.Tensor
-            Input data with shape (batch, seq_len, neurons)
-        tau : int, optional
-            Time offset of target
-        """
-        if tau < 1:
-            outputs = self.identity(inputs)
-        else:
-            # ... use the full sequence
-            outputs = self.model(inputs)
-        # repeat for target with tau>0 offset
-        for i in range(1, tau):
-            # ... use the full sequence
-            outputs = self.model(outputs)
-        return outputs
 
     # Getter functions for returning all attributes needed to reinstantiate a similar model
     def get_input_size(self):
@@ -361,23 +332,169 @@ class Model(torch.nn.Module):
         return self.l1_reg_param
 
 
+class NetworkLSTM(Model):
+    """
+    TEST MODEL.
+    """
+
+    def __init__(
+        self,
+        input_size: int,
+        hidden_size: int,
+        num_layers: int = 1,
+        loss: Union[Callable, None] = None,
+        fft_reg_param: float = 0.0,
+        l1_reg_param: float = 0.0,
+    ):
+        """
+        The output size will be the same as the input size.
+        """
+        super(NetworkLSTM, self).__init__(
+            input_size,
+            hidden_size,
+            num_layers,
+            loss,
+            fft_reg_param,
+            l1_reg_param,
+        )
+
+        # Input to hidden transformation
+        self.input_hidden = torch.nn.Sequential(
+            torch.nn.Linear(self.input_size, self.hidden_size),
+            torch.nn.ELU(),
+            torch.nn.LayerNorm(self.hidden_size),
+        )
+
+        # # LSTM layer: Input to hidden transformation
+        # self.lstm = torch.nn.LSTM(
+        #     input_size=self.input_size,
+        #     hidden_size=self.hidden_size,
+        #     num_layers=self.num_layers,
+        #     bias=True,
+        #     batch_first=True,
+        # )
+
+        # # Initialize LSTM weights
+        # for name, param in self.lstm.named_parameters():
+        #     if "weight_ih" in name:  # Input-hidden weights
+        #         torch.nn.init.xavier_uniform_(param.data, gain=1.0)
+        #     elif "weight_hh" in name:  # Hidden-hidden weights
+        #         torch.nn.init.orthogonal_(param.data)
+        #     elif "bias" in name:  # Bias weights
+        #         param.data.fill_(0)
+
+        # Initialize hidden state
+        self.hidden = None
+
+        # Mask to hidden transformation
+        self.mask_hidden = torch.nn.Sequential(
+            torch.nn.Linear(self.input_size, self.hidden_size),
+            torch.nn.ELU(),
+            torch.nn.LayerNorm(self.hidden_size),
+        )
+
+        # # Hidden to hidden transformation
+        # self.hidden_hidden = torch.nn.Sequential(
+        #     torch.nn.Linear(2 * self.hidden_size, self.hidden_size),
+        #     torch.nn.ELU(),
+        #     torch.nn.LayerNorm(self.hidden_size),
+        # )
+
+        # LSTM layer: Hidden to hidden transformation
+        self.lstm = torch.nn.LSTM(
+            input_size=2 * self.hidden_size,
+            hidden_size=self.hidden_size,
+            num_layers=self.num_layers,
+            bias=True,
+            batch_first=True,
+        )
+
+        # Initialize LSTM weights
+        for name, param in self.lstm.named_parameters():
+            if "weight_ih" in name:  # Input-hidden weights
+                torch.nn.init.xavier_uniform_(param.data, gain=1.0)
+            elif "weight_hh" in name:  # Hidden-hidden weights
+                torch.nn.init.orthogonal_(param.data)
+            elif "bias" in name:  # Bias weights
+                param.data.fill_(0)
+
+    def init_hidden(self, input_shape):
+        """
+        Inititializes the hidden and cell states vectors of the LSTM.
+        """
+        device = next(self.parameters()).device
+        batch_size = input_shape[0]  # because batch_first=True
+        h0 = torch.randn(self.num_layers, batch_size, self.hidden_size).to(device)
+        c0 = torch.randn(self.num_layers, batch_size, self.hidden_size).to(device)
+        return (h0, c0)
+
+    def forward(self, input: torch.Tensor, mask: torch.Tensor, tau: int = 1):
+        """Forward method for simple linear regression model.
+
+        Parameters
+        ----------
+        input : torch.Tensor
+            Input data with shape (batch, seq_len, neurons)
+        mask: torch.Tensor
+            Mask on the neurons with shape (neurons,)
+        tau : int, optional
+            Time offset of target
+        """
+        # control flow for tau
+        if tau < 1:  # return the input sequence
+            output = self.identity(input)
+        else:  # do one-step prediction
+            # print("input.dtype: ", input.dtype, end="\n\n")
+            # initialize hidden state
+            self.hidden = self.init_hidden(input.shape)
+            # recast the mask to the input type and shape
+            mask = torch.broadcast_to(mask.to(input.dtype), input.shape)
+            # transform the input
+            input_hidden_out = self.input_hidden(input)
+            # print("input_hidden_out: ", input_hidden_out.shape, end="\n\n")
+            # # transform the input
+            # lstm_out, self.hidden = self.lstm(input, self.hidden)
+            # # print("lstm_out: ", lstm_out.shape, end="\n\n")
+            # transform the mask
+            mask_hidden_out = self.mask_hidden(mask)
+            # print(
+            #     "mask_hidden_out: ",
+            #     mask_hidden_out.shape,
+            #     end="\n\n",
+            # )
+            # # concatenate into a single latent
+            # latent_out = torch.cat((lstm_out, mask_hidden_out), dim=-1)
+            # concatenate into a single latent
+            latent_out = torch.cat((input_hidden_out, mask_hidden_out), dim=-1)
+            # print("latent_out: ", latent_out.shape, end="\n\n")
+            # transform this concatenated latent
+            hidden_out, self.hidden = self.lstm(latent_out, self.hidden)
+            # # transform this concatenated latent
+            # hidden_out = self.hidden_hidden(latent_out)
+            # print("hidden_out: ", hidden_out.shape, end="\n\n")
+            # perform a linear readout to get the output
+            readout = self.linear(hidden_out)
+            # print("readout: ", readout.shape, end="\n\n")
+            output = readout
+        # do the remaining tau-1 steps of prediction
+        for i in range(1, tau):
+            # transform the last output
+            lstm_out, self.hidden = self.lstm(output, self.hidden)
+            # transform the mask
+            mask_hidden_out = self.mask_hidden(mask.to(output.dtype))
+            # concatenate into a single latent
+            latent_out = torch.cat((lstm_out, mask_hidden_out), dim=-1)
+            # transform this concatenated latent
+            hidden_out = self.hidden_hidden(latent_out)
+            # perform a linear readout to get the output
+            readout = self.linear(hidden_out)
+            output = readout
+        return output
+
+
 class LinearNN(Model):
     """
-    A simple linear regression model to use as a baseline.
-
-    Parameters
-    ----------
-    input_size : int
-        Number of neurons
-    hidden_size : int
-        Number of hidden units
-    num_layers : int, optional
-        Number of hidden layers, default is 1
-    loss : Callable or None, optional
-        Loss function to use, default is L1
-    reg_param : float, optional
-        FFT Regularization parameter, default is 0.0
-        (full regularization)
+    TEST MODEL.
     """
 
     def __init__(
@@ -397,49 +514,148 @@ class LinearNN(Model):
             fft_reg_param,
             l1_reg_param,
         )
-        # Input and hidden layers
-        self.input_hidden = (
+
+        # Input to hidden transformation
+        self.input_hidden = torch.nn.Sequential(
             torch.nn.Linear(self.input_size, self.hidden_size),
-            # torch.nn.ReLU(),
-            torch.nn.ELU(),
-            torch.nn.LayerNorm(self.hidden_size),
-        )
-        self.hidden_hidden = (self.num_layers - 1) * (
-            torch.nn.Linear(self.hidden_size, self.hidden_size),
-            # torch.nn.ReLU(),
             torch.nn.ELU(),
             torch.nn.LayerNorm(self.hidden_size),
         )
 
-        # Full model
-        self.model = torch.nn.Sequential(
-            *self.input_hidden,
-            *self.hidden_hidden,
-            self.linear,
+        # Mask to hidden transformation
+        self.mask_hidden = torch.nn.Sequential(
+            torch.nn.Linear(self.input_size, self.hidden_size),
+            torch.nn.ELU(),
+            torch.nn.LayerNorm(self.hidden_size),
         )
 
-    def forward(self, input: torch.Tensor, tau: int = 1):
+        # Hidden to hidden transformation
+        self.hidden_hidden = torch.nn.Sequential(
+            torch.nn.Linear(2 * self.hidden_size, self.hidden_size),
+            torch.nn.ELU(),
+            torch.nn.LayerNorm(self.hidden_size),
+        )
+
+    def forward(self, input: torch.Tensor, mask: torch.Tensor, tau: int = 1):
         """Forward method for simple linear regression model.
 
         Parameters
         ----------
         input : torch.Tensor
             Input data with shape (batch, seq_len, neurons)
+        mask: torch.Tensor
+            Mask on the neurons with shape (neurons,)
         tau : int, optional
             Time offset of target
         """
+        # control flow for tau
         if tau < 1:
             output = self.identity(input)
         else:
-            # ... use the full sequence
-            readout = self.model(input)
+            # print("input.dtype: ", input.dtype, end="\n\n")
+            # recast the mask to the input type and shape
+            mask = torch.broadcast_to(mask.to(input.dtype), input.shape)
+            # transform the input
+            input_hidden_out = self.input_hidden(input)
+            # print("input_hidden_out: ", input_hidden_out.shape, end="\n\n")
+            # transform the mask
+            mask_hidden_out = self.mask_hidden(mask)
+            # print(
+            #     "mask_hidden_out: ",
+            #     mask_hidden_out.shape,
+            #     end="\n\n",
+            # )
+            # concatenate into a single latent
+            latent_out = torch.cat((input_hidden_out, mask_hidden_out), dim=-1)
+            # print("latent_out: ", latent_out.shape, end="\n\n")
+            # transform this concatenated latent
+            hidden_out = self.hidden_hidden(latent_out)
+            # print("hidden_out: ", hidden_out.shape, end="\n\n")
+            # perform a linear readout to get the output
+            readout = self.linear(hidden_out)
+            # print("readout: ", readout.shape, end="\n\n")
             output = readout
         # repeat for target with tau>0 offset
         for i in range(1, tau):
-            # ... use the full sequence
-            readout = self.model(output)
+            # transform the last output
+            input_hidden_out = self.input_hidden(output)
+            # transform the mask
+            mask_hidden_out = self.mask_hidden(mask.to(output.dtype))
+            # concatenate into a single latent
+            latent_out = torch.cat((input_hidden_out, mask_hidden_out), dim=-1)
+            # transform this concatenated latent
+            hidden_out = self.hidden_hidden(latent_out)
+            # perform a linear readout to get the output
+            readout = self.linear(hidden_out)
             output = readout
         return output
+
+
+# class LinearNN(Model):
+#     """
+#     A simple linear regression model to use as a baseline.
+#     """
+
+#     def __init__(
+#         self,
+#         input_size: int,
+#         hidden_size: int,
+#         num_layers: int = 1,
+#         loss: Union[Callable, None] = None,
+#         fft_reg_param: float = 0.0,
+#         l1_reg_param: float = 0.0,
+#     ):
+#         super(LinearNN, self).__init__(
+#             input_size,
+#             hidden_size,
+#             num_layers,
+#             loss,
+#             fft_reg_param,
+#             l1_reg_param,
+#         )
+#         # Input and hidden layers
+#         self.input_hidden = (
+#             torch.nn.Linear(self.input_size, self.hidden_size),
+#             # torch.nn.ReLU(),
+#             torch.nn.ELU(),
+#             torch.nn.LayerNorm(self.hidden_size),
+#         )
+#         self.hidden_hidden = (self.num_layers - 1) * (
+#             torch.nn.Linear(self.hidden_size, self.hidden_size),
+#             # torch.nn.ReLU(),
+#             torch.nn.ELU(),
+#             torch.nn.LayerNorm(self.hidden_size),
+#         )
+
+#         # Full model
+#         self.model = torch.nn.Sequential(
+#             *self.input_hidden,
+#             *self.hidden_hidden,
+#             self.linear,
+#         )
+
+#     def forward(self, input: torch.Tensor, tau: int = 1):
+#         """Forward method for simple linear regression model.
+
+#         Parameters
+#         ----------
+#         input : torch.Tensor
+#             Input data with shape (batch, seq_len, neurons)
+#         tau : int, optional
+#             Time offset of target
+#         """
+#         if tau < 1:
+#             output = self.identity(input)
+#         else:
+#             # ... use the full sequence
+#             readout = self.model(input)
+#             output = readout
+#         # repeat for target with tau>0 offset
+#         for i in range(1, tau):
+#             # ... use the full sequence
+#             readout = self.model(output)
+#             output = readout
+#         return output
 
 
 class NeuralTransformer(Model):
@@ -592,120 +808,118 @@ class NeuralCFC(Model):
         return output
 
 
-class NetworkLSTM(Model):
-    """
-    A model of the _C. elegans_ neural network using an LSTM.
-    Given an input sequence of length $L$ and an offset $\tau$,
-    this model is trained to output the sequence of length $L$
-    that occurs $tau$ time steps after the start of the input sequence.
-    """
+# class NetworkLSTM(Model):
+#     """
+#     A model of the _C. elegans_ neural network using an LSTM.
+#     Given an input sequence of length $L$ and an offset $\tau$,
+#     this model is trained to output the sequence of length $L$
+#     that occurs $tau$ time steps after the start of the input sequence.
+#     """
 
-    def __init__(
-        self,
-        input_size: int,
-        hidden_size: int,
-        num_layers: int = 1,
-        loss: Union[Callable, None] = None,
-        fft_reg_param: float = 0.0,
-        l1_reg_param: float = 0.0,
-    ):
-        """
-        The output size will be the same as the input size.
-        """
-        super(NetworkLSTM, self).__init__(
-            input_size,
-            hidden_size,
-            num_layers,
-            loss,
-            fft_reg_param,
-            l1_reg_param,
-        )
-        # LSTM layer
-        self.lstm = torch.nn.LSTM(
-            input_size=self.input_size,
-            hidden_size=self.hidden_size,
-            num_layers=self.num_layers,
-            bias=True,
-            batch_first=True,
-        )
-        # Initialize LSTM weights
-        for name, param in self.lstm.named_parameters():
-            if "weight_ih" in name:  # Input-hidden weights
-                torch.nn.init.xavier_uniform_(param.data, gain=1.0)
-            elif "weight_hh" in name:  # Hidden-hidden weights
-                torch.nn.init.orthogonal_(param.data)
-            elif "bias" in name:  # Bias weights
-                param.data.fill_(0)
-        # Initialize hidden state
-        self.hidden = None
+#     def __init__(
+#         self,
+#         input_size: int,
+#         hidden_size: int,
+#         num_layers: int = 1,
+#         loss: Union[Callable, None] = None,
+#         fft_reg_param: float = 0.0,
+#         l1_reg_param: float = 0.0,
+#     ):
+#         """
+#         The output size will be the same as the input size.
+#         """
+#         super(NetworkLSTM, self).__init__(
+#             input_size,
+#             hidden_size,
+#             num_layers,
+#             loss,
+#             fft_reg_param,
+#             l1_reg_param,
+#         )
+#         # LSTM layer
+#         self.lstm = torch.nn.LSTM(
+#             input_size=self.input_size,
+#             hidden_size=self.hidden_size,
+#             num_layers=self.num_layers,
+#             bias=True,
+#             batch_first=True,
+#         )
+#         # Initialize LSTM weights
+#         for name, param in self.lstm.named_parameters():
+#             if "weight_ih" in name:  # Input-hidden weights
+#                 torch.nn.init.xavier_uniform_(param.data, gain=1.0)
+#             elif "weight_hh" in name:  # Hidden-hidden weights
+#                 torch.nn.init.orthogonal_(param.data)
+#             elif "bias" in name:  # Bias weights
+#                 param.data.fill_(0)
+#         # Initialize hidden state
+#         self.hidden = None
 
-    def init_hidden(self, input_shape):
-        """
-        Inititializes the hidden and cell states vectors of the LSTM.
-        """
-        device = next(self.parameters()).device
-        batch_size = input_shape[0]  # because batch_first=True
-        h0 = torch.randn(self.num_layers, batch_size, self.hidden_size).to(device)
-        c0 = torch.randn(self.num_layers, batch_size, self.hidden_size).to(device)
-        return (h0, c0)
+#     def init_hidden(self, input_shape):
+#         """
+#         Inititializes the hidden and cell states vectors of the LSTM.
+#         """
+#         device = next(self.parameters()).device
+#         batch_size = input_shape[0]  # because batch_first=True
+#         h0 = torch.randn(self.num_layers, batch_size, self.hidden_size).to(device)
+#         c0 = torch.randn(self.num_layers, batch_size, self.hidden_size).to(device)
+#         return (h0, c0)
 
-    def forward(self, input: torch.Tensor, tau: int = 1):
-        """Propagate input through the LSTM.
-        input: batch of data
-        tau: time offset of target
-        """
-        # Initialize hidden state
-        self.hidden = self.init_hidden(input.shape)
-        if tau < 1:  # return the input sequence
-            output = self.identity(input)
-        else:  # do one-step prediction
-            lstm_out, self.hidden = self.lstm(input, self.hidden)
-            # ... use the full sequence
-            readout = self.linear(lstm_out)
-            output = readout
-        # do the remaining tau-1 steps of prediction
-        for i in range(1, tau):
-            lstm_out, self.hidden = self.lstm(output, self.hidden)
-            # ... use the full sequence
-            readout = self.linear(lstm_out)
-            output = readout
-        return output
-
-
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
+#     def forward(self, input: torch.Tensor, tau: int = 1):
+#         """Propagate input through the LSTM.
+#         input: batch of data
+#         tau: time offset of target
+#         """
+#         # Initialize hidden state
+#         self.hidden = self.init_hidden(input.shape)
+#         if tau < 1:  # return the input sequence
+#             output = self.identity(input)
+#         else:  # do one-step prediction
+#             lstm_out, self.hidden = self.lstm(input, self.hidden)
+#             # ... use the full sequence
+#             readout = self.linear(lstm_out)
+#             output = readout
+#         # do the remaining tau-1 steps of prediction
+#         for i in range(1, tau):
+#             lstm_out, self.hidden = self.lstm(output, self.hidden)
+#             # ... use the full sequence
+#             readout = self.linear(lstm_out)
+#             output = readout
+#         return output
 
 
-# Graph Neural Network models
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
-class GraphNN(torch.nn.Module):
-    """
-    Applies a single graph convolutional layer separately to the
-    two graphs induced by using only chemical synapses or
-    gap junctions, respectively, as the edges.
-    """
+# # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
 
-    def __init__(self, input_dim, hidden_dim, output_dim):
-        super(GraphNN, self).__init__()
-        # a separte learnable conv. layer for each type of synapse
-        self.elec_conv = GCNConv(
-            in_channels=input_dim, out_channels=hidden_dim, improved=True
-        )
-        self.chem_conv = GCNConv(
-            in_channels=input_dim, out_channels=hidden_dim, improved=True
-        )
-        # readout layer transforms node features to output
-        self.linear = torch.nn.Linear(
-            in_features=2 * hidden_dim, out_features=output_dim
-        )
+# # Graph Neural Network models
+# # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
+# class GraphNN(torch.nn.Module):
+#     """
+#     Applies a single graph convolutional layer separately to the
+#     two graphs induced by using only chemical synapses or
+#     gap junctions, respectively, as the edges.
+#     """
 
-    def forward(self, x, edge_index, edge_attr):
-        elec_weight = edge_attr[:, 0]
-        chem_weight = edge_attr[:, 1]
-        elec_hid = self.elec_conv(x, edge_index, elec_weight)
-        chem_hid = self.chem_conv(x, edge_index, chem_weight)
-        hidden = torch.cat([elec_hid, chem_hid], dim=-1)
-        output = self.linear(hidden)
-        return output
+#     def __init__(self, input_dim, hidden_dim, output_dim):
+#         super(GraphNN, self).__init__()
+#         # a separte learnable conv. layer for each type of synapse
+#         self.elec_conv = GCNConv(
+#             in_channels=input_dim, out_channels=hidden_dim, improved=True
+#         )
+#         self.chem_conv = GCNConv(
+#             in_channels=input_dim, out_channels=hidden_dim, improved=True
+#         )
+#         # readout layer transforms node features to output
+#         self.linear = torch.nn.Linear(
+#             in_features=2 * hidden_dim, out_features=output_dim
+#         )
 
+#     def forward(self, x, edge_index, edge_attr):
+#         elec_weight = edge_attr[:, 0]
+#         chem_weight = edge_attr[:, 1]
+#         elec_hid = self.elec_conv(x, edge_index, elec_weight)
+#         chem_hid = self.chem_conv(x, edge_index, chem_weight)
+#         hidden = torch.cat([elec_hid, chem_hid], dim=-1)
+#         output = self.linear(hidden)
+#         return output
 
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
+# # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
