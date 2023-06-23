@@ -3,6 +3,7 @@ import torch
 import matplotlib.pyplot as plt
 import seaborn as sns
 import matplotlib.gridspec as gridspec
+from utils import NEURONS_302
 
 import matplotlib.animation as animation
 from IPython.display import HTML
@@ -47,7 +48,7 @@ def plot_signals(data, time_tensor, neuron_idx=None, yax_limit=True):
         ax.yaxis.set_ticks_position('none')
         if yax_limit:
             ax.set_ylim(-1.0, 1.0)
-        ax.set_ylabel("Neuron {}".format(column_indices[i]))
+        ax.set_ylabel("{}".format(NEURONS_302[column_indices[i]]))
         
         if i < num_columns - 1:
             ax.set_xticks([])
