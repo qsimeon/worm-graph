@@ -92,14 +92,15 @@ def train(
         # Baseline: loss if the model predicted same value at next timestep
         # equal to current value.
         base = criterion(
-            (0 if use_residual else 1) * X_train[:, :, mask], Y_train[:, :, mask]
+            prediction=(0 if use_residual else 1) * X_train[:, :, mask],
+            target=Y_train[:, :, mask],
         )
 
         # Train
-        # Y_tr = model(X_train * mask, tau)  # Forward pass.
-        Y_tr = model(X_train * mask, mask, tau)  # Forward pass.
+        Y_tr = model(X_train, mask, tau)  # Forward pass.
         loss = criterion(
-            Y_tr[:, :, mask], Y_train[:, :, mask]
+            prediction=Y_tr[:, :, mask],
+            target=Y_train[:, :, mask],
         )  # Compute training loss.
 
         # No backprop on epoch 0.
@@ -199,14 +200,17 @@ def test(
         # Baseline: loss if the model predicted value at next timestep
         # equal to current value.
         base = criterion(
-            (0 if use_residual else 1) * X_test[:, :, mask], Y_test[:, :, mask]
+            prediction=(0 if use_residual else 1) * X_test[:, :, mask],
+            target=Y_test[:, :, mask],
         )
 
         # Test
-        # Y_te = model(X_test * mask, tau)  # Forward pass.
-        Y_te = model(X_test * mask, mask, tau)  # Forward pass.
+        Y_te = model(X_test, mask, tau)  # Forward pass.
         # Compute the validation loss.
-        loss = criterion(Y_te[:, :, mask], Y_test[:, :, mask])
+        loss = criterion(
+            prediction=Y_te[:, :, mask],
+            target=Y_test[:, :, mask],
+        )
 
         # Store test and baseline loss.
         base_loss += base.detach().item()
