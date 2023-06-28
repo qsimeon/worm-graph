@@ -264,7 +264,7 @@ def split_train_test(
         Whether to sample sequences backward from end of the data.
     tau : int or list[int], optional, default=1
         The number of timesteps to the right by which the target sequence
-        is offset from input sequence. Deprecated (unused) argument.
+        is offset from input sequence.
     use_residual : bool, optional, default=False
         Whether to use calcium data or residual calcium data.
 
