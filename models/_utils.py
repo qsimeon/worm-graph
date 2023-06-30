@@ -592,22 +592,27 @@ class NeuralTransformer(Model):
             fft_reg_param,
             l1_reg_param,
         )
+
+        # Special transformer parameters
         self.n_head = (
             2  # number of attention heads; NOTE: must be divisor of hidden_size
         )
         self.block_size = MAX_TOKEN_LEN  # maximum attention block (i.e. context) size
         self.dropout = 0.0  # dropout rate
+
         # Positional encoding
         self.position_encoding = PositionalEncoding(
             self.hidden_size,
             max_len=self.block_size,
             dropout=self.dropout,
         )
+
         # Embedding
         self.embedding = torch.nn.Linear(
             2 * self.hidden_size,
             self.hidden_size,
         )  # concating input and mask
+
         # Transformer blocks
         self.blocks = torch.nn.Sequential(
             *(
@@ -620,18 +625,22 @@ class NeuralTransformer(Model):
                 for _ in range(self.num_layers)
             )
         )
+
         # Layer normalization
         self.layer_norm = torch.nn.LayerNorm(self.hidden_size)
+
         # Input to hidden transformation
         self.input_hidden = torch.nn.Sequential(
             torch.nn.Linear(self.input_size, self.hidden_size),
             torch.nn.ReLU(),
         )
+
         # Mask to hidden transformation
         self.mask_hidden = torch.nn.Sequential(
             torch.nn.Linear(self.input_size, self.hidden_size),
             torch.nn.ReLU(),
         )
+
         # Hidden to hidden transformation
         self.hidden_hidden = torch.nn.Sequential(  # input has shape (B, T, 2*C')
             self.embedding,  # (B, T, C')
@@ -693,7 +702,7 @@ class NeuralTransformer(Model):
 class NeuralCFC(Model):
     """
     Neural Circuit Policy (NCP) Closed-form continuous time (CfC) model.
-    TODO: Cite the paper by Daniela Rus and collaborators.
+    TODO: Cite the paper by Ramin hasani, Daniela Rus et al.
     """
 
     def __init__(
@@ -718,14 +727,32 @@ class NeuralCFC(Model):
             fft_reg_param,
             l1_reg_param,
         )
-        # Recurrent layer
-        self.rnn = CfC(self.input_size, self.hidden_size)
+        # Input to hidden transformation
+        self.input_hidden = torch.nn.Sequential(
+            torch.nn.Linear(self.input_size, self.hidden_size),
+            torch.nn.ReLU(),
+        )
+
+        # Mask to hidden transformation
+        self.mask_hidden = torch.nn.Sequential(
+            torch.nn.Linear(self.input_size, self.hidden_size),
+            torch.nn.ReLU(),
+        )
+
+        # RNN layer: Hidden to hidden transformation
+        self.rnn = CfC(
+            input_size=2 * self.hidden_size,  # concatenating input and mask
+            units=self.hidden_size,
+            activation="relu",
+        )
+
         # Initialize RNN weights
         for name, param in self.rnn.named_parameters():
             if "weight" in name:  # weights
                 torch.nn.init.xavier_uniform_(param.data, gain=1.0)
             elif "bias" in name:  # biases
                 param.data.fill_(0)
+
         # Initialize hidden state
         self.hidden = None
 
@@ -738,25 +765,53 @@ class NeuralCFC(Model):
         hidden = torch.randn(batch_size, self.hidden_size).to(device)
         return hidden
 
-    def forward(self, input: torch.Tensor, tau: int = 1):
-        """Propagate input through the continuous time NN.
-        input: batch of data
-        tau: time offset of target
+    def forward(self, input: torch.Tensor, mask: torch.Tensor, tau: int = 1):
+        """Forward method for simple linear regression model.
+
+        Parameters
+        ----------
+        input : torch.Tensor
+            Input data with shape (batch, seq_len, neurons)
+        mask: torch.Tensor
+            Mask on the neurons with shape (neurons,)
+        tau : int, optional
+            Time offset of target
         """
-        # Initialize hidden state
+        # initialize hidden state
         self.hidden = self.init_hidden(input.shape)
+        # recast the mask to the input type and shape
+        mask = torch.broadcast_to(mask.to(input.dtype), input.shape)
+        # control flow for tau
         if tau < 1:  # return the input sequence
             output = self.identity(input)
         else:  # do one-step prediction
-            rnn_out, self.hidden = self.rnn(input, self.hidden)
-            # ... use the full sequence
-            readout = self.linear(rnn_out)
+            # multiply the input by the mask
+            input = input * mask
+            # transform the input
+            input_hidden_out = self.input_hidden(input)
+            # transform the mask
+            mask_hidden_out = self.mask_hidden(mask)
+            # concatenate into a single latent
+            latent_out = torch.cat((input_hidden_out, mask_hidden_out), dim=-1)
+            # transform the latent
+            hidden_out, self.hidden = self.rnn(latent_out, self.hidden)
+            # perform a linear readout to get the output
+            readout = self.linear(hidden_out)
             output = readout
         # do the remaining tau-1 steps of prediction
-        for i in range(1, tau):
-            rnn_out, self.hidden = self.rnn(output, self.hidden)
-            # ... use the full sequence
-            readout = self.linear(rnn_out)
+        for _ in range(1, tau):
+            # multiply input by the mask
+            input = output * mask
+            # transform the input
+            input_hidden_out = self.input_hidden(input)
+            # transform the mask
+            mask_hidden_out = self.mask_hidden(mask)
+            # concatenate into a single latent
+            latent_out = torch.cat((input_hidden_out, mask_hidden_out), dim=-1)
+            # transform the latent
+            hidden_out, self.hidden = self.rnn(latent_out, self.hidden)
+            # perform a linear readout to get the output
+            readout = self.linear(hidden_out)
             output = readout
         return output
 
