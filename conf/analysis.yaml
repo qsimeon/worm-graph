@@ -1,4 +1,4 @@
 analysis:
-  dir: logs/hydra/2023_04_10_17_36_21
+  dir: logs/hydra/example
   param_names: ["train.train_size"]
   param: null
