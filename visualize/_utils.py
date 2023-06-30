@@ -706,4 +706,3 @@ def plot_heat_map(matrix, title=None, cmap=None, xlabel=None, ylabel=None,
 
     # Show the plot
     plt.tight_layout()
-    plt.show()

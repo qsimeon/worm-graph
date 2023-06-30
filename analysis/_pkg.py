@@ -20,3 +20,4 @@ from dtaidistance import dtw
 import sklearn.metrics as sm
 from visualize._utils import plot_heat_map
 from data._main import get_dataset
+from matplotlib.patches import Patch

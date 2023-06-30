@@ -131,8 +131,7 @@ def plot_loss_vs_parameter(config_dir, varied_param, control_param, subplot_para
 def hierarchical_clustering_algorithm(dataset_names, distance='correlation',
                                      method='ward', metric=None,
                                      truncate_mode='lastp', p=12,
-                                     criterion='maxclust', criterion_value=4, verbose=False,
-                                     show_plots=True):
+                                     criterion='maxclust', criterion_value=4, verbose=False):
     """
         single_worm_data: single worm dataset
         method: linkage method
@@ -142,7 +141,7 @@ def hierarchical_clustering_algorithm(dataset_names, distance='correlation',
 
     # Load data
 
-    one_dataset = np.random.choice(dataset_names)
+    one_dataset = np.random.choice(dataset_names) # Random pick a dataset
     dataset_names = {'dataset': {
         'name': str(one_dataset),
         }
@@ -150,12 +149,12 @@ def hierarchical_clustering_algorithm(dataset_names, distance='correlation',
     dataset_config = OmegaConf.create(dataset_names)
     dataset = get_dataset(dataset_config) # load random dataset
     wormid = np.random.choice([key for key in dataset.keys()]) # pick random worm
+    print("Analysing worm: ", wormid)
     single_worm_data = dataset[wormid]
 
     np.set_printoptions(precision=4, suppress=True)
-    if show_plots:
-        plt.figure(figsize=(10, 3))
-        plt.style.use('seaborn-whitegrid')
+    plt.figure(figsize=(10, 3))
+    plt.style.use('seaborn-whitegrid')
 
     X = single_worm_data['smooth_calcium_data'] # (time, all neurons)
     X = X[:, single_worm_data['named_neurons_mask']]  # (time, named and acive neurons)
@@ -193,12 +192,13 @@ def hierarchical_clustering_algorithm(dataset_names, distance='correlation',
     Z = linkage(condensed_D, method=method, metric=metric)
 
     # === Plot dendrogram ===
-    if show_plots:
-        dendrogram(Z, truncate_mode=truncate_mode, p=p, leaf_rotation=45., leaf_font_size=10., show_contracted=True)
-        plt.title('Hierarchical Clustering Dendrogram')
-        plt.xlabel('Cluster Size')
-        plt.ylabel('Distance')
-        plt.show()
+    
+    dendrogram(Z, truncate_mode=truncate_mode, p=p, leaf_rotation=45., leaf_font_size=10., show_contracted=True)
+    plt.title('Hierarchical Clustering Dendrogram')
+    plt.xlabel('Cluster Size')
+    plt.ylabel('Distance')
+    plt.savefig('analysis/figures/hierarchical_clustering/dendrogram.png')
+    plt.close()
 
     # === Cluster labels ===
     computed_cluster_labels = fcluster(Z, criterion_value, criterion=criterion)
@@ -214,9 +214,12 @@ def hierarchical_clustering_algorithm(dataset_names, distance='correlation',
     sorted_neuron_labels = original_neuron_labels[np.argsort(computed_cluster_labels)]
     sorted_computed_cluster_labels = computed_cluster_labels[np.argsort(computed_cluster_labels)]
 
-    if show_plots:
-        plot_heat_map(R, title="Original " + title_plot, xlabel="Neuron", ylabel="Neuron", xticks=original_neuron_labels, yticks=original_neuron_labels, xtick_skip=2, ytick_skip=2)
-        plot_heat_map(sorted_R, title="Sorted " + title_plot, xlabel="Neuron", ylabel="Neuron", xticks=sorted_neuron_labels, yticks=sorted_neuron_labels, xtick_skip=2, ytick_skip=2)
+    plot_heat_map(R, title="Original " + title_plot, xlabel="Neuron", ylabel="Neuron", xticks=original_neuron_labels, yticks=original_neuron_labels, xtick_skip=2, ytick_skip=2)
+    plt.savefig('analysis/figures/hierarchical_clustering/original_distance_matrix.png')
+    plt.close()
+    plot_heat_map(sorted_R, title="Sorted " + title_plot, xlabel="Neuron", ylabel="Neuron", xticks=sorted_neuron_labels, yticks=sorted_neuron_labels, xtick_skip=2, ytick_skip=2)
+    plt.savefig('analysis/figures/hierarchical_clustering/sorted_distance_matrix.png')
+    plt.close()
 
     # === Metrics ===
     file_path = 'analysis/neuron_classification.json'
@@ -253,3 +256,145 @@ def hierarchical_clustering_algorithm(dataset_names, distance='correlation',
     clusters.index.name = 'Neuron'
 
     return clusters, silhouette_avg
+
+def load_reference(group_by=None):
+    file_path = 'analysis/neuron_classification.json'
+
+    try:
+        with open(file_path, 'r') as f:
+            neuron_classification = json.load(f)
+    except FileNotFoundError:
+        print(f"File not found at path: {file_path}")
+    except json.JSONDecodeError as e:
+        print(f"Error while decoding JSON: {e}")
+
+    replacements = {
+        'interneuron': 'I',
+        'motor': 'M',
+        'sensory': 'S',
+        'motor, interneuron': 'MI',
+        'sensory, motor': 'SM',
+        'sensory, interneuron': 'SI',
+        'sensory, motor, interneuron': 'SMI',
+        'unknown': 'U',
+    }
+
+    for key, value in neuron_classification.items():
+            text = ', '.join(neuron_classification[key])
+            neuron_classification[key] = replacements[text]
+
+    if group_by=='four':
+        for key, value in neuron_classification.items():
+            if value == 'MI' or value == 'SM' or value == 'SI' or value == 'SMI':
+                neuron_classification[key] = 'P'
+
+            if value == 'U':
+                neuron_classification[key] = np.random.choice(['M', 'I', 'S'])
+    
+    elif group_by=='three':
+        
+        for key, value in neuron_classification.items():
+            if value == 'MI' or value == 'SM' or value == 'SI' or value == 'SMI':
+                neuron_classification[key] = np.random.choice([char for char in value])
+
+            if value == 'U':
+                neuron_classification[key] = np.random.choice(['M', 'I', 'S'])
+
+    elif group_by==None:
+        for key, value in neuron_classification.items():
+            if value == 'U':
+                neuron_classification[key] = np.random.choice(['M', 'I', 'S'])
+
+    return neuron_classification
+
+def neuron_distribution(df, ref_dict, stat='percent', group_by=None, plot_type='both'):
+
+    assert group_by in [None, 'three', 'four'],\
+        f"Invalid group_by: {group_by} -> Must be None, 'three' or 'four'"
+
+    assert stat in ['percent', 'count', 'proportion', 'density'], \
+        f"Invalid stat: {stat} -> Must be 'percent', 'count', 'proportion' or 'density'"
+    
+    new_df = df.copy()
+
+    if group_by == 'four':
+        # assert just 4 unique keys in ref_dict
+        assert len(set(ref_dict.values())) == 4, f"Invalid ref_dict -> Must have 4 unique values"
+    elif group_by == 'three':
+        # assert just 3 unique keys in ref_dict
+        assert len(set(ref_dict.values())) == 3, f"Invalid ref_dict -> Must have 3 unique values"
+    else:
+        # assert just 8 unique keys in ref_dict
+        assert len(set(ref_dict.values())) == 7, f"Invalid ref_dict -> Must have 7 unique values"
+
+    # Replace all references by the ref_dict ones (Group the neurons by three or four)
+    for neuron in new_df.index:
+        new_df.loc[neuron, 'Reference'] = ref_dict[neuron]
+
+    # Create a figure with the desired number of subplots
+    if plot_type == 'both':
+        fig, axes = plt.subplots(1, 2, figsize=(12, 5))
+    elif plot_type == 'ground-truth':
+        fig, axes = plt.subplots(1, 1, figsize=(6, 5))
+        axes = [axes]
+    elif plot_type == 'computed-cluster':
+        fig, axes = plt.subplots(1, 1, figsize=(6, 5))
+        axes = [None, axes]
+
+    if plot_type == 'both' or plot_type=='ground-truth':
+
+        # Create the histogram (literature)
+        sns.histplot(data=new_df, x='Reference', stat=stat, discrete=True, kde=True, ax=axes[0])
+
+        # Set the labels and title for the first subplot
+        axes[0].set_title('Ground truth labels distribution')
+        axes[0].set_xlabel('Neuron type')
+    
+    if plot_type == 'both' or plot_type=='computed-cluster':
+
+        # Create the histogram (computed clusters)
+        hist = sns.histplot(data=new_df, x='Computed Cluster', stat=stat, discrete=True, kde=True, ax=axes[1])
+
+        # Set the labels and title for the second subplot
+        axes[1].set_title('Computed cluster labels distribution')
+        axes[1].set_xlabel('Neuron type')
+
+        # Change the xticks to the correct labels
+        axes[1].set_xticks(np.arange(len(set(new_df['Computed Cluster'])))+1)
+
+    # Compute the proportions of each Reference label within each bin
+    if stat == 'percent' and (plot_type == 'both' or plot_type=='computed-cluster'):
+        color_palette = sns.color_palette('Set1')
+        unique_references = new_df['Reference'].unique()[:len(set(new_df['Computed Cluster']))]
+        color_map = {ref: color_palette[i % len(color_palette)] for i, ref in enumerate(unique_references)}
+
+
+        for patch in hist.patches:
+            x = patch.get_x()
+            width = patch.get_width()
+            height = patch.get_height()
+            bin_label = int(x + width / 2)  # Compute the label of the bin
+            proportions = new_df[new_df['Computed Cluster'] == bin_label]['Reference'].value_counts(normalize=True)
+            cumulative_height = 0
+            for ref, proportion in proportions.items():
+                color = color_map.get(ref, 'gray')
+                ref_height = height * proportion
+                axes[1].bar(
+                    x + width / 2, ref_height, width=width, bottom=cumulative_height,
+                    color=color, label=ref, alpha=0.5, edgecolor='black'
+                )
+                cumulative_height += ref_height
+
+        # Add legend for the first four items
+        legend_elements = [Patch(facecolor=color_map.get(ref, 'gray'), edgecolor='black', label=ref)
+                        for ref in new_df['Reference'].unique()[:len(set(new_df['Computed Cluster']))]]
+        axes[1].legend(handles=legend_elements, loc='upper right')
+
+        # Adjust the layout and spacing between subplots
+        plt.tight_layout()
+
+        # Save plot
+        plt.savefig('analysis/figures/hierarchical_clustering/cluster_distribution.png')
+        plt.close()
+
+    return new_df
