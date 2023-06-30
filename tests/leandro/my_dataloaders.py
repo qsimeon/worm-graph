@@ -35,6 +35,7 @@ def get_calcium_data(worm_data, neuron_names=None, use_residual=False, use_mask=
         mask[source_neurons_idx] = True
     
     else:
+        source_neurons_idx = [idx for idx in worm_data['named_neuron_to_slot'].values()] # Subset of labeled neurons
         mask = worm_data["named_neurons_mask"] # All named neurons
 
     if use_mask:
