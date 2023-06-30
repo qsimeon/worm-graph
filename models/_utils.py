@@ -447,7 +447,6 @@ class LinearNN(Model):
 
 class NetworkLSTM(Model):
     """
-    TODO: Test model with masking.
     A model of the _C. elegans_ neural network using an LSTM.
     Given an input sequence of length $L$ and an offset $\tau$,
     this model is trained to output the sequence of length $L$
@@ -593,17 +592,22 @@ class NeuralTransformer(Model):
             fft_reg_param,
             l1_reg_param,
         )
-        self.n_head = 4  # number of attention heads
+        self.n_head = (
+            2  # number of attention heads; NOTE: must be divisor of hidden_size
+        )
         self.block_size = MAX_TOKEN_LEN  # maximum attention block (i.e. context) size
-        self.dropout = 0.1  # dropout rate
+        self.dropout = 0.0  # dropout rate
         # Positional encoding
         self.position_encoding = PositionalEncoding(
             self.hidden_size,
             max_len=self.block_size,
             dropout=self.dropout,
         )
-        # Expansion recoding (a.k.a. embedding)
-        self.expansion_recoder = torch.nn.Linear(self.input_size, self.hidden_size)
+        # Embedding
+        self.embedding = torch.nn.Linear(
+            2 * self.hidden_size,
+            self.hidden_size,
+        )  # concating input and mask
         # Transformer blocks
         self.blocks = torch.nn.Sequential(
             *(
@@ -618,31 +622,70 @@ class NeuralTransformer(Model):
         )
         # Layer normalization
         self.layer_norm = torch.nn.LayerNorm(self.hidden_size)
-        # Full model
-        self.model = torch.nn.Sequential(  # input has shape (B, T, C)
-            self.expansion_recoder,  # (B,T,C')
-            self.position_encoding,  # (B,T,C')
-            self.blocks,  # (B,T,C')
-            self.layer_norm,  # (B,T,C')
-            self.linear,  # output has shape (B,T,C)
+        # Input to hidden transformation
+        self.input_hidden = torch.nn.Sequential(
+            torch.nn.Linear(self.input_size, self.hidden_size),
+            torch.nn.ReLU(),
+        )
+        # Mask to hidden transformation
+        self.mask_hidden = torch.nn.Sequential(
+            torch.nn.Linear(self.input_size, self.hidden_size),
+            torch.nn.ReLU(),
+        )
+        # Hidden to hidden transformation
+        self.hidden_hidden = torch.nn.Sequential(  # input has shape (B, T, 2*C')
+            self.embedding,  # (B, T, C')
+            self.position_encoding,  # (B, T, C')
+            self.blocks,  # (B, T, C')
+            self.layer_norm,  # (B, T, C')
         )
 
-    def forward(self, input: torch.Tensor, tau: int = 1):
+    def forward(self, input: torch.Tensor, mask: torch.Tensor, tau: int = 1):
         """Forward method for a transformer model.
-        Arguments:
-            (B, T, C) = input.shape = (batch_size, max_timesteps, input_size)
-            (B, T, C') = embedding.shape = (batch_size, max_timesteps, hidden_size)
+        Parameters
+        ----------
+        input : torch.Tensor
+            Input data with shape (batch, seq_len, neurons)
+        mask: torch.Tensor
+            Mask on the neurons with shape (neurons,)
+        tau : int, optional
+            Time offset of target
         """
-        if tau < 1:  # return the input sequence
+        # store the tau
+        self.tau = tau
+        # recast the mask to the input type and shape
+        mask = torch.broadcast_to(mask.to(input.dtype), input.shape)
+        # control flow for tau
+        if tau < 1:
             output = self.identity(input)
-        else:  # do one-step prediction
-            # ... use the full sequence
-            readout = self.model(input)
+        else:
+            # multiply the input by the mask
+            input = input * mask
+            # transform the input
+            input_hidden_out = self.input_hidden(input)
+            # transform the mask
+            mask_hidden_out = self.mask_hidden(mask)
+            # concatenate into a single latent
+            latent_out = torch.cat((input_hidden_out, mask_hidden_out), dim=-1)
+            # transform the latent
+            hidden_out = self.hidden_hidden(latent_out)
+            # perform a linear readout to get the output
+            readout = self.linear(hidden_out)
             output = readout
-        # do the remaining tau-1 steps of prediction
-        for i in range(1, tau):
-            # ... use the full sequence
-            readout = self.model(output)
+        # repeat for target with tau>0 offset
+        for _ in range(1, tau):
+            # multiply input by the mask
+            input = output * mask
+            # transform the input
+            input_hidden_out = self.input_hidden(input)
+            # transform the mask
+            mask_hidden_out = self.mask_hidden(mask.to(output.dtype))
+            # concatenate into a single latent
+            latent_out = torch.cat((input_hidden_out, mask_hidden_out), dim=-1)
+            # transform the  latent
+            hidden_out = self.hidden_hidden(latent_out)
+            # perform a linear readout to get the output
+            readout = self.linear(hidden_out)
             output = readout
         return output
 
