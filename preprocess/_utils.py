@@ -413,12 +413,13 @@ class CalciumDataReshaper:
         self.slot_to_neuron = {}
         self.max_timesteps = self.worm_dataset["max_timesteps"]
         self.dtype = torch.float32
-
         self._init_neuron_data()
         self._reshape_data()
 
     def _init_neuron_data(self):
         self.time_in_seconds = self.worm_dataset["time_in_seconds"]
+        self.original_median_dt = self.worm_dataset["original_median_dt"]
+        self.resample_median_dt = self.worm_dataset["resample_median_dt"]
         self.origin_calcium_data = self.worm_dataset["calcium_data"]
         self.smooth_calcium_data = self.worm_dataset["smooth_calcium_data"]
         self.residual_calcium = self.worm_dataset["residual_calcium"]
@@ -511,6 +512,8 @@ class CalciumDataReshaper:
                 "smooth_residual_calcium": self.standard_residual_smooth_calcium,
                 "time_in_seconds": self.time_in_seconds,
                 "dt": self.dt,
+                "original_median_dt": self.original_median_dt,
+                "resample_median_dt": self.resample_median_dt,
                 "named_neurons_mask": self.named_neurons_mask,
                 "unknown_neurons_mask": self.unknown_neurons_mask,
                 "neurons_mask": self.named_neurons_mask | self.unknown_neurons_mask,
@@ -858,6 +861,7 @@ class Skora2018Preprocessor(BasePreprocessor):
                 calcium_data = self.normalize_data(trace_data)
                 dt = np.gradient(time_in_seconds, axis=0)
                 dt[dt == 0] = np.finfo(float).eps
+                original_dt = np.median(dt)
                 residual_calcium = np.gradient(calcium_data, axis=0) / dt
                 original_time_in_seconds = time_in_seconds.copy()
                 time_in_seconds, calcium_data = self.resample_data(
@@ -886,6 +890,8 @@ class Skora2018Preprocessor(BasePreprocessor):
                         "max_timesteps": int(max_timesteps),
                         "time_in_seconds": time_in_seconds,
                         "dt": dt,
+                        "original_median_dt": original_dt,
+                        "resample_median_dt": self.resample_dt,
                         "num_neurons": int(num_neurons),
                         "num_named_neurons": num_named_neurons,
                         "num_unknown_neurons": num_unknown_neurons,
@@ -946,6 +952,7 @@ class Kato2015Preprocessor(BasePreprocessor):
                 calcium_data = self.normalize_data(trace_data)
                 dt = np.gradient(time_in_seconds, axis=0)
                 dt[dt == 0] = np.finfo(float).eps
+                original_dt = np.median(dt)
                 residual_calcium = np.gradient(calcium_data, axis=0) / dt
                 original_time_in_seconds = time_in_seconds.copy()
                 time_in_seconds, calcium_data = self.resample_data(
@@ -976,6 +983,8 @@ class Kato2015Preprocessor(BasePreprocessor):
                         "max_timesteps": int(max_timesteps),
                         "time_in_seconds": time_in_seconds,
                         "dt": dt,
+                        "original_median_dt": original_dt,
+                        "resample_median_dt": self.resample_dt,
                         "num_neurons": int(num_neurons),
                         "num_named_neurons": num_named_neurons,
                         "num_unknown_neurons": num_unknown_neurons,
@@ -1041,6 +1050,7 @@ class Nichols2017Preprocessor(BasePreprocessor):
                 calcium_data = self.normalize_data(trace_data)
                 dt = np.gradient(time_in_seconds, axis=0)
                 dt[dt == 0] = np.finfo(float).eps
+                original_dt = np.median(dt)
                 residual_calcium = np.gradient(calcium_data, axis=0) / dt
                 original_time_in_seconds = time_in_seconds.copy()
                 time_in_seconds, calcium_data = self.resample_data(
@@ -1069,6 +1079,8 @@ class Nichols2017Preprocessor(BasePreprocessor):
                         "max_timesteps": int(max_timesteps),
                         "time_in_seconds": time_in_seconds,
                         "dt": dt,
+                        "original_median_dt": original_dt,
+                        "resample_median_dt": self.resample_dt,
                         "num_neurons": int(num_neurons),
                         "num_named_neurons": num_named_neurons,
                         "num_unknown_neurons": num_unknown_neurons,
@@ -1149,6 +1161,7 @@ class Kaplan2020Preprocessor(BasePreprocessor):
                 calcium_data = self.normalize_data(trace_data)
                 dt = np.gradient(time_in_seconds, axis=0)
                 dt[dt == 0] = np.finfo(float).eps
+                original_dt = np.median(dt)
                 residual_calcium = np.gradient(calcium_data, axis=0) / dt
                 original_time_in_seconds = time_in_seconds.copy()
                 time_in_seconds, calcium_data = self.resample_data(
@@ -1177,6 +1190,8 @@ class Kaplan2020Preprocessor(BasePreprocessor):
                         "max_timesteps": int(max_timesteps),
                         "time_in_seconds": time_in_seconds,
                         "dt": dt,
+                        "original_median_dt": original_dt,
+                        "resample_median_dt": self.resample_dt,
                         "num_neurons": int(num_neurons),
                         "num_named_neurons": num_named_neurons,
                         "num_unknown_neurons": num_unknown_neurons,
@@ -1233,8 +1248,8 @@ class Uzel2022Preprocessor(BasePreprocessor):
                 calcium_data = self.normalize_data(trace_data)
                 dt = np.gradient(time_in_seconds, axis=0)
                 dt[dt == 0] = np.finfo(float).eps
+                original_dt = np.median(dt)
                 residual_calcium = np.gradient(calcium_data, axis=0) / dt
-
                 original_time_in_seconds = time_in_seconds.copy()
                 time_in_seconds, calcium_data = self.resample_data(
                     original_time_in_seconds, calcium_data
@@ -1262,6 +1277,8 @@ class Uzel2022Preprocessor(BasePreprocessor):
                         "max_timesteps": int(max_timesteps),
                         "time_in_seconds": time_in_seconds,
                         "dt": dt,
+                        "original_median_dt": original_dt,
+                        "resample_median_dt": self.resample_dt,
                         "num_neurons": int(num_neurons),
                         "num_named_neurons": num_named_neurons,
                         "num_unknown_neurons": num_unknown_neurons,
@@ -1405,6 +1422,7 @@ class Leifer2023Preprocessor(BasePreprocessor):
             calcium_data = self.normalize_data(real_data)
             dt = np.gradient(time_in_seconds, axis=0)
             dt[dt == 0] = np.finfo(float).eps
+            original_dt = np.median(dt)
             residual_calcium = np.gradient(calcium_data, axis=0) / dt
             original_time_in_seconds = time_in_seconds.copy()
             time_in_seconds, calcium_data = self.resample_data(
@@ -1433,6 +1451,8 @@ class Leifer2023Preprocessor(BasePreprocessor):
                     "max_timesteps": int(max_timesteps),
                     "time_in_seconds": time_in_seconds,
                     "dt": dt,
+                    "original_median_dt": original_dt,
+                    "resample_median_dt": self.resample_dt,
                     "num_neurons": int(num_neurons),
                     "num_named_neurons": num_named_neurons,
                     "num_unknown_neurons": num_unknown_neurons,
@@ -1581,6 +1601,7 @@ class Flavell2023Preprocessor(BasePreprocessor):
             calcium_data = self.transform.fit_transform(calcium_data)
             dt = np.gradient(time_in_seconds, axis=0)
             dt[dt == 0] = np.finfo(float).eps
+            original_dt = np.median(dt)
             residual_calcium = np.gradient(calcium_data, axis=0) / dt
             original_time_in_seconds = time_in_seconds.copy()
             time_in_seconds, calcium_data = self.resample_data(
@@ -1610,6 +1631,8 @@ class Flavell2023Preprocessor(BasePreprocessor):
                     "max_timesteps": int(max_timesteps),
                     "time_in_seconds": time_in_seconds,
                     "dt": dt,
+                    "original_median_dt": original_dt,
+                    "resample_median_dt": self.resample_dt,
                     "num_neurons": int(num_neurons),
                     "num_named_neurons": num_named_neurons,
                     "num_unknown_neurons": num_unknown_neurons,
