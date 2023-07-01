@@ -251,13 +251,13 @@ def total_var_reg_smooth(x, t, alpha=1e-2, order=0):
         x = x.reshape(-1, 1)
     t = t.squeeze()
     # Total variational derivative
-    # dt = np.diff(t, prepend=t[0] - np.diff(t)[0])
-    # dxdt_totalvar = dxdt(x, t, kind="trend_filtered", order=order, alpha=alpha, axis=0)
-    # x_smooth = np.cumsum(dxdt_totalvar, axis=0) * dt.reshape(-1, 1)
-    ###
-    diff_method = derivative.TrendFiltered(alpha=alpha, order=order)
-    x_smooth = diff_method.x(x, t, axis=0)
-    ###
+    dt = np.diff(t, prepend=t[0] - np.diff(t)[0])
+    dxdt_totalvar = dxdt(x, t, kind="trend_filtered", order=order, alpha=alpha, axis=0)
+    x_smooth = np.cumsum(dxdt_totalvar, axis=0) * dt.reshape(-1, 1)
+    # ###
+    # diff_method = derivative.TrendFiltered(alpha=alpha, order=order)
+    # x_smooth = diff_method.x(x, t, axis=0)
+    # ###
     if dim == 1:
         x_smooth = x_smooth.squeeze(-1)
     if istensor:
@@ -283,14 +283,14 @@ def kalman_smooth(x, t, alpha=1):
     if dim == 1:
         x = x.reshape(-1, 1)
     # Kalman filter derivative
-    # t = t.squeeze()
-    # dt = np.diff(t, prepend=t[0] - np.diff(t)[0])
-    # dxdt_kalman = dxdt(x, t, kind="kalman", alpha=alpha, axis=0)
-    # x_smooth = np.cumsum(dxdt_kalman) * dt
-    ###
-    diff_method = derivative.Kalman(alpha=alpha)
-    x_smooth = diff_method.x(x, t, axis=0)
-    ###
+    t = t.squeeze()
+    dt = np.diff(t, prepend=t[0] - np.diff(t)[0])
+    dxdt_kalman = dxdt(x, t, kind="kalman", alpha=alpha, axis=0)
+    x_smooth = np.cumsum(dxdt_kalman) * dt
+    # ###
+    # diff_method = derivative.Kalman(alpha=alpha)
+    # x_smooth = diff_method.x(x, t, axis=0)
+    # ###
     if dim == 1:
         x_smooth = x_smooth.squeeze(-1)
     if istensor:
@@ -318,16 +318,16 @@ def kernel_smooth(x, t, sigma=1, lmbd=0.1, kernel="rbf"):
     if dim == 1:
         x = x.reshape(-1, 1)
     # Kernel derivative
-    # t = t.squeeze()
-    # dt = np.diff(t, prepend=t[0] - np.diff(t)[0])
-    # dxdt_kernel = dxdt(
-    #     x, t, kind="kernel", sigma=sigma, lmbd=lmbd, kernel=kernel, axis=0
-    # )
-    # x_smooth = np.cumsum(dxdt_kernel, axis=0) * dt.reshape(-1, 1)
-    ###
-    diff_method = derivative.Kernel(sigma=sigma, lmbd=lmbd, kernel=kernel)
-    x_smooth = diff_method.x(x, t, axis=0)
-    ###
+    t = t.squeeze()
+    dt = np.diff(t, prepend=t[0] - np.diff(t)[0])
+    dxdt_kernel = dxdt(
+        x, t, kind="kernel", sigma=sigma, lmbd=lmbd, kernel=kernel, axis=0
+    )
+    x_smooth = np.cumsum(dxdt_kernel, axis=0) * dt.reshape(-1, 1)
+    # ###
+    # diff_method = derivative.Kernel(sigma=sigma, lmbd=lmbd, kernel=kernel)
+    # x_smooth = diff_method.x(x, t, axis=0)
+    # ###
     if dim == 1:
         x_smooth = x_smooth.squeeze(-1)
     if istensor:
@@ -861,7 +861,7 @@ class Skora2018Preprocessor(BasePreprocessor):
                 calcium_data = self.normalize_data(trace_data)
                 dt = np.gradient(time_in_seconds, axis=0)
                 dt[dt == 0] = np.finfo(float).eps
-                original_dt = np.median(dt)
+                original_dt = np.median(dt).item()
                 residual_calcium = np.gradient(calcium_data, axis=0) / dt
                 original_time_in_seconds = time_in_seconds.copy()
                 time_in_seconds, calcium_data = self.resample_data(
@@ -952,7 +952,7 @@ class Kato2015Preprocessor(BasePreprocessor):
                 calcium_data = self.normalize_data(trace_data)
                 dt = np.gradient(time_in_seconds, axis=0)
                 dt[dt == 0] = np.finfo(float).eps
-                original_dt = np.median(dt)
+                original_dt = np.median(dt).item()
                 residual_calcium = np.gradient(calcium_data, axis=0) / dt
                 original_time_in_seconds = time_in_seconds.copy()
                 time_in_seconds, calcium_data = self.resample_data(
@@ -1050,7 +1050,7 @@ class Nichols2017Preprocessor(BasePreprocessor):
                 calcium_data = self.normalize_data(trace_data)
                 dt = np.gradient(time_in_seconds, axis=0)
                 dt[dt == 0] = np.finfo(float).eps
-                original_dt = np.median(dt)
+                original_dt = np.median(dt).item()
                 residual_calcium = np.gradient(calcium_data, axis=0) / dt
                 original_time_in_seconds = time_in_seconds.copy()
                 time_in_seconds, calcium_data = self.resample_data(
@@ -1161,7 +1161,7 @@ class Kaplan2020Preprocessor(BasePreprocessor):
                 calcium_data = self.normalize_data(trace_data)
                 dt = np.gradient(time_in_seconds, axis=0)
                 dt[dt == 0] = np.finfo(float).eps
-                original_dt = np.median(dt)
+                original_dt = np.median(dt).item()
                 residual_calcium = np.gradient(calcium_data, axis=0) / dt
                 original_time_in_seconds = time_in_seconds.copy()
                 time_in_seconds, calcium_data = self.resample_data(
@@ -1248,7 +1248,7 @@ class Uzel2022Preprocessor(BasePreprocessor):
                 calcium_data = self.normalize_data(trace_data)
                 dt = np.gradient(time_in_seconds, axis=0)
                 dt[dt == 0] = np.finfo(float).eps
-                original_dt = np.median(dt)
+                original_dt = np.median(dt).item()
                 residual_calcium = np.gradient(calcium_data, axis=0) / dt
                 original_time_in_seconds = time_in_seconds.copy()
                 time_in_seconds, calcium_data = self.resample_data(
@@ -1422,7 +1422,7 @@ class Leifer2023Preprocessor(BasePreprocessor):
             calcium_data = self.normalize_data(real_data)
             dt = np.gradient(time_in_seconds, axis=0)
             dt[dt == 0] = np.finfo(float).eps
-            original_dt = np.median(dt)
+            original_dt = np.median(dt).item()
             residual_calcium = np.gradient(calcium_data, axis=0) / dt
             original_time_in_seconds = time_in_seconds.copy()
             time_in_seconds, calcium_data = self.resample_data(
@@ -1601,7 +1601,7 @@ class Flavell2023Preprocessor(BasePreprocessor):
             calcium_data = self.transform.fit_transform(calcium_data)
             dt = np.gradient(time_in_seconds, axis=0)
             dt[dt == 0] = np.finfo(float).eps
-            original_dt = np.median(dt)
+            original_dt = np.median(dt).item()
             residual_calcium = np.gradient(calcium_data, axis=0) / dt
             original_time_in_seconds = time_in_seconds.copy()
             time_in_seconds, calcium_data = self.resample_data(
