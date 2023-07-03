@@ -483,9 +483,10 @@ def hc_analyse_dataset(dataset_names, apply_suggestion=False, hip='hip1', group_
     elif group_by == 'three':
         groups = 3
         num_clusters = 3
-    elif group_by == None:
+    elif group_by == 'None':
         groups = 6
         num_clusters = 6
+        group_by = None # convert 'None' to None (yaml file)
 
     ref_dict = load_reference(group_by=group_by) # Create same ref dict for all worms
 
