@@ -128,10 +128,11 @@ def plot_loss_vs_parameter(config_dir, varied_param, control_param, subplot_para
     return df
 
 
-def hierarchical_clustering_algorithm(dataset_names, distance='correlation',
+def hierarchical_clustering_algorithm(single_worm_data, distance='correlation',
                                      method='ward', metric=None,
                                      truncate_mode='lastp', p=12,
-                                     criterion='maxclust', criterion_value=4, verbose=False):
+                                     criterion='maxclust', criterion_value=4, 
+                                     save_fig=False, verbose=False, wormID=None):
     """
         single_worm_data: single worm dataset
         method: linkage method
@@ -139,22 +140,11 @@ def hierarchical_clustering_algorithm(dataset_names, distance='correlation',
         plot: whether to plot the dendrogram or not
     """
 
-    # Load data
-
-    one_dataset = np.random.choice(dataset_names) # Random pick a dataset
-    dataset_names = {'dataset': {
-        'name': str(one_dataset),
-        }
-    }
-    dataset_config = OmegaConf.create(dataset_names)
-    dataset = get_dataset(dataset_config) # load random dataset
-    wormid = np.random.choice([key for key in dataset.keys()]) # pick random worm
-    print("Analysing worm: ", wormid)
-    single_worm_data = dataset[wormid]
-
     np.set_printoptions(precision=4, suppress=True)
-    plt.figure(figsize=(10, 3))
-    plt.style.use('seaborn-whitegrid')
+
+    if save_fig:
+        plt.figure(figsize=(10, 3))
+        plt.style.use('seaborn-whitegrid')
 
     X = single_worm_data['smooth_calcium_data'] # (time, all neurons)
     X = X[:, single_worm_data['named_neurons_mask']]  # (time, named and acive neurons)
@@ -194,11 +184,12 @@ def hierarchical_clustering_algorithm(dataset_names, distance='correlation',
     # === Plot dendrogram ===
     
     dendrogram(Z, truncate_mode=truncate_mode, p=p, leaf_rotation=45., leaf_font_size=10., show_contracted=True)
-    plt.title('Hierarchical Clustering Dendrogram')
-    plt.xlabel('Cluster Size')
-    plt.ylabel('Distance')
-    plt.savefig('analysis/figures/hierarchical_clustering/dendrogram.png')
-    plt.close()
+    if save_fig:
+        plt.title('Hierarchical Clustering Dendrogram ({})'.format(wormID))
+        plt.xlabel('Cluster Size')
+        plt.ylabel('Distance')
+        plt.savefig('analysis/results/hierarchical_clustering/dendrogram.png', dpi=600)
+        plt.close()
 
     # === Cluster labels ===
     computed_cluster_labels = fcluster(Z, criterion_value, criterion=criterion)
@@ -214,12 +205,13 @@ def hierarchical_clustering_algorithm(dataset_names, distance='correlation',
     sorted_neuron_labels = original_neuron_labels[np.argsort(computed_cluster_labels)]
     sorted_computed_cluster_labels = computed_cluster_labels[np.argsort(computed_cluster_labels)]
 
-    plot_heat_map(R, title="Original " + title_plot, xlabel="Neuron", ylabel="Neuron", xticks=original_neuron_labels, yticks=original_neuron_labels, xtick_skip=2, ytick_skip=2)
-    plt.savefig('analysis/figures/hierarchical_clustering/original_distance_matrix.png')
-    plt.close()
-    plot_heat_map(sorted_R, title="Sorted " + title_plot, xlabel="Neuron", ylabel="Neuron", xticks=sorted_neuron_labels, yticks=sorted_neuron_labels, xtick_skip=2, ytick_skip=2)
-    plt.savefig('analysis/figures/hierarchical_clustering/sorted_distance_matrix.png')
-    plt.close()
+    if save_fig:
+        plot_heat_map(R, title="Original {} ({})".format(title_plot, wormID), xlabel="Neuron", ylabel="Neuron", xticks=original_neuron_labels, yticks=original_neuron_labels, xtick_skip=2, ytick_skip=2)
+        plt.savefig('analysis/results/hierarchical_clustering/original_distance_matrix.png', dpi=600)
+        plt.close()
+        plot_heat_map(sorted_R, title="Sorted {} ({})".format(title_plot, wormID), xlabel="Neuron", ylabel="Neuron", xticks=sorted_neuron_labels, yticks=sorted_neuron_labels, xtick_skip=2, ytick_skip=2)
+        plt.savefig('analysis/results/hierarchical_clustering/sorted_distance_matrix.png', dpi=600)
+        plt.close()
 
     # === Metrics ===
     file_path = 'analysis/neuron_classification.json'
@@ -307,7 +299,7 @@ def load_reference(group_by=None):
 
     return neuron_classification
 
-def neuron_distribution(df, ref_dict, stat='percent', group_by=None, plot_type='both'):
+def neuron_distribution(df, ref_dict, stat='percent', group_by=None, plot_type='both', save_fig=False, wormID=None):
 
     assert group_by in [None, 'three', 'four'],\
         f"Invalid group_by: {group_by} -> Must be None, 'three' or 'four'"
@@ -347,7 +339,7 @@ def neuron_distribution(df, ref_dict, stat='percent', group_by=None, plot_type='
         sns.histplot(data=new_df, x='Reference', stat=stat, discrete=True, kde=True, ax=axes[0])
 
         # Set the labels and title for the first subplot
-        axes[0].set_title('Ground truth labels distribution')
+        axes[0].set_title('Ground truth labels distribution ({})'.format(wormID))
         axes[0].set_xlabel('Neuron type')
     
     if plot_type == 'both' or plot_type=='computed-cluster':
@@ -356,7 +348,7 @@ def neuron_distribution(df, ref_dict, stat='percent', group_by=None, plot_type='
         hist = sns.histplot(data=new_df, x='Computed Cluster', stat=stat, discrete=True, kde=True, ax=axes[1])
 
         # Set the labels and title for the second subplot
-        axes[1].set_title('Computed cluster labels distribution')
+        axes[1].set_title('Computed cluster labels distribution ({})'.format(wormID))
         axes[1].set_xlabel('Neuron type')
 
         # Change the xticks to the correct labels
@@ -394,7 +386,207 @@ def neuron_distribution(df, ref_dict, stat='percent', group_by=None, plot_type='
         plt.tight_layout()
 
         # Save plot
-        plt.savefig('analysis/figures/hierarchical_clustering/cluster_distribution.png')
+        if save_fig:
+            plt.savefig('analysis/results/hierarchical_clustering/cluster_distribution.png', dpi=600)
         plt.close()
 
     return new_df
+
+def create_total(df):
+    new_df = df.copy()
+    new_df.loc['total'] = new_df.sum(axis=0) # Count over columns
+    new_df['total'] = new_df.sum(axis=1) # Count over rows
+    return new_df
+
+def delete_total(df):
+    new_df = df.copy()
+    new_df = new_df.drop('total', axis=0) # Drop row
+    new_df = new_df.drop('total', axis=1) # Drop column
+    return new_df
+
+def count_inside_clusters(df, percentage=False, dimension='reference'):
+    
+    new_df = df.copy()
+
+    new_df = new_df.groupby('Computed Cluster')['Reference'].value_counts().unstack().fillna(0)
+
+    new_df = new_df.astype(int)
+    new_df = create_total(new_df)
+
+    if percentage:
+        new_df = convert_to_percentages(new_df, dimension=dimension)
+
+    return new_df
+
+def convert_to_percentages(df, dimension='reference'):
+    assert dimension in ['reference', 'computed-cluster'],\
+        f"Invalid dimension: {dimension} -> Must be 'reference' or 'computed-cluster'"
+
+    new_df = df.copy()
+
+    # create total row and column if they don't exist
+    if 'total' not in new_df.index:
+        new_df = create_total(new_df)
+    
+    if dimension == 'reference':
+        new_df = new_df.div(new_df.loc['total'], axis=1)*100
+    elif dimension == 'computed-cluster':
+        new_df = new_df.div(new_df['total'], axis=0)*100
+
+    return new_df.round(decimals=2)
+
+def suggest_classification(computed_clusters_df):
+
+    # TODO: suggestion 2
+
+    new_df = computed_clusters_df.copy()
+
+    # Index of the max values per columns
+    count_df = delete_total(count_inside_clusters(new_df, percentage=True, dimension='reference'))
+    max_values_col = count_df.idxmax(axis=0)
+
+    # Column of the max value per row
+    count_df = delete_total(count_inside_clusters(new_df, percentage=True, dimension='computed-cluster'))
+    max_values_row = count_df.idxmax(axis=1)
+
+    # Create mapping
+    suggestion = {'hip1': {key: value for key, value in max_values_row.items()}, 
+                  'hip2': {}} # hip1: inside cluster, hip2: global
+    
+    return suggestion
+
+def cluster2suggestion(value, suggestion):
+    return suggestion[value]
+
+def create_ref_column(df, ref_dict):
+    new_df = df.copy()
+    new_df['Reference'] = [ref_dict[neuron] if neuron in ref_dict.keys() else np.NaN for neuron in df.index]
+    return new_df
+
+def delete_ref_column(df):
+    new_df = df.copy()
+    new_df = new_df.drop('Reference', axis=1)
+    return new_df
+
+def hc_analyse_dataset(dataset_names, apply_suggestion=False, hip='hip1', group_by='four', method='ward', metric=None):
+    """
+        dataset = loaded dataset
+    """
+
+    # Load data
+    dataset_config = OmegaConf.create({'dataset': {'name': dataset_names}})
+    dataset = get_dataset(dataset_config) # load dataset
+
+    if group_by == 'four':
+        groups = 4
+        num_clusters = 4
+    elif group_by == 'three':
+        groups = 3
+        num_clusters = 3
+    else:
+        groups = 7
+        num_clusters = 7
+
+    ref_dict = load_reference(group_by=group_by) # Create same ref dict for all worms
+
+    num_worms = len(dataset.keys())
+    print(f'Number of worms: {num_worms}')
+
+    if not apply_suggestion:
+        print('No suggestion applied, ignoring hip parameter.')
+    else:
+        print(f'Suggestion applied: {hip}.')
+
+    # ===
+
+    silhouettes = []
+    all_worm_clusters_list = []
+    count_inside_clusters_array = np.zeros((num_worms, num_clusters, groups))
+
+    # random pick a worm ID for plotting
+    random_wormID = np.random.choice(list(dataset.keys()))
+
+    # ===
+
+    for i, wormID in enumerate(dataset.keys()):
+
+        if wormID == random_wormID:
+            save_fig = True
+        else:
+            save_fig = False
+
+        clusters, silhouette_avg = hierarchical_clustering_algorithm(dataset[wormID],
+                                        method=method, metric=metric, save_fig=save_fig,
+                                        criterion='maxclust', criterion_value=num_clusters,
+                                        wormID=wormID) # Compute clusters
+        
+        silhouettes.append(silhouette_avg) # Save silhouette score
+
+        grouped_clusters = neuron_distribution(clusters, ref_dict=ref_dict, group_by=group_by, save_fig=save_fig, wormID=wormID) # Group clusters
+
+        sugg_dict = suggest_classification(grouped_clusters) # Suggest classification
+
+        if apply_suggestion:
+            all_worm_clusters_list.append(grouped_clusters['Computed Cluster'].apply(cluster2suggestion, suggestion=sugg_dict[hip]).drop(columns=['Reference']))
+        else:
+            all_worm_clusters_list.append(grouped_clusters['Computed Cluster'].drop(columns=['Reference']))
+        
+        count_inside_clusters_array[i, :, :] = delete_total(count_inside_clusters(grouped_clusters, percentage=False)).values #? Count instead of percent?
+    
+    all_worm_clusters = pd.concat(all_worm_clusters_list, axis=1, keys=range(1, len(all_worm_clusters_list) + 1))
+    all_worm_clusters.columns = [f"worm{i}" for i in range(0, len(all_worm_clusters_list))]
+
+    all_worm_clusters = create_ref_column(all_worm_clusters, ref_dict) # Add reference column
+
+    if apply_suggestion:
+        # Accuracy of the classification for each worm
+        for wormID in all_worm_clusters.columns[:-1]:
+            # Select the wormN and reference columns
+            s = all_worm_clusters[[wormID, 'Reference']].copy().dropna()
+            # Count +1 for each match between the wormN and reference columns
+            count = s.apply(lambda x: 1 if x[wormID] == x['Reference'] else 0, axis=1).sum()
+            # Create row for the accuracy of the worm
+            all_worm_clusters.loc['accuracy', wormID] = count / len(s)
+
+        # Accuracy of the classification for each neuron
+        for neuron in all_worm_clusters.index[:-1]:
+            # Compare the classifications of the neuron and compare to its reference
+            s = all_worm_clusters.loc[neuron].iloc[:-1].copy().dropna().value_counts()
+            ref = all_worm_clusters.loc[neuron, 'Reference']
+            # Create row for the accuracy of the neuron
+            if ref in all_worm_clusters.loc['M4'].iloc[:-1].values:
+                all_worm_clusters.loc[neuron, 'accuracy'] = s[ref] / s.sum()
+            else:
+                all_worm_clusters.loc[neuron, 'accuracy'] = 0.0
+
+        all_worm_clusters = delete_ref_column(all_worm_clusters) # Delete reference column
+        all_worm_clusters = create_ref_column(all_worm_clusters, ref_dict) # Add reference column
+        all_worm_clusters.to_csv('analysis/results/worm_clusters.csv', index=False)
+
+        # === Plot silhouettes ===
+
+        # Create a DataFrame from the silhouette averages
+        s_data = {'Silhouette Averages': silhouettes}
+        s_df = pd.DataFrame(s_data)
+
+        # Create the box plot using Seaborn
+        plt.figure(figsize=(8, 6))
+        sns.boxplot(data=s_df, y='Silhouette Averages', boxprops={'facecolor': 'steelblue', 'alpha': 0.6},
+                    capprops={'color': 'black'}, whiskerprops={'color': 'black'}, medianprops={'color': 'black'})
+
+        # Set the plot labels
+        plt.xlabel('Silhouette Averages')
+        plt.ylabel('')
+        plt.title('Silhouette Averages')
+        plt.tight_layout()
+        # Write the median value
+        plt.text(0.33, np.median(silhouettes)+0.003, f"{np.median(silhouettes).round(4)}", color='black')
+        # Write the max value
+        plt.text(0.14, np.max(silhouettes)+0.003, f"{np.max(silhouettes).round(4)}", color='black')
+        # Write the min value
+        plt.text(0.14, np.min(silhouettes)+0.003, f"{np.min(silhouettes).round(4)}", color='black')
+
+        # Show the plot
+        plt.savefig('analysis/results/silhouette_averages.png', dpi=600)
+
+    return all_worm_clusters, ref_dict, count_inside_clusters_array, silhouettes

@@ -17,16 +17,8 @@ def analysis(
 
     # === Hierarchical clustering ===
     dataset_names = [ds_name for ds_name in configs[config.analysis.dir]['dataset']['name'].split('_')]
-    clusters, silhouette_avg = hierarchical_clustering_algorithm(dataset_names, distance='correlation',
-                                                                 method='ward', metric=None,
-                                                                 truncate_mode='lastp', p=12,
-                                                                 criterion='maxclust', criterion_value=4, verbose=False,
-                                                                 )
-    print('Silhouette average:', round(silhouette_avg, 4), "(quality of clustering)\n")
-
-    group_by = 'four'
-    ref_dict = load_reference(group_by=group_by)
-    grouped_clusters = neuron_distribution(clusters, ref_dict, stat='percent', group_by=group_by, plot_type='both')
+    hc_analyse_dataset(dataset_names, apply_suggestion=False, hip='hip1', group_by='four', method='ward',
+                       metric=None)
 
 if __name__ == "__main__":
     config = OmegaConf.load("conf/analysis.yaml")
