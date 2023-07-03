@@ -478,17 +478,22 @@ class CalciumDataReshaper:
                 self.slot_to_named_neuron[slot] = neuron
 
     def _fill_calcium_data(self, idx, slot):
-        self.standard_calcium_data[:, slot] = torch.from_numpy(
-            self.origin_calcium_data[:, idx]
+        """This rounds the calcium data to 1 decimal place."""
+        self.standard_calcium_data[:, slot] = torch.round(
+            torch.from_numpy(self.origin_calcium_data[:, idx]),
+            decimals=1,
         )
-        self.standard_residual_calcium[:, slot] = torch.from_numpy(
-            self.residual_calcium[:, idx]
+        self.standard_residual_calcium[:, slot] = torch.round(
+            torch.from_numpy(self.residual_calcium[:, idx]),
+            decimals=1,
         )
-        self.standard_smooth_calcium_data[:, slot] = torch.from_numpy(
-            self.smooth_calcium_data[:, idx]
+        self.standard_smooth_calcium_data[:, slot] = torch.round(
+            torch.from_numpy(self.smooth_calcium_data[:, idx]),
+            decimals=1,
         )
-        self.standard_residual_smooth_calcium[:, slot] = torch.from_numpy(
-            self.smooth_residual_calcium[:, idx]
+        self.standard_residual_smooth_calcium[:, slot] = torch.round(
+            torch.from_numpy(self.smooth_residual_calcium[:, idx]),
+            decimals=1,
         )
 
     def _fill_unknown_neurons_data(self):
