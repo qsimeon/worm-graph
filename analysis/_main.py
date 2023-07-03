@@ -16,9 +16,8 @@ def analysis(
             configs[os.path.dirname(file_path)] = OmegaConf.create(data)
 
     # === Hierarchical clustering ===
-    dataset_names = ['Uzel2022', 'Skora2018']#[ds_name for ds_name in configs[config.analysis.dir]['dataset']['name'].split('_')]
+    dataset_names = [ds_name for ds_name in configs[config.analysis.dir]['dataset']['name'].split('_')]
     (all_worm_clusters, ref_dict,
-    count_inside_clusters_array,
     silhouettes) = hc_analyse_dataset(dataset_names, apply_suggestion=True, hip='hip1', group_by=config.hierarchical_clustering.group_by,
                                       method=config.hierarchical_clustering.method, metric=config.hierarchical_clustering.metric)
 

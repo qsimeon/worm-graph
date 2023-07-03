@@ -501,7 +501,6 @@ def hc_analyse_dataset(dataset_names, apply_suggestion=False, hip='hip1', group_
 
     silhouettes = []
     all_worm_clusters_list = []
-    count_inside_clusters_array = np.zeros((num_worms, num_clusters, groups))
 
     # random pick a worm ID for plotting
     random_wormID = np.random.choice(list(dataset.keys()))
@@ -530,8 +529,6 @@ def hc_analyse_dataset(dataset_names, apply_suggestion=False, hip='hip1', group_
             all_worm_clusters_list.append(grouped_clusters['Computed Cluster'].apply(cluster2suggestion, suggestion=sugg_dict[hip]).drop(columns=['Reference']))
         else:
             all_worm_clusters_list.append(grouped_clusters['Computed Cluster'].drop(columns=['Reference']))
-        
-        count_inside_clusters_array[i, :, :] = delete_total(count_inside_clusters(grouped_clusters, percentage=False)).values #? Count instead of percent?
 
         if i % 10 == 0:
             print(f'{i}/{num_worms} worms analysed')
@@ -599,4 +596,4 @@ def hc_analyse_dataset(dataset_names, apply_suggestion=False, hip='hip1', group_
     plt.savefig('analysis/results/hierarchical_clustering/silhouette_averages.png', dpi=300)
     plt.close()
 
-    return all_worm_clusters, ref_dict, count_inside_clusters_array, silhouettes
+    return all_worm_clusters, ref_dict, silhouettes
