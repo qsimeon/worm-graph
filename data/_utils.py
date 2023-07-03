@@ -509,7 +509,7 @@ def graph_inject_data(single_worm_dataset, connectome_graph):
         k_ for k_, v_ in id_neuron.items() if v_ in set(graph.id_neuron.values())
     ]  # neuron indices in sparse dataset
     # 'inject' the data by creating a clone graph with the desired features
-    new_x = torch.zeros(graph.num_nodes, max_timesteps, dtype=torch.float64)
+    new_x = torch.zeros(graph.num_nodes, max_timesteps, dtype=torch.float32)
     new_x[graph_inds, :] = dataset[:, data_inds].T
     graph = Data(
         x=new_x,

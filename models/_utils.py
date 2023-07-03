@@ -121,38 +121,11 @@ class PositionalEncoding(torch.nn.Module):
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
 
-# # Inner Model Parts
-# # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
-# class Linear(torch.nn.Module):
-#     """Linear model body."""
+# # # Inner Model Parts
+# # # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
 
-#     def __init__(self, input_size, hidden_size):
-#         super().__init__()
-#         # Input to hidden transformation
-#         self.input_hidden = (
-#             torch.nn.Linear(self.input_size, self.hidden_size),
-#             # torch.nn.ReLU(),
-#             torch.nn.ELU(),
-#             torch.nn.LayerNorm(self.hidden_size),
-#         )
-#         # Hidden to hidden transformation
-#         self.hidden_hidden = (self.num_layers - 1) * (
-#             torch.nn.Linear(self.hidden_size, self.hidden_size),
-#             # torch.nn.ReLU(),
-#             torch.nn.ELU(),
-#             torch.nn.LayerNorm(self.hidden_size),
-#         )
-#         # Full inner model (before readout)
-#         self.model = torch.nn.Sequential(
-#             *self.input_hidden,
-#             *self.hidden_hidden,
-#             self.linear,
-#         )
 
-#     def forward(self, x):
-#         return self.model(x)
-
-# # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
+# # # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
 
 
 # Models (super class and sub classes)
@@ -217,6 +190,10 @@ class Model(torch.nn.Module):
         self.num_layers = num_layers
         self.fft_reg_param = fft_reg_param
         self.l1_reg_param = l1_reg_param
+        # Initialize hidden state (for models that use them)
+        self.hidden = None
+        # Initialize the tau
+        self.tau = 1  # next-timestep prediction
         # Identity layer
         self.identity = torch.nn.Identity()
         # Linear readout
@@ -256,7 +233,11 @@ class Model(torch.nn.Module):
             L1 regularization on all model weights.
             """
             # calculate next time step prediction loss
-            original_loss = self.loss(**kwargs)(prediction, target)
+            # TODO: apply recency exponential decay factor to original loss
+            original_loss = self.loss(**kwargs)(
+                prediction[:, -self.tau :, :],
+                target[:, -self.tau :, :],
+            )  # only consider the new time steps
             # FFT regularization term
             fft_loss = 0.0
             if self.fft_reg_param > 0.0:
@@ -266,16 +247,16 @@ class Model(torch.nn.Module):
                 # calculate average difference between real parts of FFTs
                 fft_loss += torch.mean(torch.abs(input_fft - target_fft))
             # L1 regularization term
-            l1_reg = 0.0
+            l1_loss = 0.0
             if self.l1_reg_param > 0.0:
                 # calculate L1 regularization term for all weights
                 for param in self.parameters():
-                    l1_reg += torch.mean(torch.abs(param))
+                    l1_loss += torch.mean(torch.abs(param))
             # combine original loss with regularization terms
             regularized_loss = (
                 original_loss
                 + self.fft_reg_param * fft_loss
-                + self.l1_reg_param * l1_reg
+                + self.l1_reg_param * l1_loss
             ) / (1.0 + self.fft_reg_param + self.l1_reg_param)
             return regularized_loss
 
@@ -315,7 +296,7 @@ class Model(torch.nn.Module):
             (inputs.size(0), inputs.size(1) + future_timesteps, inputs.size(2)),
             device=inputs.device,
         )
-        output[:, : inputs.size(1), :] = inputs * mask  # (B, T, C)
+        output[:, : inputs.size(1), :] = inputs  # (B, T, C)
         # generate future timesteps
         with torch.no_grad():
             for i in range(future_timesteps):
@@ -324,11 +305,11 @@ class Model(torch.nn.Module):
                     :, inputs.size(1) - context_len + i : inputs.size(1) + i, :
                 ]  # (B, T, C)
                 # get the prediction of next timestep
-                input_forward = self(input_cond, tau=1)
+                input_forward = self(input_cond, mask, tau=1)
                 # focus only on the last time step
                 next_timestep = input_forward[:, -1, :]  # (B, C)
                 # append predicted next timestep to the running sequence
-                output[:, inputs.size(1) + i, :] = next_timestep * mask  # (B, T+1, C)
+                output[:, inputs.size(1) + i, :] = next_timestep  # (B, T+1, C)
         return output  # (B, T+timesteps, C)
 
     def sample(self, length):
@@ -337,27 +318,6 @@ class Model(torch.nn.Module):
         TODO: Figure out how to use diffusion models to sample from the network.
         """
         pass
-
-    def forward(self, inputs, tau=1):
-        """
-        General forward method of all our models.
-        Parameters
-        ----------
-        input : torch.Tensor
-            Input data with shape (batch, seq_len, neurons)
-        tau : int, optional
-            Time offset of target
-        """
-        if tau < 1:
-            outputs = self.identity(inputs)
-        else:
-            # ... use the full sequence
-            outputs = self.model(inputs)
-        # repeat for target with tau>0 offset
-        for i in range(1, tau):
-            # ... use the full sequence
-            outputs = self.model(outputs)
-        return outputs
 
     # Getter functions for returning all attributes needed to reinstantiate a similar model
     def get_input_size(self):
@@ -381,21 +341,8 @@ class Model(torch.nn.Module):
 
 class LinearNN(Model):
     """
+    TODO: Test model with masking.
     A simple linear regression model to use as a baseline.
-
-    Parameters
-    ----------
-    input_size : int
-        Number of neurons
-    hidden_size : int
-        Number of hidden units
-    num_layers : int, optional
-        Number of hidden layers, default is 1
-    loss : Callable or None, optional
-        Loss function to use, default is L1
-    reg_param : float, optional
-        FFT Regularization parameter, default is 0.0
-        (full regularization)
     """
 
     def __init__(
@@ -415,197 +362,85 @@ class LinearNN(Model):
             fft_reg_param,
             l1_reg_param,
         )
-        # Input and hidden layers
-        self.input_hidden = (
+
+        # Input to hidden transformation
+        self.input_hidden = torch.nn.Sequential(
             torch.nn.Linear(self.input_size, self.hidden_size),
-            # torch.nn.ReLU(),
-            torch.nn.ELU(),
-            torch.nn.LayerNorm(self.hidden_size),
-        )
-        self.hidden_hidden = (self.num_layers - 1) * (
-            torch.nn.Linear(self.hidden_size, self.hidden_size),
-            # torch.nn.ReLU(),
-            torch.nn.ELU(),
+            torch.nn.ReLU(),
             torch.nn.LayerNorm(self.hidden_size),
         )
 
-        # Full model
-        self.model = torch.nn.Sequential(
-            *self.input_hidden,
-            *self.hidden_hidden,
-            self.linear,
+        # Mask to hidden transformation
+        self.mask_hidden = torch.nn.Sequential(
+            torch.nn.Linear(self.input_size, self.hidden_size),
+            torch.nn.ReLU(),
+            torch.nn.LayerNorm(self.hidden_size),
         )
 
-    def forward(self, input: torch.Tensor, tau: int = 1):
+        # Linear layer: Hidden to hidden transformation
+        self.hidden_hidden = torch.nn.Sequential(
+            torch.nn.Linear(
+                2 * self.hidden_size, self.hidden_size
+            ),  # concatenating input and mask
+            torch.nn.ReLU(),
+            torch.nn.LayerNorm(self.hidden_size),
+            *(
+                (self.num_layers - 1)
+                * (
+                    torch.nn.Linear(self.hidden_size, self.hidden_size),
+                    torch.nn.ReLU(),
+                    torch.nn.LayerNorm(self.hidden_size),
+                )
+            ),
+        )
+
+    def forward(self, input: torch.Tensor, mask: torch.Tensor, tau: int = 1):
         """Forward method for simple linear regression model.
 
         Parameters
         ----------
         input : torch.Tensor
             Input data with shape (batch, seq_len, neurons)
+        mask: torch.Tensor
+            Mask on the neurons with shape (neurons,)
         tau : int, optional
             Time offset of target
         """
+        # store the tau
+        self.tau = tau
+        # recast the mask to the input type and shape
+        mask = torch.broadcast_to(mask.to(input.dtype), input.shape)
+        # control flow for tau
         if tau < 1:
             output = self.identity(input)
         else:
-            # ... use the full sequence
-            readout = self.model(input)
+            # multiply the input by the mask
+            input = input * mask
+            # transform the input
+            input_hidden_out = self.input_hidden(input)
+            # transform the mask
+            mask_hidden_out = self.mask_hidden(mask)
+            # concatenate into a single latent
+            latent_out = torch.cat((input_hidden_out, mask_hidden_out), dim=-1)
+            # transform the latent
+            hidden_out = self.hidden_hidden(latent_out)
+            # perform a linear readout to get the output
+            readout = self.linear(hidden_out)
             output = readout
         # repeat for target with tau>0 offset
-        for i in range(1, tau):
-            # ... use the full sequence
-            readout = self.model(output)
-            output = readout
-        return output
-
-
-class NeuralTransformer(Model):
-    def __init__(
-        self,
-        input_size: int,
-        hidden_size: int,
-        num_layers: int = 1,
-        loss: Union[Callable, None] = None,
-        fft_reg_param: float = 0.0,
-        l1_reg_param: float = 0.0,
-    ):
-        """
-        TODO: Cite Andrej Kaparthy's tutorial on "How to code GPT from scratch".
-        Neural activity data is continuous valued and thus
-        can naturally be treated as if it were already emebedded.
-        However, to maintain notational similarity with the original
-        Transformer architecture, we use a linear layer to perform
-        expansion recoding - which acts as an embedding but is really
-        just a linear projection.
-        """
-        super(NeuralTransformer, self).__init__(
-            input_size,
-            hidden_size,
-            num_layers,
-            loss,
-            fft_reg_param,
-            l1_reg_param,
-        )
-        self.n_head = 4  # number of attention heads
-        self.block_size = MAX_TOKEN_LEN  # maximum attention block (i.e. context) size
-        self.dropout = 0.1  # dropout rate
-        # Positional encoding
-        self.position_encoding = PositionalEncoding(
-            self.hidden_size,
-            max_len=self.block_size,
-            dropout=self.dropout,
-        )
-        # Expansion recoding (a.k.a. embedding)
-        self.expansion_recoder = torch.nn.Linear(self.input_size, self.hidden_size)
-        # Transformer blocks
-        self.blocks = torch.nn.Sequential(
-            *(
-                Block(
-                    n_embd=self.hidden_size,
-                    block_size=self.block_size,
-                    n_head=self.n_head,
-                    dropout=self.dropout,
-                )
-                for _ in range(self.num_layers)
-            )
-        )
-        # Layer normalization
-        self.layer_norm = torch.nn.LayerNorm(self.hidden_size)
-        # Full model
-        self.model = torch.nn.Sequential(  # input has shape (B, T, C)
-            self.expansion_recoder,  # (B,T,C')
-            self.position_encoding,  # (B,T,C')
-            self.blocks,  # (B,T,C')
-            self.layer_norm,  # (B,T,C')
-            self.linear,  # output has shape (B,T,C)
-        )
-
-    def forward(self, input: torch.Tensor, tau: int = 1):
-        """Forward method for a transformer model.
-        Arguments:
-            (B, T, C) = input.shape = (batch_size, max_timesteps, input_size)
-            (B, T, C') = embedding.shape = (batch_size, max_timesteps, hidden_size)
-        """
-        if tau < 1:  # return the input sequence
-            output = self.identity(input)
-        else:  # do one-step prediction
-            # ... use the full sequence
-            readout = self.model(input)
-            output = readout
-        # do the remaining tau-1 steps of prediction
-        for i in range(1, tau):
-            # ... use the full sequence
-            readout = self.model(output)
-            output = readout
-        return output
-
-
-class NeuralCFC(Model):
-    """Neural Circuit Policy (NCP) Closed-form continuous time (CfC) model.
-    TODO: Cite the paper by Daniela Rus and collaborators."""
-
-    def __init__(
-        self,
-        input_size: int,
-        hidden_size: int,
-        num_layers: int = 1,  # unused
-        loss: Union[Callable, None] = None,
-        fft_reg_param: float = 0.0,
-        l1_reg_param: float = 0.0,
-    ):
-        """
-        The output size will be the same as the input size.
-        The num_layers parameter is not being used in this model.
-        TODO: Implement a way to use the num_layers parameter.
-        """
-        super(NeuralCFC, self).__init__(
-            input_size,
-            hidden_size,
-            num_layers,
-            loss,
-            fft_reg_param,
-            l1_reg_param,
-        )
-        # Recurrent layer
-        self.rnn = CfC(self.input_size, self.hidden_size)
-        # Initialize RNN weights
-        for name, param in self.rnn.named_parameters():
-            if "weight" in name:  # weights
-                torch.nn.init.xavier_uniform_(param.data, gain=1.0)
-            elif "bias" in name:  # biases
-                param.data.fill_(0)
-        # Initialize hidden state
-        self.hidden = None
-
-    def init_hidden(self, input_shape):
-        """
-        Inititializes the hidden state of the RNN.
-        """
-        device = next(self.parameters()).device
-        batch_size = input_shape[0]  # beacuse batch_first=True
-        hidden = torch.randn(batch_size, self.hidden_size).to(device)
-        return hidden
-
-    def forward(self, input: torch.Tensor, tau: int = 1):
-        """Propagate input through the continuous time NN.
-        input: batch of data
-        tau: time offset of target
-        """
-        # Initialize hidden state
-        self.hidden = self.init_hidden(input.shape)
-        if tau < 1:  # return the input sequence
-            output = self.identity(input)
-        else:  # do one-step prediction
-            rnn_out, self.hidden = self.rnn(input, self.hidden)
-            # ... use the full sequence
-            readout = self.linear(rnn_out)
-            output = readout
-        # do the remaining tau-1 steps of prediction
-        for i in range(1, tau):
-            rnn_out, self.hidden = self.rnn(output, self.hidden)
-            # ... use the full sequence
-            readout = self.linear(rnn_out)
+        for _ in range(1, tau):
+            # multiply input by the mask
+            input = output * mask
+            # transform the input
+            input_hidden_out = self.input_hidden(input)
+            # transform the mask
+            mask_hidden_out = self.mask_hidden(mask.to(output.dtype))
+            # concatenate into a single latent
+            latent_out = torch.cat((input_hidden_out, mask_hidden_out), dim=-1)
+            # transform the  latent
+            hidden_out = self.hidden_hidden(latent_out)
+            # perform a linear readout to get the output
+            readout = self.linear(hidden_out)
             output = readout
         return output
 
@@ -638,14 +473,28 @@ class NetworkLSTM(Model):
             fft_reg_param,
             l1_reg_param,
         )
-        # LSTM layer
+
+        # Input to hidden transformation
+        self.input_hidden = torch.nn.Sequential(
+            torch.nn.Linear(self.input_size, self.hidden_size),
+            torch.nn.ReLU(),
+        )
+
+        # Mask to hidden transformation
+        self.mask_hidden = torch.nn.Sequential(
+            torch.nn.Linear(self.input_size, self.hidden_size),
+            torch.nn.ReLU(),
+        )
+
+        # LSTM layer: Hidden to hidden transformation
         self.lstm = torch.nn.LSTM(
-            input_size=self.input_size,
+            input_size=2 * self.hidden_size,  # concatenating input and mask
             hidden_size=self.hidden_size,
             num_layers=self.num_layers,
             bias=True,
             batch_first=True,
         )
+
         # Initialize LSTM weights
         for name, param in self.lstm.named_parameters():
             if "weight_ih" in name:  # Input-hidden weights
@@ -654,8 +503,6 @@ class NetworkLSTM(Model):
                 torch.nn.init.orthogonal_(param.data)
             elif "bias" in name:  # Bias weights
                 param.data.fill_(0)
-        # Initialize hidden state
-        self.hidden = None
 
     def init_hidden(self, input_shape):
         """
@@ -667,63 +514,340 @@ class NetworkLSTM(Model):
         c0 = torch.randn(self.num_layers, batch_size, self.hidden_size).to(device)
         return (h0, c0)
 
-    def forward(self, input: torch.Tensor, tau: int = 1):
-        """Propagate input through the LSTM.
-        input: batch of data
-        tau: time offset of target
+    def forward(self, input: torch.Tensor, mask: torch.Tensor, tau: int = 1):
+        """Forward method for simple linear regression model.
+
+        Parameters
+        ----------
+        input : torch.Tensor
+            Input data with shape (batch, seq_len, neurons)
+        mask: torch.Tensor
+            Mask on the neurons with shape (neurons,)
+        tau : int, optional
+            Time offset of target
         """
-        # Initialize hidden state
+        # initialize hidden state
         self.hidden = self.init_hidden(input.shape)
+        # recast the mask to the input type and shape
+        mask = torch.broadcast_to(mask.to(input.dtype), input.shape)
+        # control flow for tau
         if tau < 1:  # return the input sequence
             output = self.identity(input)
         else:  # do one-step prediction
-            lstm_out, self.hidden = self.lstm(input, self.hidden)
-            # ... use the full sequence
-            readout = self.linear(lstm_out)
+            # multiply the input by the mask
+            input = input * mask
+            # transform the input
+            input_hidden_out = self.input_hidden(input)
+            # transform the mask
+            mask_hidden_out = self.mask_hidden(mask)
+            # concatenate into a single latent
+            latent_out = torch.cat((input_hidden_out, mask_hidden_out), dim=-1)
+            # transform the latent
+            hidden_out, self.hidden = self.lstm(latent_out, self.hidden)
+            # perform a linear readout to get the output
+            readout = self.linear(hidden_out)
             output = readout
         # do the remaining tau-1 steps of prediction
-        for i in range(1, tau):
-            lstm_out, self.hidden = self.lstm(output, self.hidden)
-            # ... use the full sequence
-            readout = self.linear(lstm_out)
+        for _ in range(1, tau):
+            # multiply input by the mask
+            input = output * mask
+            # transform the input
+            input_hidden_out = self.input_hidden(input)
+            # transform the mask
+            mask_hidden_out = self.mask_hidden(mask)
+            # concatenate into a single latent
+            latent_out = torch.cat((input_hidden_out, mask_hidden_out), dim=-1)
+            # transform the latent
+            hidden_out, self.hidden = self.lstm(latent_out, self.hidden)
+            # perform a linear readout to get the output
+            readout = self.linear(hidden_out)
             output = readout
         return output
 
 
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
-
-
-# Graph Neural Network models
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
-class GraphNN(torch.nn.Module):
-    """
-    Applies a single graph convolutional layer separately to the
-    two graphs induced by using only chemical synapses or
-    gap junctions, respectively, as the edges.
-    """
-
-    def __init__(self, input_dim, hidden_dim, output_dim):
-        super(GraphNN, self).__init__()
-        # a separte learnable conv. layer for each type of synapse
-        self.elec_conv = GCNConv(
-            in_channels=input_dim, out_channels=hidden_dim, improved=True
+class NeuralTransformer(Model):
+    def __init__(
+        self,
+        input_size: int,
+        hidden_size: int,
+        num_layers: int = 1,
+        loss: Union[Callable, None] = None,
+        fft_reg_param: float = 0.0,
+        l1_reg_param: float = 0.0,
+    ):
+        """
+        TODO: Cite Andrej Kaparthy's tutorial on "How to code GPT from scratch".
+        Neural activity data is continuous valued and thus
+        can naturally be treated as if it were already emebedded.
+        However, to maintain notational similarity with the original
+        Transformer architecture, we use a linear layer to perform
+        expansion recoding - which acts as an embedding but is really
+        just a linear projection.
+        """
+        super(NeuralTransformer, self).__init__(
+            input_size,
+            hidden_size,
+            num_layers,
+            loss,
+            fft_reg_param,
+            l1_reg_param,
         )
-        self.chem_conv = GCNConv(
-            in_channels=input_dim, out_channels=hidden_dim, improved=True
+
+        # Special transformer parameters
+        self.n_head = (
+            2  # number of attention heads; NOTE: must be divisor of hidden_size
         )
-        # readout layer transforms node features to output
-        self.linear = torch.nn.Linear(
-            in_features=2 * hidden_dim, out_features=output_dim
+        self.block_size = MAX_TOKEN_LEN  # maximum attention block (i.e. context) size
+        self.dropout = 0.0  # dropout rate
+
+        # Positional encoding
+        self.position_encoding = PositionalEncoding(
+            self.hidden_size,
+            max_len=self.block_size,
+            dropout=self.dropout,
         )
 
-    def forward(self, x, edge_index, edge_attr):
-        elec_weight = edge_attr[:, 0]
-        chem_weight = edge_attr[:, 1]
-        elec_hid = self.elec_conv(x, edge_index, elec_weight)
-        chem_hid = self.chem_conv(x, edge_index, chem_weight)
-        hidden = torch.cat([elec_hid, chem_hid], dim=-1)
-        output = self.linear(hidden)
+        # Embedding
+        self.embedding = torch.nn.Linear(
+            2 * self.hidden_size,
+            self.hidden_size,
+        )  # concating input and mask
+
+        # Transformer blocks
+        self.blocks = torch.nn.Sequential(
+            *(
+                Block(
+                    n_embd=self.hidden_size,
+                    block_size=self.block_size,
+                    n_head=self.n_head,
+                    dropout=self.dropout,
+                )
+                for _ in range(self.num_layers)
+            )
+        )
+
+        # Layer normalization
+        self.layer_norm = torch.nn.LayerNorm(self.hidden_size)
+
+        # Input to hidden transformation
+        self.input_hidden = torch.nn.Sequential(
+            torch.nn.Linear(self.input_size, self.hidden_size),
+            torch.nn.ReLU(),
+        )
+
+        # Mask to hidden transformation
+        self.mask_hidden = torch.nn.Sequential(
+            torch.nn.Linear(self.input_size, self.hidden_size),
+            torch.nn.ReLU(),
+        )
+
+        # Hidden to hidden transformation
+        self.hidden_hidden = torch.nn.Sequential(  # input has shape (B, T, 2*C')
+            self.embedding,  # (B, T, C')
+            self.position_encoding,  # (B, T, C')
+            self.blocks,  # (B, T, C')
+            self.layer_norm,  # (B, T, C')
+        )
+
+    def forward(self, input: torch.Tensor, mask: torch.Tensor, tau: int = 1):
+        """Forward method for a transformer model.
+        Parameters
+        ----------
+        input : torch.Tensor
+            Input data with shape (batch, seq_len, neurons)
+        mask: torch.Tensor
+            Mask on the neurons with shape (neurons,)
+        tau : int, optional
+            Time offset of target
+        """
+        # store the tau
+        self.tau = tau
+        # recast the mask to the input type and shape
+        mask = torch.broadcast_to(mask.to(input.dtype), input.shape)
+        # control flow for tau
+        if tau < 1:
+            output = self.identity(input)
+        else:
+            # multiply the input by the mask
+            input = input * mask
+            # transform the input
+            input_hidden_out = self.input_hidden(input)
+            # transform the mask
+            mask_hidden_out = self.mask_hidden(mask)
+            # concatenate into a single latent
+            latent_out = torch.cat((input_hidden_out, mask_hidden_out), dim=-1)
+            # transform the latent
+            hidden_out = self.hidden_hidden(latent_out)
+            # perform a linear readout to get the output
+            readout = self.linear(hidden_out)
+            output = readout
+        # repeat for target with tau>0 offset
+        for _ in range(1, tau):
+            # multiply input by the mask
+            input = output * mask
+            # transform the input
+            input_hidden_out = self.input_hidden(input)
+            # transform the mask
+            mask_hidden_out = self.mask_hidden(mask.to(output.dtype))
+            # concatenate into a single latent
+            latent_out = torch.cat((input_hidden_out, mask_hidden_out), dim=-1)
+            # transform the  latent
+            hidden_out = self.hidden_hidden(latent_out)
+            # perform a linear readout to get the output
+            readout = self.linear(hidden_out)
+            output = readout
         return output
 
 
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
+class NeuralCFC(Model):
+    """
+    Neural Circuit Policy (NCP) Closed-form continuous time (CfC) model.
+    TODO: Cite the paper by Ramin hasani, Daniela Rus et al.
+    """
+
+    def __init__(
+        self,
+        input_size: int,
+        hidden_size: int,
+        num_layers: int = 1,  # unused
+        loss: Union[Callable, None] = None,
+        fft_reg_param: float = 0.0,
+        l1_reg_param: float = 0.0,
+    ):
+        """
+        The output size will be the same as the input size.
+        The num_layers parameter is not being used in this model.
+        TODO: Implement a way to use the num_layers parameter.
+        """
+        super(NeuralCFC, self).__init__(
+            input_size,
+            hidden_size,
+            num_layers,
+            loss,
+            fft_reg_param,
+            l1_reg_param,
+        )
+        # Input to hidden transformation
+        self.input_hidden = torch.nn.Sequential(
+            torch.nn.Linear(self.input_size, self.hidden_size),
+            torch.nn.ReLU(),
+        )
+
+        # Mask to hidden transformation
+        self.mask_hidden = torch.nn.Sequential(
+            torch.nn.Linear(self.input_size, self.hidden_size),
+            torch.nn.ReLU(),
+        )
+
+        # RNN layer: Hidden to hidden transformation
+        self.rnn = CfC(
+            input_size=2 * self.hidden_size,  # concatenating input and mask
+            units=self.hidden_size,
+            activation="relu",
+        )
+
+        # Initialize RNN weights
+        for name, param in self.rnn.named_parameters():
+            if "weight" in name:  # weights
+                torch.nn.init.xavier_uniform_(param.data, gain=1.0)
+            elif "bias" in name:  # biases
+                param.data.fill_(0)
+
+        # Initialize hidden state
+        self.hidden = None
+
+    def init_hidden(self, input_shape):
+        """
+        Inititializes the hidden state of the RNN.
+        """
+        device = next(self.parameters()).device
+        batch_size = input_shape[0]  # beacuse batch_first=True
+        hidden = torch.randn(batch_size, self.hidden_size).to(device)
+        return hidden
+
+    def forward(self, input: torch.Tensor, mask: torch.Tensor, tau: int = 1):
+        """Forward method for simple linear regression model.
+
+        Parameters
+        ----------
+        input : torch.Tensor
+            Input data with shape (batch, seq_len, neurons)
+        mask: torch.Tensor
+            Mask on the neurons with shape (neurons,)
+        tau : int, optional
+            Time offset of target
+        """
+        # initialize hidden state
+        self.hidden = self.init_hidden(input.shape)
+        # recast the mask to the input type and shape
+        mask = torch.broadcast_to(mask.to(input.dtype), input.shape)
+        # control flow for tau
+        if tau < 1:  # return the input sequence
+            output = self.identity(input)
+        else:  # do one-step prediction
+            # multiply the input by the mask
+            input = input * mask
+            # transform the input
+            input_hidden_out = self.input_hidden(input)
+            # transform the mask
+            mask_hidden_out = self.mask_hidden(mask)
+            # concatenate into a single latent
+            latent_out = torch.cat((input_hidden_out, mask_hidden_out), dim=-1)
+            # transform the latent
+            hidden_out, self.hidden = self.rnn(latent_out, self.hidden)
+            # perform a linear readout to get the output
+            readout = self.linear(hidden_out)
+            output = readout
+        # do the remaining tau-1 steps of prediction
+        for _ in range(1, tau):
+            # multiply input by the mask
+            input = output * mask
+            # transform the input
+            input_hidden_out = self.input_hidden(input)
+            # transform the mask
+            mask_hidden_out = self.mask_hidden(mask)
+            # concatenate into a single latent
+            latent_out = torch.cat((input_hidden_out, mask_hidden_out), dim=-1)
+            # transform the latent
+            hidden_out, self.hidden = self.rnn(latent_out, self.hidden)
+            # perform a linear readout to get the output
+            readout = self.linear(hidden_out)
+            output = readout
+        return output
+
+
+# # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
+
+# # Graph Neural Network models
+# # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
+# class GraphNN(torch.nn.Module):
+#     """
+#     Applies a single graph convolutional layer separately to the
+#     two graphs induced by using only chemical synapses or
+#     gap junctions, respectively, as the edges.
+#     """
+
+#     def __init__(self, input_dim, hidden_dim, output_dim):
+#         super(GraphNN, self).__init__()
+#         # a separte learnable conv. layer for each type of synapse
+#         self.elec_conv = GCNConv(
+#             in_channels=input_dim, out_channels=hidden_dim, improved=True
+#         )
+#         self.chem_conv = GCNConv(
+#             in_channels=input_dim, out_channels=hidden_dim, improved=True
+#         )
+#         # readout layer transforms node features to output
+#         self.linear = torch.nn.Linear(
+#             in_features=2 * hidden_dim, out_features=output_dim
+#         )
+
+#     def forward(self, x, edge_index, edge_attr):
+#         elec_weight = edge_attr[:, 0]
+#         chem_weight = edge_attr[:, 1]
+#         elec_hid = self.elec_conv(x, edge_index, elec_weight)
+#         chem_hid = self.chem_conv(x, edge_index, chem_weight)
+#         hidden = torch.cat([elec_hid, chem_hid], dim=-1)
+#         output = self.linear(hidden)
+#         return output
+
+# # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#

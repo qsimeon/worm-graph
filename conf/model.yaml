@@ -1,10 +1,10 @@
 model:
   type: LinearNN # options: LinearNN, NetworkLSTM, NeuralCFC, NeuralTransformer
   input_size: 302 # keep fixed at input_size = 302; it is the number of neurons in the adult C. elegans hermaphrodite 
-  hidden_size: 512 # options: int > 0
-  num_layers: 1 # options: int >= 1; keep this fixed
+  hidden_size: 302 # options: int > 0
+  num_layers: 1 # number of hidden layers in the model; options: int >= 1; keep this fixed
   # constraint: 1 <= int <= 5; keep fixed at num_layers: int = 1
   loss: MSE # options: MSE, Huber, L1, Poisson
-  fft_reg_param: 1.0 # how much to regularize the loss by frequency distribution matching; options: 0.0 <= float <= 1.0
-  l1_reg_param: 1.0 # how much to regularize the loss by L1 norm of the model parameters; options: 0.0 <= float <= 1.0
+  fft_reg_param: 0.0 # how much to regularize the loss by frequency distribution matching; options: 0.0 <= float <= 1.0
+  l1_reg_param: 0.0 # how much to regularize the loss by L1 norm of the model parameters; options: 0.0 <= float <= 1.0
   checkpoint_path: false # options: false, path/to/pretrained/model
