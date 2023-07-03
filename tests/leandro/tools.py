@@ -10,8 +10,9 @@ def get_real_data(config_path):
     print("\nconfig:\n\t", OmegaConf.to_yaml(config), end="\n\n")
     return get_dataset(config)
 
-def get_one_worm_data(dataset):
-    wormid = np.random.choice([key for key in dataset.keys()])
+def get_one_worm_data(dataset, wormid=None):
+    if wormid is None:
+        wormid = np.random.choice([key for key in dataset.keys()])
     oneWorm = dataset[wormid]
     print('Worm ID: {}'.format(wormid))
     calcium_data = oneWorm['calcium_data']

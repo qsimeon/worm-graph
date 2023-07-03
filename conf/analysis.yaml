@@ -1,4 +1,9 @@
 analysis:
-  dir: logs/hydra/2023_04_10_17_36_21
+  dir: logs/hydra/example
   param_names: ["train.train_size"]
   param: null
+
+hierarchical_clustering:
+  group_by: four # None, three, four
+  method: 'ward' # ward, average, complete, single
+  metric: None # None, euclidean, cityblock, cosine, correlation...
