@@ -508,6 +508,9 @@ def hc_analyse_dataset(dataset_names, apply_suggestion=False, hip='hip1', group_
     # ===
 
     for i, wormID in enumerate(dataset.keys()):
+        
+        if len(dataset[wormID]['named_neuron_to_slot']) == 0:
+            continue # Skip worm if no neurons are found
 
         if wormID == random_wormID:
             save_fig = True
