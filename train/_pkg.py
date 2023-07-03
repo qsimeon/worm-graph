@@ -6,8 +6,7 @@ import random
 import time
 import numpy as np
 import pandas as pd
-from concurrent.futures import ThreadPoolExecutor
-from scipy.linalg import solve
+from torch.cuda.amp import autocast
 from typing import Tuple, Union
 from datetime import datetime
 from hydra.core.hydra_config import HydraConfig
@@ -21,4 +20,3 @@ from models._utils import NetworkLSTM
 from data._utils import NeuralActivityDataset, pick_worm
 from data._main import get_dataset
 from models._main import get_model
-from scipy.signal import savgol_filter

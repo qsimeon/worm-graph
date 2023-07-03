@@ -3,6 +3,7 @@ import torch
 import math
 import os
 import hydra
+from torch.cuda.amp import autocast
 from typing import Callable, Union
 from ncps.torch import CfC
 from ncps.wirings import AutoNCP

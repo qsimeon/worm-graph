@@ -1,5 +1,5 @@
 predict:
-  tau_out: 2000 # number of future time steps to predict
+  tau_out: 1000 # number of future time steps to predict
   # constraint: tau_out: int > 0
   context_len: 1000 # length of the context window to use for prediction
   model: # a pretrained model to make predictions with

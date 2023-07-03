@@ -394,6 +394,7 @@ class LinearNN(Model):
             ),
         )
 
+    @autocast()
     def forward(self, input: torch.Tensor, mask: torch.Tensor, tau: int = 1):
         """Forward method for simple linear regression model.
 
@@ -414,8 +415,8 @@ class LinearNN(Model):
         if tau < 1:
             output = self.identity(input)
         else:
-            # multiply the input by the mask
-            input = input * mask
+            # # multiply the input by the mask
+            # input = input * mask
             # transform the input
             input_hidden_out = self.input_hidden(input)
             # transform the mask
@@ -429,8 +430,8 @@ class LinearNN(Model):
             output = readout
         # repeat for target with tau>0 offset
         for _ in range(1, tau):
-            # multiply input by the mask
-            input = output * mask
+            # # multiply input by the mask
+            # input = output * mask
             # transform the input
             input_hidden_out = self.input_hidden(input)
             # transform the mask
@@ -514,6 +515,7 @@ class NetworkLSTM(Model):
         c0 = torch.randn(self.num_layers, batch_size, self.hidden_size).to(device)
         return (h0, c0)
 
+    @autocast()
     def forward(self, input: torch.Tensor, mask: torch.Tensor, tau: int = 1):
         """Forward method for simple linear regression model.
 
@@ -534,8 +536,8 @@ class NetworkLSTM(Model):
         if tau < 1:  # return the input sequence
             output = self.identity(input)
         else:  # do one-step prediction
-            # multiply the input by the mask
-            input = input * mask
+            # # multiply the input by the mask
+            # input = input * mask
             # transform the input
             input_hidden_out = self.input_hidden(input)
             # transform the mask
@@ -549,8 +551,8 @@ class NetworkLSTM(Model):
             output = readout
         # do the remaining tau-1 steps of prediction
         for _ in range(1, tau):
-            # multiply input by the mask
-            input = output * mask
+            # # multiply input by the mask
+            # input = output * mask
             # transform the input
             input_hidden_out = self.input_hidden(input)
             # transform the mask
@@ -649,6 +651,7 @@ class NeuralTransformer(Model):
             self.layer_norm,  # (B, T, C')
         )
 
+    @autocast()
     def forward(self, input: torch.Tensor, mask: torch.Tensor, tau: int = 1):
         """Forward method for a transformer model.
         Parameters
@@ -668,8 +671,8 @@ class NeuralTransformer(Model):
         if tau < 1:
             output = self.identity(input)
         else:
-            # multiply the input by the mask
-            input = input * mask
+            # # multiply the input by the mask
+            # input = input * mask
             # transform the input
             input_hidden_out = self.input_hidden(input)
             # transform the mask
@@ -683,8 +686,8 @@ class NeuralTransformer(Model):
             output = readout
         # repeat for target with tau>0 offset
         for _ in range(1, tau):
-            # multiply input by the mask
-            input = output * mask
+            # # multiply input by the mask
+            # input = output * mask
             # transform the input
             input_hidden_out = self.input_hidden(input)
             # transform the mask
@@ -765,6 +768,7 @@ class NeuralCFC(Model):
         hidden = torch.randn(batch_size, self.hidden_size).to(device)
         return hidden
 
+    @autocast()
     def forward(self, input: torch.Tensor, mask: torch.Tensor, tau: int = 1):
         """Forward method for simple linear regression model.
 
@@ -785,8 +789,8 @@ class NeuralCFC(Model):
         if tau < 1:  # return the input sequence
             output = self.identity(input)
         else:  # do one-step prediction
-            # multiply the input by the mask
-            input = input * mask
+            # # multiply the input by the mask
+            # input = input * mask
             # transform the input
             input_hidden_out = self.input_hidden(input)
             # transform the mask
@@ -800,8 +804,8 @@ class NeuralCFC(Model):
             output = readout
         # do the remaining tau-1 steps of prediction
         for _ in range(1, tau):
-            # multiply input by the mask
-            input = output * mask
+            # # multiply input by the mask
+            # input = output * mask
             # transform the input
             input_hidden_out = self.input_hidden(input)
             # transform the mask
