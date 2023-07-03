@@ -188,7 +188,7 @@ def hierarchical_clustering_algorithm(single_worm_data, distance='correlation',
         plt.title('Hierarchical Clustering Dendrogram ({})'.format(wormID))
         plt.xlabel('Cluster Size')
         plt.ylabel('Distance')
-        plt.savefig('analysis/results/hierarchical_clustering/dendrogram.png', dpi=600)
+        plt.savefig('analysis/results/hierarchical_clustering/dendrogram.png', dpi=300)
         plt.close()
 
     # === Cluster labels ===
@@ -207,10 +207,10 @@ def hierarchical_clustering_algorithm(single_worm_data, distance='correlation',
 
     if save_fig:
         plot_heat_map(R, title="Original {} ({})".format(title_plot, wormID), xlabel="Neuron", ylabel="Neuron", xticks=original_neuron_labels, yticks=original_neuron_labels, xtick_skip=2, ytick_skip=2)
-        plt.savefig('analysis/results/hierarchical_clustering/original_distance_matrix.png', dpi=600)
+        plt.savefig('analysis/results/hierarchical_clustering/original_distance_matrix.png', dpi=300)
         plt.close()
         plot_heat_map(sorted_R, title="Sorted {} ({})".format(title_plot, wormID), xlabel="Neuron", ylabel="Neuron", xticks=sorted_neuron_labels, yticks=sorted_neuron_labels, xtick_skip=2, ytick_skip=2)
-        plt.savefig('analysis/results/hierarchical_clustering/sorted_distance_matrix.png', dpi=600)
+        plt.savefig('analysis/results/hierarchical_clustering/sorted_distance_matrix.png', dpi=300)
         plt.close()
 
     # === Metrics ===
@@ -387,7 +387,7 @@ def neuron_distribution(df, ref_dict, stat='percent', group_by=None, plot_type='
 
         # Save plot
         if save_fig:
-            plt.savefig('analysis/results/hierarchical_clustering/cluster_distribution.png', dpi=600)
+            plt.savefig('analysis/results/hierarchical_clustering/cluster_distribution.png', dpi=300)
         plt.close()
 
     return new_df
@@ -532,6 +532,9 @@ def hc_analyse_dataset(dataset_names, apply_suggestion=False, hip='hip1', group_
             all_worm_clusters_list.append(grouped_clusters['Computed Cluster'].drop(columns=['Reference']))
         
         count_inside_clusters_array[i, :, :] = delete_total(count_inside_clusters(grouped_clusters, percentage=False)).values #? Count instead of percent?
+
+        if i % 10 == 0:
+            print(f'{i}/{num_worms} worms analysed')
     
     all_worm_clusters = pd.concat(all_worm_clusters_list, axis=1, keys=range(1, len(all_worm_clusters_list) + 1))
     all_worm_clusters.columns = [f"worm{i}" for i in range(0, len(all_worm_clusters_list))]
@@ -561,7 +564,7 @@ def hc_analyse_dataset(dataset_names, apply_suggestion=False, hip='hip1', group_
 
         all_worm_clusters = delete_ref_column(all_worm_clusters) # Delete reference column
         all_worm_clusters = create_ref_column(all_worm_clusters, ref_dict) # Add reference column
-        all_worm_clusters.to_csv('analysis/results/worm_clusters.csv', index=False)
+        all_worm_clusters.to_csv('analysis/results/hierarchical_clustering/worm_clusters.csv', index=False)
 
         # === Plot silhouettes ===
 
@@ -587,6 +590,7 @@ def hc_analyse_dataset(dataset_names, apply_suggestion=False, hip='hip1', group_
         plt.text(0.14, np.min(silhouettes)+0.003, f"{np.min(silhouettes).round(4)}", color='black')
 
         # Show the plot
-        plt.savefig('analysis/results/silhouette_averages.png', dpi=600)
+        plt.savefig('analysis/results/hierarchical_clustering/silhouette_averages.png', dpi=300)
+        plt.close()
 
     return all_worm_clusters, ref_dict, count_inside_clusters_array, silhouettes
