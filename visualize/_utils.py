@@ -659,3 +659,50 @@ def plot_worm_data(worm_data, num_neurons=5, smooth=False):
     )
     plt.legend()
     plt.show()
+
+
+def plot_heat_map(matrix, title=None, cmap=None, xlabel=None, ylabel=None,
+                xticks=None, yticks=None, show_xticks=True, show_yticks=True,
+                xtick_skip=None, ytick_skip=None,
+                center=None, vmin=None, vmax=None, mask=None):
+    
+    # Generate the mask
+    if type(mask) is str:
+        if mask.upper() == 'UPPER_T':
+            mask = np.triu(np.ones_like(matrix))
+        elif mask.upper() == 'LOWER_T':
+            mask = np.tril(np.ones_like(matrix))
+
+    # Set the figure size
+    fig, ax = plt.subplots(figsize=(10, 8))
+    
+    # Generate the heatmap
+    ax = sns.heatmap(matrix, mask=mask, cmap=cmap, center=center, vmin=vmin, vmax=vmax)
+    
+    # Set the title if provided
+    if title is not None:
+        ax.set_title(title)
+
+    # Set the x and y ticks if provided and show_ticks is True
+    if show_xticks:
+        if xticks is not None:
+            ax.set_xticks(np.arange(len(xticks))[::xtick_skip])
+            ax.set_xticklabels(xticks[::xtick_skip], fontsize='small', rotation=90)
+    else:
+        ax.set_xticks([])
+
+    if show_yticks:
+        if yticks is not None:
+            ax.set_yticks(np.arange(len(yticks))[::ytick_skip])
+            ax.set_yticklabels(yticks[::ytick_skip], fontsize='small', rotation=0)
+    else:
+        ax.set_yticks([])
+
+    if xlabel is not None:
+        ax.set_xlabel(xlabel)
+    
+    if ylabel is not None:
+        ax.set_ylabel(ylabel)
+
+    # Show the plot
+    plt.tight_layout()
