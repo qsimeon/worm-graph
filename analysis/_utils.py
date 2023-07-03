@@ -490,10 +490,9 @@ def hc_analyse_dataset(dataset_names, apply_suggestion=False, hip='hip1', group_
     ref_dict = load_reference(group_by=group_by) # Create same ref dict for all worms
 
     num_worms = len(dataset.keys())
-    print(f'Number of worms: {num_worms}')
 
     if not apply_suggestion:
-        print('No suggestion applied, ignoring hip parameter.')
+        print('No suggestion applied, ignoring hip parameter.\n')
     else:
         print(f'Suggestion applied: {hip}.')
 
@@ -556,41 +555,47 @@ def hc_analyse_dataset(dataset_names, apply_suggestion=False, hip='hip1', group_
             # Compare the classifications of the neuron and compare to its reference
             s = all_worm_clusters.loc[neuron].iloc[:-1].copy().dropna().value_counts()
             ref = all_worm_clusters.loc[neuron, 'Reference']
-            # Create row for the accuracy of the neuron
-            if ref in all_worm_clusters.loc['M4'].iloc[:-1].values:
+            # Create row for the accuracy of the neuron if not NaN
+            if (s[ref] / s.sum()) != np.NaN:
                 all_worm_clusters.loc[neuron, 'accuracy'] = s[ref] / s.sum()
             else:
                 all_worm_clusters.loc[neuron, 'accuracy'] = 0.0
 
         all_worm_clusters = delete_ref_column(all_worm_clusters) # Delete reference column
         all_worm_clusters = create_ref_column(all_worm_clusters, ref_dict) # Add reference column
-        all_worm_clusters.to_csv('analysis/results/hierarchical_clustering/worm_clusters.csv', index=False)
 
-        # === Plot silhouettes ===
+        # Average accuracy across all individuals
+        print(f"Average acc across individuals: {np.mean(all_worm_clusters.loc['accuracy']).round(4)}")
+        # Averace accuracy for each neuron
+        print(f"Average acc for each neuron: {np.mean(all_worm_clusters['accuracy']).round(4)}")
+    
+    all_worm_clusters.to_csv('analysis/results/hierarchical_clustering/worm_clusters.csv', index=True)
 
-        # Create a DataFrame from the silhouette averages
-        s_data = {'Silhouette Averages': silhouettes}
-        s_df = pd.DataFrame(s_data)
+    # === Plot silhouettes ===
 
-        # Create the box plot using Seaborn
-        plt.figure(figsize=(8, 6))
-        sns.boxplot(data=s_df, y='Silhouette Averages', boxprops={'facecolor': 'steelblue', 'alpha': 0.6},
-                    capprops={'color': 'black'}, whiskerprops={'color': 'black'}, medianprops={'color': 'black'})
+    # Create a DataFrame from the silhouette averages
+    s_data = {'Silhouette Averages': silhouettes}
+    s_df = pd.DataFrame(s_data)
 
-        # Set the plot labels
-        plt.xlabel('Silhouette Averages')
-        plt.ylabel('')
-        plt.title('Silhouette Averages')
-        plt.tight_layout()
-        # Write the median value
-        plt.text(0.33, np.median(silhouettes)+0.003, f"{np.median(silhouettes).round(4)}", color='black')
-        # Write the max value
-        plt.text(0.14, np.max(silhouettes)+0.003, f"{np.max(silhouettes).round(4)}", color='black')
-        # Write the min value
-        plt.text(0.14, np.min(silhouettes)+0.003, f"{np.min(silhouettes).round(4)}", color='black')
+    # Create the box plot using Seaborn
+    plt.figure(figsize=(8, 6))
+    sns.boxplot(data=s_df, y='Silhouette Averages', boxprops={'facecolor': 'steelblue', 'alpha': 0.6},
+                capprops={'color': 'black'}, whiskerprops={'color': 'black'}, medianprops={'color': 'black'})
 
-        # Show the plot
-        plt.savefig('analysis/results/hierarchical_clustering/silhouette_averages.png', dpi=300)
-        plt.close()
+    # Set the plot labels
+    plt.xlabel('Silhouette Averages')
+    plt.ylabel('')
+    plt.title('Silhouette Averages')
+    plt.tight_layout()
+    # Write the median value
+    plt.text(0.33, np.median(silhouettes)+0.003, f"{np.median(silhouettes).round(4)}", color='black')
+    # Write the max value
+    plt.text(0.14, np.max(silhouettes)+0.003, f"{np.max(silhouettes).round(4)}", color='black')
+    # Write the min value
+    plt.text(0.14, np.min(silhouettes)+0.003, f"{np.min(silhouettes).round(4)}", color='black')
+
+    # Show the plot
+    plt.savefig('analysis/results/hierarchical_clustering/silhouette_averages.png', dpi=300)
+    plt.close()
 
     return all_worm_clusters, ref_dict, count_inside_clusters_array, silhouettes
