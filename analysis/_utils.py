@@ -483,9 +483,9 @@ def hc_analyse_dataset(dataset_names, apply_suggestion=False, hip='hip1', group_
     elif group_by == 'three':
         groups = 3
         num_clusters = 3
-    else:
-        groups = 7
-        num_clusters = 7
+    elif group_by == None:
+        groups = 6
+        num_clusters = 6
 
     ref_dict = load_reference(group_by=group_by) # Create same ref dict for all worms
 
@@ -567,7 +567,7 @@ def hc_analyse_dataset(dataset_names, apply_suggestion=False, hip='hip1', group_
         # Average accuracy across all individuals
         print(f"Average acc across individuals: {np.mean(all_worm_clusters.loc['accuracy']).round(4)}")
         # Averace accuracy for each neuron
-        print(f"Average acc for each neuron: {np.mean(all_worm_clusters['accuracy']).round(4)}")
+        print(f"Average acc across neurons: {np.mean(all_worm_clusters['accuracy']).round(4)}")
     
     all_worm_clusters.to_csv('analysis/results/hierarchical_clustering/worm_clusters.csv', index=True)
 
