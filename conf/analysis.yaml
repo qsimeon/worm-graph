@@ -4,6 +4,6 @@ analysis:
   param: null
 
 hierarchical_clustering:
-  group_by: None # None, three, four
+  group_by: four # None, three, four
   method: 'ward' # ward, average, complete, single
   metric: None # None, euclidean, cityblock, cosine, correlation...
