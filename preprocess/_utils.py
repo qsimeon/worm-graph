@@ -478,7 +478,7 @@ class CalciumDataReshaper:
                 self.slot_to_named_neuron[slot] = neuron
 
     def _fill_calcium_data(self, idx, slot):
-        """This rounds the calcium data to 1 decimal place."""
+        """NOTE: This rounds the calcium data to 1 decimal place."""
         self.standard_calcium_data[:, slot] = torch.round(
             torch.from_numpy(self.origin_calcium_data[:, idx]),
             decimals=1,

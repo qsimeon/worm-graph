@@ -236,8 +236,10 @@ class Model(torch.nn.Module):
             # TODO: apply recency exponential decay factor to original loss
             original_loss = self.loss(**kwargs)(
                 prediction[:, -self.tau :, :],
-                target[:, -self.tau :, :],
-            )  # only consider the new time steps
+                target[:, -self.tau :, :],  # only consider new time steps
+                # prediction,
+                # target,  # consider all time steps
+            )
             # FFT regularization term
             fft_loss = 0.0
             if self.fft_reg_param > 0.0:
@@ -380,7 +382,8 @@ class LinearNN(Model):
         # Linear layer: Hidden to hidden transformation
         self.hidden_hidden = torch.nn.Sequential(
             torch.nn.Linear(
-                2 * self.hidden_size, self.hidden_size
+                2 * self.hidden_size,
+                self.hidden_size,
             ),  # concatenating input and mask
             torch.nn.ReLU(),
             torch.nn.LayerNorm(self.hidden_size),
@@ -394,7 +397,7 @@ class LinearNN(Model):
             ),
         )
 
-    @autocast()
+    # @autocast()
     def forward(self, input: torch.Tensor, mask: torch.Tensor, tau: int = 1):
         """Forward method for simple linear regression model.
 
@@ -435,7 +438,7 @@ class LinearNN(Model):
             # transform the input
             input_hidden_out = self.input_hidden(input)
             # transform the mask
-            mask_hidden_out = self.mask_hidden(mask.to(output.dtype))
+            mask_hidden_out = self.mask_hidden(mask)
             # concatenate into a single latent
             latent_out = torch.cat((input_hidden_out, mask_hidden_out), dim=-1)
             # transform the  latent
@@ -515,7 +518,7 @@ class NetworkLSTM(Model):
         c0 = torch.randn(self.num_layers, batch_size, self.hidden_size).to(device)
         return (h0, c0)
 
-    @autocast()
+    # @autocast()
     def forward(self, input: torch.Tensor, mask: torch.Tensor, tau: int = 1):
         """Forward method for simple linear regression model.
 
@@ -651,7 +654,7 @@ class NeuralTransformer(Model):
             self.layer_norm,  # (B, T, C')
         )
 
-    @autocast()
+    # @autocast()
     def forward(self, input: torch.Tensor, mask: torch.Tensor, tau: int = 1):
         """Forward method for a transformer model.
         Parameters
@@ -691,7 +694,7 @@ class NeuralTransformer(Model):
             # transform the input
             input_hidden_out = self.input_hidden(input)
             # transform the mask
-            mask_hidden_out = self.mask_hidden(mask.to(output.dtype))
+            mask_hidden_out = self.mask_hidden(mask)
             # concatenate into a single latent
             latent_out = torch.cat((input_hidden_out, mask_hidden_out), dim=-1)
             # transform the  latent
@@ -768,7 +771,7 @@ class NeuralCFC(Model):
         hidden = torch.randn(batch_size, self.hidden_size).to(device)
         return hidden
 
-    @autocast()
+    # @autocast()
     def forward(self, input: torch.Tensor, mask: torch.Tensor, tau: int = 1):
         """Forward method for simple linear regression model.
 
