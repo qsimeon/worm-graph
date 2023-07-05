@@ -74,7 +74,7 @@ def train(
     i = 0
     # Each data loader has samples from a single worm
     for data, mask in zip(loader, masks):
-        # some masks are all False, so skip them
+        # some masks are all False (no known neurons) so skip them
         if mask.sum().item() == 0:
             continue
         # train on the batch
@@ -92,8 +92,10 @@ def train(
         # Baseline: loss if the model predicted same value at next timestep
         # equal to current value.
         base = criterion(
-            prediction=(0 if use_residual else 1) * X_train * mask,
-            target=Y_train * mask,
+            # prediction=(0 if use_residual else 1) * X_train * mask,
+            # target=Y_train * mask,
+            prediction=(0 if use_residual else 1) * X_train[:, :, mask],
+            target=Y_train[:, :, mask],
         )
 
         # # Enables autocasting for the forward pass (model + loss)
@@ -103,8 +105,10 @@ def train(
 
         # Compute training loss.
         loss = criterion(
-            prediction=Y_tr * mask,
-            target=Y_train * mask,
+            # prediction=Y_tr * mask,
+            # target=Y_train * mask,
+            prediction=Y_tr[:, :, mask],
+            target=Y_train[:, :, mask],
         )
         # # Exits the context manager before backward()
 
@@ -207,8 +211,10 @@ def test(
         # Baseline: loss if the model predicted value at next timestep
         # equal to current value.
         base = criterion(
-            prediction=(0 if use_residual else 1) * X_test * mask,
-            target=Y_test * mask,
+            # prediction=(0 if use_residual else 1) * X_test * mask,
+            # target=Y_test * mask,
+            prediction=(0 if use_residual else 1) * X_test[:, :, mask],
+            target=Y_test[:, :, mask],
         )
 
         # Test
@@ -216,8 +222,10 @@ def test(
 
         # Compute the validation loss.
         loss = criterion(
-            prediction=Y_te * mask,
-            target=Y_test * mask,
+            # prediction=Y_te * mask,
+            # target=Y_test * mask,
+            prediction=Y_te[:, :, mask],
+            target=Y_test[:, :, mask],
         )
 
         # Store test and baseline loss.
