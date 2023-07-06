@@ -92,8 +92,6 @@ def train(
         # Baseline: loss if the model predicted same value at next timestep
         # equal to current value.
         base = criterion(
-            # prediction=(0 if use_residual else 1) * X_train * mask,
-            # target=Y_train * mask,
             prediction=(0 if use_residual else 1) * X_train[:, :, mask],
             target=Y_train[:, :, mask],
         )
@@ -105,8 +103,6 @@ def train(
 
         # Compute training loss.
         loss = criterion(
-            # prediction=Y_tr * mask,
-            # target=Y_train * mask,
             prediction=Y_tr[:, :, mask],
             target=Y_train[:, :, mask],
         )
@@ -206,13 +202,11 @@ def test(
         i += 1
         X_test, Y_test, metadata = data  # X, Y: (batch_size, seq_len, num_neurons)
         X_test, Y_test = X_test.to(DEVICE), Y_test.to(DEVICE)
-        tau = metadata["tau"][0]  # Penalize longer delays
+        tau = metadata["tau"][0]  # typically, tau = 1
 
         # Baseline: loss if the model predicted value at next timestep
         # equal to current value.
         base = criterion(
-            # prediction=(0 if use_residual else 1) * X_test * mask,
-            # target=Y_test * mask,
             prediction=(0 if use_residual else 1) * X_test[:, :, mask],
             target=Y_test[:, :, mask],
         )
@@ -222,8 +216,6 @@ def test(
 
         # Compute the validation loss.
         loss = criterion(
-            # prediction=Y_te * mask,
-            # target=Y_test * mask,
             prediction=Y_te[:, :, mask],
             target=Y_test[:, :, mask],
         )

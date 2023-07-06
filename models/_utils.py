@@ -308,14 +308,31 @@ class Model(torch.nn.Module):
             """
             Calculate loss with FFT regularization and
             L1 regularization on all model weights.
+            Arguments:
+                prediction: (batch_size, seq_len, input_size)
+                target: (batch_size, seq_len, input_size)
             """
+            # apply exponential recency decay factor to original loss
+            half_life = prediction.size(1) / 2  # half-life = seq_len
+            kernel = (
+                torch.flip(
+                    torch.exp(
+                        -torch.arange(prediction.size(1)) / half_life
+                    ),  # TODO: play around with time constant (a.k.a half-life, decay rate) parameter
+                    dims=[-1],
+                )
+                .view(1, -1, 1)
+                .to(prediction.device)
+            )
             # calculate next time step prediction loss
-            # TODO: apply recency exponential decay factor to original loss
-            original_loss = self.loss(reduction="none", **kwargs)(
+            original_loss = self.loss(**kwargs)(
                 # prediction[:, -self.tau :, :],
-                # target[:, -self.tau :, :],  # only consider new time steps
-                prediction,
-                target,  # consider all time steps
+                # target[:, -self.tau :, :],  # only consider latest time steps
+                # prediction,
+                # target,  # consider all time steps
+                # NOTE: these two options are extreme ends of spectrum from using an exponential recency decay
+                kernel * prediction,
+                kernel * target,  # weigh more recent time steps more heavily
             )
             # FFT regularization term
             fft_loss = 0.0
@@ -459,6 +476,7 @@ class LinearNN(Model):
         # Linear layer: Hidden to hidden transformation
         self.hidden_hidden = torch.nn.Sequential(
             torch.nn.Linear(
+                # 2 * self.hidden_size,
                 self.hidden_size,
                 self.hidden_size,
             ),  # combine input and mask
@@ -493,7 +511,7 @@ class LinearNN(Model):
         # store the tau
         self.tau = tau
         # recast the mask to the input type and shape
-        mask = torch.broadcast_to(mask.to(input.dtype), input.shape)
+        mask = mask.view(1, 1, -1).to(input.dtype)
         # control flow for tau
         if tau < 1:
             output = self.identity(input)
@@ -506,6 +524,13 @@ class LinearNN(Model):
             mask_hidden_out = self.mask_hidden(mask)
             # concatenate into a single latent
             latent_out = input_hidden_out
+            # latent_out = torch.concat(
+            #     (
+            #         input_hidden_out,
+            #         torch.broadcast_to(mask_hidden_out, input_hidden_out.shape),
+            #     ),
+            #     dim=-1,
+            # )
             # transform the latent
             hidden_out = self.hidden_hidden(latent_out)
             # perform a linear readout to get the output
@@ -521,6 +546,13 @@ class LinearNN(Model):
             mask_hidden_out = self.mask_hidden(mask)
             # concatenate into a single latent
             latent_out = input_hidden_out
+            # latent_out = torch.concat(
+            #     (
+            #         input_hidden_out,
+            #         torch.broadcast_to(mask_hidden_out, input_hidden_out.shape),
+            #     ),
+            #     dim=-1,
+            # )
             # transform the  latent
             hidden_out = self.hidden_hidden(latent_out)
             # perform a linear readout to get the output
@@ -573,6 +605,7 @@ class NeuralTransformer(Model):
 
         # Embedding
         self.embedding = torch.nn.Linear(
+            # 2 * self.hidden_size,
             self.hidden_size,
             self.hidden_size,
         )  # combine input and mask
@@ -628,7 +661,7 @@ class NeuralTransformer(Model):
         # store the tau
         self.tau = tau
         # recast the mask to the input type and shape
-        mask = torch.broadcast_to(mask.to(input.dtype), input.shape)
+        mask = mask.view(1, 1, -1).to(input.dtype)
         # control flow for tau
         if tau < 1:
             output = self.identity(input)
@@ -641,6 +674,13 @@ class NeuralTransformer(Model):
             mask_hidden_out = self.mask_hidden(mask)
             # concatenate into a single latent
             latent_out = input_hidden_out
+            # latent_out = torch.concat(
+            #     (
+            #         input_hidden_out,
+            #         torch.broadcast_to(mask_hidden_out, input_hidden_out.shape),
+            #     ),
+            #     dim=-1,
+            # )
             # transform the latent
             hidden_out = self.hidden_hidden(latent_out)
             # perform a linear readout to get the output
@@ -656,6 +696,13 @@ class NeuralTransformer(Model):
             mask_hidden_out = self.mask_hidden(mask)
             # concatenate into a single latent
             latent_out = input_hidden_out
+            # latent_out = torch.concat(
+            #     (
+            #         input_hidden_out,
+            #         torch.broadcast_to(mask_hidden_out, input_hidden_out.shape),
+            #     ),
+            #     dim=-1,
+            # )
             # transform the  latent
             hidden_out = self.hidden_hidden(latent_out)
             # perform a linear readout to get the output
@@ -711,7 +758,7 @@ class NetworkRNN(Model):
         self.rnn = CTRNN(
             input_size=self.hidden_size,
             hidden_size=self.hidden_size,  # combine input and mask
-            dt=0.25,
+            dt=25,
         )
 
     def init_hidden(self, input_shape):
@@ -736,7 +783,7 @@ class NetworkRNN(Model):
         # initialize hidden state
         self.hidden = self.init_hidden(input.shape)
         # recast the mask to the input type and shape
-        mask = torch.broadcast_to(mask.to(input.dtype), input.shape)
+        mask = mask.view(1, 1, -1).to(input.dtype)
         # control flow for tau
         if tau < 1:  # return the input sequence
             output = self.identity(input)
@@ -854,7 +901,7 @@ class NeuralCFC(Model):
         # initialize hidden state
         self.hidden = self.init_hidden(input.shape)
         # recast the mask to the input type and shape
-        mask = torch.broadcast_to(mask.to(input.dtype), input.shape)
+        mask = mask.view(1, 1, -1).to(input.dtype)
         # control flow for tau
         if tau < 1:  # return the input sequence
             output = self.identity(input)
@@ -975,7 +1022,7 @@ class NetworkLSTM(Model):
         # initialize hidden state
         self.hidden = self.init_hidden(input.shape)
         # recast the mask to the input type and shape
-        mask = torch.broadcast_to(mask.to(input.dtype), input.shape)
+        mask = mask.view(1, 1, -1).to(input.dtype)
         # control flow for tau
         if tau < 1:  # return the input sequence
             output = self.identity(input)
