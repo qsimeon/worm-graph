@@ -64,7 +64,7 @@ def make_predictions(
     if dataset is None:
         dataset = get_dataset(config.predict)
 
-    # Get the desired future time steps to predict
+    # Get the desired number of future timesteps to predict
     future_timesteps = config.predict.tau_out
 
     # Get the desired context window length

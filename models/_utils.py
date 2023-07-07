@@ -470,7 +470,8 @@ class LinearNN(Model):
         self.input_hidden = torch.nn.Sequential(
             torch.nn.Linear(self.input_size, self.hidden_size),
             torch.nn.ReLU(),
-            # torch.nn.LayerNorm(self.hidden_size),
+            # NOTE: YES use LayerNorm here!
+            torch.nn.LayerNorm(self.hidden_size),
         )
 
         # Linear layer: Hidden to hidden transformation
@@ -480,7 +481,7 @@ class LinearNN(Model):
                 self.hidden_size,
             ),  # combine input and mask
             torch.nn.ReLU(),
-            # torch.nn.LayerNorm(self.hidden_size),
+            # NOTE: Do NOT use LayerNorm here!
             *(
                 (self.num_layers - 1)
                 * (
@@ -489,7 +490,7 @@ class LinearNN(Model):
                         self.hidden_size,
                     ),
                     torch.nn.ReLU(),
-                    # torch.nn.LayerNorm(self.hidden_size),
+                    # NOTE: Do NOT use LayerNorm here!
                 )
             ),
         )
