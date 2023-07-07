@@ -47,7 +47,7 @@ def plot_figures(
     # plot model weights
     plot_before_after_weights(log_dir)
 
-    # TODO add more plotting functions for different figures
+    # TODO add more plotting functions for different types of figures
 
     return None
 

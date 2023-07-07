@@ -1,4 +1,5 @@
 visualize:
+  # TODO: make possibly to fo through log_dir recursively
   log_dir: logs/playground
   worm: worm0
   neuron: all

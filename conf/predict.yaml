@@ -1,8 +1,8 @@
 predict:
-  tau_out: 500 # number of future time steps to predict
+  tau_out: 1000 # number of future time steps to predict
   # constraint: tau_out: int > 0
   context_len: 500 # length of the context window to use for prediction
   model: # a pretrained model to make predictions with
     checkpoint_path: models/example_saved_model.pt # path to a trained model checkpoint to load
   dataset:
-    name: Kaplan2020 # dataset to make predictions on
+    name: Synthetic0000 # dataset to make predictions on

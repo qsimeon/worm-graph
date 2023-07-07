@@ -5,7 +5,7 @@ def model_predict(
     model: torch.nn.Module,
     data: torch.Tensor,
     timesteps: int = 1,
-    context_window: int = 100,
+    context_window: int = MAX_TOKEN_LEN,
     mask: Union[torch.Tensor, None] = None,
 ) -> tuple[torch.Tensor, torch.Tensor]:
     """Make predictions for all neurons on a dataset with a trained model.
@@ -43,7 +43,12 @@ def model_predict(
 
     # get predictions from model
     model.eval()
-    predictions = model.generate(inputs, timesteps, context_window, mask).squeeze(0)
+    predictions = model.generate(
+        inputs,
+        timesteps,
+        context_window,
+        mask,
+    ).squeeze(0)
 
     # Returned sequences are all the same shape as the input `calcium_data`
     return predictions, targets
