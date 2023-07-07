@@ -208,7 +208,8 @@ class CTRNN(torch.nn.Module):
 # # # Models (super class and sub classes) # # #
 # # # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
 class Model(torch.nn.Module):
-    """Super class for all models.
+    """
+    Super class for all models.
 
     For all our models:
         1. The output will be the same shape as the input.
@@ -227,7 +228,8 @@ class Model(torch.nn.Module):
             Need to read the literature on generative models, score-/energy-based
             models, and diffusion models to understand out how to implement this.
         7. Getter methods for the input size, hidden size, and number of layers called
-            `get_input_size`, `get_hidden_size`, and `get_num_layers`, respectively."""
+            `get_input_size`, `get_hidden_size`, and `get_num_layers`, respectively.
+    """
 
     def __init__(
         self,
@@ -468,7 +470,7 @@ class LinearNN(Model):
         self.input_hidden = torch.nn.Sequential(
             torch.nn.Linear(self.input_size, self.hidden_size),
             torch.nn.ReLU(),
-            torch.nn.LayerNorm(self.hidden_size),
+            # torch.nn.LayerNorm(self.hidden_size),
         )
 
         # Linear layer: Hidden to hidden transformation
@@ -478,7 +480,7 @@ class LinearNN(Model):
                 self.hidden_size,
             ),  # combine input and mask
             torch.nn.ReLU(),
-            torch.nn.LayerNorm(self.hidden_size),
+            # torch.nn.LayerNorm(self.hidden_size),
             *(
                 (self.num_layers - 1)
                 * (
@@ -487,7 +489,7 @@ class LinearNN(Model):
                         self.hidden_size,
                     ),
                     torch.nn.ReLU(),
-                    torch.nn.LayerNorm(self.hidden_size),
+                    # torch.nn.LayerNorm(self.hidden_size),
                 )
             ),
         )
@@ -611,7 +613,7 @@ class NeuralTransformer(Model):
         self.input_hidden = torch.nn.Sequential(
             torch.nn.Linear(self.input_size, self.hidden_size),
             torch.nn.ReLU(),
-            torch.nn.LayerNorm(self.hidden_size),
+            # NOTE: Do NOT use LayerNorm here!
         )
 
         # Hidden to hidden transformation
@@ -619,7 +621,7 @@ class NeuralTransformer(Model):
             self.embedding,  # (B, T, C')
             self.position_encoding,  # (B, T, C')
             self.blocks,  # (B, T, C')
-            torch.nn.LayerNorm(self.hidden_size),  # (B, T, C')
+            # NOTE: Do NOT use LayerNorm here!
         )
 
     # @autocast()
@@ -705,7 +707,7 @@ class NetworkRNN(Model):
         self.input_hidden = torch.nn.Sequential(
             torch.nn.Linear(self.input_size, self.hidden_size),
             torch.nn.ReLU(),
-            torch.nn.LayerNorm(self.hidden_size),
+            # NOTE: Do NOT use LayerNorm here!
         )
 
         # Hidden to hidden transformation: Continuous time RNN (CTRNN) layer
@@ -793,6 +795,7 @@ class NeuralCFC(Model):
         NOTE: The num_layers parameter is not being used in this model.
         TODO: Implement a way to use the `num_layers` parameter in this model.
         """
+
         super(NeuralCFC, self).__init__(
             input_size,
             hidden_size,
@@ -801,11 +804,12 @@ class NeuralCFC(Model):
             fft_reg_param,
             l1_reg_param,
         )
+
         # Input to hidden transformation
         self.input_hidden = torch.nn.Sequential(
             torch.nn.Linear(self.input_size, self.hidden_size),
             torch.nn.ReLU(),
-            torch.nn.LayerNorm(self.hidden_size),
+            # NOTE: Do NOT use LayerNorm here!
         )
 
         # Hidden to hidden transformation: Closed-form continuous-time (CfC) layer
@@ -832,7 +836,7 @@ class NeuralCFC(Model):
         Inititializes the hidden state of the RNN.
         """
         device = next(self.parameters()).device
-        batch_size = input_shape[0]  # beacuse batch_first=True
+        batch_size = input_shape[0]  # because batch_first=True
         hidden = torch.zeros(batch_size, self.hidden_size).to(device)
         return hidden
 
@@ -921,6 +925,7 @@ class NetworkLSTM(Model):
         self.input_hidden = torch.nn.Sequential(
             torch.nn.Linear(self.input_size, self.hidden_size),
             torch.nn.ReLU(),
+            # NOTE: Do NOT use LayerNorm here!
         )
 
         # Hidden to hidden transformation: Long-short term memory (LSTM) layer
