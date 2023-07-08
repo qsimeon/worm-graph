@@ -35,7 +35,7 @@ def get_dataset(config: DictConfig):
         'unknown_neurons_mask', 'worm'.
     """
 
-    # TODO: Add option to data config to leave out certain worms from dataset
+    # TODO: Add option to the `conf/data.yaml` config to leave out certain worms from dataset
     # Modified to combine datasets when given list
     if isinstance(config.dataset.name, str):
         dataset_names = [config.dataset.name]
