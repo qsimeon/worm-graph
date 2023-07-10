@@ -182,8 +182,8 @@ class CTRNN(torch.nn.Module):
     def forward(self, input, hidden=None):
         """
         Propagate input through the network.
-        Because batch_first=True, input has shape (batch, seq_len, input_size).
-
+        NOTE: Because we use batch_first=True,
+        input has shape (batch, seq_len, input_size).
         """
 
         # If hidden activity is not provided, initialize it
@@ -235,6 +235,10 @@ class InnerHiddenModel(torch.nn.Module):
         else:
             x, self.hidden = self.hidden_hidden(x, self.hidden)
         return x
+
+    def set_hidden(self, hidden_state):
+        self.hidden = hidden_state
+        return None
 
 
 # # # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
@@ -333,6 +337,9 @@ class Model(torch.nn.Module):
         # torch.nn.init.kaiming_uniform_(self.linear.weight, nonlinearity='relu') # He Initialization
         return None
 
+    def init_hidden(self, input_shape):
+        raise NotImplementedError()
+
     # Getter functions for returning all attributes needed to reinstantiate a similar model
     def get_input_size(self):
         return self.input_size
@@ -385,11 +392,12 @@ class Model(torch.nn.Module):
             """
             # apply exponential recency decay factor to original loss
             half_life = prediction.size(1) / 2  # half-life = seq_len / 2
+            # # TODO: play around with time constant (a.k.a half-life, decay rate) parameter
+            # half_life = 1e-10 # ~ infinitisemal time constant
+            # half_life = 1e10 # ~ infinite time constant
             kernel = (
                 torch.flip(
-                    torch.exp(
-                        -torch.arange(prediction.size(1)) / half_life
-                    ),  # TODO: play around with time constant (a.k.a half-life, decay rate) parameter
+                    torch.exp(-torch.arange(prediction.size(1)) / half_life),
                     dims=[-1],
                 )
                 .view(1, -1, 1)
@@ -397,13 +405,13 @@ class Model(torch.nn.Module):
             )
             # calculate next time step prediction loss
             original_loss = self.loss(**kwargs)(
-                # prediction[:, -self.tau :, :],
-                # target[:, -self.tau :, :],  # only consider latest time steps
-                prediction,
-                target,  # consider all time steps
-                # # NOTE: these two options are extreme ends of spectrum from using an exponential recency decay
                 # kernel * prediction,
                 # kernel * target,  # weigh more recent time steps more heavily
+                # # NOTE: the next two options are extreme ends of spectrum from using an exponential recency decay
+                # prediction[:, -self.tau :, :], # only consider latest time steps
+                # target[:, -self.tau :, :], # equivalent to infinitisemal time constant
+                prediction,  # consider all time steps
+                target,  # equivalent to infinite time constant
             )
             # FFT regularization term
             fft_loss = 0.0
@@ -543,6 +551,10 @@ class LinearNN(Model):
             self.blocks,
             torch.nn.ReLU(),
         )
+        # # # DEBUGGING # # #
+        # Instantiate internal hidden model
+        self.inner_hidden_model = InnerHiddenModel(self.hidden_hidden, self.hidden)
+        # # # DEBUGGING # # #
 
     def init_hidden(self, input_shape=None):
         return None
@@ -566,6 +578,10 @@ class LinearNN(Model):
         self.tau = tau
         # initialize hidden state
         self.hidden = self.init_hidden(input.shape)
+        # # # DEBUGGING # # #
+        # set hidden state of internal model
+        self.inner_hidden_model.set_hidden(self.hidden)
+        # # # DEBUGGING # # #
         # recast the mask to the input type and shape
         mask = mask.view(1, 1, -1).to(input.dtype)
         # initialize output tensor with input tensor
@@ -578,8 +594,11 @@ class LinearNN(Model):
             input_hidden_out = self.input_hidden(input)
             # concatenate into a single latent
             latent_out = input_hidden_out
-            # transform the  latent
-            hidden_out = self.hidden_hidden(latent_out)
+            # transform the latent
+            # # # DEBUGGING # # #
+            hidden_out = self.inner_hidden_model(latent_out)
+            # # # DEBUGGING # # #
+            # hidden_out = self.hidden_hidden(latent_out)
             # perform a linear readout to get the output
             readout = self.linear(hidden_out)
             output = readout
@@ -635,7 +654,7 @@ class NeuralTransformer(Model):
 
         # Embedding
         self.embedding = torch.nn.Linear(
-            self.hidden_size,
+            self.input_size,
             self.hidden_size,
         )  # combine input and mask
 
@@ -667,6 +686,10 @@ class NeuralTransformer(Model):
             torch.nn.ReLU(),
             # NOTE: Do NOT use LayerNorm here!
         )
+        # # # DEBUGGING # # #
+        # Instantiate internal hidden model
+        self.inner_hidden_model = InnerHiddenModel(self.hidden_hidden, self.hidden)
+        # # # DEBUGGING # # #
 
     def init_hidden(self, input_shape=None):
         return None
@@ -690,6 +713,10 @@ class NeuralTransformer(Model):
         self.tau = tau
         # initialize hidden state
         self.hidden = self.init_hidden(input.shape)
+        # # # DEBUGGING # # #
+        # set hidden state of internal model
+        self.inner_hidden_model.set_hidden(self.hidden)
+        # # # DEBUGGING # # #
         # recast the mask to the input type and shape
         mask = mask.view(1, 1, -1).to(input.dtype)
         # initialize output tensor with input tensor
@@ -702,8 +729,11 @@ class NeuralTransformer(Model):
             input_hidden_out = self.input_hidden(input)
             # concatenate into a single latent
             latent_out = input_hidden_out
-            # transform the  latent
-            hidden_out = self.hidden_hidden(latent_out)
+            # transform the latent
+            # # # DEBUGGING # # #
+            hidden_out = self.inner_hidden_model(latent_out)
+            # # # DEBUGGING # # #
+            # hidden_out = self.hidden_hidden(latent_out)
             # perform a linear readout to get the output
             readout = self.linear(hidden_out)
             output = readout
@@ -752,6 +782,10 @@ class NetworkRNN(Model):
             hidden_size=self.hidden_size,  # combine input and mask
             dt=25,
         )
+        # # # DEBUGGING # # #
+        # Instantiate internal hidden model
+        self.inner_hidden_model = InnerHiddenModel(self.hidden_hidden, self.hidden)
+        # # # DEBUGGING # # #
 
     def init_hidden(self, input_shape):
         device = next(self.parameters()).device
@@ -778,6 +812,10 @@ class NetworkRNN(Model):
         self.tau = tau
         # initialize hidden state
         self.hidden = self.init_hidden(input.shape)
+        # # # DEBUGGING # # #
+        # set hidden state of internal model
+        self.inner_hidden_model.set_hidden(self.hidden)
+        # # # DEBUGGING # # #
         # recast the mask to the input type and shape
         mask = mask.view(1, 1, -1).to(input.dtype)
         # initialize output tensor with input tensor
@@ -791,7 +829,10 @@ class NetworkRNN(Model):
             # concatenate into a single latent
             latent_out = input_hidden_out
             # transform the latent
-            hidden_out, self.hidden = self.hidden_hidden(latent_out, self.hidden)
+            # # # DEBUGGING # # #
+            hidden_out = self.inner_hidden_model(latent_out)
+            # # # DEBUGGING # # #
+            # hidden_out, self.hidden = self.hidden_hidden(latent_out, self.hidden)
             # perform a linear readout to get the output
             readout = self.linear(hidden_out)
             output = readout
@@ -841,6 +882,10 @@ class NeuralCFC(Model):
             units=self.hidden_size,
             activation="relu",
         )
+        # # # DEBUGGING # # #
+        # Instantiate internal hidden model
+        self.inner_hidden_model = InnerHiddenModel(self.hidden_hidden, self.hidden)
+        # # # DEBUGGING # # #
 
         # Initialize RNN weights
         self.init_weights()
@@ -885,6 +930,10 @@ class NeuralCFC(Model):
         self.tau = tau
         # initialize hidden state
         self.hidden = self.init_hidden(input.shape)
+        # # # DEBUGGING # # #
+        # set hidden state of internal model
+        self.inner_hidden_model.set_hidden(self.hidden)
+        # # # DEBUGGING # # #
         # recast the mask to the input type and shape
         mask = mask.view(1, 1, -1).to(input.dtype)
         # initialize output tensor with input tensor
@@ -898,7 +947,10 @@ class NeuralCFC(Model):
             # concatenate into a single latent
             latent_out = input_hidden_out
             # transform the latent
-            hidden_out, self.hidden = self.hidden_hidden(latent_out, self.hidden)
+            # # # DEBUGGING # # #
+            hidden_out = self.inner_hidden_model(latent_out)
+            # # # DEBUGGING # # #
+            # hidden_out, self.hidden = self.hidden_hidden(latent_out, self.hidden)
             # perform a linear readout to get the output
             readout = self.linear(hidden_out)
             output = readout
@@ -939,6 +991,8 @@ class NetworkLSTM(Model):
             torch.nn.Linear(self.input_size, self.hidden_size),
             torch.nn.ReLU(),
             # NOTE: Do NOT use LayerNorm here!
+            # NOTE: YES use LayerNorm here!
+            torch.nn.LayerNorm(self.hidden_size),
         )
 
         # Hidden to hidden transformation: Long-short term memory (LSTM) layer
@@ -949,6 +1003,10 @@ class NetworkLSTM(Model):
             bias=True,
             batch_first=True,
         )
+        # # # DEBUGGING # # #
+        # Instantiate internal hidden model
+        self.inner_hidden_model = InnerHiddenModel(self.hidden_hidden, self.hidden)
+        # # # DEBUGGING # # #
 
         # Initialize LSTM weights
         self.init_weights()
@@ -997,6 +1055,10 @@ class NetworkLSTM(Model):
         self.tau = tau
         # initialize hidden state
         self.hidden = self.init_hidden(input.shape)
+        # # # DEBUGGING # # #
+        # set hidden state of internal model
+        self.inner_hidden_model.set_hidden(self.hidden)
+        # # # DEBUGGING # # #
         # recast the mask to the input type and shape
         mask = mask.view(1, 1, -1).to(input.dtype)
         # initialize output tensor with input tensor
@@ -1010,7 +1072,10 @@ class NetworkLSTM(Model):
             # concatenate into a single latent
             latent_out = input_hidden_out
             # transform the latent
-            hidden_out, self.hidden = self.hidden_hidden(latent_out, self.hidden)
+            # # # DEBUGGING # # #
+            hidden_out = self.inner_hidden_model(latent_out)
+            # # # DEBUGGING # # #
+            # hidden_out, self.hidden = self.hidden_hidden(latent_out, self.hidden)
             # perform a linear readout to get the output
             readout = self.linear(hidden_out)
             output = readout
