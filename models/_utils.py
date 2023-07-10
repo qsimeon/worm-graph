@@ -732,6 +732,7 @@ class NetworkRNN(Model):
         self.input_hidden = torch.nn.Sequential(
             torch.nn.Linear(self.input_size, self.hidden_size),
             torch.nn.ReLU(),
+            # NOTE: Do NOT use LayerNorm here!
             # NOTE: YES use LayerNorm here!
             torch.nn.LayerNorm(self.hidden_size),
         )
