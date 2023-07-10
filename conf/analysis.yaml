@@ -1,5 +1,5 @@
 analysis:
-  dir: logs/hydra/2023_07_10_15_08_28 #logs/playground
+  dataset_name: "Synthetic0000" #["Flavell2023", "Kato2015"]
   hierarchical_clustering:
     group_by: four # None, three, four
     method: 'ward' # ward, average, complete, single

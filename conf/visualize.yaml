@@ -1,5 +1,4 @@
 visualize:
-  # TODO: make it possible to go through `log_dir` recursively
   log_dir: logs/hydra/2023_07_10_15_08_28
   worm: worm0
   neuron: all

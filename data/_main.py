@@ -36,7 +36,7 @@ def get_dataset(config: DictConfig):
     """
 
     # TODO: Add option to the `conf/data.yaml` config to leave out certain worms from dataset
-    # Modified to combine datasets when given list
+    # Combine datasets when given a list of dataset names
     if isinstance(config.dataset.name, str):
         dataset_names = [config.dataset.name]
     else:

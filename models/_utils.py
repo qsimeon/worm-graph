@@ -454,13 +454,13 @@ class Model(torch.nn.Module):
             )
             # calculate next time step prediction loss
             original_loss = self.loss(**kwargs)(
-                kernel * prediction,
-                kernel * target,  # weigh more recent time steps more heavily
+                # kernel * prediction,
+                # kernel * target,  # weigh more recent time steps more heavily
                 # # NOTE: the next two options are extreme ends of spectrum from using an exponential recency decay
                 # prediction[:, -self.tau :, :], # only consider latest time steps
                 # target[:, -self.tau :, :], # equivalent to infinitisemal time constant
-                # prediction,  # consider all time steps
-                # target,  # equivalent to infinite time constant
+                prediction,  # consider all time steps
+                target,  # equivalent to infinite time constant
             )
             # FFT regularization term
             fft_loss = 0.0
