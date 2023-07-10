@@ -1,5 +1,5 @@
 analysis:
-  dir: logs/hydra/2023_07_10_12_03_29 #logs/playground
+  dir: logs/hydra/2023_07_10_15_08_28 #logs/playground
   hierarchical_clustering:
     group_by: four # None, three, four
     method: 'ward' # ward, average, complete, single
