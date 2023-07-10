@@ -1,4 +1,4 @@
 visualize:
-  log_dir: logs/hydra/2023_07_10_15_08_28
-  worm: worm0
+  log_dir: logs/playground
+  worm: worm1
   neuron: all

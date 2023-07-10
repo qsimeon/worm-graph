@@ -363,7 +363,7 @@ class Model(torch.nn.Module):
     def get_l1_reg_param(self):
         return self.l1_reg_param
 
-    # @autocast()
+    @autocast()
     def forward(self, input: torch.Tensor, mask: torch.Tensor, tau: int = 1):
         """
         Forward method for simple linear regression model.
@@ -732,7 +732,8 @@ class NetworkRNN(Model):
         self.input_hidden = torch.nn.Sequential(
             torch.nn.Linear(self.input_size, self.hidden_size),
             torch.nn.ReLU(),
-            # NOTE: Do NOT use LayerNorm here!
+            # NOTE: YES use LayerNorm here!
+            torch.nn.LayerNorm(self.hidden_size),
         )
 
         # Hidden to hidden transformation: Continuous time RNN (CTRNN) layer
@@ -820,11 +821,10 @@ class NeuralCFC(Model):
         """
         for name, param in self.hidden_hidden.named_parameters():
             if "weight" in name:  # weights
-                torch.nn.init.xavier_uniform_(param.data, gain=1.0)
-                # torch.nn.init.zeros_(param.data)
+                torch.nn.init.xavier_uniform_(param.data, gain=1.5)
             elif "bias" in name:  # biases
-                param.data.fill_(0)
-                # torch.nn.init.zeros_(param.data)
+                # param.data.fill_(0)
+                torch.nn.init.zeros_(param.data)
 
 
 class NetworkLSTM(Model):
@@ -896,14 +896,12 @@ class NetworkLSTM(Model):
         """
         for name, param in self.hidden_hidden.named_parameters():
             if "weight_ih" in name:  # Input-hidden weights
-                torch.nn.init.xavier_uniform_(param.data, gain=1.0)
-                # torch.nn.init.zeros_(param.data)
+                torch.nn.init.xavier_uniform_(param.data, gain=1.5)
             elif "weight_hh" in name:  # Hidden-hidden weights
                 torch.nn.init.orthogonal_(param.data)
-                # torch.nn.init.zeros_(param.data)
             elif "bias" in name:  # Bias weights
-                param.data.fill_(0)
-                # torch.nn.init.zeros_(param.data)
+                # param.data.fill_(0)
+                torch.nn.init.zeros_(param.data)
 
 
 # # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#

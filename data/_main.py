@@ -35,18 +35,23 @@ def get_dataset(config: DictConfig):
         'unknown_neurons_mask', 'worm'.
     """
 
-    # TODO: Add option to the `conf/data.yaml` config to leave out certain worms from dataset
+    # TODO: Add option to the `conf/dataset.yaml` config to leave out certain worms from dataset
     # Combine datasets when given a list of dataset names
     if isinstance(config.dataset.name, str):
         dataset_names = [config.dataset.name]
     else:
         dataset_names = sorted(list(config.dataset.name))
 
+    # Worms to leave out
+    leave_out_worms = list(config.dataset.leave_out_worms)
+
     # Load the dataset(s)
     combined_dataset = dict()
     for dataset_name in dataset_names:
         multi_worms_dataset = load_dataset(dataset_name)
         for worm in multi_worms_dataset:
+            if worm in leave_out_worms and worm != "worm0":
+                continue
             if worm in combined_dataset:
                 worm_ = "worm%s" % len(combined_dataset)
                 combined_dataset[worm_] = multi_worms_dataset[worm]
