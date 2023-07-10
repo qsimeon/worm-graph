@@ -54,7 +54,7 @@ VALID_DATASETS = {
     "Flavell2023",  # TODO: something wrong with worm0.
 }
 
-SYNTHETIC_DATASETS = {"Synthetic0000"}
+SYNTHETIC_DATASETS = {"Synthetic0000", "synthetic_no_noise"}
 
 # List of all 302 hermaphrodite neurons
 NEURONS_302 = sorted(
