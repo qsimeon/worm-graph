@@ -1,3 +1,4 @@
+dtaidistance
 omegaconf
 pysindy
 pytest
