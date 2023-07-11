@@ -20,7 +20,7 @@ To use the submodule, follow these steps:
 
 Note: Ensure that the required checkpoints or model files are available in the specified locations if loading a saved model.
 
-## Model Classes
+## Model Classes & Structure
 
 The `_utils.py` script includes several model classes, which are subclasses of the `Model` superclass. Each model class represents a different type of neural network model and provides specific implementation details.
 
@@ -33,8 +33,18 @@ The available model classes are:
 
 You can select the desired model type in the configuration file `conf/model.yaml` by specifying the `type` parameter.
 
+The structure of the model is based on three primary components:
+
+1. The _input_ to _hidden_ block
+2. The _hidden_ to _hidden_ block
+3. The _hidden_ to _output_ block
+
+The first and last blocks act as linear maps, transmitting the inputs to a latent representation (the hidden part) and transforming the latent representation to outputs, respectively. These blocks remain consistent across different network architectures, effectively serving to rescale the dimensions of the inputs/outputs. The computation within the hidden states, however, can vary. For instance, in a Linear Model, the _hidden_ to _hidden_ block comprises a straightforward Feed Forward Network, while in an RNN model, it includes an RNN submodule.
+
+This design approach was chosen to facilitate customization for the end user. Users only need to implement the _hidden_ to _hidden_ block in `_utils.py` when creating a new model, thereby streamlining the process.
+
 ## Customization
 
-The submodule is designed to be easily customizable. You can modify the `get_model` function in `_main.py` to customize the model pipeline or add additional functionality. The `_utils.py` file contains utility functions and classes that can be modified according to your requirements.
+The submodule is designed to be easily customizable. You can modify the `get_model` function in `_main.py` to customize the model pipeline or add additional functionality. The `_utils.py` file contains utility functions and the model classes that can be modified according to your requirements, as mentioned above.
 
 Feel free to explore the code in each file for a more detailed understanding of the implementation and customization options.
