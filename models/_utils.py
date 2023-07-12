@@ -363,7 +363,7 @@ class Model(torch.nn.Module):
     def get_l1_reg_param(self):
         return self.l1_reg_param
 
-    # @autocast()
+    @autocast()
     def forward(self, input: torch.Tensor, mask: torch.Tensor, tau: int = 1):
         """
         Forward method for simple linear regression model.
@@ -732,7 +732,8 @@ class NetworkRNN(Model):
         self.input_hidden = torch.nn.Sequential(
             torch.nn.Linear(self.input_size, self.hidden_size),
             torch.nn.ReLU(),
-            # NOTE: Do NOT use LayerNorm here!
+            # NOTE: YES use LayerNorm here!
+            torch.nn.LayerNorm(self.hidden_size),
         )
 
         # Hidden to hidden transformation: Continuous time RNN (CTRNN) layer
@@ -820,11 +821,10 @@ class NeuralCFC(Model):
         """
         for name, param in self.hidden_hidden.named_parameters():
             if "weight" in name:  # weights
-                torch.nn.init.xavier_uniform_(param.data, gain=1.0)
-                # torch.nn.init.zeros_(param.data)
+                torch.nn.init.xavier_uniform_(param.data, gain=1.5)
             elif "bias" in name:  # biases
-                param.data.fill_(0)
-                # torch.nn.init.zeros_(param.data)
+                # param.data.fill_(0)
+                torch.nn.init.zeros_(param.data)
 
 
 class NetworkLSTM(Model):
@@ -896,48 +896,48 @@ class NetworkLSTM(Model):
         """
         for name, param in self.hidden_hidden.named_parameters():
             if "weight_ih" in name:  # Input-hidden weights
-                torch.nn.init.xavier_uniform_(param.data, gain=1.0)
-                # torch.nn.init.zeros_(param.data)
+                torch.nn.init.xavier_uniform_(param.data, gain=1.5)
             elif "weight_hh" in name:  # Hidden-hidden weights
                 torch.nn.init.orthogonal_(param.data)
-                # torch.nn.init.zeros_(param.data)
             elif "bias" in name:  # Bias weights
-                param.data.fill_(0)
-                # torch.nn.init.zeros_(param.data)
+                # param.data.fill_(0)
+                torch.nn.init.zeros_(param.data)
 
 
-# # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
+class NetworkGCN(Model):
+    """
+    A graph neural network model of the _C. elegans_ nervous system.
+    """
 
-# # Graph Neural Network models
-# # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
-# class GraphNN(torch.nn.Module):
-#     """
-#     Applies a single graph convolutional layer separately to the
-#     two graphs induced by using only chemical synapses or
-#     gap junctions, respectively, as the edges.
-#     """
+    def __init__(
+        self,
+        input_dim: int,
+        hidden_dim: int,
+        output_dim: int,
+        num_layers: int,
+        loss: Union[Callable, None] = None,
+        fft_reg_param: float = 0.0,
+        l1_reg_param: float = 0.0,
+        edge_index: torch.Tensor,
+    ):
+        super(NetworkGCN, self).__init__(
+            input_dim,
+            hidden_dim,
+            num_layers,
+            loss,
+            fft_reg_param,
+            l1_reg_param,
+        )
 
-#     def __init__(self, input_dim, hidden_dim, output_dim):
-#         super(GraphNN, self).__init__()
-#         # a separte learnable conv. layer for each type of synapse
-#         self.elec_conv = GCNConv(
-#             in_channels=input_dim, out_channels=hidden_dim, improved=True
-#         )
-#         self.chem_conv = GCNConv(
-#             in_channels=input_dim, out_channels=hidden_dim, improved=True
-#         )
-#         # readout layer transforms node features to output
-#         self.linear = torch.nn.Linear(
-#             in_features=2 * hidden_dim, out_features=output_dim
-#         )
+        self.layers = torch.nn.ModuleList()
+        self.layers.append(GCNConv(input_dim, hidden_dim))
+        for _ in range(num_layers - 2):
+            self.layers.append(GCNConv(hidden_dim, hidden_dim))
+        self.layers.append(GCNConv(hidden_dim, output_dim))
 
-#     def forward(self, x, edge_index, edge_attr):
-#         elec_weight = edge_attr[:, 0]
-#         chem_weight = edge_attr[:, 1]
-#         elec_hid = self.elec_conv(x, edge_index, elec_weight)
-#         chem_hid = self.chem_conv(x, edge_index, chem_weight)
-#         hidden = torch.cat([elec_hid, chem_hid], dim=-1)
-#         output = self.linear(hidden)
-#         return output
+        self.edge_index = edge_index
 
-# # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
+    def forward(self, x):
+        for i, layer in enumerate(self.layers):
+            x = torch.relu(layer(x, self.edge_index))
+        return x
