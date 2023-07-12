@@ -8,7 +8,7 @@ from utils import NEURONS_302
 import matplotlib.animation as animation
 from IPython.display import HTML
 
-def plot_signals(data, time_tensor, neuron_idx=None, yax_limit=True):
+def plot_signals(data, time_tensor, neuron_idx=None, yax_limit=True, suptitle=None):
     assert isinstance(data, torch.Tensor), "data must be a PyTorch tensor"
     assert isinstance(time_tensor, torch.Tensor), "time_tensor must be a PyTorch tensor"
     assert data.dim() == 2, "data must be a 2D tensor"
@@ -54,6 +54,12 @@ def plot_signals(data, time_tensor, neuron_idx=None, yax_limit=True):
             ax.set_xticks([])
         else:
             ax.set_xlabel("Time")
+
+    # Add a super title to the figure if provided
+    if suptitle is not None:
+        fig.suptitle(suptitle, fontsize=16)
+
+    plt.tight_layout(pad=1)
     
     plt.show()
 
