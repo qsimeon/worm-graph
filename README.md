@@ -82,7 +82,7 @@ After finishing one of the installations above, navigate back to the root direct
 ## Getting Started
 
 To make sure nothing breaks, the first thing you need to do is download and preprocess our curated collection of _C. elegans_ neural activity datasets. 
-From the root (`worm-graph`) directory, run the command"
+From the root (`worm-graph`) directory, run the command:
 
 `python preprocess/_main.py`
 
