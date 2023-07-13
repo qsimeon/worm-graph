@@ -1,3 +1,3 @@
 dataset:
-  name: Synthetic0000 #[Kato2015, Nichols2017, Skora2018, Uzel2022, Kaplan2020, Flavell2023, Leifer2023]
-  leave_out_worms: [worm1] # list of worm names to leave out of datasets
+  name: Uzel2022 #[Kato2015, Nichols2017, Skora2018, Uzel2022, Kaplan2020, Flavell2023, Leifer2023]
+  leave_out_worms: [worm1, worm2, worm3, worm4, worm5] # list of worms to leave out of datasets

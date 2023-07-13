@@ -105,7 +105,7 @@ For Jupyter notebooks, use the `CamelCase` naming style.
 
 ## Code Style Conventions
 
-- Aim to keep every runnable script (e.g. Python files with a `if __name__ == "__main__":` section) not significantly longer than 100 lines. If your code is getting longer than this, consider modularizing by encapsulating certain processes in helper functions and moving them to a separate file like `_utils.py`.
+- Aim to keep every runnable script (e.g. Python files with a `if __name__ == "__main__":` section) not significantly longer than 300 lines. If your code is getting longer than this, consider modularizing by encapsulating certain processes in helper functions and moving them to a separate file like `_utils.py`.
 
 - Follow the organization structure of this project, where each self-contained (sub-)module has its own folder containing the files: `_main.py`, `_utils.py`, and `_pkg.py`.
   - `_main.py` holds the main code that the module executes, typically as a single function that gets called in the `if __name__ == "__main__":` part.
@@ -122,27 +122,12 @@ For Jupyter notebooks, use the `CamelCase` naming style.
 
 - Always shape neural data matrices as `(time, neurons, [features])`. The braces `[]` indicate that the last `features` dimension is optional, as the `neurons` currently serve as the features for our models.
 
-## Future Tasks
+## Future Tasks / TODOs:
 
-- Urgent TODOs: 
-   - scaling law plots.
-   - search-based logging.
-- Think about canonical plots to always make:
-   - hold all else constant except for a single parameter / config item.
-   - color lines by values of the varied parameter / config item.
-- Various tasks to implement:
-   - predict the identity of a neuron given neural activity (node prediction).
-   - predict whether or not a pair of neurons are connected (edge prediction). 
-   - predict the instantaneous behavior of a worm given its current and recent neural activity.
-- Goals for the future:
-   - get networks to perform better than the baseline.
-   - better documentation:
-      - add a description of project-specific terminology to this README
-      - add unit tests for each submodule.
-      - add docstrings to all functions using Google Python Style Guide.
-   - implement graph neural network (GNN models):
-      - with connectome constraint.
-      - without connectome constraint.
-      - is additional biological data needed?
-   - perform scaling experiments:
-      - varying the (train) dataset size.
+- Perform scaling experiments:
+      - Varying the training dataset size.
+      - Create scaling law plots.
+- Add unit tests for each submodule.
+- Get networks to perform better than the baseline.
+- Add docstrings to all functions and classes in all submodules.
+   - Format using the Google Python Style Guide.

@@ -18,7 +18,7 @@ python -m pip install --upgrade pip
 echo "Installing PyTorch with CUDA."
 echo ""
 ### uncomment line below for GPU: 
-conda install --name $ENV_NAME -y pytorch torchvision torchaudio pytorch-cuda=11.8 -c pytorch -c nvidia
+conda install --name $ENV_NAME -y pytorch torchvision torchaudio pytorch-cuda=11.7 -c pytorch -c nvidia
 ### uncomment line below if no GPU:
 # conda install --name $ENV_NAME -y pytorch torchvision torchaudio cpuonly -c pytorch
 

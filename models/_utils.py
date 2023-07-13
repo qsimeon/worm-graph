@@ -336,8 +336,8 @@ class Model(torch.nn.Module):
         # Initialize the readout bias
         torch.nn.init.zeros_(self.linear.bias)
         # Initialize the readout weights
-        torch.nn.init.zeros_(self.linear.weight)
-        # torch.nn.init.xavier_uniform_(self.linear.weight) # Xavier Initialization
+        # torch.nn.init.zeros_(self.linear.weight)
+        torch.nn.init.xavier_uniform_(self.linear.weight)  # Xavier Initialization
         # torch.nn.init.kaiming_uniform_(self.linear.weight, nonlinearity='relu') # He Initialization
         return None
 
@@ -742,10 +742,8 @@ class NetworkRNN(Model):
             hidden_size=self.hidden_size,  # combine input and mask
             dt=25,
         )
-        # # # DEBUGGING # # #
         # Instantiate internal hidden model
         self.inner_hidden_model = InnerHiddenModel(self.hidden_hidden, self.hidden)
-        # # # DEBUGGING # # #
 
     def init_hidden(self, input_shape):
         device = next(self.parameters()).device
@@ -872,10 +870,9 @@ class NetworkLSTM(Model):
             bias=True,
             batch_first=True,
         )
-        # # # DEBUGGING # # #
+
         # Instantiate internal hidden model
         self.inner_hidden_model = InnerHiddenModel(self.hidden_hidden, self.hidden)
-        # # # DEBUGGING # # #
 
         # Initialize LSTM weights
         self.init_weights()
@@ -918,7 +915,6 @@ class NetworkGCN(Model):
         loss: Union[Callable, None] = None,
         fft_reg_param: float = 0.0,
         l1_reg_param: float = 0.0,
-        edge_index: torch.Tensor,
     ):
         super(NetworkGCN, self).__init__(
             input_dim,
@@ -930,12 +926,19 @@ class NetworkGCN(Model):
         )
 
         self.layers = torch.nn.ModuleList()
-        self.layers.append(GCNConv(input_dim, hidden_dim))
-        for _ in range(num_layers - 2):
-            self.layers.append(GCNConv(hidden_dim, hidden_dim))
-        self.layers.append(GCNConv(hidden_dim, output_dim))
 
+        for _ in range(num_layers - 2):
+            self.layers.extend([GCNConv(hidden_dim, hidden_dim), torch.nn.ReLU()])
+        self.layers.extend([GCNConv(hidden_dim, output_dim), torch.nn.ReLU()])
+
+        # TODO: load the edge index
         self.edge_index = edge_index
+
+        # Hidden to hidden transformation: Graph Convolutional Network (GCN)
+        self.hidden_hidden = torch.nn.Sequential(*self.layers)
+
+        # Instantiate internal hidden model
+        self.inner_hidden_model = InnerHiddenModel(self.hidden_hidden, self.edge_idex)
 
     def forward(self, x):
         for i, layer in enumerate(self.layers):
