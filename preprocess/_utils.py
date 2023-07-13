@@ -668,7 +668,7 @@ def pickle_neural_data(
             std_out = subprocess.run(bash_command, text=True)  # Run the bash command
             print(std_out, end="\n\n")
 
-        #!os.unlink(zip_path)  # Remove zip file
+        os.unlink(zip_path)  # Remove zip file
 
     # (re)-Pickle all the datasets ... OR
     if dataset is None or dataset.lower() == "all":
@@ -697,10 +697,10 @@ def pickle_neural_data(
         preprocessor.preprocess()
 
     # Delete the downloaded raw datasets
-    #!shutil.rmtree(source_path)
+    shutil.rmtree(source_path)
 
     # Create a file to indicate that the preprocessing was successful
-    #!open(os.path.join(processed_path, ".processed"), "a").close()
+    open(os.path.join(processed_path, ".processed"), "a").close()
 
     return None
 
