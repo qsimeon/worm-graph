@@ -1,4 +1,4 @@
 visualize:
-  log_dir: logs/playground
-  worm: worm1
+  log_dir: /om2/user/lrvenan/worm-graph/logs/hydra/fft_kato
+  worm: worm0
   neuron: all

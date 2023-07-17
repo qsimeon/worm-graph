@@ -158,6 +158,10 @@ def plot_loss_curves(log_dir):
     Args:
         log_dir (str): The path to the log directory.
     """
+    
+    sns.set(style='whitegrid')
+    sns.set_palette("tab10")
+
     # process the config.yaml file inside the log folder
     cfg_path = os.path.join(log_dir, "config.yaml")
     if os.path.exists(cfg_path):
@@ -168,66 +172,76 @@ def plot_loss_curves(log_dir):
                 "dataset": {"name": "unknown"},
                 "model": {"type": "unknown"},
                 "train": {"tau_in": "unknown"},
-                "globals": {"timestamp": datetime.now().strftime("%Y_%m_%d_%H_%M_%S")},
+                "globals": {"timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")},
             }
         )
-    # get strings for plot title
+
+    # Get strings for plot title
     dataset_name = config.dataset.name
+    dataset_name = dataset_name.split("_")
+    dataset_name = [ds_name[:-4] for ds_name in dataset_name]
+    dataset_name = ", ".join(dataset_name)
     model_name = config.model.type
     tau_in = config.train.tau_in
-    timestamp = config.globals.timestamp
-    # create the plot title
+    timestamp = datetime.strptime(config.globals.timestamp, "%Y_%m_%d_%H_%M_%S")
+
+    # Create the plot title
     plt_title = (
-        "Loss curves\nmodel: {}\ndataset: {}\ntraining tau: {}\ntime: {}".format(
+        "Model: {}\nDataset: {}\nTraining {}: {}\n{}".format(
             model_name,
             dataset_name,
+            r'$\tau$',
             tau_in,
-            timestamp,
+            timestamp.strftime("%Y-%m-%d %H:%M:%S"),
         )
     )
+
     # return if no loss curves file found
     loss_curves_csv = os.path.join(log_dir, "loss_curves.csv")
     if not os.path.exists(loss_curves_csv):
         print("No loss curves found in log directory.")
         return None
+    
     # load the loss dataframe
     loss_df = pd.read_csv(loss_curves_csv, index_col=0)
+
     # plot loss vs epochs
     plt.figure(figsize=(10, 6))
+
     sns.lineplot(
         x="epochs",
-        y="train_losses",
+        y="base_train_losses",
         data=loss_df,
-        label="original train",
+        label="Train baseline",
         color="c",
         alpha=0.8,
         **dict(linestyle=":"),
     )
+
     sns.lineplot(
         x="epochs",
-        y="test_losses",
+        y="base_test_losses",
         data=loss_df,
-        label="original test",
+        label="Test baseline",
         color="r",
         alpha=0.8,
         **dict(linestyle=":"),
     )
-    sns.lineplot(x="epochs", y="centered_train_losses", data=loss_df, label="train")
-    sns.lineplot(x="epochs", y="centered_test_losses", data=loss_df, label="test")
-    plt.legend()
+    sns.lineplot(x="epochs", y="train_losses", data=loss_df, label="Train")
+    sns.lineplot(x="epochs", y="test_losses", data=loss_df, label="Test")
+    plt.legend(frameon=True, loc="upper right", fontsize=12)
+
+    plt.title('Loss curves', fontsize=16)
+    
     # After creating your subplots and setting their titles, adjust the plot layout
-    plt.tight_layout(
-        rect=[0, 0, 1, 0.92]
-    )  # Adjust the rectangle's top value as needed to give the suptitle more space
-    plt.subplots_adjust(top=0.85)  # Adjust the top to make space for the title
-    # Now add your suptitle, using the y parameter to control its vertical placement
-    plt.suptitle(
-        plt_title, fontsize="medium", y=0.90
-    )  # Adjust y as needed so the title doesn't overlap with the plot
+    y = min(loss_df['base_train_losses'].min(), loss_df['base_train_losses'].min(), loss_df['train_losses'].min(), loss_df['test_losses'].min())
+    plt.text(0, y, plt_title, bbox=dict(facecolor='white', edgecolor='black', boxstyle='round'), style='italic')
     plt.xlabel("Epoch (# worm cohorts)")
-    plt.ylabel("Loss - Baseline")
+    plt.ylabel("Loss")
+    plt.tight_layout(pad=0.5)
     plt.savefig(os.path.join(log_dir, "loss_curves.png"))
     plt.close()
+
     return None
 
 
