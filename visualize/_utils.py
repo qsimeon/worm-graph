@@ -158,6 +158,10 @@ def plot_loss_curves(log_dir):
     Args:
         log_dir (str): The path to the log directory.
     """
+    
+    sns.set(style='whitegrid')
+    sns.set_palette("tab10")
+
     # process the config.yaml file inside the log folder
     cfg_path = os.path.join(log_dir, "config.yaml")
     if os.path.exists(cfg_path):
@@ -168,66 +172,76 @@ def plot_loss_curves(log_dir):
                 "dataset": {"name": "unknown"},
                 "model": {"type": "unknown"},
                 "train": {"tau_in": "unknown"},
-                "globals": {"timestamp": datetime.now().strftime("%Y_%m_%d_%H_%M_%S")},
+                "globals": {"timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")},
             }
         )
-    # get strings for plot title
+
+    # Get strings for plot title
     dataset_name = config.dataset.name
+    dataset_name = dataset_name.split("_")
+    dataset_name = [ds_name[:-4] for ds_name in dataset_name]
+    dataset_name = ", ".join(dataset_name)
     model_name = config.model.type
     tau_in = config.train.tau_in
-    timestamp = config.globals.timestamp
-    # create the plot title
+    timestamp = datetime.strptime(config.globals.timestamp, "%Y_%m_%d_%H_%M_%S")
+
+    # Create the plot title
     plt_title = (
-        "Loss curves\nmodel: {}\ndataset: {}\ntraining tau: {}\ntime: {}".format(
+        "Model: {}\nDataset: {}\nTraining {}: {}\n{}".format(
             model_name,
             dataset_name,
+            r'$\tau$',
             tau_in,
-            timestamp,
+            timestamp.strftime("%Y-%m-%d %H:%M:%S"),
         )
     )
+
     # return if no loss curves file found
     loss_curves_csv = os.path.join(log_dir, "loss_curves.csv")
     if not os.path.exists(loss_curves_csv):
         print("No loss curves found in log directory.")
         return None
+    
     # load the loss dataframe
     loss_df = pd.read_csv(loss_curves_csv, index_col=0)
+
     # plot loss vs epochs
     plt.figure(figsize=(10, 6))
+
     sns.lineplot(
         x="epochs",
-        y="train_losses",
+        y="base_train_losses",
         data=loss_df,
-        label="original train",
+        label="Train baseline",
         color="c",
         alpha=0.8,
         **dict(linestyle=":"),
     )
+
     sns.lineplot(
         x="epochs",
-        y="test_losses",
+        y="base_test_losses",
         data=loss_df,
-        label="original test",
+        label="Test baseline",
         color="r",
         alpha=0.8,
         **dict(linestyle=":"),
     )
-    sns.lineplot(x="epochs", y="centered_train_losses", data=loss_df, label="train")
-    sns.lineplot(x="epochs", y="centered_test_losses", data=loss_df, label="test")
-    plt.legend()
+    sns.lineplot(x="epochs", y="train_losses", data=loss_df, label="Train")
+    sns.lineplot(x="epochs", y="test_losses", data=loss_df, label="Test")
+    plt.legend(frameon=True, loc="upper right", fontsize=12)
+
+    plt.title('Loss curves', fontsize=16)
+    
     # After creating your subplots and setting their titles, adjust the plot layout
-    plt.tight_layout(
-        rect=[0, 0, 1, 0.92]
-    )  # Adjust the rectangle's top value as needed to give the suptitle more space
-    plt.subplots_adjust(top=0.85)  # Adjust the top to make space for the title
-    # Now add your suptitle, using the y parameter to control its vertical placement
-    plt.suptitle(
-        plt_title, fontsize="medium", y=0.90
-    )  # Adjust y as needed so the title doesn't overlap with the plot
+    y = min(loss_df['base_train_losses'].min(), loss_df['base_train_losses'].min(), loss_df['train_losses'].min(), loss_df['test_losses'].min())
+    plt.text(0, y, plt_title, bbox=dict(facecolor='white', edgecolor='black', boxstyle='round'), style='italic')
     plt.xlabel("Epoch (# worm cohorts)")
-    plt.ylabel("Loss - Baseline")
+    plt.ylabel("Loss")
+    plt.tight_layout(pad=0.5)
     plt.savefig(os.path.join(log_dir, "loss_curves.png"))
     plt.close()
+
     return None
 
 
@@ -370,9 +384,10 @@ def plot_targets_predictions(
     with the predicted calcium or calcium residual time series of a single
     neuron in a given worm.
     """
-    # whether using residual or calcium signal
+    # Whether using residual or calcium signal
     signal_str = "residual" if use_residual else "calcium"
-    # process the config.yaml file inside the log folder
+
+    # Process the config.yaml file inside the log folder
     cfg_path = os.path.join(log_dir, "config.yaml")
     if os.path.exists(cfg_path):
         config = OmegaConf.structured(OmegaConf.load(cfg_path))
@@ -386,14 +401,24 @@ def plot_targets_predictions(
                 "globals": {"timestamp": datetime.now().strftime("%Y_%m_%d_%H_%M_%S")},
             }
         )
-    # get strings for plot title
+
+    # Get strings for plot title
     train_dataset_name = config.dataset.name
+    train_dataset_name = train_dataset_name.split("_")
+    train_dataset_name = [ds_name[:-4] for ds_name in train_dataset_name]
+    train_dataset_name = ", ".join(train_dataset_name)
+
     predict_dataset_name = config.predict.dataset.name
+    predict_dataset_name = predict_dataset_name.split("_")
+    predict_dataset_name = [ds_name[:-4] for ds_name in predict_dataset_name]
+    predict_dataset_name = ", ".join(predict_dataset_name)
+
     model_name = config.model.type
     tau_in = config.train.tau_in
     tau_out = config.predict.tau_out
-    timestamp = config.globals.timestamp
-    # recursive call for all worms
+    timestamp = datetime.strptime(config.globals.timestamp, "%Y_%m_%d_%H_%M_%S")
+    
+    # Recursive call for all worms
     if (worm is None) or (worm.lower() == "all"):
         all_worms = [fname for fname in os.listdir(log_dir) if fname.startswith("worm")]
         for _worm_ in all_worms:
@@ -402,95 +427,110 @@ def plot_targets_predictions(
     else:
         assert worm in set(os.listdir(log_dir)), "No data for requested worm found."
 
-    # return if no targets or predicitions files found
+    # Return if no targets or predicitions files found
     predictions_csv = os.path.join(log_dir, worm, "predicted_" + signal_str + ".csv")
     targets_csv = os.path.join(log_dir, worm, "target_" + signal_str + ".csv")
     if (not os.path.exists(predictions_csv)) or (not os.path.exists(targets_csv)):
         print("No targets or predictions found in log directory.")
         return None
-    # load predictions dataframe
+    # Load predictions dataframe
     predictions_df = pd.read_csv(predictions_csv, index_col=0)
     tau_out = predictions_df["tau"][0]
-    # load targets dataframe
+    # Load targets dataframe
     targets_df = pd.read_csv(targets_csv, index_col=0)
 
-    # plot helper
+    # Plot helper
     def func(_neuron_):
         os.makedirs(os.path.join(log_dir, worm, "figures"), exist_ok=True)
+        
+        # Create the plot title
         plt_title = (
-            "Neural activity "
-            + signal_str
-            + " (GCaMP fluorescence) \nworm: {}, neuron: {}\nmodel: {}\ntrain dataset: {}\npredict dataset: {}\ntraining tau: {}\nprediction tau: {}\ntime: {}".format(
-                worm,
-                _neuron_,
+            "Model: {}\nTrain dataset: {}\nPredict dataset: {}\nWorm index: {}\nTraining {}: {}\nPrediction {}: {}".format(
                 model_name,
                 train_dataset_name,
                 predict_dataset_name,
+                worm,
+                r'$\tau$',
                 tau_in,
+                r'$\tau$',
                 tau_out,
-                timestamp,
+                timestamp.strftime("%Y-%m-%d %H:%M:%S"),
             )
         )
+
         # Create a figure with a larger size. Adjust (8, 6) as per your need.
-        fig, ax = plt.subplots(figsize=(8, 6))
+        fig, ax = plt.subplots(figsize=(15, 5))
+        
+        # Use sns whitegrid style
+        sns.set_style("whitegrid")
+        # Use palette tab10
+        sns.set_palette("tab10")
 
         sns.lineplot(
             data=targets_df,
             x=targets_df.time_in_seconds,
             y=targets_df[_neuron_],
-            label="target",
+            label="Target",
+            color=sns.color_palette("tab10")[3], #red
+            linestyle="dashed",
             alpha=0.5,
-            linewidth=2.5,
+            linewidth=1.5,
             ax=ax,
         )
+
         sns.lineplot(
             data=predictions_df,
             x=targets_df.time_in_seconds,
             y=predictions_df[_neuron_],
-            label="predict",
-            alpha=0.9,
-            linewidth=1,
+            color=sns.color_palette("tab10")[0], #blue
+            label="Prediction",
+            alpha=1.0,
+            linewidth=1.1,
             ax=ax,
         )
+
         ylo, yhi = ax.get_ylim()
+
         ax.fill_between(
             targets_df.time_in_seconds,
             ylo,
             yhi,
             where=predictions_df["train_test_label"] == "train",
-            alpha=0.3,
-            facecolor="cyan",
-            label="train",
+            alpha=0.2,
+            facecolor=sns.color_palette("hls", 8)[0], #red
+            label="Train stage",
         )
+
         ax.fill_between(
             targets_df.time_in_seconds,
             ylo,
             yhi,
             where=predictions_df["train_test_label"] == "test",
-            alpha=0.1,
-            facecolor="magenta",
-            label="test",
+            alpha=0.2,
+            facecolor=sns.color_palette("hls", 8)[1], #yellow
+            label="Test stage",
         )
+
         ax.fill_between(
             targets_df.time_in_seconds.to_numpy()[-tau_out:],
             ylo,
             yhi,
-            alpha=0.1,
-            facecolor="red",
-            label="predict",
+            alpha=0.2,
+            facecolor=sns.color_palette("hls", 8)[2], #green
+            label="Prediction stage",
         )
-        ax.legend(loc="upper left", fontsize=6)
+
+        ax.legend(loc="upper left", fontsize='small')
+        
         # Adjust the plot layout
-        plt.tight_layout(
-            rect=[0, 0, 1, 0.92]
-        )  # Adjust the rectangle's top value as needed to give the suptitle more space
-        plt.subplots_adjust(top=0.85)  # Adjust the top to make space for the title
-        # Now add your suptitle, using the y parameter to control its vertical placement
-        plt.suptitle(
-            plt_title, fontsize="small", y=1.02
-        )  # Adjust y as needed so the title doesn't overlap with the plot
-        plt.xlabel("Time (seconds)")
+        x_position_percent = 0.01  # Adjust this value to set the desired position
+        x_position_box = ax.get_xlim()[0] + (ax.get_xlim()[1] - ax.get_xlim()[0]) * x_position_percent
+        y_position_box = min(targets_df[_neuron_].min(), predictions_df[_neuron_].min())
+        plt.text(x_position_box, y_position_box, plt_title, bbox=dict(facecolor='white', edgecolor='black', boxstyle='round'), style='italic')
+        plt.title("Neural activity: {} (GCaMP fluorescence) - {}".format(signal_str, _neuron_))
+        plt.xlabel("Time (s)")
         plt.ylabel(signal_str.capitalize() + " ($\Delta F / F$)")
+        plt.tight_layout()
         plt.savefig(
             os.path.join(log_dir, worm, "figures", signal_str + "_%s.png" % _neuron_)
         )

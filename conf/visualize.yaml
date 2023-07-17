@@ -1,4 +1,4 @@
 visualize:
-  log_dir: logs/playground
+  log_dir: /om2/user/lrvenan/worm-graph/logs/hydra/sines4_same_f
   worm: worm0
   neuron: all

@@ -901,6 +901,7 @@ class NetworkGCN(Model):
         hidden_dim: int,
         output_dim: int,
         num_layers: int,
+        edge_index: torch.Tensor,
         loss: Union[Callable, None] = None,
         fft_reg_param: float = 0.0,
         l1_reg_param: float = 0.0,
