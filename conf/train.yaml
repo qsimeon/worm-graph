@@ -7,7 +7,7 @@ train:
   # save_freq: 0 < int <= epochs
   seq_len: 500 # length of time-series sequences to train
   # constraint: seq_len: 0 < int < len(data) 
-  k_splits: 3 # number of interleaved train/test splits per single worm data
+  k_splits: 4 # number of interleaved train/test splits per single worm data
   # constraint: 2 <= int <= 5; keep fixed k_splits: int = 2
   num_samples: 50 # the number of sampled sequences per worm
   # constraint: due to memory limitations, keep fixed num_samples: 0 < int <= 32

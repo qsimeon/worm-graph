@@ -318,10 +318,8 @@ class Model(torch.nn.Module):
         self.input_hidden = torch.nn.Linear(self.input_size, self.hidden_size)
         # Hidden to hidden transformation - placeholder
         self.hidden_hidden = torch.nn.Linear(self.hidden_size, self.hidden_size)
-        # # # DEBUGGING # # #
         # Instantiate internal hidden model - placeholder
         self.inner_hidden_model = InnerHiddenModel(self.hidden_hidden, self.hidden)
-        # # # DEBUGGING # # #
         # Linear readout
         self.linear = torch.nn.Linear(self.hidden_size, self.output_size)
         # Initialize weights
@@ -399,10 +397,7 @@ class Model(torch.nn.Module):
             # concatenate into a single latent
             latent_out = input_hidden_out
             # transform the latent
-            # # # DEBUGGING # # #
             hidden_out = self.inner_hidden_model(latent_out)
-            # # # DEBUGGING # # #
-            # hidden_out, self.hidden = self.hidden_hidden(latent_out, self.hidden)
             # perform a linear readout to get the output
             readout = self.linear(hidden_out)
             output = readout
@@ -505,7 +500,6 @@ class Model(torch.nn.Module):
         mask = torch.ones(inputs.shape[-1], dtype=torch.bool) if mask is None else mask
         # use the full sequence as the context
         context_len = min(context_len, inputs.size(1))
-        # TODO: remove this print statement
         print(
             "input length:",
             inputs.size(1),
@@ -600,10 +594,8 @@ class LinearNN(Model):
             self.blocks,
             torch.nn.ReLU(),
         )
-        # # # DEBUGGING # # #
         # Instantiate internal hidden model
         self.inner_hidden_model = InnerHiddenModel(self.hidden_hidden, self.hidden)
-        # # # DEBUGGING # # #
 
     def init_hidden(self, input_shape=None):
         return None
@@ -690,10 +682,9 @@ class NeuralTransformer(Model):
             torch.nn.ReLU(),
             # NOTE: Do NOT use LayerNorm here!
         )
-        # # # DEBUGGING # # #
+
         # Instantiate internal hidden model
         self.inner_hidden_model = InnerHiddenModel(self.hidden_hidden, self.hidden)
-        # # # DEBUGGING # # #
 
     def init_hidden(self, input_shape=None):
         return None
@@ -796,10 +787,9 @@ class NeuralCFC(Model):
             units=self.hidden_size,
             activation="relu",
         )
-        # # # DEBUGGING # # #
+
         # Instantiate internal hidden model
         self.inner_hidden_model = InnerHiddenModel(self.hidden_hidden, self.hidden)
-        # # # DEBUGGING # # #
 
         # Initialize RNN weights
         self.init_weights()
@@ -821,7 +811,6 @@ class NeuralCFC(Model):
             if "weight" in name:  # weights
                 torch.nn.init.xavier_uniform_(param.data, gain=1.5)
             elif "bias" in name:  # biases
-                # param.data.fill_(0)
                 torch.nn.init.zeros_(param.data)
 
 
