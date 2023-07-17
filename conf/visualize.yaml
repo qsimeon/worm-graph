@@ -1,8 +1,4 @@
 visualize:
-<<<<<<< HEAD
-  log_dir: /om2/user/lrvenan/worm-graph/logs/hydra/fft_kato
-=======
-  log_dir: logs/playground
->>>>>>> b6298a8d344e7799b0a9039dc02b6e831fc4b3b4
+  log_dir: /om2/user/lrvenan/worm-graph/logs/hydra/sines4_same_f
   worm: worm0
-  neuron: all
+  neuron: ADAL
