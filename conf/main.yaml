@@ -64,7 +64,7 @@ hydra:
       train.learn_rate: 0.01 #0.001, 0.01, 0.1, 1.0
       train.epochs: 1000
       train.save_freq: 1000
-      train.seq_len: 200 #100, 200
+      train.seq_len: 500 #100, 200
       train.k_splits: 2 
       train.num_samples: 16 #8, 16, 32
       train.num_batches: 1 
@@ -73,5 +73,5 @@ hydra:
       train.reverse: false 
       # PREDICT
       predict.tau_out: 1000
-      predict.context_len: 200
+      predict.context_len: 500
       predict.dataset.name: Flavell2023

@@ -5,5 +5,5 @@ predict:
   model: # a pretrained model to make predictions with
     checkpoint_path: /om2/user/lrvenan/worm-graph/logs/hydra/fft_kato/checkpoints/999_epochs_11988_worms.pt # path to a trained model checkpoint to load
   dataset:
-    name: Synthetic0000 # dataset to make predictions on
-    leave_out_worms: [] # list of worm names to leave out of datasets
+    name: Uzel2022 # dataset to make predictions on
+    leave_out_worms: [worm1, worm2, worm3, worm4, worm5] # list of worm names to leave out of datasets
