@@ -5,5 +5,5 @@ predict:
   model: # a pretrained model to make predictions with
     checkpoint_path: models/example_saved_model.pt # path to a trained model checkpoint to load
   dataset:
-    name: Uzel2022 # dataset to make predictions on
-    leave_out_worms: [worm1, worm2, worm3, worm4] # list of worm names to leave out of datasets
+    name: Kato2015 # dataset to make predictions on
+    leave_out_worms: [] # list of worm names to leave out of datasets

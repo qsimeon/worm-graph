@@ -1,4 +1,4 @@
 visualize:
   log_dir: /home/lrvnc/Projects/worm-graph/logs/hydra/2023_07_10_17_43_18
   worm: worm0 # TODO: allow this to be a list of worms
-  neuron: ADAL
+  neuron: all
