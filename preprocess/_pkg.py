@@ -10,16 +10,16 @@ import shutil
 import subprocess
 
 # Third-party libraries
-import derivative
 import h5py
 import hydra
 import mat73
 import numpy as np
 import pandas as pd
 import torch
-from derivative import dxdt
 from omegaconf import DictConfig, OmegaConf
+from pykalman import KalmanFilter
 from scipy.io import loadmat
+from scipy.ndimage import gaussian_filter1d
 from sklearn import preprocessing
 from sklearn.experimental import enable_iterative_imputer
 from sklearn.impute import IterativeImputer
@@ -30,4 +30,3 @@ from typing import Tuple, Union, Callable, Dict
 
 # Local libraries
 from utils import ROOT_DIR, RAW_FILES, NUM_NEURONS, NEURONS_302, VALID_DATASETS
-from pysindy.differentiation import SmoothedFiniteDifference

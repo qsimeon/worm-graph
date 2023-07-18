@@ -230,15 +230,13 @@ def preprocess_connectome(raw_dir, raw_files):
     return None
 
 
-def total_var_reg_smooth(x, t, alpha=1e-2, order=0):
-    """
-    Total variational regularization for smoothing a multidimensional time series.
+def gaussian_kernel_smooth(x, t, sigma=10):
+    """Gaussian smoothing for a multidimensional time series.
 
     Parameters:
         x (ndarray): The input time series to be smoothed (time, neurons).
         t (ndarray): The time vector (in seconds) corresponding to the input time series.
-        alpha (float): The regularization parameter.
-        order (int): The order of the total variational derivative.
+        sigma (float): Standard deviation for Gaussian kernel.
 
     Returns:
         x_smooth (ndarray): The smoothed time series.
@@ -249,15 +247,7 @@ def total_var_reg_smooth(x, t, alpha=1e-2, order=0):
     dim = x.ndim
     if dim == 1:
         x = x.reshape(-1, 1)
-    t = t.squeeze()
-    # Total variational derivative
-    dt = np.diff(t, prepend=t[0] - np.diff(t)[0])
-    dxdt_totalvar = dxdt(x, t, kind="trend_filtered", order=order, alpha=alpha, axis=0)
-    x_smooth = np.cumsum(dxdt_totalvar, axis=0) * dt.reshape(-1, 1)
-    # ###
-    # diff_method = derivative.TrendFiltered(alpha=alpha, order=order)
-    # x_smooth = diff_method.x(x, t, axis=0)
-    # ###
+    x_smooth = gaussian_filter1d(x, sigma, axis=0)
     if dim == 1:
         x_smooth = x_smooth.squeeze(-1)
     if istensor:
@@ -265,77 +255,7 @@ def total_var_reg_smooth(x, t, alpha=1e-2, order=0):
     return x_smooth
 
 
-def kalman_smooth(x, t, alpha=1):
-    """Kalman derivative for smoothing a multidimensional time series.
-
-    Parameters:
-        x (ndarray): The input time series to be smoothed (time, neurons).
-        t (ndarray): The time vector (in seconds) corresponding to the input time series.
-        alpha (int): Kernel size for the Kalman filter.
-
-    Returns:
-        x_smooth (ndarray): The smoothed time series.
-    """
-    istensor = isinstance(x, torch.Tensor)
-    if istensor:
-        x = x.cpu().numpy()
-    dim = x.ndim
-    if dim == 1:
-        x = x.reshape(-1, 1)
-    # Kalman filter derivative
-    t = t.squeeze()
-    dt = np.diff(t, prepend=t[0] - np.diff(t)[0])
-    dxdt_kalman = dxdt(x, t, kind="kalman", alpha=alpha, axis=0)
-    x_smooth = np.cumsum(dxdt_kalman) * dt
-    # ###
-    # diff_method = derivative.Kalman(alpha=alpha)
-    # x_smooth = diff_method.x(x, t, axis=0)
-    # ###
-    if dim == 1:
-        x_smooth = x_smooth.squeeze(-1)
-    if istensor:
-        x_smooth = torch.from_numpy(x_smooth)
-    return x_smooth
-
-
-def kernel_smooth(x, t, sigma=1, lmbd=0.1, kernel="rbf"):
-    """Kernel derivative for smoothing a multidimensional time series.
-
-    Parameters:
-        x (ndarray): The input time series to be smoothed (time, neurons).
-        t (ndarray): The time vector (in seconds) corresponding to the input time series.
-        sigma (float): The kernel length-scale parameter.
-        lmbd (float): The kernel regularization parameter.
-        kernel (str): The kernel type.
-
-    Returns:
-        x_smooth (ndarray): The smoothed time series.
-    """
-    istensor = isinstance(x, torch.Tensor)
-    if istensor:
-        x = x.cpu().numpy()
-    dim = x.ndim
-    if dim == 1:
-        x = x.reshape(-1, 1)
-    # Kernel derivative
-    t = t.squeeze()
-    dt = np.diff(t, prepend=t[0] - np.diff(t)[0])
-    dxdt_kernel = dxdt(
-        x, t, kind="kernel", sigma=sigma, lmbd=lmbd, kernel=kernel, axis=0
-    )
-    x_smooth = np.cumsum(dxdt_kernel, axis=0) * dt.reshape(-1, 1)
-    # ###
-    # diff_method = derivative.Kernel(sigma=sigma, lmbd=lmbd, kernel=kernel)
-    # x_smooth = diff_method.x(x, t, axis=0)
-    # ###
-    if dim == 1:
-        x_smooth = x_smooth.squeeze(-1)
-    if istensor:
-        x_smooth = torch.from_numpy(x_smooth)
-    return x_smooth
-
-
-def fourier_transform_smooth(x, t, percent=0.01):
+def fourier_transform_smooth(x, t, percent=0.1):
     """Uses the FFT to smooth a multidimensional time series.
 
     Smooths a multidimensional time series by keeping the lowest `percent`
@@ -374,6 +294,70 @@ def fourier_transform_smooth(x, t, percent=0.01):
     return x_smooth
 
 
+def moving_average_smooth(x, t, window_size=15):
+    """Applies a simple moving average smoothing filter to a multidimensional time series.
+
+    Parameters:
+        x (ndarray): The input time series to be smoothed.
+        t (ndarray): The time vector (in seconds) corresponding to the input time series.
+        window_size (int): The size of the moving average window.
+
+    Returns:
+        x_smooth (ndarray): The smoothed time series.
+    """
+    isnumpy = isinstance(x, np.ndarray)
+    if isnumpy:
+        x = torch.from_numpy(x)
+    dim = x.ndim
+    if dim == 1:
+        x = x.unsqueeze(-1)
+        
+    x_smooth = torch.zeros_like(x)
+    for i in range(x.shape[1]):
+        x_smooth[:, i] = torch.conv1d(
+            x[:, i].unsqueeze(0).unsqueeze(0),
+            torch.ones(1, 1, window_size, dtype=x.dtype).to(x.device) / window_size,
+            padding=window_size // 2,
+        ).squeeze(0).squeeze(0)
+    
+    if dim == 1:
+        x_smooth = x_smooth.squeeze(-1)
+    if isnumpy:
+        x_smooth = x_smooth.cpu().numpy()
+    return x_smooth
+
+
+def exponential_kernel_smooth(x, t, alpha=0.1):
+    """Exponential smoothing for a multidimensional time series.
+
+    Parameters:
+        x (ndarray): The input time series to be smoothed (time, neurons).
+        t (ndarray): The time vector (in seconds) corresponding to the input time series.
+        alpha (float): The smoothing factor, 0<alpha<1.
+
+    Returns:
+        x_smooth (ndarray): The smoothed time series.
+    """
+    istensor = isinstance(x, torch.Tensor)
+    if istensor:
+        x = x.cpu().numpy()
+    dim = x.ndim
+    if dim == 1:
+        x = x.reshape(-1, 1)
+
+    x_smooth = np.zeros_like(x)
+    x_smooth[0] = x[0]
+
+    for i in range(1, x.shape[0]):
+        x_smooth[i] = alpha * x[i] + (1 - alpha) * x_smooth[i - 1]
+
+    if dim == 1:
+        x_smooth = x_smooth.squeeze(-1)
+    if istensor:
+        x_smooth = torch.from_numpy(x_smooth)
+    return x_smooth
+
+
 def smooth_data_preprocess(calcium_data, time_in_seconds, smooth_method):
     """Smooths the calcium data provided as a (time, neurons) array `calcium_data`.
 
@@ -392,12 +376,12 @@ def smooth_data_preprocess(calcium_data, time_in_seconds, smooth_method):
         smooth_ca_data = calcium_data
     elif str(smooth_method).lower() == "fft":
         smooth_ca_data = fourier_transform_smooth(calcium_data, time_in_seconds)
-    elif str(smooth_method).lower() == "ka":
-        smooth_ca_data = kalman_smooth(calcium_data, time_in_seconds)
-    elif str(smooth_method).lower() == "ke":
-        smooth_ca_data = kernel_smooth(calcium_data, time_in_seconds)
-    elif str(smooth_method).lower() == "tvr":
-        smooth_ca_data = total_var_reg_smooth(calcium_data, time_in_seconds)
+    elif str(smooth_method).lower() == "ga":
+        smooth_ca_data = gaussian_kernel_smooth(calcium_data, time_in_seconds)
+    elif str(smooth_method).lower() == "ma":
+        smooth_ca_data = moving_average_smooth(calcium_data, time_in_seconds)
+    elif str(smooth_method).lower() == "es":
+        smooth_ca_data = exponential_kernel_smooth(calcium_data, time_in_seconds)
     else:
         raise TypeError("Check `config/preprocess.yml` for available smooth methods.")
     return smooth_ca_data
