@@ -673,6 +673,8 @@ def plot_worm_data(worm_data, num_neurons=5, smooth=False):
     :param num_neurons: The number of neurons to plot.
     """
 
+    np.random.seed(42) # set random seed for reproducibility
+
     worm = worm_data["worm"]
     dataset = worm_data["dataset"]
     if smooth:
