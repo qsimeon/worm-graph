@@ -17,7 +17,6 @@ import numpy as np
 import pandas as pd
 import torch
 from omegaconf import DictConfig, OmegaConf
-from pykalman import KalmanFilter
 from scipy.io import loadmat
 from scipy.ndimage import gaussian_filter1d
 from sklearn import preprocessing

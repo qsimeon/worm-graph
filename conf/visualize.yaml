@@ -1,4 +1,4 @@
 visualize:
   log_dir: logs/hydra/${now:%Y_%m_%d_%H_%M_%S}
-  worm: worm0
+  worm: worm0 # TODO: allow this to be a list of worms
   neuron: all

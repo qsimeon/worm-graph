@@ -1,6 +1,5 @@
 dtaidistance
 omegaconf
-pykalman
 pysindy
 pytest
 mat73
