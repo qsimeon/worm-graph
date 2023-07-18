@@ -809,11 +809,11 @@ class BasePreprocessor:
         original_dt = time_in_seconds[1] - time_in_seconds[0]
         # Upsample (interpolate)
         if original_dt >= self.resample_dt:
-            print('Upsampling data. Original dt: {}, Target dt: {}'.format(original_dt, self.resample_dt), end='\n\n')
+            #print('Upsampling data. Original dt: {}, Target dt: {}'.format(original_dt, self.resample_dt), end='\n\n')
             return interpolate_data(time_in_seconds, data, target_dt=self.resample_dt)
         # Downsample (aggregate)
         else:
-            print('Downsampling data. Original dt: {}, Target dt: {}'.format(original_dt, self.resample_dt), end='\n\n')
+            #print('Downsampling data. Original dt: {}, Target dt: {}'.format(original_dt, self.resample_dt), end='\n\n')
             return aggregate_data(time_in_seconds, data, target_dt=self.resample_dt)
 
     def normalize_data(self, data):
