@@ -559,9 +559,10 @@ def plot_correlation_scatterplot(
     Create a scatterpot of the target and predicted calcium or calcium residual
     colored by train and test sample.
     """
-    # whether using residual or calcium signal
+    # Whether using residual or calcium signal
     signal_str = "residual" if use_residual else "calcium"
-    # process the config.yaml file inside the log folder
+
+    # Process the config.yaml file inside the log folder
     cfg_path = os.path.join(log_dir, "config.yaml")
     if os.path.exists(cfg_path):
         config = OmegaConf.structured(OmegaConf.load(cfg_path))
@@ -575,14 +576,24 @@ def plot_correlation_scatterplot(
                 "globals": {"timestamp": datetime.now().strftime("%Y_%m_%d_%H_%M_%S")},
             }
         )
-    # get strings for plot title
+
+    # Get strings for plot title
     train_dataset_name = config.dataset.name
+    train_dataset_name = train_dataset_name.split("_")
+    train_dataset_name = [ds_name[:-4] for ds_name in train_dataset_name]
+    train_dataset_name = ", ".join(train_dataset_name)
+
     predict_dataset_name = config.predict.dataset.name
+    predict_dataset_name = predict_dataset_name.split("_")
+    predict_dataset_name = [ds_name[:-4] for ds_name in predict_dataset_name]
+    predict_dataset_name = ", ".join(predict_dataset_name)
+    
     model_name = config.model.type
     tau_in = config.train.tau_in
     tau_out = config.predict.tau_out
-    timestamp = config.globals.timestamp
-    # recursive call for all worms
+    timestamp = datetime.strptime(config.globals.timestamp, "%Y_%m_%d_%H_%M_%S")
+
+    # Recursive call for all worms
     if (worm is None) or (worm.lower() == "all"):
         all_worms = [fname for fname in os.listdir(log_dir) if fname.startswith("worm")]
         for _worm_ in all_worms:
@@ -590,61 +601,105 @@ def plot_correlation_scatterplot(
         return None
     else:
         assert worm in set(os.listdir(log_dir)), "No data for requested worm found."
-    # load predictions dataframe
+
+    # Load predictions dataframe
     predictions_df = pd.read_csv(
         os.path.join(log_dir, worm, "predicted_" + signal_str + ".csv"), index_col=0
     )
     tau_out = predictions_df["tau"][0]
-    # load targets dataframe
+    # Load targets dataframe
     targets_df = pd.read_csv(
         os.path.join(log_dir, worm, "target_" + signal_str + ".csv"), index_col=0
     )
+
     # TODO: consider only the predictions and targets for the last tau_out indices
     predictions_df = predictions_df.iloc[-tau_out:, :]
     targets_df = targets_df.iloc[-tau_out:, :]
 
-    # plot helper
+    # Plot helper
     def func(_neuron_):
         os.makedirs(os.path.join(log_dir, worm, "figures"), exist_ok=True)
-        plt_title = "Scatterplot of predicted vs target residuals\nworm: {}, neuron: {}\nmodel: {}\ntrain dataset: {}\npredict dataset: {}\ntraining tau: {}\nprediction tau: {}\ntime: {}".format(
-            worm,
-            _neuron_,
-            model_name,
-            train_dataset_name,
-            predict_dataset_name,
-            tau_in,
-            tau_out,
-            timestamp,
-        )
+
+        # Create a figure with a larger size
+        fig, ax = plt.subplots(figsize=(8, 5))
+
+        # Use sns whitegrid style
+        sns.set_style("whitegrid")
+        # Use palette tab10
+        sns.set_palette("tab10")
+
         data_dict = {
             "target": targets_df[_neuron_].tolist(),
             "prediction": predictions_df[_neuron_].tolist(),
             "label": predictions_df["train_test_label"].tolist(),
         }
+
         data_df = pd.DataFrame(data=data_dict)
-        sns.lmplot(
+
+        # Create scatterplot of predicted vs target
+        sns.scatterplot(
             data=data_df,
             x="target",
             y="prediction",
             hue="label",
-            legend=True,
-            palette={"test": "magenta", "train": "cyan"},
-            scatter_kws={"alpha": 0.1},
-            # line_kws={"color": "black"},
+            legend=False,
+            ax=ax,
+            size=0.5,
         )
-        # Adjust the plot layout
-        plt.tight_layout(
-            rect=[0, 0, 1, 0.92]
-        )  # Adjust the rectangle's top value as needed to give the suptitle more space
-        plt.subplots_adjust(top=0.85)  # Adjust the top to make space for the title
-        # Now add your suptitle, using the y parameter to control its vertical placement
-        plt.suptitle(
-            plt_title, fontsize="small", y=1.02
-        )  # Adjust y as needed so the title doesn't overlap with the plot
-        plt.axis("equal")
-        plt.gca().set_xlim(plt.gca().get_ylim())
+
+        # Linear regression betwee target and prediction
+        slope, intercept, r_value, p_value, std_err = stats.linregress(
+            data_df["target"], data_df["prediction"]
+        )
+
+        # Create label for linear regression line (curve + R2)
+        linreg_label = "y = {:.2f}x + {:.2f}".format(
+            slope, intercept
+        )
+
+        # Add linear regression line
+        sns.lineplot(
+            x=data_df["target"],
+            y=intercept + slope * data_df["target"],
+            color="black",
+            legend=False,
+            ax=ax,
+        )
+        
+        # Create the plot textbox
+        plt_title = (
+            "Model: {}\nTrain dataset: {}\nPredict dataset: {}\nWorm index: {}\nTraining {}: {}\nPrediction {}: {}\n\n{}\n$R^2$: {}".format(
+                model_name,
+                train_dataset_name,
+                predict_dataset_name,
+                worm,
+                r'$\tau$',
+                tau_in,
+                r'$\tau$',
+                tau_out,
+                #timestamp.strftime("%Y-%m-%d %H:%M:%S"),
+                linreg_label,
+                round(r_value ** 2, 4),
+            )
+        )
+
+        # Adjust x box position
+        x_position_percent = 0.02  # Adjust this value to set the desired position
+        x_position_box = ax.get_xlim()[0] + (ax.get_xlim()[1] - ax.get_xlim()[0]) * x_position_percent
+
+        # Adjust y box position
+        y_position_percent = 0.03  # Adjust this value to set the desired position
+        y_position_box = ax.get_ylim()[0] + (ax.get_ylim()[1] - ax.get_ylim()[0]) * y_position_percent
+
+        plt.text(x_position_box, y_position_box, plt_title, bbox=dict(facecolor='white', edgecolor='black', boxstyle='round', alpha=0.5), style='italic')
+
         plt.xlabel("Target " + signal_str + " ($\Delta F / F$)")
         plt.ylabel("Predicted " + signal_str + " ($\Delta F / F$)")
+
+        plt.title("{} scatter plot: predicted vs. target values - {}".format(signal_str.title(), _neuron_))
+
+        plt.tight_layout()
+
         plt.savefig(
             os.path.join(
                 log_dir, worm, "figures", signal_str + "_correlation_%s.png" % _neuron_
@@ -653,7 +708,7 @@ def plot_correlation_scatterplot(
         plt.close()
         return None
 
-    # plot predictions for neuron(s)
+    # Plot predictions for neuron(s)
     columns = set(predictions_df.columns)
     if (neuron is None) or (neuron.lower() == "all"):
         for _neuron_ in set(NEURONS_302) & columns:
