@@ -814,7 +814,8 @@ class BasePreprocessor:
         # Downsample (aggregate)
         else:
             #print('Downsampling data. Original dt: {}, Target dt: {}'.format(original_dt, self.resample_dt), end='\n\n')
-            return aggregate_data(time_in_seconds, data, target_dt=self.resample_dt)
+            interp_time, interp_ca = interpolate_data(time_in_seconds, data, target_dt=0.1)
+            return aggregate_data(interp_time, interp_ca, target_dt=self.resample_dt)
 
     def normalize_data(self, data):
         return self.transform.fit_transform(data)

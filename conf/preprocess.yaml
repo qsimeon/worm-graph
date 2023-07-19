@@ -1,7 +1,7 @@
 preprocess:
   url: https://www.dropbox.com/s/5r5cyxoads3iglz/opensource_data.zip?dl=1
   zipfile: opensource_data.zip
-  dataset: all # [Kato2015, Nichols2017, Skora2018, Uzel2022, Kaplan2020, Flavell2023, Leifer2023] # any dataset in utils.VALID_DATASETS
+  dataset: Kato2015 # [Kato2015, Nichols2017, Skora2018, Uzel2022, Kaplan2020, Flavell2023, Leifer2023] # any dataset in utils.VALID_DATASETS
   raw_dir: data/raw
   resample_dt: 1.0 # The time interval (in seconds) to use for resampling; if None, no resampling is performed
   smooth: GA 
