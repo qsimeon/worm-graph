@@ -1,9 +1,9 @@
 predict:
-  tau_out: 100 # number of future time steps to predict and compare with target. 
-  # constraint: tau_out: int > 0 and tau_out < max_timesteps of your dataset!
-  context_len: 125 # length of the context window to use for prediction
+  tau_out: 200 # number of future time steps to predict
+  # constraint: tau_out: int > 0
+  context_len: 200 # length of the context window to use for prediction
   model: # a pretrained model to make predictions with
-    checkpoint_path: models/example_saved_model.pt # path to a trained model checkpoint to load
+    checkpoint_path: models #models/example_saved_model.pt # path to a trained model checkpoint to load
   dataset:
-    name: Kato2015 # dataset to make predictions on
-    leave_out_worms: [] # list of worm names to leave out of datasets
+    name: Uzel2022 # dataset to make predictions on
+    leave_out_worms: [worm1, worm2, worm3, worm4, worm5] # list of worm names to leave out of datasets
