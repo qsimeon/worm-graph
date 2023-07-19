@@ -90,6 +90,12 @@ def make_predictions(
         # Get data to save
         calcium_data = single_worm_dataset[key_data]
 
+        # Assert that the tau_our is less than the length of the data
+        assert future_timesteps < calcium_data.shape[0], (
+            "The number of future timesteps to predict must be less than "
+            "the length of the data ({}).".format(calcium_data.shape[0])
+        )
+
         # Pick just named neurons
         named_neurons_mask = single_worm_dataset["named_neurons_mask"]
         named_neurons = np.array(NEURONS_302)[named_neurons_mask]
@@ -114,6 +120,7 @@ def make_predictions(
         test_mask = test_mask[-MAX_TOKEN_LEN:]
 
         # Labels and columns
+
         train_labels = np.expand_dims(np.where(train_mask, "train", "test"), axis=-1)
         columns = list(named_neurons) + [
             "train_test_label",
