@@ -42,16 +42,36 @@ def get_dataset(config: DictConfig):
     else:
         dataset_names = sorted(list(config.dataset.name))
 
-    # Worms to leave out
-    leave_out_worms = list(config.dataset.leave_out_worms)
+    num_named_neurons = config.dataset.num_named_neurons
+    num_worms = config.dataset.num_worms
+    seed = config.dataset.seed
+
+    # Assert num_named_neurons is a positive integer or 'all'
+    assert isinstance(num_named_neurons, int) or num_named_neurons == "all", (
+        "num_named_neurons must be a positive integer or 'all'."
+    )
+
+    # Assert seed is a positive integer
+    assert isinstance(seed, int), "Seed must be a positive integer."
+
+    # Assert num_worms is a positive integer or 'all'
+    assert isinstance(num_worms, int) or num_worms == "all", (
+        "num_worms must be a positive integer or 'all'."
+    )
+
+    # Set the seed
+    np.random.seed(seed)
 
     # Load the dataset(s)
     combined_dataset = dict()
     for dataset_name in dataset_names:
         multi_worms_dataset = load_dataset(dataset_name)
+
+        # Select the `num_named_neurons` neurons (overwrite the masks)
+        if num_named_neurons != "all":
+            multi_worms_dataset = select_named_neurons(multi_worms_dataset, num_named_neurons)
+
         for worm in multi_worms_dataset:
-            if worm in leave_out_worms and worm != "worm0":
-                continue
             if worm in combined_dataset:
                 worm_ = "worm%s" % len(combined_dataset)
                 combined_dataset[worm_] = multi_worms_dataset[worm]
@@ -61,9 +81,27 @@ def get_dataset(config: DictConfig):
                 combined_dataset[worm] = multi_worms_dataset[worm]
                 combined_dataset[worm]["dataset"] = "_".join(dataset_names)
 
+    # Verify if len(combined_dataset) is >= num_worms
+    if num_worms != "all":
+        assert len(combined_dataset) >= num_worms, (
+            "num_worms must be less than or equal to the number of worms in the dataset(s). "
+        )
+
+        # Select `num_worms` worms
+        wormIDs = [wormID for wormID in combined_dataset.keys()]
+        wormIDs_to_keep = np.random.choice(wormIDs, size=num_worms, replace=False)
+        print('Selecting {} worms from {}\n'.format(len(wormIDs_to_keep), len(combined_dataset)))
+
+        # Remove the worms that are not in `wormIDs_to_keep`
+        for wormID in wormIDs:
+            if wormID not in wormIDs_to_keep:
+                combined_dataset.pop(wormID)
+
+    combined_dataset = {f"worm{i}": combined_dataset[key] for i, key in enumerate(combined_dataset.keys())}
+
     # Display the dataset
     print(
-        "Chosen dataset(s): {}\nNum. worms: {}".format(
+        "Dataset loaded!\nChosen dataset(s): {}\nNum. of worms: {}".format(
             dataset_names,
             len(combined_dataset),
         ),

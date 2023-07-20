@@ -1,3 +1,5 @@
 dataset:
-  name: [Uzel2022] #[Kato2015, Nichols2017, Skora2018, Uzel2022, Kaplan2020, Flavell2023, Leifer2023]
-  leave_out_worms: [] # list of worm names to leave out of datasets
+  name: [Kato2015, Nichols2017, Skora2018, Uzel2022, Kaplan2020, Flavell2023, Leifer2023] #[Kato2015, Nichols2017, Skora2018, Uzel2022, Kaplan2020, Flavell2023, Leifer2023]
+  num_named_neurons: 10 # number of neurons to train the model with (positive integer or 'all')
+  num_worms: all # number of worms to train the model with (positive integer or 'all')
+  seed: 42 # Seed for reproducibility (positive integer)

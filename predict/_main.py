@@ -64,9 +64,6 @@ def make_predictions(
     if dataset is None:
         dataset = get_dataset(config.predict)
 
-    # Worms to exclude
-    leave_out_worms = list(config.predict.dataset.leave_out_worms)
-
     # Get the desired number of future timesteps to predict
     future_timesteps = config.predict.tau_out
 
@@ -80,9 +77,6 @@ def make_predictions(
 
     # Make a directory for each worm in the dataset and store the data
     for worm, single_worm_dataset in dataset.items():
-        # skip excluded worms
-        if worm in leave_out_worms:
-            continue
 
         # make a directory for each worm
         os.makedirs(os.path.join(log_dir, worm), exist_ok=True)
