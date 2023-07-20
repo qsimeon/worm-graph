@@ -322,7 +322,9 @@ def select_named_neurons(multi_worm_dataset, num_named_neurons):
             data['unknown_neuron_to_slot'] = unknown_neuron_to_slot
 
     # Drop worms with less than `num_named_neurons` neurons
-    print("Dropping worms: {} (less than {} named neurons)\n".format(worms_to_drop, num_named_neurons))
+    if len(worms_to_drop) > 0:
+        print("Dropping {} worms ({}) (less than {} named neurons)".format(len(worms_to_drop), multi_worm_dataset['worm0']['dataset'], num_named_neurons))
+        print("Remaining worms ({}): {}\n".format(multi_worm_dataset['worm0']['dataset'], len(list(set(multi_worm_dataset.keys()) - set(worms_to_drop)))))
     for wormID in worms_to_drop:
         del multi_worm_dataset[wormID]
 
