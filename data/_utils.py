@@ -259,6 +259,77 @@ class CElegansConnectome(InMemoryDataset):
         torch.save((data, slices), self.processed_paths[-1])
 
 
+def select_named_neurons(multi_worm_dataset, num_named_neurons):
+    """Select the `num_named_neurons` neurons from the dataset.
+
+    Parameters
+    ----------
+    multi_worm_dataset : dict
+        Multi-worm dataset to select neurons from.
+
+    Returns
+    -------
+    multi_worm_dataset : dict
+        Multi-worm dataset with selected neurons.
+
+    """
+
+    worms_to_drop = []
+
+    for wormID, data in multi_worm_dataset.items():
+        # Verify if new num_named_neurons <= actual num_named_neurons
+        if num_named_neurons > data["num_named_neurons"]:
+            worms_to_drop.append(wormID)
+            continue
+
+        else:
+            # Overwrite the neuron values
+            data["num_named_neurons"] = num_named_neurons
+            data["num_unknown_neurons"] = data["num_neurons"] - num_named_neurons
+
+            # Select the neurons to keep
+            named_neurons_mask = data['named_neurons_mask']
+            neurons_to_keep = np.random.choice(np.where(named_neurons_mask == True)[0], num_named_neurons, replace=False)
+
+            # Overwrite the named neuron masks
+            named_neurons_mask = torch.zeros_like(named_neurons_mask)
+            named_neurons_mask[neurons_to_keep] = True
+
+            # Overwrite the unknown neuron masks
+            unknown_neurons_mask = data['unknown_neurons_mask']
+            unknown_neurons_mask = ~(named_neurons_mask ^ unknown_neurons_mask)
+
+            slot_to_named_neuron = data['slot_to_named_neuron']
+            slot_to_unknown_neuron = data['slot_to_unknown_neuron']
+
+            # New unknown neurons
+            new_unknown_neurons_map = {slot: named_neuron for slot, named_neuron in slot_to_named_neuron.items() if slot not in neurons_to_keep}
+            slot_to_unknown_neuron.update(new_unknown_neurons_map)
+
+            # New named neurons
+            slot_to_named_neuron = {slot: named_neuron for slot, named_neuron in slot_to_named_neuron.items() if slot in neurons_to_keep}
+
+            # Invert new mappings
+            named_neuron_to_slot = {named_neuron: slot for slot, named_neuron in slot_to_named_neuron.items()}
+            unknown_neuron_to_slot = {unknown_neuron: slot for slot, unknown_neuron in slot_to_unknown_neuron.items()}
+
+            # Update the dataset
+            data['named_neurons_mask'] = named_neurons_mask
+            data['unknown_neurons_mask'] = unknown_neurons_mask
+            data['slot_to_named_neuron'] = slot_to_named_neuron
+            data['slot_to_unknown_neuron'] = slot_to_unknown_neuron
+            data['named_neuron_to_slot'] = named_neuron_to_slot
+            data['unknown_neuron_to_slot'] = unknown_neuron_to_slot
+
+    # Drop worms with less than `num_named_neurons` neurons
+    print("Dropping worms: {} (less than {} named neurons)\n".format(worms_to_drop, num_named_neurons))
+    for wormID in worms_to_drop:
+        del multi_worm_dataset[wormID]
+
+    return multi_worm_dataset
+
+
+
 def find_reliable_neurons(multi_worm_dataset):
     intersection = set()
     for i, worm in enumerate(multi_worm_dataset):

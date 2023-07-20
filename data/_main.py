@@ -42,16 +42,19 @@ def get_dataset(config: DictConfig):
     else:
         dataset_names = sorted(list(config.dataset.name))
 
-    # Worms to leave out
-    leave_out_worms = list(config.dataset.leave_out_worms)
+    # Number of named neurons to use
+    num_named_neurons = config.dataset.num_named_neurons
+    assert isinstance(num_named_neurons, int), "num_named_neurons must be an integer"
 
     # Load the dataset(s)
     combined_dataset = dict()
     for dataset_name in dataset_names:
         multi_worms_dataset = load_dataset(dataset_name)
+
+        # Select the `num_named_neurons` neurons (overwrite the masks)
+        multi_worms_dataset = select_named_neurons(multi_worms_dataset, num_named_neurons)
+
         for worm in multi_worms_dataset:
-            if worm in leave_out_worms and worm != "worm0":
-                continue
             if worm in combined_dataset:
                 worm_ = "worm%s" % len(combined_dataset)
                 combined_dataset[worm_] = multi_worms_dataset[worm]
