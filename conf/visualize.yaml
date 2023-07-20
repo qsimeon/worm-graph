@@ -1,4 +1,4 @@
 visualize:
-  log_dir: logs #logs/playground
+  log_dir: logs/playground
   worm: worm0 # TODO: allow this to be a list of worms
   neuron: all
