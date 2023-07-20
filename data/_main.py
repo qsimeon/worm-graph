@@ -97,6 +97,8 @@ def get_dataset(config: DictConfig):
             if wormID not in wormIDs_to_keep:
                 combined_dataset.pop(wormID)
 
+    combined_dataset = {f"worm{i}": combined_dataset[key] for i, key in enumerate(combined_dataset.keys())}
+
     # Display the dataset
     print(
         "Dataset loaded!\nChosen dataset(s): {}\nNum. of worms: {}".format(

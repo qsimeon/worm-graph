@@ -45,7 +45,7 @@ def pipeline(
     init_random_seeds(config.globals.random_seed)
 
     # Skips if data already preprocessed
-    process_data(config)
+    # process_data(config)
 
     # Returns a generator of single worm datasets
     dataset = get_dataset(config)
