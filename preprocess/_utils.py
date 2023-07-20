@@ -728,11 +728,11 @@ def pickle_neural_data(
         # call its method
         preprocessor.preprocess()
 
-    # Delete the downloaded raw datasets
-    #!shutil.rmtree(source_path)
+    # # Delete the downloaded raw datasets
+    # !shutil.rmtree(source_path)
 
     # Create a file to indicate that the preprocessing was successful
-    #!open(os.path.join(processed_path, ".processed"), "a").close()
+    !open(os.path.join(processed_path, ".processed"), "a").close()
 
     return None
 
