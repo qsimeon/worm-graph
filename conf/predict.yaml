@@ -1,12 +1,12 @@
 predict:
-  tau_out: 120 # number of future time steps to predict
+  tau_out: 200 # number of future time steps to predict
   # constraint: tau_out: int > 0
-  context_len: 120 # length of the context window to use for prediction
+  context_len: 200 # length of the context window to use for prediction
   model: # a pretrained model to make predictions with
     checkpoint_path: models #models/example_saved_model.pt # path to a trained model checkpoint to load
   dataset:
-    name: Uzel2022 # dataset to make predictions on
-    num_named_neurons: all # number of neurons to train the model with (positive integer or 'all')
-    num_worms: 1 # number of worms to train the model with (positive integer or 'all')
-    seed: 0 # Seed for reproducibility (positive integer)
+    name: Kato2015 # dataset to make predictions on
+    num_named_neurons: 10 # number of neurons to predict with trained model (positive integer or 'all')
+    num_worms: 1 # number of worms to predict with trained model with (positive integer or 'all')
+    seed: 42 # Seed for reproducibility (positive integer)
 
