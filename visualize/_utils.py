@@ -158,7 +158,8 @@ def plot_loss_curves(log_dir):
     Args:
         log_dir (str): The path to the log directory.
     """
-    
+
+    fig, ax = plt.subplots(figsize=(15, 5))
     sns.set(style='whitegrid')
     sns.set_palette("tab10")
 
@@ -180,19 +181,20 @@ def plot_loss_curves(log_dir):
     dataset_name = config.dataset.name
     dataset_name = dataset_name.split("_")
     dataset_name = [ds_name[:-4] for ds_name in dataset_name]
-    dataset_name = ", ".join(dataset_name)
+    dataset_name = ", ".join(dataset_name) # Just initials
+    num_worms = config.dataset.num_worms
     model_name = config.model.type
     tau_in = config.train.tau_in
     timestamp = datetime.strptime(config.globals.timestamp, "%Y_%m_%d_%H_%M_%S")
 
     # Create the plot title
     plt_title = (
-        "Model: {}\nDataset: {}\nTraining {}: {}\n{}".format(
+        "Model: {}\nNb. of worms: {}\nDataset(s): {}\nTraining {}: {}".format(
             model_name,
+            num_worms,
             dataset_name,
             r'$\tau$',
             tau_in,
-            timestamp.strftime("%Y-%m-%d %H:%M:%S"),
         )
     )
 
@@ -205,13 +207,11 @@ def plot_loss_curves(log_dir):
     # load the loss dataframe
     loss_df = pd.read_csv(loss_curves_csv, index_col=0)
 
-    # plot loss vs epochs
-    plt.figure(figsize=(10, 6))
-
     sns.lineplot(
         x="epochs",
         y="base_train_losses",
         data=loss_df,
+        ax=ax,
         label="Train baseline",
         color="c",
         alpha=0.8,
@@ -222,20 +222,24 @@ def plot_loss_curves(log_dir):
         x="epochs",
         y="base_test_losses",
         data=loss_df,
+        ax=ax,
         label="Test baseline",
         color="r",
         alpha=0.8,
         **dict(linestyle=":"),
     )
-    sns.lineplot(x="epochs", y="train_losses", data=loss_df, label="Train")
-    sns.lineplot(x="epochs", y="test_losses", data=loss_df, label="Test")
+    sns.lineplot(x="epochs", y="train_losses", data=loss_df, ax=ax, label="Train")
+    sns.lineplot(x="epochs", y="test_losses", data=loss_df, ax=ax, label="Test")
     plt.legend(frameon=True, loc="upper right", fontsize=12)
 
     plt.title('Loss curves', fontsize=16)
     
-    # After creating your subplots and setting their titles, adjust the plot layout
-    y = min(loss_df['base_train_losses'].min(), loss_df['base_train_losses'].min(), loss_df['train_losses'].min(), loss_df['test_losses'].min())
-    plt.text(0, y, plt_title, bbox=dict(facecolor='white', edgecolor='black', boxstyle='round'), style='italic')
+    x_position_percent = 0.075  # Adjust this value to set the desired position
+    x_position_box = ax.get_xlim()[0] + (ax.get_xlim()[1] - ax.get_xlim()[0]) * x_position_percent
+    y_position_percent = 0.80  # Adjust this value to set the desired position
+    y_position_box = ax.get_ylim()[0] + (ax.get_ylim()[1] - ax.get_ylim()[0]) * y_position_percent
+    plt.text(x_position_box, y_position_box, plt_title, bbox=dict(facecolor='white', edgecolor='black', boxstyle='round'), style='italic')
+    plt.grid(True)
     plt.xlabel("Epoch (# worm cohorts)")
     plt.ylabel("Loss")
     plt.tight_layout(pad=0.5)
