@@ -1,12 +1,16 @@
 # All imports for models module
-import torch
-import math
-import os
 import hydra
-from torch.cuda.amp import autocast
-from typing import Callable, Union
+import os
+import math
+import torch
+
+from omegaconf import DictConfig, OmegaConf
 from ncps.torch import CfC
 from ncps.wirings import AutoNCP
-from utils import DEVICE, ROOT_DIR, MAX_TOKEN_LEN
+from torch.cuda.amp import autocast
+from torch_geometric.data import Data
 from torch_geometric.nn import GCNConv
-from omegaconf import DictConfig, OmegaConf
+from typing import Callable, Union
+from utils import DEVICE, ROOT_DIR, MAX_TOKEN_LEN
+
+
