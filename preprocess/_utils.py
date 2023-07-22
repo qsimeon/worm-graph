@@ -264,7 +264,7 @@ def fourier_transform_smooth(x, t, percent=0.1):
     Parameters:
         x (ndarray): The input time series to be smoothed.
         t (ndarray): The time vector (in seconds) corresponding to the input time series.
-        percent (float): The percentage of max frequency to keep.
+        percent (float): The percentage of the max frequency to keep.
 
     Returns:
         x_smooth (ndarray): The smoothed time series.
@@ -1426,7 +1426,6 @@ class Flavell2023Preprocessor(BasePreprocessor):
             for i in ids.keys():
                 label = ids[str(i)]["label"]
                 neurons[int(i) - 1] = label
-
             # Treat the '?' labels
             for i in range(number_neurons):
                 label = neurons[i]

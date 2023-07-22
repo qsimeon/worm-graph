@@ -125,7 +125,7 @@ For Jupyter notebooks, use the `CamelCase` naming style.
 ## Future Tasks / TODOs:
 
 - Perform scaling experiments:
-      - Varying the training dataset size.
+      - Vary the training dataset size.
       - Create scaling law plots.
 - Add unit tests for each submodule.
 - Get networks to perform better than the baseline.
