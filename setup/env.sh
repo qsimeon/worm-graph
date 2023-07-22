@@ -30,7 +30,8 @@ conda install --name $ENV_NAME -y pyg -c pyg
 # Install large, complex dependencies
 echo "Installing large, complex dependencies."
 echo ""
-conda install --name $ENV_NAME -y numpy scipy pandas matplotlib jupyter jupyterlab notebook scikit-learn seaborn
+conda install --name $ENV_NAME -y numpy scipy pandas matplotlib scikit-learn seaborn
+cond install --name $ENV_NAME -y jupyter jupyterlab notebook 
 
 # Install dependencies with moderate complexity
 echo "Installing dependencies with moderate complexity."

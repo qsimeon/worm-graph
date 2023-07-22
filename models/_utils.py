@@ -361,6 +361,7 @@ class Model(torch.nn.Module):
     def get_l1_reg_param(self):
         return self.l1_reg_param
 
+    # TODO: Figure out why @autocast() throws error for some loss functions (like MSE), but not others
     @autocast()
     def forward(self, input: torch.Tensor, mask: torch.Tensor, tau: int = 1):
         """
@@ -401,7 +402,7 @@ class Model(torch.nn.Module):
             # perform a linear readout to get the output
             readout = self.linear(hidden_out)
             output = readout
-        return output
+        return output.float()
 
     def loss_fn(self):
         """

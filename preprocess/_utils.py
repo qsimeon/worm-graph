@@ -400,7 +400,7 @@ class CalciumDataReshaper:
         self.slot_to_unknown_neuron = {}
         self.slot_to_neuron = {}
         self.max_timesteps = self.worm_dataset["max_timesteps"]
-        self.dtype = torch.float32
+        self.dtype = torch.float
         self._init_neuron_data()
         self._reshape_data()
 
@@ -466,7 +466,6 @@ class CalciumDataReshaper:
                 self.slot_to_named_neuron[slot] = neuron
 
     def _fill_calcium_data(self, idx, slot):
-        """NOTE: This rounds the calcium data to 1 decimal place."""
         self.standard_calcium_data[:, slot] = torch.from_numpy(
             self.origin_calcium_data[:, idx]
         )
@@ -1383,13 +1382,13 @@ class Flavell2023Preprocessor(BasePreprocessor):
 
     def extract_data(self, file_data):
         if isinstance(file_data, h5py.File):
-            time_in_seconds = np.array(file_data["timestamp_confocal"], dtype=float)
+            time_in_seconds = np.array(file_data["timestamp_confocal"], dtype=torch.float)
             time_in_seconds = (
                 time_in_seconds - time_in_seconds[0]
             )  # start time at 0.0 seconds
             time_in_seconds = time_in_seconds.reshape((-1, 1))
 
-            calcium_data = np.array(file_data["trace_array"], dtype=float)
+            calcium_data = np.array(file_data["trace_array"], dtype=torch.float)
 
             neurons = np.array(file_data["neuropal_label"], dtype=str)
             neurons_copy = []
@@ -1408,7 +1407,7 @@ class Flavell2023Preprocessor(BasePreprocessor):
             #     0, max_t * avg_time, avg_time
             # )  # Time vector in seconds
             # time_in_seconds = time_in_seconds.reshape((-1, 1))
-            time_in_seconds = np.array(file_data["timestamp_confocal"], dtype=float)
+            time_in_seconds = np.array(file_data["timestamp_confocal"], dtype=torch.float)
             time_in_seconds = (
                 time_in_seconds - time_in_seconds[0]
             )  # start time at 0.0 seconds
