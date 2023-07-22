@@ -5,7 +5,7 @@ train:
   # constraint: epochs: int > 0 
   save_freq: 100000 # frequency (in epochs) with which to save model checkpoints
   # save_freq: 0 < int <= epochs
-  seq_len: 120 # length of time-series sequences to train
+  seq_len: 200 # length of time-series sequences to train
   # constraint: seq_len: 0 < int < len(data) 
   k_splits: 2 # number of interleaved train/test splits per single worm data
   # constraint: 2 <= int <= 5; keep fixed k_splits: int = 2
