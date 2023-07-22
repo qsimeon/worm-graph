@@ -901,7 +901,6 @@ class NetworkGCN(Model):
         hidden_dim: int,
         output_dim: int,
         num_layers: int,
-        edge_index: torch.Tensor,
         loss: Union[Callable, None] = None,
         fft_reg_param: float = 0.0,
         l1_reg_param: float = 0.0,
@@ -915,14 +914,17 @@ class NetworkGCN(Model):
             l1_reg_param,
         )
 
-        self.layers = torch.nn.ModuleList()
+        # load the connectome graph 
+        graph_tensors = torch.load(
+            os.path.join(ROOT_DIR, "data", "processed", "connectome", "graph_tensors.pt")
+        )
+        graph = Data(**graph_tensors)
+        self.edge_index = graph.edge_index
 
+        self.layers = torch.nn.ModuleList()
         for _ in range(num_layers - 2):
             self.layers.extend([GCNConv(hidden_dim, hidden_dim), torch.nn.ReLU()])
         self.layers.extend([GCNConv(hidden_dim, output_dim), torch.nn.ReLU()])
-
-        # TODO: load the edge index
-        self.edge_index = edge_index
 
         # Hidden to hidden transformation: Graph Convolutional Network (GCN)
         self.hidden_hidden = torch.nn.Sequential(*self.layers)

@@ -1,7 +1,7 @@
 predict:
   tau_out: 240 # number of future time steps to predict
   # constraint: tau_out: int > 0
-  context_len: 120 # length of the context window to use for prediction
+  context_len: 200 # length of the context window to use for prediction
   model: # a pretrained model to make predictions with
     checkpoint_path: models #models/example_saved_model.pt # path to a trained model checkpoint to load
   dataset:
