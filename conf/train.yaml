@@ -1,7 +1,7 @@
 train:
   optimizer: Adam # which Pytorch optimizer to use; options: null (defaults to SGD), SGD, Adam, AdamW, Adagrad, Adadelta, RMSprop
   learn_rate: 0.0001 # learning rate
-  epochs: 20 # number of epochs (worm cohorts) the model will be trained for
+  epochs: 500 # number of epochs (worm cohorts) the model will be trained for
   # constraint: epochs: int > 0 
   save_freq: 100000 # frequency (in epochs) with which to save model checkpoints
   # save_freq: 0 < int <= epochs
