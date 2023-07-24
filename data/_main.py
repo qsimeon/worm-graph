@@ -108,6 +108,12 @@ def get_dataset(config: DictConfig):
         end="\n\n",
     )
 
+    # Save the dataset
+    if config.dataset.save:
+        file = os.path.join(ROOT_DIR, "data/processed/neural", "custom.pickle")
+        with open(file, "wb") as f:
+            pickle.dump(combined_dataset, f)
+
     return combined_dataset
 
 
