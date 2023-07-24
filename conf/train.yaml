@@ -1,11 +1,11 @@
 train:
   optimizer: Adam # which Pytorch optimizer to use; options: null (defaults to SGD), SGD, Adam, AdamW, Adagrad, Adadelta, RMSprop
   learn_rate: 0.0001 # learning rate
-  epochs: 10 #300 # number of epochs (worm cohorts) the model will be trained for
+  epochs: 50 # number of epochs (worm cohorts) the model will be trained for
   # constraint: epochs: int > 0 
   save_freq: 100000 # frequency (in epochs) with which to save model checkpoints
   # save_freq: 0 < int <= epochs
-  seq_len: 200 # length of time-series sequences (i.e. samples) to train with
+  seq_len: 60 # length of time-series sequences to train
   # constraint: seq_len: 0 < int < len(data) 
   k_splits: 2 # number of interleaved train/test blocks to split each worm's full dataset into
   # constraint: 2 <= int <= 5; keep fixed k_splits: int = 2

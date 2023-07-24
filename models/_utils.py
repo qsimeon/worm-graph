@@ -490,7 +490,7 @@ class Model(torch.nn.Module):
     def get_l1_reg_param(self):
         return self.l1_reg_param
 
-    @autocast()
+    #@autocast()
     def forward(self, input: torch.Tensor, mask: torch.Tensor, tau: int = 1):
         """
         Forward method for simple linear regression model.
