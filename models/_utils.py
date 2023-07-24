@@ -423,8 +423,6 @@ class Model(torch.nn.Module):
             self.loss = torch.nn.MSELoss
         elif str(loss).lower() == "huber":
             self.loss = torch.nn.HuberLoss
-        elif str(loss).lower() == "poisson":
-            self.loss = torch.nn.PoissonNLLLoss
         else:
             self.loss = torch.nn.MSELoss
 
@@ -523,9 +521,6 @@ class Model(torch.nn.Module):
             input_hidden_out = self.input_hidden(input)
             # concatenate into a single latent
             latent_out = input_hidden_out
-            # ### DEBUGGING ###
-            # print("x = latent_out", latent_out.shape, end="\n\n")
-            # ### DEBUGGING ###
             # transform the latent
             hidden_out = self.inner_hidden_model(latent_out)
             # perform a linear readout to get the output
