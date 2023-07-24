@@ -76,6 +76,8 @@ def get_model(config: DictConfig) -> torch.nn.Module:
             model = NetworkRNN(**args)
         elif config.model.type == "NeuralCFC":
             model = NeuralCFC(**args)
+        elif config.model.type == "NetworkGCN":
+            model = NetworkGCN(**args)
         elif config.model.type == "LinearNN":
             model = LinearNN(**args)
         else:  # default to "LinearNN" model

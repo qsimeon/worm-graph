@@ -143,15 +143,15 @@ class CTRNN(torch.nn.Module):
         hidden: tensor of shape (batch, hidden_size), final hidden activity
     """
 
-    def __init__(self, input_size, hidden_size, tau=100, dt=None):
+    def __init__(self, input_size, hidden_size, tau=1, dt=None):
         super().__init__()
         self.input_size = input_size
         self.hidden_size = hidden_size
-        self.tau = tau  # this gives an interpration of percentage
+        self.tau = tau  # time constant
         if dt is None:
             alpha = 1
         else:
-            alpha = dt / self.tau  # think of as a decay percentage
+            alpha = dt / self.tau  # think of as a decay rate
         self.alpha = alpha
 
         self.input2h = torch.nn.Linear(input_size, hidden_size)
@@ -216,6 +216,135 @@ class FeedForwardBlock(torch.nn.Module):
     def forward(self, x):
         # notice the use of residual (skip) connections
         x = x + self.ffwd(self.ln(x))
+        return x
+
+
+class GCNModel(torch.nn.Module):
+    """
+    Graph Convolutional Network (GCN) model
+    for _C. elegans_ connectome graph.
+    """
+
+    def __init__(
+        self,
+        input_size,
+        hidden_size,
+        num_layers=1,
+    ):
+        super().__init__()
+        # Load the connectome graph
+        graph_tensors = torch.load(
+            os.path.join(
+                ROOT_DIR, "data", "processed", "connectome", "graph_tensors.pt"
+            )
+        )
+        graph = Data(**graph_tensors)
+        assert (
+            graph.num_nodes == input_size
+        ), "Input size must match number of nodes in connectome."
+
+        # Set attributes
+        self.input_size = input_size
+        self.hidden_size = hidden_size
+        # TODO: Figure out how to use the `num_layers` parameter in this model.
+        self.num_layers = num_layers
+        self.edge_index = graph.edge_index
+        self.edge_attr = graph.edge_attr
+
+        # Define the GCN layers
+        self.elec_conv = GCNConv(
+            in_channels=-1,
+            out_channels=self.hidden_size,
+            improved=True,
+        )  # electrical synapse convolutions,
+        self.chem_conv = GCNConv(
+            in_channels=-1,
+            out_channels=self.hidden_size,
+            improved=True,
+        )  # chemical synapse convolutions
+        self.hid_proj = torch.nn.Linear(
+            in_features=2 * self.hidden_size, out_features=self.hidden_size
+        )  # projection to latent space (i.e hidden state)
+
+        # Check if first forward call
+        self.first_forward = True
+        self.device = torch.device("cpu")
+
+    def forward(self, x):
+        """
+        GCNConv layers:
+            - input: node features (|V|, F_in), edge indices (2,|E|), edge weights (|E|) (optional)
+            - output: node features (|V|, F_out)
+
+        x: input tensor w/ shape (batch_size, seq_len, input_size)
+
+        input_size = 302, which is the number of nodes |V| in the connectome graph of _C. elegans_.
+        """
+        # Move GCNConv layers to same device as data
+        print("self.elec_conv", next(self.elec_conv.parameters()).device, end="\n\n")
+        if self.first_forward:
+            self.device = x.device
+            self.elec_conv = self.elec_conv.to(self.device)
+            self.chem_conv = self.chem_conv.to(self.device)
+            self.first_forward = False
+        print("self.elec_conv", next(self.elec_conv.parameters()).device, end="\n\n")
+
+        print("x", x.shape, end="\n\n")
+        # Reshape the input tensor to have shape (batch_size, |V| = input_size = 302, seq_len)
+        x = torch.transpose(x, 1, 2)
+        print("x", x.shape, end="\n\n")
+
+        # Create a list of Data objects.
+        data_list = [
+            Data(
+                x=x[i].to(self.device),
+                edge_index=self.edge_index.to(self.device),
+                edge_attr=self.edge_attr.to(self.device),
+            )
+            for i in range(x.size(0))
+        ]
+
+        # Convert this list into a Batch object.
+        batch = Batch.from_data_list(data_list)
+        print("batch.get_example(0)", batch.get_example(0), end="\n\n")
+
+        ### DEBUGGING ###
+        print(
+            "batch.x, batch.edge_index \n",
+            batch.x.shape,
+            batch.x.device,
+            batch.edge_index.shape,
+            batch.edge_index.device,
+            end="\n\n",
+        )
+        ### DEBUGGING ###
+
+        elec_weight = batch.edge_attr[:, 0]
+        print("elec_weight", elec_weight.shape, elec_weight.device, end="\n\n")
+        elec_hidden = self.elec_conv(
+            x=batch.x,
+            edge_index=batch.edge_index,
+            edge_weight=elec_weight,
+        )
+        print("elec_hidden", elec_hidden.shape, end="\n\n")
+
+        chem_weight = batch.edge_attr[:, 1]
+        print("chem_weight", chem_weight.shape, end="\n\n")
+        chem_hidden = self.chem_conv(
+            x=batch.x,
+            edge_index=batch.edge_index,
+            edge_weight=chem_weight,
+        )
+        print("chem_hidden", chem_hidden.shape, end="\n\n")
+
+        hidden = torch.cat([elec_hidden, chem_hidden], dim=-1)
+        print("hidden", hidden.shape, hidden.device, end="\n\n")
+
+        x = self.hid_proj(hidden)
+        print("x", x.shape, end="\n\n")
+        x = torch.transpose(x, 1, 2)
+        print("x", x.shape, end="\n\n")
+
         return x
 
 
@@ -328,7 +457,7 @@ class Model(torch.nn.Module):
     # Initialization functions for setting hidden states and weights.
     def _init_hidden(self):
         self.hidden = None
-        return self.hidden
+        return None
 
     def _init_weights(self):
         # Initialize the readout bias
@@ -339,7 +468,7 @@ class Model(torch.nn.Module):
         # torch.nn.init.kaiming_uniform_(self.linear.weight, nonlinearity='relu') # He Initialization
         return None
 
-    def init_hidden(self, input_shape):
+    def init_hidden(self, input_shape=None):
         raise NotImplementedError()
 
     # Getter functions for returning all attributes needed to reinstantiate a similar model
@@ -361,7 +490,6 @@ class Model(torch.nn.Module):
     def get_l1_reg_param(self):
         return self.l1_reg_param
 
-    # TODO: Figure out why @autocast() throws error for some loss functions (like MSE), but not others
     @autocast()
     def forward(self, input: torch.Tensor, mask: torch.Tensor, tau: int = 1):
         """
@@ -381,10 +509,8 @@ class Model(torch.nn.Module):
         self.tau = tau
         # initialize hidden state
         self.hidden = self.init_hidden(input.shape)
-        # # # DEBUGGING # # #
         # set hidden state of internal model
         self.inner_hidden_model.set_hidden(self.hidden)
-        # # # DEBUGGING # # #
         # recast the mask to the input type and shape
         mask = mask.view(1, 1, -1).to(input.dtype)
         # initialize output tensor with input tensor
@@ -397,12 +523,15 @@ class Model(torch.nn.Module):
             input_hidden_out = self.input_hidden(input)
             # concatenate into a single latent
             latent_out = input_hidden_out
+            # ### DEBUGGING ###
+            # print("x = latent_out", latent_out.shape, end="\n\n")
+            # ### DEBUGGING ###
             # transform the latent
             hidden_out = self.inner_hidden_model(latent_out)
             # perform a linear readout to get the output
             readout = self.linear(hidden_out)
             output = readout
-        return output.float()
+        return output.float()  # casting to float fixed autocast problem
 
     def loss_fn(self):
         """
@@ -436,8 +565,8 @@ class Model(torch.nn.Module):
                 target: (batch_size, seq_len, input_size)
             """
             # apply exponential recency decay factor to original loss
-            half_life = prediction.size(1) / 2  # half-life = seq_len / 2
             # # TODO: play around with time constant (a.k.a half-life, decay rate) parameter
+            half_life = prediction.size(1) / 2  # half-life = seq_len / 2
             # half_life = 1e-10 # ~ infinitisemal time constant
             # half_life = 1e10 # ~ infinite time constant
             kernel = (
@@ -452,10 +581,10 @@ class Model(torch.nn.Module):
             original_loss = self.loss(**kwargs)(
                 # kernel * prediction,
                 # kernel * target,  # weigh more recent time steps more heavily
-                # # NOTE: the next two options are extreme ends of spectrum from using an exponential recency decay
-                # prediction[:, -self.tau :, :], # only consider latest time steps
-                # target[:, -self.tau :, :], # equivalent to infinitisemal time constant
-                prediction,  # consider all time steps
+                # # NOTE: the next two options are the extreme ends of a spectrum from using an exponential recency decay
+                # prediction[:, -self.tau :, :],  # essentially considers only the most recent time steps
+                # target[:, -self.tau :, :],  # equivalent to infinitisemal time constant
+                prediction,  # consider all time steps weighted equally
                 target,  # equivalent to infinite time constant
             )
             # FFT regularization term
@@ -590,7 +719,7 @@ class LinearNN(Model):
             torch.nn.LayerNorm(self.hidden_size),
         )
 
-        # Linear layer: Hidden to hidden transformation
+        # Hidden to hidden transformation: Linear layer
         self.hidden_hidden = torch.nn.Sequential(
             self.blocks,
             torch.nn.ReLU(),
@@ -677,7 +806,7 @@ class NeuralTransformer(Model):
             # NOTE: Do NOT use LayerNorm here!
         )
 
-        # Hidden to hidden transformation
+        # Hidden to hidden transformation: Transformer layer
         self.hidden_hidden = torch.nn.Sequential(
             self.blocks,
             torch.nn.ReLU(),
@@ -732,7 +861,7 @@ class NetworkRNN(Model):
         self.hidden_hidden = CTRNN(
             input_size=self.hidden_size,
             hidden_size=self.hidden_size,  # combine input and mask
-            dt=25,
+            dt=0.25,
         )
         # Instantiate internal hidden model
         self.inner_hidden_model = InnerHiddenModel(self.hidden_hidden, self.hidden)
@@ -747,7 +876,7 @@ class NetworkRNN(Model):
 class NeuralCFC(Model):
     """
     Neural Circuit Policy (NCP) Closed-form continuous time (CfC) model.
-    TODO: Cite the paper by Ramin hasani, Daniela Rus et al.
+    TODO: Cite Nature Machine Intelligence 2022 paper by Ramin Hasani, Daniela Rus et al.
     """
 
     def __init__(
@@ -898,42 +1027,38 @@ class NetworkGCN(Model):
 
     def __init__(
         self,
-        input_dim: int,
-        hidden_dim: int,
-        output_dim: int,
-        num_layers: int,
+        input_size: int,
+        hidden_size: int,
+        num_layers: int = 1,
         loss: Union[Callable, None] = None,
         fft_reg_param: float = 0.0,
         l1_reg_param: float = 0.0,
     ):
         super(NetworkGCN, self).__init__(
-            input_dim,
-            hidden_dim,
+            input_size,
+            hidden_size,
             num_layers,
             loss,
             fft_reg_param,
             l1_reg_param,
         )
 
-        # load the connectome graph 
-        graph_tensors = torch.load(
-            os.path.join(ROOT_DIR, "data", "processed", "connectome", "graph_tensors.pt")
+        # Input to hidden transformation: Graph Convolutional Network (GCN) layer
+        self.input_hidden = GCNModel(self.input_size, self.hidden_size, num_layers=1)
+
+        # Hidden to hidden transformation: Identity layer
+        self.hidden_hidden = torch.nn.Sequential(
+            self.identity,
+            torch.nn.ReLU(),
+            # NOTE: Do NOT use LayerNorm here!
+            # # NOTE: YES use LayerNorm here!
+            # torch.nn.LayerNorm(self.hidden_size),
         )
-        graph = Data(**graph_tensors)
-        self.edge_index = graph.edge_index
-
-        self.layers = torch.nn.ModuleList()
-        for _ in range(num_layers - 2):
-            self.layers.extend([GCNConv(hidden_dim, hidden_dim), torch.nn.ReLU()])
-        self.layers.extend([GCNConv(hidden_dim, output_dim), torch.nn.ReLU()])
-
-        # Hidden to hidden transformation: Graph Convolutional Network (GCN)
-        self.hidden_hidden = torch.nn.Sequential(*self.layers)
 
         # Instantiate internal hidden model
-        self.inner_hidden_model = InnerHiddenModel(self.hidden_hidden, self.edge_idex)
+        self.inner_hidden_model = InnerHiddenModel(self.hidden_hidden, self.hidden)
 
-    def forward(self, x):
-        for i, layer in enumerate(self.layers):
-            x = torch.relu(layer(x, self.edge_index))
-        return x
+    def init_hidden(self, input_shape=None):
+        """Initialize the hidden state of the inner model."""
+        self.hidden = None
+        return None

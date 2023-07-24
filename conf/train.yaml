@@ -1,21 +1,22 @@
 train:
-  optimizer: RMSprop # which Pytorch optimizer to use; options: null (defaults to SGD), SGD, Adam, AdamW, Adagrad, Adadelta, RMSprop
+  optimizer: Adam # which Pytorch optimizer to use; options: null (defaults to SGD), SGD, Adam, AdamW, Adagrad, Adadelta, RMSprop
   learn_rate: 0.0001 # learning rate
-  epochs: 300 # number of epochs (worm cohorts) the model will be trained for
+  epochs: 10 #300 # number of epochs (worm cohorts) the model will be trained for
   # constraint: epochs: int > 0 
   save_freq: 100000 # frequency (in epochs) with which to save model checkpoints
   # save_freq: 0 < int <= epochs
-  seq_len: 200 # length of time-series sequences to train
+  seq_len: 200 # length of time-series sequences (i.e. samples) to train with
   # constraint: seq_len: 0 < int < len(data) 
-  k_splits: 2 # number of interleaved train/test splits per single worm data
+  k_splits: 2 # number of interleaved train/test blocks to split each worm's full dataset into
   # constraint: 2 <= int <= 5; keep fixed k_splits: int = 2
+  # NOTE: batch_size = num_samples // num_batches
   num_samples: 16 # the number of sampled sequences per worm
-  # constraint: due to memory limitations, keep fixed num_samples: 0 < int <= 32
-  num_batches: 1 # the number of batches per worm
+  # constraint: due to memory limitations, keep num_samples: 0 < int <= 32
+  # interpretation: for fixed num_batches, larger num_samples <-> larger batch_size; smaller num_batches <-> smaller batch_size
+  num_batches: 1 # the number of batches per worm (i.e, the number of forward-backward steps per worm) 
   # constraint: due to memory limitations, keep fixed num_batches: int = 1
-  # interpretation: larger num. batches <-> smaller batch size; smaller num. batches <-> larger batch size; 
-  tau_in: 1 # offset of target sequence from input sequence that we wish to train with 
+  # interpretation: for fixed num_samples, larger num_batches <-> smaller batch_size; smaller num_batches <-> larger batch_size
+  tau_in: 1 # number of timesteps forward that the target sequence offset of from input sequence by
   # constraint: keep fixed at tau_in = 1
-  # interpretation: using a list of tau_in values may help train a multi-timescale prediciton model
-  shuffle_samples: false # whether to shuffle samples (sequences) from each worm
+  shuffle_samples: true # whether to shuffle samples (sequences) from each worm
   reverse: false # if True reverse the order of generation of the samples (sequences)
