@@ -126,7 +126,7 @@ def preprocess_connectome(raw_dir, raw_files):
     # edge_attr for gap junctions
     num_edges = len(Ggap_edges)
     ggap_edge_attr = torch.empty(
-        num_edges, num_edge_features, dtype=torch.float
+        num_edges, num_edge_features, dtype=torch.float32
     )  # [num_edges, num_edge_features]
     for i, weight in enumerate(Ggap_edges.Weight.values):
         ggap_edge_attr[i, :] = torch.tensor(
@@ -136,20 +136,21 @@ def preprocess_connectome(raw_dir, raw_files):
     # edge_attr for chemical synapses
     num_edges = len(Gsyn_edges)
     gsyn_edge_attr = torch.empty(
-        num_edges, num_edge_features, dtype=torch.float
+        num_edges, num_edge_features, dtype=torch.float32
     )  # [num_edges, num_edge_features]
     for i, weight in enumerate(Gsyn_edges.Weight.values):
         gsyn_edge_attr[i, :] = torch.tensor(
-            [0, weight], dtype=torch.float
+            [0, weight], dtype=torch.float32
         )  # chemical synapse encoded as [0,1]
 
     # data.x node feature matrix
     num_nodes = len(Gsyn_nodes)
     num_node_features = 1024
 
-    # Generate random data TODO: inject real data istead !
+    # Generate random data 
+    # TODO: inject real data istead!
     x = torch.rand(
-        num_nodes, num_node_features, dtype=torch.float
+        num_nodes, num_node_features, dtype=torch.float32
     )  # [num_nodes, num_node_features]
 
     # data.y target to train against
@@ -168,12 +169,12 @@ def preprocess_connectome(raw_dir, raw_files):
     # Graph for electrical connectivity
     electrical_graph = Data(
         x=x, edge_index=ggap_edge_index, edge_attr=ggap_edge_attr, y=y
-    )  # torch_geometric package
+    )  # Data object from torch_geometric package
 
     # Graph for chemical connectivity
     chemical_graph = Data(
         x=x, edge_index=gsyn_edge_index, edge_attr=gsyn_edge_attr, y=y
-    )  # torch_geometric package
+    )  # Data object from torch_geometric package
 
     # Merge electrical and chemical graphs into a single connectome graph
     edge_index = torch.hstack((electrical_graph.edge_index, chemical_graph.edge_index))
@@ -400,7 +401,7 @@ class CalciumDataReshaper:
         self.slot_to_unknown_neuron = {}
         self.slot_to_neuron = {}
         self.max_timesteps = self.worm_dataset["max_timesteps"]
-        self.dtype = torch.float32
+        self.dtype = torch.float
         self._init_neuron_data()
         self._reshape_data()
 
@@ -466,7 +467,6 @@ class CalciumDataReshaper:
                 self.slot_to_named_neuron[slot] = neuron
 
     def _fill_calcium_data(self, idx, slot):
-        """NOTE: This rounds the calcium data to 1 decimal place."""
         self.standard_calcium_data[:, slot] = torch.from_numpy(
             self.origin_calcium_data[:, idx]
         )
@@ -1383,13 +1383,13 @@ class Flavell2023Preprocessor(BasePreprocessor):
 
     def extract_data(self, file_data):
         if isinstance(file_data, h5py.File):
-            time_in_seconds = np.array(file_data["timestamp_confocal"], dtype=float)
+            time_in_seconds = np.array(file_data["timestamp_confocal"], dtype=np.float32)
             time_in_seconds = (
                 time_in_seconds - time_in_seconds[0]
             )  # start time at 0.0 seconds
             time_in_seconds = time_in_seconds.reshape((-1, 1))
 
-            calcium_data = np.array(file_data["trace_array"], dtype=float)
+            calcium_data = np.array(file_data["trace_array"], dtype=np.float32)
 
             neurons = np.array(file_data["neuropal_label"], dtype=str)
             neurons_copy = []
@@ -1401,14 +1401,7 @@ class Flavell2023Preprocessor(BasePreprocessor):
             neurons = np.array(neurons_copy)
 
         elif isinstance(file_data, dict):  # assuming JSON format
-            # avg_time = (
-            #     file_data["avg_timestep"] * 60
-            # )  # average time step in seconds (float)
-            # time_in_seconds = np.arange(
-            #     0, max_t * avg_time, avg_time
-            # )  # Time vector in seconds
-            # time_in_seconds = time_in_seconds.reshape((-1, 1))
-            time_in_seconds = np.array(file_data["timestamp_confocal"], dtype=float)
+            time_in_seconds = np.array(file_data["timestamp_confocal"], dtype=np.float32)
             time_in_seconds = (
                 time_in_seconds - time_in_seconds[0]
             )  # start time at 0.0 seconds
@@ -1418,7 +1411,7 @@ class Flavell2023Preprocessor(BasePreprocessor):
             max_t = len(raw_traces[0])  # Max time steps (int)
             number_neurons = len(raw_traces)  # Number of neurons (int)
             ids = file_data["labeled"]  # Labels (list)
-            calcium_data = np.zeros((max_t, number_neurons))  # All traces
+            calcium_data = np.zeros((max_t, number_neurons), dtype=np.float32)  # All traces
             for i, trace in enumerate(raw_traces):
                 calcium_data[:, i] = trace
 
