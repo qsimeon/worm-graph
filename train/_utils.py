@@ -264,8 +264,8 @@ def split_train_test(
     data : torch.Tensor
         Single worm data input tensor.
     k_splits : int, optional, default=2
-        The number of chunks to split the data into for creating train
-        and test sets (half chuncks train, half test).
+        The number of chunks to split the data into for creating interleaved
+        train and test sets (the first chunk is always assigned to train).
     seq_len : int, optional, default=100
         The length of the time-series sequences to train.
     num_samples : int, optional, default=10
@@ -276,9 +276,9 @@ def split_train_test(
         will be generated.
     reverse : bool, optional, default=True
         Whether to sample sequences backward from end of the data.
-    tau : int or list[int], optional, default=1
-        The number of timesteps to the right by which the target sequence
-        is offset from input sequence.
+    tau : int, optional, default=1
+        The number of timesteps forward by which the target sequence
+        is offset from the input sequence.
     use_residual : bool, optional, default=False
         Whether to use calcium data or residual calcium data.
 
@@ -306,14 +306,9 @@ def split_train_test(
     assert isinstance(seq_len, int) and 0 < seq_len < len(
         data
     ), "Ensure that `seq_len`:int < len(data)."
-    if isinstance(tau, int):
-        assert tau < len(data) - seq_len, "Invalid `tau` integer entered."
-        tau = [tau]  # convert`tau` to a list
-    else:
-        tau = list(tau)
-        assert isinstance(tau, list) and all(
-            [0 < t < len(data) - seq_len for t in tau]
-        ), "Invalid `tau` list entered."
+    assert (
+        isinstance(tau, int) and tau < len(data) - seq_len
+    ), "Invalid `tau` integer entered."
 
     # Make time vector
     if time_vec is None:
@@ -332,7 +327,9 @@ def split_train_test(
 
     # Split dataset into train and test sections
     chunk_size = len(data) // k_splits
-    assert seq_len < chunk_size, "The entered `seq_len` is too long for this dataset!"
+    assert (
+        seq_len < chunk_size
+    ), "The entered `seq_len` is too long for this dataset! Try a smaller `seq_len` or decreasing `k_splits`."
     split_datasets = torch.split(data, chunk_size, dim=0)  # length k_splits list
     split_times = torch.split(time_vec, chunk_size, dim=0)
 
@@ -346,9 +343,10 @@ def split_train_test(
     ).detach()
     test_mask = ~train_mask.detach()
 
-    # Drop last split if too small. Important that this is after making train/test masks
+    # Drop the last split if it is too short.
+    # NOTE: It is important that this is done AFTER making the train/test masks.
     len_last = len(split_datasets[-1])
-    if any(t >= len_last // 2 for t in tau) or (len_last < seq_len):
+    if (tau >= len_last // 2) or (len_last < seq_len):
         split_datasets = split_datasets[:-1]
         split_times = split_times[:-1]
     if len(split_datasets) == 1 or len(split_times) == 1:
@@ -359,8 +357,6 @@ def split_train_test(
     train_splits, train_times = split_datasets[::2], split_times[::2]
     test_splits, test_times = split_datasets[1::2], split_times[1::2]
 
-    # Pick a random `tau` from the list
-    _tau = random.choice(tau)
     # calculate number of train/ test samples per split
     train_size_per_split = (num_samples // max(1, len(train_splits))) + (
         num_samples % max(1, len(train_splits))
@@ -377,7 +373,7 @@ def split_train_test(
             num_samples=train_size_per_split,
             reverse=reverse,
             time_vec=train_times[i],
-            tau=_tau,
+            tau=tau,
             use_residual=use_residual,
         )
         for i, _data in enumerate(train_splits)
@@ -392,7 +388,7 @@ def split_train_test(
             num_samples=test_size_per_split,
             reverse=(not reverse),
             time_vec=test_times[i],
-            tau=_tau,
+            tau=tau,
             use_residual=use_residual,
         )
         for i, _data in enumerate(test_splits)
