@@ -206,6 +206,7 @@ def train_model(
                 )
                 if i == 0:  # Keep the validation dataset the same
                     test_datasets[j] = tmp_test_dataset
+                    
                 # Add to memo
                 memo_loaders_masks[worm] = dict(
                     train_dataset=train_datasets[j],
@@ -400,6 +401,6 @@ if __name__ == "__main__":
         config,
         model,
         dataset,
-        shuffle_worms=False,
+        shuffle_worms=True,
         log_dir=os.path.join("logs", "{}".format(timestamp)),
     )
