@@ -269,6 +269,7 @@ class GCNModel(torch.nn.Module):
         # Check if first forward call
         self.first_forward = True
         self.device = torch.device("cpu")
+        self.random_projection = None
 
     def forward(self, x):
         """
@@ -280,19 +281,26 @@ class GCNModel(torch.nn.Module):
 
         input_size = 302, which is the number of nodes |V| in the connectome graph of _C. elegans_.
         """
+        # Check that the input shape is as expected
+        batch_size, seq_len, input_size = x.shape
+        assert input_size == self.input_size, "Incorrectly shaped input tensor."
+
         # Move GCNConv layers to same device as data
-        print("self.elec_conv", next(self.elec_conv.parameters()).device, end="\n\n")
         if self.first_forward:
             self.device = x.device
             self.elec_conv = self.elec_conv.to(self.device)
             self.chem_conv = self.chem_conv.to(self.device)
+            self.random_projection = torch.randn(
+                self.input_size,
+                seq_len,
+                requires_grad=False,
+                dtype=torch.float,
+                device=self.device,
+            )  # (hidden_size, seq_len)
             self.first_forward = False
-        print("self.elec_conv", next(self.elec_conv.parameters()).device, end="\n\n")
 
-        print("x", x.shape, end="\n\n")
-        # Reshape the input tensor to have shape (batch_size, |V| = input_size = 302, seq_len)
+        # Reshape the input (batch_size, |V| = input_size = 302, seq_len)
         x = torch.transpose(x, 1, 2)
-        print("x", x.shape, end="\n\n")
 
         # Create a list of Data objects.
         data_list = [
@@ -306,46 +314,33 @@ class GCNModel(torch.nn.Module):
 
         # Convert this list into a Batch object.
         batch = Batch.from_data_list(data_list)
-        print("batch.get_example(0)", batch.get_example(0), end="\n\n")
 
-        ### DEBUGGING ###
-        print(
-            "batch.x, batch.edge_index \n",
-            batch.x.shape,
-            batch.x.device,
-            batch.edge_index.shape,
-            batch.edge_index.device,
-            end="\n\n",
-        )
-        ### DEBUGGING ###
-
+        # Chemical synapses convolution
         elec_weight = batch.edge_attr[:, 0]
-        print("elec_weight", elec_weight.shape, elec_weight.device, end="\n\n")
         elec_hidden = self.elec_conv(
             x=batch.x,
             edge_index=batch.edge_index,
             edge_weight=elec_weight,
         )
-        print("elec_hidden", elec_hidden.shape, end="\n\n")
 
+        # Gap junctions convolution
         chem_weight = batch.edge_attr[:, 1]
-        print("chem_weight", chem_weight.shape, end="\n\n")
         chem_hidden = self.chem_conv(
             x=batch.x,
             edge_index=batch.edge_index,
             edge_weight=chem_weight,
         )
-        print("chem_hidden", chem_hidden.shape, end="\n\n")
 
+        # Concatenate into a single latent
         hidden = torch.cat([elec_hidden, chem_hidden], dim=-1)
-        print("hidden", hidden.shape, hidden.device, end="\n\n")
 
-        x = self.hid_proj(hidden)
-        print("x", x.shape, end="\n\n")
-        x = torch.transpose(x, 1, 2)
-        print("x", x.shape, end="\n\n")
+        # Transform back to the input space
+        x = self.hid_proj(hidden).T  # (batch_size, input_size, hidden_size)
+        x = x.reshape(self.hidden_size, batch_size, self.input_size)
+        x = x @ self.random_projection  # (hidden_size, batch_size, seq_len)
+        x = x.reshape(batch_size, seq_len, self.hidden_size)
 
-        return x
+        return x  # (batch_size, seq_len, hidden_size)
 
 
 class InnerHiddenModel(torch.nn.Module):
@@ -488,7 +483,7 @@ class Model(torch.nn.Module):
     def get_l1_reg_param(self):
         return self.l1_reg_param
 
-    #@autocast()
+    @autocast()
     def forward(self, input: torch.Tensor, mask: torch.Tensor, tau: int = 1):
         """
         Forward method for simple linear regression model.
