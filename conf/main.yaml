@@ -10,7 +10,7 @@ defaults:
 # if you want your primary config to override the values of configs
 # from the defaults List, append _self_ to the end of the defaults List
 globals:
-  random_seed: 1
+  random_seed: 0
   use_residual: false # whether to make train models on the residual signal
   smooth_data: true # whether to use smoothed signal data
   shuffle_worms: true # whether to shuffle worms
