@@ -1,7 +1,7 @@
 defaults:
   # - override hydra/launcher: submitit_local
   # # NOTE: When on OpenMind, COMMENT out the lines above and UNCOMMENT the lines below 
-  - override /hydra/launcher: submitit_slurm
+  - override hydra/launcher: submitit_local
 
 hydra:
   launcher:

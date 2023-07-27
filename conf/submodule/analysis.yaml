@@ -1,5 +1,5 @@
 analysis:
-  dataset_name: "Synthetic0000" #["Flavell2023", "Kato2015"]
+  dataset_name: "Synthetic0000" # ["Flavell2023", "Kato2015"]
   hierarchical_clustering:
     group_by: four # None, three, four
     method: 'ward' # ward, average, complete, single

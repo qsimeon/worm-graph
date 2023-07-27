@@ -1,7 +1,7 @@
 from pkg import *
 
 
-@hydra.main(version_base=None, config_path="conf", config_name="main")
+@hydra.main(version_base=None, config_path="conf")
 def pipeline(
     config: DictConfig,
 ) -> None:
@@ -83,6 +83,41 @@ def pipeline(
 
     return None
 
+@hydra.main(version_base=None, config_path="conf", config_name="hydra_cluster")
+def my_app(cfg: DictConfig) -> None:
+    """Create a custom pipeline"""
+
+    print(OmegaConf.to_yaml(cfg))
+
+    # Verifications
+    if len(cfg) == 0:
+        raise ValueError("No submodules in the pipeline.")
+    
+    if 'train' in cfg.submodule:
+        assert 'model' in cfg.submodule, "Model must be defined before training."
+        assert 'dataset' in cfg.submodule, "Dataset must be defined before training."
+
+    # Print all submodules to be included in the pipeline
+    print(OmegaConf.to_yaml(cfg.submodule))
+
+    if 'preprocess' in cfg.submodule:
+        process_data(cfg.submodule) # working
+    
+    if 'dataset' in cfg.submodule:
+        dataset = get_dataset(cfg.submodule) # working
+
+    if 'model' in cfg.submodule:
+        model = get_model(cfg.submodule) # working
+
+    if 'train' in cfg.submodule:
+        print(cfg.submodule.train)
+
+    if 'visualize' in cfg.submodule:
+        print(cfg.submodule.visualize)
+
+    if 'analysis' in cfg.submodule:
+        print(cfg.submodule.analysis)
 
 if __name__ == "__main__":
-    pipeline()
+    #! pipeline()
+    my_app()
