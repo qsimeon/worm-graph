@@ -427,6 +427,18 @@ def load_dataset(name):
 
     return loader()
 
+def load_Custom():
+    """
+    Loads the last used dataset.
+    """
+    # ensure the data has been preprocessed
+    file = os.path.join(ROOT_DIR, "data", "processed", "neural", "custom.pickle")
+    assert os.path.exists(file)
+    pickle_in = open(file, "rb")
+    # unpickle the data
+    custom_dataset = pickle.load(pickle_in)
+    return custom_dataset
+
 
 def load_Synthetic0000():
     """

@@ -9,4 +9,5 @@ predict:
     num_named_neurons: all # number of neurons to train the model with (positive integer or 'all')
     num_worms: 1 # number of worms to train the model with (positive integer or 'all')
     seed: 42 # Seed for reproducibility (positive integer)
+    save: False # Always keep this fixed at false. Modify only if you want to save prediction dataset dataset
 

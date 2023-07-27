@@ -1,7 +1,8 @@
 defaults:
-  # - override hydra/launcher: submitit_local
-  # # NOTE: When on OpenMind, COMMENT out the lines above and UNCOMMENT the lines below 
-  - override /hydra/launcher: submitit_slurm
+# This file is used to configure the slurm launcher, using the Submitit Plugin.
+# If working in a cluster (like OpenMind), use submitit_slurm.
+# If working locally, use submitit_local.
+   - override hydra/launcher: submitit_local # submitit_local, submitit_slurm
 
 hydra:
   launcher:
