@@ -477,7 +477,7 @@ def optimize_model(
 
     # Create the neurons (feature dimension) mask
     if isinstance(neurons_mask, torch.Tensor):
-        assert (
+        assert (![Untitled](https://s3-us-west-2.amazonaws.com/secure.notion-static.com/0cedc742-c308-4c6a-8074-0328c017b970/Untitled.png)
             neurons_mask.size(0) == NUM_NEURONS and neurons_mask.dtype == torch.bool
         ), "Please use a valid boolean mask for neurons."
         neurons_mask = neurons_mask.detach().to(DEVICE)

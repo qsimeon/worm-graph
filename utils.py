@@ -52,10 +52,11 @@ VALID_DATASETS = {
     "Kaplan2020",
     "Leifer2023",  # Different type of dataset: stimulus-response.
     "Flavell2023",  # TODO: something wrong with worm0.
-    "Custom", # Dataset created when 'dataset.save' is True
 }
 
-SYNTHETIC_DATASETS = {"Synthetic0000"}
+SYNTHETIC_DATASETS = {"Synthetic0000",
+                      "Custom", # Dataset created when 'dataset.save' is True
+}
 
 # List of all 302 hermaphrodite neurons
 NEURONS_302 = sorted(

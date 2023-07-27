@@ -1,4 +1,9 @@
-defaults: 
+defaults:
+# Default configuration files used by the main.py pipeline.
+# If _self_ is appended to the end of the defaults List, the repeated parameters
+# that apper here and in the other config files will be overridden by the values
+# in this file. Otherwise, the values in this file will be overridden by the
+# values in the other config files
   - preprocess
   - dataset
   - model
@@ -7,8 +12,7 @@ defaults:
   - visualize
   - slurm
   - _self_
-# if you want your primary config to override the values of configs
-# from the defaults List, append _self_ to the end of the defaults List
+
 globals:
   random_seed: 0
   use_residual: false # whether to make train models on the residual signal
@@ -38,27 +42,6 @@ hydra:
       model.checkpoint_path: false
       # DATASET
       dataset.name: [Kato2015, Nichols2017, Skora2018, Kaplan2020, Uzel2022, Flavell2023, Leifer2023]
-        # [Kato2015, Nichols2017, Skora2018, Kaplan2020, Flavell2023, Leifer2023]
-        # [Kato2015, Nichols2017, Skora2018, Kaplan2020, Flavell2023]
-        # [Nichols2017, Skora2018, Kaplan2020, Flavell2023, Leifer2023]
-        # [Kato2015, Nichols2017, Skora2018, Kaplan2020]
-        # [Nichols2017, Skora2018, Kaplan2020, Flavell2023]
-        # [Skora2018, Kaplan2020, Flavell2023, Leifer2023]
-        # [Kato2015, Nichols2017, Skora2018] 
-        # [Nichols2017, Skora2018, Kaplan2020]
-        # [Skora2018, Kaplan2020, Flavell2023]
-        # [Kaplan2020, Flavell2023, Leifer2023]
-        # [Kato2015, Nichols2017]
-        # [Nichols2017, Skora2018]
-        # [Skora2018, Kaplan2020]
-        # [Kaplan2020, Flavell2023]
-        # [Flavell2023, Leifer2023]
-        # [Kato2015]
-        # [Nichols2017]
-        # [Skora2018]
-        # [Kaplan2020]
-        # [Flavell2023]
-        # [Leifer2023]
       # TRAIN
       train.optimizer: Adagrad #SGD, Adam, AdamW, Adagrad, Adadelta, RMSprop 
       train.learn_rate: 0.01 #0.001, 0.01, 0.1, 1.0
