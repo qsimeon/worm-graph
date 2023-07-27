@@ -3,3 +3,4 @@ dataset:
   num_named_neurons: all # number of neurons to train the model with (positive integer or 'all')
   num_worms: all # number of worms to train the model with (positive integer or 'all')
   seed: 42 # Seed for reproducibility (positive integer)
+  save: false # Save the dataset after loading it (boolean)

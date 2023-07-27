@@ -5,7 +5,6 @@ def train_model(
     config: DictConfig,
     model: torch.nn.Module,
     dataset: dict,
-    shuffle_worms: bool = True,  # whether to shuffle all worms
     log_dir: Union[str, None] = None,  # hydra passes this in
 ) -> tuple[torch.nn.Module, str]:
     """Trains a neural network model on a multi-worm dataset.
@@ -65,6 +64,9 @@ def train_model(
     train_epochs = config.train.epochs + 1
     shuffle_samples = config.train.shuffle_samples
     batch_size = config.train.num_samples // config.train.num_batches
+    use_residual = config.train.use_residual
+    smooth_data = config.train.use_smooth_data
+    shuffle_worms = config.train.shuffle_worms
 
     # Hydra changes the current directory to log directory
     if log_dir is None:
@@ -81,7 +83,7 @@ def train_model(
     ), "Invalid number of worms."
 
     # Shuffle (without replacement) the worms (including duplicates) in the dataset
-    if shuffle_worms == True:
+    if shuffle_worms:
         dataset_items = random.sample(dataset_items, k=len(dataset_items))
 
     # Split the dataset into cohorts of worms; there should be one cohort per epoch
@@ -112,14 +114,6 @@ def train_model(
         optimizer = torch.optim.SGD(model.parameters(), lr=learn_rate)
 
     print("Optimizer:", optimizer, end="\n\n")
-
-    # Get other config params
-    if config.get("globals"):
-        use_residual = config.globals.use_residual
-        smooth_data = config.globals.smooth_data
-    else:  # defaults for when using RUN mode
-        use_residual = False
-        smooth_data = True
 
     # Initialize train/test loss metrics arrays
     data = {
