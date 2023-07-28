@@ -7,4 +7,4 @@ model:
   loss: MSE # options: MSE, Huber, L1, Poisson
   fft_reg_param: 0.0 # how much to regularize the loss by frequency distribution matching; options: 0.0 <= float <= 1.0
   l1_reg_param: 0.0 # how much to regularize the loss by L1 norm of the model parameters; options: 0.0 <= float <= 1.0
-  checkpoint_path: /om2/user/lrvenan/worm-graph/logs/2num_worms_ex/transformer/num_worms_exp_07_27/5/checkpoints/900_epochs_221400_worms.pt # options: false, path/to/pretrained/model
+  checkpoint_path: false # options: false, path/to/pretrained/model

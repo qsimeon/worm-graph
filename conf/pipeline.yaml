@@ -7,7 +7,7 @@ defaults:
   #   This plugin provides SLURM launcher to work on the cluster.
   #   - Use submitit_slurm when using OpenMind
   #   - Use submitit_local when running locally
-  - override hydra/launcher: submitit_slurm
+  - override hydra/launcher: submitit_local
   - _self_
 
 hydra:
@@ -17,7 +17,7 @@ hydra:
   #               defined by the sweeper. If running locally, multi-run
   #               runs the jobs serially. If in the cluster, multi-run
   #               submits the jobs in parallel.
-  mode: MULTIRUN
+  mode: RUN
 
   # Hydra job:
   #   - chdir: Change the working directory to the log directory.
@@ -43,11 +43,15 @@ hydra:
   #   These are the launcher parameters for the SubmitIt plugin.
   #   Uncomment the exclude and constraint lines if working on OpenMind.
   launcher:
-    exclude: dgx001, dgx002
-    constraint: high-capacity
+    # exclude: dgx001, dgx002
+    # constraint: high-capacity
     cpus_per_task: 1
     gpus_per_node: 1
     tasks_per_node: 1
     mem_gb: 48
     nodes: 1
     timeout_min: 1440
+
+# ============================ Pipeline Config ============================
+
+seed: 42
