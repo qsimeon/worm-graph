@@ -7,4 +7,4 @@ hydra:
   # These parameters will be tested just when MULTIRUN mode is used.
   # Use the submodule parameters if RUN.
       params:
-        submodule.dataset_train.num_worms: 50, 100
+        submodule.dataset_train.name: Kato2015, Nichols2017
