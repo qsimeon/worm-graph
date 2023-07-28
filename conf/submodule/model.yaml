@@ -7,4 +7,4 @@ model:
   loss: Huber # options: MSE, Huber, L1, Poisson
   fft_reg_param: 0.0 # how much to regularize the loss by frequency distribution matching; options: 0.0 <= float <= 1.0
   l1_reg_param: 0.0 # how much to regularize the loss by L1 norm of the model parameters; options: 0.0 <= float <= 1.0
-  checkpoint_path: false # options: false, path/to/pretrained/model
+  checkpoint_path: /home/lrvnc/Projects/worm-graph/logs/hydra/2023_07_27_22_21_40/checkpoints/10_epochs_560_worms.pt # options: false, path/to/pretrained/model

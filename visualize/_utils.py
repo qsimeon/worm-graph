@@ -163,29 +163,22 @@ def plot_loss_curves(log_dir):
     sns.set(style='whitegrid')
     sns.set_palette("tab10")
 
-    # process the config.yaml file inside the log folder
-    cfg_path = os.path.join(log_dir, "config.yaml")
+    # process the pipeline_info.yaml file inside the log folder
+    cfg_path = os.path.join(log_dir, "pipeline_info.yaml")
     if os.path.exists(cfg_path):
         config = OmegaConf.structured(OmegaConf.load(cfg_path))
+        config = config.submodule
     else:
-        config = OmegaConf.structured(
-            {
-                "dataset": {"name": "unknown"},
-                "model": {"type": "unknown"},
-                "train": {"tau_in": "unknown"},
-                "globals": {"timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")},
-            }
-        )
+        raise FileNotFoundError("No pipeline_info.yaml file found in {}".format(log_dir))
 
     # Get strings for plot title
-    dataset_name = config.dataset.name
+    dataset_name = config.dataset_train.name
     dataset_name = dataset_name.split("_")
     dataset_name = [ds_name[:-4] for ds_name in dataset_name]
     dataset_name = ", ".join(dataset_name) # Just initials
-    num_worms = config.dataset.num_worms
+    num_worms = config.dataset_train.num_worms
     model_name = config.model.type
     tau_in = config.train.tau_in
-    timestamp = datetime.strptime(config.globals.timestamp, "%Y_%m_%d_%H_%M_%S")
 
     # Create the plot title
     plt_title = (
@@ -258,30 +251,23 @@ def plot_before_after_weights(log_dir: str) -> None:
     Returns:
         None
     """
-    # process the config.yaml file inside the log folder
-    cfg_path = os.path.join(log_dir, "config.yaml")
+    # process the pipeline_info.yaml file inside the log folder
+    cfg_path = os.path.join(log_dir, "pipeline_info.yaml")
     if os.path.exists(cfg_path):
         config = OmegaConf.structured(OmegaConf.load(cfg_path))
+        config = config.submodule
     else:
-        config = OmegaConf.structured(
-            {
-                "dataset": {"name": "unknown"},
-                "model": {"type": "unknown"},
-                "train": {"tau_in": "unknown"},
-                "globals": {"timestamp": datetime.now().strftime("%Y_%m_%d_%H_%M_%S")},
-            }
-        )
+        raise FileNotFoundError("No pipeline_info.yaml file found in {}".format(log_dir))
+    
     # get strings for plot title
-    dataset_name = config.dataset.name
+    dataset_name = config.dataset_train.name
     model_name = config.model.type
     tau_in = config.train.tau_in
-    timestamp = config.globals.timestamp
     # Create the plot title
-    plt_title = "Model readout weights\nmodel: {}\ndataset: {}\ntraining tau: {}\ntime: {}".format(
+    plt_title = "Model readout weights\nmodel: {}\ndataset: {}\ntraining tau: {}".format(
         model_name,
         dataset_name,
         tau_in,
-        timestamp,
     )
     # return if no checkpoints found
     chkpt_dir = os.path.join(log_dir, "checkpoints")
@@ -391,28 +377,23 @@ def plot_targets_predictions(
     # Whether using residual or calcium signal
     signal_str = "residual" if use_residual else "calcium"
 
-    # Process the config.yaml file inside the log folder
-    cfg_path = os.path.join(log_dir, "config.yaml")
+    # Process the pipeline_info.yaml file inside the log folder
+    cfg_path = os.path.join(log_dir, "pipeline_info.yaml")
     if os.path.exists(cfg_path):
         config = OmegaConf.structured(OmegaConf.load(cfg_path))
+        config = config.submodule
     else:
-        config = OmegaConf.structured(
-            {
-                "dataset": {"name": "unknown"},
-                "model": {"type": "unknown"},
-                "train": {"tau_in": "unknown"},
-                "predict": {"tau_out": "unknown", "dataset": {"name": "unknown"}},
-                "globals": {"timestamp": datetime.now().strftime("%Y_%m_%d_%H_%M_%S")},
-            }
+        raise FileNotFoundError(
+            f"Could not find pipeline_info.yaml file in {log_dir}."
         )
 
     # Get strings for plot title
-    train_dataset_name = config.dataset.name
+    train_dataset_name = config.dataset_train.name
     train_dataset_name = train_dataset_name.split("_")
     train_dataset_name = [ds_name[:-4] for ds_name in train_dataset_name]
     train_dataset_name = ", ".join(train_dataset_name)
 
-    predict_dataset_name = config.predict.dataset.name
+    predict_dataset_name = config.dataset_predict.name
     predict_dataset_name = predict_dataset_name.split("_")
     predict_dataset_name = [ds_name[:-4] for ds_name in predict_dataset_name]
     predict_dataset_name = ", ".join(predict_dataset_name)
@@ -420,7 +401,6 @@ def plot_targets_predictions(
     model_name = config.model.type
     tau_in = config.train.tau_in
     tau_out = config.predict.tau_out
-    timestamp = datetime.strptime(config.globals.timestamp, "%Y_%m_%d_%H_%M_%S")
     
     # Recursive call for all worms
     if (worm is None) or (worm.lower() == "all"):
@@ -458,7 +438,6 @@ def plot_targets_predictions(
                 tau_in,
                 r'$\tau$',
                 tau_out,
-                timestamp.strftime("%Y-%m-%d %H:%M:%S"),
             )
         )
 
@@ -566,10 +545,11 @@ def plot_correlation_scatterplot(
     # Whether using residual or calcium signal
     signal_str = "residual" if use_residual else "calcium"
 
-    # Process the config.yaml file inside the log folder
-    cfg_path = os.path.join(log_dir, "config.yaml")
+    # Process the pipeline_info.yaml file inside the log folder
+    cfg_path = os.path.join(log_dir, "pipeline_info.yaml")
     if os.path.exists(cfg_path):
         config = OmegaConf.structured(OmegaConf.load(cfg_path))
+        config = config.submodule
     else:
         config = OmegaConf.structured(
             {
@@ -582,12 +562,12 @@ def plot_correlation_scatterplot(
         )
 
     # Get strings for plot title
-    train_dataset_name = config.dataset.name
+    train_dataset_name = config.dataset_train.name
     train_dataset_name = train_dataset_name.split("_")
     train_dataset_name = [ds_name[:-4] for ds_name in train_dataset_name]
     train_dataset_name = ", ".join(train_dataset_name)
 
-    predict_dataset_name = config.predict.dataset.name
+    predict_dataset_name = config.dataset_predict.name
     predict_dataset_name = predict_dataset_name.split("_")
     predict_dataset_name = [ds_name[:-4] for ds_name in predict_dataset_name]
     predict_dataset_name = ", ".join(predict_dataset_name)
@@ -595,7 +575,6 @@ def plot_correlation_scatterplot(
     model_name = config.model.type
     tau_in = config.train.tau_in
     tau_out = config.predict.tau_out
-    timestamp = datetime.strptime(config.globals.timestamp, "%Y_%m_%d_%H_%M_%S")
 
     # Recursive call for all worms
     if (worm is None) or (worm.lower() == "all"):

@@ -1,17 +1,14 @@
 # ============================ Hydra Config ============================
 
 defaults:
+  # To run the default pipeline, add +experiment=default to the command.
+  - submodule: []
   # SubmitIt Launcher Plugin:
   #   This plugin provides SLURM launcher to work on the cluster.
   #   - Use submitit_slurm when using OpenMind
   #   - Use submitit_local when running locally
-  - submodule: [dataset, model]
   - override hydra/launcher: submitit_local
   - _self_
-
-  # Default pipeline:
-  #   This is the default pipeline that will be loaded.
-  #- pipeline: default
 
 hydra:
   # Hydra mode:
@@ -41,12 +38,6 @@ hydra:
   sweep:
     dir: logs/hydra/${now:%Y_%m_%d_%H_%M_%S}
     subdir: ${hydra.job.num}
-  
-  # Sweeper parameters:
-  #   Here we define the parameters for the experiments.
-  sweeper:
-    params:
-      submodule.dataset.name: Kato2015, Flavell2023
 
   # Hydra launcher:
   #   These are the launcher parameters for the SubmitIt plugin.

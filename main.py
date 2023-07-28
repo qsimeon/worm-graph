@@ -91,35 +91,66 @@ def my_app(cfg: DictConfig) -> None:
 
     # Verifications
     if len(cfg) == 0:
-        raise ValueError("No submodules in the pipeline.")
+        raise ValueError("No submodules in the pipeline. Run python main.py +experiment=your_experiment")
     
     if 'train' in cfg.submodule:
         assert 'model' in cfg.submodule, "Model must be defined before training."
-        assert 'dataset' in cfg.submodule, "Dataset must be defined before training."
+        assert 'dataset_train' in cfg.submodule, "Train dataset must be defined before training."
+
+    if 'predict' in cfg.submodule:
+        assert 'model' in cfg.submodule, "Model must be defined before making predictions."
+        assert 'dataset_predict' in cfg.submodule, "Prediction dataset must be defined before making predictions."
+
+    if 'visualize' in cfg.submodule:
+        if cfg.submodule.visualize.log_dir is None:
+             assert 'train' in cfg.submodule, "Train must be defined before visualizing (or chose a log_dir)."
+             assert 'predict' in cfg.submodule, "Predict must be defined before visualizing (or chose a log_dir)."
 
     # Print all submodules to be included in the pipeline
     #print(OmegaConf.to_yaml(cfg.submodule))
 
     if 'preprocess' in cfg.submodule:
-        process_data(cfg.submodule) # working
+        process_data(cfg.submodule.preprocess) # working
     
-    if 'dataset' in cfg.submodule:
-        dataset = get_dataset(cfg.submodule) # working
+    if 'dataset_train' in cfg.submodule:
+        dataset_train = get_dataset(cfg.submodule.dataset_train) # working
+
+    if 'dataset_predict' in cfg.submodule:
+        dataset_predict = get_dataset(cfg.submodule.dataset_predict) # working
 
     if 'model' in cfg.submodule:
-        model = get_model(cfg.submodule) # working
+        model = get_model(cfg.submodule.model) # working
 
     if 'train' in cfg.submodule:
-        model, log_dir, config = train_model(
-            config = cfg.submodule,
+        model, submodules_updated, train_info = train_model(
+            train_config = cfg.submodule.train,
             model = model,
-            dataset = dataset,
-            log_dir = None,
-        )
-        print(config)
+            dataset = dataset_train
+        ) # working
+        # Update cfg.submodule parameters
+        cfg.submodule = OmegaConf.merge(cfg.submodule, submodules_updated)
+
+    if 'predict' in cfg.submodule:
+        submodules_updated = make_predictions(
+            predict_config = cfg.submodule.predict,
+            model =  model,
+            dataset = dataset_predict,
+        ) # working
+        # Update cfg.submodule parameters
+        cfg.submodule = OmegaConf.merge(cfg.submodule, submodules_updated)
+
+    # ================== Save updated configs ==================
+    log_dir = os.getcwd()
+    OmegaConf.save(cfg, os.path.join(log_dir, "pipeline_info.yaml"))
+
+    if 'train' in cfg.submodule:
+        OmegaConf.save(train_info, os.path.join(log_dir, "train_info.yaml"))
+    # ==========================================================
 
     if 'visualize' in cfg.submodule:
-        print(cfg.submodule.visualize)
+        plot_figures(
+            visualize_config=cfg.submodule.visualize
+        )
 
     if 'analysis' in cfg.submodule:
         print(cfg.submodule.analysis)

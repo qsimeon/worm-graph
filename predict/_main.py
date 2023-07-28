@@ -2,12 +2,9 @@ from predict._utils import *
 
 
 def make_predictions(
-    config: DictConfig,
-    model: Union[torch.nn.Module, None] = None,
-    dataset: Union[dict, None] = None,
-    log_dir: Union[str, None] = None,  # hydra passes this in
-    use_residual: bool = False,
-    smooth_data: bool = True,
+    predict_config: DictConfig,
+    model: torch.nn.Module,
+    dataset: dict,
 ) -> None:
     """Make predictions on a dataset with a trained model.
 
@@ -51,24 +48,17 @@ def make_predictions(
     Notes
     -----
     """
+    
+    log_dir = os.getcwd()  # logs/hydra/${now:%Y_%m_%d_%H_%M_%S}
 
-    # Hydra changes the working directory to log directory (logs/playground)
-    if log_dir is None:
-        log_dir = os.getcwd()
-    else:
-        os.makedirs(log_dir, exist_ok=True)
-
-    # Replace model and dataset with those in config file
-    if model is None:
-        model = get_model(config.predict)
-    if dataset is None:
-        dataset = get_dataset(config.predict)
+    use_residual = predict_config.use_residual
+    smooth_data = predict_config.use_smooth_data
 
     # Get the desired number of future timesteps to predict
-    future_timesteps = config.predict.tau_out
+    future_timesteps = predict_config.tau_out
 
     # Get the desired context window length
-    context_len = config.predict.context_len
+    context_len = predict_config.context_len
 
     # Get the data to save
     signal_str = "residual" if use_residual else "calcium"
@@ -164,7 +154,14 @@ def make_predictions(
             header=True,
         )
 
-    return None
+        # Configs to update
+        submodules_updated = OmegaConf.create({
+            'dataset_predict': {},
+            }
+        )
+        OmegaConf.update(submodules_updated.dataset_predict, "name", dataset['worm0']['dataset'], merge=True) # updated dataset name
+
+    return submodules_updated
 
 
 if __name__ == "__main__":

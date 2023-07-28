@@ -2,10 +2,9 @@ from train._utils import *
 
 
 def train_model(
-    config: DictConfig,
+    train_config: DictConfig,
     model: torch.nn.Module,
     dataset: dict,
-    log_dir: Union[str, None] = None,  # hydra passes this in
 ) -> tuple[torch.nn.Module, str]:
     """Trains a neural network model on a multi-worm dataset.
 
@@ -61,17 +60,14 @@ def train_model(
     model_class_name = model.__class__.__name__
     timestamp = datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
     num_unique_worms = len(dataset)
-    train_epochs = config.train.epochs + 1
-    shuffle_samples = config.train.shuffle_samples
-    batch_size = config.train.num_samples // config.train.num_batches
-    use_residual = config.train.use_residual
-    smooth_data = config.train.use_smooth_data
-    shuffle_worms = config.train.shuffle_worms
+    train_epochs = train_config.epochs + 1
+    shuffle_samples = train_config.shuffle_samples
+    batch_size = train_config.num_samples // train_config.num_batches
+    use_residual = train_config.use_residual
+    smooth_data = train_config.use_smooth_data
+    shuffle_worms = train_config.shuffle_worms
 
-    # Hydra changes the current directory to log directory
-    if log_dir is None:
-        log_dir = os.getcwd()  # logs/hydra/${now:%Y_%m_%d_%H_%M_%S}
-    os.makedirs(log_dir, exist_ok=True)
+    log_dir = os.getcwd()  # logs/hydra/${now:%Y_%m_%d_%H_%M_%S}
 
     # Create a model checkpoints folder
     os.makedirs(os.path.join(log_dir, "checkpoints"), exist_ok=True)
@@ -98,11 +94,11 @@ def train_model(
     model = model.to(DEVICE)
 
     # Instantiate the optimizer
-    opt_param = config.train.optimizer
+    opt_param = train_config.optimizer
     optim_name = "torch.optim." + opt_param
-    learn_rate = config.train.learn_rate
+    learn_rate = train_config.learn_rate
 
-    if config.train.optimizer is not None:
+    if train_config.optimizer is not None:
         if isinstance(opt_param, str):
             optimizer = eval(
                 optim_name + "(model.parameters(), lr=" + str(learn_rate) + ")"
@@ -130,11 +126,11 @@ def train_model(
 
     # Create keyword arguments for `split_train_test`
     kwargs = dict(
-        k_splits=config.train.k_splits,
-        seq_len=config.train.seq_len,
-        num_samples=config.train.num_samples,  # Number of samples per worm
-        reverse=config.train.reverse,  # Generate samples backward from the end of data
-        tau=config.train.tau_in,
+        k_splits=train_config.k_splits,
+        seq_len=train_config.seq_len,
+        num_samples=train_config.num_samples,  # Number of samples per worm
+        reverse=train_config.reverse,  # Generate samples backward from the end of data
+        tau=train_config.tau_in,
         use_residual=use_residual,
     )
 
@@ -156,7 +152,7 @@ def train_model(
     )
     # Memoize creation of data loaders and masks for speedup
     memo_loaders_masks = dict()
-    # Train for config.train.num_epochs
+    # Train for train_config.num_epochs
     reset_epoch = 0
     # Keep track of the amount of train data per epoch (in timesteps)
     worm_timesteps = 0
@@ -288,7 +284,7 @@ def train_model(
         num_covered_neurons = len(covered_neurons)
 
         # Saving model checkpoints
-        if (i % config.train.save_freq == 0) or (i + 1 == train_epochs):
+        if (i % train_config.save_freq == 0) or (i + 1 == train_epochs):
             # display progress
             print(
                 "Saving a model checkpoint.\n\tnum. worm cohorts trained on:",
@@ -311,8 +307,8 @@ def train_model(
                     "optimizer_name": optim_name,
                     # training params
                     "epoch": reset_epoch,
-                    "seq_len": config.train.seq_len,
-                    "tau": config.train.tau_in,
+                    "seq_len": train_config.seq_len,
+                    "tau": train_config.tau_in,
                     "loss": val_loss,
                     "learning_rate": learn_rate,
                     "smooth_data": smooth_data,
@@ -344,45 +340,27 @@ def train_model(
         header=True,
     )
 
-    # Modify the config file
-    config = OmegaConf.structured(OmegaConf.to_yaml(config))
-    config.setdefault("dataset", {"name": dataset_name})
-    config.dataset.name = dataset_name
-    config.setdefault(
-        "model",
-        {
-            "type": model_class_name,
-            "checkpoint_path": checkpoint_path.split("worm-graph/")[-1],
-        },
+    # Configs to update
+    submodules_updated = OmegaConf.create({
+        'dataset_train': {},
+        'model': {},
+        }
     )
-    config.model.checkpoint_path = checkpoint_path.split("worm-graph/")[-1]
-    config.setdefault(
-        "predict",
-        {"model": {"checkpoint_path": config.model.checkpoint_path}},
+    OmegaConf.update(submodules_updated.dataset_train, "name", dataset_name, merge=True) # updated dataset name
+    OmegaConf.update(submodules_updated.model, "checkpoint_path", checkpoint_path.split("worm-graph/")[-1], merge=True) # updated checkpoint path
+
+    # Save train info
+    train_info = OmegaConf.create({
+        'timestamp': timestamp,
+        'num_unique_worms': num_unique_worms,
+        'num_covered_neurons': num_covered_neurons,
+        'worm_timesteps': worm_timesteps,
+        'seconds_per_epoch': seconds_per_epoch,
+        }
     )
-    config.predict.model.checkpoint_path = config.model.checkpoint_path
-    config.setdefault("visualize", {"log_dir": log_dir.split("worm-graph/")[-1]})
-    config.visualize.log_dir = log_dir.split("worm-graph/")[-1]
 
-    # Add some global variables
-    config.setdefault(
-        "globals", {"use_residual": use_residual, "shuffle_worms": shuffle_worms}
-    )
-    config.globals.timestamp = timestamp
-    config.globals.num_unique_worms = num_unique_worms
-    config.globals.num_covered_neurons = num_covered_neurons
-    config.globals.worm_timesteps = worm_timesteps
-    config.globals.seconds_per_epoch = seconds_per_epoch
-
-    # Save config to log directory
-    OmegaConf.save(config, os.path.join(log_dir, "config.yaml"))
-
-    # Delete the original (not updated) hydra config file
-    og_cfg_file = os.path.join(log_dir, ".hydra", "config.yaml")
-    if os.path.exists(og_cfg_file):
-        os.remove(og_cfg_file)
-    # returned trained model, a path to the log directory, and the updated config
-    return model, log_dir, config
+    # returned trained model, an update to the submodules and the train info
+    return model, submodules_updated, train_info
 
 
 if __name__ == "__main__":

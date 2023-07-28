@@ -1,7 +1,7 @@
 from data._utils import *
 
 
-def get_dataset(config: DictConfig):
+def get_dataset(dataset_config: DictConfig):
     """Returns a dict with the worm data of all requested datasets.
 
     Returns a generator object that yields single worm data objects (dict)
@@ -37,30 +37,23 @@ def get_dataset(config: DictConfig):
 
     # TODO: Add option to the `conf/dataset.yaml` config to leave out certain worms from dataset
     # Combine datasets when given a list of dataset names
-    if isinstance(config.dataset.name, str):
-        dataset_names = [config.dataset.name]
+    if isinstance(dataset_config.name, str):
+        dataset_names = [dataset_config.name]
     else:
-        dataset_names = sorted(list(config.dataset.name))
+        dataset_names = sorted(list(dataset_config.name))
 
-    num_named_neurons = config.dataset.num_named_neurons
-    num_worms = config.dataset.num_worms
-    seed = config.dataset.seed
+    num_named_neurons = dataset_config.num_named_neurons
+    num_worms = dataset_config.num_worms
 
     # Assert num_named_neurons is a positive integer or 'all'
     assert isinstance(num_named_neurons, int) or num_named_neurons == "all", (
         "num_named_neurons must be a positive integer or 'all'."
     )
 
-    # Assert seed is a positive integer
-    assert isinstance(seed, int), "Seed must be a positive integer."
-
     # Assert num_worms is a positive integer or 'all'
     assert isinstance(num_worms, int) or num_worms == "all", (
         "num_worms must be a positive integer or 'all'."
     )
-
-    # Set the seed
-    np.random.seed(seed)
 
     # Load the dataset(s)
     combined_dataset = dict()
@@ -109,7 +102,7 @@ def get_dataset(config: DictConfig):
     )
 
     # Save the dataset
-    if config.dataset.save:
+    if dataset_config.save:
         file = os.path.join(ROOT_DIR, "data/processed/neural", "custom.pickle")
         with open(file, "wb") as f:
             pickle.dump(combined_dataset, f)

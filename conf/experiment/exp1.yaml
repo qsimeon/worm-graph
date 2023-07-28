@@ -1,8 +1,0 @@
-# @package _global_
-defaults:
-  - override /submodule: [dataset,model,train]
-
-hydra:
-  sweeper:
-      params:
-        submodule.dataset.name: Kato2015, Flavell2023, Nichols2017

@@ -1,0 +1,11 @@
+# @package _global_
+defaults:
+  - override /submodule: [preprocess, dataset, model, train, predict, visualize]
+
+hydra:
+  sweeper:
+  # These parameters will be tested just when MULTIRUN mode is used.
+  # Use the submodule parameters if RUN.
+      params:
+        submodule.dataset_train.name: Kato2015, Nichols2017
+        #submodule.train.learn_rate: 0.0001, 0.001

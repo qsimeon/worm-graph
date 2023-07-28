@@ -1,7 +1,7 @@
 from models._utils import *
 
 
-def get_model(config: DictConfig) -> torch.nn.Module:
+def get_model(model_config: DictConfig) -> torch.nn.Module:
     """Instantiate or load a model as specified in 'model.yaml'.
 
     This function can either create a new model of the specified type
@@ -33,8 +33,8 @@ def get_model(config: DictConfig) -> torch.nn.Module:
     """
 
     # If a checkpoint is given (True), load a saved model
-    if config.model.checkpoint_path:
-        PATH = os.path.join(ROOT_DIR, config.model.checkpoint_path)
+    if model_config.checkpoint_path:
+        PATH = os.path.join(ROOT_DIR, model_config.checkpoint_path)
         checkpoint = torch.load(PATH, map_location=torch.device(DEVICE))
         model_name = checkpoint["model_name"]
         input_size = checkpoint["input_size"]
@@ -57,28 +57,28 @@ def get_model(config: DictConfig) -> torch.nn.Module:
 
     # Otherwise, instantiate a new model
     else:
-        assert "type" in config.model, ValueError(
+        assert "type" in model_config, ValueError(
             "No model type or checkpoint path specified."
         )
         args = dict(
-            input_size=config.model.input_size,
-            hidden_size=config.model.hidden_size,
-            num_layers=config.model.num_layers,
-            loss=config.model.loss,
-            fft_reg_param=config.model.fft_reg_param,
-            l1_reg_param=config.model.l1_reg_param,
+            input_size=model_config.input_size,
+            hidden_size=model_config.hidden_size,
+            num_layers=model_config.num_layers,
+            loss=model_config.loss,
+            fft_reg_param=model_config.fft_reg_param,
+            l1_reg_param=model_config.l1_reg_param,
         )
-        if config.model.type == "NeuralTransformer":
+        if model_config.type == "NeuralTransformer":
             model = NeuralTransformer(**args)
-        elif config.model.type == "NetworkLSTM":
+        elif model_config.type == "NetworkLSTM":
             model = NetworkLSTM(**args)
-        elif config.model.type == "NetworkRNN":
+        elif model_config.type == "NetworkRNN":
             model = NetworkRNN(**args)
-        elif config.model.type == "NeuralCFC":
+        elif model_config.type == "NeuralCFC":
             model = NeuralCFC(**args)
-        elif config.model.type == "NetworkGCN":
+        elif model_config.type == "NetworkGCN":
             model = NetworkGCN(**args)
-        elif config.model.type == "LinearNN":
+        elif model_config.type == "LinearNN":
             model = LinearNN(**args)
         else:  # default to "LinearNN" model
             model = LinearNN(**args)
