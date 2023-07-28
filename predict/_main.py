@@ -156,10 +156,10 @@ def make_predictions(
 
         # Configs to update
         submodules_updated = OmegaConf.create({
-            'dataset_predict': {},
+            'dataset': {'predict': {}},
             }
         )
-        OmegaConf.update(submodules_updated.dataset_predict, "name", dataset['worm0']['dataset'], merge=True) # updated dataset name
+        OmegaConf.update(submodules_updated.dataset.predict, "name", dataset['worm0']['dataset'], merge=True) # updated dataset name
 
     return submodules_updated
 

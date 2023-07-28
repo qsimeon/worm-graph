@@ -172,11 +172,11 @@ def plot_loss_curves(log_dir):
         raise FileNotFoundError("No pipeline_info.yaml file found in {}".format(log_dir))
 
     # Get strings for plot title
-    dataset_name = config.dataset_train.name
+    dataset_name = config.dataset.train.name
     dataset_name = dataset_name.split("_")
     dataset_name = [ds_name[:-4] for ds_name in dataset_name]
     dataset_name = ", ".join(dataset_name) # Just initials
-    num_worms = config.dataset_train.num_worms
+    num_worms = config.dataset.train.num_worms
     model_name = config.model.type
     tau_in = config.train.tau_in
 
@@ -260,7 +260,7 @@ def plot_before_after_weights(log_dir: str) -> None:
         raise FileNotFoundError("No pipeline_info.yaml file found in {}".format(log_dir))
     
     # get strings for plot title
-    dataset_name = config.dataset_train.name
+    dataset_name = config.dataset.train.name
     model_name = config.model.type
     tau_in = config.train.tau_in
     # Create the plot title
@@ -388,12 +388,12 @@ def plot_targets_predictions(
         )
 
     # Get strings for plot title
-    train_dataset_name = config.dataset_train.name
+    train_dataset_name = config.dataset.train.name
     train_dataset_name = train_dataset_name.split("_")
     train_dataset_name = [ds_name[:-4] for ds_name in train_dataset_name]
     train_dataset_name = ", ".join(train_dataset_name)
 
-    predict_dataset_name = config.dataset_predict.name
+    predict_dataset_name = config.dataset.predict.name
     predict_dataset_name = predict_dataset_name.split("_")
     predict_dataset_name = [ds_name[:-4] for ds_name in predict_dataset_name]
     predict_dataset_name = ", ".join(predict_dataset_name)
@@ -562,12 +562,12 @@ def plot_correlation_scatterplot(
         )
 
     # Get strings for plot title
-    train_dataset_name = config.dataset_train.name
+    train_dataset_name = config.dataset.train.name
     train_dataset_name = train_dataset_name.split("_")
     train_dataset_name = [ds_name[:-4] for ds_name in train_dataset_name]
     train_dataset_name = ", ".join(train_dataset_name)
 
-    predict_dataset_name = config.dataset_predict.name
+    predict_dataset_name = config.dataset.predict.name
     predict_dataset_name = predict_dataset_name.split("_")
     predict_dataset_name = [ds_name[:-4] for ds_name in predict_dataset_name]
     predict_dataset_name = ", ".join(predict_dataset_name)

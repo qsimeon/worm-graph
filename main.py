@@ -4,19 +4,21 @@ from pkg import *
 def pipeline(cfg: DictConfig) -> None:
     """Create a custom pipeline"""
 
-    print(OmegaConf.to_yaml(cfg), end="\n\n")
-
     # Verifications
-    if len(cfg) == 0:
+    if len(cfg) == 1: # only the pipeline module
         raise ValueError("No submodules in the pipeline. Run python main.py +experiment=your_experiment")
+
+    # print(OmegaConf.to_yaml(cfg), end="\n\n")
     
     if 'train' in cfg.submodule:
         assert 'model' in cfg.submodule, "Model must be defined before training."
-        assert 'dataset_train' in cfg.submodule, "Train dataset must be defined before training."
+        assert 'dataset' in cfg.submodule, "Train dataset must be defined before training (no submodule.dataset found)."
+        assert 'train' in cfg.submodule.dataset, "Train dataset must be defined before training (no submodule.dataset.train found)."
 
     if 'predict' in cfg.submodule:
         assert 'model' in cfg.submodule, "Model must be defined before making predictions."
-        assert 'dataset_predict' in cfg.submodule, "Prediction dataset must be defined before making predictions."
+        assert 'dataset' in cfg.submodule, "Prediction dataset must be defined before making predictions (no submodule.dataset found)."
+        assert 'predict' in cfg.submodule.dataset, "Prediction dataset must be defined before making predictions (no submodule.dataset.predict found)."
 
     if 'visualize' in cfg.submodule:
         if cfg.submodule.visualize.log_dir is None:
@@ -25,16 +27,18 @@ def pipeline(cfg: DictConfig) -> None:
 
     torch_device() # Display Pytorch device
 
-    init_random_seeds(cfg.seed) # Intialize random seeds
+    init_random_seeds(cfg.pipeline.seed) # Set random seeds
 
     if 'preprocess' in cfg.submodule:
         process_data(cfg.submodule.preprocess)
     
-    if 'dataset_train' in cfg.submodule:
-        dataset_train = get_dataset(cfg.submodule.dataset_train)
+    if 'dataset' in cfg.submodule:
 
-    if 'dataset_predict' in cfg.submodule:
-        dataset_predict = get_dataset(cfg.submodule.dataset_predict)
+        if 'train' in cfg.submodule.dataset:
+            dataset_train = get_dataset(cfg.submodule.dataset.train)
+
+        if 'predict' in cfg.submodule.dataset:
+            dataset_predict = get_dataset(cfg.submodule.dataset.predict)
 
     if 'model' in cfg.submodule:
         model = get_model(cfg.submodule.model)

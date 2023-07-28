@@ -87,6 +87,7 @@ def init_random_seeds(seed=0):
     """
     Initialize random seeds for numpy, torch, and random.
     """
+    print("Setting random seeds to %d" % (seed), end="\n\n")
     clear_cache()
     np.random.seed(seed)
     torch.manual_seed(seed)
