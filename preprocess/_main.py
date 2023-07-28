@@ -1,7 +1,7 @@
 from preprocess._utils import *
 
 
-def process_data(config: DictConfig) -> None:
+def process_data(preprocess_config: DictConfig) -> None:
     """Preprocesses the raw neural and connectome data.
 
     This function preprocesses raw neural and connectome data to be used
@@ -30,11 +30,11 @@ def process_data(config: DictConfig) -> None:
     # Pickle (and download) the data neural data if not already done
     if not os.path.exists(os.path.join(ROOT_DIR, "data/processed/neural/.processed")):
         pickle_neural_data(
-            url=config.preprocess.url,
-            zipfile=config.preprocess.zipfile,
-            dataset=config.preprocess.dataset,
-            smooth_method=config.preprocess.smooth,
-            resample_dt=config.preprocess.resample_dt,
+            url=preprocess_config.url,
+            zipfile=preprocess_config.zipfile,
+            dataset=preprocess_config.dataset,
+            smooth_method=preprocess_config.smooth,
+            resample_dt=preprocess_config.resample_dt,
         )
         print("C. elegans neural data has been pickled!", end="\n\n")
     else:
@@ -44,7 +44,7 @@ def process_data(config: DictConfig) -> None:
     if not os.path.exists(
         os.path.join(ROOT_DIR, "data/processed/connectome/graph_tensors.pt")
     ):
-        preprocess_connectome(raw_dir=config.preprocess.raw_dir, raw_files=RAW_FILES)
+        preprocess_connectome(raw_dir=preprocess_config.raw_dir, raw_files=RAW_FILES)
         print("C. elegans connectome has been preprocessed!", end="\n\n")
     else:
         print("Connectome already preprocessed.", end="\n\n")

@@ -1,4 +1,0 @@
-visualize:
-  log_dir: /om2/user/lrvenan/worm-graph/logs/linear/RMS_linear/2023_07_22_11_19_08
-  worm: worm0 # TODO: allow this to be a list of worms
-  neuron: all

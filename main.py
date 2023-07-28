@@ -1,88 +1,83 @@
 from pkg import *
 
+@hydra.main(version_base=None, config_path="conf", config_name="pipeline")
+def pipeline(cfg: DictConfig) -> None:
+    """Create a custom pipeline"""
 
-@hydra.main(version_base=None, config_path="conf", config_name="main")
-def pipeline(
-    config: DictConfig,
-) -> None:
-    """Runs a complete pipeline to train a model and make predictions.
+    # Verifications
+    if len(cfg) == 1: # only the pipeline module
+        raise ValueError("No submodules in the pipeline. Run python main.py +experiment=your_experiment")
 
-    Can be configured using the main.yaml file in the conf directory.
+    # print(OmegaConf.to_yaml(cfg), end="\n\n")
+    
+    if 'train' in cfg.submodule:
+        assert 'model' in cfg.submodule, "Model must be defined before training."
+        assert 'dataset' in cfg.submodule, "Train dataset must be defined before training (no submodule.dataset found)."
+        assert 'train' in cfg.submodule.dataset, "Train dataset must be defined before training (no submodule.dataset.train found)."
 
-    Parameters
-    ----------
-    config: DictConfig
-        Hydra configuration object.
+    if 'predict' in cfg.submodule:
+        assert 'model' in cfg.submodule, "Model must be defined before making predictions."
+        assert 'dataset' in cfg.submodule, "Prediction dataset must be defined before making predictions (no submodule.dataset found)."
+        assert 'predict' in cfg.submodule.dataset, "Prediction dataset must be defined before making predictions (no submodule.dataset.predict found)."
 
-    Calls
-    -----
-    process_data : function in preprocess/_main.py
-        Configuration file in conf/preprocess.yaml
+    if 'visualize' in cfg.submodule:
+        if cfg.submodule.visualize.log_dir is None:
+             assert 'train' in cfg.submodule, "Train must be defined before visualizing (or chose a log_dir)."
+             assert 'predict' in cfg.submodule, "Predict must be defined before visualizing (or chose a log_dir)."
 
-    get_dataset : function in datasets/_main.py
-        Configuration file in conf/dataset.yaml
+    torch_device() # Display Pytorch device
 
-    get_model : function in models/_main.py
-        Configuration file in conf/model.yaml
+    init_random_seeds(cfg.pipeline.seed) # Set random seeds
 
-    train_model : function in train/_main.py
-        Configuration file in conf/train.yaml
+    if 'preprocess' in cfg.submodule:
+        process_data(cfg.submodule.preprocess)
+    
+    if 'dataset' in cfg.submodule:
 
-    plot_figures : function in visualization/_main.py
-        Configuration file in conf/visualize.yaml
+        if 'train' in cfg.submodule.dataset:
+            dataset_train = get_dataset(cfg.submodule.dataset.train)
 
-    TODO: Implement `analyze_outputs` : function in analysis/_main.py; config in conf/analysis.yaml
+        if 'predict' in cfg.submodule.dataset:
+            dataset_predict = get_dataset(cfg.submodule.dataset.predict)
 
-    Notes
-    -----
-    * Use mode: RUN if you are having a UserWarning with MULTIRUN
+    if 'model' in cfg.submodule:
+        model = get_model(cfg.submodule.model)
 
-    """
-    # Display Pytorch device
-    torch_device()
+    if 'train' in cfg.submodule:
+        model, submodules_updated, train_info = train_model(
+            train_config = cfg.submodule.train,
+            model = model,
+            dataset = dataset_train
+        ) # working
+        # Update cfg.submodule parameters
+        cfg.submodule = OmegaConf.merge(cfg.submodule, submodules_updated)
 
-    # Intialize random seeds
-    init_random_seeds(config.globals.random_seed)
+    if 'predict' in cfg.submodule:
+        submodules_updated = make_predictions(
+            predict_config = cfg.submodule.predict,
+            model =  model,
+            dataset = dataset_predict,
+        ) # working
+        # Update cfg.submodule parameters
+        cfg.submodule = OmegaConf.merge(cfg.submodule, submodules_updated)
 
-    # Skips if data already preprocessed
-    #! process_data(config)
+    # ================== Save updated configs ==================
+    log_dir = os.getcwd()
+    OmegaConf.save(cfg, os.path.join(log_dir, "pipeline_info.yaml"))
 
-    # Returns a generator of single worm datasets
-    dataset = get_dataset(config)
+    if 'train' in cfg.submodule:
+        OmegaConf.save(train_info, os.path.join(log_dir, "train_info.yaml"))
+    # ==========================================================
 
-    # Get the model to train
-    model = get_model(config)
+    if 'visualize' in cfg.submodule:
+        plot_figures(
+            visualize_config=cfg.submodule.visualize
+        )
 
-    # Train model is the bulk of the pipeline code
-    model, log_dir, config = train_model(
-        config,
-        model,
-        dataset,
-        shuffle_worms=config.globals.shuffle_worms,  # shuffle worms
-        log_dir=None,  # hydra changes working directory to log directory
-    )
+    if 'analysis' in cfg.submodule:
+        print(cfg.submodule.analysis)
 
-    # Use trained model to make predictions on the dataset
-    make_predictions(
-        config,  # `train_model` injected the `predict` params into config`
-        model=None,
-        dataset=None,
-        log_dir=log_dir,
-        use_residual=config.globals.use_residual,
-        smooth_data=config.globals.smooth_data,
-    )
-
-    # Plot figures
-    plot_figures(config, log_dir)
-
-    ## TODO: Analysis of outputs
-    # analyze_outputs(config, log_dir)
-
-    # Free up GPU
-    clear_cache()
-
-    return None
-
+    clear_cache() # Free up GPU
 
 if __name__ == "__main__":
     pipeline()

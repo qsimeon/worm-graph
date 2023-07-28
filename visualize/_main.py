@@ -2,28 +2,20 @@ from visualize._utils import *
 
 
 def plot_figures(
-    config: DictConfig,
-    log_dir: str = None,
-    worm: str = None,
-    neuron: str = None,
+    visualize_config: DictConfig,
 ) -> None:
     """
     Plots the loss curves and other basic plots from the results of traininig
     a model on a worm neural activity dataset. Save figures to the directory `log_dir`.
     """
-    # get default hyperparams for plotting
+
+    log_dir = visualize_config.log_dir # If none, use current working directory
     if log_dir is None:
-        log_dir = config.visualize.log_dir
-        os.makedirs(log_dir, exist_ok=True)
-    if worm is None:
-        worm = config.visualize.worm
-    if neuron is None:
-        neuron = config.visualize.neuron
-    # get other (global) config params
-    if config.get("globals"):
-        use_residual = config.globals.use_residual
-    else:
-        use_residual = False
+        log_dir = os.getcwd()  # logs/hydra/${now:%Y_%m_%d_%H_%M_%S}
+
+    worm = visualize_config.worm
+    neuron = visualize_config.neuron
+    use_residual = visualize_config.use_residual
 
     # loss curves
     plot_loss_curves(log_dir)

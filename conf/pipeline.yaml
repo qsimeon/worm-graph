@@ -1,0 +1,58 @@
+# ============================ Hydra Config ============================
+
+defaults:
+  # To run the default pipeline, add +experiment=default to the command.
+  - submodule: []
+  # SubmitIt Launcher Plugin:
+  #   This plugin provides SLURM launcher to work on the cluster.
+  #   - Use submitit_slurm when using OpenMind
+  #   - Use submitit_local when running locally
+  - override hydra/launcher: submitit_local
+  - _self_
+
+hydra:
+  # Hydra mode:
+  #   - RUN: Run a single job
+  #   - MULTIRUN: Run multiple jobs, each with different parameters
+  #               defined by the sweeper. If running locally, multi-run
+  #               runs the jobs serially. If in the cluster, multi-run
+  #               submits the jobs in parallel.
+  mode: RUN
+
+  # Hydra job:
+  #   - chdir: Change the working directory to the log directory.
+  #            This is important for the pipeline to work.
+  job:
+    chdir: true
+
+  # Hydra run:
+  #   This is the RUN configuration.
+  #   - dir: Directory to save the RUN results.
+  run:
+    dir: logs/hydra/${now:%Y_%m_%d_%H_%M_%S}
+
+  # Hydra sweep:
+  #   This is the MULTIRUN configuration.
+  #   - dir: Directory to save the MULTIRUN results.
+  #   - subdir: Subdirectory to save each run result.
+  sweep:
+    dir: logs/hydra/${now:%Y_%m_%d_%H_%M_%S}
+    subdir: ${hydra.job.num}
+
+  # Hydra launcher:
+  #   These are the launcher parameters for the SubmitIt plugin.
+  #   Uncomment the exclude and constraint lines if working on OpenMind.
+  launcher:
+    # exclude: dgx001, dgx002
+    # constraint: high-capacity
+    cpus_per_task: 1
+    gpus_per_node: 1
+    tasks_per_node: 1
+    mem_gb: 48
+    nodes: 1
+    timeout_min: 1440
+
+# ============================ Pipeline Config ============================
+
+pipeline:
+  seed: 42
