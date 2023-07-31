@@ -36,7 +36,7 @@ cond install --name $ENV_NAME -y jupyter jupyterlab notebook
 # Install dependencies with moderate complexity
 echo "Installing dependencies with moderate complexity."
 echo ""
-conda install --name $ENV_NAME -y h5py networkx ipython jinja2 typing typing_extensions
+conda install --name $ENV_NAME -y h5py networkx ipython jinja2 spectrum typing typing_extensions
 
 # Install small, simple dependencies
 echo "Installing small, simple dependencies."
