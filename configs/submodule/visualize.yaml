@@ -1,5 +1,5 @@
 visualize:
-  log_dir: /home/lrvnc/Projects/worm-graph/logs/hydra/2023_07_31_09_46_40 # Null to use the current log directory
+  log_dir: /home/lrvnc/Projects/worm-graph/logs/hydra/2023_07_31_10_16_05 # Null to use the current log directory
   worm: worm0 # TODO: allow this to be a list of worms
   neuron: all
   use_residual: false

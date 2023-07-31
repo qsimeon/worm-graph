@@ -39,6 +39,12 @@ def plot_figures(
     # plot model weights
     plot_before_after_weights(log_dir)
 
+    # Delete the new log directory created by hydra if using a specific log_dir
+    if visualize_config.log_dir is not None:
+        cur_dir = os.getcwd()
+        os.chdir("..")
+        os.rmdir(cur_dir)
+
     # TODO add more plotting functions for different types of figures
 
     return None
