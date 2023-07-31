@@ -45,6 +45,15 @@ def plot_figures(
 
 
 if __name__ == "__main__":
-    config = OmegaConf.load("conf/visualize.yaml")
-    print("config:", OmegaConf.to_yaml(config), end="\n\n")
-    plot_figures(config)
+    config = OmegaConf.load("configs/submodule/visualize.yaml")
+    print(OmegaConf.to_yaml(config), end="\n\n")
+
+    # Create new to log directory
+    timestamp = datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
+    log_dir = os.path.join("logs/hydra", timestamp)
+    os.makedirs(log_dir, exist_ok=True)
+
+    # Move to new log directory
+    os.chdir(log_dir)
+
+    plot_figures(config.visualize)

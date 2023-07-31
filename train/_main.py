@@ -364,15 +364,33 @@ def train_model(
 
 
 if __name__ == "__main__":
-    config = OmegaConf.load("conf/train.yaml")
-    print("config:", OmegaConf.to_yaml(config), end="\n\n")
-    model = get_model(OmegaConf.load("conf/model.yaml"))
-    dataset = get_dataset(OmegaConf.load("conf/dataset.yaml"))
+    train_config = OmegaConf.load("configs/submodule/train.yaml")
+    print(OmegaConf.to_yaml(train_config), end="\n\n")
+
+    model_config = OmegaConf.load("configs/submodule/model.yaml")
+    print(OmegaConf.to_yaml(model_config), end="\n\n")
+
+    dataset_config = OmegaConf.load("configs/submodule/dataset.yaml")
+    print(OmegaConf.to_yaml(dataset_config), end="\n\n")
+
+    # Create new to log directory
     timestamp = datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
-    model, log_dir, config = train_model(
-        config,
-        model,
-        dataset,
-        shuffle_worms=True,
-        log_dir=os.path.join("logs", "{}".format(timestamp)),
+    log_dir = os.path.join("logs/hydra", timestamp)
+    os.makedirs(log_dir, exist_ok=True)
+
+    # Move to new log directory
+    os.chdir(log_dir)
+
+    # Dataset
+    train_dataset = get_dataset(dataset_config.dataset.train)
+
+    # Get the model
+    model = get_model(model_config.model)
+
+    # Train the model
+    model, submodules_updated, train_info = train_model(
+        train_config=train_config.train,
+        model=model,
+        dataset=train_dataset,
     )
+

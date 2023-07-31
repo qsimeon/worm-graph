@@ -111,6 +111,7 @@ def get_dataset(dataset_config: DictConfig):
 
 
 if __name__ == "__main__":
-    config = OmegaConf.load("conf/dataset.yaml")
-    print("\nconfig:\n\t", OmegaConf.to_yaml(config), end="\n\n")
-    dataset = get_dataset(config)
+    config = OmegaConf.load("configs/submodule/dataset.yaml")
+    print(OmegaConf.to_yaml(config), end="\n\n")
+    dataset_train = get_dataset(config.dataset.train)
+    dataset_predict = get_dataset(config.dataset.predict)
