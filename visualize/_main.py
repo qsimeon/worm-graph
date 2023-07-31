@@ -43,7 +43,7 @@ def plot_figures(
     if visualize_config.log_dir is not None:
         cur_dir = os.getcwd()
         os.chdir("..")
-        os.rmdir(cur_dir)
+        shutil.rmtree(cur_dir, ignore_errors=True)
 
     # TODO add more plotting functions for different types of figures
 
