@@ -53,6 +53,6 @@ def process_data(preprocess_config: DictConfig) -> None:
 
 
 if __name__ == "__main__":
-    config = OmegaConf.load("conf/preprocess.yaml")
-    print("config:", OmegaConf.to_yaml(config), end="\n\n")
-    process_data(config)
+    config = OmegaConf.load("configs/submodule/preprocess.yaml")
+    print(OmegaConf.to_yaml(config), end="\n\n")
+    process_data(config.preprocess)

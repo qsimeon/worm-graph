@@ -165,13 +165,32 @@ def make_predictions(
 
 
 if __name__ == "__main__":
-    config = OmegaConf.load("conf/predict.yaml")
-    print("config:", OmegaConf.to_yaml(config), end="\n\n")
-    if config.predict.model.checkpoint_path.__contains__("checkpoints"):
-        log_dir = config.predict.model.checkpoint_path.split("checkpoints")[0]
-    else:
-        log_dir = os.path.join("logs", "playground")
+    dataset_config = OmegaConf.load("configs/submodule/dataset.yaml")
+    print(OmegaConf.to_yaml(dataset_config), end="\n\n")
+
+    model_config = OmegaConf.load("configs/submodule/model.yaml")
+    print(OmegaConf.to_yaml(model_config), end="\n\n")
+
+    predict_config = OmegaConf.load("configs/submodule/predict.yaml")
+    print(OmegaConf.to_yaml(predict_config), end="\n\n")
+
+    # Create new to log directory
+    timestamp = datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
+    log_dir = os.path.join("logs/hydra", timestamp)
+    os.makedirs(log_dir, exist_ok=True)
+
+    # Move to new log directory
+    os.chdir(log_dir)
+    
+    # Get the model
+    model = get_model(model_config.model)
+
+    # Get the dataset
+    dataset = get_dataset(dataset_config.dataset.predict)
+
+    # Make predictions
     make_predictions(
-        config,
-        log_dir=log_dir,
+        model=model,
+        dataset=dataset,
+        predict_config=predict_config.predict,
     )
