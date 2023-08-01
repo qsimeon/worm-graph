@@ -44,6 +44,12 @@ def plot_figures(
             use_residual,
         )
 
+    # Delete the new log directory created by hydra if using a specific log_dir
+    if visualize_config.log_dir is not None:
+        cur_dir = os.getcwd()
+        os.chdir("..")
+        shutil.rmtree(cur_dir, ignore_errors=True)
+
     # TODO add more plotting functions for different types of figures
 
     return None

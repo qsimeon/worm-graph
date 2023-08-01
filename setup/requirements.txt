@@ -1,9 +1,9 @@
 dtaidistance
+hydra-core
+hydra-optuna-sweeper
+hydra-submitit-launcher
+mat73
+ncps
 omegaconf
 pysindy
 pytest
-mat73
-ncps
-hydra-core
-hydra-submitit-launcher
-hydra-optuna-sweeper

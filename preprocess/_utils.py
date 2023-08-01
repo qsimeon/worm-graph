@@ -255,8 +255,10 @@ def gaussian_kernel_smooth(x, t, sigma=10):
         x_smooth = torch.from_numpy(x_smooth)
     return x_smooth
 
+# TODO: write a Kalman smoother
 
 def fourier_transform_smooth(x, t, percent=0.1):
+    # TODO: Rewrite this to do windowed smoothing using mutitaper estimates
     """Uses the FFT to smooth a multidimensional time series.
 
     Smooths a multidimensional time series by keeping the lowest `percent`
