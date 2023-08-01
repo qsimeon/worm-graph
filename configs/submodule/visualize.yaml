@@ -1,5 +1,6 @@
 visualize:
-  log_dir: /home/lrvnc/Projects/worm-graph/logs/hydra/2023_08_01_10_35_15 # Null to use the current log directory
+  log_dir: null # This directory is overwritten when using the a pipeline with train or predict.
+                # If using the submodule alone, this directory is the path to the log folder you want to generate the visualization in.
   worm: worm0 # TODO: allow this to be a list of worms
   neuron: all
   use_residual: false
