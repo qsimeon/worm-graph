@@ -62,11 +62,22 @@ def pipeline(cfg: DictConfig) -> None:
         cfg.submodule = OmegaConf.merge(cfg.submodule, submodules_updated)
 
     # ================== Save updated configs ==================
+
     log_dir = os.getcwd()
-    OmegaConf.save(cfg, os.path.join(log_dir, "pipeline_info.yaml"))
 
     if 'train' in cfg.submodule:
+        # Save train info and keep dataset.train in pipeline info
         OmegaConf.save(train_info, os.path.join(log_dir, "train_info.yaml"))
+    else:
+        # Delete dataset.train from pipeline info
+        del cfg.submodule.dataset.train
+
+    if not 'predict' in cfg.submodule:
+        # Delete dataset.predict from pipeline info
+        del cfg.submodule.dataset.predict
+
+    OmegaConf.save(cfg, os.path.join(log_dir, "pipeline_info.yaml"))
+    
     # ==========================================================
 
     if 'visualize' in cfg.submodule:
