@@ -344,10 +344,12 @@ def train_model(
     submodules_updated = OmegaConf.create({
         'dataset': {'train': {}},
         'model': {},
+        'visualize': {},
         }
     )
     OmegaConf.update(submodules_updated.dataset.train, "name", dataset_name, merge=True) # updated dataset name
     OmegaConf.update(submodules_updated.model, "checkpoint_path", checkpoint_path.split("worm-graph/")[-1], merge=True) # updated checkpoint path
+    OmegaConf.update(submodules_updated.visualize, "log_dir", log_dir, merge=True) # update visualize directory
 
     # Save train info
     train_info = OmegaConf.create({

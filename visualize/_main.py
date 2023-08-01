@@ -9,35 +9,40 @@ def plot_figures(
     a model on a worm neural activity dataset. Save figures to the directory `log_dir`.
     """
 
-    log_dir = visualize_config.log_dir # If none, use current working directory
-    if log_dir is None:
-        log_dir = os.getcwd()  # logs/hydra/${now:%Y_%m_%d_%H_%M_%S}
+    log_dir = visualize_config.log_dir
 
     worm = visualize_config.worm
     neuron = visualize_config.neuron
     use_residual = visualize_config.use_residual
 
-    # loss curves
-    plot_loss_curves(log_dir)
+    # Load pipeline info
+    pipeline_info = OmegaConf.load(os.path.join(log_dir, "pipeline_info.yaml"))
 
-    # scatterplot of modeled vs. real neuron activity
-    plot_correlation_scatterplot(
-        log_dir,
-        worm,
-        neuron,
-        use_residual,
-    )
+    # Plots related to training (loss_curves.csv file exists, checkpoints exists)
+    if 'train' in pipeline_info.submodule:
+        # Loss curves
+        plot_loss_curves(log_dir)
 
-    # calcium residuals
-    plot_targets_predictions(
-        log_dir,
-        worm,
-        neuron,
-        use_residual,
-    )
+        # Model weights
+        plot_before_after_weights(log_dir)
 
-    # plot model weights
-    plot_before_after_weights(log_dir)
+    # Plots reletad to predictions (at least worm0 directory exists)
+    if 'predict' in pipeline_info.submodule:
+        # Correlation plot
+        plot_correlation_scatterplot(
+            log_dir,
+            worm,
+            neuron,
+            use_residual,
+        )
+
+        # Generation plot
+        plot_targets_predictions(
+            log_dir,
+            worm,
+            neuron,
+            use_residual,
+        )
 
     # Delete the new log directory created by hydra if using a specific log_dir
     if visualize_config.log_dir is not None:

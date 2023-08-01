@@ -22,8 +22,7 @@ def pipeline(cfg: DictConfig) -> None:
 
     if 'visualize' in cfg.submodule:
         if cfg.submodule.visualize.log_dir is None:
-             assert 'train' in cfg.submodule, "Train must be defined before visualizing (or chose a log_dir)."
-             assert 'predict' in cfg.submodule, "Predict must be defined before visualizing (or chose a log_dir)."
+             assert ('train' in cfg.submodule) or ('predict' in cfg.submodule), "Train/Predict must be defined before visualizing (or chose a log_dir)."
 
     torch_device() # Display Pytorch device
 
@@ -50,28 +49,45 @@ def pipeline(cfg: DictConfig) -> None:
             dataset = dataset_train
         ) # working
         # Update cfg.submodule parameters
-        cfg.submodule = OmegaConf.merge(cfg.submodule, submodules_updated)
+        cfg.submodule.dataset = OmegaConf.merge(cfg.submodule.dataset, submodules_updated.dataset)
+        cfg.submodule.model = OmegaConf.merge(cfg.submodule.model, submodules_updated.model)
+        if 'visualize' in cfg.submodule:
+            cfg.submodule.visualize = OmegaConf.merge(cfg.submodule.visualize, submodules_updated.visualize)
 
     if 'predict' in cfg.submodule:
         submodules_updated = make_predictions(
             predict_config = cfg.submodule.predict,
             model =  model,
             dataset = dataset_predict,
-        ) # working
+        )
         # Update cfg.submodule parameters
         cfg.submodule = OmegaConf.merge(cfg.submodule, submodules_updated)
+        if 'visualize' in cfg.submodule:
+            cfg.submodule.visualize = OmegaConf.merge(cfg.submodule.visualize, submodules_updated.visualize)
 
     # ================== Save updated configs ==================
+
     log_dir = os.getcwd()
-    OmegaConf.save(cfg, os.path.join(log_dir, "pipeline_info.yaml"))
 
     if 'train' in cfg.submodule:
+        # Save train info and keep dataset.train in pipeline info
         OmegaConf.save(train_info, os.path.join(log_dir, "train_info.yaml"))
+    elif 'dataset' in cfg.submodule:
+        # Delete dataset.train from pipeline info if exists
+        del cfg.submodule.dataset.train
+
+    if not 'predict' in cfg.submodule:
+        # Delete dataset.predict from pipeline info if it exists
+        if 'dataset' in cfg.submodule:
+            del cfg.submodule.dataset.predict
+
+    OmegaConf.save(cfg, os.path.join(log_dir, "pipeline_info.yaml"))
+    
     # ==========================================================
 
     if 'visualize' in cfg.submodule:
         plot_figures(
-            visualize_config=cfg.submodule.visualize
+            visualize_config = cfg.submodule.visualize
         )
 
     if 'analysis' in cfg.submodule:
