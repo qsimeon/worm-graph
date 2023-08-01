@@ -606,7 +606,7 @@ def reshape_calcium_data(worm_dataset):
     return reshaper.worm_dataset
 
 
-def interpolate_data(time, data, target_dt):
+def interpolate_data(time, data, target_dt, method="linear"):
     """Interpolate data using np.interp.
 
     This function takes the given time points and corresponding data and
@@ -640,9 +640,10 @@ def interpolate_data(time, data, target_dt):
     num_neurons = data.shape[1]
     interpolated_data_np = np.zeros((len(target_time_np), num_neurons))
 
-    for i in range(num_neurons):
-        interpolated_data_np[:, i] = np.interp(target_time_np, time, data[:, i])
-
+    if method == "linear":
+        for i in range(num_neurons):
+            interpolated_data_np[:, i] = np.interp(target_time_np, time, data[:, i])
+    
     return target_time_np, interpolated_data_np
 
 
@@ -703,6 +704,7 @@ def pickle_neural_data(
     transform=StandardScaler(),
     smooth_method="fft",
     resample_dt=None,
+    interpolation_method="linear",
 ):
     """Preprocess and then saves C. elegans neural data to .pickle format.
 
@@ -771,7 +773,7 @@ def pickle_neural_data(
             print("Dataset:", dataset, end="\n\n")
             # instantiate the relevant preprocessor class
             preprocessor = eval(dataset + "Preprocessor")(
-                transform, smooth_method, resample_dt
+                transform, smooth_method, resample_dt, interpolation_method
             )
             # call its method
             preprocessor.preprocess()
@@ -853,11 +855,13 @@ class BasePreprocessor:
         transform=StandardScaler(),
         smooth_method="FFT",
         resample_dt=0.1,
+        interpolation_method="linear",
     ):
         self.dataset = dataset_name
         self.transform = transform
         self.smooth_method = smooth_method
         self.resample_dt = resample_dt
+        self.interpolation_method = interpolation_method
         self.raw_data_path = os.path.join(ROOT_DIR, "opensource_data")
         self.processed_data_path = os.path.join(ROOT_DIR, "data/processed/neural")
 
@@ -873,12 +877,12 @@ class BasePreprocessor:
         # Upsample (interpolate)
         if original_dt >= self.resample_dt:
             # print('Upsampling data. Original dt: {}, Target dt: {}'.format(original_dt, self.resample_dt), end='\n\n')
-            return interpolate_data(time_in_seconds, data, target_dt=self.resample_dt)
+            return interpolate_data(time_in_seconds, data, target_dt=self.resample_dt, method=self.interpolation_method)
         # Downsample (aggregate)
         else:
             # print('Downsampling data. Original dt: {}, Target dt: {}'.format(original_dt, self.resample_dt), end='\n\n')
             interp_time, interp_ca = interpolate_data(
-                time_in_seconds, data, target_dt=0.1
+                time_in_seconds, data, target_dt=0.1, method=self.interpolation_method
             )
             return aggregate_data(interp_time, interp_ca, target_dt=self.resample_dt)
 
