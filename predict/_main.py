@@ -157,9 +157,11 @@ def make_predictions(
         # Configs to update
         submodules_updated = OmegaConf.create({
             'dataset': {'predict': {}},
+            'visualize': {},
             }
         )
         OmegaConf.update(submodules_updated.dataset.predict, "name", dataset['worm0']['dataset'], merge=True) # updated dataset name
+        OmegaConf.update(submodules_updated.visualize, "log_dir", log_dir, merge=True) # update visualize directory
 
     return submodules_updated
 

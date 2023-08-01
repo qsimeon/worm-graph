@@ -388,18 +388,12 @@ def plot_targets_predictions(
         )
 
     # Get strings for plot title
-    train_dataset_name = config.dataset.train.name
-    train_dataset_name = train_dataset_name.split("_")
-    train_dataset_name = [ds_name[:-4] for ds_name in train_dataset_name]
-    train_dataset_name = ", ".join(train_dataset_name)
-
     predict_dataset_name = config.dataset.predict.name
     predict_dataset_name = predict_dataset_name.split("_")
     predict_dataset_name = [ds_name[:-4] for ds_name in predict_dataset_name]
     predict_dataset_name = ", ".join(predict_dataset_name)
 
     model_name = config.model.type
-    tau_in = config.train.tau_in
     tau_out = config.predict.tau_out
     
     # Recursive call for all worms
@@ -429,13 +423,10 @@ def plot_targets_predictions(
         
         # Create the plot title
         plt_title = (
-            "Model: {}\nTrain dataset: {}\nPredict dataset: {}\nWorm index: {}\nTraining {}: {}\nPrediction {}: {}".format(
+            "Model: {}\nPredict dataset: {}\nWorm index: {}\nPrediction {}: {}".format(
                 model_name,
-                train_dataset_name,
                 predict_dataset_name,
                 worm,
-                r'$\tau$',
-                tau_in,
                 r'$\tau$',
                 tau_out,
             )
@@ -562,18 +553,12 @@ def plot_correlation_scatterplot(
         )
 
     # Get strings for plot title
-    train_dataset_name = config.dataset.train.name
-    train_dataset_name = train_dataset_name.split("_")
-    train_dataset_name = [ds_name[:-4] for ds_name in train_dataset_name]
-    train_dataset_name = ", ".join(train_dataset_name)
-
     predict_dataset_name = config.dataset.predict.name
     predict_dataset_name = predict_dataset_name.split("_")
     predict_dataset_name = [ds_name[:-4] for ds_name in predict_dataset_name]
     predict_dataset_name = ", ".join(predict_dataset_name)
     
     model_name = config.model.type
-    tau_in = config.train.tau_in
     tau_out = config.predict.tau_out
 
     # Recursive call for all worms
@@ -651,13 +636,10 @@ def plot_correlation_scatterplot(
         
         # Create the plot textbox
         plt_title = (
-            "Model: {}\nTrain dataset: {}\nPredict dataset: {}\nWorm index: {}\nTraining {}: {}\nPrediction {}: {}\n\n{}\n$R^2$: {}".format(
+            "Model: {}\nPredict dataset: {}\nWorm index: {}\nPrediction {}: {}\n\n{}\n$R^2$: {}".format(
                 model_name,
-                train_dataset_name,
                 predict_dataset_name,
                 worm,
-                r'$\tau$',
-                tau_in,
                 r'$\tau$',
                 tau_out,
                 #timestamp.strftime("%Y-%m-%d %H:%M:%S"),
