@@ -35,6 +35,7 @@ def process_data(preprocess_config: DictConfig) -> None:
             dataset=preprocess_config.dataset,
             smooth_method=preprocess_config.smooth,
             resample_dt=preprocess_config.resample_dt,
+            interpolation_method=preprocess_config.interpolation_method,
         )
         print("C. elegans neural data has been pickled!", end="\n\n")
     else:
