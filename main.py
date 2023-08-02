@@ -4,6 +4,9 @@ from pkg import *
 def pipeline(cfg: DictConfig) -> None:
     """Create a custom pipeline"""
 
+    if 'exp_name' in cfg:
+        print(f"\nExperiment name: {cfg.exp_name}")
+
     # Verifications
     if len(cfg) == 1: # only the pipeline module
         raise ValueError("No submodules in the pipeline. Run python main.py +experiment=your_experiment")

@@ -1,6 +1,7 @@
 # @package _global_
 defaults:
   - override /submodule: [preprocess, dataset, model, train, predict, visualize]
+  - _self_
 
 hydra:
   sweeper:
@@ -8,3 +9,5 @@ hydra:
   # Use the submodule parameters if RUN.
       params:
         submodule.dataset_train.name: Kato2015, Nichols2017
+
+exp_name: num_worms_exp
