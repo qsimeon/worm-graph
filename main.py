@@ -94,8 +94,7 @@ def pipeline(cfg: DictConfig) -> None:
     if 'experiment' in cfg:
         # Go one level up
         log_dir = os.path.dirname(log_dir) # Because experiments run in multirun mode
-        print(log_dir)
-        plot_scaling_laws(log_dir, cfg.experiment)
+        plot_experiment(log_dir, cfg.experiment)
 
     clear_cache() # Free up GPU
 

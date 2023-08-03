@@ -802,10 +802,8 @@ def seconds_per_epoch_plot(exp_log_dir, key, log_scale=True):
     elif key == 'learn_rate':
         key_name = 'Learning rate'
     else:
-        print('Experiment not registered.\n Registered experiments: \
-              num_worms, num_named_neurons, loss, seq_len, num_samples, hidden_size, worm_timesteps, optimizer or learn_rate')
-        # End execution
-        return None
+        print('Experiment not registered. Skip computation time scaling law plot.')
+        return None, None, None
 
     # Store seconds per epoch, number of named neurons and number of worms
     seconds_per_epoch = []
@@ -869,7 +867,7 @@ def seconds_per_epoch_plot(exp_log_dir, key, log_scale=True):
     # plt.show()
     plt.close()
     # Save the plot
-    fig.savefig(os.path.join(exp_log_dir, 'scaling_laws', 'seconds_per_epoch_bar'), dpi=300)
+    # fig.savefig(os.path.join(exp_log_dir, 'scaling_laws', 'computation_vs_'+key), dpi=300)
 
     if key == 'num_worms' or key == 'seq_len' or key == 'num_samples' or key == 'hidden_size' or key == 'worm_timesteps':
         # Plot the seconds per epoch vs the number of worms
@@ -912,7 +910,7 @@ def seconds_per_epoch_plot(exp_log_dir, key, log_scale=True):
         # plt.show()
         plt.close()
         # Save the plot inside the scaling_laws folder
-        fig.savefig(os.path.join(exp_log_dir, 'scaling_laws', 'seconds_per_epoch_scatter'), dpi=300)
+        fig.savefig(os.path.join(exp_log_dir, 'scaling_laws', 'computation_vs_'+key), dpi=300)
 
 
     # Return df, fig and ax so we can customize the plot if we want
@@ -956,7 +954,8 @@ def test_losses_plot(exp_log_dir, key, threshold=1e-5, window=30, xlim=None):
     elif key == 'learn_rate':
         key_name = 'Learning rate'
     else:
-        raise ValueError('key must be num_worms, num_named_neurons, loss, seq_len, num_samples, hidden_size, optimizer or learn_rate')
+        key = 'unknown'
+        key_name = 'unknown'
 
     # Create plot
     fig, ax = plt.subplots(figsize=(10, 5))
@@ -1004,15 +1003,6 @@ def test_losses_plot(exp_log_dir, key, threshold=1e-5, window=30, xlim=None):
         if conv_epoch is not None:
             ax.axvline(conv_epoch, color=colors[i], linestyle='--', alpha=0.5)
         i += 1
-    
-    # Plot just one base test loss
-    sns.lineplot(data=loss_df, x='epochs', y='base_test_losses', ax=ax, label='Baseline', color='black')
-    # Dash the base test loss line
-    ax.lines[-1].set_linestyle("--")
-    # Reduce the opacity of the base test loss line
-    ax.lines[-1].set_alpha(0.7)
-    # Reduce size of the base test loss line
-    ax.lines[-1].set_linewidth(0.7)
 
     if xlim is not None:
         ax.set_xlim(xlim)
@@ -1021,7 +1011,7 @@ def test_losses_plot(exp_log_dir, key, threshold=1e-5, window=30, xlim=None):
     plt.xlabel('Epochs')
     plt.ylabel('Test loss')
     # Set title
-    plt.title('Test loss vs epochs')
+    plt.title('Test loss vs Epochs')
     plt.tight_layout()
     # Save the plot
     fig.savefig(os.path.join(exp_log_dir, 'scaling_laws', 'test_losses'), dpi=300)
@@ -1029,3 +1019,102 @@ def test_losses_plot(exp_log_dir, key, threshold=1e-5, window=30, xlim=None):
     plt.close()
 
     return loss_df, fig, ax
+
+def scaling_law_plot(exp_log_dir, key='num_worms', log_scale=True):
+
+    if key == 'num_worms':
+        key_name = 'Worms'
+    elif key == 'num_named_neurons':
+        key_name = 'Named neurons'
+    elif key == 'seq_len':
+        key_name = 'Sequence length'
+    elif key == 'num_samples':
+        key_name = 'Number of samples'
+    elif key == 'hidden_size':
+        key_name = 'Hidden size'
+    elif key == 'worm_timesteps':
+        key_name = 'Worm timesteps'
+    else:
+        print('Experiment not registered. Skip test loss scaling law plot.')
+        return None, None, None
+
+    # Store number of worms and mean loss after plateau
+    min_loss = []
+    num_worms = []
+    num_named_neurons = []
+    seq_len = []
+    num_samples = []
+    hidden_size = []
+    worm_timesteps = []
+    baseline_test_loss = []
+
+    # Iterate over all folders inside exp_log_dir
+    for folder in os.listdir(exp_log_dir):
+        # Skip .submitit folder and multirun.yaml file
+        if folder == '.submitit' or folder == 'multirun.yaml' or folder == 'scaling_laws':
+            continue
+        # Load the config file inside each folder
+        pipeline_info = OmegaConf.load(os.path.join(exp_log_dir, folder, 'pipeline_info.yaml')).submodule
+        train_info = OmegaConf.load(os.path.join(exp_log_dir, folder, 'train_info.yaml'))
+        # Extract num_worms from the config file
+        num_worms.append(pipeline_info['dataset']['train']['num_worms'])
+        # Extract num_named_neurons from the config file
+        num_named_neurons.append(pipeline_info['dataset']['train']['num_named_neurons'])
+        # Extract seq_len from the config file
+        seq_len.append(pipeline_info['train']['seq_len'])
+        # Extract num_samples from the config file
+        num_samples.append(pipeline_info['train']['num_samples'])
+        # Extract hidden_size from the config file
+        hidden_size.append(pipeline_info['model']['hidden_size'])
+        # Extract worm_timesteps from the config file
+        worm_timesteps.append(train_info['worm_timesteps'])
+        # Load the loss dataframe inside each folder
+        loss_df = pd.read_csv(os.path.join(exp_log_dir, folder, 'loss_curves.csv'))
+        # TODO: Find the epoch when the loss curve plateaus
+        min_loss.append(loss_df['test_losses'].min())
+        # Extract mean baseline test value
+        baseline_test_loss.append(np.mean(loss_df['base_test_losses']))
+
+    # Create a dataframe with the plateau epoch, window size and threshold
+    df = pd.DataFrame({'min_loss': min_loss, 'baseline': baseline_test_loss,
+                       'num_worms': num_worms, 'num_named_neurons': num_named_neurons, 'seq_len': seq_len,
+                       'num_samples': num_samples, 'hidden_size': hidden_size, 'worm_timesteps': worm_timesteps})
+
+    # Plot plateau loss vs number of worms
+    fig, ax = plt.subplots(figsize=(10, 5))
+    sns.set_style('whitegrid')
+    sns.set_palette('tab10')
+    sns.scatterplot(data=df, x=key, y='min_loss', ax=ax, label='Test loss')
+    # Plot baseline test loss with
+    sns.lineplot(data=df, x=key, y='baseline', ax=ax, label='Baseline test loss', alpha=0.7)
+    if log_scale:
+        # Use log scale for the x axis and y axis
+        ax.set_xscale('log')
+        ax.set_yscale('log')
+        # Regression line for the plot above
+        slope, intercept, r_value, p_value, std_err = stats.linregress(np.log(df[key]), np.log(df['min_loss']))
+        # Add the regression line to the plot above using sns lineplot
+        x = np.linspace(df[key].min(), df[key].max(), 1000)
+        y = np.exp(intercept) * x ** slope
+    else:
+        # Regression line for the plot above
+        slope, intercept, r_value, p_value, std_err = stats.linregress(df[key], df['min_loss'])
+        # Add the regression line to the plot above using sns lineplot
+        x = np.linspace(df[key].min(), df[key].max(), 1000)
+        y = slope * x + intercept
+    # Write the regression line equation as a label
+    label = 'y = {}x + {}\n~ R^2: {}'.format(round(slope, 5), round(intercept, 5), round(r_value ** 2, 5))
+    sns.lineplot(x=x, y=y, ax=ax, label=label, color='red', alpha=0.7)
+    # Use dashed line style
+    ax.lines[0].set_linestyle("--")
+    plt.xlabel(key_name)
+    plt.ylabel('Test loss')
+    # Set title
+    plt.title('Test loss vs {}'.format(key_name))
+    plt.tight_layout()
+    # plt.show()
+    # Save the plot
+    fig.savefig(os.path.join(exp_log_dir, 'scaling_laws', 'loss_vs_'+key), dpi=300)
+    plt.close()
+
+    return df, fig, ax
