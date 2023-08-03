@@ -5,3 +5,6 @@ defaults:
 
 hydra:
   mode: RUN
+
+experiment:
+  name: default_run

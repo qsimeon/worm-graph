@@ -20,3 +20,6 @@ from models._utils import NetworkLSTM
 from data._utils import NeuralActivityDataset, pick_worm
 from data._main import get_dataset
 from models._main import get_model
+
+from utils import log_params_from_omegaconf_dict
+import mlflow
