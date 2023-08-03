@@ -6,8 +6,6 @@ defaults:
 submodule:
   model:
     checkpoint_path: false # Start with a fresh new model
-  visualize:
-    log_dir: null # Use the current log directory
 
 hydra:
   sweeper:
@@ -17,4 +15,7 @@ hydra:
         submodule.dataset_train.name: Kato2015, Nichols2017
         #submodule.train.learn_rate: 0.0001, 0.001
 
-exp_name: default_run
+experiment:
+  name: default
+  options:
+    log_scale: true

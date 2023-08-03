@@ -4,10 +4,22 @@ defaults:
   - _self_
 
 hydra:
+  mode: MULTIRUN
   sweeper:
   # These parameters will be tested just when MULTIRUN mode is used.
   # Use the submodule parameters if RUN.
       params:
-        submodule.dataset_train.name: Kato2015, Nichols2017
+        submodule.dataset.train.num_worms: 5, 10
 
-exp_name: num_worms_exp
+submodule:
+  dataset:
+    train:
+      name: Nichols2017
+      num_named_neurons: all
+    predict:
+      name: Kato2015
+
+experiment:
+  name: num_worms
+  options:
+    log_scale: true

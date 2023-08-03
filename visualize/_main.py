@@ -48,6 +48,22 @@ def plot_figures(
 
     return None
 
+def plot_scaling_laws(log_dir, exp_config: DictConfig) -> None:
+    """
+    Plots the scaling laws for the worm neural activity dataset.
+    """
+
+    # Scaling law plots
+    scaling_law_dir = os.path.join(log_dir, "scaling_laws")
+    os.makedirs(scaling_law_dir, exist_ok=True)
+
+    # Computation time
+    df, fig, ax = seconds_per_epoch_plot(exp_log_dir = log_dir,
+                                         key = exp_config.name,
+                                         log_scale = exp_config.options.log_scale)
+
+    return None
+
 
 if __name__ == "__main__":
     config = OmegaConf.load("configs/submodule/visualize.yaml")

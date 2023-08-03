@@ -780,3 +780,140 @@ def plot_heat_map(
 
     # Show the plot
     plt.tight_layout()
+
+def seconds_per_epoch_plot(exp_log_dir, key, log_scale=True):
+
+    if key == 'num_worms':
+        key_name = 'Number of worms'
+    elif key == 'num_named_neurons':
+        key_name = 'Number of named neurons'
+    elif key == 'loss':
+        key_name = 'Loss'
+    elif key == 'seq_len':
+        key_name = 'Sequence length'
+    elif key == 'num_samples':
+        key_name = 'Number of samples'
+    elif key == 'hidden_size':
+        key_name = 'Hidden size'
+    elif key == 'worm_timesteps':
+        key_name = 'Worm timesteps'
+    elif key == 'optimizer':
+        key_name = 'Optimizer'
+    elif key == 'learn_rate':
+        key_name = 'Learning rate'
+    else:
+        print('Experiment not registered.\n Registered experiments: \
+              num_worms, num_named_neurons, loss, seq_len, num_samples, hidden_size, worm_timesteps, optimizer or learn_rate')
+        # End execution
+        return None
+
+    # Store seconds per epoch, number of named neurons and number of worms
+    seconds_per_epoch = []
+    num_named_neurons = []
+    num_worms = []
+    loss_type = []
+    seq_len = []
+    num_samples = []
+    hidden_size = []
+    worm_timesteps = []
+    optimizer = []
+    lr = []
+
+    # Loop over all folders inside the log directory
+    for folder in os.listdir(exp_log_dir):
+        # Skip .submitit folder and multirun.yaml file
+        if folder == '.submitit' or folder == 'multirun.yaml' or folder == 'scaling_laws':
+            continue
+        # Load the config file inside each folder
+        pipeline_info = OmegaConf.load(os.path.join(exp_log_dir, folder, 'pipeline_info.yaml')).submodule
+        train_info = OmegaConf.load(os.path.join(exp_log_dir, folder, 'train_info.yaml'))
+        # Extract seconds_per_epoch from the config file
+        seconds_per_epoch.append(train_info['seconds_per_epoch'])
+        # Extract num_named_neurons from the config file
+        num_named_neurons.append(pipeline_info['dataset']['train']['num_named_neurons'])
+        # Extract num_worms from the config file
+        num_worms.append(pipeline_info['dataset']['train']['num_worms'])
+        # Extract loss_type from the config file
+        loss_type.append(pipeline_info['model']['loss'])
+        # Extract seq_len from the config file
+        seq_len.append(pipeline_info['train']['seq_len'])
+        # Extract num_samples from the config file
+        num_samples.append(pipeline_info['train']['num_samples'])
+        # Extract hidden_size from the config file
+        hidden_size.append(pipeline_info['model']['hidden_size'])
+        # Extract worm_timesteps from the config file
+        worm_timesteps.append(train_info['worm_timesteps'])
+        # Extract optimizer
+        optimizer.append(pipeline_info['train']['optimizer'])
+        # Extract learn_rate
+        lr.append(pipeline_info['train']['learn_rate'])
+
+    # Create a dataframe with the seconds per epoch, number of named neurons and number of worms
+    df = pd.DataFrame({'seconds_per_epoch': seconds_per_epoch, 'num_named_neurons': num_named_neurons,
+    'num_worms': num_worms, 'loss': loss_type, 'seq_len': seq_len, 'num_samples': num_samples, 'hidden_size': hidden_size,
+    'worm_timesteps': worm_timesteps, 'optimizer': optimizer, 'learn_rate': lr})
+
+    # Plot the seconds per epoch vs the number of worms
+    fig, ax = plt.subplots(figsize=(10, 5))
+    # Use whitegrid style
+    sns.set_style('whitegrid')
+    sns.set_palette('tab10')
+    # Plot the data using sns bar plot
+    sns.barplot(data=df, x=key, y='seconds_per_epoch', ax=ax)
+    # Set the x axis and y axis labels according to the key
+    plt.xlabel(key_name)
+    plt.ylabel('Seconds per epoch')
+    # Set title according to the key
+    plt.title('Seconds per epoch vs {}'.format(key_name))
+    plt.tight_layout()
+    # plt.show()
+    plt.close()
+    # Save the plot
+    fig.savefig(os.path.join(exp_log_dir, 'scaling_laws', 'seconds_per_epoch_bar'), dpi=300)
+
+    if key == 'num_worms' or key == 'seq_len' or key == 'num_samples' or key == 'hidden_size' or key == 'worm_timesteps':
+        # Plot the seconds per epoch vs the number of worms
+        fig, ax = plt.subplots(figsize=(10, 5))
+        # Use whitegrid style
+        sns.set_style('whitegrid')
+        sns.set_palette('tab10')
+        # Plot the data using sns scatterplot
+        sns.scatterplot(data=df, x=key, y='seconds_per_epoch', ax=ax)
+        # Regression line
+        if log_scale:
+            # Use log scale for the x axis and y axis
+            ax.set_xscale('log')
+            ax.set_yscale('log')
+            slope, intercept, r_value, p_value, std_err = stats.linregress(np.log(df[key]), np.log(df['seconds_per_epoch']))
+            # Add the regression line to the plot using sns lineplot
+            x = np.linspace(df[key].min(), df[key].max(), 1000)
+            y = np.exp(intercept) * x ** slope
+        else:
+            slope, intercept, r_value, p_value, std_err = stats.linregress(df[key], df['seconds_per_epoch'])
+            # Add the regression line to the plot using sns lineplot
+            x = np.linspace(df[key].min(), df[key].max(), 1000)
+            y = slope * x + intercept
+        # Write the regression line equation as a label
+        label = 'y = {}x + {}\n~ R^2: {}'.format(round(slope, 5), round(intercept, 5), round(r_value ** 2, 5))
+        sns.lineplot(x=x, y=y, ax=ax, label=label, color='red')
+        # Use dashed line style
+        ax.lines[0].set_linestyle("--")
+        # Reduce the opacity of the regression line
+        ax.lines[0].set_alpha(0.5)
+        # Reduce size of the regression line
+        ax.lines[0].set_linewidth(1)
+
+        # Set the x axis and y axis labels according to the key
+        plt.xlabel(key_name)
+        plt.ylabel('Seconds per epoch')
+        # Set title according to the key
+        plt.title('Seconds per epoch vs {}'.format(key_name))
+        plt.tight_layout()
+        # plt.show()
+        plt.close()
+        # Save the plot inside the scaling_laws folder
+        fig.savefig(os.path.join(exp_log_dir, 'scaling_laws', 'seconds_per_epoch_scatter'), dpi=300)
+
+
+    # Return df, fig and ax so we can customize the plot if we want
+    return df, fig, ax

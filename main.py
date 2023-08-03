@@ -4,14 +4,9 @@ from pkg import *
 def pipeline(cfg: DictConfig) -> None:
     """Create a custom pipeline"""
 
-    if 'exp_name' in cfg:
-        print(f"\nExperiment name: {cfg.exp_name}")
-
     # Verifications
     if len(cfg) == 1: # only the pipeline module
         raise ValueError("No submodules in the pipeline. Run python main.py +experiment=your_experiment")
-
-    # print(OmegaConf.to_yaml(cfg), end="\n\n")
     
     if 'train' in cfg.submodule:
         assert 'model' in cfg.submodule, "Model must be defined before training."
@@ -50,12 +45,12 @@ def pipeline(cfg: DictConfig) -> None:
             train_config = cfg.submodule.train,
             model = model,
             dataset = dataset_train
-        ) # working
-        # Update cfg.submodule parameters
-        cfg.submodule.dataset = OmegaConf.merge(cfg.submodule.dataset, submodules_updated.dataset)
-        cfg.submodule.model = OmegaConf.merge(cfg.submodule.model, submodules_updated.model)
+        )
+        # Update cfg.submodule
+        cfg.submodule.dataset = OmegaConf.merge(cfg.submodule.dataset, submodules_updated.dataset) # update dataset.train name
+        cfg.submodule.model = OmegaConf.merge(cfg.submodule.model, submodules_updated.model) # update checkpoint path
         if 'visualize' in cfg.submodule:
-            cfg.submodule.visualize = OmegaConf.merge(cfg.submodule.visualize, submodules_updated.visualize)
+            cfg.submodule.visualize = OmegaConf.merge(cfg.submodule.visualize, submodules_updated.visualize) # update log_dir
 
     if 'predict' in cfg.submodule:
         submodules_updated = make_predictions(
@@ -63,10 +58,10 @@ def pipeline(cfg: DictConfig) -> None:
             model =  model,
             dataset = dataset_predict,
         )
-        # Update cfg.submodule parameters
-        cfg.submodule = OmegaConf.merge(cfg.submodule, submodules_updated)
+        # Update cfg.submodule
+        cfg.submodule.dataset = OmegaConf.merge(cfg.submodule.dataset, submodules_updated.dataset) # update dataset.predict name
         if 'visualize' in cfg.submodule:
-            cfg.submodule.visualize = OmegaConf.merge(cfg.submodule.visualize, submodules_updated.visualize)
+            cfg.submodule.visualize = OmegaConf.merge(cfg.submodule.visualize, submodules_updated.visualize) # update log_dir
 
     # ================== Save updated configs ==================
 
@@ -90,11 +85,17 @@ def pipeline(cfg: DictConfig) -> None:
 
     if 'visualize' in cfg.submodule:
         plot_figures(
-            visualize_config = cfg.submodule.visualize
+            visualize_config = cfg.submodule.visualize,
         )
 
     if 'analysis' in cfg.submodule:
         print(cfg.submodule.analysis)
+
+    if 'experiment' in cfg:
+        # Go one level up
+        log_dir = os.path.dirname(log_dir) # Because experiments run in multirun mode
+        print(log_dir)
+        plot_scaling_laws(log_dir, cfg.experiment)
 
     clear_cache() # Free up GPU
 
