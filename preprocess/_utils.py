@@ -318,6 +318,7 @@ def moving_average_smooth(x, t, window_size=15):
         x = x.unsqueeze(-1)
 
     x_smooth = torch.zeros_like(x)
+    # TODO: vectorize this smoothing operation
     for i in range(x.shape[1]):
         x_smooth[:, i] = (
             torch.conv1d(
@@ -357,6 +358,7 @@ def exponential_kernel_smooth(x, t, alpha=0.1):
     x_smooth = np.zeros_like(x)
     x_smooth[0] = x[0]
 
+    # TODO: vectorize this smoothing operation
     for i in range(1, x.shape[0]):
         x_smooth[i] = alpha * x[i] + (1 - alpha) * x_smooth[i - 1]
 
@@ -648,7 +650,10 @@ def interpolate_data(time, data, target_dt, method="linear"):
     interpolated_data_np = np.zeros((len(target_time_np), num_neurons))
 
     # TODO: vectorize the interpolation
-    if method == "linear":
+    if method is None:
+        target_time_np = time
+        interpolated_data_np = data
+    elif method == "linear":
         for i in range(num_neurons):
             interpolated_data_np[:, i] = np.interp(target_time_np, time, data[:, i])
     # TODO: implement other non-linear interpolation methods
@@ -720,8 +725,8 @@ def pickle_neural_data(
     dataset="all",
     transform=StandardScaler(),
     smooth_method="fft",
+    interpolate_method="linear",
     resample_dt=None,
-    interpolation_method="linear",
 ):
     """Preprocess and then saves C. elegans neural data to .pickle format.
 
@@ -744,6 +749,8 @@ def pickle_neural_data(
     smooth_method : str, optional (default: 'fft')
         The smoothing method to apply to the data;
         options are 'ga', 'fft', 'es' or 'ma'.
+    interpolate_method: str, optional (default: 'linear')
+        The scipy interpolation method to use when resampling the data.
     resample_dt : float, optional (default: None)
         The resampling time interval in seconds.
         If None, no resampling is performed.
@@ -790,7 +797,7 @@ def pickle_neural_data(
             print("Dataset:", dataset, end="\n\n")
             # instantiate the relevant preprocessor class
             preprocessor = eval(dataset + "Preprocessor")(
-                transform, smooth_method, interpolation_method, resample_dt
+                transform, smooth_method, interpolate_method, resample_dt
             )
             # call its method
             preprocessor.preprocess()
@@ -805,7 +812,7 @@ def pickle_neural_data(
         print("Dataset:", dataset, end="\n\n")
         # instantiate the relevant preprocessor class
         preprocessor = eval(dataset + "Preprocessor")(
-            transform, smooth_method, interpolation_method, resample_dt
+            transform, smooth_method, interpolate_method, resample_dt
         )
         # call its method
         preprocessor.preprocess()
@@ -872,14 +879,14 @@ class BasePreprocessor:
         dataset_name,
         transform=StandardScaler(),
         smooth_method="FFT",
-        interpolation_method="linear",
+        interpolate_method="linear",
         resample_dt=0.1,
     ):
         self.dataset = dataset_name
         self.transform = transform
         self.smooth_method = smooth_method
         self.resample_dt = resample_dt
-        self.interpolation_method = interpolation_method
+        self.interpolate_method = interpolate_method
         self.raw_data_path = os.path.join(ROOT_DIR, "opensource_data")
         self.processed_data_path = os.path.join(ROOT_DIR, "data/processed/neural")
 
@@ -899,13 +906,13 @@ class BasePreprocessor:
                 time_in_seconds,
                 data,
                 target_dt=self.resample_dt,
-                method=self.interpolation_method,
+                method=self.interpolate_method,
             )
         # Downsample (aggregate)
         else:
             # print('Downsampling data. Original dt: {}, Target dt: {}'.format(original_dt, self.resample_dt), end='\n\n')
             interp_time, interp_ca = interpolate_data(
-                time_in_seconds, data, target_dt=0.1, method=self.interpolation_method
+                time_in_seconds, data, target_dt=0.1, method=self.interpolate_method
             )
             return aggregate_data(interp_time, interp_ca, target_dt=self.resample_dt)
 
@@ -1031,7 +1038,7 @@ class BasePreprocessor:
                 worm: {
                     "dataset": self.dataset,
                     "smooth_method": self.smooth_method,
-                    "interpolation_method": self.interpolation_method,
+                    "interpolate_method": self.interpolate_method,
                     "worm": worm,
                     "original_calcium_data": calcium_data,  # normalized
                     "original_smooth_calcium_data": smooth_calcium_data,  # normalized and smoothed
@@ -1066,9 +1073,9 @@ class BasePreprocessor:
 
 
 class Skora2018Preprocessor(BasePreprocessor):
-    def __init__(self, transform, smooth_method, interpolation_method, resample_dt):
+    def __init__(self, transform, smooth_method, interpolate_method, resample_dt):
         super().__init__(
-            "Skora2018", transform, smooth_method, interpolation_method, resample_dt
+            "Skora2018", transform, smooth_method, interpolate_method, resample_dt
         )
 
     def extract_data(self, arr):
@@ -1102,9 +1109,9 @@ class Skora2018Preprocessor(BasePreprocessor):
 
 
 class Kato2015Preprocessor(BasePreprocessor):
-    def __init__(self, transform, smooth_method, interpolation_method, resample_dt):
+    def __init__(self, transform, smooth_method, interpolate_method, resample_dt):
         super().__init__(
-            "Kato2015", transform, smooth_method, interpolation_method, resample_dt
+            "Kato2015", transform, smooth_method, interpolate_method, resample_dt
         )
 
     def extract_data(self, arr):
@@ -1139,9 +1146,9 @@ class Kato2015Preprocessor(BasePreprocessor):
 
 
 class Nichols2017Preprocessor(BasePreprocessor):
-    def __init__(self, transform, smooth_method, interpolation_method, resample_dt):
+    def __init__(self, transform, smooth_method, interpolate_method, resample_dt):
         super().__init__(
-            "Nichols2017", transform, smooth_method, interpolation_method, resample_dt
+            "Nichols2017", transform, smooth_method, interpolate_method, resample_dt
         )
 
     def extract_data(self, arr):
@@ -1179,9 +1186,9 @@ class Nichols2017Preprocessor(BasePreprocessor):
 
 
 class Kaplan2020Preprocessor(BasePreprocessor):
-    def __init__(self, transform, smooth_method, interpolation_method, resample_dt):
+    def __init__(self, transform, smooth_method, interpolate_method, resample_dt):
         super().__init__(
-            "Kaplan2020", transform, smooth_method, interpolation_method, resample_dt
+            "Kaplan2020", transform, smooth_method, interpolate_method, resample_dt
         )
 
     def load_data(self, file_name):
@@ -1230,9 +1237,9 @@ class Kaplan2020Preprocessor(BasePreprocessor):
 
 
 class Uzel2022Preprocessor(BasePreprocessor):
-    def __init__(self, transform, smooth_method, interpolation_method, resample_dt):
+    def __init__(self, transform, smooth_method, interpolate_method, resample_dt):
         super().__init__(
-            "Uzel2022", transform, smooth_method, interpolation_method, resample_dt
+            "Uzel2022", transform, smooth_method, interpolate_method, resample_dt
         )
 
     def load_data(self, file_name):
@@ -1268,9 +1275,9 @@ class Uzel2022Preprocessor(BasePreprocessor):
 
 
 class Leifer2023Preprocessor(BasePreprocessor):
-    def __init__(self, transform, smooth_method, interpolation_method, resample_dt):
+    def __init__(self, transform, smooth_method, interpolate_method, resample_dt):
         super().__init__(
-            "Leifer2023", transform, smooth_method, interpolation_method, resample_dt
+            "Leifer2023", transform, smooth_method, interpolate_method, resample_dt
         )
 
     def load_data(self, file_name):
@@ -1440,7 +1447,7 @@ class Leifer2023Preprocessor(BasePreprocessor):
                 worm: {
                     "dataset": self.dataset,
                     "smooth_method": self.smooth_method,
-                    "interpolation_method": self.interpolation_method,
+                    "interpolate_method": self.interpolate_method,
                     "worm": worm,
                     "original_calcium_data": calcium_data,  # normalized
                     "original_smooth_calcium_data": smooth_calcium_data,  # normalized and smoothed
@@ -1478,9 +1485,9 @@ class Leifer2023Preprocessor(BasePreprocessor):
 
 
 class Flavell2023Preprocessor(BasePreprocessor):
-    def __init__(self, transform, smooth_method, interpolation_method, resample_dt):
+    def __init__(self, transform, smooth_method, interpolate_method, resample_dt):
         super().__init__(
-            "Flavell2023", transform, smooth_method, interpolation_method, resample_dt
+            "Flavell2023", transform, smooth_method, interpolate_method, resample_dt
         )
 
     def load_data(self, file_name):
@@ -1659,7 +1666,7 @@ class Flavell2023Preprocessor(BasePreprocessor):
                 worm: {
                     "dataset": self.dataset,
                     "smooth_method": self.smooth_method,
-                    "interpolation_method": self.interpolation_method,
+                    "interpolate_method": self.interpolate_method,
                     "worm": worm,
                     "original_calcium_data": calcium_data,  # normalized
                     "original_smooth_calcium_data": smooth_calcium_data,  # normalized and smoothed
