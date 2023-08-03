@@ -917,3 +917,115 @@ def seconds_per_epoch_plot(exp_log_dir, key, log_scale=True):
 
     # Return df, fig and ax so we can customize the plot if we want
     return df, fig, ax
+
+# Define a function to calculate convergence time
+def convergence_epoch(y_values, x_values, threshold=1e-5):
+    # Calculate the absolute difference between successive y-values
+    diffs = np.abs(np.diff(y_values))
+
+    # Find the first time the difference is less than the threshold
+    indices = np.where(diffs < threshold)
+
+    if len(indices[0]) > 0:
+        return x_values[indices[0][0]]
+    else:
+        return None  # Convergence didn't occur
+
+def test_losses_plot(exp_log_dir, key, threshold=1e-5, window=30, xlim=None):
+
+    # Cycle tab10 colors
+    colors = ['tab:blue', 'tab:orange', 'tab:green', 'tab:red', 'tab:purple', 'tab:brown',
+    'tab:pink', 'tab:gray', 'tab:olive', 'tab:cyan']
+
+    if key == 'num_worms':
+        key_name = 'Worms'
+    elif key == 'num_named_neurons':
+        key_name = 'Named neurons'
+    elif key == 'loss':
+        key_name = 'Loss'
+    elif key == 'seq_len':
+        key_name = 'Sequence length'
+    elif key == 'num_samples':
+        key_name = 'Number of samples'
+    elif key == 'hidden_size':
+        key_name = 'Hidden size'
+    elif key == 'worm_timesteps':
+        key_name = 'Worm timesteps'
+    elif key == 'optimizer':
+        key_name = 'Optimizer'
+    elif key == 'learn_rate':
+        key_name = 'Learning rate'
+    else:
+        raise ValueError('key must be num_worms, num_named_neurons, loss, seq_len, num_samples, hidden_size, optimizer or learn_rate')
+
+    # Create plot
+    fig, ax = plt.subplots(figsize=(10, 5))
+    sns.set_style('whitegrid')
+    sns.set_palette('tab10')
+
+    # Loop over all folders inside the log directory
+    i = 0
+    for folder in os.listdir(exp_log_dir):
+        # Skip .submitit folder and multirun.yaml file
+        if folder == '.submitit' or folder == 'multirun.yaml' or folder == 'scaling_laws':
+            continue
+        # Load the config file inside each folder
+        pipeline_info = OmegaConf.load(os.path.join(exp_log_dir, folder, 'pipeline_info.yaml')).submodule
+        train_info = OmegaConf.load(os.path.join(exp_log_dir, folder, 'train_info.yaml'))
+        # Extract the number of worms, number of named neurons or loss type from the config file
+        if key == 'num_worms':
+            key_value = pipeline_info['dataset']['train'][key]
+        elif key == 'num_named_neurons':
+            key_value = pipeline_info['dataset']['train'][key]
+        elif key == 'loss':
+            key_value = pipeline_info['model'][key]
+        elif key == 'seq_len':
+            key_value = pipeline_info['train'][key]
+        elif key == 'num_samples':
+            key_value = pipeline_info['train'][key]
+        elif key == 'hidden_size':
+            key_value = pipeline_info['model'][key]
+        elif key == 'worm_timesteps':
+            key_value = train_info[key]
+        elif key == 'optimizer':
+            key_value = pipeline_info['train'][key]
+        elif key == 'learn_rate':
+            key_value = pipeline_info['train'][key]
+        # Load the dataframe with the losses
+        loss_df = pd.read_csv(os.path.join(exp_log_dir, folder, 'loss_curves.csv'))
+        # if test loss == inf, skip
+        if np.sum(loss_df['test_losses'] == np.inf) > 0:
+            continue
+        # Plot the test losses
+        label = '{} {}'.format(key_value, key_name)
+        sns.lineplot(data=loss_df, x='epochs', y='test_losses', ax=ax, label=label, color=colors[i])
+        # Vertical line conv epoch
+        conv_epoch = convergence_epoch(loss_df['test_losses'].rolling(window).mean().values, loss_df['epochs'].values, threshold=threshold)
+        if conv_epoch is not None:
+            ax.axvline(conv_epoch, color=colors[i], linestyle='--', alpha=0.5)
+        i += 1
+    
+    # Plot just one base test loss
+    sns.lineplot(data=loss_df, x='epochs', y='base_test_losses', ax=ax, label='Baseline', color='black')
+    # Dash the base test loss line
+    ax.lines[-1].set_linestyle("--")
+    # Reduce the opacity of the base test loss line
+    ax.lines[-1].set_alpha(0.7)
+    # Reduce size of the base test loss line
+    ax.lines[-1].set_linewidth(0.7)
+
+    if xlim is not None:
+        ax.set_xlim(xlim)
+
+    # Set the x axis and y axis labels
+    plt.xlabel('Epochs')
+    plt.ylabel('Test loss')
+    # Set title
+    plt.title('Test loss vs epochs')
+    plt.tight_layout()
+    # Save the plot
+    fig.savefig(os.path.join(exp_log_dir, 'scaling_laws', 'test_losses'), dpi=300)
+    # plt.show()
+    plt.close()
+
+    return loss_df, fig, ax

@@ -61,6 +61,13 @@ def plot_scaling_laws(log_dir, exp_config: DictConfig) -> None:
     df, fig, ax = seconds_per_epoch_plot(exp_log_dir = log_dir,
                                          key = exp_config.name,
                                          log_scale = exp_config.options.log_scale)
+    
+    # All test losses
+    df, fig, ax = test_losses_plot(exp_log_dir = log_dir,
+                                   key = exp_config.name,
+                                   threshold = 1e-5,
+                                   window = 30,
+                                   xlim = None)
 
     return None
 
