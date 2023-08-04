@@ -13,7 +13,7 @@ def process_data(preprocess_config: DictConfig) -> None:
     ------
     config: DictConfig
         Hydra configuration object.
-    
+
     Calls
     -----
     pickle_neural_data : function in preprocess/_utils.py
@@ -23,7 +23,7 @@ def process_data(preprocess_config: DictConfig) -> None:
     Returns
     -------
     None
-        The function's primary purpose is to preprocess the data 
+        The function's primary purpose is to preprocess the data
         and save it to disk for future use.
     """
 
@@ -39,7 +39,7 @@ def process_data(preprocess_config: DictConfig) -> None:
             dataset=preprocess_config.dataset,
             smooth_method=preprocess_config.smooth,
             resample_dt=preprocess_config.resample_dt,
-            interpolation_method=preprocess_config.interpolation_method,
+            interpolate_method=preprocess_config.interpolate,
         )
         logger.info("Finished preprocessing neural data.")
     else:

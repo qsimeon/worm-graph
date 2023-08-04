@@ -3,19 +3,21 @@
 
 `tree -L 1 worm-graph`
 ```
-├── LICENSE
-├── README.md
-├── __init__.py
 ├── analysis
-├── conf
+├── configs
 ├── data
-├── logs
+├── debugging
+├── __init__.py
+├── LICENSE
 ├── main.py
 ├── models
+├── opensource_data
 ├── pkg.py
 ├── predict
 ├── preprocess
+├── __pycache__
 ├── pyproject.toml
+├── README.md
 ├── setup
 ├── tests
 ├── train
@@ -84,11 +86,15 @@ After finishing one of the installations above, navigate back to the root direct
 To make sure nothing breaks, the first thing you need to do is download and preprocess our curated collection of _C. elegans_ neural activity datasets. 
 From the root (`worm-graph`) directory, run the command:
 
-`python preprocess/_main.py`
+`python main.py +submodule=[preprocess]`
 
 Now you can run the main script as a demo of the fully functional pipeline:
 
-`python -u main.py --run`
+`python main.py +experiment=default`
+
+If you are running on a SLURM computing cluster:
+
+`python main.py +experiment=default hydra/launcher=submitit_slurm`
 
 For one multi-worm dataset of neural activity, this pipeline will:
 1. Load the preprocessed calcium data for all worms in the dataset.
