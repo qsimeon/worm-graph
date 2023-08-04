@@ -1,6 +1,6 @@
 # @package _global_
 defaults:
-  - override /submodule: [preprocess, dataset, model, train, predict, visualize]
+  - override /submodule: [dataset, model, train, predict, visualize]
   - _self_
 
 hydra:
