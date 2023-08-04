@@ -4,11 +4,16 @@ from pkg import *
 def pipeline(cfg: DictConfig) -> None:
     """Create a custom pipeline"""
 
-    # start new run
+    # Configure logger
+    logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+    logger = logging.getLogger(__name__)
+
+    # Start new experiment run (MLflow)
     mlflow.set_tracking_uri(LOGS_DIR+'/mlruns')
     mlflow.set_experiment(cfg.experiment.name)
 
     with mlflow.start_run(run_name=datetime.now().strftime("%Y-%m-%d_%H:%M:%S")) as run:
+
         # Verifications
         if len(cfg) == 1: # only the pipeline module
             raise ValueError("No submodules in the pipeline. Run python main.py +experiment=your_experiment")
@@ -27,8 +32,11 @@ def pipeline(cfg: DictConfig) -> None:
             if cfg.submodule.visualize.log_dir is None:
                 assert ('train' in cfg.submodule) or ('predict' in cfg.submodule), "Train/Predict must be defined before visualizing (or chose a log_dir)."
 
-        torch_device() # Display Pytorch device
+        logger.info("Torch device: %s" % (DEVICE))
+        logger.info("Setting random seeds to %d" % (cfg.experiment.seed))
 
+        torch.cuda.empty_cache()
+        cfg.experiment.seed = random.randint(0, 100)
         init_random_seeds(cfg.experiment.seed) # Set random seeds
 
         if 'preprocess' in cfg.submodule:
@@ -46,7 +54,7 @@ def pipeline(cfg: DictConfig) -> None:
             model = get_model(cfg.submodule.model)
 
         if 'train' in cfg.submodule:
-            model, submodules_updated, train_info = train_model(
+            model, submodules_updated, train_info, metric = train_model(
                 train_config = cfg.submodule.train,
                 model = model,
                 dataset = dataset_train
@@ -94,13 +102,21 @@ def pipeline(cfg: DictConfig) -> None:
             )
 
         if 'analysis' in cfg.submodule:
-            print(cfg.submodule.analysis)
+            pass
 
-        if cfg.experiment.name in ['num_worms']:
+        if cfg.experiment.name in ['num_worms', 'num_named_neurons']:
             log_dir = os.path.dirname(log_dir) # Because experiments run in multirun mode
             plot_experiment(log_dir, cfg.experiment)
+        
+        # Save experiment parameters (MLflow)
+        log_params_from_omegaconf_dict(cfg)
+        logger.info("Experiment finished. Best metric: %s" % (metric))
 
-        clear_cache() # Free up GPU
+        torch.cuda.empty_cache()
+        mlflow.end_run()
+
+    # Return metric for optuna automatic hyperparameter tuning
+    return metric
 
 if __name__ == "__main__":
     pipeline()

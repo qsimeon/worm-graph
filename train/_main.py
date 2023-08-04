@@ -1,5 +1,7 @@
 from train._utils import *
 
+# Init logger
+logger = logging.getLogger(__name__)
 
 def train_model(
     train_config: DictConfig,
@@ -109,15 +111,12 @@ def train_model(
     else:
         optimizer = torch.optim.SGD(model.parameters(), lr=learn_rate)
 
-    print("Optimizer:", optimizer, end="\n\n")
-
     # Early stopping
     es = EarlyStopping(
         patience = train_config.early_stopping.patience,
         min_delta = train_config.early_stopping.delta,
         restore_best_weights = train_config.early_stopping.restore_best_weights,
         )
-
 
     # Initialize train/test loss metrics arrays
     data = {
@@ -169,11 +168,18 @@ def train_model(
     # Keep track of the average optimization time per epoch
     seconds_per_epoch = 0
 
+    logger.info(f"Start training.")
+
     # Main FOR loop; train the model for multiple epochs (one cohort = one epoch)
     # In one epoch we process all worms (i.e one cohort)
-    for i, cohort in enumerate(worm_cohorts):
-        # Log parameters (MLflow)
-        log_params_from_omegaconf_dict(train_config)
+    pbar = tqdm(
+        enumerate(worm_cohorts), 
+        total=len(worm_cohorts),
+        position=0, leave=True,  # position at top and remove when done
+        dynamic_ncols=True,  # adjust width to terminal window size
+        )
+    
+    for i, cohort in pbar:
 
         # Create a array of datasets and masks for the cohort
         train_datasets = np.empty(num_unique_worms, dtype=object)
@@ -296,12 +302,8 @@ def train_model(
 
         # Saving model checkpoints
         if (i % train_config.save_freq == 0) or (i + 1 == train_epochs):
-            # display progress
-            print(
-                "Saving a model checkpoint.\n\tnum. worm cohorts trained on:",
-                i,
-                end="\n\n",
-            )
+            # logger.info("Saving a model checkpoint ({} epochs).".format(i))
+
             # Save model checkpoints
             chkpt_name = "{}_epochs_{}_worms.pt".format(
                 reset_epoch, i * num_unique_worms
@@ -341,9 +343,15 @@ def train_model(
                 checkpoint_path,
             )
 
-        if es(model, log['test_losses']):
-            print("Early stopping triggered.")
+        if es(model, log['test_losses'][0]):
+            logger.info("Early stopping triggered (epoch {}).".format(i))
             break
+        
+        # Update progress bar
+        tqdm_description = f'Epoch {i+1}/{len(worm_cohorts)}'
+        tqdm_postfix = {'train_loss': log['train_losses'][0], 'val_loss': log['test_losses'][0]}  # assuming train_loss is defined
+        pbar.set_description(tqdm_description)
+        pbar.set_postfix(tqdm_postfix)
 
         # Set to next epoch before continuing
         reset_epoch = log["epochs"][-1] + 1
@@ -377,8 +385,11 @@ def train_model(
         }
     )
 
+    # Metric that we want optuna to optimize
+    metric = data['test_losses'][:i].min()
+
     # returned trained model, an update to the submodules and the train info
-    return model, submodules_updated, train_info
+    return model, submodules_updated, train_info, metric
 
 
 if __name__ == "__main__":

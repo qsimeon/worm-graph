@@ -1,5 +1,7 @@
 from data._utils import *
 
+# Init logger
+logger = logging.getLogger(__name__)
 
 def get_dataset(dataset_config: DictConfig):
     """Returns a dict with the worm data of all requested datasets.
@@ -58,6 +60,7 @@ def get_dataset(dataset_config: DictConfig):
     # Load the dataset(s)
     combined_dataset = dict()
     for dataset_name in dataset_names:
+        logger.info('Loading single dataset: {}'.format(dataset_name))
         multi_worms_dataset = load_dataset(dataset_name)
 
         # Select the `num_named_neurons` neurons (overwrite the masks)
@@ -83,7 +86,7 @@ def get_dataset(dataset_config: DictConfig):
         # Select `num_worms` worms
         wormIDs = [wormID for wormID in combined_dataset.keys()]
         wormIDs_to_keep = np.random.choice(wormIDs, size=num_worms, replace=False)
-        print('Selecting {} worms from {}\n'.format(len(wormIDs_to_keep), len(combined_dataset)))
+        logger.info('Selecting {} worms from {}'.format(len(wormIDs_to_keep), len(combined_dataset)))
 
         # Remove the worms that are not in `wormIDs_to_keep`
         for wormID in wormIDs:
@@ -92,14 +95,7 @@ def get_dataset(dataset_config: DictConfig):
 
     combined_dataset = {f"worm{i}": combined_dataset[key] for i, key in enumerate(combined_dataset.keys())}
 
-    # Display the dataset
-    print(
-        "Dataset loaded!\nChosen dataset(s): {}\nNum. of worms: {}".format(
-            dataset_names,
-            len(combined_dataset),
-        ),
-        end="\n\n",
-    )
+    logger.info('Combined dataset loaded: {}'.format(dataset_names))
 
     # Save the dataset
     if dataset_config.save:

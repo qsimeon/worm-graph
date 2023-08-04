@@ -1,11 +1,12 @@
 import numpy as np
-import os
 import pandas as pd
+import os
 import random
 import torch
 import torch.multiprocessing
 import warnings
 import mlflow
+import logging
 from omegaconf import DictConfig, ListConfig
 
 # Ignore sklearn's RuntimeWarnings
@@ -70,27 +71,10 @@ NEURONS_302 = sorted(
     ).neuron
 )
 
-
-def torch_device():
-    """
-    Returns the torch device (cpu or gpu)
-    """
-    print("\ntorch device: %s" % (DEVICE), end="\n\n")
-    return None
-
-
-def clear_cache():
-    """Free up GPU memory."""
-    torch.cuda.empty_cache()
-    return None
-
-
 def init_random_seeds(seed=0):
     """
     Initialize random seeds for numpy, torch, and random.
     """
-    print("Setting random seeds to %d" % (seed), end="\n\n")
-    clear_cache()
     np.random.seed(seed)
     torch.manual_seed(seed)
     random.seed(seed)

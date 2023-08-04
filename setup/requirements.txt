@@ -8,3 +8,4 @@ ncps
 omegaconf
 pysindy
 pytest
+mlflow

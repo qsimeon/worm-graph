@@ -1,5 +1,7 @@
 from visualize._utils import *
 
+# Init logger
+logger = logging.getLogger(__name__)
 
 def plot_figures(
     visualize_config: DictConfig,
@@ -17,6 +19,8 @@ def plot_figures(
 
     # Load pipeline info
     pipeline_info = OmegaConf.load(os.path.join(log_dir, "pipeline_info.yaml"))
+
+    logger.info('Start plotting figures.')
 
     # Plots related to training (loss_curves.csv file exists, checkpoints exists)
     if 'train' in pipeline_info.submodule:

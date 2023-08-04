@@ -1,5 +1,7 @@
 from predict._pkg import *
 
+# Init logger
+logger = logging.getLogger(__name__)
 
 def model_predict(
     model: torch.nn.Module,

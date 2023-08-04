@@ -1,13 +1,11 @@
 # All imports for models module
-import copy
-import hydra
 import math
 import os
 import torch
+import logging
 
 from omegaconf import DictConfig, OmegaConf
 from ncps.torch import CfC
-from ncps.wirings import AutoNCP
 from torch.cuda.amp import autocast
 from torch_geometric.data import Data, Batch
 from torch_geometric.nn import GCNConv

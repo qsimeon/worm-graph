@@ -1,33 +1,39 @@
 from train._pkg import *
 
+# Init logger
+logger = logging.getLogger(__name__)
+
 class EarlyStopping():
-  # https://github.com/jeffheaton/t81_558_deep_learning/blob/pytorch/t81_558_class_03_4_early_stop.ipynb
-  def __init__(self, patience=5, min_delta=0, restore_best_weights=True):
-    self.patience = patience
-    self.min_delta = min_delta
-    self.restore_best_weights = restore_best_weights
-    self.best_model = None
-    self.best_loss = None
-    self.counter = 0
+    # https://github.com/jeffheaton/t81_558_deep_learning/blob/pytorch/t81_558_class_03_4_early_stop.ipynb
+    def __init__(self, patience=5, min_delta=0, restore_best_weights=True):
+        self.patience = patience
+        self.min_delta = min_delta
+        self.restore_best_weights = restore_best_weights
+        self.best_model = None
+        self.best_loss = None
+        self.counter = 0
+        
+    def __call__(self, model, val_loss):
+        if self.best_loss == None:
+            self.best_loss = val_loss
+            self.best_model = copy.deepcopy(model)
+        elif self.best_loss - val_loss > self.min_delta:
+            self.best_loss = val_loss
+            self.counter = 0
+            self.best_model.load_state_dict(model.state_dict())
+            self.save_best_model(model)
+        elif self.best_loss - val_loss < self.min_delta:
+            self.counter += 1
+        if self.counter >= self.patience:
+            self.status = f"Stopped on {self.counter}"
+            if self.restore_best_weights:
+                model.load_state_dict(self.best_model.state_dict())
+                self.save_best_model(model)
+            return True
+        return False
     
-  def __call__(self, model, val_loss):
-    if self.best_loss == None:
-      self.best_loss = val_loss
-      self.best_model = copy.deepcopy(model)
-    elif self.best_loss - val_loss > self.min_delta:
-      self.best_loss = val_loss
-      self.counter = 0
-      self.best_model.load_state_dict(model.state_dict())
-    elif self.best_loss - val_loss < self.min_delta:
-      self.counter += 1
-      if self.counter >= self.patience:
-        self.status = f"Stopped on {self.counter}"
-        if self.restore_best_weights:
-          model.load_state_dict(self.best_model.state_dict())
-          # Save the best model
-          torch.save(model.state_dict(), os.path.join(os.getcwd(), "checkpoints", 'best_model.pt'))
-        return True
-    return False
+    def save_best_model(self, model):
+        torch.save(model.state_dict(), os.path.join(os.getcwd(), "checkpoints", 'best_model.pt'))
 
 
 def train(
@@ -151,14 +157,14 @@ def train(
         num_train_samples += X_train.detach().size(0)
 
         # Log MLflow metrics.
-        mlflow.log_metric("train_loss", loss.detach().item(), step=step+i-1)
-        mlflow.log_metric("train_baseline", base.detach().item(), step=step+i-1)
+        mlflow.log_metric("train_loss_iteration", loss.detach().item(), step=step+i-1)
+        mlflow.log_metric("train_baseline_iteration", base.detach().item(), step=step+i-1)
 
     # Average train and baseline losses.
     losses = {
-        "train_loss": train_loss / (i + 1),
-        "base_train_loss": base_loss / (i + 1),
-        "centered_train_loss": (train_loss - base_loss) / (i + 1),
+        "train_loss": train_loss / i,
+        "base_train_loss": base_loss / i,
+        "centered_train_loss": (train_loss - base_loss) / i,
         "num_train_samples": num_train_samples,
     }
 
@@ -261,14 +267,14 @@ def test(
         num_test_samples += X_test.detach().size(0)
 
         # Log MLflow metrics.
-        mlflow.log_metric("test_loss", loss.detach().item(), step=step+i-1)
-        mlflow.log_metric("test_baseline", base.detach().item(), step=step+i-1)
+        mlflow.log_metric("test_loss_iteration", loss.detach().item(), step=step+i-1)
+        mlflow.log_metric("test_baseline_iteration", base.detach().item(), step=step+i-1)
 
     # Average test and baseline losses.
     losses = {
-        "test_loss": test_loss / (i + 1),
-        "base_test_loss": base_loss / (i + 1),
-        "centered_test_loss": (test_loss - base_loss) / (i + 1),
+        "test_loss": test_loss / i,
+        "base_test_loss": base_loss / i,
+        "centered_test_loss": (test_loss - base_loss) / i,
         "num_test_samples": num_test_samples,
     }
 
@@ -595,12 +601,11 @@ def optimize_model(
         log["centered_train_losses"][i] = centered_train_loss
         log["centered_test_losses"][i] = centered_test_loss
 
-        # Print to standard output
-        if (num_epochs < 10) or (epoch % (num_epochs // 10) == 0):
-            print(
-                f"\nEpoch: {epoch:03d}, Train Loss: {centered_train_loss:.4f}, Val. Loss: {centered_test_loss:.4f}",
-                end="\n\n",
-            )
+        # Save epoch losses (MLflow)
+        mlflow.log_metric("train_loss_epoch", train_loss, step=epoch)
+        mlflow.log_metric("train_baseline_epoch", base_train_loss, step=epoch)
+        mlflow.log_metric("test_loss_epoch", test_loss, step=epoch)
+        mlflow.log_metric("test_baseline_epoch", base_test_loss, step=epoch)
 
     # Return optimized model
     return model, log

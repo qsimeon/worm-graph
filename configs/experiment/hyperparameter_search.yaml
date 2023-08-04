@@ -1,0 +1,28 @@
+# @package _global_
+defaults:
+  - override /submodule: [dataset, model, train, visualize]
+  - override hydra/sweeper: optuna # Use optuna for hyperparameter optimization
+  - _self_
+
+hydra:
+  mode: MULTIRUN
+  sweeper:
+    sampler:
+      seed: 42 # Seed for reproducibility
+    direction: minimize # Minimize the metric
+    n_trials: 2 # Number of trials to run
+    n_jobs: 1 # Number of jobs to run in parallel
+    params:
+      # Hyperparameters to optimize
+      submodule.train.learn_rate: range(1e-3, 1e-5)
+
+submodule:
+  dataset:
+    train:
+      name: Kato2015
+      num_named_neurons: all
+      num_worms: 5
+      epochs: 10
+
+experiment:
+  name: hyperparameter_search

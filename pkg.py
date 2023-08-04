@@ -1,8 +1,6 @@
 # All imports for main module
 import hydra
-import torch
-import shutil
-import mlflow
+import logging
 from datetime import datetime
 from utils import *
 from omegaconf import DictConfig, OmegaConf

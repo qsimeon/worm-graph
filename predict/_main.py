@@ -1,5 +1,7 @@
 from predict._utils import *
 
+# Init logger
+logger = logging.getLogger(__name__)
 
 def make_predictions(
     predict_config: DictConfig,
@@ -64,6 +66,8 @@ def make_predictions(
     signal_str = "residual" if use_residual else "calcium"
     key_data = "residual_calcium" if use_residual else "calcium_data"
     key_data = "smooth_" + key_data if smooth_data else key_data
+
+    logger.info("Start making predictions.")
 
     # Make a directory for each worm in the dataset and store the data
     for worm, single_worm_dataset in dataset.items():
