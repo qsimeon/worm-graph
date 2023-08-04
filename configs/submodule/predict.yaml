@@ -1,6 +1,6 @@
 predict:
-  tau_out: 240 # number of future time steps to predict
+  tau_out: 200 # number of future time steps to predict
   # constraint: tau_out: int > 0
-  context_len: 240 # length of the context window to use for prediction
+  context_len: 200 # length of the context window to use for prediction
   use_residual: false
   use_smooth_data: false
