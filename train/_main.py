@@ -178,6 +178,7 @@ def train_model(
         position=0, leave=True,  # position at top and remove when done
         dynamic_ncols=True,  # adjust width to terminal window size
         )
+    
     for i, cohort in pbar:
 
         # Create a array of datasets and masks for the cohort

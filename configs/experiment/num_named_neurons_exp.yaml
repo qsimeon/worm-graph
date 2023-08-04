@@ -1,6 +1,6 @@
 # @package _global_
 defaults:
-  - override /submodule: [preprocess, dataset, model, train, predict, visualize]
+  - override /submodule: [dataset, model, train, predict, visualize]
   - _self_
 
 hydra:
@@ -11,7 +11,10 @@ hydra:
       params:
         submodule.dataset.train.name: Nichols2017
         submodule.dataset.train.num_worms: 5
-        submodule.dataset.train.num_named_neurons: 5, 10, 30
+        submodule.dataset.train.num_named_neurons: 5, 10
+        experiment.seed: 0, 1
 
 experiment:
-  name: default_multirun
+  name: num_named_neurons
+  options:
+    log_scale: true

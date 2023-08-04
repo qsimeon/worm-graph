@@ -20,7 +20,7 @@ train:
   # constraint: keep fixed at tau_in = 1
   shuffle_samples: true # whether to shuffle samples (sequences) from each worm
   reverse: false # if True reverse the order of generation of the samples (sequences)
-  shuffle_worms: false # whether to shuffle worms
+  shuffle_worms: true # whether to shuffle worms
   use_residual: false
   use_smooth_data: true
 

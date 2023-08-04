@@ -14,9 +14,6 @@ def pipeline(cfg: DictConfig) -> None:
 
     with mlflow.start_run(run_name=datetime.now().strftime("%Y-%m-%d_%H:%M:%S")) as run:
 
-        # Save experiment parameters (MLflow)
-        log_params_from_omegaconf_dict(cfg)
-
         # Verifications
         if len(cfg) == 1: # only the pipeline module
             raise ValueError("No submodules in the pipeline. Run python main.py +experiment=your_experiment")
@@ -105,12 +102,17 @@ def pipeline(cfg: DictConfig) -> None:
         if 'analysis' in cfg.submodule:
             pass
 
-        if cfg.experiment.name in ['num_worms']:
+        if cfg.experiment.name in ['num_worms', 'num_named_neurons']:
             log_dir = os.path.dirname(log_dir) # Because experiments run in multirun mode
             plot_experiment(log_dir, cfg.experiment)
+        
+        # Save experiment parameters (MLflow)
+        log_params_from_omegaconf_dict(cfg)
 
         torch.cuda.empty_cache()
         mlflow.end_run()
+
+    return 
 
 if __name__ == "__main__":
     pipeline()
