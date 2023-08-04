@@ -1,0 +1,10 @@
+# @package _global_
+defaults:
+  - override /submodule: [preprocess, dataset, model, train, predict, visualize]
+  - _self_
+
+hydra:
+  mode: RUN
+
+experiment:
+  name: default_run

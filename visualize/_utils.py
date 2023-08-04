@@ -780,3 +780,341 @@ def plot_heat_map(
 
     # Show the plot
     plt.tight_layout()
+
+def seconds_per_epoch_plot(exp_log_dir, key, log_scale=True):
+
+    if key == 'num_worms':
+        key_name = 'Number of worms'
+    elif key == 'num_named_neurons':
+        key_name = 'Number of named neurons'
+    elif key == 'loss':
+        key_name = 'Loss'
+    elif key == 'seq_len':
+        key_name = 'Sequence length'
+    elif key == 'num_samples':
+        key_name = 'Number of samples'
+    elif key == 'hidden_size':
+        key_name = 'Hidden size'
+    elif key == 'worm_timesteps':
+        key_name = 'Worm timesteps'
+    elif key == 'optimizer':
+        key_name = 'Optimizer'
+    elif key == 'learn_rate':
+        key_name = 'Learning rate'
+    else:
+        print('Experiment not registered. Skip computation time scaling law plot.')
+        return None, None, None
+
+    # Store seconds per epoch, number of named neurons and number of worms
+    seconds_per_epoch = []
+    num_named_neurons = []
+    num_worms = []
+    loss_type = []
+    seq_len = []
+    num_samples = []
+    hidden_size = []
+    worm_timesteps = []
+    optimizer = []
+    lr = []
+
+    # Loop over all folders inside the log directory
+    for folder in os.listdir(exp_log_dir):
+        # Skip .submitit folder and multirun.yaml file
+        if folder == '.submitit' or folder == 'multirun.yaml' or folder == 'scaling_laws':
+            continue
+        # Load the config file inside each folder
+        pipeline_info = OmegaConf.load(os.path.join(exp_log_dir, folder, 'pipeline_info.yaml')).submodule
+        train_info = OmegaConf.load(os.path.join(exp_log_dir, folder, 'train_info.yaml'))
+        # Extract seconds_per_epoch from the config file
+        seconds_per_epoch.append(train_info['seconds_per_epoch'])
+        # Extract num_named_neurons from the config file
+        num_named_neurons.append(pipeline_info['dataset']['train']['num_named_neurons'])
+        # Extract num_worms from the config file
+        num_worms.append(pipeline_info['dataset']['train']['num_worms'])
+        # Extract loss_type from the config file
+        loss_type.append(pipeline_info['model']['loss'])
+        # Extract seq_len from the config file
+        seq_len.append(pipeline_info['train']['seq_len'])
+        # Extract num_samples from the config file
+        num_samples.append(pipeline_info['train']['num_samples'])
+        # Extract hidden_size from the config file
+        hidden_size.append(pipeline_info['model']['hidden_size'])
+        # Extract worm_timesteps from the config file
+        worm_timesteps.append(train_info['worm_timesteps'])
+        # Extract optimizer
+        optimizer.append(pipeline_info['train']['optimizer'])
+        # Extract learn_rate
+        lr.append(pipeline_info['train']['learn_rate'])
+
+    # Create a dataframe with the seconds per epoch, number of named neurons and number of worms
+    df = pd.DataFrame({'seconds_per_epoch': seconds_per_epoch, 'num_named_neurons': num_named_neurons,
+    'num_worms': num_worms, 'loss': loss_type, 'seq_len': seq_len, 'num_samples': num_samples, 'hidden_size': hidden_size,
+    'worm_timesteps': worm_timesteps, 'optimizer': optimizer, 'learn_rate': lr})
+
+    # Plot the seconds per epoch vs the number of worms
+    fig, ax = plt.subplots(figsize=(10, 5))
+    # Use whitegrid style
+    sns.set_style('whitegrid')
+    sns.set_palette('tab10')
+    # Plot the data using sns bar plot
+    sns.barplot(data=df, x=key, y='seconds_per_epoch', ax=ax)
+    # Set the x axis and y axis labels according to the key
+    plt.xlabel(key_name)
+    plt.ylabel('Seconds per epoch')
+    # Set title according to the key
+    plt.title('Seconds per epoch vs {}'.format(key_name))
+    plt.tight_layout()
+    # plt.show()
+    plt.close()
+    # Save the plot
+    # fig.savefig(os.path.join(exp_log_dir, 'scaling_laws', 'computation_vs_'+key), dpi=300)
+
+    if key == 'num_worms' or key == 'seq_len' or key == 'num_samples' or key == 'hidden_size' or key == 'worm_timesteps':
+        # Plot the seconds per epoch vs the number of worms
+        fig, ax = plt.subplots(figsize=(10, 5))
+        # Use whitegrid style
+        sns.set_style('whitegrid')
+        sns.set_palette('tab10')
+        # Plot the data using sns scatterplot
+        sns.scatterplot(data=df, x=key, y='seconds_per_epoch', ax=ax)
+        # Regression line
+        if log_scale:
+            # Use log scale for the x axis and y axis
+            ax.set_xscale('log')
+            ax.set_yscale('log')
+            slope, intercept, r_value, p_value, std_err = stats.linregress(np.log(df[key]), np.log(df['seconds_per_epoch']))
+            # Add the regression line to the plot using sns lineplot
+            x = np.linspace(df[key].min(), df[key].max(), 1000)
+            y = np.exp(intercept) * x ** slope
+        else:
+            slope, intercept, r_value, p_value, std_err = stats.linregress(df[key], df['seconds_per_epoch'])
+            # Add the regression line to the plot using sns lineplot
+            x = np.linspace(df[key].min(), df[key].max(), 1000)
+            y = slope * x + intercept
+        # Write the regression line equation as a label
+        label = 'y = {}x + {}\n~ R^2: {}'.format(round(slope, 5), round(intercept, 5), round(r_value ** 2, 5))
+        sns.lineplot(x=x, y=y, ax=ax, label=label, color='red')
+        # Use dashed line style
+        ax.lines[0].set_linestyle("--")
+        # Reduce the opacity of the regression line
+        ax.lines[0].set_alpha(0.5)
+        # Reduce size of the regression line
+        ax.lines[0].set_linewidth(1)
+
+        # Set the x axis and y axis labels according to the key
+        plt.xlabel(key_name)
+        plt.ylabel('Seconds per epoch')
+        # Set title according to the key
+        plt.title('Seconds per epoch vs {}'.format(key_name))
+        plt.tight_layout()
+        # plt.show()
+        plt.close()
+        # Save the plot inside the scaling_laws folder
+        fig.savefig(os.path.join(exp_log_dir, 'scaling_laws', 'computation_vs_'+key), dpi=300)
+
+
+    # Return df, fig and ax so we can customize the plot if we want
+    return df, fig, ax
+
+# Define a function to calculate convergence time
+def convergence_epoch(y_values, x_values, threshold=1e-5):
+    # Calculate the absolute difference between successive y-values
+    diffs = np.abs(np.diff(y_values))
+
+    # Find the first time the difference is less than the threshold
+    indices = np.where(diffs < threshold)
+
+    if len(indices[0]) > 0:
+        return x_values[indices[0][0]]
+    else:
+        return None  # Convergence didn't occur
+
+def test_losses_plot(exp_log_dir, key, threshold=1e-5, window=30, xlim=None):
+
+    # Cycle tab10 colors
+    colors = ['tab:blue', 'tab:orange', 'tab:green', 'tab:red', 'tab:purple', 'tab:brown',
+    'tab:pink', 'tab:gray', 'tab:olive', 'tab:cyan']
+
+    if key == 'num_worms':
+        key_name = 'Worms'
+    elif key == 'num_named_neurons':
+        key_name = 'Named neurons'
+    elif key == 'loss':
+        key_name = 'Loss'
+    elif key == 'seq_len':
+        key_name = 'Sequence length'
+    elif key == 'num_samples':
+        key_name = 'Number of samples'
+    elif key == 'hidden_size':
+        key_name = 'Hidden size'
+    elif key == 'worm_timesteps':
+        key_name = 'Worm timesteps'
+    elif key == 'optimizer':
+        key_name = 'Optimizer'
+    elif key == 'learn_rate':
+        key_name = 'Learning rate'
+    else:
+        key = 'unknown'
+        key_name = 'unknown'
+
+    # Create plot
+    fig, ax = plt.subplots(figsize=(10, 5))
+    sns.set_style('whitegrid')
+    sns.set_palette('tab10')
+
+    # Loop over all folders inside the log directory
+    i = 0
+    for folder in os.listdir(exp_log_dir):
+        # Skip .submitit folder and multirun.yaml file
+        if folder == '.submitit' or folder == 'multirun.yaml' or folder == 'scaling_laws':
+            continue
+        # Load the config file inside each folder
+        pipeline_info = OmegaConf.load(os.path.join(exp_log_dir, folder, 'pipeline_info.yaml')).submodule
+        train_info = OmegaConf.load(os.path.join(exp_log_dir, folder, 'train_info.yaml'))
+        # Extract the number of worms, number of named neurons or loss type from the config file
+        if key == 'num_worms':
+            key_value = pipeline_info['dataset']['train'][key]
+        elif key == 'num_named_neurons':
+            key_value = pipeline_info['dataset']['train'][key]
+        elif key == 'loss':
+            key_value = pipeline_info['model'][key]
+        elif key == 'seq_len':
+            key_value = pipeline_info['train'][key]
+        elif key == 'num_samples':
+            key_value = pipeline_info['train'][key]
+        elif key == 'hidden_size':
+            key_value = pipeline_info['model'][key]
+        elif key == 'worm_timesteps':
+            key_value = train_info[key]
+        elif key == 'optimizer':
+            key_value = pipeline_info['train'][key]
+        elif key == 'learn_rate':
+            key_value = pipeline_info['train'][key]
+        # Load the dataframe with the losses
+        loss_df = pd.read_csv(os.path.join(exp_log_dir, folder, 'loss_curves.csv'))
+        # if test loss == inf, skip
+        if np.sum(loss_df['test_losses'] == np.inf) > 0:
+            continue
+        # Plot the test losses
+        label = '{} {}'.format(key_value, key_name)
+        sns.lineplot(data=loss_df, x='epochs', y='test_losses', ax=ax, label=label, color=colors[i])
+        # Vertical line conv epoch
+        conv_epoch = convergence_epoch(loss_df['test_losses'].rolling(window).mean().values, loss_df['epochs'].values, threshold=threshold)
+        if conv_epoch is not None:
+            ax.axvline(conv_epoch, color=colors[i], linestyle='--', alpha=0.5)
+        i += 1
+
+    if xlim is not None:
+        ax.set_xlim(xlim)
+
+    # Set the x axis and y axis labels
+    plt.xlabel('Epochs')
+    plt.ylabel('Test loss')
+    # Set title
+    plt.title('Test loss vs Epochs')
+    plt.tight_layout()
+    # Save the plot
+    fig.savefig(os.path.join(exp_log_dir, 'scaling_laws', 'test_losses'), dpi=300)
+    # plt.show()
+    plt.close()
+
+    return loss_df, fig, ax
+
+def scaling_law_plot(exp_log_dir, key='num_worms', log_scale=True):
+
+    if key == 'num_worms':
+        key_name = 'Worms'
+    elif key == 'num_named_neurons':
+        key_name = 'Named neurons'
+    elif key == 'seq_len':
+        key_name = 'Sequence length'
+    elif key == 'num_samples':
+        key_name = 'Number of samples'
+    elif key == 'hidden_size':
+        key_name = 'Hidden size'
+    elif key == 'worm_timesteps':
+        key_name = 'Worm timesteps'
+    else:
+        print('Experiment not registered. Skip test loss scaling law plot.')
+        return None, None, None
+
+    # Store number of worms and mean loss after plateau
+    min_loss = []
+    num_worms = []
+    num_named_neurons = []
+    seq_len = []
+    num_samples = []
+    hidden_size = []
+    worm_timesteps = []
+    baseline_test_loss = []
+
+    # Iterate over all folders inside exp_log_dir
+    for folder in os.listdir(exp_log_dir):
+        # Skip .submitit folder and multirun.yaml file
+        if folder == '.submitit' or folder == 'multirun.yaml' or folder == 'scaling_laws':
+            continue
+        # Load the config file inside each folder
+        pipeline_info = OmegaConf.load(os.path.join(exp_log_dir, folder, 'pipeline_info.yaml')).submodule
+        train_info = OmegaConf.load(os.path.join(exp_log_dir, folder, 'train_info.yaml'))
+        # Extract num_worms from the config file
+        num_worms.append(pipeline_info['dataset']['train']['num_worms'])
+        # Extract num_named_neurons from the config file
+        num_named_neurons.append(pipeline_info['dataset']['train']['num_named_neurons'])
+        # Extract seq_len from the config file
+        seq_len.append(pipeline_info['train']['seq_len'])
+        # Extract num_samples from the config file
+        num_samples.append(pipeline_info['train']['num_samples'])
+        # Extract hidden_size from the config file
+        hidden_size.append(pipeline_info['model']['hidden_size'])
+        # Extract worm_timesteps from the config file
+        worm_timesteps.append(train_info['worm_timesteps'])
+        # Load the loss dataframe inside each folder
+        loss_df = pd.read_csv(os.path.join(exp_log_dir, folder, 'loss_curves.csv'))
+        # TODO: Find the epoch when the loss curve plateaus
+        min_loss.append(loss_df['test_losses'].min())
+        # Extract mean baseline test value
+        baseline_test_loss.append(np.mean(loss_df['base_test_losses']))
+
+    # Create a dataframe with the plateau epoch, window size and threshold
+    df = pd.DataFrame({'min_loss': min_loss, 'baseline': baseline_test_loss,
+                       'num_worms': num_worms, 'num_named_neurons': num_named_neurons, 'seq_len': seq_len,
+                       'num_samples': num_samples, 'hidden_size': hidden_size, 'worm_timesteps': worm_timesteps})
+
+    # Plot plateau loss vs number of worms
+    fig, ax = plt.subplots(figsize=(10, 5))
+    sns.set_style('whitegrid')
+    sns.set_palette('tab10')
+    sns.scatterplot(data=df, x=key, y='min_loss', ax=ax, label='Test loss')
+    # Plot baseline test loss with
+    sns.lineplot(data=df, x=key, y='baseline', ax=ax, label='Baseline test loss', alpha=0.7)
+    if log_scale:
+        # Use log scale for the x axis and y axis
+        ax.set_xscale('log')
+        ax.set_yscale('log')
+        # Regression line for the plot above
+        slope, intercept, r_value, p_value, std_err = stats.linregress(np.log(df[key]), np.log(df['min_loss']))
+        # Add the regression line to the plot above using sns lineplot
+        x = np.linspace(df[key].min(), df[key].max(), 1000)
+        y = np.exp(intercept) * x ** slope
+    else:
+        # Regression line for the plot above
+        slope, intercept, r_value, p_value, std_err = stats.linregress(df[key], df['min_loss'])
+        # Add the regression line to the plot above using sns lineplot
+        x = np.linspace(df[key].min(), df[key].max(), 1000)
+        y = slope * x + intercept
+    # Write the regression line equation as a label
+    label = 'y = {}x + {}\n~ R^2: {}'.format(round(slope, 5), round(intercept, 5), round(r_value ** 2, 5))
+    sns.lineplot(x=x, y=y, ax=ax, label=label, color='red', alpha=0.7)
+    # Use dashed line style
+    ax.lines[0].set_linestyle("--")
+    plt.xlabel(key_name)
+    plt.ylabel('Test loss')
+    # Set title
+    plt.title('Test loss vs {}'.format(key_name))
+    plt.tight_layout()
+    # plt.show()
+    # Save the plot
+    fig.savefig(os.path.join(exp_log_dir, 'scaling_laws', 'loss_vs_'+key), dpi=300)
+    plt.close()
+
+    return df, fig, ax

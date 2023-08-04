@@ -8,6 +8,7 @@ def train(
     optimizer: torch.optim.Optimizer,
     no_grad: bool = False,
     use_residual: bool = False,
+    step: int = 0,
 ) -> dict:
     """Train a model.
 
@@ -120,6 +121,10 @@ def train(
         train_loss += loss.detach().item()
         num_train_samples += X_train.detach().size(0)
 
+        # Log MLflow metrics.
+        mlflow.log_metric("train_loss", loss.detach().item(), step=step+i-1)
+        mlflow.log_metric("train_baseline", base.detach().item(), step=step+i-1)
+
     # Average train and baseline losses.
     losses = {
         "train_loss": train_loss / (i + 1),
@@ -138,6 +143,7 @@ def test(
     model: torch.nn.Module,
     mask: Union[list[torch.Tensor], torch.Tensor],
     use_residual: bool = False,
+    step: int = 0,
 ) -> dict:
     """Evaluate a model.
 
@@ -224,6 +230,10 @@ def test(
         base_loss += base.detach().item()
         test_loss += loss.detach().item()
         num_test_samples += X_test.detach().size(0)
+
+        # Log MLflow metrics.
+        mlflow.log_metric("test_loss", loss.detach().item(), step=step+i-1)
+        mlflow.log_metric("test_baseline", base.detach().item(), step=step+i-1)
 
     # Average test and baseline losses.
     losses = {
@@ -521,12 +531,14 @@ def optimize_model(
             optimizer,
             no_grad=(epoch == 0),
             use_residual=use_residual,
+            step=start_epoch*len(train_loader),
         )
         test_log = test(
             test_loader,
             model,
             neurons_mask,
             use_residual=use_residual,
+            step=start_epoch*len(test_loader),
         )
 
         # Retrieve losses

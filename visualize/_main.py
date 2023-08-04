@@ -44,13 +44,35 @@ def plot_figures(
             use_residual,
         )
 
-    # Delete the new log directory created by hydra if using a specific log_dir
-    if visualize_config.log_dir is not None:
-        cur_dir = os.getcwd()
-        os.chdir("..")
-        shutil.rmtree(cur_dir, ignore_errors=True)
-
     # TODO add more plotting functions for different types of figures
+
+    return None
+
+def plot_experiment(log_dir, exp_config: DictConfig) -> None:
+    """
+    Plots the scaling laws for the worm neural activity dataset.
+    """
+
+    # Scaling law plots
+    scaling_law_dir = os.path.join(log_dir, "scaling_laws")
+    os.makedirs(scaling_law_dir, exist_ok=True)
+
+    # Computation time vs. key (amount of data, hidden size, etc.)
+    df, fig, ax = seconds_per_epoch_plot(exp_log_dir = log_dir,
+                                         key = exp_config.name,
+                                         log_scale = exp_config.options.log_scale)
+    
+    # All test losses
+    df, fig, ax = test_losses_plot(exp_log_dir = log_dir,
+                                   key = exp_config.name,
+                                   threshold = 1e-5,
+                                   window = 30,
+                                   xlim = None)
+    
+    # Test loss vs. key (amount of data, hidden size, etc.)
+    df, fig, ax = scaling_law_plot(exp_log_dir = log_dir,
+                                   key = exp_config.name,
+                                   log_scale = exp_config.options.log_scale)
 
     return None
 
