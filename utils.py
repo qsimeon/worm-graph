@@ -75,7 +75,6 @@ def init_random_seeds(seed=0):
     """
     Initialize random seeds for numpy, torch, and random.
     """
-    torch.cuda.empty_cache()
     np.random.seed(seed)
     torch.manual_seed(seed)
     random.seed(seed)

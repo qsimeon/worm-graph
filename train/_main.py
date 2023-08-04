@@ -385,8 +385,11 @@ def train_model(
         }
     )
 
+    # Metric that we want optuna to optimize
+    metric = data['test_losses'][:i].min()
+
     # returned trained model, an update to the submodules and the train info
-    return model, submodules_updated, train_info
+    return model, submodules_updated, train_info, metric
 
 
 if __name__ == "__main__":
