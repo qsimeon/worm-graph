@@ -168,9 +168,17 @@ def train_model(
     # Keep track of the average optimization time per epoch
     seconds_per_epoch = 0
 
+    logger.info(f"Start training.")
+
     # Main FOR loop; train the model for multiple epochs (one cohort = one epoch)
     # In one epoch we process all worms (i.e one cohort)
-    for i, cohort in enumerate(worm_cohorts):
+    pbar = tqdm(
+        enumerate(worm_cohorts), 
+        total=len(worm_cohorts),
+        position=0, leave=True,  # position at top and remove when done
+        dynamic_ncols=True,  # adjust width to terminal window size
+        )
+    for i, cohort in pbar:
 
         # Create a array of datasets and masks for the cohort
         train_datasets = np.empty(num_unique_worms, dtype=object)
@@ -293,7 +301,7 @@ def train_model(
 
         # Saving model checkpoints
         if (i % train_config.save_freq == 0) or (i + 1 == train_epochs):
-            logger.info("Saving a model checkpoint ({} epochs).".format(i))
+            # logger.info("Saving a model checkpoint ({} epochs).".format(i))
 
             # Save model checkpoints
             chkpt_name = "{}_epochs_{}_worms.pt".format(
@@ -334,9 +342,15 @@ def train_model(
                 checkpoint_path,
             )
 
-        if es(model, log['test_losses']):
+        if es(model, log['test_losses'][0]):
             logger.info("Early stopping triggered (epoch {}).".format(i))
             break
+        
+        # Update progress bar
+        tqdm_description = f'Epoch {i+1}/{len(worm_cohorts)}'
+        tqdm_postfix = {'train_loss': log['train_losses'][0], 'val_loss': log['test_losses'][0]}  # assuming train_loss is defined
+        pbar.set_description(tqdm_description)
+        pbar.set_postfix(tqdm_postfix)
 
         # Set to next epoch before continuing
         reset_epoch = log["epochs"][-1] + 1
