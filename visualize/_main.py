@@ -24,7 +24,7 @@ def plot_figures(
         plot_loss_curves(log_dir)
 
         # Model weights
-        plot_before_after_weights(log_dir)
+        #! plot_before_after_weights(log_dir) # TODO: modify to work with EarlyStopping
 
     # Plots reletad to predictions (at least worm0 directory exists)
     if 'predict' in pipeline_info.submodule:

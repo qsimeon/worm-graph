@@ -111,6 +111,14 @@ def train_model(
 
     print("Optimizer:", optimizer, end="\n\n")
 
+    # Early stopping
+    es = EarlyStopping(
+        patience = train_config.early_stopping.patience,
+        min_delta = train_config.early_stopping.delta,
+        restore_best_weights = train_config.early_stopping.restore_best_weights,
+        )
+
+
     # Initialize train/test loss metrics arrays
     data = {
         "epochs": np.zeros(train_epochs, dtype=int),
@@ -332,6 +340,11 @@ def train_model(
                 },
                 checkpoint_path,
             )
+
+        if es(model, log['test_losses']):
+            print("Early stopping triggered.")
+            break
+
         # Set to next epoch before continuing
         reset_epoch = log["epochs"][-1] + 1
         continue
