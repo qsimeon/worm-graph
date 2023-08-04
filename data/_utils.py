@@ -1,6 +1,9 @@
 from data._pkg import *
 
 
+# Init logger
+logger = logging.getLogger(__name__)
+
 class NeuralActivityDataset(torch.utils.data.Dataset):
     """A custom neural activity time-series prediction dataset.
 
@@ -242,8 +245,6 @@ class CElegansConnectome(InMemoryDataset):
         assert os.path.exists(
             data_path
         ), "Must first call `python -u preprocess/_main.py`"
-        # load the raw data
-        print("Loading from preprocess...")
         graph_tensors = torch.load(data_path)
         # make the graph
         connectome = Data(**graph_tensors)
@@ -323,8 +324,13 @@ def select_named_neurons(multi_worm_dataset, num_named_neurons):
 
     # Drop worms with less than `num_named_neurons` neurons
     if len(worms_to_drop) > 0:
-        print("Dropping {} worms ({}) (less than {} named neurons)".format(len(worms_to_drop), multi_worm_dataset['worm0']['dataset'], num_named_neurons))
-        print("Remaining worms ({}): {}\n".format(multi_worm_dataset['worm0']['dataset'], len(list(set(multi_worm_dataset.keys()) - set(worms_to_drop)))))
+        logger.info("Dropping {} worms. {} remaining".format(
+            len(worms_to_drop),
+            len(list(set(multi_worm_dataset.keys()) - set(worms_to_drop))))
+            )
+    else:
+        logger.info("No worms dropped.")
+
     for wormID in worms_to_drop:
         del multi_worm_dataset[wormID]
 
