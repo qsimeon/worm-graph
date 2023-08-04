@@ -10,6 +10,7 @@ hydra:
   # Use the submodule parameters if RUN.
       params:
         submodule.dataset.train.name: Kato2015, Nichols2017
+        submodule.dataset.train.num_worms: 5
 
 experiment:
   name: default_multirun
