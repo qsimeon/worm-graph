@@ -385,6 +385,10 @@ def train_model(
         }
     )
 
+    # Train loop is over and wasn't early stopped. Load the best model
+    logger.info("Training loop is over and wasn't early stopped. Loading best model.")
+    model.load_state_dict(es.best_model.state_dict())
+
     # Metric that we want optuna to optimize
     metric = data['test_losses'][:i].min()
 

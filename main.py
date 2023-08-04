@@ -33,10 +33,12 @@ def pipeline(cfg: DictConfig) -> None:
                 assert ('train' in cfg.submodule) or ('predict' in cfg.submodule), "Train/Predict must be defined before visualizing (or chose a log_dir)."
 
         logger.info("Torch device: %s" % (DEVICE))
-        logger.info("Setting random seeds to %d" % (cfg.experiment.seed))
 
         torch.cuda.empty_cache()
-        cfg.experiment.seed = random.randint(0, 100)
+
+        if cfg.experiment.seed is None:
+            cfg.experiment.seed = random.randint(0, 100)
+        logger.info("Setting random seeds to %d" % (cfg.experiment.seed))
         init_random_seeds(cfg.experiment.seed) # Set random seeds
 
         if 'preprocess' in cfg.submodule:
@@ -110,13 +112,14 @@ def pipeline(cfg: DictConfig) -> None:
         
         # Save experiment parameters (MLflow)
         log_params_from_omegaconf_dict(cfg)
-        logger.info("Experiment finished. Best metric: %s" % (metric))
 
         torch.cuda.empty_cache()
         mlflow.end_run()
 
     # Return metric for optuna automatic hyperparameter tuning
-    return metric
+    if 'train' in cfg.submodule:
+        logger.info("Experiment finished. Final metric: %s" % (metric))
+        return metric
 
 if __name__ == "__main__":
     pipeline()
