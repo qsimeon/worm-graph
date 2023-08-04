@@ -1,5 +1,7 @@
 from train._utils import *
 
+# Init logger
+logger = logging.getLogger(__name__)
 
 def train_model(
     train_config: DictConfig,
@@ -109,15 +111,12 @@ def train_model(
     else:
         optimizer = torch.optim.SGD(model.parameters(), lr=learn_rate)
 
-    print("Optimizer:", optimizer, end="\n\n")
-
     # Early stopping
     es = EarlyStopping(
         patience = train_config.early_stopping.patience,
         min_delta = train_config.early_stopping.delta,
         restore_best_weights = train_config.early_stopping.restore_best_weights,
         )
-
 
     # Initialize train/test loss metrics arrays
     data = {
@@ -294,12 +293,8 @@ def train_model(
 
         # Saving model checkpoints
         if (i % train_config.save_freq == 0) or (i + 1 == train_epochs):
-            # display progress
-            print(
-                "Saving a model checkpoint.\n\tnum. worm cohorts trained on:",
-                i,
-                end="\n\n",
-            )
+            logger.info("Saving a model checkpoint ({} epochs).".format(i))
+
             # Save model checkpoints
             chkpt_name = "{}_epochs_{}_worms.pt".format(
                 reset_epoch, i * num_unique_worms
@@ -340,7 +335,7 @@ def train_model(
             )
 
         if es(model, log['test_losses']):
-            print("Early stopping triggered.")
+            logger.info("Early stopping triggered (epoch {}).".format(i))
             break
 
         # Set to next epoch before continuing

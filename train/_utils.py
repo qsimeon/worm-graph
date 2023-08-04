@@ -595,12 +595,7 @@ def optimize_model(
         log["centered_train_losses"][i] = centered_train_loss
         log["centered_test_losses"][i] = centered_test_loss
 
-        # Print to standard output
-        if (num_epochs < 10) or (epoch % (num_epochs // 10) == 0):
-            print(
-                f"\nEpoch: {epoch:03d}, Train Loss: {centered_train_loss:.4f}, Val. Loss: {centered_test_loss:.4f}",
-                end="\n\n",
-            )
+        # TODO: Progress bar
 
     # Return optimized model
     return model, log
