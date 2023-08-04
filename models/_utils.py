@@ -622,15 +622,8 @@ class Model(torch.nn.Module):
         mask = torch.ones(inputs.shape[-1], dtype=torch.bool) if mask is None else mask
         # use the full sequence as the context
         context_len = min(context_len, inputs.size(1))
-        print(
-            "input length:",
-            inputs.size(1),
-            "\ncontext length:",
-            context_len,
-            "\nfuture timesteps:",
-            future_timesteps,
-            end="\n\n",
-        )
+        logger.info("Generating {} future timesteps, conditioned on {} timesteps with {} window size.".format(future_timesteps, inputs.size(1), context_len))
+
         # initialize output tensor
         output = torch.zeros(
             (inputs.size(0), inputs.size(1) + future_timesteps, inputs.size(2)),
