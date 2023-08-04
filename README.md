@@ -3,19 +3,21 @@
 
 `tree -L 1 worm-graph`
 ```
-├── LICENSE
-├── README.md
-├── __init__.py
 ├── analysis
-├── conf
+├── configs
 ├── data
-├── logs
+├── debugging
+├── __init__.py
+├── LICENSE
 ├── main.py
 ├── models
+├── opensource_data
 ├── pkg.py
 ├── predict
 ├── preprocess
+├── __pycache__
 ├── pyproject.toml
+├── README.md
 ├── setup
 ├── tests
 ├── train
