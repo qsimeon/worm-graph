@@ -1,5 +1,7 @@
 from models._utils import *
 
+# Init logger
+logger = logging.getLogger(__name__)
 
 def get_model(model_config: DictConfig) -> torch.nn.Module:
     """Instantiate or load a model as specified in 'model.yaml'.
@@ -53,7 +55,7 @@ def get_model(model_config: DictConfig) -> torch.nn.Module:
             l1_reg_param=l1_reg_param,
         )
         model.load_state_dict(model_state_dict)
-        print("Model checkpoint path:", PATH, end="\n\n")
+        logger.info("Loaded model from checkpoint: {}".format(PATH))
 
     # Otherwise, instantiate a new model
     else:
@@ -82,9 +84,7 @@ def get_model(model_config: DictConfig) -> torch.nn.Module:
             model = LinearNN(**args)
         else:  # default to "LinearNN" model
             model = LinearNN(**args)
-        print("Initialized a new model.", end="\n\n")
-
-    print("Model:", model, end="\n\n")
+        logger.info("Initialized a new model: {}.".format(model_config.type))
 
     return model.to(torch.float32)
 

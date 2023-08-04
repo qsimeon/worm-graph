@@ -35,7 +35,8 @@ def pipeline(cfg: DictConfig) -> None:
             if cfg.submodule.visualize.log_dir is None:
                 assert ('train' in cfg.submodule) or ('predict' in cfg.submodule), "Train/Predict must be defined before visualizing (or chose a log_dir)."
 
-        torch_device() # Display Pytorch device
+        logger.info("Torch device: %s" % (DEVICE))
+        logger.info("Setting random seeds to %d" % (cfg.experiment.seed))
 
         init_random_seeds(cfg.experiment.seed) # Set random seeds
 
@@ -108,7 +109,7 @@ def pipeline(cfg: DictConfig) -> None:
             log_dir = os.path.dirname(log_dir) # Because experiments run in multirun mode
             plot_experiment(log_dir, cfg.experiment)
 
-        clear_cache()
+        torch.cuda.empty_cache()
         mlflow.end_run()
 
 if __name__ == "__main__":

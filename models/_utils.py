@@ -1,5 +1,7 @@
 from models._pkg import *
 
+# Init logger
+logger = logging.getLogger(__name__)
 
 # # # Transformer Parts (Self-Attention, Feed-Forward, Positional Encoding) # # #
 # # # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
