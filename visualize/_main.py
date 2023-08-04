@@ -1,5 +1,7 @@
 from visualize._utils import *
 
+# Init logger
+logger = logging.getLogger(__name__)
 
 def plot_figures(
     visualize_config: DictConfig,
@@ -8,9 +10,6 @@ def plot_figures(
     Plots the loss curves and other basic plots from the results of traininig
     a model on a worm neural activity dataset. Save figures to the directory `log_dir`.
     """
-
-    # Init logger
-    logger = logging.getLogger(__name__)
 
     log_dir = visualize_config.log_dir
 
@@ -23,7 +22,6 @@ def plot_figures(
 
     # Plots related to training (loss_curves.csv file exists, checkpoints exists)
     if 'train' in pipeline_info.submodule:
-        logger.info("Plotting figures related to training...")
         # Loss curves
         plot_loss_curves(log_dir)
 

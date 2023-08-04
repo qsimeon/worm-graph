@@ -1,5 +1,7 @@
 from visualize._pkg import *
 
+# Init logger
+logger = logging.getLogger(__name__)
 
 def draw_connectome(
     network, pos=None, labels=None, plt_title="C. elegans connectome network"
@@ -194,7 +196,7 @@ def plot_loss_curves(log_dir):
     # return if no loss curves file found
     loss_curves_csv = os.path.join(log_dir, "loss_curves.csv")
     if not os.path.exists(loss_curves_csv):
-        print("No loss curves found in log directory.")
+        logger.error("No loss curves found in the log directory.")
         return None
     
     # load the loss dataframe
@@ -272,7 +274,7 @@ def plot_before_after_weights(log_dir: str) -> None:
     # return if no checkpoints found
     chkpt_dir = os.path.join(log_dir, "checkpoints")
     if not os.path.exists(chkpt_dir):
-        print("No checkpoints found in log directory.")
+        logger.error("No checkpoints found in the log directory.")
         return None
     # load the first model checkpoint
     chkpts = sorted(os.listdir(chkpt_dir), key=lambda x: int(x.split("_")[0]))
@@ -409,7 +411,7 @@ def plot_targets_predictions(
     predictions_csv = os.path.join(log_dir, worm, "predicted_" + signal_str + ".csv")
     targets_csv = os.path.join(log_dir, worm, "target_" + signal_str + ".csv")
     if (not os.path.exists(predictions_csv)) or (not os.path.exists(targets_csv)):
-        print("No targets or predictions found in log directory.")
+        logger.error("No targets or predictions found in log directory.")
         return None
     # Load predictions dataframe
     predictions_df = pd.read_csv(predictions_csv, index_col=0)
@@ -802,7 +804,7 @@ def seconds_per_epoch_plot(exp_log_dir, key, log_scale=True):
     elif key == 'learn_rate':
         key_name = 'Learning rate'
     else:
-        print('Experiment not registered. Skip computation time scaling law plot.')
+        logger.info('Skipping computation time scaling law plot.')
         return None, None, None
 
     # Store seconds per epoch, number of named neurons and number of worms
@@ -1035,7 +1037,7 @@ def scaling_law_plot(exp_log_dir, key='num_worms', log_scale=True):
     elif key == 'worm_timesteps':
         key_name = 'Worm timesteps'
     else:
-        print('Experiment not registered. Skip test loss scaling law plot.')
+        logger.info('Skipping test loss scaling law plot.')
         return None, None, None
 
     # Store number of worms and mean loss after plateau

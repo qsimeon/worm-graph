@@ -1,5 +1,7 @@
 from predict._utils import *
 
+# Init logger
+logger = logging.getLogger(__name__)
 
 def make_predictions(
     predict_config: DictConfig,
