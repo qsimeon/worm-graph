@@ -56,4 +56,4 @@ hydra:
 
 experiment:
   name: dafault_run
-  seed: 42 # Seed for reproducibility (its overriden each run)
+  seed: null # If null, a random seed is generated for each run.
