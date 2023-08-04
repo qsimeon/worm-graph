@@ -4,11 +4,19 @@ from pkg import *
 def pipeline(cfg: DictConfig) -> None:
     """Create a custom pipeline"""
 
-    # start new run
+    # Configure logger
+    logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+    logger = logging.getLogger(__name__)
+
+    # Start new experiment run (MLflow)
     mlflow.set_tracking_uri(LOGS_DIR+'/mlruns')
     mlflow.set_experiment(cfg.experiment.name)
 
     with mlflow.start_run(run_name=datetime.now().strftime("%Y-%m-%d_%H:%M:%S")) as run:
+
+        # Save experiment parameters (MLflow)
+        log_params_from_omegaconf_dict(cfg)
+
         # Verifications
         if len(cfg) == 1: # only the pipeline module
             raise ValueError("No submodules in the pipeline. Run python main.py +experiment=your_experiment")
@@ -94,13 +102,14 @@ def pipeline(cfg: DictConfig) -> None:
             )
 
         if 'analysis' in cfg.submodule:
-            print(cfg.submodule.analysis)
+            pass
 
         if cfg.experiment.name in ['num_worms']:
             log_dir = os.path.dirname(log_dir) # Because experiments run in multirun mode
             plot_experiment(log_dir, cfg.experiment)
 
-        clear_cache() # Free up GPU
+        clear_cache()
+        mlflow.end_run()
 
 if __name__ == "__main__":
     pipeline()

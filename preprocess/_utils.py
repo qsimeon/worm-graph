@@ -1,5 +1,7 @@
 from preprocess._pkg import *
 
+# Init logger
+logger = logging.getLogger(__name__)
 
 def preprocess_connectome(raw_dir, raw_files):
     """Convert the raw connectome data to a graph tensor.
@@ -772,7 +774,7 @@ def pickle_neural_data(
     # (re)-Pickle all the datasets ... OR
     if dataset is None or dataset.lower() == "all":
         for dataset in VALID_DATASETS:
-            print("Dataset:", dataset, end="\n\n")
+            logger.info(f"Start processing {dataset}.")
             # instantiate the relevant preprocessor class
             preprocessor = eval(dataset + "Preprocessor")(
                 transform, smooth_method, resample_dt, interpolation_method
@@ -787,7 +789,7 @@ def pickle_neural_data(
         ), "Invalid dataset requested! Please pick one from:\n{}".format(
             list(VALID_DATASETS)
         )
-        print("Dataset:", dataset, end="\n\n")
+        logger.info(f"Start processing {dataset}.")
         # instantiate the relevant preprocessor class
         preprocessor = eval(dataset + "Preprocessor")(
             transform, smooth_method, resample_dt
@@ -799,21 +801,9 @@ def pickle_neural_data(
     # shutil.rmtree(source_path)
 
     # Create a file to indicate that the preprocessing was successful
-    open(os.path.join(processed_path, ".processed"), "a").close()
+    # open(os.path.join(processed_path, ".processed"), "a").close()
 
     return None
-
-
-def silence_errors():
-    logging.getLogger().setLevel(logging.CRITICAL)
-
-
-def restore_logging():
-    root_logger = logging.getLogger()
-    root_logger.setLevel(logging.NOTSET)
-    # set matplotlib logging level to WARNING
-    mpl_logger = logging.getLogger("matplotlib")
-    mpl_logger.setLevel(logging.WARNING)
 
 
 class BasePreprocessor:
@@ -878,11 +868,9 @@ class BasePreprocessor:
         original_dt = time_in_seconds[1] - time_in_seconds[0]
         # Upsample (interpolate)
         if original_dt >= self.resample_dt:
-            # print('Upsampling data. Original dt: {}, Target dt: {}'.format(original_dt, self.resample_dt), end='\n\n')
             return interpolate_data(time_in_seconds, data, target_dt=self.resample_dt, method=self.interpolation_method)
         # Downsample (aggregate)
         else:
-            # print('Downsampling data. Original dt: {}, Target dt: {}'.format(original_dt, self.resample_dt), end='\n\n')
             interp_time, interp_ca = interpolate_data(
                 time_in_seconds, data, target_dt=0.1, method=self.interpolation_method
             )
@@ -1072,7 +1060,7 @@ class Skora2018Preprocessor(BasePreprocessor):
 
         # Save data
         self.save_data(preprocessed_data)
-        print(f"Finished processing {self.dataset}!", end="\n\n")
+        logger.info(f"Finished processing {self.dataset}.")
 
 
 class Kato2015Preprocessor(BasePreprocessor):
@@ -1107,7 +1095,7 @@ class Kato2015Preprocessor(BasePreprocessor):
 
         # Save data
         self.save_data(preprocessed_data)
-        print(f"Finished processing {self.dataset}!", end="\n\n")
+        logger.info(f"Finished processing {self.dataset}.")
 
 
 class Nichols2017Preprocessor(BasePreprocessor):
@@ -1145,7 +1133,7 @@ class Nichols2017Preprocessor(BasePreprocessor):
 
         # Save data
         self.save_data(preprocessed_data)
-        print(f"Finished processing {self.dataset}!", end="\n\n")
+        logger.info(f"Finished processing {self.dataset}.")
 
 
 class Kaplan2020Preprocessor(BasePreprocessor):
@@ -1153,13 +1141,8 @@ class Kaplan2020Preprocessor(BasePreprocessor):
         super().__init__("Kaplan2020", transform, smooth_method, resample_dt)
 
     def load_data(self, file_name):
-        # silence logging during loading:
-        # ERROR:root:ERROR: MATLAB type not supported: function_handle_workspace, (uint32)
-        silence_errors()
         # load data with mat73
         data = mat73.loadmat(os.path.join(self.raw_data_path, self.dataset, file_name))
-        # turn on logging again after loading
-        restore_logging()
         return data
 
     def extract_data(self, arr):
@@ -1194,7 +1177,7 @@ class Kaplan2020Preprocessor(BasePreprocessor):
 
         # Save data
         self.save_data(preprocessed_data)
-        print(f"Finished processing {self.dataset}!", end="\n\n")
+        logger.info(f"Finished processing {self.dataset}.")
 
 
 class Uzel2022Preprocessor(BasePreprocessor):
@@ -1230,7 +1213,7 @@ class Uzel2022Preprocessor(BasePreprocessor):
 
         # Save data
         self.save_data(preprocessed_data)
-        print(f"Finished processing {self.dataset}!", end="\n\n")
+        logger.info(f"Finished processing {self.dataset}.")
 
 
 class Leifer2023Preprocessor(BasePreprocessor):
@@ -1435,7 +1418,7 @@ class Leifer2023Preprocessor(BasePreprocessor):
 
         # Save data
         self.save_data(preprocessed_data)
-        print(f"Finished processing {self.dataset}!", end="\n\n")
+        logger.info(f"Finished processing {self.dataset}.")
 
 
 class Flavell2023Preprocessor(BasePreprocessor):
@@ -1642,4 +1625,4 @@ class Flavell2023Preprocessor(BasePreprocessor):
             preprocessed_data[worm] = reshape_calcium_data(preprocessed_data[worm])
         # save data
         self.save_data(preprocessed_data)
-        print(f"Finished processing {self.dataset}!", end="\n\n")
+        logger.info(f"Finished processing {self.dataset}.")

@@ -172,8 +172,6 @@ def train_model(
     # Main FOR loop; train the model for multiple epochs (one cohort = one epoch)
     # In one epoch we process all worms (i.e one cohort)
     for i, cohort in enumerate(worm_cohorts):
-        # Log parameters (MLflow)
-        log_params_from_omegaconf_dict(train_config)
 
         # Create a array of datasets and masks for the cohort
         train_datasets = np.empty(num_unique_worms, dtype=object)
