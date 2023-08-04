@@ -90,7 +90,7 @@ From the root (`worm-graph`) directory, run the command:
 
 Now you can run the main script as a demo of the fully functional pipeline:
 
-`python main.py +experiment=default`
+`python main.py +experiment=default_run`
 
 If you are running on a SLURM computing cluster:
 
