@@ -3,7 +3,7 @@ from data._utils import *
 # Init logger
 logger = logging.getLogger(__name__)
 
-def get_dataset(dataset_config: DictConfig):
+def get_dataset(dataset_config: DictConfig, name='train'):
     """Returns a dict with the worm data of all requested datasets.
 
     Returns a generator object that yields single worm data objects (dict)
@@ -37,7 +37,8 @@ def get_dataset(dataset_config: DictConfig):
         'unknown_neurons_mask', 'worm'.
     """
 
-    # TODO: Add option to the `conf/dataset.yaml` config to leave out certain worms from dataset
+    log_dir = os.getcwd()  # logs/hydra/${now:%Y_%m_%d_%H_%M_%S}
+
     # Combine datasets when given a list of dataset names
     if isinstance(dataset_config.name, str):
         dataset_names = [dataset_config.name]
@@ -57,10 +58,12 @@ def get_dataset(dataset_config: DictConfig):
         "num_worms must be a positive integer or 'all'."
     )
 
+    logger.info('Combining datasets: {}'.format(dataset_names))
+
     # Load the dataset(s)
     combined_dataset = dict()
+    
     for dataset_name in dataset_names:
-        logger.info('Loading single dataset: {}'.format(dataset_name))
         multi_worms_dataset = load_dataset(dataset_name)
 
         # Select the `num_named_neurons` neurons (overwrite the masks)
@@ -72,10 +75,10 @@ def get_dataset(dataset_config: DictConfig):
                 worm_ = "worm%s" % len(combined_dataset)
                 combined_dataset[worm_] = multi_worms_dataset[worm]
                 combined_dataset[worm_]["worm"] = worm_
-                combined_dataset[worm_]["dataset"] = "_".join(dataset_names)
+                combined_dataset[worm_]["original_worm"] = worm
             else:
                 combined_dataset[worm] = multi_worms_dataset[worm]
-                combined_dataset[worm]["dataset"] = "_".join(dataset_names)
+                combined_dataset[worm]["original_worm"] = worm
 
     # Verify if len(combined_dataset) is >= num_worms
     if num_worms != "all":
@@ -95,11 +98,38 @@ def get_dataset(dataset_config: DictConfig):
 
     combined_dataset = {f"worm{i}": combined_dataset[key] for i, key in enumerate(combined_dataset.keys())}
 
-    available_neurons = []
-    for worm, data in combined_dataset.items():
-        available_neurons.append([neuron for slot, neuron in data['slot_to_named_neuron'].items()])
+    # Information about the dataset
+    dataset_info = {
+        'dataset': [],
+        'original_index': [],
+        'combined_dataset_index': [],
+        'neurons': [],
+    }
 
-    logger.debug('Combined dataset loaded: {}'.format(dataset_names))
+    combined_dataset_neurons = []
+
+    for worm, data in combined_dataset.items():
+        dataset_info['dataset'].append(data['dataset'])
+        dataset_info['original_index'].append(data['original_worm'])
+        dataset_info['combined_dataset_index'].append(data['worm'])
+        worm_neurons = [neuron for slot, neuron in data['slot_to_named_neuron'].items()]
+        dataset_info['neurons'].append(worm_neurons)
+        combined_dataset_neurons = combined_dataset_neurons + worm_neurons
+
+    dataset_info = pd.DataFrame(dataset_info)
+
+    combined_dataset_neurons = np.array(combined_dataset_neurons)
+    # Count occurernces of each neuron
+    neuron_counts = np.unique(combined_dataset_neurons, return_counts=True)
+    # Sort by neuron count
+    neuron_counts = np.array(sorted(zip(*neuron_counts), key=lambda x: x[1], reverse=True))
+    # Create a dataframe
+    neuron_counts = pd.DataFrame(neuron_counts, columns=["neuron", "count"])
+
+    # Save the dataset info
+    os.makedirs(os.path.join(log_dir, 'dataset'), exist_ok=True)
+    dataset_info.to_csv(os.path.join(log_dir, 'dataset', name+'_dataset_info.csv'), index=True, header=True)
+    neuron_counts.to_csv(os.path.join(log_dir, 'dataset', name+'_neuron_counts.csv'), index=True, header=True)
 
     # Save the dataset
     if dataset_config.save:
