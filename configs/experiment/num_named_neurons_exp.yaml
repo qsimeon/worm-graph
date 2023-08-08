@@ -18,3 +18,4 @@ experiment:
   name: num_named_neurons
   options:
     log_scale: true
+  mode: MULTIRUN

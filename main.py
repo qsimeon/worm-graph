@@ -59,7 +59,8 @@ def pipeline(cfg: DictConfig) -> None:
             model, submodules_updated, train_info, metric = train_model(
                 train_config = cfg.submodule.train,
                 model = model,
-                dataset = dataset_train
+                dataset = dataset_train,
+                verbose = True if cfg.experiment.mode == 'MULTIRUN' else False,
             )
             # Update cfg.submodule
             cfg.submodule.dataset = OmegaConf.merge(cfg.submodule.dataset, submodules_updated.dataset) # update dataset.train name

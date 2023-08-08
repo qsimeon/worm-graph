@@ -7,6 +7,7 @@ def train_model(
     train_config: DictConfig,
     model: torch.nn.Module,
     dataset: dict,
+    verbose: bool = False,
 ) -> tuple[torch.nn.Module, str]:
     """Trains a neural network model on a multi-worm dataset.
 
@@ -290,6 +291,12 @@ def train_model(
         for key in data:  # pre-allocated memory for `data[key]`
             # with `num_epochs=1`, this is just data[key][i] = log[key]
             data[key][(i * num_epochs) : (i * num_epochs) + len(log[key])] = log[key]
+        
+        # Log the test and train losses every 10 epochs
+        if i % 10 == 0 and verbose:
+            logger.info(
+                f"Epoch {i}/{len(worm_cohorts)} | Train loss: {data['train_losses'][-1]:.4f} | Test loss: {data['test_losses'][-1]:.4f} | SpE: {seconds_per_epoch:.2f}"
+            )
 
         # Extract the latest validation loss
         val_loss = data["centered_test_losses"][-1]

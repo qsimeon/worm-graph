@@ -21,3 +21,4 @@ submodule:
 
 experiment:
   name: learning_rate_exp
+  mode: MULTIRUN

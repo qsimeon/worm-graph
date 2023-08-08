@@ -7,4 +7,4 @@
 #SBATCH --time=12:00:00
 
 source /om2/user/lrvenan/miniconda/bin/activate worm-graph
-srun python main.py +submodule=preprocess
+srun python main.py +experiment=hyperparameter_search

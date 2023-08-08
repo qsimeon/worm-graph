@@ -11,7 +11,8 @@ hydra:
       params:
         submodule.dataset.train.name: Nichols2017
         submodule.dataset.train.num_worms: 5
-        submodule.dataset.train.num_named_neurons: 5, 10, 30
+        submodule.dataset.train.num_named_neurons: 5, 10
 
 experiment:
   name: default_multirun
+  mode: MULTIRUN

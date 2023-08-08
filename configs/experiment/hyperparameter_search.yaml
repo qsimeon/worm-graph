@@ -30,3 +30,4 @@ submodule:
 
 experiment:
   name: hyperparameter_search
+  mode: MULTIRUN
