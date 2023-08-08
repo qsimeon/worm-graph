@@ -20,8 +20,6 @@ hydra:
       submodule.train.seq_len: 60, 120, 240
       submodule.train.num_samples: 8, 16, 32
       submodule.model.hidden_size: 128, 256, 512
-      submodule.model.fft_reg_param: range(0, 1, 0.1)
-      submodule.model.l1_reg_param: range(0, 1, 0.1)
 
 submodule:
   dataset:

@@ -1,0 +1,36 @@
+[32m[I 2023-08-08 13:29:54,050][0m A new study created in memory with name: hyperparameter_search[0m
+[2023-08-08 13:29:54,050][HYDRA] Study name: hyperparameter_search
+[2023-08-08 13:29:54,050][HYDRA] Storage: None
+[2023-08-08 13:29:54,050][HYDRA] Sampler: TPESampler
+[2023-08-08 13:29:54,050][HYDRA] Directions: ['minimize']
+[2023-08-08 13:29:54,111][HYDRA] Submitit 'local' sweep output dir : logs/hydra/2023_08_08_13_29_54
+[2023-08-08 13:29:54,113][HYDRA] 	#0 : submodule.train.optimizer=AdamW submodule.train.learn_rate=0.001 submodule.train.seq_len=60 submodule.train.num_samples=16 submodule.model.hidden_size=128 +experiment=hyperparameter_search
+[2023-08-08 13:29:54,122][HYDRA] 	#1 : submodule.train.optimizer=AdamW submodule.train.learn_rate=0.001 submodule.train.seq_len=240 submodule.train.num_samples=32 submodule.model.hidden_size=256 +experiment=hyperparameter_search
+Error executing job with overrides: ['submodule.train.optimizer=AdamW', 'submodule.train.learn_rate=0.001', 'submodule.train.seq_len=60', 'submodule.train.num_samples=16', 'submodule.model.hidden_size=128', '+experiment=hyperparameter_search']
+Traceback (most recent call last):
+  File "/net/vast-storage/scratch/vast/yanglab/lrvenan/worm-graph/main.py", line 126, in <module>
+    pipeline()
+  File "/om2/user/lrvenan/miniconda/envs/worm-graph/lib/python3.9/site-packages/hydra/main.py", line 94, in decorated_main
+    _run_hydra(
+  File "/om2/user/lrvenan/miniconda/envs/worm-graph/lib/python3.9/site-packages/hydra/_internal/utils.py", line 394, in _run_hydra
+    _run_app(
+  File "/om2/user/lrvenan/miniconda/envs/worm-graph/lib/python3.9/site-packages/hydra/_internal/utils.py", line 465, in _run_app
+    run_and_report(
+  File "/om2/user/lrvenan/miniconda/envs/worm-graph/lib/python3.9/site-packages/hydra/_internal/utils.py", line 223, in run_and_report
+    raise ex
+  File "/om2/user/lrvenan/miniconda/envs/worm-graph/lib/python3.9/site-packages/hydra/_internal/utils.py", line 220, in run_and_report
+    return func()
+  File "/om2/user/lrvenan/miniconda/envs/worm-graph/lib/python3.9/site-packages/hydra/_internal/utils.py", line 466, in <lambda>
+    lambda: hydra.multirun(
+  File "/om2/user/lrvenan/miniconda/envs/worm-graph/lib/python3.9/site-packages/hydra/_internal/hydra.py", line 162, in multirun
+    ret = sweeper.sweep(arguments=task_overrides)
+  File "/om2/user/lrvenan/miniconda/envs/worm-graph/lib/python3.9/site-packages/hydra_plugins/hydra_optuna_sweeper/optuna_sweeper.py", line 52, in sweep
+    return self.sweeper.sweep(arguments)
+  File "/om2/user/lrvenan/miniconda/envs/worm-graph/lib/python3.9/site-packages/hydra_plugins/hydra_optuna_sweeper/_impl.py", line 391, in sweep
+    raise e
+  File "/om2/user/lrvenan/miniconda/envs/worm-graph/lib/python3.9/site-packages/hydra_plugins/hydra_optuna_sweeper/_impl.py", line 357, in sweep
+    values = [float(ret.return_value)]
+  File "/om2/user/lrvenan/miniconda/envs/worm-graph/lib/python3.9/site-packages/hydra/core/utils.py", line 260, in return_value
+    raise self._return_value
+AssertionError
+srun: error: node055: task 0: Exited with exit code 1
