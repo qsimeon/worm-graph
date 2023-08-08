@@ -11,7 +11,7 @@ hydra:
       seed: 42 # Seed for reproducibility
     study_name: hyperparameter_search # Name of the study (for optuna)
     direction: minimize # Minimize the metric
-    n_trials: 20 # Number of trials to run
+    n_trials: 10 # Number of trials to run
     n_jobs: 1 # Number of jobs to run in parallel
     params:
       # Hyperparameters to optimize
@@ -23,10 +23,10 @@ hydra:
 submodule:
   dataset:
     train:
-      name: Kato2015
+      name: [Kato2015, Nichols2017, Skora2018, Uzel2022, Kaplan2020, Flavell2023, Leifer2023]
       num_named_neurons: all
-      num_worms: 5
-      epochs: 10
+      num_worms: all
+      epochs: 900
 
 experiment:
   name: hyperparameter_search
