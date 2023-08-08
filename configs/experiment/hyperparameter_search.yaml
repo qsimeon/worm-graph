@@ -28,17 +28,14 @@ submodule:
       num_named_neurons: all
       num_worms: all
       save: false
-  
   model:
     type: NetworkLSTM
     input_size: 302
-    hidden_size: 256
     num_layers: 1
     loss: MSE
     fft_reg_param: 0.0
     l1_reg_param: 0.0
     checkpoint_path: null # fresh model
-
   train:
     epochs: 900
     save_freq: 1000
