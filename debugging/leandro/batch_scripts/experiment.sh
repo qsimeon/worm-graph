@@ -6,6 +6,5 @@
 #SBATCH --mem=64000
 #SBATCH --time=12:00:00
 
-module load openmind/anaconda/3-2022.05
-srun conda activate worm-graph
+source /om2/user/lrvenan/miniconda/bin/activate worm-graph
 srun python main.py +submodule=preprocess

@@ -1,0 +1,38 @@
+[2023-08-08 10:11:50,893][__main__][INFO] - Torch device: cuda
+[2023-08-08 10:11:50,893][__main__][INFO] - Setting random seeds to 87
+[2023-08-08 10:11:50,916][preprocess._main][INFO] - Preprocessing C. elegans neural data...
+[2023-08-08 10:11:50,916][preprocess._utils][INFO] - Start processing Flavell2023.
+[2023-08-08 10:12:16,332][preprocess._utils][INFO] - Finished processing Flavell2023.
+[2023-08-08 10:12:16,353][preprocess._utils][INFO] - Start processing Uzel2022.
+[2023-08-08 10:12:19,823][preprocess._utils][INFO] - Finished processing Uzel2022.
+[2023-08-08 10:12:19,824][preprocess._utils][INFO] - Start processing Kaplan2020.
+[2023-08-08 10:12:20,509][root][ERROR] - ERROR: MATLAB type not supported: function_handle_workspace, (uint32)
+[2023-08-08 10:12:20,533][root][ERROR] - ERROR: MATLAB type not supported: function_handle_workspace, (uint32)
+[2023-08-08 10:12:20,560][root][ERROR] - ERROR: MATLAB type not supported: function_handle_workspace, (uint32)
+[2023-08-08 10:12:20,582][root][ERROR] - ERROR: MATLAB type not supported: function_handle_workspace, (uint32)
+[2023-08-08 10:12:23,966][root][ERROR] - ERROR: MATLAB type not supported: function_handle_workspace, (uint32)
+[2023-08-08 10:12:24,017][root][ERROR] - ERROR: MATLAB type not supported: function_handle_workspace, (uint32)
+[2023-08-08 10:12:24,091][root][ERROR] - ERROR: MATLAB type not supported: function_handle_workspace, (uint32)
+[2023-08-08 10:12:24,147][root][ERROR] - ERROR: MATLAB type not supported: function_handle_workspace, (uint32)
+[2023-08-08 10:12:24,199][root][ERROR] - ERROR: MATLAB type not supported: function_handle_workspace, (uint32)
+[2023-08-08 10:12:24,233][root][ERROR] - ERROR: MATLAB type not supported: function_handle_workspace, (uint32)
+[2023-08-08 10:12:24,272][root][ERROR] - ERROR: MATLAB type not supported: function_handle_workspace, (uint32)
+[2023-08-08 10:12:24,300][root][ERROR] - ERROR: MATLAB type not supported: function_handle_workspace, (uint32)
+[2023-08-08 10:12:24,347][root][ERROR] - ERROR: MATLAB type not supported: function_handle_workspace, (uint32)
+[2023-08-08 10:12:24,387][root][ERROR] - ERROR: MATLAB type not supported: function_handle_workspace, (uint32)
+[2023-08-08 10:12:29,305][root][ERROR] - ERROR: MATLAB type not supported: function_handle_workspace, (uint32)
+[2023-08-08 10:12:29,339][root][ERROR] - ERROR: MATLAB type not supported: function_handle_workspace, (uint32)
+[2023-08-08 10:12:29,372][root][ERROR] - ERROR: MATLAB type not supported: function_handle_workspace, (uint32)
+[2023-08-08 10:12:29,395][root][ERROR] - ERROR: MATLAB type not supported: function_handle_workspace, (uint32)
+[2023-08-08 10:12:29,424][root][ERROR] - ERROR: MATLAB type not supported: function_handle_workspace, (uint32)
+[2023-08-08 10:12:33,996][preprocess._utils][INFO] - Finished processing Kaplan2020.
+[2023-08-08 10:12:34,004][preprocess._utils][INFO] - Start processing Skora2018.
+[2023-08-08 10:12:38,707][preprocess._utils][INFO] - Finished processing Skora2018.
+[2023-08-08 10:12:38,708][preprocess._utils][INFO] - Start processing Nichols2017.
+[2023-08-08 10:12:58,830][preprocess._utils][INFO] - Finished processing Nichols2017.
+[2023-08-08 10:12:58,846][preprocess._utils][INFO] - Start processing Leifer2023.
+[2023-08-08 10:14:19,688][preprocess._utils][INFO] - Finished processing Leifer2023.
+[2023-08-08 10:14:19,714][preprocess._utils][INFO] - Start processing Kato2015.
+[2023-08-08 10:14:24,811][preprocess._utils][INFO] - Finished processing Kato2015.
+[2023-08-08 10:14:24,812][preprocess._main][INFO] - Finished preprocessing neural data.
+[2023-08-08 10:14:24,814][preprocess._main][INFO] - Connectome already preprocessed.
