@@ -12,7 +12,7 @@ hydra:
     study_name: hyperparameter_search # Name of the study (for optuna)
     direction: minimize # Minimize the metric
     n_trials: 10 # Number of trials to run
-    n_jobs: 1 # Number of jobs to run in parallel
+    n_jobs: 2 # Number of jobs to run in parallel
     params:
       # Hyperparameters to optimize
       submodule.train.optimizer: Adam, AdamW, Adagrad, RMSprop

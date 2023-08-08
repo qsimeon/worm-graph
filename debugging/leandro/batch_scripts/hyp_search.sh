@@ -1,7 +1,7 @@
 #!/bin/bash
 
 #SBATCH --job-name=hyp_search
-#SBATCH --output=/om2/user/lrvenan/worm-graph/debugging/leandro/batch_scripts/hyp_search.out
+#SBATCH --output=/om2/user/lrvenan/worm-graph/debugging/leandro/batch_scripts/hyp_search.txt
 #SBATCH --gres=gpu:2
 #SBATCH --mem=64000
 #SBATCH --time=12:00:00
