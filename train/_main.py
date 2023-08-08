@@ -365,11 +365,9 @@ def train_model(
         continue
 
     # Save loss curves
-    pd.DataFrame(data=data).to_csv(
-        os.path.join(log_dir, "loss_curves.csv"),
-        index=True,
-        header=True,
-    )
+    loss_df = pd.DataFrame(data=data)
+    loss_df = loss_df[loss_df['train_losses'] != 0]  # remove 0s (when early stopping is triggered)
+    loss_df.to_csv(index=True, header=True, path_or_buf=os.path.join(log_dir, "loss_curves.csv"))
 
     # Configs to update
     submodules_updated = OmegaConf.create({
@@ -393,7 +391,7 @@ def train_model(
     )
 
     # Train loop is over and wasn't early stopped. Load the best model
-    logger.info("Training loop is over and wasn't early stopped. Loading best model.")
+    logger.info("Training loop is over. Loading best model.")
     model.load_state_dict(es.best_model.state_dict())
 
     # Metric that we want optuna to optimize

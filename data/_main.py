@@ -95,7 +95,13 @@ def get_dataset(dataset_config: DictConfig):
 
     combined_dataset = {f"worm{i}": combined_dataset[key] for i, key in enumerate(combined_dataset.keys())}
 
-    logger.info('Combined dataset loaded: {}'.format(dataset_names))
+    available_neurons = []
+    for worm, data in combined_dataset.items():
+        available_neurons.append([neuron for slot, neuron in data['slot_to_named_neuron'].items()])
+
+    logger.info('Available neurons: {}'.format(available_neurons))
+
+    logger.debug('Combined dataset loaded: {}'.format(dataset_names))
 
     # Save the dataset
     if dataset_config.save:

@@ -57,4 +57,4 @@ hydra:
 experiment:
   name: default_run
   seed: null # If null, a random seed is generated for each run.
-  mode: ${hydra.mode}
+  mode: RUN
