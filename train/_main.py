@@ -295,7 +295,7 @@ def train_model(
         # Log the test and train losses every 10 epochs
         if i % 10 == 0 and verbose:
             logger.info(
-                f"Epoch {i}/{len(worm_cohorts)} | Train loss: {data['train_losses'][-1]:.4f} | Test loss: {data['test_losses'][-1]:.4f} | SpE: {seconds_per_epoch:.2f}"
+                f"Epoch {i}/{len(worm_cohorts)} | Train loss: {log['train_losses'][0]:.4f} | Test loss: {log['test_losses'][0]:.4f} | SpE: {seconds_per_epoch:.2f}"
             )
 
         # Extract the latest validation loss

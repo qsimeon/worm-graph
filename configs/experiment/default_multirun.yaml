@@ -1,6 +1,6 @@
 # @package _global_
 defaults:
-  - override /submodule: [dataset, model, train, predict, visualize]
+  - override /submodule: [dataset, model, train, visualize]
   - _self_
 
 hydra:
@@ -9,9 +9,15 @@ hydra:
   # These parameters will be tested just when MULTIRUN mode is used.
   # Use the submodule parameters if RUN.
       params:
-        submodule.dataset.train.name: Nichols2017
-        submodule.dataset.train.num_worms: 5
         submodule.dataset.train.num_named_neurons: 5, 10
+
+submodule:
+  dataset:
+    train:
+      name: Kato2015
+      num_worms: 5
+  train:
+    epochs: 20
 
 experiment:
   name: default_multirun
