@@ -16,3 +16,4 @@ hydra:
 experiment:
   name: default_multirun
   mode: MULTIRUN
+  seed: 42

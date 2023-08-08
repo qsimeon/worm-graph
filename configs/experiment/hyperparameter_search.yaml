@@ -56,3 +56,4 @@ submodule:
 experiment:
   name: hyperparameter_search
   mode: MULTIRUN
+  seed: 42

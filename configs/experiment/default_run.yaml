@@ -8,5 +8,5 @@ hydra:
 
 experiment:
   name: default_run
-  seed: 42
   mode: RUN
+  seed: 42
