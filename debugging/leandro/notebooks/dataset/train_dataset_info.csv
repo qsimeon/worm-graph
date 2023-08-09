@@ -1,0 +1,11 @@
+,dataset,original_index,combined_dataset_index,neurons
+0,Kato2015,worm2,worm2,"['AIBL', 'AS1', 'BAGL', 'RIGR', 'RIVR']"
+1,Kato2015,worm6,worm6,"['AVEL', 'OLQDR', 'RIVL', 'SABVL', 'URADL']"
+2,Kato2015,worm9,worm9,"['AVHR', 'SIADL', 'SMDDR', 'SMDVL', 'SMDVR']"
+3,Kato2015,worm10,worm10,"['AIBR', 'OLQDR', 'RIGL', 'RIMR', 'URYDL']"
+4,Kato2015,worm11,worm11,"['AIBR', 'ASKL', 'ASKR', 'RIMR', 'SMDVL']"
+5,Nichols2017,worm3,worm15,"['AIBL', 'ALA', 'BAGR', 'URYDR', 'VB1']"
+6,Nichols2017,worm6,worm18,"['AFDL', 'AVEL', 'RID', 'RIVR', 'VA1']"
+7,Nichols2017,worm9,worm21,"['AUAR', 'AVAR', 'BAGR', 'SIBVR', 'URYDR']"
+8,Nichols2017,worm14,worm26,"['RMEV', 'SMDDL', 'URXL', 'URXR', 'URYDL']"
+9,Nichols2017,worm28,worm40,"['AIBR', 'ALA', 'SIBDL', 'VA1', 'VB1']"
