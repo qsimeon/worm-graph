@@ -19,14 +19,41 @@ hydra:
       submodule.train.learn_rate: 1e-3, 1e-4, 1e-5
       submodule.train.seq_len: 60, 120, 240
       submodule.train.num_samples: 8, 16, 32
+      submodule.model.hidden_size: 128, 256, 512
 
 submodule:
   dataset:
     train:
-      name: Kato2015
+      name: [Kato2015, Nichols2017, Skora2018, Uzel2022, Kaplan2020, Flavell2023, Leifer2023]
       num_named_neurons: all
-      num_worms: 5
-      epochs: 10
+      num_worms: 50
+      save: false
+    predict:
+      name: Kato2015
+      num_named_neurons: 1
+      num_worms: 1
+      save: false
+  model:
+    type: LinearNN
+    input_size: 302
+    num_layers: 1
+    loss: MSE
+    fft_reg_param: 0.0
+    l1_reg_param: 0.0
+    checkpoint_path: null # fresh model
+  train:
+    epochs: 900
+    save_freq: 1000
+    k_splits: 2
+    num_batches: 1
+    tau_in: 1
+    shuffle_samples: true
+    reverse: false
+    shuffle_worms: true
+    use_residual: false
+    use_smooth_data: true
 
 experiment:
   name: hyperparameter_search
+  mode: MULTIRUN
+  seed: 42

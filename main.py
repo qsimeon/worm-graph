@@ -47,10 +47,10 @@ def pipeline(cfg: DictConfig) -> None:
         if 'dataset' in cfg.submodule:
 
             if 'train' in cfg.submodule.dataset:
-                dataset_train = get_dataset(cfg.submodule.dataset.train)
+                dataset_train = get_dataset(cfg.submodule.dataset.train, name = 'train')
 
             if 'predict' in cfg.submodule.dataset:
-                dataset_predict = get_dataset(cfg.submodule.dataset.predict)
+                dataset_predict = get_dataset(cfg.submodule.dataset.predict, name = 'predict')
 
         if 'model' in cfg.submodule:
             model = get_model(cfg.submodule.model)
@@ -59,7 +59,8 @@ def pipeline(cfg: DictConfig) -> None:
             model, submodules_updated, train_info, metric = train_model(
                 train_config = cfg.submodule.train,
                 model = model,
-                dataset = dataset_train
+                dataset = dataset_train,
+                verbose = True if cfg.experiment.mode == 'MULTIRUN' else False,
             )
             # Update cfg.submodule
             cfg.submodule.dataset = OmegaConf.merge(cfg.submodule.dataset, submodules_updated.dataset) # update dataset.train name

@@ -55,5 +55,6 @@ hydra:
 # ============================ Pipeline Config ============================
 
 experiment:
-  name: default_run
+  name: submodule
   seed: null # If null, a random seed is generated for each run.
+  mode: RUN

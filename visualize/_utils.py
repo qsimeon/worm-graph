@@ -201,6 +201,7 @@ def plot_loss_curves(log_dir):
     
     # load the loss dataframe
     loss_df = pd.read_csv(loss_curves_csv, index_col=0)
+    loss_df = loss_df[loss_df['train_losses'] != 0]
 
     sns.lineplot(
         x="epochs",

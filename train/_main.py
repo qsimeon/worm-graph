@@ -7,6 +7,7 @@ def train_model(
     train_config: DictConfig,
     model: torch.nn.Module,
     dataset: dict,
+    verbose: bool = False,
 ) -> tuple[torch.nn.Module, str]:
     """Trains a neural network model on a multi-worm dataset.
 
@@ -290,6 +291,12 @@ def train_model(
         for key in data:  # pre-allocated memory for `data[key]`
             # with `num_epochs=1`, this is just data[key][i] = log[key]
             data[key][(i * num_epochs) : (i * num_epochs) + len(log[key])] = log[key]
+        
+        # Log the test and train losses every 10 epochs
+        if i % 10 == 0 and verbose:
+            logger.info(
+                f"Epoch {i}/{len(worm_cohorts)} | Train loss: {log['train_losses'][0]:.4f} | Test loss: {log['test_losses'][0]:.4f} | SpE: {seconds_per_epoch:.2f}"
+            )
 
         # Extract the latest validation loss
         val_loss = data["centered_test_losses"][-1]
@@ -358,11 +365,9 @@ def train_model(
         continue
 
     # Save loss curves
-    pd.DataFrame(data=data).to_csv(
-        os.path.join(log_dir, "loss_curves.csv"),
-        index=True,
-        header=True,
-    )
+    loss_df = pd.DataFrame(data=data)
+    loss_df = loss_df[loss_df['train_losses'] != 0]  # remove 0s (when early stopping is triggered)
+    loss_df.to_csv(index=True, header=True, path_or_buf=os.path.join(log_dir, "loss_curves.csv"))
 
     # Configs to update
     submodules_updated = OmegaConf.create({
@@ -386,7 +391,7 @@ def train_model(
     )
 
     # Train loop is over and wasn't early stopped. Load the best model
-    logger.info("Training loop is over and wasn't early stopped. Loading best model.")
+    logger.info("Training loop is over. Loading best model.")
     model.load_state_dict(es.best_model.state_dict())
 
     # Metric that we want optuna to optimize
