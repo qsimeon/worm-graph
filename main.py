@@ -47,10 +47,10 @@ def pipeline(cfg: DictConfig) -> None:
         if 'dataset' in cfg.submodule:
 
             if 'train' in cfg.submodule.dataset:
-                dataset_train = get_dataset(cfg.submodule.dataset.train)
+                dataset_train = get_dataset(cfg.submodule.dataset.train, name = 'train')
 
             if 'predict' in cfg.submodule.dataset:
-                dataset_predict = get_dataset(cfg.submodule.dataset.predict)
+                dataset_predict = get_dataset(cfg.submodule.dataset.predict, name = 'predict')
 
         if 'model' in cfg.submodule:
             model = get_model(cfg.submodule.model)
