@@ -46,11 +46,11 @@ def pipeline(cfg: DictConfig) -> None:
         
         if 'dataset' in cfg.submodule:
 
-            if 'train' in cfg.submodule.dataset:
-                dataset_train = get_dataset(cfg.submodule.dataset.train, name = 'train')
+            if 'for_training' in cfg.submodule.dataset:
+                dataset_train = get_datasets(cfg.submodule.dataset.for_training, name = 'training')
 
-            if 'predict' in cfg.submodule.dataset:
-                dataset_predict = get_dataset(cfg.submodule.dataset.predict, name = 'predict')
+            if 'for_prediction' in cfg.submodule.dataset:
+                dataset_predict = get_datasets(cfg.submodule.dataset.for_prediction, name = 'prediction')
 
         if 'model' in cfg.submodule:
             model = get_model(cfg.submodule.model)
@@ -88,12 +88,12 @@ def pipeline(cfg: DictConfig) -> None:
             OmegaConf.save(train_info, os.path.join(log_dir, "train_info.yaml"))
         elif 'dataset' in cfg.submodule:
             # Delete dataset.train from pipeline info if exists
-            del cfg.submodule.dataset.train
+            del cfg.submodule.dataset.for_training
 
         if not 'predict' in cfg.submodule:
             # Delete dataset.predict from pipeline info if it exists
             if 'dataset' in cfg.submodule:
-                del cfg.submodule.dataset.predict
+                del cfg.submodule.dataset.for_prediction
 
         OmegaConf.save(cfg, os.path.join(log_dir, "pipeline_info.yaml"))
         

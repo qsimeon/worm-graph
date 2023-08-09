@@ -422,7 +422,7 @@ if __name__ == "__main__":
     os.chdir(log_dir)
 
     # Dataset
-    train_dataset = get_dataset(dataset_config.dataset.train)
+    train_dataset = get_datasets(dataset_config.dataset.train)
 
     # Get the model
     model = get_model(model_config.model)
