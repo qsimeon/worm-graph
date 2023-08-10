@@ -4,6 +4,8 @@ from pkg import *
 def pipeline(cfg: DictConfig) -> None:
     """Create a custom pipeline"""
 
+    log_dir = os.getcwd()
+
     # Configure logger
     logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
     logger = logging.getLogger(__name__)
@@ -36,8 +38,10 @@ def pipeline(cfg: DictConfig) -> None:
         
         if 'dataset' in cfg.submodule:
             if 'for_training' in cfg.submodule.dataset:
+                logger.info("Loading training dataset")
                 dataset_train = get_datasets(cfg.submodule.dataset.for_training, name='training')
             if 'for_prediction' in cfg.submodule.dataset:
+                logger.info("Loading prediction dataset")
                 dataset_predict = get_datasets(cfg.submodule.dataset.for_prediction, name='prediction')
         else:
             dataset_train = (None, None)
@@ -54,7 +58,7 @@ def pipeline(cfg: DictConfig) -> None:
                 model = model,
                 train_dataset = dataset_train[0],
                 val_dataset = dataset_train[1],
-                verbose = False
+                verbose = True if cfg.experiment.mode == 'MULTIRUN' else False,
             )
 
         if 'predict' in cfg.submodule:
@@ -67,12 +71,6 @@ def pipeline(cfg: DictConfig) -> None:
             cfg.submodule.dataset = OmegaConf.merge(cfg.submodule.dataset, submodules_updated.dataset) # update dataset.predict name
             if 'visualize' in cfg.submodule:
                 cfg.submodule.visualize = OmegaConf.merge(cfg.submodule.visualize, submodules_updated.visualize) # update log_dir
-
-        # ================== Save updated configs ==================
-
-        log_dir = os.getcwd()
-
-        OmegaConf.save(cfg, os.path.join(log_dir, "pipeline_info.yaml"))
         
         # ==========================================================
 
@@ -87,6 +85,9 @@ def pipeline(cfg: DictConfig) -> None:
         if cfg.experiment.name in ['num_worms', 'num_named_neurons']:
             log_dir = os.path.dirname(log_dir) # Because experiments run in multirun mode
             plot_experiment(log_dir, cfg.experiment)
+
+        # Save pipeline info
+        OmegaConf.save(cfg, os.path.join(log_dir, "pipeline_info.yaml"))
         
         # Save experiment parameters (MLflow)
         log_params_from_omegaconf_dict(cfg)

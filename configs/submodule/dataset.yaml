@@ -11,7 +11,7 @@ dataset:
     reverse: false
     use_residual: false
     smooth_data: true
-    use_this_train_dataset: /home/lrvnc/Projects/worm-graph/logs/hydra/2023_08_10_17_55_10/dataset/train_dataset_for_training.pt # if null, use the dataset specified in dataset.yaml
+    use_this_train_dataset: null # if null, use the dataset specified in dataset.yaml
     use_this_val_dataset: null # if null, use the dataset specified in dataset.yaml
 
   for_prediction:

@@ -7,4 +7,4 @@ model:
   loss: MSE # options: MSE, Huber, L1, Poisson
   fft_reg_param: 0.0 # how much to regularize the loss by frequency distribution matching; options: 0.0 <= float <= 1.0
   l1_reg_param: 0.0 # how much to regularize the loss by L1 norm of the model parameters; options: 0.0 <= float <= 1.0
-  use_this_pretrained_model: /home/lrvnc/Projects/worm-graph/logs/hydra/2023_08_10_17_31_51/train/checkpoints/model_epoch_0.pt # options: null, path/to/pretrained/model
+  use_this_pretrained_model: null # options: null, path/to/pretrained/model

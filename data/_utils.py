@@ -309,12 +309,13 @@ def select_named_neurons(multi_worm_dataset, num_named_neurons):
 
     # Drop worms with less than `num_named_neurons` neurons
     if len(worms_to_drop) > 0:
-        logger.info("Dropping {} worms. {} remaining".format(
+        logger.info("Dropping {} worms from {}. {} remaining.".format(
             len(worms_to_drop),
+            data['dataset'],
             len(list(set(multi_worm_dataset.keys()) - set(worms_to_drop))))
             )
     else:
-        logger.info("No worms dropped.")
+        logger.info("No worms dropped from {}.".format(data['dataset']))
 
     for wormID in worms_to_drop:
         del multi_worm_dataset[wormID]
@@ -598,7 +599,7 @@ def create_combined_dataset(experimental_datasets, num_named_neurons, num_worms,
     else:
         dataset_names = sorted(list(experimental_datasets))
 
-    logger.info('Combining datasets: {}'.format(dataset_names))
+    logger.info('Combined datasets: {}'.format(dataset_names))
 
     # Load the dataset(s)
     combined_dataset = dict()
@@ -629,7 +630,7 @@ def create_combined_dataset(experimental_datasets, num_named_neurons, num_worms,
         # Select `num_worms` worms
         wormIDs = [wormID for wormID in combined_dataset.keys()]
         wormIDs_to_keep = np.random.choice(wormIDs, size=num_worms, replace=False)
-        logger.info('Selecting {} worms from {}'.format(len(wormIDs_to_keep), len(combined_dataset)))
+        logger.info('Selecting {} worms from {} in the combined dataset'.format(len(wormIDs_to_keep), len(combined_dataset)))
 
         # Remove the worms that are not in `wormIDs_to_keep`
         for wormID in wormIDs:
