@@ -20,10 +20,6 @@ def pipeline(cfg: DictConfig) -> None:
         if len(cfg) == 1: # only the pipeline module
             raise ValueError("No submodules in the pipeline. Run python main.py +experiment=your_experiment")
 
-        if 'visualize' in cfg.submodule:
-            if cfg.submodule.visualize.log_dir is None:
-                assert ('train' in cfg.submodule) or ('predict' in cfg.submodule), "Train/Predict must be defined before visualizing (or chose a log_dir)."
-
         logger.info("Torch device: %s" % (DEVICE))
 
         torch.cuda.empty_cache()
@@ -60,6 +56,8 @@ def pipeline(cfg: DictConfig) -> None:
                 val_dataset = dataset_train[1],
                 verbose = True if cfg.experiment.mode == 'MULTIRUN' else False,
             )
+            # Update visualize submodule to plot current run
+            cfg.submodule.visualize.plot_figures_from_this_log_dir = log_dir
 
         if 'predict' in cfg.submodule:
             submodules_updated = make_predictions(
@@ -67,10 +65,11 @@ def pipeline(cfg: DictConfig) -> None:
                 model =  model,
                 dataset = dataset_predict,
             )
-            # Update cfg.submodule
-            cfg.submodule.dataset = OmegaConf.merge(cfg.submodule.dataset, submodules_updated.dataset) # update dataset.predict name
-            if 'visualize' in cfg.submodule:
-                cfg.submodule.visualize = OmegaConf.merge(cfg.submodule.visualize, submodules_updated.visualize) # update log_dir
+            # Update visualize submodule to plot current run
+            cfg.submodule.visualize.plot_figures_from_this_log_dir = log_dir
+
+        # Save pipeline info
+        OmegaConf.save(cfg, os.path.join(log_dir, "pipeline_info.yaml"))
         
         # ==========================================================
 
@@ -86,8 +85,6 @@ def pipeline(cfg: DictConfig) -> None:
             log_dir = os.path.dirname(log_dir) # Because experiments run in multirun mode
             plot_experiment(log_dir, cfg.experiment)
 
-        # Save pipeline info
-        OmegaConf.save(cfg, os.path.join(log_dir, "pipeline_info.yaml"))
         
         # Save experiment parameters (MLflow)
         log_params_from_omegaconf_dict(cfg)

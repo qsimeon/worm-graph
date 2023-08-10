@@ -154,7 +154,7 @@ def plot_frequency_distribution(data, ax, title, dt=0.5):
     ax.set_title(title)
 
 
-def plot_loss_curves(log_dir):
+def plot_loss_curves(log_dir, info_to_display=None):
     """Plots the loss curves stored in a log directory.
 
     Args:
@@ -165,47 +165,17 @@ def plot_loss_curves(log_dir):
     sns.set(style='whitegrid')
     sns.set_palette("tab10")
 
-    # process the pipeline_info.yaml file inside the log folder
-    cfg_path = os.path.join(log_dir, "pipeline_info.yaml")
-    if os.path.exists(cfg_path):
-        config = OmegaConf.structured(OmegaConf.load(cfg_path))
-        config = config.submodule
-    else:
-        raise FileNotFoundError("No pipeline_info.yaml file found in {}".format(log_dir))
-
-    # Get strings for plot title
-    dataset_name = config.dataset.train.name
-    dataset_name = dataset_name.split("_")
-    dataset_name = [ds_name[:-4] for ds_name in dataset_name]
-    dataset_name = ", ".join(dataset_name) # Just initials
-    num_worms = config.dataset.train.num_worms
-    model_name = config.model.type
-    tau_in = config.train.tau_in
-
-    # Create the plot title
-    plt_title = (
-        "Model: {}\nNb. of worms: {}\nDataset(s): {}\nTraining {}: {}".format(
-            model_name,
-            num_worms,
-            dataset_name,
-            r'$\tau$',
-            tau_in,
-        )
-    )
-
-    # return if no loss curves file found
-    loss_curves_csv = os.path.join(log_dir, "loss_curves.csv")
+    # Load loss curves
+    loss_curves_csv = os.path.join(log_dir, 'train', 'train_metrics.csv')
     if not os.path.exists(loss_curves_csv):
         logger.error("No loss curves found in the log directory.")
         return None
     
-    # load the loss dataframe
     loss_df = pd.read_csv(loss_curves_csv, index_col=0)
-    loss_df = loss_df[loss_df['train_losses'] != 0]
 
     sns.lineplot(
-        x="epochs",
-        y="base_train_losses",
+        x="epoch",
+        y="train_baseline",
         data=loss_df,
         ax=ax,
         label="Train baseline",
@@ -215,31 +185,32 @@ def plot_loss_curves(log_dir):
     )
 
     sns.lineplot(
-        x="epochs",
-        y="base_test_losses",
+        x="epoch",
+        y="val_loss",
         data=loss_df,
         ax=ax,
-        label="Test baseline",
+        label="Validation baseline",
         color="r",
         alpha=0.8,
         **dict(linestyle=":"),
     )
-    sns.lineplot(x="epochs", y="train_losses", data=loss_df, ax=ax, label="Train")
-    sns.lineplot(x="epochs", y="test_losses", data=loss_df, ax=ax, label="Test")
+    sns.lineplot(x="epoch", y="train_loss", data=loss_df, ax=ax, label="Train")
+    sns.lineplot(x="epoch", y="val_loss", data=loss_df, ax=ax, label="Validation")
     plt.legend(frameon=True, loc="upper right", fontsize=12)
 
-    plt.title('Loss curves', fontsize=16)
+    plt.title('Learning curves', fontsize=16)
     
     x_position_percent = 0.075  # Adjust this value to set the desired position
     x_position_box = ax.get_xlim()[0] + (ax.get_xlim()[1] - ax.get_xlim()[0]) * x_position_percent
     y_position_percent = 0.80  # Adjust this value to set the desired position
     y_position_box = ax.get_ylim()[0] + (ax.get_ylim()[1] - ax.get_ylim()[0]) * y_position_percent
-    plt.text(x_position_box, y_position_box, plt_title, bbox=dict(facecolor='white', edgecolor='black', boxstyle='round'), style='italic')
+    if info_to_display is not None:
+        plt.text(x_position_box, y_position_box, info_to_display, bbox=dict(facecolor='white', edgecolor='black', boxstyle='round'), style='italic')
     plt.grid(True)
-    plt.xlabel("Epoch (# worm cohorts)")
+    plt.xlabel("Epoch")
     plt.ylabel("Loss")
     plt.tight_layout(pad=0.5)
-    plt.savefig(os.path.join(log_dir, "loss_curves.png"))
+    plt.savefig(os.path.join(log_dir, 'train', 'loss_curves.png'), dpi=300)
     plt.close()
 
     return None

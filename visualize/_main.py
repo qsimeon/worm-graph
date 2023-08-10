@@ -11,44 +11,28 @@ def plot_figures(
     a model on a worm neural activity dataset. Save figures to the directory `log_dir`.
     """
 
-    log_dir = visualize_config.log_dir
+    log_dir = visualize_config.plot_figures_from_this_log_dir
+
+    assert log_dir is not None, "log_dir is None. Please specify a log_dir to plot figures from."
 
     worm = visualize_config.worm
     neuron = visualize_config.neuron
     use_residual = visualize_config.use_residual
 
-    # Load pipeline info
-    pipeline_info = OmegaConf.load(os.path.join(log_dir, "pipeline_info.yaml"))
+    # Loop through submodules log directories
+    for submodule_dir in os.listdir(log_dir):
 
-    logger.info('Start plotting figures.')
+        if submodule_dir == 'dataset':
+            continue
 
-    # Plots related to training (loss_curves.csv file exists, checkpoints exists)
-    if 'train' in pipeline_info.submodule:
-        # Loss curves
-        plot_loss_curves(log_dir)
+        if submodule_dir == 'train':
+            plot_loss_curves(log_dir=log_dir, info_to_display=None)
+            # plot_before_after_weights
 
-        # Model weights
-        #! plot_before_after_weights(log_dir) # TODO: modify to work with EarlyStopping
-
-    # Plots reletad to predictions (at least worm0 directory exists)
-    if 'predict' in pipeline_info.submodule:
-        # Correlation plot
-        plot_correlation_scatterplot(
-            log_dir,
-            worm,
-            neuron,
-            use_residual,
-        )
-
-        # Generation plot
-        plot_targets_predictions(
-            log_dir,
-            worm,
-            neuron,
-            use_residual,
-        )
-
-    # TODO add more plotting functions for different types of figures
+        if submodule_dir == 'predict':
+            # plot_correlation_scatterplot
+            # plot_targets_predictions
+            continue
 
     return None
 
