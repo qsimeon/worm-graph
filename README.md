@@ -26,14 +26,14 @@
 └── visualize
 ```
 
-## For end users
-
 ### Table of Contents
 1. [Environment Setup](#environment-setup)
 2. [Getting Started](#getting-started)
 3. [File Naming Conventions](#file-naming-conventions)
 4. [Code Style Conventions](#code-style-conventions)
 5. [Future Tasks](#future-tasks)
+
+## For end users
 
 ### Environment Setup
 
