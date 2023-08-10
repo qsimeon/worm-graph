@@ -101,16 +101,16 @@ def train_model(
             train_running_base_loss += train_baseline.item()
             train_running_loss += train_loss.item()
 
+            # Store metrics in MLflow
+            mlflow.log_metric("iteration_train_loss", train_loss.item(), step=epoch*len(trainloader) + batch_idx)
+            mlflow.log_metric("iteration_train_baseline", train_baseline.item(), step=epoch*len(trainloader) + batch_idx)
+
         end_time = time.perf_counter()
 
         # Store metrics
         train_epoch_loss.append(train_running_loss / len(trainloader))
         train_epoch_baseline.append(train_running_base_loss / len(trainloader))
         train_computation_time.append(end_time - start_time)
-
-        # Store metrics in MLflow
-        mlflow.log_metric("iteration_train_loss", train_loss.item(), step=epoch*len(trainloader) + batch_idx)
-        mlflow.log_metric("iteration_train_baseline", train_baseline.item(), step=epoch*len(trainloader) + batch_idx)
 
         # Reset running losses
         train_running_base_loss = 0
@@ -140,16 +140,16 @@ def train_model(
                 val_running_base_loss += val_baseline.item()
                 val_running_loss += val_loss.item()
 
+                # Store metrics in MLflow
+                mlflow.log_metric("iteration_val_loss", val_loss.item(), step=epoch*len(valloader) + batch_idx)
+                mlflow.log_metric("iteration_val_baseline", val_baseline.item(), step=epoch*len(valloader) + batch_idx)
+
             end_time = time.perf_counter()
 
             # Store metrics
             val_epoch_loss.append(val_running_loss / len(valloader))
             val_epoch_baseline.append(val_running_base_loss / len(valloader))
             val_computation_time.append(end_time - start_time)
-
-            # Store metrics in MLflow
-            mlflow.log_metric("iteration_val_loss", val_loss.item(), step=epoch*len(valloader) + batch_idx)
-            mlflow.log_metric("iteration_val_baseline", val_baseline.item(), step=epoch*len(valloader) + batch_idx)
 
             # Reset running losses
             val_running_base_loss = 0
@@ -179,7 +179,7 @@ def train_model(
         "epoch": np.arange(len(train_epoch_loss)),
         "train_loss": train_epoch_loss,
         "train_baseline": train_epoch_baseline,
-        "computation_time": train_computation_time,
+        "train_computation_time": train_computation_time,
         "val_loss": val_epoch_loss,
         "val_baseline": val_epoch_baseline,
         "val_computation_time": val_computation_time

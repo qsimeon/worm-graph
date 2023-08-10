@@ -5,8 +5,9 @@ train:
   save_freq: 1000
   batch_size: 4
   shuffle: true
-  use_this_train_dataset: /home/lrvnc/Projects/worm-graph/logs/hydra/2023_08_10_15_31_11/dataset/train_dataset_for_training.pt # if null, use the dataset specified in dataset.yaml
-  use_this_val_dataset: /home/lrvnc/Projects/worm-graph/logs/hydra/2023_08_10_15_31_11/dataset/val_dataset_for_training.pt # if null, use the dataset specified in dataset.yaml
+  use_this_train_dataset: null # if null, use the dataset specified in dataset.yaml
+  use_this_val_dataset: null # if null, use the dataset specified in dataset.yaml
+  use_this_pretrained_model: null # if null, train from scratch
 
   early_stopping:
     delta: 1e-4 # minimum change in validation loss to be considered an improvement
