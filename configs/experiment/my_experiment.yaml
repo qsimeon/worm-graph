@@ -1,0 +1,61 @@
+# @package _global_
+defaults:
+  - override /submodule: [dataset, model, train, visualize]
+  - _self_
+
+hydra:
+  mode: MULTIRUN
+  sweeper:
+  # These parameters will be tested just when MULTIRUN mode is used.
+  # Use the submodule parameters if RUN.
+      params:
+        submodule.dataset.for_training.num_worms: 1, 2, 3
+
+submodule:
+
+  dataset:
+    for_training:
+      experimental_datasets: Kato2015
+      num_named_neurons: all
+      k_splits: 2
+      num_train_samples: 32
+      num_val_samples: 32
+      seq_len: 240
+      tau: 1
+      reverse: false
+      use_residual: false
+      smooth_data: true
+      use_this_train_dataset: null
+      use_this_val_dataset: null
+
+  model:
+    type: NetworkLSTM # options: LinearNN, NetworkLSTM, NetworkRNN, NeuralCFC, NetworkGCN, NeuralTransformer
+    input_size: 302 # keep fixed at input_size = 302; it is the number of neurons in the adult C. elegans hermaphrodite 
+    hidden_size: 256 # options: int > 0
+    num_layers: 1 # number of hidden layers in the model; options: int >= 1; keep this fixed
+    # constraint: 1 <= int <= 5; keep fixed at num_layers: int = 1
+    loss: MSE # options: MSE, Huber, L1, Poisson
+    fft_reg_param: 0.0 # how much to regularize the loss by frequency distribution matching; options: 0.0 <= float <= 1.0
+    l1_reg_param: 0.0 # how much to regularize the loss by L1 norm of the model parameters; options: 0.0 <= float <= 1.0
+    use_this_pretrained_model: null # options: null, path/to/pretrained/model
+
+  train:
+    optimizer: AdamW
+    lr: 0.001
+    epochs: 10
+    save_freq: 1000
+    batch_size: 16
+    shuffle: true
+    use_this_train_dataset: null # if null, use the dataset specified in dataset.yaml
+    use_this_val_dataset: null # if null, use the dataset specified in dataset.yaml
+    use_this_pretrained_model: null # if null, train from scratch
+
+    early_stopping:
+      delta: 1e-4 # minimum change in validation loss to be considered an improvement
+      patience: 10 # number of epochs to wait for improvement before stopping
+
+
+experiment:
+  name: default_multirun
+  mode: MULTIRUN
+  seed: 42

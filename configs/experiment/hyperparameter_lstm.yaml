@@ -16,23 +16,27 @@ hydra:
     params:
       # Hyperparameters to optimize
       submodule.train.optimizer: Adam, AdamW, Adagrad, RMSprop
-      submodule.train.learn_rate: 1e-3, 1e-4, 1e-5
-      submodule.train.seq_len: 60, 120, 240
-      submodule.train.num_samples: 8, 16, 32
+      submodule.train.lr: 1e-3, 1e-4, 1e-5
+      submodule.train.batch_size: 16, 32, 64
+      submodule.dataset.for_training.seq_len: 60, 120, 240
+      submodule.train.num_train_samples: 8, 16, 32
       submodule.model.hidden_size: 128, 256, 512
 
 submodule:
+
   dataset:
-    train:
-      name: [Kato2015, Nichols2017, Skora2018, Uzel2022, Kaplan2020, Flavell2023, Leifer2023]
+    for_training:
+      experimental_datasets: Kato2015
       num_named_neurons: all
-      num_worms: 50
-      save: false
-    predict:
-      name: Kato2015
-      num_named_neurons: 1
-      num_worms: 1
-      save: false
+      k_splits: 2
+      num_val_samples: 16
+      tau: 1
+      reverse: false
+      use_residual: false
+      smooth_data: true
+      use_this_train_dataset: null
+      use_this_val_dataset: null
+
   model:
     type: NetworkLSTM
     input_size: 302
@@ -40,18 +44,19 @@ submodule:
     loss: MSE
     fft_reg_param: 0.0
     l1_reg_param: 0.0
-    checkpoint_path: null # fresh model
+    use_this_pretrained_model: null
+
   train:
-    epochs: 900
+    epochs: 10
     save_freq: 1000
-    k_splits: 2
-    num_batches: 1
-    tau_in: 1
-    shuffle_samples: true
-    reverse: false
-    shuffle_worms: true
-    use_residual: false
-    use_smooth_data: true
+    shuffle: true
+    use_this_train_dataset: null
+    use_this_val_dataset: null
+    use_this_pretrained_model: null
+
+    early_stopping:
+      delta: 1e-4
+      patience: 10
 
 experiment:
   name: hyperparameter_search
