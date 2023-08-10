@@ -12,22 +12,23 @@ hydra:
     study_name: hyperparameter_search # Name of the study (for optuna)
     direction: minimize # Minimize the metric
     n_trials: 20 # Number of trials to run
-    n_jobs: 1 # Number of jobs to run in parallel
+    n_jobs: 2 # Number of jobs to run in parallel
     params:
       # Hyperparameters to optimize
       submodule.train.optimizer: Adam, AdamW, Adagrad, RMSprop
       submodule.train.lr: 1e-3, 1e-4, 1e-5
       submodule.train.batch_size: 16, 32, 64
       submodule.dataset.for_training.seq_len: 60, 120, 240
-      submodule.train.num_train_samples: 8, 16, 32
+      submodule.dataset.for_training.num_train_samples: 8, 16, 32
       submodule.model.hidden_size: 128, 256, 512
 
 submodule:
 
   dataset:
     for_training:
-      experimental_datasets: Kato2015
+      experimental_datasets: [Kato2015, Nichols2017, Skora2018, Uzel2022, Kaplan2020, Flavell2023, Leifer2023]
       num_named_neurons: all
+      num_worms: 50
       k_splits: 2
       num_val_samples: 16
       tau: 1
@@ -47,8 +48,8 @@ submodule:
     use_this_pretrained_model: null
 
   train:
-    epochs: 10
-    save_freq: 1000
+    epochs: 900
+    save_freq: 100
     shuffle: true
     use_this_train_dataset: null
     use_this_val_dataset: null
