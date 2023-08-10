@@ -54,7 +54,7 @@ def pipeline(cfg: DictConfig) -> None:
                 model = model,
                 train_dataset = dataset_train[0],
                 val_dataset = dataset_train[1],
-                verbose=True
+                verbose = False
             )
 
         if 'predict' in cfg.submodule:

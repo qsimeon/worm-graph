@@ -71,9 +71,19 @@ def train_model(
     train_computation_time = []
     val_computation_time = []
 
+    # Start training
     logger.info("Starting training loop...")
 
-    for epoch in range(epochs):
+    model = model.to(DEVICE)
+
+    pbar = tqdm(
+        range(epochs), 
+        total=epochs,
+        position=0, leave=True,  # position at top and remove when done
+        dynamic_ncols=True,  # adjust width to terminal window size
+        )
+
+    for epoch in pbar:
 
         # ============================ Train loop ============================
 
@@ -81,6 +91,10 @@ def train_model(
         start_time = time.perf_counter()
 
         for batch_idx, (X_train, Y_train, masks_train, metadata) in enumerate(trainloader):
+
+            X_train = X_train.to(DEVICE)
+            Y_train = Y_train.to(DEVICE)
+            masks_train = masks_train.to(DEVICE)
 
             optimizer.zero_grad() # Reset gradients
 
@@ -112,6 +126,9 @@ def train_model(
         train_epoch_baseline.append(train_running_base_loss / len(trainloader))
         train_computation_time.append(end_time - start_time)
 
+        mlflow.log_metric("epoch_train_loss", train_epoch_loss[-1], step=epoch)
+        mlflow.log_metric("epoch_train_baseline", train_epoch_baseline[-1], step=epoch)
+
         # Reset running losses
         train_running_base_loss = 0
         train_running_loss = 0
@@ -126,6 +143,10 @@ def train_model(
             start_time = time.perf_counter()
 
             for batch_idx, (X_val, Y_val, masks_val, metadata_val) in enumerate(valloader):
+
+                X_val = X_val.to(DEVICE)
+                Y_val = Y_val.to(DEVICE)
+                masks_val = masks_val.to(DEVICE)
 
                 # Baseline model: identity model - predict that the next time step is the same as the current one.
                 # This is the simplest model we can think of: predict that the next time step is the same as the current one
@@ -151,6 +172,9 @@ def train_model(
             val_epoch_baseline.append(val_running_base_loss / len(valloader))
             val_computation_time.append(end_time - start_time)
 
+            mlflow.log_metric("epoch_val_loss", val_epoch_loss[-1], step=epoch)
+            mlflow.log_metric("epoch_val_baseline", val_epoch_baseline[-1], step=epoch)
+
             # Reset running losses
             val_running_base_loss = 0
             val_running_loss = 0
@@ -168,6 +192,9 @@ def train_model(
         if verbose:
             print("Epoch: {}/{} | Train loss: {:.4f} | Val. loss: {:.4f}".format(epoch+1, epochs, train_epoch_loss[-1], val_epoch_loss[-1]))
 
+        # Update progress bar
+        pbar.set_description(f'Epoch {epoch}/{epochs}')
+        pbar.set_postfix({'Train loss': train_epoch_loss[-1], 'Val. loss': val_epoch_loss[-1]})
 
     # Restore best model and save it
     logger.info("Training loop is over. Loading best model.")
