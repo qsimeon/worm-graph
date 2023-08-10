@@ -26,10 +26,18 @@ def train_model(
     # Load train and validation datasets if asked
     if train_dataset is None:
         assert train_config.use_this_train_dataset is not None, "File path to train dataset must be provided if not using the dataset submodule"
+        logger.info("Loading train dataset from %s" % (train_config.use_this_train_dataset))
         train_dataset = torch.load(train_config.use_this_train_dataset)
     if val_dataset is None:
         assert train_config.use_this_val_dataset is not None, "File path to validation dataset must be provided if not using the dataset submodule"
+        logger.info("Loading validation dataset from %s" % (train_config.use_this_val_dataset))
         val_dataset = torch.load(train_config.use_this_val_dataset)
+
+    # Load model if asked
+    if train_config.use_this_pretrained_model is not None:
+        assert train_config.use_this_pretrained_model is not None, "File path to pretrained model must be provided if not using the model submodule"
+        model_config = OmegaConf.create({'use_this_pretrained_model': train_config.use_this_pretrained_model})
+        model = get_model(model_config)
 
     # Parameters
     epochs = train_config.epochs
@@ -49,7 +57,6 @@ def train_model(
     es = EarlyStopping(
         patience = train_config.early_stopping.patience,
         min_delta = train_config.early_stopping.delta,
-        restore_best_weights = train_config.early_stopping.restore_best_weights,
         )
 
     # Create dataloaders
@@ -136,7 +143,6 @@ def train_model(
         # ============================ Validation loop ============================
 
         model.eval()
-        
 
         with torch.no_grad():
 

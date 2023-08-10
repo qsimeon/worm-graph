@@ -5,6 +5,10 @@ logger = logging.getLogger(__name__)
 
 def get_datasets(dataset_config: DictConfig, name='training'):
 
+    train_dataset, val_dataset = None, None
+
+    
+
     experimental_datasets = dataset_config.experimental_datasets
     num_named_neurons = dataset_config.num_named_neurons
     num_worms = dataset_config.num_worms
@@ -42,6 +46,13 @@ def get_datasets(dataset_config: DictConfig, name='training'):
     neuron_counts.to_csv(os.path.join(log_dir, 'dataset', f"neuron_info_for_{name}.csv"), index=True, header=True)
     torch.save(train_dataset, os.path.join(log_dir, 'dataset', f"train_dataset_for_{name}.pt"))
     torch.save(val_dataset, os.path.join(log_dir, 'dataset', f"val_dataset_for_{name}.pt"))
+
+    if dataset_config.use_this_train_dataset is not None:
+        logger.info(f'Overwiting train dataset with {dataset_config.use_this_train_dataset}')
+        train_dataset = torch.load(dataset_config.use_this_train_dataset)
+    if dataset_config.use_this_val_dataset is not None:
+        logger.info(f'Overwiting val. dataset with {dataset_config.use_this_val_dataset}')
+        val_dataset = torch.load(dataset_config.use_this_val_dataset)
 
     return train_dataset, val_dataset
 
