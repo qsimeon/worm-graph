@@ -21,19 +21,63 @@ class EarlyStopping():
             self.best_loss = val_loss
             self.counter = 0
             self.best_model.load_state_dict(model.state_dict())
-            self.save_best_model(model)
         elif self.best_loss - val_loss < self.min_delta:
             self.counter += 1
         if self.counter >= self.patience:
-            self.status = f"Stopped on {self.counter}"
-            if self.restore_best_weights:
-                model.load_state_dict(self.best_model.state_dict())
-                self.save_best_model(model)
             return True
         return False
     
-    def save_best_model(self, model):
-        torch.save(model.state_dict(), os.path.join(os.getcwd(), "checkpoints", 'best_model.pt'))
+def save_model(model, path):
+    torch.save(
+                {
+                    # State dictionaries
+                    "model_state_dict": model.state_dict(),
+                    # Names
+                    "model_name": model.__class__.__name__,
+                    # Model parameters
+                    "input_size": model.get_input_size(),
+                    "hidden_size": model.get_hidden_size(),
+                    "num_layers": model.get_num_layers(),
+                    "loss_name": model.get_loss_name(),
+                    "fft_reg_param": model.get_fft_reg_param(),
+                    "l1_reg_param": model.get_l1_reg_param(),
+                },
+                path
+            )
+
+
+def compute_loss(loss_fn, X, Y, masks):
+    """
+    Compute loss for each sample in the batch and average them.
+    
+    This is necessary because inside each minibatch, different examples can have different masks.
+    Therefore, different examples will have different shapes, and the loss function will not be able to
+    compute the loss for the entire batch at once.
+
+    Parameters
+    ----------
+    loss_fn : torch.nn.Module
+        A loss function instance.
+    X : torch.Tensor
+        A batch of input sequences. Shape: (batch_size, seq_len, input_size).
+    Y : torch.Tensor
+        A batch of target sequences. Shape: (batch_size, seq_len, input_size).
+    masks : torch.Tensor
+        A batch of masks. Shape: (batch_size, seq_len).
+    """
+    
+    # Calculate loss
+    losses = []
+    for i in range(X.shape[0]):
+        valid_X = X[i][:, masks[i]]
+        valid_Y = Y[i][:, masks[i]]
+        loss_i = loss_fn(valid_X, valid_Y)
+        losses.append(loss_i)
+
+    # Compute average loss for backpropagation
+    total_loss = torch.mean(torch.stack(losses))
+
+    return total_loss
 
 
 def train(

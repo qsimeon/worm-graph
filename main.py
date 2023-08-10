@@ -17,16 +17,6 @@ def pipeline(cfg: DictConfig) -> None:
         # Verifications
         if len(cfg) == 1: # only the pipeline module
             raise ValueError("No submodules in the pipeline. Run python main.py +experiment=your_experiment")
-        
-        if 'train' in cfg.submodule:
-            assert 'model' in cfg.submodule, "Model must be defined before training."
-            assert 'dataset' in cfg.submodule, "Train dataset must be defined before training (no submodule.dataset found)."
-            assert 'train' in cfg.submodule.dataset, "Train dataset must be defined before training (no submodule.dataset.train found)."
-
-        if 'predict' in cfg.submodule:
-            assert 'model' in cfg.submodule, "Model must be defined before making predictions."
-            assert 'dataset' in cfg.submodule, "Prediction dataset must be defined before making predictions (no submodule.dataset found)."
-            assert 'predict' in cfg.submodule.dataset, "Prediction dataset must be defined before making predictions (no submodule.dataset.predict found)."
 
         if 'visualize' in cfg.submodule:
             if cfg.submodule.visualize.log_dir is None:
@@ -45,28 +35,27 @@ def pipeline(cfg: DictConfig) -> None:
             process_data(cfg.submodule.preprocess)
         
         if 'dataset' in cfg.submodule:
-
             if 'for_training' in cfg.submodule.dataset:
-                dataset_train = get_datasets(cfg.submodule.dataset.for_training, name = 'training')
-
+                dataset_train = get_datasets(cfg.submodule.dataset.for_training, name='training')
             if 'for_prediction' in cfg.submodule.dataset:
-                dataset_predict = get_datasets(cfg.submodule.dataset.for_prediction, name = 'prediction')
+                dataset_predict = get_datasets(cfg.submodule.dataset.for_prediction, name='prediction')
+        else:
+            dataset_train = (None, None)
+            dataset_predict = (None, None)
 
         if 'model' in cfg.submodule:
             model = get_model(cfg.submodule.model)
+        else:
+            model = None
 
         if 'train' in cfg.submodule:
-            model, submodules_updated, train_info, metric = train_model(
+            model, metric = train_model(
                 train_config = cfg.submodule.train,
                 model = model,
-                dataset = dataset_train,
-                verbose = True if cfg.experiment.mode == 'MULTIRUN' else False,
+                train_dataset = dataset_train[0],
+                val_dataset = dataset_train[1],
+                verbose=True
             )
-            # Update cfg.submodule
-            cfg.submodule.dataset = OmegaConf.merge(cfg.submodule.dataset, submodules_updated.dataset) # update dataset.train name
-            cfg.submodule.model = OmegaConf.merge(cfg.submodule.model, submodules_updated.model) # update checkpoint path
-            if 'visualize' in cfg.submodule:
-                cfg.submodule.visualize = OmegaConf.merge(cfg.submodule.visualize, submodules_updated.visualize) # update log_dir
 
         if 'predict' in cfg.submodule:
             submodules_updated = make_predictions(
@@ -82,18 +71,6 @@ def pipeline(cfg: DictConfig) -> None:
         # ================== Save updated configs ==================
 
         log_dir = os.getcwd()
-
-        if 'train' in cfg.submodule:
-            # Save train info and keep dataset.train in pipeline info
-            OmegaConf.save(train_info, os.path.join(log_dir, "train_info.yaml"))
-        elif 'dataset' in cfg.submodule:
-            # Delete dataset.train from pipeline info if exists
-            del cfg.submodule.dataset.for_training
-
-        if not 'predict' in cfg.submodule:
-            # Delete dataset.predict from pipeline info if it exists
-            if 'dataset' in cfg.submodule:
-                del cfg.submodule.dataset.for_prediction
 
         OmegaConf.save(cfg, os.path.join(log_dir, "pipeline_info.yaml"))
         

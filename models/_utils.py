@@ -495,7 +495,7 @@ class Model(torch.nn.Module):
         input : torch.Tensor
             Input data with shape (batch, seq_len, neurons)
         mask : torch.Tensor
-            Mask on the neurons with shape (neurons,)
+            Mask on the neurons with shape (batch, neurons)
         tau : int, optional
             Time offset of target
         """
@@ -507,7 +507,7 @@ class Model(torch.nn.Module):
         # set hidden state of internal model
         self.inner_hidden_model.set_hidden(self.hidden)
         # recast the mask to the input type and shape
-        mask = mask.view(1, 1, -1).to(input.dtype)
+        mask = mask.unsqueeze(1).expand_as(input)
         # initialize output tensor with input tensor
         output = self.identity(input * mask)
         # loop through tau

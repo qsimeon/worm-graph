@@ -24,6 +24,7 @@ class NeuralActivityDataset(torch.utils.data.Dataset):
         data,
         time_vec,
         neurons_mask,
+        wormID,
         seq_len=1,
         num_samples=100,
         reverse=False,
@@ -90,6 +91,7 @@ class NeuralActivityDataset(torch.utils.data.Dataset):
         self.time_vec = time_vec.squeeze()
 
         self.max_timesteps, self.num_neurons = data.shape
+        self.wormID = wormID
         self.seq_len = seq_len
         self.reverse = reverse
         self.tau = tau
@@ -135,17 +137,9 @@ class NeuralActivityDataset(torch.utils.data.Dataset):
         # Calculate the residual (forward first derivative)
         Res_tau = (Y_tau - X_tau).detach() / (avg_dt * max(1, self.tau))
 
-        # Store metadata about the sample
-        input = "calcium"
-        target = "residual" if self.use_residual else "calcium"
         metadata = dict(
-            seq_len=self.seq_len,
-            start=start,
-            end=end,
+            wormID=self.wormID,
             tau=self.tau,
-            avg_dt=avg_dt,
-            input=input,
-            target=target,
             time_vec=time_vec,
         )
 
@@ -749,6 +743,7 @@ def split_combined_dataset(combined_dataset, k_splits, num_train_samples, num_va
                     data = train_split.detach(),
                     time_vec = train_time_split.detach(),
                     neurons_mask = neurons_mask,
+                    wormID = wormID,
                     seq_len = seq_len,
                     num_samples = num_samples_split,
                     tau = tau,
@@ -764,6 +759,7 @@ def split_combined_dataset(combined_dataset, k_splits, num_train_samples, num_va
                     data = val_split.detach(),
                     time_vec = val_time_split.detach(),
                     neurons_mask = neurons_mask,
+                    wormID = wormID,
                     seq_len = seq_len,
                     num_samples = num_samples_split,
                     tau = tau,
