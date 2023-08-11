@@ -26,7 +26,7 @@ submodule:
     use_this_train_dataset: null
     use_this_val_dataset: null
   train:
-    epochs: 10
+    epochs: 5
 
 experiment:
   name: default_multirun

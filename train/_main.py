@@ -39,6 +39,9 @@ def train_model(
         model_config = OmegaConf.create({'use_this_pretrained_model': train_config.use_this_pretrained_model})
         model = get_model(model_config)
 
+    # Load model to device
+    model = model.to(DEVICE)
+
     # Parameters
     epochs = train_config.epochs
     batch_size = train_config.batch_size
@@ -80,8 +83,6 @@ def train_model(
 
     # Start training
     logger.info("Starting training loop...")
-
-    model = model.to(DEVICE)
 
     pbar = tqdm(
         range(epochs), 
