@@ -1,8 +1,8 @@
 train:
-  optimizer: Adagrad
+  optimizer: AdamW
   lr: 0.0001
-  epochs: 900
-  save_freq: 100
+  epochs: 20
+  save_freq: 1000
   batch_size: 16
   shuffle: true
   use_this_train_dataset: null # if null, use the dataset specified in dataset.yaml

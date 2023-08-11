@@ -1,30 +1,14 @@
 dataset:
-  for_training:
-    experimental_datasets: Kato2015 #[Kato2015, Nichols2017, Skora2018, Uzel2022, Kaplan2020, Flavell2023, Leifer2023]
-    num_named_neurons: all # number of neurons to train the model with (positive integer or 'all')
-    num_worms: 1 # number of worms to train the model with (positive integer or 'all')
-    k_splits: 2
-    num_train_samples: 16
-    num_val_samples: 16
-    seq_len: 120
-    tau: 1
-    reverse: false
-    use_residual: false
-    smooth_data: true
-    use_this_train_dataset: null # if null, use the dataset specified in dataset.yaml
-    use_this_val_dataset: null # if null, use the dataset specified in dataset.yaml
-
-  for_prediction:
-    experimental_datasets: Skora2018 #[Kato2015, Nichols2017, Skora2018, Uzel2022, Kaplan2020, Flavell2023, Leifer2023]
-    num_named_neurons: 10 # number of neurons to train the model with (positive integer or 'all')
-    num_worms: 10 # number of worms to train the model with (positive integer or 'all')
-    k_splits: 2
-    num_train_samples: 16
-    num_val_samples: 4
-    seq_len: 120
-    tau: 1
-    reverse: false
-    use_residual: false
-    smooth_data: true
-    use_this_train_dataset: null # if null, use the dataset specified in dataset.yaml
-    use_this_val_dataset: null # if null, use the dataset specified in dataset.yaml
+  experimental_datasets: Kato2015 #[Kato2015, Nichols2017, Skora2018, Uzel2022, Kaplan2020, Flavell2023, Leifer2023]
+  num_named_neurons: all # number of neurons to train the model with (positive integer or 'all')
+  num_worms: 12 # number of worms to train the model with (positive integer or 'all')
+  k_splits: 2
+  num_train_samples: 16
+  num_val_samples: 16
+  seq_len: 120
+  tau: 1
+  reverse: false
+  use_residual: false
+  smooth_data: true
+  use_this_train_dataset: null # if null, use the dataset specified in dataset.yaml
+  use_this_val_dataset: null # if null, use the dataset specified in dataset.yaml

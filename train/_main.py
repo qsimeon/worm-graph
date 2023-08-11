@@ -6,8 +6,8 @@ logger = logging.getLogger(__name__)
 def train_model(
         train_config: DictConfig,
         model: torch.nn.Module,
-        train_dataset: None,
-        val_dataset: None,
+        train_dataset: torch.utils.data.Dataset,
+        val_dataset: torch.utils.data.Dataset,
         verbose: bool = False,
 ):
     
@@ -23,7 +23,7 @@ def train_model(
     os.makedirs(os.path.join(log_dir, "train"), exist_ok=True)
     os.makedirs(os.path.join(log_dir, "train", "checkpoints"), exist_ok=True)
 
-    # Load train and validation datasets if asked
+    # Load train and validation datasets if dataset submodule is not in pipeline
     if train_dataset is None:
         assert train_config.use_this_train_dataset is not None, "File path to train dataset must be provided if not using the dataset submodule"
         logger.info("Loading train dataset from %s" % (train_config.use_this_train_dataset))
@@ -33,7 +33,7 @@ def train_model(
         logger.info("Loading validation dataset from %s" % (train_config.use_this_val_dataset))
         val_dataset = torch.load(train_config.use_this_val_dataset)
 
-    # Load model if asked
+    # Load model if model submodule is not in pipeline
     if train_config.use_this_pretrained_model is not None:
         assert train_config.use_this_pretrained_model is not None, "File path to pretrained model must be provided if not using the model submodule"
         model_config = OmegaConf.create({'use_this_pretrained_model': train_config.use_this_pretrained_model})

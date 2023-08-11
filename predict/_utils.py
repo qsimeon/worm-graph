@@ -3,54 +3,69 @@ from predict._pkg import *
 # Init logger
 logger = logging.getLogger(__name__)
 
+
 def model_predict(
-    model: torch.nn.Module,
-    data: torch.Tensor,
-    timesteps: int = 1,
-    context_window: int = MAX_TOKEN_LEN,
-    mask: Union[torch.Tensor, None] = None,
-) -> tuple[torch.Tensor, torch.Tensor]:
-    """Make predictions for all neurons on a dataset with a trained model.
+        log_dir: str,
+        model: torch.nn.Module,
+        dataset: torch.utils.data.Dataset,
+        context_window: int,
+        nb_ts_to_generate: int = None,
+):
+    
+    x, y, mask, metadata = next(iter(dataset))
+    seq_len = x.shape[0]
 
-    This function uses a trained model to predict the future
-    neural activity given sequences of past neural activity.
+    assert context_window < seq_len, (
+        "The context window must be smaller than the sequence length ({}).".format(seq_len)
+    )
 
-    Parameters
-    ----------
-    model : torch.nn.Module
-        Trained model used to make predictions.
-    data : torch.Tensor
-        Calcium data tensor with shape (1, max_timesteps, num_neurons) or
-        (max_timesteps, num_neurons).
-    timesteps : int, optional, default: 1000
-        Number of future timesteps to predict.
-    context_window : int, optional, default: 100
-        Number of previous timesteps to regress on for prediction.
-    mask : torch.Tensor or None, optional, default: None
-        Output mask with shape (num_neurons,) to apply to the predictions.
+    if nb_ts_to_generate is None:
+        nb_ts_to_generate = seq_len - context_window
 
-    Returns
-    -------
-    tuple[torch.Tensor, torch.Tensor]:
-        A tuple containing the predictions and targets as torch tensors.
-        All tensors are of the same shape as the input calcium data.
-    """
-    # verify input shape
-    data = data.squeeze(0)  # (max_timesteps, num_neurons)
-    assert data.ndim == 2, "Calcium data has incorrect shape!"
+    worms_predicted = set()
 
-    # get desired targets and inputs to model
-    targets = data[:, :]
-    inputs = data[:-timesteps, :]
+    model = model.to(DEVICE)
 
-    # get predictions from model
-    model.eval()
-    predictions = model.generate(
-        inputs,
-        timesteps,
-        context_window,
-        mask,
-    ).squeeze(0)
+    # Iterate over the examples in the dataset
+    for x, y, mask, metadata in iter(dataset):
 
-    # Returned sequences are all the same shape as the input `calcium_data`
-    return predictions, targets
+        # Skip example if from the same worm
+        if metadata["wormID"] in worms_predicted:
+            continue
+
+        # Send tensors to device
+        x = x.to(DEVICE)
+        y = y.to(DEVICE)
+        mask = mask.to(DEVICE)
+
+        worms_predicted.add(metadata["wormID"])
+
+        generated_activity = model.generate(
+            input=x.unsqueeze(0),
+            mask=mask.unsqueeze(0),
+            nb_ts_to_generate=nb_ts_to_generate,
+            context_window=context_window
+        ).squeeze(0).detach().cpu().numpy()
+        
+        context_activity = x[:context_window, :].detach().cpu().numpy()
+        ground_truth_activity = x[context_window:, :].detach().cpu().numpy()
+
+        # Convert each tensor into a DataFrame and add type level
+        df_context = pd.DataFrame(context_activity, columns=NEURONS_302)
+        df_context['Type'] = 'Context'
+        df_context.set_index('Type', append=True, inplace=True)
+
+        df_ground_truth = pd.DataFrame(ground_truth_activity, columns=NEURONS_302)
+        df_ground_truth['Type'] = 'Ground Truth'
+        df_ground_truth.set_index('Type', append=True, inplace=True)
+
+        df_generated = pd.DataFrame(generated_activity, columns=NEURONS_302)
+        df_generated['Type'] = 'Generated'
+        df_generated.set_index('Type', append=True, inplace=True)
+
+        # Concatenate the DataFrames
+        result_df = pd.concat([df_context, df_ground_truth, df_generated])
+        result_df = result_df.reorder_levels(['Type', None]).sort_index()
+
+        # Save the DataFrame
+        result_df.to_csv(os.path.join(log_dir, f"{metadata['wormID']}.csv"))

@@ -33,15 +33,9 @@ def pipeline(cfg: DictConfig) -> None:
             process_data(cfg.submodule.preprocess)
         
         if 'dataset' in cfg.submodule:
-            if 'for_training' in cfg.submodule.dataset:
-                logger.info("Loading training dataset")
-                dataset_train = get_datasets(cfg.submodule.dataset.for_training, name='training')
-            if 'for_prediction' in cfg.submodule.dataset:
-                logger.info("Loading prediction dataset")
-                dataset_predict = get_datasets(cfg.submodule.dataset.for_prediction, name='prediction')
+            train_dataset, val_dataset = get_datasets(cfg.submodule.dataset)
         else:
-            dataset_train = (None, None)
-            dataset_predict = (None, None)
+            train_dataset, val_dataset =  None, None
 
         if 'model' in cfg.submodule:
             model = get_model(cfg.submodule.model)
@@ -52,21 +46,24 @@ def pipeline(cfg: DictConfig) -> None:
             model, metric = train_model(
                 train_config = cfg.submodule.train,
                 model = model,
-                train_dataset = dataset_train[0],
-                val_dataset = dataset_train[1],
+                train_dataset = train_dataset,
+                val_dataset = val_dataset,
                 verbose = True if cfg.experiment.mode == 'MULTIRUN' else False,
             )
             # Update visualize submodule to plot current run
-            cfg.submodule.visualize.plot_figures_from_this_log_dir = log_dir
+            if 'visualize' in cfg.submodule:
+                cfg.submodule.visualize.plot_figures_from_this_log_dir = log_dir
 
         if 'predict' in cfg.submodule:
-            submodules_updated = make_predictions(
+            make_predictions(
                 predict_config = cfg.submodule.predict,
-                model =  model,
-                dataset = dataset_predict,
+                model = model,
+                train_dataset = train_dataset,
+                val_dataset = val_dataset,
             )
             # Update visualize submodule to plot current run
-            cfg.submodule.visualize.plot_figures_from_this_log_dir = log_dir
+            if 'visualize' in cfg.submodule:
+                cfg.submodule.visualize.plot_figures_from_this_log_dir = log_dir
 
         # Save pipeline info
         OmegaConf.save(cfg, os.path.join(log_dir, "pipeline_info.yaml"))

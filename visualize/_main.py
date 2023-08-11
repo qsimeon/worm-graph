@@ -13,7 +13,7 @@ def plot_figures(
 
     log_dir = visualize_config.plot_figures_from_this_log_dir
 
-    assert log_dir is not None, "log_dir is None. Please specify a log_dir to plot figures from."
+    assert log_dir is not None, "log_dir is None. Please specify a log directory to plot figures from."
 
     worm = visualize_config.worm
     neuron = visualize_config.neuron

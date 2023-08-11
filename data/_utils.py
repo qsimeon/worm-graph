@@ -557,7 +557,7 @@ def load_Leifer2023():
     return Leifer2023
 
 
-def create_combined_dataset(experimental_datasets, num_named_neurons, num_worms, name='train'):
+def create_combined_dataset(experimental_datasets, num_named_neurons, num_worms):
     """Returns a dict with the worm data of all requested datasets.
 
     Returns a generator object that yields single worm data objects (dict)

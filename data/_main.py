@@ -3,11 +3,9 @@ from data._utils import *
 # Init logger
 logger = logging.getLogger(__name__)
 
-def get_datasets(dataset_config: DictConfig, name='training'):
+def get_datasets(dataset_config: DictConfig):
 
     train_dataset, val_dataset = None, None
-
-    
 
     experimental_datasets = dataset_config.experimental_datasets
     num_named_neurons = dataset_config.num_named_neurons
@@ -32,9 +30,11 @@ def get_datasets(dataset_config: DictConfig, name='training'):
         "num_worms must be a positive integer or 'all'."
     )
 
+    logger.info("Loading datasets.")
+
     combined_dataset, dataset_info, neuron_counts = create_combined_dataset(experimental_datasets,
-                                                                            num_named_neurons, num_worms,
-                                                                            name=name)
+                                                                            num_named_neurons, num_worms
+                                                                            )
     train_dataset, val_dataset = split_combined_dataset(combined_dataset, k_splits, num_train_samples,
                                                          num_val_samples, seq_len, tau, reverse,
                                                          use_residual, smooth_data)
@@ -42,10 +42,10 @@ def get_datasets(dataset_config: DictConfig, name='training'):
     # Save the datasets and information about them
     log_dir = os.getcwd()  # logs/hydra/${now:%Y_%m_%d_%H_%M_%S}
     os.makedirs(os.path.join(log_dir, 'dataset'), exist_ok=True)
-    dataset_info.to_csv(os.path.join(log_dir, 'dataset', f"dataset_info_for_{name}.csv"), index=True, header=True)
-    neuron_counts.to_csv(os.path.join(log_dir, 'dataset', f"neuron_info_for_{name}.csv"), index=True, header=True)
-    torch.save(train_dataset, os.path.join(log_dir, 'dataset', f"train_dataset_for_{name}.pt"))
-    torch.save(val_dataset, os.path.join(log_dir, 'dataset', f"val_dataset_for_{name}.pt"))
+    dataset_info.to_csv(os.path.join(log_dir, 'dataset', f"dataset_info.csv"), index=True, header=True)
+    neuron_counts.to_csv(os.path.join(log_dir, 'dataset', f"neuron_info.csv"), index=True, header=True)
+    torch.save(train_dataset, os.path.join(log_dir, 'dataset', f"train_dataset.pt"))
+    torch.save(val_dataset, os.path.join(log_dir, 'dataset', f"val_dataset.pt"))
 
     if dataset_config.use_this_train_dataset is not None:
         logger.info(f'Overwiting train dataset with {dataset_config.use_this_train_dataset}')

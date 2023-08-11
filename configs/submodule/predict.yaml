@@ -1,6 +1,7 @@
 predict:
-  tau_out: 200 # number of future time steps to predict
-  # constraint: tau_out: int > 0
-  context_len: 200 # length of the context window to use for prediction
-  use_residual: false
-  use_smooth_data: false
+  worms_to_predict: null # if null, predict all the worms in the dataset. Otherwise, predict only the worms in this list
+  nb_ts_to_generate: null # if null, the number of time steps to generate = seq_len - context_window
+  context_window: 100
+  use_this_train_dataset: /home/lrvnc/Projects/worm-graph/logs/hydra/2023_08_11_17_45_41/dataset/train_dataset.pt # if null, use the dataset specified in dataset.yaml
+  use_this_val_dataset: /home/lrvnc/Projects/worm-graph/logs/hydra/2023_08_11_17_45_41/dataset/val_dataset.pt # if null, use the dataset specified in dataset.yaml
+  use_this_model: /home/lrvnc/Projects/worm-graph/logs/hydra/2023_08_11_17_45_41/train/checkpoints/model_best.pt # if null, train from scratch
