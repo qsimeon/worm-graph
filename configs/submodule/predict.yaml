@@ -1,7 +1,7 @@
 predict:
-  worms_to_predict: null # if null, predict all the worms in the dataset. Otherwise, predict only the worms in this list
+  worms_to_predict: [worm0, worm1] # if null, predict all the worms in the dataset. Otherwise, predict only the worms in this list
   nb_ts_to_generate: null # if null, the number of time steps to generate = seq_len - context_window
   context_window: 100
-  use_this_train_dataset: /home/lrvnc/Projects/worm-graph/logs/hydra/2023_08_11_17_45_41/dataset/train_dataset.pt # if null, use the dataset specified in dataset.yaml
-  use_this_val_dataset: /home/lrvnc/Projects/worm-graph/logs/hydra/2023_08_11_17_45_41/dataset/val_dataset.pt # if null, use the dataset specified in dataset.yaml
-  use_this_model: /home/lrvnc/Projects/worm-graph/logs/hydra/2023_08_11_17_45_41/train/checkpoints/model_best.pt # if null, train from scratch
+  use_this_train_dataset: null # if null, use the dataset specified in dataset.yaml
+  use_this_val_dataset: null # if null, use the dataset specified in dataset.yaml
+  use_this_model: null # if null, train from scratch

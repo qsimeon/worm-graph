@@ -10,6 +10,7 @@ def model_predict(
         dataset: torch.utils.data.Dataset,
         context_window: int,
         nb_ts_to_generate: int = None,
+        worms_to_predict: list = None,
 ):
     
     x, y, mask, metadata = next(iter(dataset))
@@ -31,6 +32,10 @@ def model_predict(
 
         # Skip example if from the same worm
         if metadata["wormID"] in worms_predicted:
+            continue
+
+        # Skip example if not in the list of worms to predict
+        if worms_to_predict is not None and metadata["wormID"] not in worms_to_predict:
             continue
 
         # Send tensors to device
@@ -69,3 +74,5 @@ def model_predict(
 
         # Save the DataFrame
         result_df.to_csv(os.path.join(log_dir, f"{metadata['wormID']}.csv"))
+
+    logger.info("Done. {}".format(worms_predicted))

@@ -52,7 +52,6 @@ def make_predictions(
     -----
     """
 
-
     log_dir = os.getcwd()  # logs/hydra/${now:%Y_%m_%d_%H_%M_%S}
 
     # Create prediction directories
@@ -77,23 +76,25 @@ def make_predictions(
         model = get_model(model_config)
 
     # Make predictions in the train and validation datasets
+    logger.info("Start making predictions (train dataset)...")
     model_predict(
         log_dir = os.path.join(log_dir, 'prediction', 'train'),
         model = model,
         dataset = train_dataset,
         context_window = predict_config.context_window,
         nb_ts_to_generate = predict_config.nb_ts_to_generate,
+        worms_to_predict = predict_config.worms_to_predict,
     )
 
+    logger.info("Start making predictions (val. dataset)...")
     model_predict(
         log_dir = os.path.join(log_dir, 'prediction', 'val'),
         model = model,
         dataset = val_dataset,
         context_window = predict_config.context_window,
         nb_ts_to_generate = predict_config.nb_ts_to_generate,
+        worms_to_predict = predict_config.worms_to_predict,
     )
-    
-    return None
 
 
 if __name__ == "__main__":
