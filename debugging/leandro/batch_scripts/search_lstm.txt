@@ -1,8 +1,0 @@
-[32m[I 2023-08-10 19:31:21,196][0m A new study created in memory with name: hyperparameter_search[0m
-[2023-08-10 19:31:21,196][HYDRA] Study name: hyperparameter_search
-[2023-08-10 19:31:21,196][HYDRA] Storage: None
-[2023-08-10 19:31:21,196][HYDRA] Sampler: TPESampler
-[2023-08-10 19:31:21,196][HYDRA] Directions: ['minimize']
-[2023-08-10 19:31:21,255][HYDRA] Submitit 'slurm' sweep output dir : logs/hydra/2023_08_10_19_31_21
-[2023-08-10 19:31:21,259][HYDRA] 	#0 : submodule.train.optimizer=AdamW submodule.train.lr=0.001 submodule.train.batch_size=16 submodule.dataset.for_training.seq_len=120 submodule.dataset.for_training.num_train_samples=8 submodule.model.hidden_size=256 +experiment=hyperparameter_lstm
-[2023-08-10 19:31:21,270][HYDRA] 	#1 : submodule.train.optimizer=AdamW submodule.train.lr=1e-05 submodule.train.batch_size=64 submodule.dataset.for_training.seq_len=120 submodule.dataset.for_training.num_train_samples=32 submodule.model.hidden_size=128 +experiment=hyperparameter_lstm
