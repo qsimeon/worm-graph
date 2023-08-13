@@ -3,145 +3,61 @@ from data._utils import *
 # Init logger
 logger = logging.getLogger(__name__)
 
-def get_dataset(dataset_config: DictConfig, name='train'):
-    """Returns a dict with the worm data of all requested datasets.
+def get_datasets(dataset_config: DictConfig):
 
-    Returns a generator object that yields single worm data objects (dict)
-    from the multi-worm dataset specified by the `name` param in 'dataset.yaml'.
+    train_dataset, val_dataset = None, None
 
-    Parameters
-    ----------
-    config: DictConfig
-        Hydra configuration object.
-
-    Calls
-    -----
-    load_dataset : function in data/_utils.py
-        Load a specified dataset by name.
-
-    Returns
-    -------
-    dataset: dict
-        Dictionary of single worm data objects.
-
-    Notes
-    -----
-    * The keys of the dictionary are the worm IDs ('worm0', 'worm1', etc.).
-    * The features of each worm are (22 in total):
-        'calcium_data', 'dataset', 'dt', 'max_timesteps', 'named_neuron_to_slot',
-        'named_neurons_mask', 'neuron_to_slot', 'neurons_mask',
-        'num_named_neurons', 'num_neurons', 'num_unknown_neurons',
-        'residual_calcium', 'slot_to_named_neuron', 'slot_to_neuron',
-        'slot_to_unknown_neuron', 'smooth_calcium_data', 'smooth_method',
-        'smooth_residual_calcium', 'time_in_seconds', 'unknown_neuron_to_slot',
-        'unknown_neurons_mask', 'worm'.
-    """
-
-    log_dir = os.getcwd()  # logs/hydra/${now:%Y_%m_%d_%H_%M_%S}
-
-    # Combine datasets when given a list of dataset names
-    if isinstance(dataset_config.name, str):
-        dataset_names = [dataset_config.name]
-    else:
-        dataset_names = sorted(list(dataset_config.name))
-
+    experimental_datasets = dataset_config.experimental_datasets
     num_named_neurons = dataset_config.num_named_neurons
     num_worms = dataset_config.num_worms
+    k_splits = dataset_config.k_splits
+    num_train_samples = dataset_config.num_train_samples
+    num_val_samples = dataset_config.num_val_samples
+    seq_len = dataset_config.seq_len
+    tau = dataset_config.tau
+    reverse = dataset_config.reverse
+    use_residual = dataset_config.use_residual
+    smooth_data = dataset_config.smooth_data
 
-    # Assert num_named_neurons is a positive integer or 'all'
+    # Verifications
+    assert isinstance(k_splits, int) and k_splits > 1, "k_splits must be an integer > 1"
+
     assert isinstance(num_named_neurons, int) or num_named_neurons == "all", (
         "num_named_neurons must be a positive integer or 'all'."
     )
 
-    # Assert num_worms is a positive integer or 'all'
     assert isinstance(num_worms, int) or num_worms == "all", (
         "num_worms must be a positive integer or 'all'."
     )
 
-    logger.info('Combining datasets: {}'.format(dataset_names))
+    logger.info("Loading datasets.")
 
-    # Load the dataset(s)
-    combined_dataset = dict()
+    combined_dataset, dataset_info, neuron_counts = create_combined_dataset(experimental_datasets,
+                                                                            num_named_neurons, num_worms
+                                                                            )
+    train_dataset, val_dataset = split_combined_dataset(combined_dataset, k_splits, num_train_samples,
+                                                         num_val_samples, seq_len, tau, reverse,
+                                                         use_residual, smooth_data)
     
-    for dataset_name in dataset_names:
-        multi_worms_dataset = load_dataset(dataset_name)
-
-        # Select the `num_named_neurons` neurons (overwrite the masks)
-        if num_named_neurons != "all":
-            multi_worms_dataset = select_named_neurons(multi_worms_dataset, num_named_neurons)
-
-        for worm in multi_worms_dataset:
-            if worm in combined_dataset:
-                worm_ = "worm%s" % len(combined_dataset)
-                combined_dataset[worm_] = multi_worms_dataset[worm]
-                combined_dataset[worm_]["worm"] = worm_
-                combined_dataset[worm_]["original_worm"] = worm
-            else:
-                combined_dataset[worm] = multi_worms_dataset[worm]
-                combined_dataset[worm]["original_worm"] = worm
-
-    # Verify if len(combined_dataset) is >= num_worms
-    if num_worms != "all":
-        assert len(combined_dataset) >= num_worms, (
-            "num_worms must be less than or equal to the number of worms in the dataset(s). "
-        )
-
-        # Select `num_worms` worms
-        wormIDs = [wormID for wormID in combined_dataset.keys()]
-        wormIDs_to_keep = np.random.choice(wormIDs, size=num_worms, replace=False)
-        logger.info('Selecting {} worms from {}'.format(len(wormIDs_to_keep), len(combined_dataset)))
-
-        # Remove the worms that are not in `wormIDs_to_keep`
-        for wormID in wormIDs:
-            if wormID not in wormIDs_to_keep:
-                combined_dataset.pop(wormID)
-
-    combined_dataset = {f"worm{i}": combined_dataset[key] for i, key in enumerate(combined_dataset.keys())}
-
-    # Information about the dataset
-    dataset_info = {
-        'dataset': [],
-        'original_index': [],
-        'combined_dataset_index': [],
-        'neurons': [],
-    }
-
-    combined_dataset_neurons = []
-
-    for worm, data in combined_dataset.items():
-        dataset_info['dataset'].append(data['dataset'])
-        dataset_info['original_index'].append(data['original_worm'])
-        dataset_info['combined_dataset_index'].append(data['worm'])
-        worm_neurons = [neuron for slot, neuron in data['slot_to_named_neuron'].items()]
-        dataset_info['neurons'].append(worm_neurons)
-        combined_dataset_neurons = combined_dataset_neurons + worm_neurons
-
-    dataset_info = pd.DataFrame(dataset_info)
-
-    combined_dataset_neurons = np.array(combined_dataset_neurons)
-    # Count occurernces of each neuron
-    neuron_counts = np.unique(combined_dataset_neurons, return_counts=True)
-    # Sort by neuron count
-    neuron_counts = np.array(sorted(zip(*neuron_counts), key=lambda x: x[1], reverse=True))
-    # Create a dataframe
-    neuron_counts = pd.DataFrame(neuron_counts, columns=["neuron", "count"])
-
-    # Save the dataset info
+    # Save the datasets and information about them
+    log_dir = os.getcwd()  # logs/hydra/${now:%Y_%m_%d_%H_%M_%S}
     os.makedirs(os.path.join(log_dir, 'dataset'), exist_ok=True)
-    dataset_info.to_csv(os.path.join(log_dir, 'dataset', name+'_dataset_info.csv'), index=True, header=True)
-    neuron_counts.to_csv(os.path.join(log_dir, 'dataset', name+'_neuron_counts.csv'), index=True, header=True)
+    dataset_info.to_csv(os.path.join(log_dir, 'dataset', f"dataset_info.csv"), index=True, header=True)
+    neuron_counts.to_csv(os.path.join(log_dir, 'dataset', f"neuron_info.csv"), index=True, header=True)
+    torch.save(train_dataset, os.path.join(log_dir, 'dataset', f"train_dataset.pt"))
+    torch.save(val_dataset, os.path.join(log_dir, 'dataset', f"val_dataset.pt"))
 
-    # Save the dataset
-    if dataset_config.save:
-        file = os.path.join(ROOT_DIR, "data/processed/neural", "custom.pickle")
-        with open(file, "wb") as f:
-            pickle.dump(combined_dataset, f)
+    if dataset_config.use_this_train_dataset is not None:
+        logger.info(f'Overwiting train dataset with {dataset_config.use_this_train_dataset}')
+        train_dataset = torch.load(dataset_config.use_this_train_dataset)
+    if dataset_config.use_this_val_dataset is not None:
+        logger.info(f'Overwiting val. dataset with {dataset_config.use_this_val_dataset}')
+        val_dataset = torch.load(dataset_config.use_this_val_dataset)
 
-    return combined_dataset
-
+    return train_dataset, val_dataset
 
 if __name__ == "__main__":
     config = OmegaConf.load("configs/submodule/dataset.yaml")
     print(OmegaConf.to_yaml(config), end="\n\n")
-    dataset_train = get_dataset(config.dataset.train)
-    dataset_predict = get_dataset(config.dataset.predict)
+    dataset_train = get_datasets(config.dataset.train)
+    dataset_predict = get_datasets(config.dataset.predict)

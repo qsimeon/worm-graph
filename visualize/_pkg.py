@@ -8,6 +8,7 @@ import torch
 import torch_geometric
 import os
 import logging
+import ast
 
 from datetime import datetime
 from matplotlib.lines import Line2D

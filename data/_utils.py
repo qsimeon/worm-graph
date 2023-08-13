@@ -22,10 +22,11 @@ class NeuralActivityDataset(torch.utils.data.Dataset):
     def __init__(
         self,
         data,
+        time_vec,
+        neurons_mask,
+        wormID,
         seq_len=1,
         num_samples=100,
-        neurons=None,
-        time_vec=None,
         reverse=False,
         tau=1,
         use_residual=False,
@@ -68,7 +69,7 @@ class NeuralActivityDataset(torch.utils.data.Dataset):
             keys: 'seq_len', 'start' index , 'end' index
         """
 
-        super(NeuralActivityDataset, self).__init__()
+        super().__init__()
 
         # Check the inputs
         assert torch.is_tensor(data), "Recast the data as type `torch.tensor`."
@@ -81,31 +82,23 @@ class NeuralActivityDataset(torch.utils.data.Dataset):
         ), "Enter a integer offset `0 <= tau < max_timesteps // 2`."
 
         # Create time vector if not provided
-        if time_vec is not None:
-            assert torch.is_tensor(
-                time_vec
-            ), "Recast the time vector as type `torch.tensor`."
-            assert time_vec.squeeze().ndim == 1 and len(time_vec) == data.size(
-                0
-            ), "Time vector must have shape (len(data), )"
-            self.time_vec = time_vec.squeeze()
-        else:
-            self.time_vec = torch.arange(data.size(0)).double()
+        assert torch.is_tensor(
+            time_vec
+        ), "Recast the time vector as type `torch.tensor`."
+        assert time_vec.squeeze().ndim == 1 and len(time_vec) == data.size(
+            0
+        ), "Time vector must have shape (len(data), )"
+        self.time_vec = time_vec.squeeze()
 
-        self.max_timesteps, num_neurons = data.shape
+        self.max_timesteps, self.num_neurons = data.shape
+        self.wormID = wormID
         self.seq_len = seq_len
         self.reverse = reverse
         self.tau = tau
         self.use_residual = use_residual
 
-        # Select out requested neurons
-        if neurons is not None:
-            self.neurons = np.array(neurons)  # use the subset of neurons given
-        else:  # neurons is None
-            self.neurons = np.arange(num_neurons)  # use all the neurons
-
-        self.num_neurons = self.neurons.size
         self.data = data
+        self.neurons_mask = neurons_mask
         self.num_samples = num_samples
         self.data_samples = self.__data_generator()
 
@@ -136,25 +129,17 @@ class NeuralActivityDataset(torch.utils.data.Dataset):
         avg_dt = torch.diff(time_vec).mean()
 
         # Data samples: input (X_tau) and target (Y_tau)
-        X_tau = self.data[start:end, self.neurons].detach().clone()
+        X_tau = self.data[start:end, :].detach().clone()
         Y_tau = (
-            self.data[start + self.tau : end + self.tau, self.neurons].detach().clone()
+            self.data[start + self.tau : end + self.tau, :].detach().clone()
         )  # Overlap
 
         # Calculate the residual (forward first derivative)
         Res_tau = (Y_tau - X_tau).detach() / (avg_dt * max(1, self.tau))
 
-        # Store metadata about the sample
-        input = "calcium"
-        target = "residual" if self.use_residual else "calcium"
         metadata = dict(
-            seq_len=self.seq_len,
-            start=start,
-            end=end,
+            wormID=self.wormID,
             tau=self.tau,
-            avg_dt=avg_dt,
-            input=input,
-            target=target,
             time_vec=time_vec,
         )
 
@@ -162,7 +147,7 @@ class NeuralActivityDataset(torch.utils.data.Dataset):
         if self.use_residual:
             Y_tau = Res_tau
 
-        return X_tau, Y_tau, metadata
+        return X_tau, Y_tau, self.neurons_mask, metadata
 
     def __data_generator(self):
         """Private method for generating data samples.
@@ -324,18 +309,18 @@ def select_named_neurons(multi_worm_dataset, num_named_neurons):
 
     # Drop worms with less than `num_named_neurons` neurons
     if len(worms_to_drop) > 0:
-        logger.info("Dropping {} worms. {} remaining".format(
+        logger.info("Dropping {} worms from {}. {} remaining.".format(
             len(worms_to_drop),
+            data['dataset'],
             len(list(set(multi_worm_dataset.keys()) - set(worms_to_drop))))
             )
     else:
-        logger.info("No worms dropped.")
+        logger.info("No worms dropped from {}.".format(data['dataset']))
 
     for wormID in worms_to_drop:
         del multi_worm_dataset[wormID]
 
     return multi_worm_dataset
-
 
 
 def find_reliable_neurons(multi_worm_dataset):
@@ -432,6 +417,7 @@ def load_dataset(name):
     loader = eval("load_" + name)  # call the "load" functions below
 
     return loader()
+
 
 def load_Custom():
     """
@@ -569,6 +555,225 @@ def load_Leifer2023():
     # unpickle the data
     Leifer2023 = pickle.load(pickle_in)
     return Leifer2023
+
+
+def create_combined_dataset(experimental_datasets, num_named_neurons, num_worms):
+    """Returns a dict with the worm data of all requested datasets.
+
+    Returns a generator object that yields single worm data objects (dict)
+    from the multi-worm dataset specified by the `name` param in 'dataset.yaml'.
+
+    Parameters
+    ----------
+    config: DictConfig
+        Hydra configuration object.
+
+    Calls
+    -----
+    load_dataset : function in data/_utils.py
+        Load a specified dataset by name.
+
+    Returns
+    -------
+    dataset: dict
+        Dictionary of single worm data objects.
+
+    Notes
+    -----
+    * The keys of the dictionary are the worm IDs ('worm0', 'worm1', etc.).
+    * The features of each worm are (22 in total):
+        'calcium_data', 'dataset', 'dt', 'max_timesteps', 'named_neuron_to_slot',
+        'named_neurons_mask', 'neuron_to_slot', 'neurons_mask',
+        'num_named_neurons', 'num_neurons', 'num_unknown_neurons',
+        'residual_calcium', 'slot_to_named_neuron', 'slot_to_neuron',
+        'slot_to_unknown_neuron', 'smooth_calcium_data', 'smooth_method',
+        'smooth_residual_calcium', 'time_in_seconds', 'unknown_neuron_to_slot',
+        'unknown_neurons_mask', 'worm'.
+    """
+
+    log_dir = os.getcwd()  # logs/hydra/${now:%Y_%m_%d_%H_%M_%S}
+
+    # Combine datasets when given a list of dataset names
+    if isinstance(experimental_datasets, str):
+        dataset_names = [experimental_datasets]
+    else:
+        dataset_names = sorted(list(experimental_datasets))
+
+    logger.info('Combined datasets: {}'.format(dataset_names))
+
+    # Load the dataset(s)
+    combined_dataset = dict()
+    
+    for dataset_name in dataset_names:
+        multi_worms_dataset = load_dataset(dataset_name)
+
+        # Select the `num_named_neurons` neurons (overwrite the masks)
+        if num_named_neurons != "all":
+            multi_worms_dataset = select_named_neurons(multi_worms_dataset, num_named_neurons)
+
+        for worm in multi_worms_dataset:
+            if worm in combined_dataset:
+                worm_ = "worm%s" % len(combined_dataset)
+                combined_dataset[worm_] = multi_worms_dataset[worm]
+                combined_dataset[worm_]["worm"] = worm_
+                combined_dataset[worm_]["original_worm"] = worm
+            else:
+                combined_dataset[worm] = multi_worms_dataset[worm]
+                combined_dataset[worm]["original_worm"] = worm
+
+    # Verify if len(combined_dataset) is >= num_worms
+    if num_worms != "all":
+        assert len(combined_dataset) >= num_worms, (
+            "num_worms must be less than or equal to the number of worms in the dataset(s). "
+        )
+
+        # Select `num_worms` worms
+        wormIDs = [wormID for wormID in combined_dataset.keys()]
+        wormIDs_to_keep = np.random.choice(wormIDs, size=num_worms, replace=False)
+        logger.info('Selecting {} worms from {} in the combined dataset'.format(len(wormIDs_to_keep), len(combined_dataset)))
+
+        # Remove the worms that are not in `wormIDs_to_keep`
+        for wormID in wormIDs:
+            if wormID not in wormIDs_to_keep:
+                combined_dataset.pop(wormID)
+
+    combined_dataset = {f"worm{i}": combined_dataset[key] for i, key in enumerate(combined_dataset.keys())}
+
+    # Information about the dataset
+    dataset_info = {
+        'dataset': [],
+        'original_index': [],
+        'combined_dataset_index': [],
+        'neurons': [],
+    }
+
+    combined_dataset_neurons = []
+
+    for worm, data in combined_dataset.items():
+        dataset_info['dataset'].append(data['dataset'])
+        dataset_info['original_index'].append(data['original_worm'])
+        dataset_info['combined_dataset_index'].append(data['worm'])
+        worm_neurons = [neuron for slot, neuron in data['slot_to_named_neuron'].items()]
+        dataset_info['neurons'].append(worm_neurons)
+        combined_dataset_neurons = combined_dataset_neurons + worm_neurons
+
+    dataset_info = pd.DataFrame(dataset_info)
+
+    combined_dataset_neurons = np.array(combined_dataset_neurons)
+    # Count occurernces of each neuron
+    neuron_counts = np.unique(combined_dataset_neurons, return_counts=True)
+    # Sort by neuron count
+    neuron_counts = np.array(sorted(zip(*neuron_counts), key=lambda x: x[1], reverse=True))
+    # Create a dataframe
+    neuron_counts = pd.DataFrame(neuron_counts, columns=["neuron", "count"])
+
+    return combined_dataset, dataset_info, neuron_counts
+
+
+def distribute_samples(data_splits, total_nb_samples):
+    # Calculate the base number of samples for each split
+    base_samples_per_split = total_nb_samples // len(data_splits)
+    # Calculate the remainder
+    remainder = total_nb_samples % len(data_splits)
+
+    samples_to_take = []
+    
+    # Distribute the samples
+    for i in range(len(data_splits)):
+        if i < remainder:
+            samples_to_take.append(base_samples_per_split + 1)
+        else:
+            samples_to_take.append(base_samples_per_split)
+
+    return samples_to_take
+
+
+def split_combined_dataset(combined_dataset, k_splits, num_train_samples, num_val_samples, seq_len, tau, reverse, use_residual, smooth_data):
+
+    # Choose whether to use calcium or residual data
+    if use_residual:
+        key_data = "residual_calcium"
+    else:
+        key_data = "calcium_data"
+
+    # Choose whether to use original or smoothed data
+    if smooth_data:
+        key_data = "smooth_" + key_data
+    else:
+        key_data = key_data
+
+    # Store the training and validation datasets
+    train_dataset = []
+    val_dataset = []
+
+    # Loop through the worms in the dataset
+    for wormID, single_worm_dataset in combined_dataset.items():
+
+        # Extract relevant features from the dataset
+        data = single_worm_dataset[key_data]
+        neurons_mask = single_worm_dataset["named_neurons_mask"]
+        time_vec = single_worm_dataset["time_in_seconds"]
+
+        # Verifications
+        assert isinstance(seq_len, int) and 0 < seq_len < len(data), "seq_len must be an integer > 0 and < len(data)"
+        assert isinstance(tau, int) and tau < (len(data) - seq_len), "The desired tau is too long. Try a smaller value"
+        assert seq_len < (len(data) // k_splits), "The desired seq_len is too long. Try a smaller seq_len or decreasing k_splits"
+
+        # Split the data and the time vector into k splits
+        data_splits = np.array_split(data, k_splits)
+        time_vec_splits = np.array_split(time_vec, k_splits)
+
+        # Separate the splits into training and validation sets
+        train_data_splits = data_splits[::2]
+        train_time_vec_splits = time_vec_splits[::2]
+        val_data_splits = data_splits[1::2]
+        val_time_vec_splits = time_vec_splits[1::2]
+
+        # Number of total time steps in each split
+        total_train_time_steps = np.sum([len(split) for split in train_data_splits])
+        total_val_time_steps = np.sum([len(split) for split in val_data_splits])
+
+        # Number of samples in each split
+        train_samples_per_split = distribute_samples(train_data_splits, num_train_samples)
+        val_samples_per_split = distribute_samples(val_data_splits, num_val_samples)
+
+        # Create a dataset for each split
+        for train_split, train_time_split, num_samples_split in zip(train_data_splits, train_time_vec_splits, train_samples_per_split):
+            train_dataset.append(
+                NeuralActivityDataset(
+                    data = train_split.detach(),
+                    time_vec = train_time_split.detach(),
+                    neurons_mask = neurons_mask,
+                    wormID = wormID,
+                    seq_len = seq_len,
+                    num_samples = num_samples_split,
+                    tau = tau,
+                    use_residual = use_residual,
+                    reverse = reverse,
+                )
+            )
+
+        
+        for val_split, val_time_split, num_samples_split in zip(val_data_splits, val_time_vec_splits, val_samples_per_split):
+            val_dataset.append(
+                NeuralActivityDataset(
+                    data = val_split.detach(),
+                    time_vec = val_time_split.detach(),
+                    neurons_mask = neurons_mask,
+                    wormID = wormID,
+                    seq_len = seq_len,
+                    num_samples = num_samples_split,
+                    tau = tau,
+                    use_residual = use_residual,
+                    reverse = reverse,
+                )
+            )
+
+    # Concatenate the datasets
+    train_dataset = torch.utils.data.ConcatDataset(train_dataset) # Nb of train examples = nb train samples * nb of worms
+    val_dataset = torch.utils.data.ConcatDataset(val_dataset) # Nb of val examples = nb train samples * nb of worms
+
+    return train_dataset, val_dataset
 
 
 def graph_inject_data(single_worm_dataset, connectome_graph):

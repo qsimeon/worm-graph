@@ -495,7 +495,7 @@ class Model(torch.nn.Module):
         input : torch.Tensor
             Input data with shape (batch, seq_len, neurons)
         mask : torch.Tensor
-            Mask on the neurons with shape (neurons,)
+            Mask on the neurons with shape (batch, neurons)
         tau : int, optional
             Time offset of target
         """
@@ -507,7 +507,7 @@ class Model(torch.nn.Module):
         # set hidden state of internal model
         self.inner_hidden_model.set_hidden(self.hidden)
         # recast the mask to the input type and shape
-        mask = mask.view(1, 1, -1).to(input.dtype)
+        mask = mask.unsqueeze(1).expand_as(input)
         # initialize output tensor with input tensor
         output = self.identity(input * mask)
         # loop through tau
@@ -602,48 +602,41 @@ class Model(torch.nn.Module):
             return regularized_loss
 
         return loss
+    
 
     def generate(
-        self,
-        inputs: torch.Tensor,
-        future_timesteps: int = 1,
-        context_len: int = MAX_TOKEN_LEN,
-        mask: Union[torch.Tensor, None] = None,
+            self,
+            input: torch.Tensor,
+            mask: torch.Tensor,
+            nb_ts_to_generate: int,
+            context_window: int,
     ):
-        """
-        Generate future timesteps of neural activity.
-        """
-        # check dimensions of input
-        if inputs.ndim == 2:
-            inputs = inputs.unsqueeze(0)
-        else:
-            assert inputs.ndim == 3, "Inputs must have shape (B, T, C)."
-        # create mask if none is provided
-        mask = torch.ones(inputs.shape[-1], dtype=torch.bool) if mask is None else mask
-        # use the full sequence as the context
-        context_len = min(context_len, inputs.size(1))
-        logger.info("Generating {} future timesteps, conditioned on {} timesteps with {} window size.".format(future_timesteps, inputs.size(1), context_len))
 
-        # initialize output tensor
-        output = torch.zeros(
-            (inputs.size(0), inputs.size(1) + future_timesteps, inputs.size(2)),
-            device=inputs.device,
-        )
-        output[:, : inputs.size(1), :] = inputs  # (B, T, C)
-        # generate future timesteps
-        with torch.no_grad():
-            for i in range(future_timesteps):
-                # condition on the previous context_len timesteps
-                input_cond = output[
-                    :, inputs.size(1) - context_len + i : inputs.size(1) + i, :
-                ]  # (B, T, C)
-                # get the prediction of next timestep
-                input_forward = self(input_cond, mask, tau=1)
-                # focus only on the last time step
-                next_timestep = input_forward[:, -1, :]  # (B, C)
-                # append predicted next timestep to the running sequence
-                output[:, inputs.size(1) + i, :] = next_timestep  # (B, T+1, C)
-        return output  # (B, T+timesteps, C)
+        self.eval()
+
+        generated_values = []
+
+        with torch.no_grad(): 
+            for t in range(nb_ts_to_generate):
+
+                # Get the last context_window values of the input tensor
+                x = input[:, t:context_window+t, :]  # shape (1, context_window, 302)
+
+                # Get predictions
+                predictions = self(x, mask, tau=self.tau)  # shape (1, context_window, 302)
+
+                # Get last predicted value
+                last_time_step = predictions[:, -1, :].unsqueeze(0)  # shape (1, 1, 302)
+
+                # Append the prediction to the generated_values list and input tensor
+                generated_values.append(last_time_step)
+                input = torch.cat((input, last_time_step), dim=1)  # add the prediction to the input tensor
+
+        # Stack the generated values to a tensor
+        generated_tensor = torch.cat(generated_values, dim=1)  # shape (nb_ts_to_generate, 302)
+        
+        return generated_tensor
+
 
     def sample(self, timesteps):
         """

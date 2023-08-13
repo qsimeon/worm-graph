@@ -35,8 +35,8 @@ def get_model(model_config: DictConfig) -> torch.nn.Module:
     """
 
     # If a checkpoint is given (True), load a saved model
-    if model_config.checkpoint_path:
-        PATH = os.path.join(ROOT_DIR, model_config.checkpoint_path)
+    if model_config.use_this_pretrained_model:
+        PATH = os.path.join(ROOT_DIR, model_config.use_this_pretrained_model)
         checkpoint = torch.load(PATH, map_location=torch.device(DEVICE))
         model_name = checkpoint["model_name"]
         input_size = checkpoint["input_size"]
@@ -55,7 +55,7 @@ def get_model(model_config: DictConfig) -> torch.nn.Module:
             l1_reg_param=l1_reg_param,
         )
         model.load_state_dict(model_state_dict)
-        logger.info("Loaded model from checkpoint: {}".format(PATH))
+        logger.info("Loading model from checkpoint: {}".format(model_config.use_this_pretrained_model))
 
     # Otherwise, instantiate a new model
     else:

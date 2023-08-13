@@ -4,401 +4,228 @@ from train._utils import *
 logger = logging.getLogger(__name__)
 
 def train_model(
-    train_config: DictConfig,
-    model: torch.nn.Module,
-    dataset: dict,
-    verbose: bool = False,
-) -> tuple[torch.nn.Module, str]:
-    """Trains a neural network model on a multi-worm dataset.
-
-    The function saves the training progress, loss curves, and model
-    checkpoints during training. This function takes in a configuration
-    dictionary, model, dataset, and optional parameters to control the
-    training process. It returns the trained model and the path to the
-    directory containing the training and evaluation logs.
-
-    Parameters
-    ----------
-    config : DictConfig
-        Hydra configuration object containing training parameters.
-    model : torch.nn.Module
-        The neural network model to be trained.
-    dataset : dict
-        A dictionary containing the multi-worm dataset.
-    shuffle_worms : bool, optional
-        Whether to shuffle all worms. Defaults to True.
-    log_dir : str or None, optional
-        Path to the directory where training and evaluation logs will be
-        saved. If None, the current working directory will be used.
-        Defaults to None.
-
-    Calls
-    -----
-    split_train_test : function in train/_utils.py
-        Splits data into train and test sets for a single worm.
-    optimize_model : function in train/_utils.py
-        Trains and validates the model for the specified number of epochs.
-
-    Returns
-    -------
-    tuple : (torch.nn.Module, str)
-        A tuple containing the trained model and the path to the directory
-        with training and evaluation logs.
-
-    Notes
-    -----
-    * You can find the loss curves and checkpoints of the trained model in
-      the `log_dir` directory.
-    * Calcium data is used by default. Set use_residual to True in main.yaml
-      to use the residual data instead.
-    * No smoothening is applied to the data by default. Set smooth_data to
-      True in main.yaml to use the smoothened data instead.
-    """
-
-    # Check if we have a valid dataset (must have at least one worm: "worm0")
-    assert "worm0" in dataset, "Not a valid dataset object."
-
-    # Get some helpful variables
-    dataset_name = dataset["worm0"]["dataset"]
-    model_class_name = model.__class__.__name__
-    timestamp = datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
-    num_unique_worms = len(dataset)
-    train_epochs = train_config.epochs + 1
-    shuffle_samples = train_config.shuffle_samples
-    batch_size = train_config.num_samples // train_config.num_batches
-    use_residual = train_config.use_residual
-    smooth_data = train_config.use_smooth_data
-    shuffle_worms = train_config.shuffle_worms
-
+        train_config: DictConfig,
+        model: torch.nn.Module,
+        train_dataset: torch.utils.data.Dataset,
+        val_dataset: torch.utils.data.Dataset,
+        verbose: bool = False,
+):
+    
+    # Verifications
+    assert isinstance(train_config.epochs, int) and train_config.epochs > 0, "epochs must be a positive integer"
+    assert isinstance(train_config.batch_size, int) and train_config.batch_size > 0, "batch_size must be a positive integer"
+    assert isinstance(train_config.shuffle, bool), "shuffle must be a boolean"
+    assert train_config.optimizer in ['SGD', 'Adam', 'AdamW', 'Adagrad', 'Adadelta', 'RMSprop'], "optimizer must be one of SGD, Adam, AdamW, Adagrad, Adadelta, RMSprop"
+    
     log_dir = os.getcwd()  # logs/hydra/${now:%Y_%m_%d_%H_%M_%S}
 
-    # Create a model checkpoints folder
-    os.makedirs(os.path.join(log_dir, "checkpoints"), exist_ok=True)
+    # Create train and checkpoints directories
+    os.makedirs(os.path.join(log_dir, "train"), exist_ok=True)
+    os.makedirs(os.path.join(log_dir, "train", "checkpoints"), exist_ok=True)
 
-    # Cycle the dataset until the desired number epochs obtained
-    dataset_items = sorted(dataset.items()) * train_epochs
-    assert (
-        len(dataset_items) == train_epochs * num_unique_worms
-    ), "Invalid number of worms."
+    # Load train and validation datasets if dataset submodule is not in pipeline
+    if train_dataset is None:
+        assert train_config.use_this_train_dataset is not None, "File path to train dataset must be provided if not using the dataset submodule"
+        logger.info("Loading train dataset from %s" % (train_config.use_this_train_dataset))
+        train_dataset = torch.load(train_config.use_this_train_dataset)
+    if val_dataset is None:
+        assert train_config.use_this_val_dataset is not None, "File path to validation dataset must be provided if not using the dataset submodule"
+        logger.info("Loading validation dataset from %s" % (train_config.use_this_val_dataset))
+        val_dataset = torch.load(train_config.use_this_val_dataset)
 
-    # Shuffle (without replacement) the worms (including duplicates) in the dataset
-    if shuffle_worms:
-        dataset_items = random.sample(dataset_items, k=len(dataset_items))
+    # Load model if model submodule is not in pipeline
+    if train_config.use_this_pretrained_model is not None:
+        assert train_config.use_this_pretrained_model is not None, "File path to pretrained model must be provided if not using the model submodule"
+        model_config = OmegaConf.create({'use_this_pretrained_model': train_config.use_this_pretrained_model})
+        model = get_model(model_config)
 
-    # Split the dataset into cohorts of worms; there should be one cohort per epoch
-    worm_cohorts = np.array_split(dataset_items, train_epochs)
-    worm_cohorts = [_.tolist() for _ in worm_cohorts]  # Convert cohort arrays to lists
-    assert len(worm_cohorts) == train_epochs, "Invalid number of cohorts."
-    assert all(
-        [len(cohort) == num_unique_worms for cohort in worm_cohorts]
-    ), "Invalid cohort size."
-
-    # Move model to device
+    # Load model to device
     model = model.to(DEVICE)
 
-    # Instantiate the optimizer
-    opt_param = train_config.optimizer
-    optim_name = "torch.optim." + opt_param
-    learn_rate = train_config.learn_rate
+    # Parameters
+    epochs = train_config.epochs
+    batch_size = train_config.batch_size
+    shuffle = train_config.shuffle
+    criterion = model.loss_fn()
+    save_freq = train_config.save_freq
 
-    if train_config.optimizer is not None:
-        if isinstance(opt_param, str):
-            optimizer = eval(
-                optim_name + "(model.parameters(), lr=" + str(learn_rate) + ")"
-            )
-        assert isinstance(
-            optimizer, torch.optim.Optimizer
-        ), "Please use an instance of torch.optim.Optimizer."
-    else:
-        optimizer = torch.optim.SGD(model.parameters(), lr=learn_rate)
+    _, _, _, metadata = next(iter(train_dataset))
+    tau = metadata['tau']
 
-    # Early stopping
+    optim_name = "torch.optim." + train_config.optimizer
+    lr = train_config.lr
+    optimizer = eval(optim_name + "(model.parameters(), lr=" + str(lr) + ")")
+
+    # Instantiate EarlyStopping
     es = EarlyStopping(
         patience = train_config.early_stopping.patience,
         min_delta = train_config.early_stopping.delta,
-        restore_best_weights = train_config.early_stopping.restore_best_weights,
         )
 
-    # Initialize train/test loss metrics arrays
-    data = {
-        "epochs": np.zeros(train_epochs, dtype=int),
-        "num_train_samples": np.zeros(train_epochs, dtype=int),
-        "num_test_samples": np.zeros(train_epochs, dtype=int),
-        "base_train_losses": np.zeros(train_epochs, dtype=np.float32),
-        "base_test_losses": np.zeros(train_epochs, dtype=np.float32),
-        "train_losses": np.zeros(train_epochs, dtype=np.float32),
-        "test_losses": np.zeros(train_epochs, dtype=np.float32),
-        "centered_train_losses": np.zeros(train_epochs, dtype=np.float32),
-        "centered_test_losses": np.zeros(train_epochs, dtype=np.float32),
-    }
+    # Create dataloaders
+    trainloader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=shuffle)
+    valloader = torch.utils.data.DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
 
-    # Create keyword arguments for `split_train_test`
-    kwargs = dict(
-        k_splits=train_config.k_splits,
-        seq_len=train_config.seq_len,
-        num_samples=train_config.num_samples,  # Number of samples per worm
-        reverse=train_config.reverse,  # Generate samples backward from the end of data
-        tau=train_config.tau_in,
-        use_residual=use_residual,
-    )
+    # Loss metrics
+    train_running_base_loss = 0
+    train_running_loss = 0
+    train_epoch_loss = []
+    train_epoch_baseline = []
 
-    # Choose whether to use calcium or residual data
-    if use_residual:
-        key_data = "residual_calcium"
-    else:
-        key_data = "calcium_data"
+    val_running_base_loss = 0
+    val_running_loss = 0
+    val_epoch_loss = []
+    val_epoch_baseline = []
 
-    # Choose whether to use original or smoothed data
-    if smooth_data:
-        key_data = "smooth_" + key_data
-    else:
-        key_data = key_data
+    # Computation time metrics
+    train_computation_time = []
+    val_computation_time = []
 
-    # Throughout training, keep track of what neurons have been covered
-    coverage_mask = torch.zeros_like(
-        dataset["worm0"]["named_neurons_mask"], dtype=torch.bool
-    )
-    # Memoize creation of data loaders and masks for speedup
-    memo_loaders_masks = dict()
-    # Train for train_config.num_epochs
-    reset_epoch = 0
-    # Keep track of the amount of train data per epoch (in timesteps)
-    worm_timesteps = 0
-    # Keep track of the total optimization time
-    cumsum_seconds = 0
-    # Keep track of the average optimization time per epoch
-    seconds_per_epoch = 0
+    # Start training
+    logger.info("Starting training loop...")
 
-    logger.info(f"Start training.")
-
-    # Main FOR loop; train the model for multiple epochs (one cohort = one epoch)
-    # In one epoch we process all worms (i.e one cohort)
     pbar = tqdm(
-        enumerate(worm_cohorts), 
-        total=len(worm_cohorts),
+        range(epochs), 
+        total=epochs,
         position=0, leave=True,  # position at top and remove when done
         dynamic_ncols=True,  # adjust width to terminal window size
         )
-    
-    for i, cohort in pbar:
 
-        # Create a array of datasets and masks for the cohort
-        train_datasets = np.empty(num_unique_worms, dtype=object)
+    for epoch in pbar:
 
-        if i == 0:  # Keep the validation dataset the same
-            test_datasets = np.empty(num_unique_worms, dtype=object)
+        # ============================ Train loop ============================
 
-        neurons_masks = np.empty(num_unique_worms, dtype=object)
-
-        # Iterate over each worm in the cohort
-        for j, (worm, single_worm_dataset) in enumerate(cohort):
-            # Check the memo for existing loaders and masks
-            if worm in memo_loaders_masks:
-                train_datasets[j] = memo_loaders_masks[worm]["train_dataset"]
-                if i == 0:  # Keep the validation dataset the same
-                    test_datasets[j] = memo_loaders_masks[worm]["test_dataset"]
-                train_mask = memo_loaders_masks[worm]["train_mask"]
-                test_mask = memo_loaders_masks[worm]["test_mask"]
-
-            # Create data loaders and train/test masks only once per worm
-            else:
-                (
-                    train_datasets[j],
-                    tmp_test_dataset,
-                    train_mask,
-                    test_mask,
-                ) = split_train_test(
-                    data=single_worm_dataset[key_data],
-                    time_vec=single_worm_dataset["time_in_seconds"],  # time vector
-                    **kwargs,
-                )
-                if i == 0:  # Keep the validation dataset the same
-                    test_datasets[j] = tmp_test_dataset
-                    
-                # Add to memo
-                memo_loaders_masks[worm] = dict(
-                    train_dataset=train_datasets[j],
-                    test_dataset=tmp_test_dataset,
-                    train_mask=train_mask,
-                    test_mask=test_mask,
-                )
-
-            # Get the neurons mask for this worm
-            neurons_masks[j] = single_worm_dataset["named_neurons_mask"]
-            # Update coverage mask
-            coverage_mask |= single_worm_dataset["named_neurons_mask"]
-
-            # Mutate this worm's dataset with its train and test masks
-            dataset[worm].setdefault("train_mask", train_mask.detach())
-            dataset[worm].setdefault("test_mask", test_mask.detach())
-
-            # Increment the count of the amount of train data (measured in timesteps) of one epoch
-            if i == 0:
-                worm_timesteps += train_mask.sum().item()
-
-        # Create full datasets and masks for the cohort
-        neurons_mask = list(neurons_masks)
-        train_dataset = ConcatDataset(list(train_datasets))
-        test_dataset = ConcatDataset(list(test_datasets))
-
-        train_loader = DataLoader(
-            train_dataset,
-            batch_size=batch_size,
-            shuffle=shuffle_samples,  # shuffle sampled sequences
-            pin_memory=True,
-            num_workers=0,
-        )  # (X, Y, Dict)
-
-        test_loader = DataLoader(
-            test_dataset,
-            batch_size=batch_size,
-            shuffle=shuffle_samples,  # shuffle sampled sequences
-            pin_memory=True,
-            num_workers=0,
-        )  # (X, Y, Dict)
-
-        # Optimize for 1 epoch per cohort
-        num_epochs = 1  # 1 cohort = 1 epoch
-
-        # Get the starting timestamp
+        model.train()
         start_time = time.perf_counter()
 
-        # `optimize_model` accepts the train and test data loaders, the neuron masks and optimizes for num_epochs
-        model, log = optimize_model(
-            model=model,
-            train_loader=train_loader,
-            test_loader=test_loader,
-            neurons_mask=neurons_mask,
-            optimizer=optimizer,
-            start_epoch=reset_epoch,
-            learn_rate=learn_rate,
-            num_epochs=num_epochs,
-            use_residual=use_residual,
-        )
+        for batch_idx, (X_train, Y_train, masks_train, metadata) in enumerate(trainloader):
 
-        # Get the ending timestamp
+            X_train = X_train.to(DEVICE)
+            Y_train = Y_train.to(DEVICE)
+            masks_train = masks_train.to(DEVICE)
+
+            optimizer.zero_grad() # Reset gradients
+
+            # Baseline model: identity model - predict that the next time step is the same as the current one.
+            # This is the simplest model we can think of: predict that the next time step is the same as the current one
+            # is better than predict any other random number.
+            train_baseline = compute_loss(loss_fn=criterion, X=X_train, Y=Y_train, masks=masks_train)
+            
+            # Model
+            y_pred = model(X_train, masks_train, tau)
+            train_loss = compute_loss(loss_fn=criterion, X=y_pred, Y=Y_train, masks=masks_train)
+
+            # Backpropagation (skip first epoch)
+            train_loss.backward()
+            optimizer.step()
+
+            # Update running losses
+            train_running_base_loss += train_baseline.item()
+            train_running_loss += train_loss.item()
+
+            # Store metrics in MLflow
+            mlflow.log_metric("iteration_train_loss", train_loss.item(), step=epoch*len(trainloader) + batch_idx)
+            mlflow.log_metric("iteration_train_baseline", train_baseline.item(), step=epoch*len(trainloader) + batch_idx)
+
         end_time = time.perf_counter()
 
-        # Calculate the elapsed and average time
-        n = i + 1
-        seconds = end_time - start_time
-        cumsum_seconds += seconds
-        seconds_per_epoch = (
-            n - 1
-        ) / n * seconds_per_epoch + 1 / n * seconds  # running average
+        # Store metrics
+        train_epoch_loss.append(train_running_loss / len(trainloader))
+        train_epoch_baseline.append(train_running_base_loss / len(trainloader))
+        train_computation_time.append(end_time - start_time)
 
-        # Retrieve losses and sample counts
-        for key in data:  # pre-allocated memory for `data[key]`
-            # with `num_epochs=1`, this is just data[key][i] = log[key]
-            data[key][(i * num_epochs) : (i * num_epochs) + len(log[key])] = log[key]
-        
-        # Log the test and train losses every 10 epochs
-        if i % 10 == 0 and verbose:
-            logger.info(
-                f"Epoch {i}/{len(worm_cohorts)} | Train loss: {log['train_losses'][0]:.4f} | Test loss: {log['test_losses'][0]:.4f} | SpE: {seconds_per_epoch:.2f}"
-            )
+        mlflow.log_metric("epoch_train_loss", train_epoch_loss[-1], step=epoch)
+        mlflow.log_metric("epoch_train_baseline", train_epoch_baseline[-1], step=epoch)
 
-        # Extract the latest validation loss
-        val_loss = data["centered_test_losses"][-1]
+        # Reset running losses
+        train_running_base_loss = 0
+        train_running_loss = 0
 
-        # Get what neurons have been covered (i.e. seen) so far
-        covered_neurons = set(
-            np.array(NEURONS_302)[torch.nonzero(coverage_mask).squeeze().numpy()]
-        )
-        num_covered_neurons = len(covered_neurons)
+        # ============================ Validation loop ============================
 
-        # Saving model checkpoints
-        if (i % train_config.save_freq == 0) or (i + 1 == train_epochs):
-            # logger.info("Saving a model checkpoint ({} epochs).".format(i))
+        model.eval()
 
-            # Save model checkpoints
-            chkpt_name = "{}_epochs_{}_worms.pt".format(
-                reset_epoch, i * num_unique_worms
-            )
-            checkpoint_path = os.path.join(log_dir, "checkpoints", chkpt_name)
-            torch.save(
-                {
-                    # state dictionaries
-                    "model_state_dict": model.state_dict(),
-                    "optimizer_state_dict": optimizer.state_dict(),
-                    # names
-                    "dataset_name": dataset_name,
-                    "model_name": model_class_name,
-                    "optimizer_name": optim_name,
-                    # training params
-                    "epoch": reset_epoch,
-                    "seq_len": train_config.seq_len,
-                    "tau": train_config.tau_in,
-                    "loss": val_loss,
-                    "learning_rate": learn_rate,
-                    "smooth_data": smooth_data,
-                    # model instance params
-                    "input_size": model.get_input_size(),
-                    "hidden_size": model.get_hidden_size(),
-                    "num_layers": model.get_num_layers(),
-                    "loss_name": model.get_loss_name(),
-                    "fft_reg_param": model.get_fft_reg_param(),
-                    "l1_reg_param": model.get_l1_reg_param(),
-                    # other variables
-                    "timestamp": timestamp,
-                    "elapsed_time_seconds": cumsum_seconds,
-                    "covered_neurons": covered_neurons,
-                    "worm_timesteps": worm_timesteps,
-                    "num_worm_cohorts": i,
-                    "num_unique_worms": num_unique_worms,
-                },
-                checkpoint_path,
-            )
+        with torch.no_grad():
 
-        if es(model, log['test_losses'][0]):
-            logger.info("Early stopping triggered (epoch {}).".format(i))
+            start_time = time.perf_counter()
+
+            for batch_idx, (X_val, Y_val, masks_val, metadata_val) in enumerate(valloader):
+
+                X_val = X_val.to(DEVICE)
+                Y_val = Y_val.to(DEVICE)
+                masks_val = masks_val.to(DEVICE)
+
+                # Baseline model: identity model - predict that the next time step is the same as the current one.
+                # This is the simplest model we can think of: predict that the next time step is the same as the current one
+                # is better than predict any other random number.
+                val_baseline = compute_loss(loss_fn=criterion, X=X_val, Y=Y_val, masks=masks_val)
+
+                # Model
+                y_pred = model(X_val, masks_val, tau)
+                val_loss = compute_loss(loss_fn=criterion, X=y_pred, Y=Y_val, masks=masks_val)
+
+                # Update running losses
+                val_running_base_loss += val_baseline.item()
+                val_running_loss += val_loss.item()
+
+                # Store metrics in MLflow
+                mlflow.log_metric("iteration_val_loss", val_loss.item(), step=epoch*len(valloader) + batch_idx)
+                mlflow.log_metric("iteration_val_baseline", val_baseline.item(), step=epoch*len(valloader) + batch_idx)
+
+            end_time = time.perf_counter()
+
+            # Store metrics
+            val_epoch_loss.append(val_running_loss / len(valloader))
+            val_epoch_baseline.append(val_running_base_loss / len(valloader))
+            val_computation_time.append(end_time - start_time)
+
+            mlflow.log_metric("epoch_val_loss", val_epoch_loss[-1], step=epoch)
+            mlflow.log_metric("epoch_val_baseline", val_epoch_baseline[-1], step=epoch)
+
+            # Reset running losses
+            val_running_base_loss = 0
+            val_running_loss = 0
+
+        # Save model checkpoint
+        if epoch % save_freq == 0:
+            save_model(model, os.path.join(log_dir, "train", "checkpoints", "model_epoch_" + str(epoch) + ".pt"))
+
+        # Early stopping
+        if es(model, train_epoch_loss[-1]):
+            logger.info("Early stopping triggered (epoch {}).".format(epoch))
             break
-        
+
+        # Print statistics if in verbose mode
+        if verbose:
+            logger.info("Epoch: {}/{} | Train loss: {:.4f} | Val. loss: {:.4f}".format(epoch+1, epochs, train_epoch_loss[-1], val_epoch_loss[-1]))
+
         # Update progress bar
-        tqdm_description = f'Epoch {i+1}/{len(worm_cohorts)}'
-        tqdm_postfix = {'train_loss': log['train_losses'][0], 'val_loss': log['test_losses'][0]}  # assuming train_loss is defined
-        pbar.set_description(tqdm_description)
-        pbar.set_postfix(tqdm_postfix)
+        pbar.set_description(f'Epoch {epoch}/{epochs}')
+        pbar.set_postfix({'Train loss': train_epoch_loss[-1], 'Val. loss': val_epoch_loss[-1]})
 
-        # Set to next epoch before continuing
-        reset_epoch = log["epochs"][-1] + 1
-        continue
-
-    # Save loss curves
-    loss_df = pd.DataFrame(data=data)
-    loss_df = loss_df[loss_df['train_losses'] != 0]  # remove 0s (when early stopping is triggered)
-    loss_df.to_csv(index=True, header=True, path_or_buf=os.path.join(log_dir, "loss_curves.csv"))
-
-    # Configs to update
-    submodules_updated = OmegaConf.create({
-        'dataset': {'train': {}},
-        'model': {},
-        'visualize': {},
-        }
-    )
-    OmegaConf.update(submodules_updated.dataset.train, "name", dataset_name, merge=True) # updated dataset name
-    OmegaConf.update(submodules_updated.model, "checkpoint_path", checkpoint_path.split("worm-graph/")[-1], merge=True) # updated checkpoint path
-    OmegaConf.update(submodules_updated.visualize, "log_dir", log_dir, merge=True) # update visualize directory
-
-    # Save train info
-    train_info = OmegaConf.create({
-        'timestamp': timestamp,
-        'num_unique_worms': num_unique_worms,
-        'num_covered_neurons': num_covered_neurons,
-        'worm_timesteps': worm_timesteps,
-        'seconds_per_epoch': seconds_per_epoch,
-        }
-    )
-
-    # Train loop is over and wasn't early stopped. Load the best model
+    # Restore best model and save it
     logger.info("Training loop is over. Loading best model.")
     model.load_state_dict(es.best_model.state_dict())
+    save_model(model, os.path.join(log_dir, "train", "checkpoints", "model_best.pt"))
 
-    # Metric that we want optuna to optimize
-    metric = data['test_losses'][:i].min()
+    # Save training and evaluation metrics into a csv file
+    train_metrics = pd.DataFrame({
+        "epoch": np.arange(len(train_epoch_loss)),
+        "train_loss": train_epoch_loss,
+        "train_baseline": train_epoch_baseline,
+        "train_computation_time": train_computation_time,
+        "val_loss": val_epoch_loss,
+        "val_baseline": val_epoch_baseline,
+        "val_computation_time": val_computation_time
+    })
+    train_metrics.to_csv(os.path.join(log_dir, "train", "train_metrics.csv"), index=False)
 
-    # returned trained model, an update to the submodules and the train info
-    return model, submodules_updated, train_info, metric
+    # Metric for optuna (lowest validation loss)
+    metric = min(val_epoch_loss)
+    if metric == np.NaN:
+        metric = np.inf
+
+    return model, metric
 
 
 if __name__ == "__main__":
@@ -420,7 +247,7 @@ if __name__ == "__main__":
     os.chdir(log_dir)
 
     # Dataset
-    train_dataset = get_dataset(dataset_config.dataset.train)
+    train_dataset = get_datasets(dataset_config.dataset.train)
 
     # Get the model
     model = get_model(model_config.model)
