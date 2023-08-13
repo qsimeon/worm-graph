@@ -337,164 +337,75 @@ def plot_before_after_weights(log_dir: str) -> None:
     return None
 
 
-def plot_targets_predictions(
-    log_dir: str,
-    worm: Union[str, None] = "all",
-    neuron: Union[str, None] = "all",
-    use_residual: bool = False,
-) -> None:
-    """
-    Plot of the target calcium or calcium residual time series overlayed
-    with the predicted calcium or calcium residual time series of a single
-    neuron in a given worm.
-    """
-    # Whether using residual or calcium signal
-    signal_str = "residual" if use_residual else "calcium"
+def plot_predictions(log_dir, neurons_to_plot=None, worms_to_plot=None):
 
-    # Process the pipeline_info.yaml file inside the log folder
-    cfg_path = os.path.join(log_dir, "pipeline_info.yaml")
-    if os.path.exists(cfg_path):
-        config = OmegaConf.structured(OmegaConf.load(cfg_path))
-        config = config.submodule
-    else:
-        raise FileNotFoundError(
-            f"Could not find pipeline_info.yaml file in {log_dir}."
-        )
+    for type_dir in os.listdir(os.path.join(log_dir, 'prediction')):
 
-    # Get strings for plot title
-    predict_dataset_name = config.dataset.predict.name
-    predict_dataset_name = predict_dataset_name.split("_")
-    predict_dataset_name = [ds_name[:-4] for ds_name in predict_dataset_name]
-    predict_dataset_name = ", ".join(predict_dataset_name)
+        for file in os.listdir(os.path.join(log_dir, 'prediction', type_dir)):
+            
+            wormID = file[:-4]
 
-    model_name = config.model.type
-    tau_out = config.predict.tau_out
-    
-    # Recursive call for all worms
-    if (worm is None) or (worm.lower() == "all"):
-        all_worms = [fname for fname in os.listdir(log_dir) if fname.startswith("worm")]
-        for _worm_ in all_worms:
-            plot_targets_predictions(log_dir, _worm_, neuron)
-        return None
-    else:
-        assert worm in set(os.listdir(log_dir)), "No data for requested worm found."
+            # Skip file if not .csv
+            if not file.endswith('.csv') and wormID not in worms_to_plot:
+                continue
 
-    # Return if no targets or predicitions files found
-    predictions_csv = os.path.join(log_dir, worm, "predicted_" + signal_str + ".csv")
-    targets_csv = os.path.join(log_dir, worm, "target_" + signal_str + ".csv")
-    if (not os.path.exists(predictions_csv)) or (not os.path.exists(targets_csv)):
-        logger.error("No targets or predictions found in log directory.")
-        return None
-    # Load predictions dataframe
-    predictions_df = pd.read_csv(predictions_csv, index_col=0)
-    tau_out = predictions_df["tau"][0]
-    # Load targets dataframe
-    targets_df = pd.read_csv(targets_csv, index_col=0)
+            url = os.path.join(log_dir, 'prediction', type_dir, file)
 
-    # Plot helper
-    def func(_neuron_):
-        os.makedirs(os.path.join(log_dir, worm, "figures"), exist_ok=True)
-        
-        # Create the plot title
-        plt_title = (
-            "Model: {}\nPredict dataset: {}\nWorm index: {}\nPrediction {}: {}".format(
-                model_name,
-                predict_dataset_name,
-                worm,
-                r'$\tau$',
-                tau_out,
-            )
-        )
+            # Acess the prediction directory
+            df = pd.read_csv(url)
+            df.set_index(['Type', 'Unnamed: 1'], inplace=True)
+            df.index.names = ['Type', '']
 
-        # Create a figure with a larger size. Adjust (8, 6) as per your need.
-        fig, ax = plt.subplots(figsize=(15, 5))
-        
-        # Use sns whitegrid style
-        sns.set_style("whitegrid")
-        # Use palette tab10
-        sns.set_palette("tab10")
+            # Load named neurons
+            ds_info = pd.read_csv(os.path.join(log_dir, 'dataset', 'dataset_info.csv'))
+            neurons = ds_info[ds_info['combined_dataset_index']==wormID]['neurons']
+            neurons = ast.literal_eval(neurons.values[0]) # convert str to list
 
-        sns.lineplot(
-            data=targets_df,
-            x=targets_df.time_in_seconds,
-            y=targets_df[_neuron_],
-            label="Target",
-            color=sns.color_palette("tab10")[3], #red
-            linestyle="dashed",
-            alpha=0.5,
-            linewidth=1.5,
-            ax=ax,
-        )
+            seq_len = len(pd.concat([df.loc['Context'], df.loc['Ground Truth']], axis=0))
+            time_vector = np.arange(seq_len)
 
-        sns.lineplot(
-            data=predictions_df,
-            x=targets_df.time_in_seconds,
-            y=predictions_df[_neuron_],
-            color=sns.color_palette("tab10")[0], #blue
-            label="Prediction",
-            alpha=1.0,
-            linewidth=1.1,
-            ax=ax,
-        )
+            time_context = time_vector[:len(df.loc['Context'])]
+            time_ground_truth = time_vector[len(df.loc['Context']):seq_len]
+            time_generated = time_vector[len(df.loc['Context']):]
 
-        ylo, yhi = ax.get_ylim()
+            sns.set_style('whitegrid')
 
-        ax.fill_between(
-            targets_df.time_in_seconds,
-            ylo,
-            yhi,
-            where=predictions_df["train_test_label"] == "train",
-            alpha=0.2,
-            facecolor=sns.color_palette("hls", 8)[0], #red
-            label="Train stage",
-        )
+            palette = sns.color_palette("tab10")
+            ground_truth_color = palette[0]   # Red-like color
+            generated_color = palette[3]   # Green-like color
 
-        ax.fill_between(
-            targets_df.time_in_seconds,
-            ylo,
-            yhi,
-            where=predictions_df["train_test_label"] == "test",
-            alpha=0.2,
-            facecolor=sns.color_palette("hls", 8)[1], #yellow
-            label="Test stage",
-        )
+            logger.info(f'Plotting neuron predictions for {type_dir}/{wormID}...')
 
-        ax.fill_between(
-            targets_df.time_in_seconds.to_numpy()[-tau_out:],
-            ylo,
-            yhi,
-            alpha=0.2,
-            facecolor=sns.color_palette("hls", 8)[2], #green
-            label="Prediction stage",
-        )
+            for neuron in neurons:
 
-        ax.legend(loc="upper left", fontsize='small')
-        
-        # Adjust the plot layout
-        x_position_percent = 0.01  # Adjust this value to set the desired position
-        x_position_box = ax.get_xlim()[0] + (ax.get_xlim()[1] - ax.get_xlim()[0]) * x_position_percent
-        y_position_box = min(targets_df[_neuron_].min(), predictions_df[_neuron_].min())
-        plt.text(x_position_box, y_position_box, plt_title, bbox=dict(facecolor='white', edgecolor='black', boxstyle='round'), style='italic')
-        plt.title("Neural activity: {} (GCaMP fluorescence) - {}".format(signal_str, _neuron_))
-        plt.xlabel("Time (s)")
-        plt.ylabel(signal_str.capitalize() + " ($\Delta F / F$)")
-        plt.tight_layout()
-        plt.savefig(
-            os.path.join(log_dir, worm, "figures", signal_str + "_%s.png" % _neuron_)
-        )
-        plt.close()
-        return None
+                # Skip neuron if not in neurons_to_plot
+                if neurons_to_plot is not None and neuron not in neurons_to_plot:
+                    continue
 
-    # plot predictions for neuron(s)
-    columns = set(predictions_df.columns)
-    if (neuron is None) or (neuron.lower() == "all"):
-        for _neuron_ in set(NEURONS_302) & columns:
-            func(_neuron_)
-    elif neuron in columns:
-        func(neuron)
-    else:
-        pass  # do nothing
-    return None
+                fig, ax = plt.subplots(figsize=(10, 4))
+
+                ax.plot(time_context, df.loc['Context', neuron], color=ground_truth_color, label='Ground truth activity')
+                ax.plot(time_ground_truth, df.loc['Ground Truth', neuron], color=ground_truth_color, alpha=0.5)
+                ax.plot(time_generated, df.loc['Generated', neuron], color=generated_color, label='Model activity')
+
+                # Fill the context window
+                ax.axvspan(time_context[0], time_context[-1], alpha=0.1, color=ground_truth_color, label='Context window')
+
+                # Fill the generated window
+                ax.axvspan(time_generated[0], time_generated[-1], alpha=0.1, color=generated_color, label='Generation window')
+
+                ax.set_title(f'Neuronal Activity of {neuron}')
+                ax.set_xlabel('Time steps')
+                ax.set_ylabel('Activity ($\Delta F / F$)')
+                ax.legend(loc='upper right')
+
+                plt.tight_layout()
+
+                # Make figure directory
+                os.makedirs(os.path.join(log_dir, 'prediction', type_dir, wormID), exist_ok=True)
+
+                plt.savefig(os.path.join(log_dir, 'prediction', type_dir, wormID, f'{neuron}.png'), dpi=300)
+                plt.close()
 
 
 def plot_correlation_scatterplot(

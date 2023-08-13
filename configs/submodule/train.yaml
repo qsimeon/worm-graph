@@ -1,7 +1,7 @@
 train:
   optimizer: AdamW
   lr: 0.0001
-  epochs: 200
+  epochs: 5
   save_freq: 1000
   batch_size: 16
   shuffle: true

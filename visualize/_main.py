@@ -15,23 +15,22 @@ def plot_figures(
 
     assert log_dir is not None, "log_dir is None. Please specify a log directory to plot figures from."
 
-    worm = visualize_config.worm
-    neuron = visualize_config.neuron
-    use_residual = visualize_config.use_residual
-
     # Loop through submodules log directories
     for submodule_dir in os.listdir(log_dir):
 
         if submodule_dir == 'dataset':
+            logger.info("Plotting submodule 'dataset'.")
             continue
 
         if submodule_dir == 'train':
+            logger.info("Plotting submodule 'train'.")
             plot_loss_curves(log_dir=log_dir, info_to_display=None)
             # plot_before_after_weights
 
-        if submodule_dir == 'predict':
+        if submodule_dir == 'prediction':
+            logger.info("Plotting submodule 'prediction'.")
+            plot_predictions(log_dir=log_dir, neurons_to_plot=visualize_config.predict.neurons_to_plot, worms_to_plot=visualize_config.predict.worms_to_plot)
             # plot_correlation_scatterplot
-            # plot_targets_predictions
             continue
 
     return None
