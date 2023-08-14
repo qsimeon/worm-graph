@@ -9,7 +9,7 @@ hydra:
   # These parameters will be tested just when MULTIRUN mode is used.
   # Use the submodule parameters if RUN.
       params:
-        submodule.dataset.num_worms: 10, 50, 100, 150, 200, 246
+        submodule.dataset.num_worms: 10, 50, 100, 150, 200, 245
 
 submodule:
 
