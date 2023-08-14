@@ -1,0 +1,25 @@
+Error executing job with overrides: ['submodule.dataset.num_worms=1', '+experiment=num_worms']
+Traceback (most recent call last):
+  File "/net/vast-storage/scratch/vast/yanglab/lrvenan/worm-graph/main.py", line 98, in <module>
+    pipeline()
+  File "/home/lrvenan/.local/lib/python3.9/site-packages/hydra/main.py", line 94, in decorated_main
+    _run_hydra(
+  File "/home/lrvenan/.local/lib/python3.9/site-packages/hydra/_internal/utils.py", line 394, in _run_hydra
+    _run_app(
+  File "/home/lrvenan/.local/lib/python3.9/site-packages/hydra/_internal/utils.py", line 465, in _run_app
+    run_and_report(
+  File "/home/lrvenan/.local/lib/python3.9/site-packages/hydra/_internal/utils.py", line 223, in run_and_report
+    raise ex
+  File "/home/lrvenan/.local/lib/python3.9/site-packages/hydra/_internal/utils.py", line 220, in run_and_report
+    return func()
+  File "/home/lrvenan/.local/lib/python3.9/site-packages/hydra/_internal/utils.py", line 466, in <lambda>
+    lambda: hydra.multirun(
+  File "/home/lrvenan/.local/lib/python3.9/site-packages/hydra/_internal/hydra.py", line 162, in multirun
+    ret = sweeper.sweep(arguments=task_overrides)
+  File "/home/lrvenan/.local/lib/python3.9/site-packages/hydra/_internal/core_plugins/basic_sweeper.py", line 181, in sweep
+    _ = r.return_value
+  File "/home/lrvenan/.local/lib/python3.9/site-packages/hydra/core/utils.py", line 260, in return_value
+    raise self._return_value
+omegaconf.errors.ConfigAttributeError: Key 'options' is not in struct
+    full_key: experiment.options
+    object_type=dict

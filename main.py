@@ -78,9 +78,9 @@ def pipeline(cfg: DictConfig) -> None:
         if 'analysis' in cfg.submodule:
             pass
 
-        if cfg.experiment.name in ['num_worms', 'num_named_neurons']:
-            log_dir = os.path.dirname(log_dir) # Because experiments run in multirun mode
-            plot_experiment(log_dir, cfg.experiment)
+        #if cfg.experiment.name in ['num_worms', 'num_named_neurons']:
+        #    log_dir = os.path.dirname(log_dir) # Because experiments run in multirun mode
+        #    plot_experiment(log_dir, cfg.experiment)
 
         
         # Save experiment parameters (MLflow)

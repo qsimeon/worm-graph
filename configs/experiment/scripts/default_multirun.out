@@ -1,3 +1,4 @@
-[2023-08-14 14:38:42,962][HYDRA] Submitit 'slurm' sweep output dir : logs/hydra/2023_08_14_14_38_42
-[2023-08-14 14:38:42,965][HYDRA] 	#0 : submodule.dataset.num_named_neurons=5 +experiment=default_multirun
-[2023-08-14 14:38:42,974][HYDRA] 	#1 : submodule.dataset.num_named_neurons=10 +experiment=default_multirun
+[2023-08-14 15:33:45,170][HYDRA] Submitit 'slurm' sweep output dir : logs/hydra/2023_08_14_15_33_44
+[2023-08-14 15:33:45,173][HYDRA] 	#0 : submodule.dataset.num_worms=1 +experiment=num_worms
+[2023-08-14 15:33:45,179][HYDRA] 	#1 : submodule.dataset.num_worms=2 +experiment=num_worms
+[2023-08-14 15:33:45,185][HYDRA] 	#2 : submodule.dataset.num_worms=3 +experiment=num_worms
