@@ -1,4 +1,3 @@
-Error executing job with overrides: ['submodule.dataset.num_worms=1', '+experiment=num_worms']
 Traceback (most recent call last):
   File "/net/vast-storage/scratch/vast/yanglab/lrvenan/worm-graph/main.py", line 98, in <module>
     pipeline()
@@ -16,10 +15,21 @@ Traceback (most recent call last):
     lambda: hydra.multirun(
   File "/home/lrvenan/.local/lib/python3.9/site-packages/hydra/_internal/hydra.py", line 162, in multirun
     ret = sweeper.sweep(arguments=task_overrides)
-  File "/home/lrvenan/.local/lib/python3.9/site-packages/hydra/_internal/core_plugins/basic_sweeper.py", line 181, in sweep
-    _ = r.return_value
-  File "/home/lrvenan/.local/lib/python3.9/site-packages/hydra/core/utils.py", line 260, in return_value
-    raise self._return_value
-omegaconf.errors.ConfigAttributeError: Key 'options' is not in struct
-    full_key: experiment.options
-    object_type=dict
+  File "/home/lrvenan/.local/lib/python3.9/site-packages/hydra/_internal/core_plugins/basic_sweeper.py", line 177, in sweep
+    results = self.launcher.launch(batch, initial_job_idx=initial_job_idx)
+  File "/home/lrvenan/.local/lib/python3.9/site-packages/hydra_plugins/hydra_submitit_launcher/submitit_launcher.py", line 146, in launch
+    return [j.results()[0] for j in jobs]
+  File "/home/lrvenan/.local/lib/python3.9/site-packages/hydra_plugins/hydra_submitit_launcher/submitit_launcher.py", line 146, in <listcomp>
+    return [j.results()[0] for j in jobs]
+  File "/home/lrvenan/.local/lib/python3.9/site-packages/submitit/core/core.py", line 289, in results
+    outcome, result = self._get_outcome_and_result()
+  File "/home/lrvenan/.local/lib/python3.9/site-packages/submitit/core/core.py", line 384, in _get_outcome_and_result
+    raise utils.UncompletedJobError("\n".join(message))
+submitit.core.utils.UncompletedJobError: Job 32030781_0 (task: 0) with path /net/vast-storage/scratch/vast/yanglab/lrvenan/worm-graph/logs/hydra/2023_08_14_16_14_07/.submitit/32030781_0/32030781_0_0_result.pkl
+has not produced any output (state: OUT_OF_MEMORY)
+Error stream produced:
+----------------------------------------
+slurmstepd: error: Detected 1 oom-kill event(s) in StepId=32030782.0. Some of your processes may have been killed by the cgroup out-of-memory handler.
+srun: error: node056: task 0: Out Of Memory
+slurmstepd: error: Detected 1 oom-kill event(s) in StepId=32030782.batch. Some of your processes may have been killed by the cgroup out-of-memory handler.
+

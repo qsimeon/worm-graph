@@ -2,9 +2,7 @@
 
 #SBATCH --job-name=main
 #SBATCH --gres=gpu:1
-#SBATCH --mem-per-cpu=4G
-#SBATCH --cpus-per-task=4
-#SBATCH --partition=yanglab
+#SBATCH --mem-per-cpu=64G
 
 #SBATCH --error=configs/experiment/scripts/default_multirun.err
 #SBATCH --output=configs/experiment/scripts/default_multirun.out

@@ -269,6 +269,16 @@ def select_named_neurons(multi_worm_dataset, num_named_neurons):
     worms_to_drop = []
 
     for wormID, data in multi_worm_dataset.items():
+
+        # Check if worm has named neurons
+        if torch.sum(data["named_neurons_mask"]) == 0:
+            worms_to_drop.append(wormID)
+            continue
+
+        # Skip if num_named_neurons is 'all'
+        if num_named_neurons == 'all':
+            continue
+
         # Verify if new num_named_neurons <= actual num_named_neurons
         if num_named_neurons > data["num_named_neurons"]:
             worms_to_drop.append(wormID)
@@ -625,8 +635,7 @@ def create_combined_dataset(experimental_datasets, num_named_neurons, num_worms)
         multi_worms_dataset = load_dataset(dataset_name)
 
         # Select the `num_named_neurons` neurons (overwrite the masks)
-        if num_named_neurons != "all":
-            multi_worms_dataset = select_named_neurons(multi_worms_dataset, num_named_neurons)
+        multi_worms_dataset = select_named_neurons(multi_worms_dataset, num_named_neurons)
 
         for worm in multi_worms_dataset:
             if worm in combined_dataset:
