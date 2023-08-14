@@ -563,6 +563,17 @@ def load_Leifer2023():
     return Leifer2023
 
 
+def rename_worm_keys(d):
+    # Sort the keys
+    sorted_keys = sorted(d.keys(), key=lambda x: int(x.replace('worm', '')))
+    
+    # Create a mapping from old keys to new keys
+    key_mapping = {old_key: f'worm{i}' for i, old_key in enumerate(sorted_keys)}
+    
+    # Return the dictionary with keys renamed
+    return {key_mapping[key]: d[key] for key in sorted_keys}
+
+
 def create_combined_dataset(experimental_datasets, num_named_neurons, num_worms):
     """Returns a dict with the worm data of all requested datasets.
 
@@ -643,7 +654,7 @@ def create_combined_dataset(experimental_datasets, num_named_neurons, num_worms)
             if wormID not in wormIDs_to_keep:
                 combined_dataset.pop(wormID)
 
-    combined_dataset = {f"worm{i}": combined_dataset[key] for i, key in enumerate(combined_dataset.keys())}
+    combined_dataset = rename_worm_keys(combined_dataset)
 
     # Information about the dataset
     dataset_info = {
@@ -658,7 +669,7 @@ def create_combined_dataset(experimental_datasets, num_named_neurons, num_worms)
     for worm, data in combined_dataset.items():
         dataset_info['dataset'].append(data['dataset'])
         dataset_info['original_index'].append(data['original_worm'])
-        dataset_info['combined_dataset_index'].append(data['worm'])
+        dataset_info['combined_dataset_index'].append(worm)
         worm_neurons = [neuron for slot, neuron in data['slot_to_named_neuron'].items()]
         dataset_info['neurons'].append(worm_neurons)
         combined_dataset_neurons = combined_dataset_neurons + worm_neurons
@@ -784,8 +795,8 @@ def split_combined_dataset(combined_dataset, k_splits, num_train_samples, num_va
             
         # Store the number of unique time steps for each worm
         time_step_info['combined_dataset_index'].append(wormID)
-        time_step_info['train_time_steps'].append(len(train_dataset[-1].unique_time_steps))
-        time_step_info['val_time_steps'].append(len(val_dataset[-1].unique_time_steps))
+        time_step_info['train_time_steps'].append(train_split_time_steps)
+        time_step_info['val_time_steps'].append(val_split_time_steps)
 
     # Concatenate the datasets
     train_dataset = torch.utils.data.ConcatDataset(train_dataset) # Nb of train examples = nb train samples * nb of worms
