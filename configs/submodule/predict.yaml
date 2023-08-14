@@ -1,5 +1,5 @@
 predict:
-  worms_to_predict: [worm0, worm1] # if null, predict all the worms in the dataset. Otherwise, predict only the worms in this list
+  worms_to_predict: null # if null, predict all the worms in the dataset. Otherwise, predict only the worms in this list
   nb_ts_to_generate: null # if null, the number of time steps to generate = seq_len - context_window
   context_window: 60
   use_this_train_dataset: null # if null, use the dataset specified in dataset.yaml

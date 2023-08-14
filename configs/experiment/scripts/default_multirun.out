@@ -1,0 +1,3 @@
+[2023-08-14 14:38:42,962][HYDRA] Submitit 'slurm' sweep output dir : logs/hydra/2023_08_14_14_38_42
+[2023-08-14 14:38:42,965][HYDRA] 	#0 : submodule.dataset.num_named_neurons=5 +experiment=default_multirun
+[2023-08-14 14:38:42,974][HYDRA] 	#1 : submodule.dataset.num_named_neurons=10 +experiment=default_multirun
