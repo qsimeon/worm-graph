@@ -610,11 +610,16 @@ class Model(torch.nn.Module):
             mask: torch.Tensor,
             nb_ts_to_generate: int,
             context_window: int,
+            autoregressive: bool = True,
     ):
 
         self.eval()
 
         generated_values = []
+
+        if autoregressive:
+            # Generate values autoregressively
+            input = input[:, :context_window, :]  # shape (1, context_window, 302)
 
         with torch.no_grad(): 
             for t in range(nb_ts_to_generate):

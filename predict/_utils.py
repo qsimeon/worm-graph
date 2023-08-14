@@ -11,6 +11,7 @@ def model_predict(
         context_window: int,
         nb_ts_to_generate: int = None,
         worms_to_predict: list = None,
+        autoregressive_prediction: bool = True,
 ):
     
     x, y, mask, metadata = next(iter(dataset))
@@ -49,7 +50,8 @@ def model_predict(
             input=x.unsqueeze(0),
             mask=mask.unsqueeze(0),
             nb_ts_to_generate=nb_ts_to_generate,
-            context_window=context_window
+            context_window=context_window,
+            autoregressive=autoregressive_prediction,
         ).squeeze(0).detach().cpu().numpy()
         
         context_activity = x[:context_window, :].detach().cpu().numpy()
