@@ -74,6 +74,9 @@ def plot_experiment(visualize_config: DictConfig, exp_config: DictConfig) -> Non
     # Plot losses and computation time
     plot_exp_losses(exp_log_dir, exp_plot_dir, exp_key)
 
+    # Scaling law
+    plot_scaling_law(exp_log_dir, exp_plot_dir, exp_key)
+
     return None
 
 

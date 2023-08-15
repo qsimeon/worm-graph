@@ -672,12 +672,9 @@ def plot_heat_map(
 
 def experiment_parameter(exp_dir, key):
 
-    value, title, xaxis = None, None, None
-
-    if key == 'default_multirun':
-        value = exp_dir.split('/')[-1]
-        title = 'Default multirun'
-        xaxis = 'Experiment run'
+    value = exp_dir.split('/')[-1] # expN (default)
+    title = 'MULTIRUN'
+    xaxis = 'Experiment run'
 
     if key == 'num_time_steps':
         df = pd.read_csv(os.path.join(exp_dir, 'dataset', 'dataset_info.csv'))
@@ -805,4 +802,64 @@ def plot_exp_losses(exp_log_dir, exp_plot_dir, exp_name):
 
     # Save figure
     fig.savefig(os.path.join(exp_plot_dir, 'val_loss.png'))
+    plt.close()
+
+
+def plot_scaling_law(exp_log_dir, exp_plot_dir, exp_name):
+    fig, ax = plt.subplots(1, 1, figsize=(10, 4))
+
+    # Store losses, parameter experiment and baselines
+    losses = []
+    exp_parameter = []
+    baselines = []
+
+    # Loop over all the experiment files
+    for file in np.sort(os.listdir(exp_log_dir)):
+
+        # Skip if not starts with exp
+        if not file.startswith('exp') or file.startswith('exp_'):
+            continue
+
+        # Get experiment directory
+        exp_dir = os.path.join(exp_log_dir, file)
+        
+        # Load train metrics
+        df = pd.read_csv(os.path.join(exp_dir, 'train', 'train_metrics.csv'))
+
+        # Lower validation loss
+        losses.append(df['val_loss'].min())
+        baselines.append(df['val_baseline'].mean())
+
+        # Get experiment parameter
+        exp_param, exp_title, xaxis_title = experiment_parameter(exp_dir, key=exp_name)
+        exp_parameter.append(exp_param)
+
+    # Plot
+    ax.plot(exp_parameter, losses, 'o')
+    ax.plot(exp_parameter, baselines, '--.', color='black', label='Baseline')
+    ax.set_xlabel(xaxis_title, fontsize=12)
+    ax.set_ylabel('Validation loss', fontsize=12)
+
+    # Log scale
+    ax.set_xscale('log')
+    ax.set_yscale('log')
+
+    # Regression
+    try:
+        slope, intercept, r_value, p_value, std_err = stats.linregress(np.log(exp_parameter), np.log(losses))
+        fit_label = 'y = {:.2f}x + {:.2f}'.format(slope, intercept)
+        ax.plot(exp_parameter, np.exp(intercept + slope * np.log(exp_parameter)), 'r', label=fit_label)
+    except:
+        pass
+
+    # Legend
+    ax.legend(fontsize=10)
+
+    # Title
+    ax.set_title('Scaling law: ' + exp_title.lower(), fontsize=14)
+
+    plt.tight_layout()
+
+    # Save
+    plt.savefig(os.path.join(exp_plot_dir, 'scaling_law.png'), dpi=300)
     plt.close()
