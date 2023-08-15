@@ -456,8 +456,8 @@ def plot_pca_trajectory(log_dir, worms_to_plot=None, plot_type='3D'):
 
             # Combine and Standardize the data
             all_data = pd.concat([ar_gen_data, ground_truth_data, gt_gen_data])
-            #scaler = StandardScaler()
-            standardized_data = all_data
+            scaler = StandardScaler()
+            standardized_data = scaler.fit_transform(all_data)
 
             # Apply PCA
             if plot_type == '2D':
@@ -484,6 +484,14 @@ def plot_pca_trajectory(log_dir, worms_to_plot=None, plot_type='3D'):
                 plt.xlabel('Principal Component 1')
                 plt.ylabel('Principal Component 2')
 
+                # Text box with PCA explained variance
+                textstr = '\n'.join((
+                    r'$PC_1=%.2f$' % (pca.explained_variance_ratio_[0], ),
+                    r'$PC_2=%.2f$' % (pca.explained_variance_ratio_[1], )))
+                props = dict(boxstyle='round', facecolor='white', alpha=0.5)
+                plt.text(0.05, 0.95, textstr, transform=plt.gca().transAxes, fontsize=14,
+                        verticalalignment='top', bbox=props)
+
             else:
                 fig = plt.figure(figsize=(8, 7))
                 ax = fig.add_subplot(111, projection='3d')
@@ -506,6 +514,15 @@ def plot_pca_trajectory(log_dir, worms_to_plot=None, plot_type='3D'):
                 ax.set_ylabel('Principal Component 2')
                 ax.set_zlabel('Principal Component 3')
 
+                # Text box with PCA explained variance
+                textstr = '\n'.join((
+                    r'$PC_1=%.2f$' % (pca.explained_variance_ratio_[0], ),
+                    r'$PC_2=%.2f$' % (pca.explained_variance_ratio_[1], ),
+                    r'$PC_3=%.2f$' % (pca.explained_variance_ratio_[2], )))
+                props = dict(boxstyle='round', facecolor='white', alpha=0.5)
+                ax.text(0.0, 0.0, 0.0, textstr, transform=ax.transAxes, fontsize=14,
+                        verticalalignment='bottom', bbox=props)
+                
             plt.legend()
             plt.title(f'PCA Trajectories of Predictions in {plot_type}')
             plt.tight_layout()
