@@ -456,8 +456,8 @@ def plot_pca_trajectory(log_dir, worms_to_plot=None, plot_type='3D'):
 
             # Combine and Standardize the data
             all_data = pd.concat([ar_gen_data, ground_truth_data, gt_gen_data])
-            #scaler = StandardScaler()
-            standardized_data = all_data
+            scaler = StandardScaler()
+            standardized_data = scaler.fit_transform(all_data)
 
             # Apply PCA
             if plot_type == '2D':
