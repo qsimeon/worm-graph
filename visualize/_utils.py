@@ -361,6 +361,13 @@ def plot_predictions(log_dir, neurons_to_plot=None, worms_to_plot=None):
             neurons = ds_info[ds_info['combined_dataset_index']==wormID]['neurons']
             neurons = ast.literal_eval(neurons.values[0]) # convert str to list
 
+            # Treat neurons_to_plot
+            if isinstance(neurons_to_plot, int):
+                neurons_to_plot = np.random.choice(neurons, size=min(neurons_to_plot, len(neurons)), replace=False).tolist()
+            elif isinstance(neurons_to_plot, list):
+                # Skip neurons that are not available
+                neurons_to_plot = [neuron for neuron in neurons_to_plot if neuron in neurons]
+
             seq_len = len(pd.concat([df.loc['Context'], df.loc['Ground Truth']], axis=0))
             max_time_steps = len(pd.concat([df.loc['Context'], df.loc['AR Generation']], axis=0))
             time_vector = np.arange(max_time_steps)
@@ -405,172 +412,110 @@ def plot_predictions(log_dir, neurons_to_plot=None, worms_to_plot=None):
 
                 # Make figure directory
                 os.makedirs(os.path.join(log_dir, 'prediction', type_ds, wormID), exist_ok=True)
-                
+
                 # Save figure
                 plt.savefig(os.path.join(log_dir, 'prediction', type_ds, wormID, f'{neuron}.png'), dpi=300)
                 plt.close()
 
 
-def plot_correlation_scatterplot(
-    log_dir: str,
-    worm: Union[str, None] = "all",
-    neuron: Union[str, None] = "all",
-    use_residual: bool = False,
-):
-    """
-    Create a scatterpot of the target and predicted calcium or calcium residual
-    colored by train and test sample.
-    """
-    # Whether using residual or calcium signal
-    signal_str = "residual" if use_residual else "calcium"
+def plot_pca_trajectory(log_dir, worms_to_plot=None, plot_type='3D'):
 
-    # Process the pipeline_info.yaml file inside the log folder
-    cfg_path = os.path.join(log_dir, "pipeline_info.yaml")
-    if os.path.exists(cfg_path):
-        config = OmegaConf.structured(OmegaConf.load(cfg_path))
-        config = config.submodule
-    else:
-        config = OmegaConf.structured(
-            {
-                "dataset": {"name": "unknown"},
-                "model": {"type": "unknown"},
-                "train": {"tau_in": "unknown"},
-                "predict": {"tau_out": "unknown", "dataset": {"name": "unknown"}},
-                "globals": {"timestamp": datetime.now().strftime("%Y_%m_%d_%H_%M_%S")},
-            }
-        )
-
-    # Get strings for plot title
-    predict_dataset_name = config.dataset.predict.name
-    predict_dataset_name = predict_dataset_name.split("_")
-    predict_dataset_name = [ds_name[:-4] for ds_name in predict_dataset_name]
-    predict_dataset_name = ", ".join(predict_dataset_name)
-    
-    model_name = config.model.type
-    tau_out = config.predict.tau_out
-
-    # Recursive call for all worms
-    if (worm is None) or (worm.lower() == "all"):
-        all_worms = [fname for fname in os.listdir(log_dir) if fname.startswith("worm")]
-        for _worm_ in all_worms:
-            plot_correlation_scatterplot(log_dir, _worm_, neuron)
-        return None
-    else:
-        assert worm in set(os.listdir(log_dir)), "No data for requested worm found."
-
-    # Load predictions dataframe
-    predictions_df = pd.read_csv(
-        os.path.join(log_dir, worm, "predicted_" + signal_str + ".csv"), index_col=0
-    )
-    tau_out = predictions_df["tau"][0]
-    # Load targets dataframe
-    targets_df = pd.read_csv(
-        os.path.join(log_dir, worm, "target_" + signal_str + ".csv"), index_col=0
-    )
-
-    # TODO: consider only the predictions and targets for the last tau_out indices
-    predictions_df = predictions_df.iloc[-tau_out:, :]
-    targets_df = targets_df.iloc[-tau_out:, :]
-
-    # Plot helper
-    def func(_neuron_):
-        os.makedirs(os.path.join(log_dir, worm, "figures"), exist_ok=True)
-
-        # Create a figure with a larger size
-        fig, ax = plt.subplots(figsize=(8, 5))
-
-        # Use sns whitegrid style
-        sns.set_style("whitegrid")
-        # Use palette tab10
-        sns.set_palette("tab10")
-
-        data_dict = {
-            "target": targets_df[_neuron_].tolist(),
-            "prediction": predictions_df[_neuron_].tolist(),
-            "label": predictions_df["train_test_label"].tolist(),
-        }
-
-        data_df = pd.DataFrame(data=data_dict)
-
-        # Create scatterplot of predicted vs target
-        sns.scatterplot(
-            data=data_df,
-            x="target",
-            y="prediction",
-            hue="label",
-            legend=False,
-            ax=ax,
-            size=0.5,
-        )
-
-        # Linear regression betwee target and prediction
-        slope, intercept, r_value, p_value, std_err = stats.linregress(
-            data_df["target"], data_df["prediction"]
-        )
-
-        # Create label for linear regression line (curve + R2)
-        linreg_label = "y = {:.2f}x + {:.2f}".format(
-            slope, intercept
-        )
-
-        # Add linear regression line
-        sns.lineplot(
-            x=data_df["target"],
-            y=intercept + slope * data_df["target"],
-            color="black",
-            legend=False,
-            ax=ax,
-        )
+    for type_ds in os.listdir(os.path.join(log_dir, 'prediction')):
+            
+        for file in os.listdir(os.path.join(log_dir, 'prediction', type_ds)):
         
-        # Create the plot textbox
-        plt_title = (
-            "Model: {}\nPredict dataset: {}\nWorm index: {}\nPrediction {}: {}\n\n{}\n$R^2$: {}".format(
-                model_name,
-                predict_dataset_name,
-                worm,
-                r'$\tau$',
-                tau_out,
-                #timestamp.strftime("%Y-%m-%d %H:%M:%S"),
-                linreg_label,
-                round(r_value ** 2, 4),
-            )
-        )
+            wormID = file[:-4]
 
-        # Adjust x box position
-        x_position_percent = 0.02  # Adjust this value to set the desired position
-        x_position_box = ax.get_xlim()[0] + (ax.get_xlim()[1] - ax.get_xlim()[0]) * x_position_percent
+            # Skip file if not .csv
+            if not file.endswith('.csv') and wormID not in worms_to_plot:
+                continue
 
-        # Adjust y box position
-        y_position_percent = 0.03  # Adjust this value to set the desired position
-        y_position_box = ax.get_ylim()[0] + (ax.get_ylim()[1] - ax.get_ylim()[0]) * y_position_percent
+            df = pd.read_csv(os.path.join(log_dir, 'prediction', type_ds, file))
 
-        plt.text(x_position_box, y_position_box, plt_title, bbox=dict(facecolor='white', edgecolor='black', boxstyle='round', alpha=0.5), style='italic')
+            # Load named neurons
+            ds_info = pd.read_csv(os.path.join(log_dir, 'dataset', 'dataset_info.csv'))
+            neurons = ds_info[ds_info['combined_dataset_index']=='worm0']['neurons']
+            neurons = ast.literal_eval(neurons.values[0]) # convert str to list
 
-        plt.xlabel("Target " + signal_str + " ($\Delta F / F$)")
-        plt.ylabel("Predicted " + signal_str + " ($\Delta F / F$)")
+            sns.set_style('whitegrid')
+            palette = sns.color_palette("tab10")
+            gt_color = palette[0]   # Blue
+            gt_generation_color = palette[1] # orange (next time step prediction with gt)
+            ar_generation_color = palette[2] # gree (autoregressive next time step prediction)
 
-        plt.title("{} scatter plot: predicted vs. target values - {}".format(signal_str.title(), _neuron_))
+            # Split data by Type
+            ar_gen_data = df[df['Type'] == 'AR Generation'].drop(columns=['Type', 'Unnamed: 1'])
+            ar_gen_data = ar_gen_data[neurons]  # Filter only named neurons
 
-        plt.tight_layout()
+            ground_truth_data = df[df['Type'] == 'Ground Truth'].drop(columns=['Type', 'Unnamed: 1'])
+            ground_truth_data = ground_truth_data[neurons]  # Filter only named neurons
 
-        plt.savefig(
-            os.path.join(
-                log_dir, worm, "figures", signal_str + "_correlation_%s.png" % _neuron_
-            )
-        )
-        plt.close()
-        return None
+            # Extract GT Generation data
+            gt_gen_data = df[df['Type'] == 'GT Generation'].drop(columns=['Type', 'Unnamed: 1'])
+            gt_gen_data = gt_gen_data[neurons]  # Filter only named neurons
 
-    # Plot predictions for neuron(s)
-    columns = set(predictions_df.columns)
-    if (neuron is None) or (neuron.lower() == "all"):
-        for _neuron_ in set(NEURONS_302) & columns:
-            func(_neuron_)
-    elif neuron in columns:
-        func(neuron)
-    else:
-        pass  # do nothing
-    return None
+            # Combine and Standardize the data
+            all_data = pd.concat([ar_gen_data, ground_truth_data, gt_gen_data])
+            #scaler = StandardScaler()
+            standardized_data = all_data
+
+            # Apply PCA
+            if plot_type == '2D':
+                pca = PCA(n_components=2)
+            else:
+                pca = PCA(n_components=3)
+            reduced_data = pca.fit_transform(standardized_data)
+
+            # Plot
+            if plot_type == '2D':
+                plt.figure(figsize=(8, 7))
+                
+                plt.plot(reduced_data[:len(ar_gen_data), 0], reduced_data[:len(ar_gen_data), 1], color=ar_generation_color, label='Autoregressive generation', linestyle='-', marker='o')
+                plt.plot(reduced_data[len(ar_gen_data):len(ar_gen_data)+len(ground_truth_data), 0], 
+                        reduced_data[len(ar_gen_data):len(ar_gen_data)+len(ground_truth_data), 1], color=gt_color, label='Ground Truth', linestyle='-', marker='o')
+                plt.plot(reduced_data[len(ar_gen_data)+len(ground_truth_data):, 0], 
+                        reduced_data[len(ar_gen_data)+len(ground_truth_data):, 1], color=gt_generation_color, label="'Teacher forcing' generation", linestyle='-', marker='o')
+                
+                # Mark starting points with black stars
+                plt.scatter(reduced_data[0, 0], reduced_data[0, 1], color='black', marker='*', s=50)
+                plt.scatter(reduced_data[len(ar_gen_data), 0], reduced_data[len(ar_gen_data), 1], color='black', marker='*', s=50)
+                plt.scatter(reduced_data[len(ar_gen_data)+len(ground_truth_data), 0], reduced_data[len(ar_gen_data)+len(ground_truth_data), 1], color='black', marker='*', s=50)
+                
+                plt.xlabel('Principal Component 1')
+                plt.ylabel('Principal Component 2')
+
+            else:
+                fig = plt.figure(figsize=(8, 7))
+                ax = fig.add_subplot(111, projection='3d')
+                
+                ax.plot(reduced_data[:len(ar_gen_data), 0], reduced_data[:len(ar_gen_data), 1], reduced_data[:len(ar_gen_data), 2], color=ar_generation_color, label='Autoregressive generation', linestyle='-', marker='o')
+                ax.plot(reduced_data[len(ar_gen_data):len(ar_gen_data)+len(ground_truth_data), 0], 
+                        reduced_data[len(ar_gen_data):len(ar_gen_data)+len(ground_truth_data), 1],
+                        reduced_data[len(ar_gen_data):len(ar_gen_data)+len(ground_truth_data), 2], color=gt_color, label='Ground Truth', linestyle='-', marker='o')
+                ax.plot(reduced_data[len(ar_gen_data)+len(ground_truth_data):, 0], 
+                        reduced_data[len(ar_gen_data)+len(ground_truth_data):, 1],
+                        reduced_data[len(ar_gen_data)+len(ground_truth_data):, 2], color=gt_generation_color, label="'Teacher forcing' generation", linestyle='-', marker='o')
+                
+                # Mark starting points with black stars
+                ax.scatter(reduced_data[0, 0], reduced_data[0, 1], reduced_data[0, 2], color='black', marker='*', s=50)
+                ax.scatter(reduced_data[len(ar_gen_data), 0], reduced_data[len(ar_gen_data), 1], reduced_data[len(ar_gen_data), 2], color='black', marker='*', s=50)
+                ax.scatter(reduced_data[len(ar_gen_data)+len(ground_truth_data), 0], reduced_data[len(ar_gen_data)+len(ground_truth_data), 1], reduced_data[len(ar_gen_data)+len(ground_truth_data), 2], color='black', marker='*', s=50)
+                
+                
+                ax.set_xlabel('Principal Component 1')
+                ax.set_ylabel('Principal Component 2')
+                ax.set_zlabel('Principal Component 3')
+
+            plt.legend()
+            plt.title(f'PCA Trajectories of Predictions in {plot_type}')
+            plt.tight_layout()
+
+            # Make figure directory
+            os.makedirs(os.path.join(log_dir, 'prediction', type_ds, 'pca'), exist_ok=True)
+
+            # Save figure
+            plt.savefig(os.path.join(log_dir, 'prediction', type_ds, 'pca', f'pca_{plot_type}.png'), dpi=300)
+            plt.close()
 
 
 def plot_worm_data(worm_data, num_neurons=5, smooth=False):

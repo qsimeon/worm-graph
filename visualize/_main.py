@@ -30,8 +30,9 @@ def plot_figures(
         if submodule_dir == 'prediction':
             logger.info("Plotting submodule 'prediction'.")
             plot_predictions(log_dir=log_dir, neurons_to_plot=visualize_config.predict.neurons_to_plot, worms_to_plot=visualize_config.predict.worms_to_plot)
+            plot_pca_trajectory(log_dir=log_dir, worms_to_plot=visualize_config.predict.worms_to_plot, plot_type='3D')
+            plot_pca_trajectory(log_dir=log_dir, worms_to_plot=visualize_config.predict.worms_to_plot, plot_type='2D')
             # plot_correlation_scatterplot
-            continue
 
     return None
 
