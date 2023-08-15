@@ -164,3 +164,4 @@ dmypy.json
 
 # Custom
 API_KEY.txt
+gui/

@@ -30,36 +30,53 @@ def plot_figures(
         if submodule_dir == 'prediction':
             logger.info("Plotting submodule 'prediction'.")
             plot_predictions(log_dir=log_dir, neurons_to_plot=visualize_config.predict.neurons_to_plot, worms_to_plot=visualize_config.predict.worms_to_plot)
+            plot_pca_trajectory(log_dir=log_dir, worms_to_plot=visualize_config.predict.worms_to_plot, plot_type='3D')
+            plot_pca_trajectory(log_dir=log_dir, worms_to_plot=visualize_config.predict.worms_to_plot, plot_type='2D')
             # plot_correlation_scatterplot
-            continue
 
     return None
 
-def plot_experiment(log_dir, exp_config: DictConfig) -> None:
+def plot_experiment(visualize_config: DictConfig, exp_config: DictConfig) -> None:
     """
     Plots the scaling laws for the worm neural activity dataset.
     """
 
-    # Scaling law plots
-    scaling_law_dir = os.path.join(log_dir, "scaling_laws")
-    os.makedirs(scaling_law_dir, exist_ok=True)
+    log_dir = visualize_config.plot_figures_from_this_log_dir
 
-    # Computation time vs. key (amount of data, hidden size, etc.)
-    df, fig, ax = seconds_per_epoch_plot(exp_log_dir = log_dir,
-                                         key = exp_config.name,
-                                         log_scale = exp_config.options.log_scale)
-    
-    # All test losses
-    df, fig, ax = test_losses_plot(exp_log_dir = log_dir,
-                                   key = exp_config.name,
-                                   threshold = 1e-5,
-                                   window = 30,
-                                   xlim = None)
-    
-    # Test loss vs. key (amount of data, hidden size, etc.)
-    df, fig, ax = scaling_law_plot(exp_log_dir = log_dir,
-                                   key = exp_config.name,
-                                   log_scale = exp_config.options.log_scale)
+    assert log_dir is not None, "log_dir is None. Please specify a log directory to plot figures from."
+
+    # If this log is an experiment log, it contains 'exp0' directory
+    if 'exp0' in os.listdir(log_dir):
+        exp_log_dir = log_dir
+    else:
+        # One directory up if inside any 'expN' directory
+        log_dir = os.path.dirname(log_dir)
+        if 'exp0' in os.listdir(log_dir):
+            exp_log_dir = log_dir
+        else:
+            logger.info(f"Log directory {log_dir} is not an experiment log. Skipping experiment plots.")
+            return None
+
+    # Create directory to store experiment plots
+    exp_plot_dir = os.path.join(exp_log_dir, "exp_plots")
+    os.makedirs(exp_plot_dir, exist_ok=True)
+
+    # Get experiment key
+    pipeline_info_exp0 = OmegaConf.load(os.path.join(exp_log_dir, "exp0", "pipeline_info.yaml"))
+    exp_key = pipeline_info_exp0.experiment.name
+
+    value, title, xaxis = experiment_parameter(os.path.join(exp_log_dir, 'exp0'), key=exp_key)
+    if value is None:
+        logger.info(f"Experiment {exp_key} not found in {exp_log_dir}. Skipping experiment plots.")
+        return None
+
+    logger.info(f"Plotting experiment {exp_key}.")
+
+    # Plot losses and computation time
+    plot_exp_losses(exp_log_dir, exp_plot_dir, exp_key)
+
+    # Scaling law
+    plot_scaling_law(exp_log_dir, exp_plot_dir, exp_key)
 
     return None
 

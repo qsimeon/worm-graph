@@ -1,0 +1,7 @@
+[2023-08-14 16:14:08,416][HYDRA] Submitit 'slurm' sweep output dir : logs/hydra/2023_08_14_16_14_07
+[2023-08-14 16:14:08,419][HYDRA] 	#0 : submodule.dataset.num_worms=10 +experiment=num_worms
+[2023-08-14 16:14:08,427][HYDRA] 	#1 : submodule.dataset.num_worms=50 +experiment=num_worms
+[2023-08-14 16:14:08,437][HYDRA] 	#2 : submodule.dataset.num_worms=100 +experiment=num_worms
+[2023-08-14 16:14:08,445][HYDRA] 	#3 : submodule.dataset.num_worms=150 +experiment=num_worms
+[2023-08-14 16:14:08,453][HYDRA] 	#4 : submodule.dataset.num_worms=200 +experiment=num_worms
+[2023-08-14 16:14:08,462][HYDRA] 	#5 : submodule.dataset.num_worms=246 +experiment=num_worms

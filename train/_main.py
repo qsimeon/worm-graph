@@ -85,7 +85,7 @@ def train_model(
     logger.info("Starting training loop...")
 
     pbar = tqdm(
-        range(epochs), 
+        range(epochs+1), # +1 because we skip the first epoch
         total=epochs,
         position=0, leave=True,  # position at top and remove when done
         dynamic_ncols=True,  # adjust width to terminal window size
@@ -117,7 +117,8 @@ def train_model(
 
             # Backpropagation (skip first epoch)
             train_loss.backward()
-            optimizer.step()
+            if epoch > 0:
+                optimizer.step()
 
             # Update running losses
             train_running_base_loss += train_baseline.item()

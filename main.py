@@ -70,18 +70,18 @@ def pipeline(cfg: DictConfig) -> None:
         
         # ==========================================================
 
+        if 'analysis' in cfg.submodule:
+            pass
+
         if 'visualize' in cfg.submodule:
             plot_figures(
                 visualize_config = cfg.submodule.visualize,
             )
 
-        if 'analysis' in cfg.submodule:
-            pass
-
-        if cfg.experiment.name in ['num_worms', 'num_named_neurons']:
-            log_dir = os.path.dirname(log_dir) # Because experiments run in multirun mode
-            plot_experiment(log_dir, cfg.experiment)
-
+            plot_experiment(
+                visualize_config = cfg.submodule.visualize,
+                exp_config = cfg.experiment
+            )
         
         # Save experiment parameters (MLflow)
         log_params_from_omegaconf_dict(cfg)

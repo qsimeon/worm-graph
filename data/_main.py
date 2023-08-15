@@ -35,10 +35,13 @@ def get_datasets(dataset_config: DictConfig):
     combined_dataset, dataset_info, neuron_counts = create_combined_dataset(experimental_datasets,
                                                                             num_named_neurons, num_worms
                                                                             )
-    train_dataset, val_dataset = split_combined_dataset(combined_dataset, k_splits, num_train_samples,
+    train_dataset, val_dataset, time_step_info = split_combined_dataset(combined_dataset, k_splits, num_train_samples,
                                                          num_val_samples, seq_len, tau, reverse,
                                                          use_residual, smooth_data)
     
+    # Merge dataset_info and time_step_info
+    dataset_info = dataset_info.merge(time_step_info, on='combined_dataset_index', how='outer')
+
     # Save the datasets and information about them
     log_dir = os.getcwd()  # logs/hydra/${now:%Y_%m_%d_%H_%M_%S}
     os.makedirs(os.path.join(log_dir, 'dataset'), exist_ok=True)
