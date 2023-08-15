@@ -186,7 +186,7 @@ def plot_loss_curves(log_dir, info_to_display=None):
 
     sns.lineplot(
         x="epoch",
-        y="val_loss",
+        y="val_baseline",
         data=loss_df,
         ax=ax,
         label="Validation baseline",
