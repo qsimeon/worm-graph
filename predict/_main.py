@@ -56,9 +56,8 @@ def make_predictions(
 
     # Create prediction directories
     os.makedirs(os.path.join(log_dir, 'prediction'), exist_ok=True)
-    os.makedirs(os.path.join(log_dir, 'prediction', 'ground_truth', 'train'), exist_ok=True)
-    os.makedirs(os.path.join(log_dir, 'prediction', 'ground_truth', 'val'), exist_ok=True)
-    os.makedirs(os.path.join(log_dir, 'prediction', 'autoregressive', 'val'), exist_ok=True)
+    os.makedirs(os.path.join(log_dir, 'prediction', 'train'), exist_ok=True)
+    os.makedirs(os.path.join(log_dir, 'prediction', 'val'), exist_ok=True)
 
     # Load train and validation datasets if dataset submodule is not in pipeline
     if train_dataset is None:
@@ -77,39 +76,21 @@ def make_predictions(
         model = get_model(model_config)
 
     # Make predictions in the train and validation datasets
-    logger.info("Start making predictions with ground truth signals (train dataset)...")
-    model_predict(
-        log_dir = os.path.join(log_dir, 'prediction', 'ground_truth', 'train'),
-        model = model,
-        dataset = train_dataset,
-        context_window = predict_config.context_window,
-        nb_ts_to_generate = predict_config.nb_ts_to_generate,
-        worms_to_predict = predict_config.worms_to_predict,
-        autoregressive_prediction=False,
-    )
+    for ds_type in os.listdir(os.path.join(log_dir, 'prediction')):
 
-    logger.info("Start making predictions with ground truth signals (val. dataset)...")
-    model_predict(
-        log_dir = os.path.join(log_dir, 'prediction', 'ground_truth', 'val'),
-        model = model,
-        dataset = val_dataset,
-        context_window = predict_config.context_window,
-        nb_ts_to_generate = predict_config.nb_ts_to_generate,
-        worms_to_predict = predict_config.worms_to_predict,
-        autoregressive_prediction=False,
-    )
+        if ds_type not in ['train', 'val']:
+            continue
 
-    logger.info("Start making predictions autoregressively (val. dataset)...")
-    model_predict(
-        log_dir = os.path.join(log_dir, 'prediction', 'autoregressive', 'val'),
-        model = model,
-        dataset = val_dataset,
-        context_window = predict_config.context_window,
-        nb_ts_to_generate = predict_config.nb_ts_to_generate,
-        worms_to_predict = predict_config.worms_to_predict,
-        autoregressive_prediction=True,
-    )
+        logger.info("Start making predictions in %s dataset..." % (ds_type))
 
+        model_predict(
+            log_dir = os.path.join(log_dir, 'prediction', ds_type),
+            model = model,
+            dataset = train_dataset if ds_type == 'train' else val_dataset,
+            context_window = predict_config.context_window,
+            nb_ts_to_generate = predict_config.nb_ts_to_generate,
+            worms_to_predict = predict_config.worms_to_predict,
+        )
 
 if __name__ == "__main__":
     dataset_config = OmegaConf.load("configs/submodule/dataset.yaml")

@@ -11,7 +11,6 @@ def model_predict(
         context_window: int,
         nb_ts_to_generate: int = None,
         worms_to_predict: list = None,
-        autoregressive_prediction: bool = True,
 ):
     
     x, y, mask, metadata = next(iter(dataset))
@@ -21,8 +20,10 @@ def model_predict(
         "The context window must be smaller than the sequence length ({}).".format(seq_len)
     )
 
+    nb_gt_ts_to_generate = seq_len - context_window # Time steps for ground truth comparison
+
     if nb_ts_to_generate is None:
-        nb_ts_to_generate = seq_len - context_window
+        nb_ts_to_generate = nb_gt_ts_to_generate
 
     worms_predicted = set()
 
@@ -46,15 +47,23 @@ def model_predict(
 
         worms_predicted.add(metadata["wormID"])
 
-        generated_activity = model.generate(
+        gt_generated_activity = model.generate(
+            input=x.unsqueeze(0),
+            mask=mask.unsqueeze(0),
+            nb_ts_to_generate=nb_gt_ts_to_generate,
+            context_window=context_window,
+            autoregressive=False,
+        ).squeeze(0).detach().cpu().numpy()
+
+        auto_reg_generated_activity = model.generate(
             input=x.unsqueeze(0),
             mask=mask.unsqueeze(0),
             nb_ts_to_generate=nb_ts_to_generate,
             context_window=context_window,
-            autoregressive=autoregressive_prediction,
+            autoregressive=True,
         ).squeeze(0).detach().cpu().numpy()
         
-        context_activity = x[:context_window, :].detach().cpu().numpy()
+        context_activity = x[:context_window+1, :].detach().cpu().numpy() # +1 for plot continuity
         ground_truth_activity = x[context_window:, :].detach().cpu().numpy()
 
         # Convert each tensor into a DataFrame and add type level
@@ -66,12 +75,16 @@ def model_predict(
         df_ground_truth['Type'] = 'Ground Truth'
         df_ground_truth.set_index('Type', append=True, inplace=True)
 
-        df_generated = pd.DataFrame(generated_activity, columns=NEURONS_302)
-        df_generated['Type'] = 'Generated'
-        df_generated.set_index('Type', append=True, inplace=True)
+        df_gt_generated = pd.DataFrame(gt_generated_activity, columns=NEURONS_302)
+        df_gt_generated['Type'] = 'GT Generation'
+        df_gt_generated.set_index('Type', append=True, inplace=True)
+
+        df_ar_generated = pd.DataFrame(auto_reg_generated_activity, columns=NEURONS_302)
+        df_ar_generated['Type'] = 'AR Generation'
+        df_ar_generated.set_index('Type', append=True, inplace=True)
 
         # Concatenate the DataFrames
-        result_df = pd.concat([df_context, df_ground_truth, df_generated])
+        result_df = pd.concat([df_context, df_ground_truth, df_gt_generated, df_ar_generated])
         result_df = result_df.reorder_levels(['Type', None]).sort_index()
 
         # Save the DataFrame
