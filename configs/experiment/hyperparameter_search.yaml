@@ -11,8 +11,8 @@ hydra:
       seed: 42 # Seed for reproducibility
     study_name: hyperparameter_search # Name of the study (for optuna)
     direction: minimize # Minimize the metric
-    n_trials: 3 # Number of trials to run
-    n_jobs: 3 # Number of jobs to run in parallel
+    n_trials: 20 # Number of trials to run
+    n_jobs: 2 # Number of jobs to run in parallel
     params:
       # Hyperparameters to optimize
       submodule.train.optimizer: Adam, AdamW, Adagrad, RMSprop
@@ -51,8 +51,8 @@ submodule:
   train:
     # optimizer: AdamW
     # lr: 0.001
-    epochs: 5
-    save_freq: 100
+    epochs: 600
+    save_freq: 200
     # batch_size: 16
     shuffle: true
     use_this_train_dataset: null # use training dataset from dataset submodule
