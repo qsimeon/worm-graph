@@ -13,7 +13,12 @@ class EarlyStopping():
         self.counter = 0
         
     def __call__(self, model, val_loss):
-        if self.best_loss == None:
+
+        if val_loss is None or math.isnan(val_loss):
+            logger.info("Validation loss is not a valid number (NaN).")
+            return True
+
+        if self.best_loss is None:
             self.best_loss = val_loss
             self.best_model = copy.deepcopy(model)
         elif self.best_loss - val_loss > self.min_delta:
@@ -22,6 +27,7 @@ class EarlyStopping():
             self.best_model.load_state_dict(model.state_dict())
         elif self.best_loss - val_loss < self.min_delta:
             self.counter += 1
+
         if self.counter >= self.patience:
             return True
         return False

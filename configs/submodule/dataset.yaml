@@ -1,11 +1,11 @@
 dataset:
   experimental_datasets: Kato2015 # [Kato2015, Nichols2017, Skora2018, Uzel2022, Kaplan2020, Flavell2023, Leifer2023]
   num_named_neurons: all # number of neurons to train the model with (positive integer or 'all')
-  num_worms: 1 # number of worms to train the model with (positive integer or 'all')
+  num_worms: all # number of worms to train the model with (positive integer or 'all')
   k_splits: 2
   num_train_samples: 32
   num_val_samples: 32
-  seq_len: 240
+  seq_len: 120
   tau: 1
   reverse: false
   use_residual: false

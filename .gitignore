@@ -165,3 +165,4 @@ dmypy.json
 # Custom
 API_KEY.txt
 gui/
+data/standard_datasets/*
