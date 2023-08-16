@@ -223,9 +223,9 @@ def train_model(
 
     # Metric for optuna (lowest validation loss)
     metric = min(val_epoch_loss)
-    if metric == np.NaN:
-        metric = np.inf
-
+    if metric == np.NaN or metric is None:
+        metric = float('inf')
+    print(type(metric))
     return model, metric
 
 

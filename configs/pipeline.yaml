@@ -53,6 +53,7 @@ hydra:
     gpus_per_node: 1
     tasks_per_node: 1
     timeout_min: 1440
+    exclude: dgx001, dgx002
     #partition: yanglab # sinfo to see the available partitions in OpenMind
 
 # ============================ Pipeline Config ============================
