@@ -23,9 +23,14 @@ hydra:
 submodule:
 
   dataset:
+    # Train and validate with standard datasets
+    use_this_train_dataset: /om2/user/lrvenan/worm-graph/data/standard_datasets/dataset2/train_dataset.pt # 50 worms, num_val_samples=32, seq_len=120
+    use_this_val_dataset: /om2/user/lrvenan/worm-graph/data/standard_datasets/dataset1/val_dataset.pt # all worms, num_val_samples=32, seq_len=120
+
+    # Load the smaller dataset. Won't be used for training or validation (overridden by use_this_train_dataset and use_this_val_dataset)
     experimental_datasets: Kato2015 #[Kato2015, Nichols2017, Skora2018, Uzel2022, Kaplan2020, Flavell2023, Leifer2023]
-    num_named_neurons: 1
-    num_worms: 1
+    num_named_neurons: all
+    num_worms: all
     k_splits: 2
     num_train_samples: 32
     num_val_samples: 32
@@ -34,8 +39,7 @@ submodule:
     smooth_data: true
     reverse: false
     use_residual: false
-    use_this_train_dataset: null # load new training dataset
-    use_this_val_dataset: /home/lrvnc/Projects/worm-graph/data/standard_datasets/dataset1/val_dataset.pt # load new validation dataset
+    
 
   model:
     type: LinearNN
@@ -76,6 +80,6 @@ submodule:
       neurons_to_plot: 4 # plot all the neurons
 
 experiment:
-  name: hyperparameter_search
+  name: hyp_search
   mode: MULTIRUN
   seed: 42
