@@ -346,8 +346,13 @@ def plot_predictions(log_dir, neurons_to_plot=None, worms_to_plot=None):
             wormID = file[:-4]
 
             # Skip file if not .csv
-            if not file.endswith('.csv') and wormID not in worms_to_plot:
+            if not file.endswith('.csv'):
                 continue
+
+            # Skip if num_worms given
+            if worms_to_plot is not None: 
+                if wormID not in worms_to_plot:
+                    continue
 
             url = os.path.join(log_dir, 'prediction', type_ds, file)
 
@@ -367,6 +372,8 @@ def plot_predictions(log_dir, neurons_to_plot=None, worms_to_plot=None):
             elif isinstance(neurons_to_plot, list):
                 # Skip neurons that are not available
                 neurons_to_plot = [neuron for neuron in neurons_to_plot if neuron in neurons]
+            else:
+                neurons_to_plot = neurons # all neurons
 
             seq_len = len(pd.concat([df.loc['Context'], df.loc['Ground Truth']], axis=0))
             max_time_steps = len(pd.concat([df.loc['Context'], df.loc['AR Generation']], axis=0))
@@ -386,11 +393,7 @@ def plot_predictions(log_dir, neurons_to_plot=None, worms_to_plot=None):
 
             logger.info(f'Plotting neuron predictions for {type_ds}/{wormID}...')
 
-            for neuron in neurons:
-
-                # Skip neuron if not in neurons_to_plot
-                if neurons_to_plot is not None and neuron not in neurons_to_plot:
-                    continue
+            for neuron in neurons_to_plot:
 
                 fig, ax = plt.subplots(figsize=(10, 4))
 
@@ -424,11 +427,19 @@ def plot_pca_trajectory(log_dir, worms_to_plot=None, plot_type='3D'):
             
         for file in os.listdir(os.path.join(log_dir, 'prediction', type_ds)):
         
+
             wormID = file[:-4]
 
             # Skip file if not .csv
-            if not file.endswith('.csv') and wormID not in worms_to_plot:
+            if not file.endswith('.csv'):
                 continue
+
+            # Skip if num_worms given
+            if worms_to_plot is not None: 
+                if wormID not in worms_to_plot:
+                    continue
+
+            logger.info(f'Plotting PCA trajectory for {type_ds}/{wormID}...')
 
             df = pd.read_csv(os.path.join(log_dir, 'prediction', type_ds, file))
 

@@ -225,7 +225,7 @@ def train_model(
     metric = min(val_epoch_loss)
     if metric == np.NaN or metric is None:
         metric = float('inf')
-    print(type(metric))
+
     return model, metric
 
 

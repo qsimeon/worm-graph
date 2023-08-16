@@ -34,8 +34,6 @@ def plot_figures(
             plot_pca_trajectory(log_dir=log_dir, worms_to_plot=visualize_config.predict.worms_to_plot, plot_type='2D')
             # plot_correlation_scatterplot
 
-    return None
-
 def plot_experiment(visualize_config: DictConfig, exp_config: DictConfig) -> None:
     """
     Plots the scaling laws for the worm neural activity dataset.
@@ -77,8 +75,6 @@ def plot_experiment(visualize_config: DictConfig, exp_config: DictConfig) -> Non
 
     # Scaling law
     plot_scaling_law(exp_log_dir, exp_plot_dir, exp_key)
-
-    return None
 
 
 if __name__ == "__main__":
