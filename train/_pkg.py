@@ -11,6 +11,7 @@ import copy
 import logging
 import math
 
+from torch.optim import lr_scheduler
 from torch.cuda.amp import autocast
 from typing import Tuple, Union
 from datetime import datetime

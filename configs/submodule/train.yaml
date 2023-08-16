@@ -12,3 +12,8 @@ train:
   early_stopping:
     delta: 1e-4 # minimum change in validation loss to be considered an improvement
     patience: 10 # number of epochs to wait for improvement before stopping
+
+  lr_scheduler:
+    T_0: 10 # Number of epochs for the first period
+    T_mult: 2 # Factor to multiply T_0 after each restart
+    eta_min: 1e-5 # Minimum learning rate
