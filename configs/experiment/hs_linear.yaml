@@ -35,7 +35,7 @@ submodule:
     reverse: false
     use_residual: false
     use_this_train_dataset: null # load new training dataset
-    use_this_val_dataset: /om2/user/lrvenan/worm-graph/data/standard_datasets/dataset1/val_dataset.pt # load new validation dataset
+    use_this_val_dataset: /home/lrvnc/Projects/worm-graph/data/standard_datasets/dataset1/val_dataset.pt # load new validation dataset
 
   model:
     type: LinearNN

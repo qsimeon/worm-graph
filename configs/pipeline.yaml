@@ -7,7 +7,7 @@ defaults:
   #   This plugin provides SLURM launcher to work on the cluster.
   #   - Use submitit_slurm when using OpenMind (add hydra/launcher=submitit_slurm if using command line)
   #   - Use submitit_local when running locally
-  - override hydra/launcher: submitit_slurm
+  - override hydra/launcher: submitit_local
   - _self_
 
 hydra:
@@ -42,18 +42,7 @@ hydra:
   # Hydra launcher:
   #   These are the launcher parameters for the SubmitIt plugin.
   #   Comment the partition if working locally.
-  launcher:
-    setup:
-      - cd /om2/user/lrvenan/worm-graph
-      - source /om2/user/lrvenan/miniconda/bin/activate worm-graph
-    nodes: 1
-    gres: gpu:1
-    mem_gb: 32
-    cpus_per_task: 1
-    gpus_per_node: 1
-    tasks_per_node: 1
-    timeout_min: 1440
-    #partition: yanglab # sinfo to see the available partitions in OpenMind
+
 
 
 # ============================ Pipeline Config ============================

@@ -470,80 +470,85 @@ def plot_pca_trajectory(log_dir, worms_to_plot=None, plot_type='3D'):
             scaler = StandardScaler()
             standardized_data = scaler.fit_transform(all_data)
 
-            # Apply PCA
-            if plot_type == '2D':
-                pca = PCA(n_components=2)
-            else:
-                pca = PCA(n_components=3)
-            reduced_data = pca.fit_transform(standardized_data)
+            try:
+                # Apply PCA
+                if plot_type == '2D':
+                    pca = PCA(n_components=2)
+                else:
+                    pca = PCA(n_components=3)
+                reduced_data = pca.fit_transform(standardized_data)
 
-            # Plot
-            if plot_type == '2D':
-                plt.figure(figsize=(8, 7))
-                
-                plt.plot(reduced_data[:len(ar_gen_data), 0], reduced_data[:len(ar_gen_data), 1], color=ar_generation_color, label='Autoregressive generation', linestyle='-', marker='o')
-                plt.plot(reduced_data[len(ar_gen_data):len(ar_gen_data)+len(ground_truth_data), 0], 
-                        reduced_data[len(ar_gen_data):len(ar_gen_data)+len(ground_truth_data), 1], color=gt_color, label='Ground Truth', linestyle='-', marker='o')
-                plt.plot(reduced_data[len(ar_gen_data)+len(ground_truth_data):, 0], 
-                        reduced_data[len(ar_gen_data)+len(ground_truth_data):, 1], color=gt_generation_color, label="'Teacher forcing' generation", linestyle='-', marker='o')
-                
-                # Mark starting points with black stars
-                plt.scatter(reduced_data[0, 0], reduced_data[0, 1], color='black', marker='*', s=50)
-                plt.scatter(reduced_data[len(ar_gen_data), 0], reduced_data[len(ar_gen_data), 1], color='black', marker='*', s=50)
-                plt.scatter(reduced_data[len(ar_gen_data)+len(ground_truth_data), 0], reduced_data[len(ar_gen_data)+len(ground_truth_data), 1], color='black', marker='*', s=50)
-                
-                plt.xlabel('Principal Component 1')
-                plt.ylabel('Principal Component 2')
+                # Plot
+                if plot_type == '2D':
+                    plt.figure(figsize=(8, 7))
+                    
+                    plt.plot(reduced_data[:len(ar_gen_data), 0], reduced_data[:len(ar_gen_data), 1], color=ar_generation_color, label='Autoregressive generation', linestyle='-', marker='o')
+                    plt.plot(reduced_data[len(ar_gen_data):len(ar_gen_data)+len(ground_truth_data), 0], 
+                            reduced_data[len(ar_gen_data):len(ar_gen_data)+len(ground_truth_data), 1], color=gt_color, label='Ground Truth', linestyle='-', marker='o')
+                    plt.plot(reduced_data[len(ar_gen_data)+len(ground_truth_data):, 0], 
+                            reduced_data[len(ar_gen_data)+len(ground_truth_data):, 1], color=gt_generation_color, label="'Teacher forcing' generation", linestyle='-', marker='o')
+                    
+                    # Mark starting points with black stars
+                    plt.scatter(reduced_data[0, 0], reduced_data[0, 1], color='black', marker='*', s=50)
+                    plt.scatter(reduced_data[len(ar_gen_data), 0], reduced_data[len(ar_gen_data), 1], color='black', marker='*', s=50)
+                    plt.scatter(reduced_data[len(ar_gen_data)+len(ground_truth_data), 0], reduced_data[len(ar_gen_data)+len(ground_truth_data), 1], color='black', marker='*', s=50)
+                    
+                    plt.xlabel('Principal Component 1')
+                    plt.ylabel('Principal Component 2')
 
-                # Text box with PCA explained variance
-                textstr = '\n'.join((
-                    r'$PC_1=%.2f$' % (pca.explained_variance_ratio_[0], ),
-                    r'$PC_2=%.2f$' % (pca.explained_variance_ratio_[1], )))
-                props = dict(boxstyle='round', facecolor='white', alpha=0.5)
-                plt.text(0.05, 0.95, textstr, transform=plt.gca().transAxes, fontsize=14,
-                        verticalalignment='top', bbox=props)
+                    # Text box with PCA explained variance
+                    textstr = '\n'.join((
+                        r'$PC_1=%.2f$' % (pca.explained_variance_ratio_[0], ),
+                        r'$PC_2=%.2f$' % (pca.explained_variance_ratio_[1], )))
+                    props = dict(boxstyle='round', facecolor='white', alpha=0.5)
+                    plt.text(0.05, 0.95, textstr, transform=plt.gca().transAxes, fontsize=14,
+                            verticalalignment='top', bbox=props)
 
-            else:
-                fig = plt.figure(figsize=(8, 7))
-                ax = fig.add_subplot(111, projection='3d')
-                
-                ax.plot(reduced_data[:len(ar_gen_data), 0], reduced_data[:len(ar_gen_data), 1], reduced_data[:len(ar_gen_data), 2], color=ar_generation_color, label='Autoregressive generation', linestyle='-', marker='o')
-                ax.plot(reduced_data[len(ar_gen_data):len(ar_gen_data)+len(ground_truth_data), 0], 
-                        reduced_data[len(ar_gen_data):len(ar_gen_data)+len(ground_truth_data), 1],
-                        reduced_data[len(ar_gen_data):len(ar_gen_data)+len(ground_truth_data), 2], color=gt_color, label='Ground Truth', linestyle='-', marker='o')
-                ax.plot(reduced_data[len(ar_gen_data)+len(ground_truth_data):, 0], 
-                        reduced_data[len(ar_gen_data)+len(ground_truth_data):, 1],
-                        reduced_data[len(ar_gen_data)+len(ground_truth_data):, 2], color=gt_generation_color, label="'Teacher forcing' generation", linestyle='-', marker='o')
-                
-                # Mark starting points with black stars
-                ax.scatter(reduced_data[0, 0], reduced_data[0, 1], reduced_data[0, 2], color='black', marker='*', s=50)
-                ax.scatter(reduced_data[len(ar_gen_data), 0], reduced_data[len(ar_gen_data), 1], reduced_data[len(ar_gen_data), 2], color='black', marker='*', s=50)
-                ax.scatter(reduced_data[len(ar_gen_data)+len(ground_truth_data), 0], reduced_data[len(ar_gen_data)+len(ground_truth_data), 1], reduced_data[len(ar_gen_data)+len(ground_truth_data), 2], color='black', marker='*', s=50)
-                
-                
-                ax.set_xlabel('Principal Component 1')
-                ax.set_ylabel('Principal Component 2')
-                ax.set_zlabel('Principal Component 3')
+                else:
+                    fig = plt.figure(figsize=(8, 7))
+                    ax = fig.add_subplot(111, projection='3d')
+                    
+                    ax.plot(reduced_data[:len(ar_gen_data), 0], reduced_data[:len(ar_gen_data), 1], reduced_data[:len(ar_gen_data), 2], color=ar_generation_color, label='Autoregressive generation', linestyle='-', marker='o')
+                    ax.plot(reduced_data[len(ar_gen_data):len(ar_gen_data)+len(ground_truth_data), 0], 
+                            reduced_data[len(ar_gen_data):len(ar_gen_data)+len(ground_truth_data), 1],
+                            reduced_data[len(ar_gen_data):len(ar_gen_data)+len(ground_truth_data), 2], color=gt_color, label='Ground Truth', linestyle='-', marker='o')
+                    ax.plot(reduced_data[len(ar_gen_data)+len(ground_truth_data):, 0], 
+                            reduced_data[len(ar_gen_data)+len(ground_truth_data):, 1],
+                            reduced_data[len(ar_gen_data)+len(ground_truth_data):, 2], color=gt_generation_color, label="'Teacher forcing' generation", linestyle='-', marker='o')
+                    
+                    # Mark starting points with black stars
+                    ax.scatter(reduced_data[0, 0], reduced_data[0, 1], reduced_data[0, 2], color='black', marker='*', s=50)
+                    ax.scatter(reduced_data[len(ar_gen_data), 0], reduced_data[len(ar_gen_data), 1], reduced_data[len(ar_gen_data), 2], color='black', marker='*', s=50)
+                    ax.scatter(reduced_data[len(ar_gen_data)+len(ground_truth_data), 0], reduced_data[len(ar_gen_data)+len(ground_truth_data), 1], reduced_data[len(ar_gen_data)+len(ground_truth_data), 2], color='black', marker='*', s=50)
+                    
+                    
+                    ax.set_xlabel('Principal Component 1')
+                    ax.set_ylabel('Principal Component 2')
+                    ax.set_zlabel('Principal Component 3')
 
-                # Text box with PCA explained variance
-                textstr = '\n'.join((
-                    r'$PC_1=%.2f$' % (pca.explained_variance_ratio_[0], ),
-                    r'$PC_2=%.2f$' % (pca.explained_variance_ratio_[1], ),
-                    r'$PC_3=%.2f$' % (pca.explained_variance_ratio_[2], )))
-                props = dict(boxstyle='round', facecolor='white', alpha=0.5)
-                ax.text(0.0, 0.0, 0.0, textstr, transform=ax.transAxes, fontsize=14,
-                        verticalalignment='bottom', bbox=props)
-                
-            plt.legend()
-            plt.title(f'PCA Trajectories of Predictions in {plot_type}')
-            plt.tight_layout()
+                    # Text box with PCA explained variance
+                    textstr = '\n'.join((
+                        r'$PC_1=%.2f$' % (pca.explained_variance_ratio_[0], ),
+                        r'$PC_2=%.2f$' % (pca.explained_variance_ratio_[1], ),
+                        r'$PC_3=%.2f$' % (pca.explained_variance_ratio_[2], )))
+                    props = dict(boxstyle='round', facecolor='white', alpha=0.5)
+                    ax.text(0.0, 0.0, 0.0, textstr, transform=ax.transAxes, fontsize=14,
+                            verticalalignment='bottom', bbox=props)
+                    
+                plt.legend()
+                plt.title(f'PCA Trajectories of Predictions in {plot_type}')
+                plt.tight_layout()
 
-            # Make figure directory
-            os.makedirs(os.path.join(log_dir, 'prediction', type_ds, 'pca'), exist_ok=True)
+                # Make figure directory
+                os.makedirs(os.path.join(log_dir, 'prediction', type_ds, 'pca'), exist_ok=True)
 
-            # Save figure
-            plt.savefig(os.path.join(log_dir, 'prediction', type_ds, 'pca', f'pca_{plot_type}.png'), dpi=300)
-            plt.close()
+                # Save figure
+                plt.savefig(os.path.join(log_dir, 'prediction', type_ds, 'pca', f'pca_{plot_type}.png'), dpi=300)
+                plt.close()
+
+            except:
+                logger.info(f'PCA plot failed for {plot_type} in {type_ds} dataset (check if num_named_neurons >= 3)')
+                pass
 
 
 def plot_worm_data(worm_data, num_neurons=5, smooth=False):
