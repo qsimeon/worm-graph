@@ -9,7 +9,7 @@ hydra:
   sweeper:
     sampler:
       seed: 42 # Seed for reproducibility
-    study_name: hs_linear # Name of the study (for optuna)
+    study_name: hs_lstm # Name of the study (for optuna)
     direction: minimize # Minimize the metric
     n_trials: 10 # Number of trials to run
     n_jobs: 2 # Number of jobs to run in parallel
@@ -42,7 +42,7 @@ submodule:
     
 
   model:
-    type: LinearNN
+    type: NeuralTransformer
     input_size: 302
     # hidden_size: 256
     num_layers: 1
