@@ -75,7 +75,7 @@ def plot_experiment(visualize_config: DictConfig, exp_config: DictConfig) -> Non
         plot_exp_losses(exp_log_dir, exp_plot_dir, exp_key)
 
         # Scaling law
-        plot_scaling_law(exp_log_dir, exp_plot_dir, exp_key)
+        plot_scaling_law(exp_log_dir=exp_log_dir, exp_name=exp_key, exp_plot_dir=exp_plot_dir)
     except:
         logger.info(f"Not all experiments are finished. Skipping for now.")
         return None

@@ -690,6 +690,12 @@ def experiment_parameter(exp_dir, key):
         title = 'Loss function'
         xaxis = 'Loss function type'
 
+    if key == 'model_type':
+        pipeline_info = OmegaConf.load(os.path.join(exp_dir, 'pipeline_info.yaml'))
+        value = pipeline_info.submodule.model.type # Model type used for training
+        title = 'Model'
+        xaxis = 'Model type'
+
     if key == 'num_train_samples':
         pipeline_info = OmegaConf.load(os.path.join(exp_dir, 'pipeline_info.yaml'))
         value = pipeline_info.submodule.dataset.num_train_samples # Number of training samples used for training
@@ -789,8 +795,11 @@ def plot_exp_losses(exp_log_dir, exp_plot_dir, exp_name):
     plt.close()
 
 
-def plot_scaling_law(exp_log_dir, exp_plot_dir, exp_name):
-    fig, ax = plt.subplots(1, 1, figsize=(10, 4))
+def plot_scaling_law(exp_log_dir, exp_name, exp_plot_dir=None, fig=None, ax=None):
+
+    if fig is None or ax is None:
+        # Create
+        fig, ax = plt.subplots(1, 1, figsize=(10, 4))
 
     # Store losses, parameter experiment and baselines
     losses = []
@@ -844,6 +853,10 @@ def plot_scaling_law(exp_log_dir, exp_plot_dir, exp_name):
 
     plt.tight_layout()
 
-    # Save
-    plt.savefig(os.path.join(exp_plot_dir, 'scaling_law.png'), dpi=300)
-    plt.close()
+    if exp_plot_dir is None:
+        # Used for plotting in jupyter notebook
+        return fig, ax
+    else:
+        # Save when running the pipeline
+        plt.savefig(os.path.join(exp_plot_dir, 'scaling_law.png'), dpi=300)
+        plt.close()
