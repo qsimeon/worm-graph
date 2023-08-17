@@ -9,16 +9,18 @@ hydra:
   # These parameters will be tested just when MULTIRUN mode is used.
   # Use the submodule parameters if RUN.
       params:
-        submodule.dataset.num_named_neurons: 10, 20, 30, 44 #10, 20, 30, 50, 70, 80, 90
+        submodule.dataset.num_named_neurons: 10, 20, 30, 50, 70, 80, 90
 
 submodule:
 
   dataset:
-    # Validate with standard dataset
-    use_these_datasets: /home/lrvnc/Projects/worm-graph/logs/hydra/2023_08_17_00_13_47/dataset # 8 worms with 44 neurons, num_val_samples=32, seq_len=120
+    # Combined and validation datasets provided
+    #  - Validation: all worms (245) with all named neurons
+    #  - Combined: 47 worms with 90 named neurons
+    use_these_datasets: /om2/user/lrvenan/worm-graph/data/standard_datasets/num_named_neurons_ds
 
-    # Create new train dataset
-    experimental_datasets: [Kato2015, Nichols2017, Skora2018, Uzel2022, Kaplan2020, Flavell2023, Leifer2023]
+    # Won't be used, because Combined dataset is provided
+    experimental_datasets: [Kato2015, Nichols2017, Skora2018, Uzel2022, Kaplan2020, Flavell2023, Leifer2023] 
     # num_named_neurons: all # PARAMETER OF STUDY
     num_worms: all
     k_splits: 2
@@ -44,7 +46,7 @@ submodule:
   train:
     optimizer: Adagrad
     lr: 0.001
-    epochs: 5
+    epochs: 600
     save_freq: 100
     batch_size: 32
     shuffle: true
