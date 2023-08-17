@@ -14,19 +14,23 @@ hydra:
 submodule:
 
   dataset:
+    # Validate with standard dataset
+    use_this_val_dataset: /om2/user/lrvenan/worm-graph/data/standard_datasets/dataset1/val_dataset.pt # all worms, num_val_samples=32, seq_len=120
+
+    # Create new train dataset
+    use_this_train_dataset: null # load new training dataset
     experimental_datasets: [Kato2015, Nichols2017, Skora2018, Uzel2022, Kaplan2020, Flavell2023, Leifer2023]
     num_named_neurons: all
-    # num_worms: all
+    # num_worms: all # PARAMETER OF STUDY
     k_splits: 2
     num_train_samples: 32
     num_val_samples: 32
-    seq_len: 60
+    seq_len: 120
     tau: 1
     smooth_data: true
     reverse: false
     use_residual: false
-    use_this_train_dataset: null # load new training dataset
-    use_this_val_dataset: null # load new validation dataset
+
 
   model:
     type: NeuralTransformer
@@ -39,11 +43,11 @@ submodule:
     use_this_pretrained_model: null # create fresh model
 
   train:
-    optimizer: Adam
-    lr: 1.0e-05
+    optimizer: Adagrad
+    lr: 0.001
     epochs: 600
     save_freq: 100
-    batch_size: 64
+    batch_size: 32
     shuffle: true
     use_this_train_dataset: null # use training dataset from dataset submodule
     use_this_val_dataset: null # use validation dataset from dataset submodule
@@ -55,7 +59,7 @@ submodule:
   predict:
     worms_to_predict: [worm0]
     nb_ts_to_generate: null # time steps to generate = seq_len - context_window
-    context_window: 30
+    context_window: 60
     use_this_train_dataset: null # use training dataset from dataset submodule
     use_this_val_dataset: null # use validation dataset from dataset submodule
     use_this_model: null # use model from model submodule

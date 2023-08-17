@@ -9,29 +9,33 @@ hydra:
   # These parameters will be tested just when MULTIRUN mode is used.
   # Use the submodule parameters if RUN.
       params:
-        submodule.dataset.num_worms: 10, 50, 100, 150, 200, 245
+        submodule.dataset.num_named_neurons: 10, 20, 30, 50, 70, 80, 90
 
 submodule:
 
   dataset:
+    # Validate with standard dataset
+    use_this_val_dataset: /om2/user/lrvenan/worm-graph/data/standard_datasets/dataset1/val_dataset.pt # all worms, num_val_samples=32, seq_len=120
+
+    # Create new train dataset
+    use_this_train_dataset: null # load new training dataset
     experimental_datasets: [Kato2015, Nichols2017, Skora2018, Uzel2022, Kaplan2020, Flavell2023, Leifer2023]
-    num_named_neurons: all
-    # num_worms: all
+    # num_named_neurons: all # PARAMETER OF STUDY
+    num_worms: all 
     k_splits: 2
     num_train_samples: 32
     num_val_samples: 32
-    seq_len: 60
+    seq_len: 120
     tau: 1
     smooth_data: true
     reverse: false
     use_residual: false
-    use_this_train_dataset: null # load new training dataset
-    use_this_val_dataset: null # load new validation dataset
+
 
   model:
-    type: NeuralTransformer
+    type: NetworkLSTM
     input_size: 302
-    hidden_size: 512
+    hidden_size: 256
     num_layers: 1
     loss: MSE
     fft_reg_param: 0.0
@@ -39,11 +43,11 @@ submodule:
     use_this_pretrained_model: null # create fresh model
 
   train:
-    optimizer: Adam
-    lr: 1.0e-05
-    epochs: 600
+    optimizer: AdamW
+    lr: 0.001
+    epochs: 3
     save_freq: 100
-    batch_size: 64
+    batch_size: 16
     shuffle: true
     use_this_train_dataset: null # use training dataset from dataset submodule
     use_this_val_dataset: null # use validation dataset from dataset submodule
@@ -51,11 +55,15 @@ submodule:
     early_stopping:
       delta: 1e-4
       patience: 10
+    lr_scheduler:
+      T_0: 10
+      T_mult: 2
+      eta_min: 1e-5
 
   predict:
     worms_to_predict: [worm0]
     nb_ts_to_generate: null # time steps to generate = seq_len - context_window
-    context_window: 30
+    context_window: 60
     use_this_train_dataset: null # use training dataset from dataset submodule
     use_this_val_dataset: null # use validation dataset from dataset submodule
     use_this_model: null # use model from model submodule
@@ -68,6 +76,6 @@ submodule:
 
 
 experiment:
-  name: num_time_steps
+  name: num_named_neurons
   mode: MULTIRUN
   seed: 42
