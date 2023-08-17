@@ -362,7 +362,7 @@ def plot_predictions(log_dir, neurons_to_plot=None, worms_to_plot=None):
             df.index.names = ['Type', '']
 
             # Load named neurons
-            ds_info = pd.read_csv(os.path.join(log_dir, 'dataset', 'dataset_info.csv'))
+            ds_info = pd.read_csv(os.path.join(log_dir, 'dataset', type_ds+'_dataset_info.csv'))
             neurons = ds_info[ds_info['combined_dataset_index']==wormID]['neurons']
             neurons = ast.literal_eval(neurons.values[0]) # convert str to list
 
@@ -444,7 +444,7 @@ def plot_pca_trajectory(log_dir, worms_to_plot=None, plot_type='3D'):
             df = pd.read_csv(os.path.join(log_dir, 'prediction', type_ds, file))
 
             # Load named neurons
-            ds_info = pd.read_csv(os.path.join(log_dir, 'dataset', 'dataset_info.csv'))
+            ds_info = pd.read_csv(os.path.join(log_dir, 'dataset', type_ds+'_dataset_info.csv'))
             neurons = ds_info[ds_info['combined_dataset_index']=='worm0']['neurons']
             neurons = ast.literal_eval(neurons.values[0]) # convert str to list
 
@@ -655,7 +655,7 @@ def experiment_parameter(exp_dir, key):
     xaxis = 'Experiment run'
 
     if key == 'num_time_steps':
-        df = pd.read_csv(os.path.join(exp_dir, 'dataset', 'dataset_info.csv'))
+        df = pd.read_csv(os.path.join(exp_dir, 'dataset', 'train_dataset_info.csv'))
         value = df['train_time_steps'].sum() # Total number of train time steps
         title = 'Amount of training data'
         xaxis = 'Number of time steps'
@@ -683,6 +683,12 @@ def experiment_parameter(exp_dir, key):
         value = pipeline_info.submodule.dataset.seq_len # Sequence length used for training
         title = 'Sequence length'
         xaxis = 'Sequence length'
+
+    if key == 'loss':
+        pipeline_info = OmegaConf.load(os.path.join(exp_dir, 'pipeline_info.yaml'))
+        value = pipeline_info.submodule.model.loss # Loss function used for training
+        title = 'Loss function'
+        xaxis = 'Loss function type'
 
     if key == 'num_train_samples':
         pipeline_info = OmegaConf.load(os.path.join(exp_dir, 'pipeline_info.yaml'))

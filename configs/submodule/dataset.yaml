@@ -4,10 +4,6 @@ dataset:
   # If not null, but the directory is incomplete (without a combined, train or val. datasets), 
   #   create the missing ones using the experimental_datasets.
   use_these_datasets: /home/lrvnc/Projects/worm-graph/data/standard_datasets/myDS1
-  use_this_combined_dataset: null # if null, use the datasets specified in experimental_datasets
-  use_this_train_dataset: null # if null, use train dataset generated from experimental_datasets
-  use_this_val_dataset: null # if null, use val. dataset generated from experimental_datasets
-  save_datasets: true # whether to save save the combined dataset (dict), train/val datasets (torch)
 
   experimental_datasets: Nichols2017 #[Kato2015, Nichols2017, Skora2018, Uzel2022, Kaplan2020, Flavell2023, Leifer2023]
   num_named_neurons: all # number of neurons to train the model with (positive integer or 'all')
