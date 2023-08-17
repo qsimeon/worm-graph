@@ -330,13 +330,64 @@ def select_named_neurons(multi_worm_dataset, num_named_neurons):
             data['dataset'],
             len(list(set(multi_worm_dataset.keys()) - set(worms_to_drop))))
             )
-    else:
-        logger.info("No worms dropped from {}.".format(data['dataset']))
 
     for wormID in worms_to_drop:
         del multi_worm_dataset[wormID]
 
     return multi_worm_dataset
+
+
+def rename_worm_keys(d):
+    # Sort the keys
+    sorted_keys = sorted(d.keys(), key=lambda x: int(x.replace('worm', '')))
+    
+    # Create a mapping from old keys to new keys
+    key_mapping = {old_key: f'worm{i}' for i, old_key in enumerate(sorted_keys)}
+    
+    # Return the dictionary with keys renamed
+    return {key_mapping[key]: d[key] for key in sorted_keys}
+
+
+def filter_loaded_combined_dataset(combined_dataset, num_worms, num_named_neurons):
+
+    combined_dataset = select_named_neurons(combined_dataset, num_named_neurons)
+
+    # Verify if len(combined_dataset) is >= num_worms
+    if num_worms != "all":
+        assert len(combined_dataset) >= num_worms, (
+            "num_worms must be less than or equal to the number of worms in the combined dataset. "
+        )
+
+        # Select `num_worms` worms
+        wormIDs = [wormID for wormID in combined_dataset.keys()]
+        wormIDs_to_keep = np.random.choice(wormIDs, size=num_worms, replace=False)
+        logger.info('Selecting {} worms from {} in the combined dataset'.format(len(wormIDs_to_keep), len(combined_dataset)))
+
+        # Remove the worms that are not in `wormIDs_to_keep`
+        for wormID in wormIDs:
+            if wormID not in wormIDs_to_keep:
+                combined_dataset.pop(wormID)
+
+    combined_dataset = rename_worm_keys(combined_dataset)
+
+    # Information about the dataset
+    dataset_info = {
+        'dataset': [],
+        'original_index': [],
+        'combined_dataset_index': [],
+        'neurons': [],
+    }
+
+    for worm, data in combined_dataset.items():
+        dataset_info['dataset'].append(data['dataset'])
+        dataset_info['original_index'].append(data['original_worm'])
+        dataset_info['combined_dataset_index'].append(worm)
+        worm_neurons = [neuron for slot, neuron in data['slot_to_named_neuron'].items()]
+        dataset_info['neurons'].append(worm_neurons)
+
+    dataset_info = pd.DataFrame(dataset_info)
+
+    return combined_dataset, dataset_info
 
 
 def find_reliable_neurons(multi_worm_dataset):
@@ -573,17 +624,6 @@ def load_Leifer2023():
     return Leifer2023
 
 
-def rename_worm_keys(d):
-    # Sort the keys
-    sorted_keys = sorted(d.keys(), key=lambda x: int(x.replace('worm', '')))
-    
-    # Create a mapping from old keys to new keys
-    key_mapping = {old_key: f'worm{i}' for i, old_key in enumerate(sorted_keys)}
-    
-    # Return the dictionary with keys renamed
-    return {key_mapping[key]: d[key] for key in sorted_keys}
-
-
 def create_combined_dataset(experimental_datasets, num_named_neurons, num_worms):
     """Returns a dict with the worm data of all requested datasets.
 
@@ -673,27 +713,16 @@ def create_combined_dataset(experimental_datasets, num_named_neurons, num_worms)
         'neurons': [],
     }
 
-    combined_dataset_neurons = []
-
     for worm, data in combined_dataset.items():
         dataset_info['dataset'].append(data['dataset'])
         dataset_info['original_index'].append(data['original_worm'])
         dataset_info['combined_dataset_index'].append(worm)
         worm_neurons = [neuron for slot, neuron in data['slot_to_named_neuron'].items()]
         dataset_info['neurons'].append(worm_neurons)
-        combined_dataset_neurons = combined_dataset_neurons + worm_neurons
 
     dataset_info = pd.DataFrame(dataset_info)
 
-    combined_dataset_neurons = np.array(combined_dataset_neurons)
-    # Count occurernces of each neuron
-    neuron_counts = np.unique(combined_dataset_neurons, return_counts=True)
-    # Sort by neuron count
-    neuron_counts = np.array(sorted(zip(*neuron_counts), key=lambda x: x[1], reverse=True))
-    # Create a dataframe
-    neuron_counts = pd.DataFrame(neuron_counts, columns=["neuron", "count"])
-
-    return combined_dataset, dataset_info, neuron_counts
+    return combined_dataset, dataset_info
 
 
 def distribute_samples(data_splits, total_nb_samples):
