@@ -9,19 +9,18 @@ hydra:
   # These parameters will be tested just when MULTIRUN mode is used.
   # Use the submodule parameters if RUN.
       params:
-        submodule.dataset.num_named_neurons: 10, 20, 30, 50, 70, 80, 90
+        submodule.dataset.num_named_neurons: 10, 20, 30, 44 #10, 20, 30, 50, 70, 80, 90
 
 submodule:
 
   dataset:
     # Validate with standard dataset
-    use_this_val_dataset: /om2/user/lrvenan/worm-graph/data/standard_datasets/dataset1/val_dataset.pt # all worms, num_val_samples=32, seq_len=120
+    use_these_datasets: /home/lrvnc/Projects/worm-graph/logs/hydra/2023_08_17_00_13_47/dataset # 8 worms with 44 neurons, num_val_samples=32, seq_len=120
 
     # Create new train dataset
-    use_this_train_dataset: null # load new training dataset
     experimental_datasets: [Kato2015, Nichols2017, Skora2018, Uzel2022, Kaplan2020, Flavell2023, Leifer2023]
     # num_named_neurons: all # PARAMETER OF STUDY
-    num_worms: all 
+    num_worms: all
     k_splits: 2
     num_train_samples: 32
     num_val_samples: 32
@@ -33,9 +32,9 @@ submodule:
 
 
   model:
-    type: NetworkLSTM
+    type: NeuralTransformer
     input_size: 302
-    hidden_size: 256
+    hidden_size: 512
     num_layers: 1
     loss: MSE
     fft_reg_param: 0.0
@@ -43,11 +42,11 @@ submodule:
     use_this_pretrained_model: null # create fresh model
 
   train:
-    optimizer: AdamW
+    optimizer: Adagrad
     lr: 0.001
-    epochs: 3
+    epochs: 5
     save_freq: 100
-    batch_size: 16
+    batch_size: 32
     shuffle: true
     use_this_train_dataset: null # use training dataset from dataset submodule
     use_this_val_dataset: null # use validation dataset from dataset submodule
@@ -55,10 +54,6 @@ submodule:
     early_stopping:
       delta: 1e-4
       patience: 10
-    lr_scheduler:
-      T_0: 10
-      T_mult: 2
-      eta_min: 1e-5
 
   predict:
     worms_to_predict: [worm0]
