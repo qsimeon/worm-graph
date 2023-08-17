@@ -48,9 +48,6 @@ submodule:
     save_freq: 100
     batch_size: 32
     shuffle: true
-    use_this_train_dataset: null # use training dataset from dataset submodule
-    use_this_val_dataset: null # use validation dataset from dataset submodule
-    use_this_pretrained_model: null # train from scratch
     early_stopping:
       delta: 1e-4
       patience: 10
@@ -59,9 +56,6 @@ submodule:
     worms_to_predict: [worm0]
     nb_ts_to_generate: null # time steps to generate = seq_len - context_window
     context_window: 60
-    use_this_train_dataset: null # use training dataset from dataset submodule
-    use_this_val_dataset: null # use validation dataset from dataset submodule
-    use_this_model: null # use model from model submodule
 
   visualize:
     plot_figures_from_this_log_dir: null # plot figures of current experiment

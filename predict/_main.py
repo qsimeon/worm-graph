@@ -59,22 +59,6 @@ def make_predictions(
     os.makedirs(os.path.join(log_dir, 'prediction', 'train'), exist_ok=True)
     os.makedirs(os.path.join(log_dir, 'prediction', 'val'), exist_ok=True)
 
-    # Load train and validation datasets if dataset submodule is not in pipeline
-    if train_dataset is None:
-        assert predict_config.use_this_train_dataset is not None, "File path to train dataset must be provided if not using the dataset submodule"
-        logger.info("Loading train dataset from %s" % (predict_config.use_this_train_dataset))
-        train_dataset = torch.load(predict_config.use_this_train_dataset)
-    if val_dataset is None:
-        assert predict_config.use_this_val_dataset is not None, "File path to validation dataset must be provided if not using the dataset submodule"
-        logger.info("Loading validation dataset from %s" % (predict_config.use_this_val_dataset))
-        val_dataset = torch.load(predict_config.use_this_val_dataset)
-
-    # Load model if model submodule is not in pipeline
-    if predict_config.use_this_model is not None:
-        assert predict_config.use_this_model is not None, "File path to model must be provided if not using the model submodule"
-        model_config = OmegaConf.create({'use_this_pretrained_model': predict_config.use_this_model})
-        model = get_model(model_config)
-
     # Make predictions in the train and validation datasets
     for ds_type in os.listdir(os.path.join(log_dir, 'prediction')):
 

@@ -2,7 +2,7 @@
 
 defaults:
   # To run the default pipeline, add +experiment=default to the command.
-  - submodule: [dataset]
+  - submodule: []
   # SubmitIt Launcher Plugin:
   #   This plugin provides SLURM launcher to work on the cluster.
   #   - Use submitit_slurm when using OpenMind (add hydra/launcher=submitit_slurm if using command line)
