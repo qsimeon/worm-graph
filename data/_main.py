@@ -66,7 +66,9 @@ def get_datasets(dataset_config: DictConfig):
 
         # If both datasets exist, save and return them. Else, create them using the experimental datasets
         if train_dataset_exists and val_dataset_exists:
-            # There's no need to save the datasets again, just return them
+            # There's no need to save the datasets again, just their information (for visualization submodule use)
+            dataset_info_train.to_csv(os.path.join(log_dir, 'dataset', f"train_dataset_info.csv"), index=True, header=True)
+            dataset_info_val.to_csv(os.path.join(log_dir, 'dataset', f"val_dataset_info.csv"), index=True, header=True)
             return train_dataset, val_dataset
         
         else:

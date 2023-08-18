@@ -13,6 +13,10 @@ hydra:
 
 submodule:
   dataset:
+    # Train and validation dataset provided
+    use_these_datasets: /home/lrvnc/Projects/worm-graph/data/standard_datasets/FKKNSU
+
+    # Ignore these datasets
     experimental_datasets: Kato2015
     num_worms: 1
     k_splits: 2
@@ -23,9 +27,9 @@ submodule:
     reverse: false
     use_residual: false
     smooth_data: true
-    use_these_datasets: null
+    
   train:
-    epochs: 5
+    epochs: 10
 
 experiment:
   name: default_multirun
