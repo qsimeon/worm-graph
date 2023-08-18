@@ -690,6 +690,12 @@ def experiment_parameter(exp_dir, key):
         title = 'Loss function'
         xaxis = 'Loss function type'
 
+    if key == 'num_train_samples':
+        pipeline_info = OmegaConf.load(os.path.join(exp_dir, 'pipeline_info.yaml'))
+        value = pipeline_info.submodule.dataset.num_train_samples
+        title = 'Number of training samples'
+        xaxis = 'Number of training samples'
+
     if key == 'model_type':
         pipeline_info = OmegaConf.load(os.path.join(exp_dir, 'pipeline_info.yaml'))
         value = pipeline_info.submodule.model.type # Model type used for training
