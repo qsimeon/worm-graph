@@ -48,12 +48,14 @@ hydra:
       - source /om2/user/lrvenan/miniconda/bin/activate worm-graph
     nodes: 1
     gres: gpu:1
+    exclude: dgx001, dgx002
     mem_gb: 32
     cpus_per_task: 1
     gpus_per_node: 1
     tasks_per_node: 1
     timeout_min: 1440
     #partition: yanglab # sinfo to see the available partitions in OpenMind
+
 
 # ============================ Pipeline Config ============================
 

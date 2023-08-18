@@ -1,14 +1,17 @@
 train:
+  task: many-to-many
   optimizer: AdamW
-  lr: 0.0001
-  epochs: 10
+  lr: 0.001
+  epochs: 20
   save_freq: 1000
   batch_size: 16
   shuffle: true
-  use_this_train_dataset: null # if null, use the dataset specified in dataset.yaml
-  use_this_val_dataset: null # if null, use the dataset specified in dataset.yaml
-  use_this_pretrained_model: null # if null, train from scratch
 
   early_stopping:
     delta: 1e-4 # minimum change in validation loss to be considered an improvement
     patience: 10 # number of epochs to wait for improvement before stopping
+
+  lr_scheduler:
+    T_0: 10 # Number of epochs for the first period
+    T_mult: 2 # Factor to multiply T_0 after each restart
+    eta_min: 1e-5 # Minimum learning rate

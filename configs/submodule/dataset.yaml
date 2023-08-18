@@ -1,14 +1,19 @@
 dataset:
-  experimental_datasets: Kato2015 # Kato2015, Nichols2017, Skora2018, Uzel2022, Kaplan2020, Flavell2023, Leifer2023
+  # Path to a directory containing the datasets to be used.
+  # If null, create a new dataset using the experimental_datasets.
+  # If not null, but the directory is incomplete (without a combined, train or val. datasets), 
+  #   create the missing ones using the experimental_datasets.
+  use_these_datasets: null
+
+  experimental_datasets: [Kato2015, Nichols2017, Skora2018, Uzel2022, Kaplan2020, Flavell2023, Leifer2023]
   num_named_neurons: all # number of neurons to train the model with (positive integer or 'all')
   num_worms: all # number of worms to train the model with (positive integer or 'all')
   k_splits: 2
-  num_train_samples: 16
-  num_val_samples: 16
+  num_train_samples: 4
+  num_val_samples: 32
   seq_len: 120
   tau: 1
   reverse: false
   use_residual: false
   smooth_data: true
-  use_this_train_dataset: null # if null, use the dataset specified in dataset.yaml
-  use_this_val_dataset: null # if null, use the dataset specified in dataset.yaml
+  

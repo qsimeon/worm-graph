@@ -1,0 +1,70 @@
+# @package _global_
+defaults:
+  - override /submodule: [dataset, model, train, predict, visualize]
+  - _self_
+
+hydra:
+  mode: MULTIRUN
+  sweeper:
+  # These parameters will be tested just when MULTIRUN mode is used.
+  # Use the submodule parameters if RUN.
+      params:
+        submodule.dataset.num_worms: 10, 50, 100, 150, 200, 245
+
+submodule:
+
+  dataset:
+    # Validate with standard dataset
+    use_these_datasets: CHANGE # all worms, num_val_samples=32, seq_len=120
+
+    # Create new train dataset
+    experimental_datasets: [Kato2015, Nichols2017, Skora2018, Uzel2022, Kaplan2020, Flavell2023, Leifer2023]
+    num_named_neurons: all
+    # num_worms: all # PARAMETER OF STUDY
+    k_splits: 2
+    num_train_samples: 32
+    num_val_samples: 32
+    seq_len: 120
+    tau: 1
+    smooth_data: true
+    reverse: false
+    use_residual: false
+
+
+  model:
+    type: NeuralTransformer
+    input_size: 302
+    hidden_size: 512
+    num_layers: 1
+    loss: MSE
+    fft_reg_param: 0.0
+    l1_reg_param: 0.0
+    use_this_pretrained_model: null # create fresh model
+
+  train:
+    optimizer: Adagrad
+    lr: 0.001
+    epochs: 600
+    save_freq: 100
+    batch_size: 32
+    shuffle: true
+    early_stopping:
+      delta: 1e-4
+      patience: 10
+
+  predict:
+    worms_to_predict: [worm0]
+    nb_ts_to_generate: null # time steps to generate = seq_len - context_window
+    context_window: 60
+
+  visualize:
+    plot_figures_from_this_log_dir: null # plot figures of current experiment
+    predict:
+      worms_to_plot: null # plot all predicted worms (worm0)
+      neurons_to_plot: 10 # plot all the neurons
+
+
+experiment:
+  name: num_time_steps
+  mode: MULTIRUN
+  seed: 42

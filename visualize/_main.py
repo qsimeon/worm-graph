@@ -34,51 +34,51 @@ def plot_figures(
             plot_pca_trajectory(log_dir=log_dir, worms_to_plot=visualize_config.predict.worms_to_plot, plot_type='2D')
             # plot_correlation_scatterplot
 
-    return None
-
 def plot_experiment(visualize_config: DictConfig, exp_config: DictConfig) -> None:
     """
     Plots the scaling laws for the worm neural activity dataset.
     """
 
-    log_dir = visualize_config.plot_figures_from_this_log_dir
+    try:
+        log_dir = visualize_config.plot_figures_from_this_log_dir
 
-    assert log_dir is not None, "log_dir is None. Please specify a log directory to plot figures from."
+        assert log_dir is not None, "log_dir is None. Please specify a log directory to plot figures from."
 
-    # If this log is an experiment log, it contains 'exp0' directory
-    if 'exp0' in os.listdir(log_dir):
-        exp_log_dir = log_dir
-    else:
-        # One directory up if inside any 'expN' directory
-        log_dir = os.path.dirname(log_dir)
+        # If this log is an experiment log, it contains 'exp0' directory
         if 'exp0' in os.listdir(log_dir):
             exp_log_dir = log_dir
         else:
-            logger.info(f"Log directory {log_dir} is not an experiment log. Skipping experiment plots.")
+            # One directory up if inside any 'expN' directory
+            log_dir = os.path.dirname(log_dir)
+            if 'exp0' in os.listdir(log_dir):
+                exp_log_dir = log_dir
+            else:
+                logger.info(f"Log directory {log_dir} is not an experiment log. Skipping experiment plots.")
+                return None
+
+        # Create directory to store experiment plots
+        exp_plot_dir = os.path.join(exp_log_dir, "exp_plots")
+        os.makedirs(exp_plot_dir, exist_ok=True)
+
+        # Get experiment key
+        pipeline_info_exp0 = OmegaConf.load(os.path.join(exp_log_dir, "exp0", "pipeline_info.yaml"))
+        exp_key = pipeline_info_exp0.experiment.name
+
+        value, title, xaxis = experiment_parameter(os.path.join(exp_log_dir, 'exp0'), key=exp_key)
+        if value is None:
+            logger.info(f"Experiment {exp_key} not found in {exp_log_dir}. Skipping experiment plots.")
             return None
 
-    # Create directory to store experiment plots
-    exp_plot_dir = os.path.join(exp_log_dir, "exp_plots")
-    os.makedirs(exp_plot_dir, exist_ok=True)
+        logger.info(f"Plotting experiment {exp_key}.")
 
-    # Get experiment key
-    pipeline_info_exp0 = OmegaConf.load(os.path.join(exp_log_dir, "exp0", "pipeline_info.yaml"))
-    exp_key = pipeline_info_exp0.experiment.name
+        # Plot losses and computation time
+        plot_exp_losses(exp_log_dir, exp_plot_dir, exp_key)
 
-    value, title, xaxis = experiment_parameter(os.path.join(exp_log_dir, 'exp0'), key=exp_key)
-    if value is None:
-        logger.info(f"Experiment {exp_key} not found in {exp_log_dir}. Skipping experiment plots.")
+        # Scaling law
+        plot_scaling_law(exp_log_dir=exp_log_dir, exp_name=exp_key, exp_plot_dir=exp_plot_dir)
+    except:
+        logger.info(f"Not all experiments are finished. Skipping for now.")
         return None
-
-    logger.info(f"Plotting experiment {exp_key}.")
-
-    # Plot losses and computation time
-    plot_exp_losses(exp_log_dir, exp_plot_dir, exp_key)
-
-    # Scaling law
-    plot_scaling_law(exp_log_dir, exp_plot_dir, exp_key)
-
-    return None
 
 
 if __name__ == "__main__":

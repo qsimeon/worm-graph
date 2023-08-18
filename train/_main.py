@@ -23,22 +23,6 @@ def train_model(
     os.makedirs(os.path.join(log_dir, "train"), exist_ok=True)
     os.makedirs(os.path.join(log_dir, "train", "checkpoints"), exist_ok=True)
 
-    # Load train and validation datasets if dataset submodule is not in pipeline
-    if train_dataset is None:
-        assert train_config.use_this_train_dataset is not None, "File path to train dataset must be provided if not using the dataset submodule"
-        logger.info("Loading train dataset from %s" % (train_config.use_this_train_dataset))
-        train_dataset = torch.load(train_config.use_this_train_dataset)
-    if val_dataset is None:
-        assert train_config.use_this_val_dataset is not None, "File path to validation dataset must be provided if not using the dataset submodule"
-        logger.info("Loading validation dataset from %s" % (train_config.use_this_val_dataset))
-        val_dataset = torch.load(train_config.use_this_val_dataset)
-
-    # Load model if model submodule is not in pipeline
-    if train_config.use_this_pretrained_model is not None:
-        assert train_config.use_this_pretrained_model is not None, "File path to pretrained model must be provided if not using the model submodule"
-        model_config = OmegaConf.create({'use_this_pretrained_model': train_config.use_this_pretrained_model})
-        model = get_model(model_config)
-
     # Load model to device
     model = model.to(DEVICE)
 
@@ -55,6 +39,11 @@ def train_model(
     optim_name = "torch.optim." + train_config.optimizer
     lr = train_config.lr
     optimizer = eval(optim_name + "(model.parameters(), lr=" + str(lr) + ")")
+    scheduler = lr_scheduler.CosineAnnealingWarmRestarts(optimizer,
+                                                         T_0=train_config.lr_scheduler.T_0,
+                                                         T_mult=train_config.lr_scheduler.T_mult,
+                                                         eta_min=train_config.lr_scheduler.eta_min
+                                                         )
 
     # Instantiate EarlyStopping
     es = EarlyStopping(
@@ -106,13 +95,24 @@ def train_model(
 
             optimizer.zero_grad() # Reset gradients
 
+            # If many-to-one prediction, select last time step. Else, many-to-many prediction.
+            if train_config.task == "many-to-one":
+                y_base = X_train[:, -1, :].unsqueeze(1)  # Select last time step
+                Y_train = Y_train[:, -1, :].unsqueeze(1)  # Select last time step
+            else:
+                y_base = X_train
+
             # Baseline model: identity model - predict that the next time step is the same as the current one.
             # This is the simplest model we can think of: predict that the next time step is the same as the current one
             # is better than predict any other random number.
-            train_baseline = compute_loss(loss_fn=criterion, X=X_train, Y=Y_train, masks=masks_train)
+            train_baseline = compute_loss(loss_fn=criterion, X=y_base, Y=Y_train, masks=masks_train)
             
             # Model
             y_pred = model(X_train, masks_train, tau)
+
+            if train_config.task == "many-to-one":
+                y_pred = y_pred[:, -1, :].unsqueeze(1)  # Select last time step
+
             train_loss = compute_loss(loss_fn=criterion, X=y_pred, Y=Y_train, masks=masks_train)
 
             # Backpropagation (skip first epoch)
@@ -129,6 +129,11 @@ def train_model(
             mlflow.log_metric("iteration_train_baseline", train_baseline.item(), step=epoch*len(trainloader) + batch_idx)
 
         end_time = time.perf_counter()
+
+        # Step the scheduler
+        scheduler.step()
+        current_lr = optimizer.param_groups[0]['lr']
+        mlflow.log_metric("learning_rate", current_lr, step=epoch)
 
         # Store metrics
         train_epoch_loss.append(train_running_loss / len(trainloader))
@@ -156,13 +161,24 @@ def train_model(
                 Y_val = Y_val.to(DEVICE)
                 masks_val = masks_val.to(DEVICE)
 
+                # If many-to-one prediction, select last time step. Else, many-to-many prediction.
+                if train_config.task == "many-to-one":
+                    y_base = X_val[:, -1, :].unsqueeze(1)  # Select last time step
+                    Y_val = Y_val[:, -1, :].unsqueeze(1)  # Select last time step
+                else:
+                    y_base = X_val
+
                 # Baseline model: identity model - predict that the next time step is the same as the current one.
                 # This is the simplest model we can think of: predict that the next time step is the same as the current one
                 # is better than predict any other random number.
-                val_baseline = compute_loss(loss_fn=criterion, X=X_val, Y=Y_val, masks=masks_val)
+                val_baseline = compute_loss(loss_fn=criterion, X=y_base, Y=Y_val, masks=masks_val)
 
                 # Model
                 y_pred = model(X_val, masks_val, tau)
+
+                if train_config.task == "many-to-one":
+                    y_pred = y_pred[:, -1, :].unsqueeze(1)  # Select last time step
+                    
                 val_loss = compute_loss(loss_fn=criterion, X=y_pred, Y=Y_val, masks=masks_val)
 
                 # Update running losses
@@ -223,8 +239,8 @@ def train_model(
 
     # Metric for optuna (lowest validation loss)
     metric = min(val_epoch_loss)
-    if metric == np.NaN:
-        metric = np.inf
+    if metric == np.NaN or metric is None:
+        metric = float('inf')
 
     return model, metric
 

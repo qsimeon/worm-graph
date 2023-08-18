@@ -19,6 +19,20 @@ def pipeline(cfg: DictConfig) -> None:
         # Verifications
         if len(cfg) == 1: # only the pipeline module
             raise ValueError("No submodules in the pipeline. Run python main.py +experiment=your_experiment")
+        
+        if 'train' in cfg.submodule:
+            # Need to have a model and a dataset
+            if 'model' not in cfg.submodule:
+                raise AssertionError("Need to specify a model before training.")
+            if 'dataset' not in cfg.submodule:
+                raise AssertionError("Need to specify a dataset before training.")
+            
+        if 'predict' in cfg.submodule:
+            # Need to have a model and a dataset
+            if 'model' not in cfg.submodule:
+                raise AssertionError("Need to specify a model before predicting.")
+            if 'dataset' not in cfg.submodule:
+                raise AssertionError("Need to specify a dataset before predicting.")
 
         logger.info("Torch device: %s" % (DEVICE))
 
@@ -34,13 +48,9 @@ def pipeline(cfg: DictConfig) -> None:
         
         if 'dataset' in cfg.submodule:
             train_dataset, val_dataset = get_datasets(cfg.submodule.dataset)
-        else:
-            train_dataset, val_dataset =  None, None
 
         if 'model' in cfg.submodule:
             model = get_model(cfg.submodule.model)
-        else:
-            model = None
 
         if 'train' in cfg.submodule:
             model, metric = train_model(
