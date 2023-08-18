@@ -105,7 +105,7 @@ def train_model(
             # Baseline model: identity model - predict that the next time step is the same as the current one.
             # This is the simplest model we can think of: predict that the next time step is the same as the current one
             # is better than predict any other random number.
-            train_baseline = compute_loss(loss_fn=criterion, X=y_base, Y=Y_train, masks=masks_train)
+            train_baseline = compute_loss_vectorized(loss_fn=criterion, X=y_base, Y=Y_train, masks=masks_train)
             
             # Model
             y_pred = model(X_train, masks_train, tau)
@@ -113,7 +113,7 @@ def train_model(
             if train_config.task == "many-to-one":
                 y_pred = y_pred[:, -1, :].unsqueeze(1)  # Select last time step
 
-            train_loss = compute_loss(loss_fn=criterion, X=y_pred, Y=Y_train, masks=masks_train)
+            train_loss = compute_loss_vectorized(loss_fn=criterion, X=y_pred, Y=Y_train, masks=masks_train)
 
             # Backpropagation (skip first epoch)
             if epoch > 0:
@@ -171,7 +171,7 @@ def train_model(
                 # Baseline model: identity model - predict that the next time step is the same as the current one.
                 # This is the simplest model we can think of: predict that the next time step is the same as the current one
                 # is better than predict any other random number.
-                val_baseline = compute_loss(loss_fn=criterion, X=y_base, Y=Y_val, masks=masks_val)
+                val_baseline = compute_loss_vectorized(loss_fn=criterion, X=y_base, Y=Y_val, masks=masks_val)
 
                 # Model
                 y_pred = model(X_val, masks_val, tau)
@@ -179,7 +179,7 @@ def train_model(
                 if train_config.task == "many-to-one":
                     y_pred = y_pred[:, -1, :].unsqueeze(1)  # Select last time step
                     
-                val_loss = compute_loss(loss_fn=criterion, X=y_pred, Y=Y_val, masks=masks_val)
+                val_loss = compute_loss_vectorized(loss_fn=criterion, X=y_pred, Y=Y_val, masks=masks_val)
 
                 # Update running losses
                 val_running_base_loss += val_baseline.item()

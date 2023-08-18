@@ -570,7 +570,7 @@ class Model(torch.nn.Module):
                 .to(prediction.device)
             )
             # calculate next time step prediction loss
-            original_loss = self.loss(**kwargs)(
+            original_loss = self.loss(reduction='none', **kwargs)(
                 # kernel * prediction,
                 # kernel * target,  # weigh more recent time steps more heavily
                 # # NOTE: the next two options are the extreme ends of a spectrum from using an exponential recency decay
