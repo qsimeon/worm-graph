@@ -14,17 +14,17 @@ hydra:
 submodule:
 
   dataset:
-    # Validate with standard dataset
-    use_these_datasets: CHANGE # all worms, num_val_samples=32, seq_len=120
+    # Do not use standard datasets
+    use_these_datasets: null # all worms, num_val_samples=32, seq_len=120
 
     # Create new train dataset
     experimental_datasets: [Kato2015, Nichols2017, Skora2018, Uzel2022, Kaplan2020, Flavell2023, Leifer2023]
     num_named_neurons: all
     # num_worms: all # PARAMETER OF STUDY
     k_splits: 2
-    num_train_samples: 32
-    num_val_samples: 32
-    seq_len: 120
+    num_train_samples: 16
+    num_val_samples: 16
+    seq_len: 60
     tau: 1
     smooth_data: true
     reverse: false
@@ -32,21 +32,21 @@ submodule:
 
 
   model:
-    type: NeuralTransformer
+    type: NetworkLSTM
     input_size: 302
-    hidden_size: 512
+    hidden_size: 256
     num_layers: 1
-    loss: MSE
+    loss: Huber
     fft_reg_param: 0.0
     l1_reg_param: 0.0
     use_this_pretrained_model: null # create fresh model
 
   train:
-    optimizer: Adagrad
-    lr: 0.001
-    epochs: 600
+    optimizer: Adam
+    lr: 0.0001
+    epochs: 999
     save_freq: 100
-    batch_size: 32
+    batch_size: 16
     shuffle: true
     early_stopping:
       delta: 1e-4
@@ -55,7 +55,7 @@ submodule:
   predict:
     worms_to_predict: [worm0]
     nb_ts_to_generate: null # time steps to generate = seq_len - context_window
-    context_window: 60
+    context_window: 20
 
   visualize:
     plot_figures_from_this_log_dir: null # plot figures of current experiment

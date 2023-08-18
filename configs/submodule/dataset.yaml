@@ -9,9 +9,9 @@ dataset:
   num_named_neurons: all # number of neurons to train the model with (positive integer or 'all')
   num_worms: all # number of worms to train the model with (positive integer or 'all')
   k_splits: 2
-  num_train_samples: 4
-  num_val_samples: 32
-  seq_len: 120
+  num_train_samples: 16
+  num_val_samples: 16
+  seq_len: 60
   tau: 1
   reverse: false
   use_residual: false
