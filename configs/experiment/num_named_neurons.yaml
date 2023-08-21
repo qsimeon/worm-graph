@@ -51,12 +51,8 @@ submodule:
     batch_size: 16
     shuffle: true
     early_stopping:
-      delta: 0
-      patience: 200
-    lr_scheduler:
-      T_0: 10
-      T_mult: 2
-      eta_min: 1e-5
+      delta: 0 # minimum change in validation loss to be considered an improvement
+      patience: 50 # number of epochs to wait for improvement before stopping
 
   predict:
     worms_to_predict: [worm0]
