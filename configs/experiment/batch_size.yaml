@@ -9,18 +9,20 @@ hydra:
   # These parameters will be tested just when MULTIRUN mode is used.
   # Use the submodule parameters if RUN.
       params:
-        submodule.dataset.num_worms: 10, 50, 100, 150, 200, 245
+        submodule.train.batch_size: 8, 16, 32, 64, 128
 
 submodule:
 
   dataset:
-    # Do not use standard datasets
-    use_these_datasets: /om2/user/lrvenan/worm-graph/data/standard_datasets/num_time_steps_old_exp # all worms, num_val_samples=16, seq_len=60
+    # Combined and validation datasets provided
+    #  - Train: all worms (245) with all named neurons (num_train_samples=16, seq_len=60)
+    #  - Validation: all worms (245) with all named neurons (num_val_samples=16, seq_len=60)
+    use_these_datasets: /om2/user/lrvenan/worm-graph/data/standard_datasets/batch_size_old_exp
 
-    # Create new train dataset
-    experimental_datasets: [Kato2015, Nichols2017, Skora2018, Uzel2022, Kaplan2020, Flavell2023, Leifer2023]
+    # Won't be used, because Combined dataset is provided
+    experimental_datasets: [Kato2015, Nichols2017, Skora2018, Uzel2022, Kaplan2020, Flavell2023, Leifer2023] 
     num_named_neurons: all
-    # num_worms: all # PARAMETER OF STUDY
+    num_worms: all
     k_splits: 2
     num_train_samples: 16
     num_val_samples: 16
@@ -30,9 +32,8 @@ submodule:
     reverse: false
     use_residual: false
 
-
   model:
-    type: NeuralTransformer
+    type: NetworkLSTM
     input_size: 302
     hidden_size: 256
     num_layers: 1
@@ -43,10 +44,10 @@ submodule:
 
   train:
     optimizer: Adam
-    lr: 0.0001
+    lr: 0.001
     epochs: 900
     save_freq: 100
-    batch_size: 16
+    # batch_size: 16 # PARAMETER OF STUDY
     shuffle: true
     early_stopping:
       delta: 0 # minimum change in validation loss to be considered an improvement
@@ -65,6 +66,6 @@ submodule:
 
 
 experiment:
-  name: num_time_steps
+  name: batch_size
   mode: MULTIRUN
   seed: 42

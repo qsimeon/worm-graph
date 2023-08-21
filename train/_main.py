@@ -39,11 +39,7 @@ def train_model(
     optim_name = "torch.optim." + train_config.optimizer
     lr = train_config.lr
     optimizer = eval(optim_name + "(model.parameters(), lr=" + str(lr) + ")")
-    scheduler = lr_scheduler.CosineAnnealingWarmRestarts(optimizer,
-                                                         T_0=train_config.lr_scheduler.T_0,
-                                                         T_mult=train_config.lr_scheduler.T_mult,
-                                                         eta_min=train_config.lr_scheduler.eta_min
-                                                         )
+    scheduler = lr_scheduler.ReduceLROnPlateau(optimizer, 'min')
 
     # Instantiate EarlyStopping
     es = EarlyStopping(
@@ -130,11 +126,6 @@ def train_model(
 
         end_time = time.perf_counter()
 
-        # Step the scheduler
-        scheduler.step()
-        current_lr = optimizer.param_groups[0]['lr']
-        mlflow.log_metric("learning_rate", current_lr, step=epoch)
-
         # Store metrics
         train_epoch_loss.append(train_running_loss / len(trainloader))
         train_epoch_baseline.append(train_running_base_loss / len(trainloader))
@@ -202,6 +193,11 @@ def train_model(
             # Reset running losses
             val_running_base_loss = 0
             val_running_loss = 0
+        
+        # Step the scheduler
+        scheduler.step(val_epoch_loss[-1])
+        current_lr = optimizer.param_groups[0]['lr']
+        mlflow.log_metric("learning_rate", current_lr, step=epoch)
 
         # Save model checkpoint
         if epoch % save_freq == 0:
