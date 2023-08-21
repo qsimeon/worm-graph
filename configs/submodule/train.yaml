@@ -8,8 +8,8 @@ train:
   shuffle: true
 
   early_stopping:
-    delta: 1e-4 # minimum change in validation loss to be considered an improvement
-    patience: 10 # number of epochs to wait for improvement before stopping
+    delta: 1e-5 # minimum change in validation loss to be considered an improvement
+    patience: 200 # number of epochs to wait for improvement before stopping
 
   lr_scheduler:
     T_0: 10 # Number of epochs for the first period

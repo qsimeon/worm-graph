@@ -39,17 +39,17 @@ def train_model(
     optim_name = "torch.optim." + train_config.optimizer
     lr = train_config.lr
     optimizer = eval(optim_name + "(model.parameters(), lr=" + str(lr) + ")")
-    #!scheduler = lr_scheduler.CosineAnnealingWarmRestarts(optimizer,
-    #!                                                     T_0=train_config.lr_scheduler.T_0,
-    #!                                                     T_mult=train_config.lr_scheduler.T_mult,
-    #!                                                     eta_min=train_config.lr_scheduler.eta_min
-    #!                                                     )
+    scheduler = lr_scheduler.CosineAnnealingWarmRestarts(optimizer,
+                                                         T_0=train_config.lr_scheduler.T_0,
+                                                         T_mult=train_config.lr_scheduler.T_mult,
+                                                         eta_min=train_config.lr_scheduler.eta_min
+                                                         )
 
     # Instantiate EarlyStopping
-    #!es = EarlyStopping(
-    #!    patience = train_config.early_stopping.patience,
-    #!    min_delta = train_config.early_stopping.delta,
-    #!    )
+    es = EarlyStopping(
+        patience = train_config.early_stopping.patience,
+        min_delta = train_config.early_stopping.delta,
+        )
 
     # Create dataloaders
     trainloader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=shuffle)
@@ -131,9 +131,9 @@ def train_model(
         end_time = time.perf_counter()
 
         # Step the scheduler
-        #!scheduler.step()
-        #!current_lr = optimizer.param_groups[0]['lr']
-        #!mlflow.log_metric("learning_rate", current_lr, step=epoch)
+        scheduler.step()
+        current_lr = optimizer.param_groups[0]['lr']
+        mlflow.log_metric("learning_rate", current_lr, step=epoch)
 
         # Store metrics
         train_epoch_loss.append(train_running_loss / len(trainloader))
@@ -208,9 +208,9 @@ def train_model(
             save_model(model, os.path.join(log_dir, "train", "checkpoints", "model_epoch_" + str(epoch) + ".pt"))
 
         # Early stopping
-        #!if es(model, train_epoch_loss[-1]):
-        #!    logger.info("Early stopping triggered (epoch {}).".format(epoch))
-        #!    break
+        if es(model, train_epoch_loss[-1]):
+            logger.info("Early stopping triggered (epoch {}).".format(epoch))
+            break
 
         # Print statistics if in verbose mode
         if verbose:
@@ -221,9 +221,9 @@ def train_model(
         pbar.set_postfix({'Train loss': train_epoch_loss[-1], 'Val. loss': val_epoch_loss[-1]})
 
     # Restore best model and save it
-    #!logger.info("Training loop is over. Loading best model.")
-    #!model.load_state_dict(es.best_model.state_dict())
-    #!save_model(model, os.path.join(log_dir, "train", "checkpoints", "model_best.pt"))
+    logger.info("Training loop is over. Loading best model.")
+    model.load_state_dict(es.best_model.state_dict())
+    save_model(model, os.path.join(log_dir, "train", "checkpoints", "model_best.pt"))
 
     # Save training and evaluation metrics into a csv file
     train_metrics = pd.DataFrame({

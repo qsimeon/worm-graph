@@ -15,7 +15,7 @@ submodule:
 
   dataset:
     # Do not use standard datasets
-    use_these_datasets: null # all worms, num_val_samples=32, seq_len=120
+    use_these_datasets: /om2/user/lrvenan/worm-graph/data/standard_datasets/num_time_steps_old_exp # all worms, num_val_samples=16, seq_len=60
 
     # Create new train dataset
     experimental_datasets: [Kato2015, Nichols2017, Skora2018, Uzel2022, Kaplan2020, Flavell2023, Leifer2023]
@@ -32,7 +32,7 @@ submodule:
 
 
   model:
-    type: NetworkLSTM
+    type: NeuralTransformer
     input_size: 302
     hidden_size: 256
     num_layers: 1
@@ -43,19 +43,24 @@ submodule:
 
   train:
     optimizer: Adam
-    lr: 0.0001
-    epochs: 999
+    lr: 0.001
+    epochs: 900
     save_freq: 100
     batch_size: 16
     shuffle: true
     early_stopping:
-      delta: 1e-4
-      patience: 10
+      delta: 1e-5 # minimum change in validation loss to be considered an improvement
+      patience: 200 # number of epochs to wait for improvement before stopping
+
+    lr_scheduler:
+      T_0: 10 # Number of epochs for the first period
+      T_mult: 2 # Factor to multiply T_0 after each restart
+      eta_min: 1e-5 # Minimum learning rate
 
   predict:
     worms_to_predict: [worm0]
     nb_ts_to_generate: null # time steps to generate = seq_len - context_window
-    context_window: 20
+    context_window: 30
 
   visualize:
     plot_figures_from_this_log_dir: null # plot figures of current experiment
