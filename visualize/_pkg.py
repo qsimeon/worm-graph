@@ -3,6 +3,7 @@ import networkx as nx
 import numpy as np
 import pandas as pd
 import seaborn as sns
+import matplotlib.ticker as ticker
 import copy
 import torch
 import torch_geometric

@@ -20,7 +20,7 @@ def plot_figures(
 
         if submodule_dir == 'dataset':
             logger.info("Plotting submodule 'dataset'.")
-            continue
+            plot_dataset_info(log_dir=log_dir)
 
         if submodule_dir == 'train':
             logger.info("Plotting submodule 'train'.")

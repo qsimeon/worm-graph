@@ -154,6 +154,64 @@ def plot_frequency_distribution(data, ax, title, dt=0.5):
     ax.set_title(title)
 
 
+def plot_dataset_info(log_dir):
+
+    neuron_idx_mapping = {neuron: idx for idx, neuron in enumerate(NEURONS_302)}
+
+    # Train dataset
+    df_train = pd.read_csv(os.path.join(log_dir, 'dataset', 'train_dataset_info.csv'))
+    # Convert 'neurons' column to list
+    df_train['neurons'] = df_train['neurons'].apply(lambda x: ast.literal_eval(x))
+    # Get all neurons
+    neurons_train, neuron_counts_train = np.unique(np.concatenate(df_train['neurons'].values), return_counts=True)
+    # Standard sorting
+    std_counts_train = np.zeros(302)
+    neuron_idx = [neuron_idx_mapping[neuron] for neuron in neurons_train]
+    std_counts_train[neuron_idx] = neuron_counts_train
+
+    # Validation dataset
+    df_val = pd.read_csv(os.path.join(log_dir, 'dataset', 'val_dataset_info.csv'))
+    # Convert 'neurons' column to list
+    df_val['neurons'] = df_val['neurons'].apply(lambda x: ast.literal_eval(x))
+    # Get all neurons
+    neurons_val, neuron_counts_val = np.unique(np.concatenate(df_val['neurons'].values), return_counts=True)
+    # Standard sorting
+    std_counts_val = np.zeros(302)
+    neuron_idx_val = [neuron_idx_mapping[neuron] for neuron in neurons_val]
+    std_counts_val[neuron_idx_val] = neuron_counts_val
+
+    # Plot histogram using sns
+    fig, ax = plt.subplots(2, 1, figsize=(10, 8))
+    sns.set_style("whitegrid")
+    sns.set_palette("tab10")
+
+    # Train dataset
+    sns.barplot(x=NEURONS_302, y=std_counts_train, ax=ax[0])
+    ax[0].set_xticklabels(NEURONS_302, rotation=45)
+    ax[0].set_ylabel('Count', fontsize=12)
+    ax[0].set_xlabel('Neuron', fontsize=12)
+    ax[0].set_title('Train dataset', fontsize=14)
+    # Reduce the number of xticks for readability
+    ax[0].xaxis.set_major_locator(ticker.MultipleLocator(10))
+    ax[0].xaxis.set_minor_locator(ticker.MultipleLocator(1))
+
+    # Validation dataset
+    sns.barplot(x=NEURONS_302, y=std_counts_val, ax=ax[1])
+    ax[1].set_xticklabels(NEURONS_302, rotation=45)
+    ax[1].set_ylabel('Count', fontsize=12)
+    ax[1].set_xlabel('Neuron', fontsize=12)
+    ax[1].set_title('Validation dataset', fontsize=14)
+    # Reduce the number of xticks for readability
+    ax[1].xaxis.set_major_locator(ticker.MultipleLocator(10))
+    ax[1].xaxis.set_minor_locator(ticker.MultipleLocator(1))
+
+    plt.tight_layout()
+
+    # Save figure
+    fig.savefig(os.path.join(log_dir, 'dataset', 'dataset_info.png'), dpi=300)
+    plt.close()
+
+
 def plot_loss_curves(log_dir, info_to_display=None):
     """Plots the loss curves stored in a log directory.
 
