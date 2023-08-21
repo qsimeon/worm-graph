@@ -274,6 +274,52 @@ def plot_loss_curves(log_dir, info_to_display=None):
     return None
 
 
+def setup_histograms_for_checkpoint(chkpt, axes, range_val, fig):
+    model_config = OmegaConf.create({'use_this_pretrained_model': chkpt})
+    model = get_model(model_config)
+    
+    # Extract weights and filter out biases
+    weights = [param.detach().cpu().numpy().flatten() for name, param in model.named_parameters() if 'weight' in name]
+    
+    # Use a style for better aesthetics
+    with plt.style.context('ggplot'):
+        for ax, (name, weight) in zip(axes, zip([name for name, _ in model.named_parameters() if 'weight' in name], weights)):
+            ax.clear()  # Clear previous histograms
+            ax.hist(weight, bins=50, range=range_val)
+            ax.set_title(f"Layer: {name}", fontsize=12)
+            ax.set_xlabel("Weight values", fontsize=10)
+            ax.set_ylabel("Frequency", fontsize=10)
+            ax.grid(True, which="both", ls="--", linewidth=0.5)
+    
+    # Set the superior title to the figure with the checkpoint name
+    chkpt_name = os.path.basename(chkpt)  # Extract the file name from the full path
+    chkpt_name = chkpt_name.split('.')[0]  # Remove the extension
+    chkpt_name = chkpt_name.split('_')[-1]  # Remove the epoch number
+    fig.suptitle(f"Weights distribution at epoch {chkpt_name}", fontsize=16)
+
+def histogram_weights_animation(log_dir, output_video_name='weights_dynamics.mp4'):
+    # Get list of checkpoints
+    checkpoints = np.sort([os.path.join(log_dir, 'train', 'checkpoints', chkpt) for chkpt in os.listdir(os.path.join(log_dir, 'train', 'checkpoints')) if 'model_best' not in chkpt]).tolist()
+    
+    # Get the global range of weights for a consistent plot across checkpoints
+    model_config = OmegaConf.create({'use_this_pretrained_model': checkpoints[0]})
+    model = get_model(model_config)
+    weights = [param.detach().cpu().numpy().flatten() for name, param in model.named_parameters() if 'weight' in name]
+    all_weights = np.concatenate(weights)
+    range_val = (all_weights.min(), all_weights.max())
+    
+    # Initialize a figure
+    num_layers = len(weights)
+    fig = plt.figure(figsize=(20, 5 * ((num_layers + 1) // 2)))
+    gs = gridspec.GridSpec((num_layers + 1) // 2, 2)
+    axes = [fig.add_subplot(gs[i]) for i in range(num_layers)]
+    
+    ani = FuncAnimation(fig, setup_histograms_for_checkpoint, frames=checkpoints, fargs=(axes, range_val, fig), repeat=False)
+    ani.save(os.path.join(log_dir, 'train', output_video_name), writer='ffmpeg', fps=1)
+
+    plt.close(fig)
+
+
 def plot_before_after_weights(log_dir: str) -> None:
     """Plots the model's readout weights from before and after training.
 
