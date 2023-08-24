@@ -11,6 +11,31 @@ def train_model(
         verbose: bool = False,
 ):
     
+    """
+    Main standard ML training loop.
+
+    Parameters
+    ----------
+    train_config : DictConfig
+        A dictionary containing the training configuration.
+    model : torch.nn.Module
+        A model instance.
+    train_dataset : torch.utils.data.Dataset
+        A train dataset instance.
+    val_dataset : torch.utils.data.Dataset
+        A validation dataset instance.
+    verbose : bool, optional
+        Whether to print statistics at each epoch, by default False (True when using MULTIRUN hydra mode)
+
+    Returns
+    -------
+    model: torch.nn.Module
+        The trained model.
+    metric: float
+        The metric used for optuna (lowest validation loss across epochs).
+    """
+
+    
     # Verifications
     assert isinstance(train_config.epochs, int) and train_config.epochs > 0, "epochs must be a positive integer"
     assert isinstance(train_config.batch_size, int) and train_config.batch_size > 0, "batch_size must be a positive integer"
@@ -260,15 +285,17 @@ if __name__ == "__main__":
     os.chdir(log_dir)
 
     # Dataset
-    train_dataset = get_datasets(dataset_config.dataset.train)
+    train_dataset, val_dataset = get_datasets(dataset_config.dataset)
 
     # Get the model
     model = get_model(model_config.model)
 
     # Train the model
-    model, submodules_updated, train_info = train_model(
+    model, metric = train_model(
         train_config=train_config.train,
         model=model,
-        dataset=train_dataset,
+        train_dataset=train_dataset,
+        val_dataset=val_dataset,
     )
+    print('Final metric:', metric)
 
