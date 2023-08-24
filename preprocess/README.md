@@ -6,7 +6,7 @@ This repository contains the functions used to preprocess the open-source calciu
 
 The submodule consists of the following files:
 
-- `_main.py`: Contains the pipeline for preprocessing the open source data as specified in the configuration file.
+- `_main.py`: Contains the pipeline for preprocessing the data as specified in the configuration file.
 - `_utils.py`: Contains utility functions and classes for data processing.
 - `_pkg.py`: Contains the necessary imports for the submodule.
 
@@ -15,9 +15,9 @@ The submodule consists of the following files:
 To use the submodule, follow these steps:
 
 1. Install the required Python dependencies as explained in the `setup` folder.
-2. Modify the configuration file in `conf/preprocess.yaml` as desired.
-3. Run the main pipeline: `python preprocess/_main.py`.
-4. The processed dataset will be saved in the `data/processed/neural` folder.
+2. Modify the configuration file in `configs/submodule/preprocess.yaml` as desired (see the explanation of each parameter in the configs submodule README).
+3. Run the main pipeline: `python main.py +submodule=preprocess`.
+4. The processed dataset will be saved in pickle format in the `data/processed/neural` folder.
 5. Load the preprocessed data using our `data` submodule and have fun!
 
 ## Datasets
@@ -41,14 +41,19 @@ Each dataset is stored in a Python dictionary:
 
 - `dataset`: (str) Name of the dataset
 - `smooth_method`: (str) Method used to smooth the calcium data
-- `worm`: (str) The worm ID in the dataset
-- `max_timesteps`: (float) Number of time steps of the data
-- `dt`: (torch.tensor) Column vector containing the difference between time steps. Shape (max_timesteps, 1)
-- `calcium_data`: (torch.tensor) The calcium data, with standardized columns. Shape: (max_timesteps, 302)
-- `smooth_calcium_data`: (torch.tensor) Smoothed calcium data, with standardized columns. Shape: (max_timesteps, 302)
-- `residual_calcium`: (torch.tensor) The residual calcium data, with standardized columns. Shape: (max_timesteps, 302)
-- `smooth_residual_calcium`: (torch.tensor) Smoothed residual calcium data, with standardized columns. Shape: (max_timesteps, 302)
-- `time_in_seconds`: (torch.tensor) A column vector equally spaced by dt. Shape: (max_timesteps, 1)
+- `interpolate_method`: (std) Method used to interpolate the calcium data
+- `worm`: (str) The worm ID in the COMBINED dataset (if you load more than one dataset)
+- `original_worm`: (str) The worm ID in the original dataset (when you load a single dataset)
+- `original_max_timesteps`: (int) Number of time steps before resampling
+- `max_timesteps`: (int) Number of time steps after resampling
+- `original_dt`: (torch.tensor) Column vector containing the difference between time steps (before resampling). Shape: (original_max_timesteps, 1)
+- `dt`: (torch.tensor) Column vector containing the difference between time steps. Shape: (max_timesteps, 1)
+- `residual_` and `original_calcium_data`: (torch.tensor) Standardized and normalized calcium data. Shape: (original_max_timesteps, 302)
+- `residual_` and `calcium_data`: (torch.tensor) Standardized, normalized and resampled calcium data. Shape: (max_timesteps, 302)
+- `residual_` and `original_smooth_calcium_data`: (torch.tensor) Standardized, smoothed and normalized calcium data. Shape: (original_max_timesteps, 302)
+- `residual_` and `smooth_calcium_data`: (torch.tensor) Standardized, smoothed, normalized and resampled calcium data. Shape: (max_timesteps, 302)
+- `original_time_in_seconds`: (torch.tensor) A column vector with the original time recording times (without resampling). Shape: (original_max_timesteps, 1)
+- `time_in_seconds`: (torch.tensor) A column vector equally spaced by dt after resampling. Shape: (max_timesteps, 1)
 - `num_neurons`: (int) Number of total tracked neurons of this specific worm
 - `num_named_neurons`: (int) Number of labeled neurons
 - `num_unknown_neurons`: (int) Number of unlabeled neurons
@@ -71,8 +76,8 @@ The datasets have been preprocessed using Python scripts available in this repos
 - Loading raw data in various formats (MATLAB files, JSON files, etc.).
 - Extracting relevant data fields (neuron IDs, traces, time vectors, etc.).
 - Cleaning and normalizing the data.
-- Resampling the data to a common time resolution.
-- Smoothing the data using different methods (e.g., Savitzky-Golay filter).
+- Resampling the data to a common time resolution. - if requested
+- Smoothing the data using different methods (e.g., Savitzky-Golay filter). - if requested
 - Creating dictionaries to map neuron indices to neuron IDs and vice versa.
 - Saving the preprocessed data in a standardized format.
 

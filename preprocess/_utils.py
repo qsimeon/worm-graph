@@ -746,7 +746,7 @@ def pickle_neural_data(
     dataset : str or list, optional (default: 'all')
         The name(s) of the dataset(s) to be pickled.
         If None, all datasets are pickled.
-    transform : object, optional
+    transform : object, optional (default: StandardScaler())
         The sklearn transformation to be applied to the data.
     smooth_method : str, optional (default: 'fft')
         The smoothing method to apply to the data;
@@ -759,13 +759,9 @@ def pickle_neural_data(
 
     Calls
     -----
-    {Dataset}Preprocessor : class in preprocess/{dataset}.py
+    {Dataset}Preprocessor : class in preprocess/_utils.py
+        The class that preprocesses the data for the specified dataset.
 
-    Returns
-    -------
-    None
-        The function's primary purpose is to preprocess the data and save
-        it to disk for future use.
     """
     zip_path = os.path.join(ROOT_DIR, zipfile)
     source_path = os.path.join(ROOT_DIR, zipfile.strip(".zip"))
@@ -851,6 +847,8 @@ class BasePreprocessor:
         normalize_data(): Method for normalizing the neural data.
         save_data(): Method for saving the processed data to .pickle format.
         create_neuron_idx(): Method for extracting a neuron label to index mapping from the raw data.
+        preprocess_traces(): Base method for preprocessing the calcium traces. Some datasets may require
+            additional preprocessing steps, in which case this method should be overridden.
 
     Note:
         This class is intended to be subclassed, not directly instantiated.
