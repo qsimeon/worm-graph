@@ -30,8 +30,6 @@ def get_model(model_config: DictConfig) -> torch.nn.Module:
         A new or loaded model instance, moved to the appropriate device and
         cast to torch.float32 data type.
 
-    Notes
-    -----
     """
 
     # If a checkpoint is given (True), load a saved model

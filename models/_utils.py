@@ -612,6 +612,25 @@ class Model(torch.nn.Module):
             context_window: int,
             autoregressive: bool = True,
     ):
+        """
+        Generate future neural activity from the model.
+
+        Parameters
+        ----------
+        input : torch.Tensor
+            Input data with shape (batch, seq_len, neurons)
+        mask : torch.Tensor
+            Mask on the neurons with shape (batch, neurons)
+        nb_ts_to_generate : int
+            Number of time steps to generate
+        context_window : int
+            Number of time steps to use as context
+
+        Returns
+        -------
+        generated_tensor : torch.Tensor
+            Generated data with shape (nb_ts_to_generate, neurons)
+        """
 
         self.eval()
 
