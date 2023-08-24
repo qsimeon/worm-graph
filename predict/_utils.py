@@ -12,6 +12,25 @@ def model_predict(
         nb_ts_to_generate: int = None,
         worms_to_predict: list = None,
 ):
+    """Make predictions on a dataset with a trained model.
+
+    Saves in log/predict a .csv with the Calcium neural activity predictions.
+
+    Parameters:
+    ----------
+    log_dir : str
+        Directory to save the predictions.
+    model : torch.nn.Module
+        Trained model.
+    dataset : torch.utils.data.Dataset
+        Dataset with worm data examples.
+    context_window : int
+        Number of time steps to use as context for the predictions.
+    nb_ts_to_generate : int
+        Number of time steps to generate.
+    worms_to_predict : list
+        List of worm IDs to predict.
+    """
     
     x, y, mask, metadata = next(iter(dataset))
     seq_len = x.shape[0]
