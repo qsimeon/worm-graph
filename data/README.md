@@ -16,9 +16,8 @@ To use the submodule, follow these steps:
 
 1. Install the required Python dependencies as explained in the `setup` folder.
 2. Modify the dataset configuration file `configs/submodule/dataset.yaml` to specify the experimental dataset names and other parameters.
-3. Run the `python main.py +submodule=dataset` to load the dataset and obtain the required data. It will create a dataset folder inside the `logs` directory, containig the train and validation datasets, the combined dataset before splitting the data into train and validation, and some additional information of them.
-4. Use the loaded dataset for further analysis or processing in your application.
-5. For more usage examples, see the configuration submodule.
+3. Run the `python main.py +submodule=dataset` to load the dataset and obtain the required data. It will create a `dataset` folder inside the `logs` directory, containig the train and validation datasets, the combined dataset before splitting the data into train and validation, and some additional information of them.
+4. For more usage examples, see the configuration submodule.
 
 Note: Make sure to have the required dataset files in the appropriate directories before running the code. Take a look into the `preprocess` module before.
 
