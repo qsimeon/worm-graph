@@ -6,7 +6,7 @@ This submodule contains the code for handling and loading various datasets used 
 
 The submodule consists of the following files:
 
-- `_main.py`: Contains the main script for loading the dataset specified in the configuration file.
+- `_main.py`: Contains the main function `get_datasets` for retrieving or generating training and validation datasets based on the specified configuration. This function can load datasets if they are provided in a specific directory or generate them from the requested experimental datasets (see the configs submodule for more details).
 - `_utils.py`: Contains utility functions and classes for data processing and dataset loading.
 - `_pkg.py`: Contains the necessary imports for the submodule.
 
@@ -15,58 +15,12 @@ The submodule consists of the following files:
 To use the submodule, follow these steps:
 
 1. Install the required Python dependencies as explained in the `setup` folder.
-2. Modify the dataset configuration file `conf/dataset.yaml` to specify the dataset name and other parameters.
-3. Run the `_main.py` script to load the dataset and obtain the required data. This script calls the necessary functions from `_utils.py`.
+2. Modify the dataset configuration file `configs/submodule/dataset.yaml` to specify the experimental dataset names and other parameters.
+3. Run the `python main.py +submodule=dataset` to load the dataset and obtain the required data. It will create a dataset folder inside the `logs` directory, containig the train and validation datasets, the combined dataset before splitting the data into train and validation, and some additional information of them.
 4. Use the loaded dataset for further analysis or processing in your application.
+5. For more usage examples, see the configuration submodule.
 
 Note: Make sure to have the required dataset files in the appropriate directories before running the code. Take a look into the `preprocess` module before.
-
-## Dataset Loading
-
-The `_utils.py` file provides functions to load different datasets. The available datasets are:
-
-- `Kato2015`: Calcium imaging data from **12** *C. elegans* individuals.
-- `Nichols2017`: Calcium imaging data from **44** *C. elegans* individuals.
-- `Skora2018`: Calcium imaging data from **12** *C. elegans* individuals.
-- `Kaplan2020`: Calcium imaging data from **19** *C. elegans* individuals.
-- `Uzel2022`: Calcium imaging data from **6** *C. elegans* individuals.
-- `Leifer2023`: Calcium imaging data from **41** *C. elegans* individuals.
-- `Flavell2023`: Calcium imaging data from **10** *C. elegans* individuals.
-- `Synthetic0000`: Synthetic dataset.
-
-You can load a dataset using the `load_dataset(name)` function in `_utils.py`, where `name` is one of the dataset names mentioned above.
-
-### Dataset Structure
-
-Each dataset is stored in a Python dictionary:
-
-<details>
-<summary>Here you will find its list of features</summary>
-
-- `dataset`: (str) Name of the dataset
-- `smooth_method`: (str) Method used to smooth the calcium data
-- `worm`: (str) The worm ID in the dataset
-- `max_timesteps`: (float) Number of time steps of the data
-- `dt`: (torch.tensor) Column vector containing the difference between time steps. Shape (max_timesteps, 1)
-- `calcium_data`: (torch.tensor) The calcium data, with standardized columns. Shape: (max_timesteps, 302)
-- `smooth_calcium_data`: (torch.tensor) Smoothed calcium data, with standardized columns. Shape: (max_timesteps, 302)
-- `residual_calcium`: (torch.tensor) The residual calcium data, with standardized columns. Shape: (max_timesteps, 302)
-- `smooth_residual_calcium`: (torch.tensor) Smoothed residual calcium data, with standardized columns. Shape: (max_timesteps, 302)
-- `time_in_seconds`: (torch.tensor) A column vector equally spaced by dt. Shape: (max_timesteps, 1)
-- `num_neurons`: (int) Number of total tracked neurons of this specific worm
-- `num_named_neurons`: (int) Number of labeled neurons
-- `num_unknown_neurons`: (int) Number of unlabeled neurons
-- `named_neurons_mask`: (torch.tensor) A bool vector indicating the positions of the labeled neurons. Shape: (302)
-- `unknown_neurons_mask`: (torch.tensor) A bool vector indicating the positions of the unlabeled neurons. Shape: (302)
-- `neurons_mask`: (torch.tensor) A bool vector indicating the positions of all tracked neurons (labeled + unlabeled). Shape: (302)
-- `slot_to_named_neuron`: (dict) Mapping of column index -> 302 neurons. Len: num_neurons
-- `named_neuron_to_slot`: (dict) Mapping of 302 neurons -> column index. Len: num_neurons
-- `slot_to_unknown_neuron`: (dict) Mapping of column index -> unlabeled neuron. Len: num_unknown_neurons
-- `unknown_neuron_to_slot`: (dict) Mapping of unlabeled neurons -> column index. Len: num_unknown_neurons
-- `slot_to_neuron`: (dict) Mapping of column index -> labeled+unlabeled neurons. Len: num_neurons
-- `neuron_to_slot`: (dict) Mapping of labeled+unlabeled neurons -> column index. Len: num_neurons
-
-</details>
 
 ## Customization
 

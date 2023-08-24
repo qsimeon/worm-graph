@@ -263,7 +263,6 @@ def select_named_neurons(multi_worm_dataset, num_named_neurons):
     -------
     multi_worm_dataset : dict
         Multi-worm dataset with selected neurons.
-
     """
 
     worms_to_drop = []
@@ -338,6 +337,9 @@ def select_named_neurons(multi_worm_dataset, num_named_neurons):
 
 
 def rename_worm_keys(d):
+    """
+        Auxiliar function to rename the keys of a combined dataset.
+    """
     # Sort the keys
     sorted_keys = sorted(d.keys(), key=lambda x: int(x.replace('worm', '')))
     
@@ -349,6 +351,23 @@ def rename_worm_keys(d):
 
 
 def filter_loaded_combined_dataset(combined_dataset, num_worms, num_named_neurons):
+    """
+    Auxiliar function to filter worms of the loaded combined dataset.
+
+    Parameters
+    ----------
+    combined_dataset : dict
+        Multi-worm dataset to filter the worms from.
+    num_worms : int
+        Number of worms to keep.
+    num_named_neurons : int
+        Number of named neurons to keep.
+
+    Returns
+    -------
+    combined_dataset : dict
+        Filtered multi-worm dataset.
+    """
 
     combined_dataset = select_named_neurons(combined_dataset, num_named_neurons)
 
@@ -627,9 +646,6 @@ def load_Leifer2023():
 def create_combined_dataset(experimental_datasets, num_named_neurons, num_worms):
     """Returns a dict with the worm data of all requested datasets.
 
-    Returns a generator object that yields single worm data objects (dict)
-    from the multi-worm dataset specified by the `name` param in 'dataset.yaml'.
-
     Parameters
     ----------
     config: DictConfig
@@ -726,6 +742,21 @@ def create_combined_dataset(experimental_datasets, num_named_neurons, num_worms)
 
 
 def distribute_samples(data_splits, total_nb_samples):
+    """Auxiliar function to distribute the samples across the splits.
+
+    Parameters
+    ----------
+    data_splits : list
+        List of data splits.
+    total_nb_samples : int
+        Total number of samples to distribute.
+
+    Returns
+    -------
+    samples_to_take : list
+        List of the number of samples to take from each split.
+    """
+
     # Calculate the base number of samples for each split
     base_samples_per_split = total_nb_samples // len(data_splits)
     # Calculate the remainder
@@ -744,6 +775,40 @@ def distribute_samples(data_splits, total_nb_samples):
 
 
 def split_combined_dataset(combined_dataset, k_splits, num_train_samples, num_val_samples, seq_len, tau, reverse, use_residual, smooth_data):
+    """Creates the training and validation datasets from the combined dataset.
+    
+    Also returns the number of unique time steps for each worm and each split.
+
+    Parameters
+    ----------
+    combined_dataset : dict
+        Combined dataset to split.
+    k_splits : int
+        Number of splits to create.
+    num_train_samples : int
+        Number of training samples.
+    num_val_samples : int
+        Number of validation samples.
+    seq_len : int
+        Length of the sequences.
+    tau : int
+        Time lag between the input and the target (in number of time steps).
+    reverse : bool
+        Whether to reverse the sequences.
+    use_residual : bool
+        Whether to use the residual data.
+    smooth_data : bool
+        Whether to use the smoothed data.
+
+    Returns
+    -------
+    train_dataset : list
+        List of training datasets.
+    val_dataset : list
+        List of validation datasets.
+    time_step_info : dict
+        Dataframe with the number of unique time steps for each worm and each split.
+    """
 
     # Choose whether to use calcium or residual data
     if use_residual:
