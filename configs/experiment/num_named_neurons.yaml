@@ -17,16 +17,16 @@ submodule:
     # Combined and validation datasets provided
     #  - Validation: all worms (245) with all named neurons
     #  - Combined: 47 worms with 90 named neurons
-    use_these_datasets: /om2/user/lrvenan/worm-graph/data/standard_datasets/num_named_neurons_old_exp
+    use_these_datasets: /om2/user/lrvenan/worm-graph/data/standard_datasets/num_named_neurons_ds
 
     # Won't be used, because Combined dataset is provided
     experimental_datasets: [Kato2015, Nichols2017, Skora2018, Uzel2022, Kaplan2020, Flavell2023, Leifer2023] 
     # num_named_neurons: all # PARAMETER OF STUDY
     num_worms: all
     k_splits: 2
-    num_train_samples: 16
-    num_val_samples: 16
-    seq_len: 60
+    num_train_samples: 32
+    num_val_samples: 32
+    seq_len: 120
     tau: 1
     smooth_data: true
     reverse: false
@@ -34,30 +34,30 @@ submodule:
 
 
   model:
-    type: NetworkLSTM
+    type: LinearNN
     input_size: 302
     hidden_size: 256
     num_layers: 1
-    loss: Huber
+    loss: MSE
     fft_reg_param: 0.0
     l1_reg_param: 0.0
     use_this_pretrained_model: null # create fresh model
 
   train:
-    optimizer: Adam
-    lr: 0.001
+    optimizer: AdamW
+    lr: 0.0001
     epochs: 900
     save_freq: 100
-    batch_size: 16
+    batch_size: 32
     shuffle: true
     early_stopping:
-      delta: 0 # minimum change in validation loss to be considered an improvement
-      patience: 50 # number of epochs to wait for improvement before stopping
+      delta: 1e-6 # minimum change in validation loss to be considered an improvement
+      patience: 25 # number of epochs to wait for improvement before stopping
 
   predict:
     worms_to_predict: [worm0]
     nb_ts_to_generate: null # time steps to generate = seq_len - context_window
-    context_window: 30
+    context_window: 60
 
   visualize:
     plot_figures_from_this_log_dir: null # plot figures of current experiment

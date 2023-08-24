@@ -764,6 +764,18 @@ def experiment_parameter(exp_dir, key):
         title = 'Amount of training data'
         xaxis = 'Number of time steps'
 
+    if key == 'hidden_size':
+        pipeline_info = OmegaConf.load(os.path.join(exp_dir, 'pipeline_info.yaml'))
+        value = pipeline_info.submodule.model.hidden_size # Model hidden dimension
+        title = 'Hidden dimension'
+        xaxis = 'Hidden dimension'
+
+    if key == 'optimizer':
+        pipeline_info = OmegaConf.load(os.path.join(exp_dir, 'pipeline_info.yaml'))
+        value = pipeline_info.submodule.train.optimizer
+        title = 'Optimizer'
+        xaxis = 'Optimizer type'
+
     if key == 'batch_size':
         pipeline_info = OmegaConf.load(os.path.join(exp_dir, 'pipeline_info.yaml'))
         value = pipeline_info.submodule.train.batch_size # Experiment batch size

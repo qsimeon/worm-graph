@@ -9,20 +9,20 @@ hydra:
   # These parameters will be tested just when MULTIRUN mode is used.
   # Use the submodule parameters if RUN.
       params:
-        submodule.dataset.num_worms: 10, 50, 100, 150, 200, 245
+        submodule.train.optimizer: Adam, AdamW, Adagrad, RMSprop
 
 submodule:
 
   dataset:
-    # Combined and validation datasets provided
-    # Combined: all worms (245) with all named neurons
-    # Validation set - kept the same for all experiments (all worms, seq_len=120, num_val_samples=32)
-    use_these_datasets: /om2/user/lrvenan/worm-graph/data/standard_datasets/num_time_steps_ds
+    # Train and validation datasets provided
+    #  - Validation: 25 worms with 50 neurons (seq_len=120, num_val_samples=32)
+    #  - Train: 25 worms with 50 neurons (seq_len=120, num_val_samples=32)
+    use_these_datasets: /om2/user/lrvenan/worm-graph/data/standard_datasets/optimizer_ds
 
     # Won't be used, because Combined dataset is provided
-    experimental_datasets: [Kato2015, Nichols2017, Skora2018, Uzel2022, Kaplan2020, Flavell2023, Leifer2023]
-    num_named_neurons: all
-    # num_worms: all # PARAMETER OF STUDY
+    experimental_datasets: [Kato2015, Nichols2017, Skora2018, Uzel2022, Kaplan2020, Flavell2023, Leifer2023] 
+    # num_named_neurons: all # PARAMETER OF STUDY
+    num_worms: all
     k_splits: 2
     num_train_samples: 32
     num_val_samples: 32
@@ -34,9 +34,9 @@ submodule:
 
 
   model:
-    type: LinearNN
+    type: NeuralTransformer
     input_size: 302
-    hidden_size: 256
+    hidden_size: 512
     num_layers: 1
     loss: MSE
     fft_reg_param: 0.0
@@ -44,9 +44,9 @@ submodule:
     use_this_pretrained_model: null # create fresh model
 
   train:
-    optimizer: AdamW
+    # optimizer: Adam # PARAMETER OF STUDY
     lr: 0.0001
-    epochs: 900
+    epochs: 300
     save_freq: 100
     batch_size: 32
     shuffle: true
@@ -67,6 +67,6 @@ submodule:
 
 
 experiment:
-  name: num_time_steps
+  name: optimizer
   mode: MULTIRUN
   seed: 42
