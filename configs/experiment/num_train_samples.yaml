@@ -50,8 +50,8 @@ submodule:
     batch_size: 16
     shuffle: true
     early_stopping:
-      delta: 1e-4
-      patience: 10
+      delta: 0
+      patience: 200
 
   predict:
     worms_to_predict: [worm0]

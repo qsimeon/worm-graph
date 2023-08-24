@@ -20,11 +20,12 @@ def plot_figures(
 
         if submodule_dir == 'dataset':
             logger.info("Plotting submodule 'dataset'.")
-            continue
+            plot_dataset_info(log_dir=log_dir)
 
         if submodule_dir == 'train':
             logger.info("Plotting submodule 'train'.")
             plot_loss_curves(log_dir=log_dir, info_to_display=None)
+            histogram_weights_animation(log_dir=log_dir)
             # plot_before_after_weights
 
         if submodule_dir == 'prediction':

@@ -1,7 +1,7 @@
 preprocess:
   url: https://www.dropbox.com/scl/fi/03iwxm5hgr7zl0r1pro0i/opensource_data.zip?rlkey=xe76dvfp384emef11gdzyf9q8&dl=1
   zipfile: opensource_data.zip
-  dataset: Flavell2023 # [Kato2015, Nichols2017, Skora2018, Uzel2022, Kaplan2020, Flavell2023, Leifer2023] # any dataset in utils.VALID_DATASETS
+  dataset: all # [Kato2015, Nichols2017, Skora2018, Uzel2022, Kaplan2020, Flavell2023, Leifer2023] # any dataset in utils.VALID_DATASETS
   resample_dt: 1.0 # The time interval (in seconds) to use for resampling; if null, no resampling is performed
   interpolate: linear # The method to use for interpolation; options: null, linear, quadratic, cubic
   smooth: GA

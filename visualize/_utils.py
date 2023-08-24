@@ -154,6 +154,64 @@ def plot_frequency_distribution(data, ax, title, dt=0.5):
     ax.set_title(title)
 
 
+def plot_dataset_info(log_dir):
+
+    neuron_idx_mapping = {neuron: idx for idx, neuron in enumerate(NEURONS_302)}
+
+    # Train dataset
+    df_train = pd.read_csv(os.path.join(log_dir, 'dataset', 'train_dataset_info.csv'))
+    # Convert 'neurons' column to list
+    df_train['neurons'] = df_train['neurons'].apply(lambda x: ast.literal_eval(x))
+    # Get all neurons
+    neurons_train, neuron_counts_train = np.unique(np.concatenate(df_train['neurons'].values), return_counts=True)
+    # Standard sorting
+    std_counts_train = np.zeros(302)
+    neuron_idx = [neuron_idx_mapping[neuron] for neuron in neurons_train]
+    std_counts_train[neuron_idx] = neuron_counts_train
+
+    # Validation dataset
+    df_val = pd.read_csv(os.path.join(log_dir, 'dataset', 'val_dataset_info.csv'))
+    # Convert 'neurons' column to list
+    df_val['neurons'] = df_val['neurons'].apply(lambda x: ast.literal_eval(x))
+    # Get all neurons
+    neurons_val, neuron_counts_val = np.unique(np.concatenate(df_val['neurons'].values), return_counts=True)
+    # Standard sorting
+    std_counts_val = np.zeros(302)
+    neuron_idx_val = [neuron_idx_mapping[neuron] for neuron in neurons_val]
+    std_counts_val[neuron_idx_val] = neuron_counts_val
+
+    # Plot histogram using sns
+    fig, ax = plt.subplots(2, 1, figsize=(10, 8))
+    sns.set_style("whitegrid")
+    sns.set_palette("tab10")
+
+    # Train dataset
+    sns.barplot(x=NEURONS_302, y=std_counts_train, ax=ax[0])
+    ax[0].set_xticklabels(NEURONS_302, rotation=45)
+    ax[0].set_ylabel('Count', fontsize=12)
+    ax[0].set_xlabel('Neuron', fontsize=12)
+    ax[0].set_title('Train dataset', fontsize=14)
+    # Reduce the number of xticks for readability
+    ax[0].xaxis.set_major_locator(ticker.MultipleLocator(10))
+    ax[0].xaxis.set_minor_locator(ticker.MultipleLocator(1))
+
+    # Validation dataset
+    sns.barplot(x=NEURONS_302, y=std_counts_val, ax=ax[1])
+    ax[1].set_xticklabels(NEURONS_302, rotation=45)
+    ax[1].set_ylabel('Count', fontsize=12)
+    ax[1].set_xlabel('Neuron', fontsize=12)
+    ax[1].set_title('Validation dataset', fontsize=14)
+    # Reduce the number of xticks for readability
+    ax[1].xaxis.set_major_locator(ticker.MultipleLocator(10))
+    ax[1].xaxis.set_minor_locator(ticker.MultipleLocator(1))
+
+    plt.tight_layout()
+
+    # Save figure
+    fig.savefig(os.path.join(log_dir, 'dataset', 'dataset_info.png'), dpi=300)
+    plt.close()
+
+
 def plot_loss_curves(log_dir, info_to_display=None):
     """Plots the loss curves stored in a log directory.
 
@@ -214,6 +272,52 @@ def plot_loss_curves(log_dir, info_to_display=None):
     plt.close()
 
     return None
+
+
+def setup_histograms_for_checkpoint(chkpt, axes, range_val, fig):
+    model_config = OmegaConf.create({'use_this_pretrained_model': chkpt})
+    model = get_model(model_config)
+    
+    # Extract weights and filter out biases
+    weights = [param.detach().cpu().numpy().flatten() for name, param in model.named_parameters() if 'weight' in name]
+    
+    # Use a style for better aesthetics
+    with plt.style.context('ggplot'):
+        for ax, (name, weight) in zip(axes, zip([name for name, _ in model.named_parameters() if 'weight' in name], weights)):
+            ax.clear()  # Clear previous histograms
+            ax.hist(weight, bins=50, range=range_val)
+            ax.set_title(f"Layer: {name}", fontsize=12)
+            ax.set_xlabel("Weight values", fontsize=10)
+            ax.set_ylabel("Frequency", fontsize=10)
+            ax.grid(True, which="both", ls="--", linewidth=0.5)
+    
+    # Set the superior title to the figure with the checkpoint name
+    chkpt_name = os.path.basename(chkpt)  # Extract the file name from the full path
+    chkpt_name = chkpt_name.split('.')[0]  # Remove the extension
+    chkpt_name = chkpt_name.split('_')[-1]  # Remove the epoch number
+    fig.suptitle(f"Weights distribution at epoch {chkpt_name}", fontsize=16)
+
+def histogram_weights_animation(log_dir, output_video_name='weights_dynamics.mp4'):
+    # Get list of checkpoints
+    checkpoints = np.sort([os.path.join(log_dir, 'train', 'checkpoints', chkpt) for chkpt in os.listdir(os.path.join(log_dir, 'train', 'checkpoints')) if 'model_best' not in chkpt]).tolist()
+    
+    # Get the global range of weights for a consistent plot across checkpoints
+    model_config = OmegaConf.create({'use_this_pretrained_model': checkpoints[0]})
+    model = get_model(model_config)
+    weights = [param.detach().cpu().numpy().flatten() for name, param in model.named_parameters() if 'weight' in name]
+    all_weights = np.concatenate(weights)
+    range_val = (all_weights.min(), all_weights.max())
+    
+    # Initialize a figure
+    num_layers = len(weights)
+    fig = plt.figure(figsize=(20, 5 * ((num_layers + 1) // 2)))
+    gs = gridspec.GridSpec((num_layers + 1) // 2, 2)
+    axes = [fig.add_subplot(gs[i]) for i in range(num_layers)]
+    
+    ani = FuncAnimation(fig, setup_histograms_for_checkpoint, frames=checkpoints, fargs=(axes, range_val, fig), repeat=False)
+    ani.save(os.path.join(log_dir, 'train', output_video_name), writer='ffmpeg', fps=1)
+
+    plt.close(fig)
 
 
 def plot_before_after_weights(log_dir: str) -> None:
@@ -659,6 +763,18 @@ def experiment_parameter(exp_dir, key):
         value = df['train_time_steps'].sum() # Total number of train time steps
         title = 'Amount of training data'
         xaxis = 'Number of time steps'
+
+    if key == 'hidden_size':
+        pipeline_info = OmegaConf.load(os.path.join(exp_dir, 'pipeline_info.yaml'))
+        value = pipeline_info.submodule.model.hidden_size # Model hidden dimension
+        title = 'Hidden dimension'
+        xaxis = 'Hidden dimension'
+
+    if key == 'optimizer':
+        pipeline_info = OmegaConf.load(os.path.join(exp_dir, 'pipeline_info.yaml'))
+        value = pipeline_info.submodule.train.optimizer
+        title = 'Optimizer'
+        xaxis = 'Optimizer type'
 
     if key == 'batch_size':
         pipeline_info = OmegaConf.load(os.path.join(exp_dir, 'pipeline_info.yaml'))

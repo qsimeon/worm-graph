@@ -4,6 +4,39 @@ from data._utils import *
 logger = logging.getLogger(__name__)
 
 def get_datasets(dataset_config: DictConfig):
+    """
+    Retrieve or generate training and validation datasets based on the provided configuration.
+
+    The function first checks if datasets are provided in the specified directory. If they are,
+    it will load them. If not, it will generate the datasets from the requested experimental datasets.
+
+    Params
+    ------
+    dataset_config: (DictConfig)
+        A configuration dictionary containing the following keys:
+
+        - use_these_datasets (str or None): Directory containing train and validation datasets. 
+            If provided, datasets will be loaded from this directory if they exist.
+            If not provided or datasets don't exist in the directory, they will be generated using the other parameters.
+
+        - experimental_datasets: Path to the experimental datasets.
+        - num_named_neurons (int or 'all'): Number of named neurons to include or 'all' to include all.
+        - num_worms (int or 'all'): Number of worms to include or 'all' to include all.
+        - k_splits (int): Number of splits for k-fold cross-validation.
+        - num_train_samples (int): Number of training samples.
+        - num_val_samples (int): Number of validation samples.
+        - seq_len (int): Sequence length for time series data.
+        - tau (int): Time delay for time series data.
+        - reverse (bool): Whether to reverse the time series data.
+        - use_residual (bool): Whether to use residuals in the data.
+        - smooth_data (bool): Whether to smooth the data.
+        
+    Returns
+    -------
+    tuple: A tuple containing two elements:
+        - train_dataset (torch.Tensor): The training dataset.
+        - val_dataset (torch.Tensor): The validation dataset.
+    """
 
     train_dataset, val_dataset = None, None
 

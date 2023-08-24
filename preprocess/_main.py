@@ -12,19 +12,14 @@ def process_data(preprocess_config: DictConfig) -> None:
     Params
     ------
     config: DictConfig
-        Hydra configuration object.
+        Hydra configuration object. See configs submodule for details.
 
     Calls
     -----
     pickle_neural_data : function in preprocess/_utils.py
-        Convert neural data to .pickle format.
+        Preprocess and convert neural data to .pickle format.
     preprocess_connectome : function in preprocess/_utils.py
 
-    Returns
-    -------
-    None
-        The function's primary purpose is to preprocess the data
-        and save it to disk for future use.
     """
 
     # Init logger

@@ -34,9 +34,9 @@ submodule:
 
 
   model:
-    type: NeuralTransformer
+    type: LinearNN
     input_size: 302
-    hidden_size: 512
+    hidden_size: 256
     num_layers: 1
     loss: MSE
     fft_reg_param: 0.0
@@ -44,15 +44,15 @@ submodule:
     use_this_pretrained_model: null # create fresh model
 
   train:
-    optimizer: Adagrad
-    lr: 0.001
-    epochs: 600
+    optimizer: AdamW
+    lr: 0.0001
+    epochs: 900
     save_freq: 100
     batch_size: 32
     shuffle: true
     early_stopping:
-      delta: 1e-4
-      patience: 10
+      delta: 1e-6 # minimum change in validation loss to be considered an improvement
+      patience: 25 # number of epochs to wait for improvement before stopping
 
   predict:
     worms_to_predict: [worm0]

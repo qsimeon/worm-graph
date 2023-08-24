@@ -9,15 +9,16 @@ hydra:
   # These parameters will be tested just when MULTIRUN mode is used.
   # Use the submodule parameters if RUN.
       params:
-        submodule.dataset.num_worms: 10, 50, 100, 150, 200, 245
+        submodule.model.hidden_size: 32, 64, 128, 256, 512
 
 submodule:
 
   dataset:
-    # Combined and validation datasets provided
+    # Train and validation datasets provided
+    # Train: all worms (245) with all named neurons (seq_len=120, num_val_samples=32)
+    # Validation: all worms (245) with all named neurons (seq_len=120, num_val_samples=32)
     # Combined: all worms (245) with all named neurons
-    # Validation set - kept the same for all experiments (all worms, seq_len=120, num_val_samples=32)
-    use_these_datasets: /om2/user/lrvenan/worm-graph/data/standard_datasets/num_time_steps_ds
+    use_these_datasets: /om2/user/lrvenan/worm-graph/data/standard_datasets/all_available_data
 
     # Won't be used, because Combined dataset is provided
     experimental_datasets: [Kato2015, Nichols2017, Skora2018, Uzel2022, Kaplan2020, Flavell2023, Leifer2023]
@@ -34,9 +35,9 @@ submodule:
 
 
   model:
-    type: LinearNN
+    type: NeuralTransformer
     input_size: 302
-    hidden_size: 256
+    # hidden_size: 512 # PARAMETER OF STUDY
     num_layers: 1
     loss: MSE
     fft_reg_param: 0.0
@@ -44,15 +45,15 @@ submodule:
     use_this_pretrained_model: null # create fresh model
 
   train:
-    optimizer: AdamW
-    lr: 0.0001
+    optimizer: Adagrad
+    lr: 0.001
     epochs: 900
     save_freq: 100
     batch_size: 32
     shuffle: true
     early_stopping:
       delta: 1e-6 # minimum change in validation loss to be considered an improvement
-      patience: 25 # number of epochs to wait for improvement before stopping
+      patience: 50 # number of epochs to wait for improvement before stopping
 
   predict:
     worms_to_predict: [worm0]
@@ -67,6 +68,6 @@ submodule:
 
 
 experiment:
-  name: num_time_steps
+  name: hidden_size
   mode: MULTIRUN
   seed: 42

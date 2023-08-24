@@ -11,45 +11,18 @@ def make_predictions(
 ) -> None:
     """Make predictions on a dataset with a trained model.
 
-    Saves in the provided log directory a .csv file for each of the
-    following:
-        * Calcium neural activity
-        * Target calcium residuals
-        * Predicted calcium residuals
-    Each .csv file has a column for each named neuron in the dataset
-    plus two additional columns for the train mask and test mask
-    respectively.
+    Saves in log/predict a .csv with the Calcium neural activity predictions.
 
     Parameters:
     ----------
-    config : DictConfig
+    predict_config : DictConfig
         Hydra configuration object.
-    model : torch.nn.Module or None, optional, default: None
-        Trained model. If not provided, will be loaded from the configuration.
-    dataset : dict or None, optional, default: None
-        Multi-worm dataset. If not provided, will be loaded from the configuration.
-    log_dir : str or None, optional, default: None
-        Log directory where the output files will be saved (logs/playground).
-    use_residual : bool, optional, default: False
-        If True, use residual calcium instead of calcium data.
-    smooth_data : bool, optional, default: True
-        If True, use smoothed data for predictions.
-
-    Calls
-    -----
-    get_model : function in model/_main.py
-        Instantiate or load a model as specified in 'model.yaml'.
-    get_dataset : function in data/_main.py
-        Returns a dict with the worm data of all requested datasets.
-    model_predict : function in predict/_utils.py
-        Make predictions for all neurons on a dataset with a trained model.
-
-    Returns
-    -------
-    None
-
-    Notes
-    -----
+    model : torch.nn.Module
+        Trained model.
+    train_dataset : torch.utils.data.Dataset
+        Train dataset with worm data examples.
+    val_dataset : dict
+        Validation dataset with worm data examples.
     """
 
     log_dir = os.getcwd()  # logs/hydra/${now:%Y_%m_%d_%H_%M_%S}

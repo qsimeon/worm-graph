@@ -11,6 +11,31 @@ def train_model(
         verbose: bool = False,
 ):
     
+    """
+    Main standard ML training loop.
+
+    Parameters
+    ----------
+    train_config : DictConfig
+        A dictionary containing the training configuration.
+    model : torch.nn.Module
+        A model instance.
+    train_dataset : torch.utils.data.Dataset
+        A train dataset instance.
+    val_dataset : torch.utils.data.Dataset
+        A validation dataset instance.
+    verbose : bool, optional
+        Whether to print statistics at each epoch, by default False (True when using MULTIRUN hydra mode)
+
+    Returns
+    -------
+    model: torch.nn.Module
+        The trained model.
+    metric: float
+        The metric used for optuna (lowest validation loss across epochs).
+    """
+
+    
     # Verifications
     assert isinstance(train_config.epochs, int) and train_config.epochs > 0, "epochs must be a positive integer"
     assert isinstance(train_config.batch_size, int) and train_config.batch_size > 0, "batch_size must be a positive integer"
@@ -39,11 +64,7 @@ def train_model(
     optim_name = "torch.optim." + train_config.optimizer
     lr = train_config.lr
     optimizer = eval(optim_name + "(model.parameters(), lr=" + str(lr) + ")")
-    scheduler = lr_scheduler.CosineAnnealingWarmRestarts(optimizer,
-                                                         T_0=train_config.lr_scheduler.T_0,
-                                                         T_mult=train_config.lr_scheduler.T_mult,
-                                                         eta_min=train_config.lr_scheduler.eta_min
-                                                         )
+    scheduler = lr_scheduler.ReduceLROnPlateau(optimizer, 'min')
 
     # Instantiate EarlyStopping
     es = EarlyStopping(
@@ -75,7 +96,7 @@ def train_model(
 
     pbar = tqdm(
         range(epochs+1), # +1 because we skip the first epoch
-        total=epochs,
+        total=epochs+1,
         position=0, leave=True,  # position at top and remove when done
         dynamic_ncols=True,  # adjust width to terminal window size
         )
@@ -105,7 +126,7 @@ def train_model(
             # Baseline model: identity model - predict that the next time step is the same as the current one.
             # This is the simplest model we can think of: predict that the next time step is the same as the current one
             # is better than predict any other random number.
-            train_baseline = compute_loss(loss_fn=criterion, X=y_base, Y=Y_train, masks=masks_train)
+            train_baseline = compute_loss_vectorized(loss_fn=criterion, X=y_base, Y=Y_train, masks=masks_train)
             
             # Model
             y_pred = model(X_train, masks_train, tau)
@@ -113,11 +134,11 @@ def train_model(
             if train_config.task == "many-to-one":
                 y_pred = y_pred[:, -1, :].unsqueeze(1)  # Select last time step
 
-            train_loss = compute_loss(loss_fn=criterion, X=y_pred, Y=Y_train, masks=masks_train)
+            train_loss = compute_loss_vectorized(loss_fn=criterion, X=y_pred, Y=Y_train, masks=masks_train)
 
             # Backpropagation (skip first epoch)
-            train_loss.backward()
             if epoch > 0:
+                train_loss.backward()
                 optimizer.step()
 
             # Update running losses
@@ -129,11 +150,6 @@ def train_model(
             mlflow.log_metric("iteration_train_baseline", train_baseline.item(), step=epoch*len(trainloader) + batch_idx)
 
         end_time = time.perf_counter()
-
-        # Step the scheduler
-        scheduler.step()
-        current_lr = optimizer.param_groups[0]['lr']
-        mlflow.log_metric("learning_rate", current_lr, step=epoch)
 
         # Store metrics
         train_epoch_loss.append(train_running_loss / len(trainloader))
@@ -171,7 +187,7 @@ def train_model(
                 # Baseline model: identity model - predict that the next time step is the same as the current one.
                 # This is the simplest model we can think of: predict that the next time step is the same as the current one
                 # is better than predict any other random number.
-                val_baseline = compute_loss(loss_fn=criterion, X=y_base, Y=Y_val, masks=masks_val)
+                val_baseline = compute_loss_vectorized(loss_fn=criterion, X=y_base, Y=Y_val, masks=masks_val)
 
                 # Model
                 y_pred = model(X_val, masks_val, tau)
@@ -179,7 +195,7 @@ def train_model(
                 if train_config.task == "many-to-one":
                     y_pred = y_pred[:, -1, :].unsqueeze(1)  # Select last time step
                     
-                val_loss = compute_loss(loss_fn=criterion, X=y_pred, Y=Y_val, masks=masks_val)
+                val_loss = compute_loss_vectorized(loss_fn=criterion, X=y_pred, Y=Y_val, masks=masks_val)
 
                 # Update running losses
                 val_running_base_loss += val_baseline.item()
@@ -202,6 +218,11 @@ def train_model(
             # Reset running losses
             val_running_base_loss = 0
             val_running_loss = 0
+        
+        # Step the scheduler
+        scheduler.step(val_epoch_loss[-1])
+        current_lr = optimizer.param_groups[0]['lr']
+        mlflow.log_metric("learning_rate", current_lr, step=epoch)
 
         # Save model checkpoint
         if epoch % save_freq == 0:
@@ -217,7 +238,7 @@ def train_model(
             logger.info("Epoch: {}/{} | Train loss: {:.4f} | Val. loss: {:.4f}".format(epoch+1, epochs, train_epoch_loss[-1], val_epoch_loss[-1]))
 
         # Update progress bar
-        pbar.set_description(f'Epoch {epoch}/{epochs}')
+        pbar.set_description(f'Epoch {epoch}/{epochs+1}')
         pbar.set_postfix({'Train loss': train_epoch_loss[-1], 'Val. loss': val_epoch_loss[-1]})
 
     # Restore best model and save it
@@ -264,15 +285,17 @@ if __name__ == "__main__":
     os.chdir(log_dir)
 
     # Dataset
-    train_dataset = get_datasets(dataset_config.dataset.train)
+    train_dataset, val_dataset = get_datasets(dataset_config.dataset)
 
     # Get the model
     model = get_model(model_config.model)
 
     # Train the model
-    model, submodules_updated, train_info = train_model(
+    model, metric = train_model(
         train_config=train_config.train,
         model=model,
-        dataset=train_dataset,
+        train_dataset=train_dataset,
+        val_dataset=val_dataset,
     )
+    print('Final metric:', metric)
 
