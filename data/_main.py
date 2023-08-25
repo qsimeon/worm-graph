@@ -157,14 +157,14 @@ def get_datasets(dataset_config: DictConfig):
         combined_dataset, dataset_info = create_combined_dataset(experimental_datasets,
                                                                  num_named_neurons, num_worms
                                                                  )
-        train_dataset, val_dataset, time_step_info = split_combined_dataset(combined_dataset, k_splits, num_train_samples,
+        train_dataset, val_dataset, dataset_info2 = split_combined_dataset(combined_dataset, k_splits, num_train_samples,
                                                                             num_val_samples, seq_len, tau, reverse,
                                                                             use_residual, smooth_data
                                                                             )
         
-        # Merge dataset_info and time_step_info
-        dataset_info_train = dataset_info.merge(time_step_info[['combined_dataset_index', 'train_time_steps']], on='combined_dataset_index', how='outer')
-        dataset_info_val = dataset_info.merge(time_step_info[['combined_dataset_index', 'val_time_steps']], on='combined_dataset_index', how='outer')
+        # Merge dataset_info and dataset_info2
+        dataset_info_train = dataset_info.merge(dataset_info2[['combined_dataset_index', 'train_time_steps', 'tau', 'num_train_samples', 'train_seq_len']], on='combined_dataset_index', how='outer')
+        dataset_info_val = dataset_info.merge(dataset_info2[['combined_dataset_index', 'val_time_steps', 'num_val_samples', 'val_seq_len']], on='combined_dataset_index', how='outer')
 
         # Save the datasets and information about them
         # => They contain the same neurons, but with different time steps

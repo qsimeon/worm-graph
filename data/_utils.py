@@ -25,6 +25,7 @@ class NeuralActivityDataset(torch.utils.data.Dataset):
         time_vec,
         neurons_mask,
         wormID,
+        worm_dataset,
         seq_len=1,
         num_samples=100,
         reverse=False,
@@ -92,6 +93,7 @@ class NeuralActivityDataset(torch.utils.data.Dataset):
 
         self.max_timesteps, self.num_neurons = data.shape
         self.wormID = wormID
+        self.worm_dataset = worm_dataset
         self.seq_len = seq_len
         self.reverse = reverse
         self.tau = tau
@@ -140,8 +142,10 @@ class NeuralActivityDataset(torch.utils.data.Dataset):
 
         metadata = dict(
             wormID=self.wormID,
+            worm_dataset=self.worm_dataset,
             tau=self.tau,
             time_vec=time_vec,
+            start_time=start,
         )
 
         # Return sample
@@ -727,6 +731,7 @@ def create_combined_dataset(experimental_datasets, num_named_neurons, num_worms)
         'original_index': [],
         'combined_dataset_index': [],
         'neurons': [],
+        'num_neurons': [],
     }
 
     for worm, data in combined_dataset.items():
@@ -735,6 +740,7 @@ def create_combined_dataset(experimental_datasets, num_named_neurons, num_worms)
         dataset_info['combined_dataset_index'].append(worm)
         worm_neurons = [neuron for slot, neuron in data['slot_to_named_neuron'].items()]
         dataset_info['neurons'].append(worm_neurons)
+        dataset_info['num_neurons'].append(len(worm_neurons))
 
     dataset_info = pd.DataFrame(dataset_info)
 
@@ -827,7 +833,15 @@ def split_combined_dataset(combined_dataset, k_splits, num_train_samples, num_va
     val_dataset = []
 
     # Store the time steps info
-    time_step_info = {'combined_dataset_index': [], 'train_time_steps': [], 'val_time_steps': []}
+    dataset_info2 = {'combined_dataset_index': [],
+                      'train_time_steps': [],
+                      'num_train_samples': [],
+                      'tau': [],
+                      'train_seq_len': [],
+                      'val_time_steps': [],
+                      'num_val_samples': [],
+                      'val_seq_len': [],
+                      }
 
     # Loop through the worms in the dataset
     for wormID, single_worm_dataset in combined_dataset.items():
@@ -836,6 +850,7 @@ def split_combined_dataset(combined_dataset, k_splits, num_train_samples, num_va
         data = single_worm_dataset[key_data]
         neurons_mask = single_worm_dataset["named_neurons_mask"]
         time_vec = single_worm_dataset["time_in_seconds"]
+        worm_dataset = single_worm_dataset["dataset"]
 
         # Verifications
         assert isinstance(seq_len, int) and 0 < seq_len < len(data), "seq_len must be an integer > 0 and < len(data)"
@@ -866,7 +881,8 @@ def split_combined_dataset(combined_dataset, k_splits, num_train_samples, num_va
                     data = train_split.detach(),
                     time_vec = train_time_split.detach(),
                     neurons_mask = neurons_mask,
-                    wormID = wormID,
+                    wormID = wormID, # worm ID of the combined dataset
+                    worm_dataset = worm_dataset, # dataset where the worm comes from
                     seq_len = seq_len,
                     num_samples = num_samples_split,
                     tau = tau,
@@ -884,7 +900,8 @@ def split_combined_dataset(combined_dataset, k_splits, num_train_samples, num_va
                     data = val_split.detach(),
                     time_vec = val_time_split.detach(),
                     neurons_mask = neurons_mask,
-                    wormID = wormID,
+                    wormID = wormID, # worm ID of the combined dataset
+                    worm_dataset = worm_dataset, # dataset where the worm comes from
                     seq_len = seq_len,
                     num_samples = num_samples_split,
                     tau = tau,
@@ -897,18 +914,26 @@ def split_combined_dataset(combined_dataset, k_splits, num_train_samples, num_va
                 raise ValueError("More time steps from samples than in the val. split")
             
         # Store the number of unique time steps for each worm
-        time_step_info['combined_dataset_index'].append(wormID)
-        time_step_info['train_time_steps'].append(train_split_time_steps)
-        time_step_info['val_time_steps'].append(val_split_time_steps)
+        dataset_info2['combined_dataset_index'].append(wormID)
+
+        dataset_info2['train_time_steps'].append(train_split_time_steps)
+        dataset_info2['train_seq_len'].append(seq_len)
+        dataset_info2['num_train_samples'].append(num_train_samples)
+        dataset_info2['tau'].append(tau)
+
+        dataset_info2['val_time_steps'].append(val_split_time_steps)
+        dataset_info2['val_seq_len'].append(seq_len)
+        dataset_info2['num_val_samples'].append(num_val_samples)
+
 
     # Concatenate the datasets
     train_dataset = torch.utils.data.ConcatDataset(train_dataset) # Nb of train examples = nb train samples * nb of worms
     val_dataset = torch.utils.data.ConcatDataset(val_dataset) # Nb of val examples = nb train samples * nb of worms
 
     # Convert time_step_info to a dataframe
-    time_step_info = pd.DataFrame(time_step_info)
+    dataset_info2 = pd.DataFrame(dataset_info2)
 
-    return train_dataset, val_dataset, time_step_info
+    return train_dataset, val_dataset, dataset_info2
 
 
 def graph_inject_data(single_worm_dataset, connectome_graph):
