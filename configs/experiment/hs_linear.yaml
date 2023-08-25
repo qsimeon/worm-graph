@@ -11,7 +11,7 @@ hydra:
       seed: 42 # Seed for reproducibility
     study_name: hs_linear # Name of the study (for optuna)
     direction: minimize # Minimize the metric
-    n_trials: 10 # Number of trials to run
+    n_trials: 20 # Number of trials to run
     n_jobs: 2 # Number of jobs to run in parallel
     params:
       # Hyperparameters to optimize
@@ -24,7 +24,7 @@ submodule:
 
   dataset:
     # Train and validate with standard datasets
-    use_these_datasets: CHANGE # use the standard datasets
+    use_these_datasets: null # use the standard datasets
 
     # Load the smaller dataset. Won't be used for training or validation (overridden by use_this_train_dataset and use_this_val_dataset)
     experimental_datasets: Kato2015 #[Kato2015, Nichols2017, Skora2018, Uzel2022, Kaplan2020, Flavell2023, Leifer2023]
@@ -58,12 +58,8 @@ submodule:
     # batch_size: 16
     shuffle: true
     early_stopping:
-      delta: 1e-4
-      patience: 10
-    lr_scheduler:
-      T_0: 10
-      T_mult: 2
-      eta_min: 1e-5
+      delta: 1e-6
+      patience: 200
 
   predict:
     worms_to_predict: [worm0]

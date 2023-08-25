@@ -45,13 +45,13 @@ submodule:
 
   train:
     optimizer: AdamW
-    lr: 0.0001
+    lr: 0.001
     epochs: 900
     save_freq: 100
-    batch_size: 32
+    batch_size: 16
     shuffle: true
     early_stopping:
-      delta: 1e-6 # minimum change in validation loss to be considered an improvement
+      delta: 1e-7 # minimum change in validation loss to be considered an improvement
       patience: 25 # number of epochs to wait for improvement before stopping
 
   predict:
