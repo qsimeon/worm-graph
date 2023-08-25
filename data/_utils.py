@@ -851,6 +851,7 @@ def split_combined_dataset(combined_dataset, k_splits, num_train_samples, num_va
         neurons_mask = single_worm_dataset["named_neurons_mask"]
         time_vec = single_worm_dataset["time_in_seconds"]
         worm_dataset = single_worm_dataset["dataset"]
+        original_wormID = single_worm_dataset["original_worm"]
 
         # Verifications
         assert isinstance(seq_len, int) and 0 < seq_len < len(data), "seq_len must be an integer > 0 and < len(data)"
@@ -881,7 +882,7 @@ def split_combined_dataset(combined_dataset, k_splits, num_train_samples, num_va
                     data = train_split.detach(),
                     time_vec = train_time_split.detach(),
                     neurons_mask = neurons_mask,
-                    wormID = wormID, # worm ID of the combined dataset
+                    wormID = original_wormID, # worm ID of the experimental dataset (original)
                     worm_dataset = worm_dataset, # dataset where the worm comes from
                     seq_len = seq_len,
                     num_samples = num_samples_split,
@@ -900,7 +901,7 @@ def split_combined_dataset(combined_dataset, k_splits, num_train_samples, num_va
                     data = val_split.detach(),
                     time_vec = val_time_split.detach(),
                     neurons_mask = neurons_mask,
-                    wormID = wormID, # worm ID of the combined dataset
+                    wormID = original_wormID, # worm ID of the experimental dataset (original)
                     worm_dataset = worm_dataset, # dataset where the worm comes from
                     seq_len = seq_len,
                     num_samples = num_samples_split,

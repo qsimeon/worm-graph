@@ -229,8 +229,6 @@ def plot_dataset_info(log_dir):
     fig.savefig(os.path.join(log_dir, 'dataset', 'dataset_info.png'), dpi=300)
     plt.close()
 
-    return train_exp_datasets
-
 
 def plot_loss_curves(log_dir, info_to_display=None):
     """Plots the loss curves stored in a log directory.
@@ -464,85 +462,92 @@ def plot_before_after_weights(log_dir: str) -> None:
 def plot_predictions(log_dir, neurons_to_plot=None, worms_to_plot=None):
 
     for type_ds in os.listdir(os.path.join(log_dir, 'prediction')):
-            
-        for file in os.listdir(os.path.join(log_dir, 'prediction', type_ds)):
-        
-            wormID = file[:-4]
 
-            # Skip file if not .csv
-            if not file.endswith('.csv'):
-                continue
+        for ds_name in os.listdir(os.path.join(log_dir, 'prediction', type_ds)):
 
-            # Skip if num_worms given
-            if worms_to_plot is not None: 
-                if wormID not in worms_to_plot:
-                    continue
+            for wormID in os.listdir(os.path.join(log_dir, 'prediction', type_ds, ds_name)):
 
-            url = os.path.join(log_dir, 'prediction', type_ds, file)
+                # Skip if num_worms given
+                if worms_to_plot is not None: 
+                    if wormID not in worms_to_plot:
+                        continue
 
-            # Acess the prediction directory
-            df = pd.read_csv(url)
-            df.set_index(['Type', 'Unnamed: 1'], inplace=True)
-            df.index.names = ['Type', '']
+                url = os.path.join(log_dir, 'prediction', type_ds, ds_name, wormID, 'predictions.csv')
 
-            # Load named neurons
-            ds_info = pd.read_csv(os.path.join(log_dir, 'dataset', type_ds+'_dataset_info.csv'))
-            neurons = ds_info[ds_info['combined_dataset_index']==wormID]['neurons']
-            neurons = ast.literal_eval(neurons.values[0]) # convert str to list
+                # Acess the prediction directory
+                df = pd.read_csv(url)
+                df.set_index(['Type', 'Unnamed: 1'], inplace=True)
+                df.index.names = ['Type', '']
 
-            # Treat neurons_to_plot
-            if isinstance(neurons_to_plot, int):
-                neurons_to_plot = np.random.choice(neurons, size=min(neurons_to_plot, len(neurons)), replace=False).tolist()
-            elif isinstance(neurons_to_plot, list):
-                # Skip neurons that are not available
-                neurons_to_plot = [neuron for neuron in neurons_to_plot if neuron in neurons]
-            else:
-                neurons_to_plot = neurons # all neurons
+                # Load named neurons
+                ds_info = pd.read_csv(os.path.join(log_dir, 'dataset', type_ds+'_dataset_info.csv'))
+                neurons = ds_info[ds_info['combined_dataset_index']==wormID]['neurons']
+                neurons = ast.literal_eval(neurons.values[0]) # convert str to list
 
-            seq_len = len(pd.concat([df.loc['Context'], df.loc['Ground Truth']], axis=0))
-            max_time_steps = len(pd.concat([df.loc['Context'], df.loc['AR Generation']], axis=0))
-            time_vector = np.arange(max_time_steps)
+                # Treat neurons_to_plot
+                if isinstance(neurons_to_plot, int):
+                    neurons_to_plot = np.random.choice(neurons, size=min(neurons_to_plot, len(neurons)), replace=False).tolist()
+                elif isinstance(neurons_to_plot, list):
+                    # Skip neurons that are not available
+                    neurons_to_plot = [neuron for neuron in neurons_to_plot if neuron in neurons]
+                else:
+                    neurons_to_plot = neurons # all neurons
 
-            time_context = time_vector[:len(df.loc['Context'])]
-            time_ground_truth = time_vector[len(df.loc['Context'])-1:seq_len-1]
-            time_gt_generated = time_vector[len(df.loc['Context'])-1:seq_len-1]
-            time_ar_generated = time_vector[len(df.loc['Context'])-1:max_time_steps-1] # -1 for plot continuity
+                seq_len = len(pd.concat([df.loc['Context'], df.loc['Ground Truth']], axis=0))
+                max_time_steps = len(pd.concat([df.loc['Context'], df.loc['AR Generation']], axis=0))
+                time_vector = np.arange(max_time_steps)
 
-            sns.set_style('whitegrid')
+                time_context = time_vector[:len(df.loc['Context'])]
+                time_ground_truth = time_vector[len(df.loc['Context'])-1:seq_len-1]
+                time_gt_generated = time_vector[len(df.loc['Context'])-1:seq_len-1]
+                time_ar_generated = time_vector[len(df.loc['Context'])-1:max_time_steps-1] # -1 for plot continuity
 
-            palette = sns.color_palette("tab10")
-            gt_color = palette[0]   # Blue
-            gt_generation_color = palette[1] # orange (next time step prediction with gt)
-            ar_generation_color = palette[2] # gree (autoregressive next time step prediction)
+                sns.set_style('whitegrid')
 
-            logger.info(f'Plotting neuron predictions for {type_ds}/{wormID}...')
+                palette = sns.color_palette("tab10")
+                gt_color = palette[0]   # Blue
+                gt_generation_color = palette[1] # orange (next time step prediction with gt)
+                ar_generation_color = palette[2] # gree (autoregressive next time step prediction)
 
-            for neuron in neurons_to_plot:
+                # logger.info(f'Plotting neuron predictions for {type_ds}/{wormID}...')
 
-                fig, ax = plt.subplots(figsize=(10, 4))
+                # Metadata textbox
+                metadata_text = 'Dataset: {}\nWorm ID: {}\n'.format(ds_name, wormID)
 
-                ax.plot(time_context, df.loc['Context', neuron], color=gt_color, label='Ground truth activity')
-                ax.plot(time_ground_truth, df.loc['Ground Truth', neuron], color=gt_color, alpha=0.5)
+                for neuron in neurons_to_plot:
 
-                ax.plot(time_gt_generated, df.loc['GT Generation', neuron], color=gt_generation_color, label="'Teacher forcing' generation")
-                ax.plot(time_ar_generated, df.loc['AR Generation', neuron], color=ar_generation_color, label='Autoregressive generation')
+                    fig, ax = plt.subplots(figsize=(10, 4))
 
-                # Fill the context window
-                ax.axvspan(time_context[0], time_context[-1], alpha=0.1, color=gt_color, label='Context window')
+                    ax.plot(time_context, df.loc['Context', neuron], color=gt_color, label='Ground truth activity')
+                    ax.plot(time_ground_truth, df.loc['Ground Truth', neuron], color=gt_color, alpha=0.5)
 
-                ax.set_title(f'Neuronal Activity of {neuron}')
-                ax.set_xlabel('Time steps')
-                ax.set_ylabel('Activity ($\Delta F / F$)')
-                ax.legend(loc='upper right')
+                    ax.plot(time_gt_generated, df.loc['GT Generation', neuron], color=gt_generation_color, label="'Teacher forcing' generation")
+                    ax.plot(time_ar_generated, df.loc['AR Generation', neuron], color=ar_generation_color, label='Autoregressive generation')
 
-                plt.tight_layout()
+                    # Fill the context window
+                    ax.axvspan(time_context[0], time_context[-1], alpha=0.1, color=gt_color, label='Context window')
 
-                # Make figure directory
-                os.makedirs(os.path.join(log_dir, 'prediction', type_ds, wormID), exist_ok=True)
+                    ax.set_title(f'Neuronal Activity of {neuron}')
+                    ax.set_xlabel('Time steps')
+                    ax.set_ylabel('Activity ($\Delta F / F$)')
+                    ax.legend(loc='upper right')
 
-                # Save figure
-                plt.savefig(os.path.join(log_dir, 'prediction', type_ds, wormID, f'{neuron}.png'), dpi=300)
-                plt.close()
+                    # Add metadata textbox in upper left corner
+                    ax.text(0.02, 0.95, metadata_text,
+                            transform=ax.transAxes,
+                            fontsize=10,
+                            verticalalignment='top',
+                            bbox=dict(boxstyle='round, pad=1', facecolor='white', edgecolor='black', alpha=0.5)
+                            )
+
+                    plt.tight_layout()
+
+                    # Make figure directory
+                    os.makedirs(os.path.join(log_dir, 'prediction', type_ds, ds_name, wormID, 'neurons'), exist_ok=True)
+
+                    # Save figure
+                    plt.savefig(os.path.join(log_dir, 'prediction', type_ds, ds_name, wormID, 'neurons', f'{neuron}.png'), dpi=300)
+                    plt.close()
 
 
 def plot_pca_trajectory(log_dir, worms_to_plot=None, plot_type='3D'):

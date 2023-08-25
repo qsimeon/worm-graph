@@ -45,6 +45,7 @@ def model_predict(
         nb_ts_to_generate = nb_gt_ts_to_generate
 
     worms_predicted = set()
+    datasets_predicted = set()
 
     model = model.to(DEVICE)
 
@@ -52,7 +53,7 @@ def model_predict(
     for x, y, mask, metadata in iter(dataset):
 
         # Skip example if from the same worm
-        if metadata["wormID"] in worms_predicted:
+        if metadata["wormID"] in worms_predicted and metadata["worm_dataset"] in datasets_predicted:
             continue
 
         # Skip example if not in the list of worms to predict
@@ -65,6 +66,7 @@ def model_predict(
         mask = mask.to(DEVICE)
 
         worms_predicted.add(metadata["wormID"])
+        datasets_predicted.add(metadata["worm_dataset"])
 
         gt_generated_activity = model.generate(
             input=x.unsqueeze(0),
@@ -106,7 +108,10 @@ def model_predict(
         result_df = pd.concat([df_context, df_ground_truth, df_gt_generated, df_ar_generated])
         result_df = result_df.reorder_levels(['Type', None]).sort_index()
 
+        # Create folder for dataset
+        os.makedirs(os.path.join(log_dir, metadata['worm_dataset']), exist_ok=True) # ds level
+        os.makedirs(os.path.join(log_dir, metadata['worm_dataset'], metadata['wormID']), exist_ok=True) # worm level
         # Save the DataFrame
-        result_df.to_csv(os.path.join(log_dir, f"{metadata['wormID']}.csv"))
+        result_df.to_csv(os.path.join(log_dir, metadata['worm_dataset'], metadata['wormID'], "predictions.csv"))
 
     logger.info("Done. {}".format(worms_predicted))
