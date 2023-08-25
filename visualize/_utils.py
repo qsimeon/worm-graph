@@ -168,6 +168,8 @@ def plot_dataset_info(log_dir):
     std_counts_train = np.zeros(302)
     neuron_idx = [neuron_idx_mapping[neuron] for neuron in neurons_train]
     std_counts_train[neuron_idx] = neuron_counts_train
+    # Get unique datasets
+    train_exp_datasets = df_train['dataset'].unique().tolist()
 
     # Validation dataset
     df_val = pd.read_csv(os.path.join(log_dir, 'dataset', 'val_dataset_info.csv'))
@@ -179,6 +181,8 @@ def plot_dataset_info(log_dir):
     std_counts_val = np.zeros(302)
     neuron_idx_val = [neuron_idx_mapping[neuron] for neuron in neurons_val]
     std_counts_val[neuron_idx_val] = neuron_counts_val
+    # Get unique datasets
+    val_exp_datasets = df_val['dataset'].unique().tolist()
 
     # Plot histogram using sns
     fig, ax = plt.subplots(2, 1, figsize=(10, 8))
@@ -190,26 +194,42 @@ def plot_dataset_info(log_dir):
     ax[0].set_xticklabels(NEURONS_302, rotation=45)
     ax[0].set_ylabel('Count', fontsize=12)
     ax[0].set_xlabel('Neuron', fontsize=12)
-    ax[0].set_title('Train dataset', fontsize=14)
+    ax[0].set_title('Neuron count of Train Dataset', fontsize=14)
     # Reduce the number of xticks for readability
     ax[0].xaxis.set_major_locator(ticker.MultipleLocator(10))
     ax[0].xaxis.set_minor_locator(ticker.MultipleLocator(1))
+    metadata_train_text = 'Experimental datasets used: {}\nTotal number of worms: {}'.format(', '.join(train_exp_datasets), len(df_train))
+    ax[0].text(0.02, 0.95, metadata_train_text, 
+               transform=ax[0].transAxes, 
+               fontsize=10,
+               verticalalignment='top',
+               bbox=dict(boxstyle='round, pad=1', facecolor='white', edgecolor='black', alpha=0.5)
+               )
 
     # Validation dataset
     sns.barplot(x=NEURONS_302, y=std_counts_val, ax=ax[1])
     ax[1].set_xticklabels(NEURONS_302, rotation=45)
     ax[1].set_ylabel('Count', fontsize=12)
     ax[1].set_xlabel('Neuron', fontsize=12)
-    ax[1].set_title('Validation dataset', fontsize=14)
+    ax[1].set_title('Neuron count of Validation Dataset', fontsize=14)
     # Reduce the number of xticks for readability
     ax[1].xaxis.set_major_locator(ticker.MultipleLocator(10))
     ax[1].xaxis.set_minor_locator(ticker.MultipleLocator(1))
+    metadata_val_text = 'Experimental datasets used: {}\nTotal number of worms: {}'.format(', '.join(val_exp_datasets), len(df_val))
+    ax[1].text(0.02, 0.95, metadata_val_text, 
+               transform=ax[1].transAxes, 
+               fontsize=10,
+               verticalalignment='top',
+               bbox=dict(boxstyle='round, pad=1', facecolor='white', edgecolor='black', alpha=0.5)
+               )
 
     plt.tight_layout()
 
     # Save figure
     fig.savefig(os.path.join(log_dir, 'dataset', 'dataset_info.png'), dpi=300)
     plt.close()
+
+    return train_exp_datasets
 
 
 def plot_loss_curves(log_dir, info_to_display=None):
