@@ -1,13 +1,26 @@
 dataset:
   # Path to a directory containing the datasets to be used.
-  # If null, create a new dataset using the experimental_datasets.
-  # If not null, but the directory is incomplete (without a combined, train or val. datasets), 
-  #   create the missing ones using the experimental_datasets.
-  use_these_datasets: null
+  # If null, create a new dataset in the logs/dataset directory using the experimental_datasets.
+  # If not null, and the directory contains train and validation datasets, use them directly.
+  # If not null, and the directory contains only the combined dataset, create both train and validation dataset from it.
+  # If not null, and the directory contains a combined dataset + train or val. dataset, create the missing dataset using the combined dataset.
+  # Specify num_worms to random pick a subset worms from the combined dataset (when a combined dataset is provided).
+  use_these_datasets:
+    path: /home/lrvnc/Projects/worm-graph/logs/hydra/2023_08_29_15_40_40/dataset
+    num_worms: 20
 
-  experimental_datasets: [Nichols2017, Uzel2022]  #[Kato2015, Nichols2017, Skora2018, Uzel2022, Kaplan2020, Flavell2023, Leifer2023]
+  experimental_datasets:
+    # null = don't use this dataset
+    # all = use all the worms in the dataset
+    # positive integer = use this number of worms from the dataset (random pick)
+    Kato2015: 5
+    Nichols2017: null
+    Skora2018: all
+    Uzel2022: [worm6, worm2]
+    Kaplan2020: null
+    Flavell2023: null
+    Leifer2023: null
   num_named_neurons: all # number of neurons to train the model with (positive integer or 'all')
-  num_worms: all # number of worms to train the model with (positive integer or 'all')
   k_splits: 2
   num_train_samples: 32
   num_val_samples: 32

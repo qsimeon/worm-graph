@@ -4,3 +4,12 @@ analysis:
     group_by: four # None, three, four
     method: 'ward' # ward, average, complete, single
     metric: None # None, euclidean, cityblock, cosine, correlation...
+
+  validation:
+    Kato2015: all
+    Nichols2017: all
+    Skora2018: all
+    Uzel2022: all
+    Kaplan2020: all
+    Flavell2023: all
+    Leifer2023: all
