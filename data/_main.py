@@ -164,8 +164,8 @@ def get_datasets(dataset_config: DictConfig, save=True):
                                                                             )
         
         # Merge dataset_info and dataset_info2
-        dataset_info_train = dataset_info.merge(dataset_info2[['combined_dataset_index', 'train_time_steps', 'tau', 'num_train_samples', 'train_seq_len']], on='combined_dataset_index', how='outer')
-        dataset_info_val = dataset_info.merge(dataset_info2[['combined_dataset_index', 'val_time_steps', 'num_val_samples', 'val_seq_len']], on='combined_dataset_index', how='outer')
+        dataset_info_train = dataset_info.merge(dataset_info2[['combined_dataset_index', 'train_time_steps', 'tau', 'num_train_samples', 'train_seq_len', 'smooth_data', 'use_residual', 'k_splits']], on='combined_dataset_index', how='outer')
+        dataset_info_val = dataset_info.merge(dataset_info2[['combined_dataset_index', 'val_time_steps', 'num_val_samples', 'val_seq_len', 'smooth_data', 'use_residual', 'k_splits']], on='combined_dataset_index', how='outer')
 
         # Save the datasets and information about them
         if save:

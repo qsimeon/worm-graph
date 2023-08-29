@@ -1,4 +1,7 @@
 predict:
-  worms_to_predict: [worm1, worm6] # if null, predict all the worms in the dataset. Otherwise, predict only the worms in this list
+  # if worms_to_predict is null, predict all the worms in all datasets.
+  # Otherwise, predict only the worms in this list (for each experimental dataset)
+  worms_to_predict: [worm1, worm6]
+  
   nb_ts_to_generate: null # if null, the number of time steps to generate = seq_len - context_window
   context_window: 60

@@ -860,13 +860,19 @@ def split_combined_dataset(combined_dataset, k_splits, num_train_samples, num_va
 
     # Store the time steps info
     dataset_info2 = {'combined_dataset_index': [],
+                     
                       'train_time_steps': [],
                       'num_train_samples': [],
                       'tau': [],
                       'train_seq_len': [],
+
                       'val_time_steps': [],
                       'num_val_samples': [],
                       'val_seq_len': [],
+
+                      'smooth_data': [],
+                      'use_residual': [],
+                      'k_splits': [],
                       }
 
     # Loop through the worms in the dataset
@@ -952,6 +958,9 @@ def split_combined_dataset(combined_dataset, k_splits, num_train_samples, num_va
         dataset_info2['val_seq_len'].append(seq_len)
         dataset_info2['num_val_samples'].append(num_val_samples)
 
+        dataset_info2['smooth_data'].append(smooth_data)
+        dataset_info2['use_residual'].append(use_residual)
+        dataset_info2['k_splits'].append(k_splits)
 
     # Concatenate the datasets
     train_dataset = torch.utils.data.ConcatDataset(train_dataset) # Nb of train examples = nb train samples * nb of worms
