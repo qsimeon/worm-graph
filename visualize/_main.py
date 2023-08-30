@@ -81,6 +81,10 @@ def plot_experiment(visualize_config: DictConfig, exp_config: DictConfig) -> Non
 
         # Scaling law
         plot_scaling_law(exp_log_dir=exp_log_dir, exp_name=exp_key, exp_plot_dir=exp_plot_dir)
+
+        # Plot spread dataset losses analysis
+        plot_exp_validation_loss_per_dataset(exp_log_dir=exp_log_dir, exp_name=exp_key, exp_plot_dir=exp_plot_dir)
+
     except:
         logger.info(f"Not all experiments are finished. Skipping for now.")
         return None

@@ -33,11 +33,6 @@ def pipeline(cfg: DictConfig) -> None:
                 raise AssertionError("Need to specify a model before predicting.")
             if 'dataset' not in cfg.submodule:
                 raise AssertionError("Need to specify a dataset before predicting.")
-            
-        if 'analysis' in cfg.submodule:
-            # Need to have a trained model
-            if 'train' not in cfg.submodule:
-                raise AssertionError("Need to train a model before analysing.")
 
         logger.info("Torch device: %s" % (DEVICE))
 

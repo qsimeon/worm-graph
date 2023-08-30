@@ -1,7 +1,16 @@
 predict:
-  # if worms_to_predict is null, predict all the worms in all datasets.
-  # Otherwise, predict only the worms in this list (for each experimental dataset)
-  worms_to_predict: [worm1, worm6]
+  # Choose the worms that you want to predict
+  experimental_datasets:
+    # null = don't predict on this dataset
+    # all = predict on all the worms in the dataset
+    # positive integer = use this number of worms from the dataset (random pick)
+    Kato2015: worm0
+    Nichols2017: null
+    Skora2018: [worm2, worm3]
+    Uzel2022: all
+    Kaplan2020: null
+    Flavell2023: null
+    Leifer2023: null
   
   nb_ts_to_generate: null # if null, the number of time steps to generate = seq_len - context_window
   context_window: 60
