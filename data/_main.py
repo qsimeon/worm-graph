@@ -124,15 +124,15 @@ def get_datasets(dataset_config: DictConfig, save=True):
                                                                          num_named_neurons
                                                                          )
                 
-            created_train_dataset, created_val_dataset, time_step_info = split_combined_dataset(
+            created_train_dataset, created_val_dataset, dataset_info2 = split_combined_dataset(
                     combined_dataset, k_splits, num_train_samples,
                     num_val_samples, seq_len, tau, reverse,
                     use_residual, smooth_data
                 )
             
             # Merge dataset_info and time_step_info
-            created_dataset_info_train = dataset_info.merge(time_step_info[['combined_dataset_index', 'train_time_steps']], on='combined_dataset_index', how='outer')
-            created_dataset_info_val = dataset_info.merge(time_step_info[['combined_dataset_index', 'val_time_steps']], on='combined_dataset_index', how='outer')
+            created_dataset_info_train = dataset_info.merge(dataset_info2[['combined_dataset_index', 'train_time_steps', 'tau', 'num_train_samples', 'train_seq_len', 'smooth_data', 'use_residual', 'k_splits']], on='combined_dataset_index', how='outer')
+            created_dataset_info_val = dataset_info.merge(dataset_info2[['combined_dataset_index', 'val_time_steps', 'num_val_samples', 'val_seq_len', 'smooth_data', 'use_residual', 'k_splits']], on='combined_dataset_index', how='outer')
 
             # Replace missing dataset
             if not train_dataset_exists:

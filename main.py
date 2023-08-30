@@ -47,10 +47,6 @@ def pipeline(cfg: DictConfig) -> None:
             process_data(cfg.submodule.preprocess)
         
         if 'dataset' in cfg.submodule:
-            # Convert the stringified dictionary to an actual dictionary
-            if isinstance(cfg.submodule.dataset.experimental_datasets, list):
-                experimental_datasets = string_to_dict(cfg.submodule.dataset.experimental_datasets)
-
             train_dataset, val_dataset = get_datasets(cfg.submodule.dataset)
             # Update visualize and analysis submodule to plot current run
             if 'visualize' in cfg.submodule:

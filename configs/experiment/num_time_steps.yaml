@@ -9,7 +9,7 @@ hydra:
   # These parameters will be tested just when MULTIRUN mode is used.
   # Use the submodule parameters if RUN.
     params:
-      submodule.dataset.experimental_datasets: 'Kato2015=2,Nichols2017=2,Skora2018=2,Uzel2022=2,Kaplan2020=2,Flavell2023=2,Leifer2023=2', 'Kato2015=9,Nichols2017=9,Skora2018=9,Uzel2022=9,Kaplan2020=9,Flavell2023=9,Leifer2023=9'
+      submodule.dataset.experimental_datasets: choice({Kato2015:2, Nichols2017:2, Skora2018:2, Uzel2022:2, Kaplan2020:2, Flavell2023:2, Leifer2023:2},{Kato2015:1, Nichols2017:1, Skora2018:1, Uzel2022:1, Kaplan2020:1, Flavell2023:1, Leifer2023:1})
 
 submodule:
 
