@@ -10,7 +10,9 @@ def analyse_run(analysis_config: DictConfig):
     assert log_dir is not None, "log_dir is None. Please specify a log directory to analyse."
 
     # Analyse loss spread across datasets
-    validation_loss_per_dataset(log_dir)
+    validation_loss_per_dataset(log_dir=log_dir, 
+                                experimental_datasets=analysis_config.validation.experimental_datasets,
+                                task=analysis_config.validation.task)
 
     #TODO Hierarchical Clustering analysis
 

@@ -6,8 +6,3 @@ visualize:
   predict:
     worms_to_plot: null # if null, plot all the worms in the dataset. Otherwise, plot only the worms in this list
     neurons_to_plot: 2 # if null, plot all the neurons in the dataset. Otherwise, plot only the neurons in this list
-
-  # Options for scaling law plots
-  scaling_law:
-    exp_name: null
-    log_scale: true

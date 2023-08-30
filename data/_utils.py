@@ -653,8 +653,8 @@ def select_desired_worms(multi_worm_dataset, num_worms):
     if num_worms == "all":
         return multi_worm_dataset
     
-    dataset_name = multi_worm_dataset['worm0']['dataset']
     wormIDs = [wormID for wormID in multi_worm_dataset.keys()]
+    dataset_name = multi_worm_dataset[wormIDs[0]]['dataset']
     
     # num_worms can be string, list or int
     if isinstance(num_worms, str):

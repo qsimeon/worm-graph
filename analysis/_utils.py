@@ -672,7 +672,7 @@ def hc_analyse_dataset(
     return all_worm_clusters, ref_dict, silhouettes
 
 
-def validation_loss_per_dataset(log_dir):
+def validation_loss_per_dataset(log_dir, experimental_datasets, task):
 
     logger.info("Analyzing validation loss per dataset...")
 
@@ -684,12 +684,6 @@ def validation_loss_per_dataset(log_dir):
     tau = int(train_dataset_info['tau'].values[0])
     use_residual = int(train_dataset_info['use_residual'].values[0])
     smooth_data = int(train_dataset_info['smooth_data'].values[0])
-
-    train_dataset_names = train_dataset_info['dataset'].unique().tolist()
-
-    # List of datasets and worms to be analyzed
-    analysis_config = OmegaConf.load('/home/lrvnc/Projects/worm-graph/configs/submodule/analysis.yaml').analysis
-    datasets_and_worms = analysis_config.validation.experimental_datasets
 
     # Loss metrics
     val_running_base_loss = 0
@@ -705,7 +699,7 @@ def validation_loss_per_dataset(log_dir):
     model.to(DEVICE)
     criterion = model.loss_fn()
 
-    for dataset, worms_to_use in datasets_and_worms.items():
+    for dataset, worms_to_use in experimental_datasets.items():
 
         # Skip some datasets
         if worms_to_use is None:
@@ -714,8 +708,7 @@ def validation_loss_per_dataset(log_dir):
             num_worms.append(np.NaN)
             continue
 
-        experimental_datasets = {dataset: worms_to_use}
-        combined_dataset, _ = create_combined_dataset(experimental_datasets=experimental_datasets,
+        combined_dataset, _ = create_combined_dataset(experimental_datasets={dataset: worms_to_use},
                                                     num_named_neurons='all')
         _, val_dataset, _ = split_combined_dataset(combined_dataset=combined_dataset,
                                                 k_splits=k_splits,
@@ -744,7 +737,7 @@ def validation_loss_per_dataset(log_dir):
                 masks_val = masks_val.to(DEVICE)
 
                 # If many-to-one prediction, select last time step. Else, many-to-many prediction.
-                if analysis_config.validation.task == "many-to-one":
+                if task == "many-to-one":
                     y_base = X_val[:, -1, :].unsqueeze(1)  # Select last time step
                     Y_val = Y_val[:, -1, :].unsqueeze(1)  # Select last time step
                 else:
@@ -758,7 +751,7 @@ def validation_loss_per_dataset(log_dir):
                 # Model
                 y_pred = model(X_val, masks_val, tau)
 
-                if analysis_config.validation.task == "many-to-one":
+                if task == "many-to-one":
                     y_pred = y_pred[:, -1, :].unsqueeze(1)  # Select last time step
                     
                 val_loss = compute_loss_vectorized(loss_fn=criterion, X=y_pred, Y=Y_val, masks=masks_val)
@@ -777,7 +770,7 @@ def validation_loss_per_dataset(log_dir):
             val_running_loss = 0
 
     # Save losses in csv
-    losses = pd.DataFrame({'dataset': list(datasets_and_worms.keys()),
+    losses = pd.DataFrame({'dataset': list(experimental_datasets.keys()),
                            'val_loss': dataset_val_loss,
                            'val_baseline': dataset_val_baseline,
                            'num_worms': num_worms})

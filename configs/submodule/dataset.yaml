@@ -6,17 +6,17 @@ dataset:
   # If not null, and the directory contains a combined dataset + train or val. dataset, create the missing dataset using the combined dataset.
   # Specify num_worms to random pick a subset worms from the combined dataset (when a combined dataset is provided).
   use_these_datasets:
-    path: null
-    num_worms: 20
+    path: /om2/user/lrvenan/worm-graph/data/datasets/custom01
+    num_worms: 7
 
   experimental_datasets:
     # null = don't use this dataset
     # all = use all the worms in the dataset
     # positive integer = use this number of worms from the dataset (random pick)
-    Kato2015: 5
+    Kato2015: 3
     Nichols2017: null
-    Skora2018: all
-    Uzel2022: [worm6, worm2]
+    Skora2018: null
+    Uzel2022: null
     Kaplan2020: null
     Flavell2023: null
     Leifer2023: null

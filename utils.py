@@ -94,3 +94,13 @@ def _explore_recursive(parent_name, element):
     elif isinstance(element, ListConfig):
         for i, v in enumerate(element):
             mlflow.log_param(f'{parent_name}.{i}', v)
+
+
+def string_to_dict(s):
+    # Convert stringified dictionary to an actual dictionary
+    pairs = s.split(',')
+    d = {}
+    for pair in pairs:
+        k, v = pair.split('=')
+        d[k] = int(v)
+    return d
