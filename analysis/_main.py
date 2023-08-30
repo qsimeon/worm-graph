@@ -1,28 +1,20 @@
 from analysis._utils import *
-from analysis._pkg import *
 
 
-def analysis(
-    config: DictConfig,
-):
-    # Combine datasets when given a list of dataset names
-    if isinstance(config.analysis.dataset_name, str):
-        dataset_names = [config.analysis.dataset_name]
-    else:
-        dataset_names = sorted(list(config.analysis.dataset_name))
+def analyse_run(analysis_config: DictConfig):
 
-    # Perform hierarchical clustering
-    (all_worm_clusters, ref_dict, silhouettes) = hc_analyse_dataset(
-        dataset_names,
-        apply_suggestion=True,
-        hip="hip1",
-        group_by=config.analysis.hierarchical_clustering.group_by,
-        method=config.analysis.hierarchical_clustering.method,
-        metric=config.analysis.hierarchical_clustering.metric,
-    )
+    log_dir = analysis_config.analyse_this_log_dir
+
+    assert log_dir is not None, "log_dir is None. Please specify a log directory to plot figures from."
+
+    # Analyse loss spread across datasets
+    validation_loss_per_dataset(log_dir)
+
+
+def analyse_exp():
+    pass
 
 
 if __name__ == "__main__":
     config = OmegaConf.load("conf/analysis.yaml")
     print("config:", OmegaConf.to_yaml(config), end="\n\n")
-    analysis(config)

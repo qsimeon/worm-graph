@@ -3,7 +3,7 @@ from models._utils import *
 # Init logger
 logger = logging.getLogger(__name__)
 
-def get_model(model_config: DictConfig) -> torch.nn.Module:
+def get_model(model_config: DictConfig, verbose=True) -> torch.nn.Module:
     """Instantiate or load a model as specified in 'model.yaml'.
 
     This function can either create a new model of the specified type
@@ -53,7 +53,8 @@ def get_model(model_config: DictConfig) -> torch.nn.Module:
             l1_reg_param=l1_reg_param,
         )
         model.load_state_dict(model_state_dict)
-        logger.info("Loading model from checkpoint: {}".format(model_config.use_this_pretrained_model))
+        if verbose:
+            logger.info("Loading model from checkpoint: {}".format(model_config.use_this_pretrained_model))
 
     # Otherwise, instantiate a new model
     else:
@@ -82,7 +83,8 @@ def get_model(model_config: DictConfig) -> torch.nn.Module:
             model = LinearNN(**args)
         else:  # default to "LinearNN" model
             model = LinearNN(**args)
-        logger.info("Initialized a new model: {}.".format(model_config.type))
+        if verbose:
+            logger.info("Initialized a new model: {}.".format(model_config.type))
 
     return model.to(torch.float32)
 

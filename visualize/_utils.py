@@ -2,6 +2,7 @@ from visualize._pkg import *
 
 # Init logger
 logger = logging.getLogger(__name__)
+logging.getLogger("matplotlib").setLevel(logging.WARNING) # Suppress matplotlib logging
 
 def draw_connectome(
     network, pos=None, labels=None, plt_title="C. elegans connectome network"
@@ -294,7 +295,7 @@ def plot_loss_curves(log_dir, info_to_display=None):
 
 def setup_histograms_for_checkpoint(chkpt, axes, range_val, fig):
     model_config = OmegaConf.create({'use_this_pretrained_model': chkpt})
-    model = get_model(model_config)
+    model = get_model(model_config, verbose=False)
     
     # Extract weights and filter out biases
     weights = [param.detach().cpu().numpy().flatten() for name, param in model.named_parameters() if 'weight' in name]
@@ -321,7 +322,7 @@ def histogram_weights_animation(log_dir, output_video_name='weights_dynamics.mp4
     
     # Get the global range of weights for a consistent plot across checkpoints
     model_config = OmegaConf.create({'use_this_pretrained_model': checkpoints[0]})
-    model = get_model(model_config)
+    model = get_model(model_config, verbose=False)
     weights = [param.detach().cpu().numpy().flatten() for name, param in model.named_parameters() if 'weight' in name]
     all_weights = np.concatenate(weights)
     range_val = (all_weights.min(), all_weights.max())
