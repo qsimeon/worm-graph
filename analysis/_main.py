@@ -1,5 +1,7 @@
 from analysis._utils import *
 
+# Init logger
+logger = logging.getLogger(__name__)
 
 def analyse_run(analysis_config: DictConfig):
 
@@ -9,6 +11,8 @@ def analyse_run(analysis_config: DictConfig):
 
     # Analyse loss spread across datasets
     validation_loss_per_dataset(log_dir)
+
+    #TODO Hierarchical Clustering analysis
 
 
 def analyse_exp():

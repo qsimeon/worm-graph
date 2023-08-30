@@ -697,6 +697,7 @@ def validation_loss_per_dataset(log_dir):
 
     dataset_val_loss = []
     dataset_val_baseline = []
+    num_worms = []
 
     # Load the model
     model_chkpt = os.path.join(log_dir, 'train', 'checkpoints', f'model_best.pt')
@@ -708,8 +709,9 @@ def validation_loss_per_dataset(log_dir):
 
         # Skip some datasets
         if worms_to_use is None:
-            dataset_val_loss.append(0)
-            dataset_val_baseline.append(0)
+            dataset_val_loss.append(np.NaN)
+            dataset_val_baseline.append(np.NaN)
+            num_worms.append(np.NaN)
             continue
 
         experimental_datasets = {dataset: worms_to_use}
@@ -725,6 +727,8 @@ def validation_loss_per_dataset(log_dir):
                                                 smooth_data=smooth_data,
                                                 reverse=False
                                                 )
+
+        num_worms.append(len(combined_dataset))
         
         valloader = torch.utils.data.DataLoader(val_dataset, batch_size=32, shuffle=False)
 
@@ -775,7 +779,8 @@ def validation_loss_per_dataset(log_dir):
     # Save losses in csv
     losses = pd.DataFrame({'dataset': list(datasets_and_worms.keys()),
                            'val_loss': dataset_val_loss,
-                           'val_baseline': dataset_val_baseline})
+                           'val_baseline': dataset_val_baseline,
+                           'num_worms': num_worms})
 
     # Create analysis folder
     os.makedirs(os.path.join(log_dir, 'analysis'), exist_ok=True)

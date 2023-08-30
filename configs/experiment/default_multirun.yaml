@@ -1,6 +1,6 @@
 # @package _global_
 defaults:
-  - override /submodule: [dataset, model, train, predict, visualize]
+  - override /submodule: [dataset, model, train, predict, analysis, visualize]
   - _self_
 
 hydra:
@@ -13,12 +13,18 @@ hydra:
 
 submodule:
   dataset:
-    # Train and validation dataset provided
-    use_these_datasets: /home/lrvnc/Projects/worm-graph/data/standard_datasets/FKKNSU
-
-    # Ignore these datasets
-    experimental_datasets: Kato2015
-    num_worms: 1
+    use_these_datasets:
+      path: null
+      num_worms: all
+    # Create new datasets
+    experimental_datasets:
+      Kato2015: 5
+      Nichols2017: null
+      Skora2018: null
+      Uzel2022: [worm0]
+      Kaplan2020: null
+      Flavell2023: null
+      Leifer2023: null
     k_splits: 2
     num_train_samples: 16
     num_val_samples: 4
