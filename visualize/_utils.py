@@ -2,6 +2,7 @@ from visualize._pkg import *
 
 # Init logger
 logger = logging.getLogger(__name__)
+logging.getLogger("matplotlib").setLevel(logging.WARNING) # Suppress matplotlib logging
 
 def draw_connectome(
     network, pos=None, labels=None, plt_title="C. elegans connectome network"
@@ -168,6 +169,8 @@ def plot_dataset_info(log_dir):
     std_counts_train = np.zeros(302)
     neuron_idx = [neuron_idx_mapping[neuron] for neuron in neurons_train]
     std_counts_train[neuron_idx] = neuron_counts_train
+    # Get unique datasets
+    train_exp_datasets = df_train['dataset'].unique().tolist()
 
     # Validation dataset
     df_val = pd.read_csv(os.path.join(log_dir, 'dataset', 'val_dataset_info.csv'))
@@ -179,6 +182,8 @@ def plot_dataset_info(log_dir):
     std_counts_val = np.zeros(302)
     neuron_idx_val = [neuron_idx_mapping[neuron] for neuron in neurons_val]
     std_counts_val[neuron_idx_val] = neuron_counts_val
+    # Get unique datasets
+    val_exp_datasets = df_val['dataset'].unique().tolist()
 
     # Plot histogram using sns
     fig, ax = plt.subplots(2, 1, figsize=(10, 8))
@@ -190,20 +195,34 @@ def plot_dataset_info(log_dir):
     ax[0].set_xticklabels(NEURONS_302, rotation=45)
     ax[0].set_ylabel('Count', fontsize=12)
     ax[0].set_xlabel('Neuron', fontsize=12)
-    ax[0].set_title('Train dataset', fontsize=14)
+    ax[0].set_title('Neuron count of Train Dataset', fontsize=14)
     # Reduce the number of xticks for readability
     ax[0].xaxis.set_major_locator(ticker.MultipleLocator(10))
     ax[0].xaxis.set_minor_locator(ticker.MultipleLocator(1))
+    metadata_train_text = 'Experimental datasets used: {}\nTotal number of worms: {}'.format(', '.join(train_exp_datasets), len(df_train))
+    ax[0].text(0.02, 0.95, metadata_train_text, 
+               transform=ax[0].transAxes, 
+               fontsize=10,
+               verticalalignment='top',
+               bbox=dict(boxstyle='round, pad=1', facecolor='white', edgecolor='black', alpha=0.5)
+               )
 
     # Validation dataset
     sns.barplot(x=NEURONS_302, y=std_counts_val, ax=ax[1])
     ax[1].set_xticklabels(NEURONS_302, rotation=45)
     ax[1].set_ylabel('Count', fontsize=12)
     ax[1].set_xlabel('Neuron', fontsize=12)
-    ax[1].set_title('Validation dataset', fontsize=14)
+    ax[1].set_title('Neuron count of Validation Dataset', fontsize=14)
     # Reduce the number of xticks for readability
     ax[1].xaxis.set_major_locator(ticker.MultipleLocator(10))
     ax[1].xaxis.set_minor_locator(ticker.MultipleLocator(1))
+    metadata_val_text = 'Experimental datasets used: {}\nTotal number of worms: {}'.format(', '.join(val_exp_datasets), len(df_val))
+    ax[1].text(0.02, 0.95, metadata_val_text, 
+               transform=ax[1].transAxes, 
+               fontsize=10,
+               verticalalignment='top',
+               bbox=dict(boxstyle='round, pad=1', facecolor='white', edgecolor='black', alpha=0.5)
+               )
 
     plt.tight_layout()
 
@@ -276,7 +295,7 @@ def plot_loss_curves(log_dir, info_to_display=None):
 
 def setup_histograms_for_checkpoint(chkpt, axes, range_val, fig):
     model_config = OmegaConf.create({'use_this_pretrained_model': chkpt})
-    model = get_model(model_config)
+    model = get_model(model_config, verbose=False)
     
     # Extract weights and filter out biases
     weights = [param.detach().cpu().numpy().flatten() for name, param in model.named_parameters() if 'weight' in name]
@@ -303,7 +322,7 @@ def histogram_weights_animation(log_dir, output_video_name='weights_dynamics.mp4
     
     # Get the global range of weights for a consistent plot across checkpoints
     model_config = OmegaConf.create({'use_this_pretrained_model': checkpoints[0]})
-    model = get_model(model_config)
+    model = get_model(model_config, verbose=False)
     weights = [param.detach().cpu().numpy().flatten() for name, param in model.named_parameters() if 'weight' in name]
     all_weights = np.concatenate(weights)
     range_val = (all_weights.min(), all_weights.max())
@@ -444,215 +463,217 @@ def plot_before_after_weights(log_dir: str) -> None:
 def plot_predictions(log_dir, neurons_to_plot=None, worms_to_plot=None):
 
     for type_ds in os.listdir(os.path.join(log_dir, 'prediction')):
-            
-        for file in os.listdir(os.path.join(log_dir, 'prediction', type_ds)):
-        
-            wormID = file[:-4]
 
-            # Skip file if not .csv
-            if not file.endswith('.csv'):
-                continue
+        for ds_name in os.listdir(os.path.join(log_dir, 'prediction', type_ds)):
 
-            # Skip if num_worms given
-            if worms_to_plot is not None: 
-                if wormID not in worms_to_plot:
-                    continue
+            for wormID in os.listdir(os.path.join(log_dir, 'prediction', type_ds, ds_name)):
 
-            url = os.path.join(log_dir, 'prediction', type_ds, file)
+                # Skip if num_worms given
+                if worms_to_plot is not None: 
+                    if wormID not in worms_to_plot:
+                        continue
 
-            # Acess the prediction directory
-            df = pd.read_csv(url)
-            df.set_index(['Type', 'Unnamed: 1'], inplace=True)
-            df.index.names = ['Type', '']
+                url = os.path.join(log_dir, 'prediction', type_ds, ds_name, wormID, 'predictions.csv')
+                neurons_url = os.path.join(log_dir, 'prediction', type_ds, ds_name, wormID, 'named_neurons.csv')
 
-            # Load named neurons
-            ds_info = pd.read_csv(os.path.join(log_dir, 'dataset', type_ds+'_dataset_info.csv'))
-            neurons = ds_info[ds_info['combined_dataset_index']==wormID]['neurons']
-            neurons = ast.literal_eval(neurons.values[0]) # convert str to list
+                # Acess the prediction directory
+                df = pd.read_csv(url)
+                df.set_index(['Type', 'Unnamed: 1'], inplace=True)
+                df.index.names = ['Type', '']
 
-            # Treat neurons_to_plot
-            if isinstance(neurons_to_plot, int):
-                neurons_to_plot = np.random.choice(neurons, size=min(neurons_to_plot, len(neurons)), replace=False).tolist()
-            elif isinstance(neurons_to_plot, list):
-                # Skip neurons that are not available
-                neurons_to_plot = [neuron for neuron in neurons_to_plot if neuron in neurons]
-            else:
-                neurons_to_plot = neurons # all neurons
+                # Get the named neurons
+                neurons_df = pd.read_csv(neurons_url)
+                neurons = neurons_df['named_neurons']
 
-            seq_len = len(pd.concat([df.loc['Context'], df.loc['Ground Truth']], axis=0))
-            max_time_steps = len(pd.concat([df.loc['Context'], df.loc['AR Generation']], axis=0))
-            time_vector = np.arange(max_time_steps)
+                # Treat neurons_to_plot
+                if isinstance(neurons_to_plot, int):
+                    neurons = np.random.choice(neurons, size=min(neurons_to_plot, len(neurons)), replace=False).tolist()
+                elif isinstance(neurons_to_plot, list):
+                    # Skip neurons that are not available
+                    neurons = [neuron for neuron in neurons_to_plot if neuron in neurons]
 
-            time_context = time_vector[:len(df.loc['Context'])]
-            time_ground_truth = time_vector[len(df.loc['Context'])-1:seq_len-1]
-            time_gt_generated = time_vector[len(df.loc['Context'])-1:seq_len-1]
-            time_ar_generated = time_vector[len(df.loc['Context'])-1:max_time_steps-1] # -1 for plot continuity
+                seq_len = len(pd.concat([df.loc['Context'], df.loc['Ground Truth']], axis=0))
+                max_time_steps = len(pd.concat([df.loc['Context'], df.loc['AR Generation']], axis=0))
+                time_vector = np.arange(max_time_steps)
 
-            sns.set_style('whitegrid')
+                time_context = time_vector[:len(df.loc['Context'])]
+                time_ground_truth = time_vector[len(df.loc['Context'])-1:seq_len-1]
+                time_gt_generated = time_vector[len(df.loc['Context'])-1:seq_len-1]
+                time_ar_generated = time_vector[len(df.loc['Context'])-1:max_time_steps-1] # -1 for plot continuity
 
-            palette = sns.color_palette("tab10")
-            gt_color = palette[0]   # Blue
-            gt_generation_color = palette[1] # orange (next time step prediction with gt)
-            ar_generation_color = palette[2] # gree (autoregressive next time step prediction)
+                sns.set_style('whitegrid')
 
-            logger.info(f'Plotting neuron predictions for {type_ds}/{wormID}...')
+                palette = sns.color_palette("tab10")
+                gt_color = palette[0]   # Blue
+                gt_generation_color = palette[1] # orange (next time step prediction with gt)
+                ar_generation_color = palette[2] # gree (autoregressive next time step prediction)
 
-            for neuron in neurons_to_plot:
+                # logger.info(f'Plotting neuron predictions for {type_ds}/{wormID}...')
 
-                fig, ax = plt.subplots(figsize=(10, 4))
+                # Metadata textbox
+                metadata_text = 'Dataset: {}\nWorm ID: {}'.format(ds_name, wormID)
 
-                ax.plot(time_context, df.loc['Context', neuron], color=gt_color, label='Ground truth activity')
-                ax.plot(time_ground_truth, df.loc['Ground Truth', neuron], color=gt_color, alpha=0.5)
+                for neuron in neurons:
 
-                ax.plot(time_gt_generated, df.loc['GT Generation', neuron], color=gt_generation_color, label="'Teacher forcing' generation")
-                ax.plot(time_ar_generated, df.loc['AR Generation', neuron], color=ar_generation_color, label='Autoregressive generation')
+                    fig, ax = plt.subplots(figsize=(10, 4))
 
-                # Fill the context window
-                ax.axvspan(time_context[0], time_context[-1], alpha=0.1, color=gt_color, label='Context window')
+                    ax.plot(time_context, df.loc['Context', neuron], color=gt_color, label='Ground truth activity')
+                    ax.plot(time_ground_truth, df.loc['Ground Truth', neuron], color=gt_color, alpha=0.5)
 
-                ax.set_title(f'Neuronal Activity of {neuron}')
-                ax.set_xlabel('Time steps')
-                ax.set_ylabel('Activity ($\Delta F / F$)')
-                ax.legend(loc='upper right')
+                    ax.plot(time_gt_generated, df.loc['GT Generation', neuron], color=gt_generation_color, label="'Teacher forcing' generation")
+                    ax.plot(time_ar_generated, df.loc['AR Generation', neuron], color=ar_generation_color, label='Autoregressive generation')
 
-                plt.tight_layout()
+                    # Fill the context window
+                    ax.axvspan(time_context[0], time_context[-1], alpha=0.1, color=gt_color, label='Context window')
 
-                # Make figure directory
-                os.makedirs(os.path.join(log_dir, 'prediction', type_ds, wormID), exist_ok=True)
+                    ax.set_title(f'Neuronal Activity of {neuron}')
+                    ax.set_xlabel('Time steps')
+                    ax.set_ylabel('Activity ($\Delta F / F$)')
+                    ax.legend(loc='upper right')
 
-                # Save figure
-                plt.savefig(os.path.join(log_dir, 'prediction', type_ds, wormID, f'{neuron}.png'), dpi=300)
-                plt.close()
+                    # Add metadata textbox in upper left corner
+                    ax.text(0.02, 0.95, metadata_text,
+                            transform=ax.transAxes,
+                            fontsize=8,
+                            verticalalignment='top',
+                            bbox=dict(boxstyle='round, pad=1', facecolor='white', edgecolor='black', alpha=0.5)
+                            )
+
+                    plt.tight_layout()
+
+                    # Make figure directory
+                    os.makedirs(os.path.join(log_dir, 'prediction', type_ds, ds_name, wormID, 'neurons'), exist_ok=True)
+
+                    # Save figure
+                    plt.savefig(os.path.join(log_dir, 'prediction', type_ds, ds_name, wormID, 'neurons', f'{neuron}.png'), dpi=300)
+                    plt.close()
 
 
 def plot_pca_trajectory(log_dir, worms_to_plot=None, plot_type='3D'):
 
     for type_ds in os.listdir(os.path.join(log_dir, 'prediction')):
-            
-        for file in os.listdir(os.path.join(log_dir, 'prediction', type_ds)):
-        
 
-            wormID = file[:-4]
+        for ds_name in os.listdir(os.path.join(log_dir, 'prediction', type_ds)):
 
-            # Skip file if not .csv
-            if not file.endswith('.csv'):
-                continue
+            for wormID in os.listdir(os.path.join(log_dir, 'prediction', type_ds, ds_name)):
 
-            # Skip if num_worms given
-            if worms_to_plot is not None: 
-                if wormID not in worms_to_plot:
-                    continue
+                # Skip if num_worms given
+                if worms_to_plot is not None: 
+                    if wormID not in worms_to_plot:
+                        continue
 
-            logger.info(f'Plotting PCA trajectory for {type_ds}/{wormID}...')
+                # logger.info(f'Plotting PCA trajectory for {type_ds}/{wormID}...')
 
-            df = pd.read_csv(os.path.join(log_dir, 'prediction', type_ds, file))
+                url = os.path.join(log_dir, 'prediction', type_ds, ds_name, wormID, 'predictions.csv')
+                neurons_url = os.path.join(log_dir, 'prediction', type_ds, ds_name, wormID, 'named_neurons.csv')
 
-            # Load named neurons
-            ds_info = pd.read_csv(os.path.join(log_dir, 'dataset', type_ds+'_dataset_info.csv'))
-            neurons = ds_info[ds_info['combined_dataset_index']=='worm0']['neurons']
-            neurons = ast.literal_eval(neurons.values[0]) # convert str to list
+                df = pd.read_csv(url)
 
-            sns.set_style('whitegrid')
-            palette = sns.color_palette("tab10")
-            gt_color = palette[0]   # Blue
-            gt_generation_color = palette[1] # orange (next time step prediction with gt)
-            ar_generation_color = palette[2] # gree (autoregressive next time step prediction)
+                # Get the named neurons
+                neurons_df = pd.read_csv(neurons_url)
+                neurons = neurons_df['named_neurons']
 
-            # Split data by Type
-            ar_gen_data = df[df['Type'] == 'AR Generation'].drop(columns=['Type', 'Unnamed: 1'])
-            ar_gen_data = ar_gen_data[neurons]  # Filter only named neurons
+                sns.set_style('whitegrid')
+                palette = sns.color_palette("tab10")
+                gt_color = palette[0]   # Blue
+                gt_generation_color = palette[1] # orange (next time step prediction with gt)
+                ar_generation_color = palette[2] # gree (autoregressive next time step prediction)
 
-            ground_truth_data = df[df['Type'] == 'Ground Truth'].drop(columns=['Type', 'Unnamed: 1'])
-            ground_truth_data = ground_truth_data[neurons]  # Filter only named neurons
+                # Split data by Type
+                ar_gen_data = df[df['Type'] == 'AR Generation'].drop(columns=['Type', 'Unnamed: 1'])
+                ar_gen_data = ar_gen_data[neurons]  # Filter only named neurons
 
-            # Extract GT Generation data
-            gt_gen_data = df[df['Type'] == 'GT Generation'].drop(columns=['Type', 'Unnamed: 1'])
-            gt_gen_data = gt_gen_data[neurons]  # Filter only named neurons
+                ground_truth_data = df[df['Type'] == 'Ground Truth'].drop(columns=['Type', 'Unnamed: 1'])
+                ground_truth_data = ground_truth_data[neurons]  # Filter only named neurons
 
-            # Combine and Standardize the data
-            all_data = pd.concat([ar_gen_data, ground_truth_data, gt_gen_data])
-            scaler = StandardScaler()
-            standardized_data = scaler.fit_transform(all_data)
+                # Extract GT Generation data
+                gt_gen_data = df[df['Type'] == 'GT Generation'].drop(columns=['Type', 'Unnamed: 1'])
+                gt_gen_data = gt_gen_data[neurons]  # Filter only named neurons
 
-            try:
-                # Apply PCA
-                if plot_type == '2D':
-                    pca = PCA(n_components=2)
-                else:
-                    pca = PCA(n_components=3)
-                reduced_data = pca.fit_transform(standardized_data)
+                # Combine and Standardize the data
+                all_data = pd.concat([ar_gen_data, ground_truth_data, gt_gen_data])
+                scaler = StandardScaler()
+                standardized_data = scaler.fit_transform(all_data)
 
-                # Plot
-                if plot_type == '2D':
-                    plt.figure(figsize=(8, 7))
-                    
-                    plt.plot(reduced_data[:len(ar_gen_data), 0], reduced_data[:len(ar_gen_data), 1], color=ar_generation_color, label='Autoregressive generation', linestyle='-', marker='o')
-                    plt.plot(reduced_data[len(ar_gen_data):len(ar_gen_data)+len(ground_truth_data), 0], 
-                            reduced_data[len(ar_gen_data):len(ar_gen_data)+len(ground_truth_data), 1], color=gt_color, label='Ground Truth', linestyle='-', marker='o')
-                    plt.plot(reduced_data[len(ar_gen_data)+len(ground_truth_data):, 0], 
-                            reduced_data[len(ar_gen_data)+len(ground_truth_data):, 1], color=gt_generation_color, label="'Teacher forcing' generation", linestyle='-', marker='o')
-                    
-                    # Mark starting points with black stars
-                    plt.scatter(reduced_data[0, 0], reduced_data[0, 1], color='black', marker='*', s=50)
-                    plt.scatter(reduced_data[len(ar_gen_data), 0], reduced_data[len(ar_gen_data), 1], color='black', marker='*', s=50)
-                    plt.scatter(reduced_data[len(ar_gen_data)+len(ground_truth_data), 0], reduced_data[len(ar_gen_data)+len(ground_truth_data), 1], color='black', marker='*', s=50)
-                    
-                    plt.xlabel('Principal Component 1')
-                    plt.ylabel('Principal Component 2')
+                try:
+                    # Apply PCA
+                    if plot_type == '2D':
+                        pca = PCA(n_components=2)
+                    else:
+                        pca = PCA(n_components=3)
+                    reduced_data = pca.fit_transform(standardized_data)
 
-                    # Text box with PCA explained variance
-                    textstr = '\n'.join((
-                        r'$PC_1=%.2f$' % (pca.explained_variance_ratio_[0], ),
-                        r'$PC_2=%.2f$' % (pca.explained_variance_ratio_[1], )))
-                    props = dict(boxstyle='round', facecolor='white', alpha=0.5)
-                    plt.text(0.05, 0.95, textstr, transform=plt.gca().transAxes, fontsize=14,
-                            verticalalignment='top', bbox=props)
+                    # Plot
+                    if plot_type == '2D':
+                        plt.figure(figsize=(8, 7))
+                        
+                        plt.plot(reduced_data[:len(ar_gen_data), 0], reduced_data[:len(ar_gen_data), 1], color=ar_generation_color, label='Autoregressive generation', linestyle='-', marker='o')
+                        plt.plot(reduced_data[len(ar_gen_data):len(ar_gen_data)+len(ground_truth_data), 0], 
+                                reduced_data[len(ar_gen_data):len(ar_gen_data)+len(ground_truth_data), 1], color=gt_color, label='Ground Truth', linestyle='-', marker='o')
+                        plt.plot(reduced_data[len(ar_gen_data)+len(ground_truth_data):, 0], 
+                                reduced_data[len(ar_gen_data)+len(ground_truth_data):, 1], color=gt_generation_color, label="'Teacher forcing' generation", linestyle='-', marker='o')
+                        
+                        # Mark starting points with black stars
+                        plt.scatter(reduced_data[0, 0], reduced_data[0, 1], color='black', marker='*', s=50)
+                        plt.scatter(reduced_data[len(ar_gen_data), 0], reduced_data[len(ar_gen_data), 1], color='black', marker='*', s=50)
+                        plt.scatter(reduced_data[len(ar_gen_data)+len(ground_truth_data), 0], reduced_data[len(ar_gen_data)+len(ground_truth_data), 1], color='black', marker='*', s=50)
+                        
+                        plt.xlabel('Principal Component 1')
+                        plt.ylabel('Principal Component 2')
 
-                else:
-                    fig = plt.figure(figsize=(8, 7))
-                    ax = fig.add_subplot(111, projection='3d')
-                    
-                    ax.plot(reduced_data[:len(ar_gen_data), 0], reduced_data[:len(ar_gen_data), 1], reduced_data[:len(ar_gen_data), 2], color=ar_generation_color, label='Autoregressive generation', linestyle='-', marker='o')
-                    ax.plot(reduced_data[len(ar_gen_data):len(ar_gen_data)+len(ground_truth_data), 0], 
-                            reduced_data[len(ar_gen_data):len(ar_gen_data)+len(ground_truth_data), 1],
-                            reduced_data[len(ar_gen_data):len(ar_gen_data)+len(ground_truth_data), 2], color=gt_color, label='Ground Truth', linestyle='-', marker='o')
-                    ax.plot(reduced_data[len(ar_gen_data)+len(ground_truth_data):, 0], 
-                            reduced_data[len(ar_gen_data)+len(ground_truth_data):, 1],
-                            reduced_data[len(ar_gen_data)+len(ground_truth_data):, 2], color=gt_generation_color, label="'Teacher forcing' generation", linestyle='-', marker='o')
-                    
-                    # Mark starting points with black stars
-                    ax.scatter(reduced_data[0, 0], reduced_data[0, 1], reduced_data[0, 2], color='black', marker='*', s=50)
-                    ax.scatter(reduced_data[len(ar_gen_data), 0], reduced_data[len(ar_gen_data), 1], reduced_data[len(ar_gen_data), 2], color='black', marker='*', s=50)
-                    ax.scatter(reduced_data[len(ar_gen_data)+len(ground_truth_data), 0], reduced_data[len(ar_gen_data)+len(ground_truth_data), 1], reduced_data[len(ar_gen_data)+len(ground_truth_data), 2], color='black', marker='*', s=50)
-                    
-                    
-                    ax.set_xlabel('Principal Component 1')
-                    ax.set_ylabel('Principal Component 2')
-                    ax.set_zlabel('Principal Component 3')
+                        # Text box with PCA explained variance
+                        textstr = '\n'.join((
+                            r'$PC_1=%.2f$' % (pca.explained_variance_ratio_[0], ),
+                            r'$PC_2=%.2f$' % (pca.explained_variance_ratio_[1], )))
+                        props = dict(boxstyle='round', facecolor='white', alpha=0.5)
+                        plt.text(0.05, 0.95, textstr, transform=plt.gca().transAxes, fontsize=14,
+                                verticalalignment='top', bbox=props)
 
-                    # Text box with PCA explained variance
-                    textstr = '\n'.join((
-                        r'$PC_1=%.2f$' % (pca.explained_variance_ratio_[0], ),
-                        r'$PC_2=%.2f$' % (pca.explained_variance_ratio_[1], ),
-                        r'$PC_3=%.2f$' % (pca.explained_variance_ratio_[2], )))
-                    props = dict(boxstyle='round', facecolor='white', alpha=0.5)
-                    ax.text(0.0, 0.0, 0.0, textstr, transform=ax.transAxes, fontsize=14,
-                            verticalalignment='bottom', bbox=props)
-                    
-                plt.legend()
-                plt.title(f'PCA Trajectories of Predictions in {plot_type}')
-                plt.tight_layout()
+                    else:
+                        fig = plt.figure(figsize=(8, 7))
+                        ax = fig.add_subplot(111, projection='3d')
+                        
+                        ax.plot(reduced_data[:len(ar_gen_data), 0], reduced_data[:len(ar_gen_data), 1], reduced_data[:len(ar_gen_data), 2], color=ar_generation_color, label='Autoregressive generation', linestyle='-', marker='o')
+                        ax.plot(reduced_data[len(ar_gen_data):len(ar_gen_data)+len(ground_truth_data), 0], 
+                                reduced_data[len(ar_gen_data):len(ar_gen_data)+len(ground_truth_data), 1],
+                                reduced_data[len(ar_gen_data):len(ar_gen_data)+len(ground_truth_data), 2], color=gt_color, label='Ground Truth', linestyle='-', marker='o')
+                        ax.plot(reduced_data[len(ar_gen_data)+len(ground_truth_data):, 0], 
+                                reduced_data[len(ar_gen_data)+len(ground_truth_data):, 1],
+                                reduced_data[len(ar_gen_data)+len(ground_truth_data):, 2], color=gt_generation_color, label="'Teacher forcing' generation", linestyle='-', marker='o')
+                        
+                        # Mark starting points with black stars
+                        ax.scatter(reduced_data[0, 0], reduced_data[0, 1], reduced_data[0, 2], color='black', marker='*', s=50)
+                        ax.scatter(reduced_data[len(ar_gen_data), 0], reduced_data[len(ar_gen_data), 1], reduced_data[len(ar_gen_data), 2], color='black', marker='*', s=50)
+                        ax.scatter(reduced_data[len(ar_gen_data)+len(ground_truth_data), 0], reduced_data[len(ar_gen_data)+len(ground_truth_data), 1], reduced_data[len(ar_gen_data)+len(ground_truth_data), 2], color='black', marker='*', s=50)
+                        
+                        
+                        ax.set_xlabel('Principal Component 1')
+                        ax.set_ylabel('Principal Component 2')
+                        ax.set_zlabel('Principal Component 3')
 
-                # Make figure directory
-                os.makedirs(os.path.join(log_dir, 'prediction', type_ds, 'pca'), exist_ok=True)
+                        # Text box with PCA explained variance
+                        textstr = '\n'.join((
+                            r'$PC_1=%.2f$' % (pca.explained_variance_ratio_[0], ),
+                            r'$PC_2=%.2f$' % (pca.explained_variance_ratio_[1], ),
+                            r'$PC_3=%.2f$' % (pca.explained_variance_ratio_[2], )))
+                        props = dict(boxstyle='round', facecolor='white', alpha=0.5)
+                        ax.text(0.0, 0.0, 0.0, textstr, transform=ax.transAxes, fontsize=14,
+                                verticalalignment='bottom', bbox=props)
+                        
+                    plt.legend()
+                    plt.title(f'PCA Trajectories of Predictions in {plot_type}')
+                    plt.tight_layout()
 
-                # Save figure
-                plt.savefig(os.path.join(log_dir, 'prediction', type_ds, 'pca', f'pca_{plot_type}.png'), dpi=300)
-                plt.close()
+                    # Make figure directory
+                    os.makedirs(os.path.join(log_dir, 'prediction', type_ds, ds_name, wormID, 'pca'), exist_ok=True)
 
-            except:
-                logger.info(f'PCA plot failed for {plot_type} in {type_ds} dataset (check if num_named_neurons >= 3)')
-                pass
+                    # Save figure
+                    plt.savefig(os.path.join(log_dir, 'prediction', type_ds, ds_name, wormID, 'pca', f'pca_{plot_type}.png'), dpi=300)
+                    plt.close()
+
+                except:
+                    logger.info(f'PCA plot failed for {plot_type} in {type_ds} dataset (check if num_named_neurons >= 3)')
+                    pass
 
 
 def plot_worm_data(worm_data, num_neurons=5, smooth=False):
@@ -982,3 +1003,220 @@ def plot_scaling_law(exp_log_dir, exp_name, exp_plot_dir=None, fig=None, ax=None
         # Save when running the pipeline
         plt.savefig(os.path.join(exp_plot_dir, 'scaling_law.png'), dpi=300)
         plt.close()
+
+
+def plot_validation_loss_per_dataset(log_dir):
+
+    # Load validation losses
+    losses = pd.read_csv(os.path.join(log_dir, 'analysis', 'validation_loss_per_dataset.csv'))
+    losses = losses.dropna()
+
+    # Train dataset names
+    train_info = pd.read_csv(os.path.join(log_dir, 'dataset', 'train_dataset_info.csv'))
+    train_dataset_names = train_info['dataset'].unique()
+
+    sns.set_theme(style="whitegrid")
+    sns.set_palette("tab10")
+    palette = sns.color_palette()
+
+    fig, ax = plt.subplots(3,1,figsize=(10, 12))
+
+    # First plot both model and baseline losses
+    ax[0].bar(np.arange(len(losses)), losses['val_loss'], color=palette[0], label='Model')
+    ax[0].bar(np.arange(len(losses)), losses['val_baseline'], color=palette[1], label='Baseline', alpha=0.4)
+    ax[0].set_xticks(np.arange(len(losses)))
+    ax[0].set_xticklabels(losses['dataset'].values, rotation=0, ha='center')
+    ax[0].set_ylabel('Loss')
+    ax[0].set_title('Validation loss across datasets')
+    ax[0].legend(loc='upper right')
+    props = dict(boxstyle='round', facecolor='white', alpha=0.5)
+    textstr = 'Datasets used for training: \n{}'.format(', '.join(train_dataset_names))
+    ax[0].text(0.02, 0.95, textstr, transform=ax[0].transAxes, fontsize=10,
+            verticalalignment='top', bbox=props)
+    for i, v in enumerate(losses['num_worms']):
+        ax[0].text(i, max(losses.loc[i, ['val_loss', 'val_baseline']]), r'$n_{val} = $' + str(int(v)), ha='center', fontsize=8)
+
+    # Second plot only model losses
+    ax[1].bar(np.arange(len(losses)), losses['val_loss'], color=palette[0], label='Model')
+    ax[1].set_xticks(np.arange(len(losses)))
+    ax[1].set_xticklabels(losses['dataset'].values, rotation=0, ha='center')
+    ax[1].set_ylabel('Loss')
+
+    # Third plot only baseline losses
+    ax[2].bar(np.arange(len(losses)), losses['val_baseline'], color=palette[1], label='Baseline')
+    ax[2].set_xticks(np.arange(len(losses)))
+    ax[2].set_xticklabels(losses['dataset'].values, rotation=0, ha='center')
+    ax[2].set_ylabel('Loss')
+    ax[2].set_xlabel('Dataset')
+
+    plt.tight_layout()
+
+    # Save figure
+    plt.savefig(os.path.join(log_dir, 'analysis', 'validation_loss_per_dataset.png'), dpi=300)
+    plt.close()
+
+
+def plot_exp_validation_loss_per_dataset(exp_log_dir, exp_name, exp_plot_dir):
+
+    # =============== Collect information ===============
+    losses = pd.DataFrame(columns=['dataset', 'val_loss', 'val_baseline', 'exp_param'])
+
+    # Loop through all experiments
+    for file in np.sort(os.listdir(exp_log_dir)):
+
+        # Skip if not starts with exp
+        if not file.startswith('exp') or file.startswith('exp_'):
+            continue
+
+        # Get experiment directory
+        exp_dir = os.path.join(exp_log_dir, file)
+
+        # Experiment parameters
+        exp_param, exp_title, exp_xaxis = experiment_parameter(exp_dir, key=exp_name)
+
+        # Load validation losses per dataset
+        tmp_df = pd.read_csv(os.path.join(exp_dir, 'analysis', 'validation_loss_per_dataset.csv'))
+
+        # Add experiment parameter to dataframe
+        tmp_df['exp_param'] = exp_param
+
+        # Load train information
+        train_info = pd.read_csv(os.path.join(exp_dir, 'dataset', 'train_dataset_info.csv'))
+
+        # Dataset names used for training
+        train_dataset_names = train_info['dataset'].unique()
+        tmp_df['train_dataset_names'] = ', '.join(train_dataset_names)
+
+        # Name of the model
+        model_name = torch.load(os.path.join(exp_dir, 'train', 'checkpoints', 'model_best.pt'))['model_name']
+        tmp_df['model_name'] = model_name
+        
+        # Append to dataframe
+        losses = pd.concat([losses, tmp_df], axis=0)
+
+
+    # Make exp_param multi index with dataset
+    losses = losses.set_index(['exp_param', 'dataset'])
+
+    # Drop NaNs
+    losses = losses.dropna()
+
+    # Create one subplot per dataset, arranged in two columns
+    num_datasets = len(losses.index.unique(level='dataset'))
+    num_rows = int(np.ceil(num_datasets / 2))
+
+    # =============== Start plotting ===============
+    fig, ax = plt.subplots(num_rows, 2, figsize=(14, 12))
+    sns.set_style('whitegrid')
+    sns.set_palette("tab10")
+    # Get a color palette with enough colors for all the datasets
+    palette = sns.color_palette("tab10", len(losses.index.unique(level='dataset')))
+    ax = ax.flatten()  # Flatten the ax array for easy iteration
+
+    # Plot validation loss vs. exp_param (individual plots)
+    for i, dataset in enumerate(losses.index.unique(level='dataset')):
+
+        df_subset_model = losses.loc[losses.index.get_level_values('dataset') == dataset, 'val_loss'].reset_index()
+        df_subset_baseline = losses.loc[losses.index.get_level_values('dataset') == dataset, 'val_baseline'].reset_index()
+
+        sns.scatterplot(data=df_subset_model, x='exp_param', y='val_loss', ax=ax[i], label='Model', marker='o')
+        sns.lineplot(data=df_subset_baseline, x='exp_param', y='val_baseline', ax=ax[i], label='Baseline', linestyle='--', marker='o', color='black')
+
+        # Log-log scale
+        ax[i].set_xscale('log')
+        ax[i].set_yscale('log')
+
+        # Try to fit linear regression (log-log)
+        try:
+            x = np.log(df_subset_model['exp_param'].values)
+            y = np.log(df_subset_model['val_loss'].values)
+            slope, intercept, r_value, p_value, std_err = stats.linregress(x, y)
+            fit_label = 'y = {:.2f}x + {:.2e}\nR^2 = {:.4f}'.format(slope, intercept, r_value**2)
+            ax[i].plot(df_subset_model['exp_param'].values, np.exp(intercept + slope * x), color=palette[3], linestyle='-', label=fit_label)
+        except:
+            logger.info('Failed to fit linear regression (log-log scale) for dataset {}'.format(dataset))
+            pass
+
+        # Add number of worms to title
+        num_worms = losses.loc[losses.index.get_level_values('dataset') == dataset, 'num_worms'].values[0]
+        ax[i].set_title(f'{dataset}: '+r'$n_{val}=$'+f'{int(num_worms)} worms')
+
+        # Add text box with metadata
+        model = losses.loc[losses.index.get_level_values('dataset') == dataset, 'model_name'].values[0]
+        props = dict(boxstyle='round', facecolor='white', alpha=0.5)
+        textstr = 'Model: {}'.format(model_name)
+        ax[i].text(0.02, 0.02, textstr, transform=ax[i].transAxes, fontsize=10,
+                verticalalignment='bottom', bbox=props)
+
+        # Only set x-label for bottom row
+        if i >= len(ax) - 2:
+            ax[i].set_xlabel(exp_xaxis)
+
+        # Only set y-label for leftmost columns
+        if i % 2 == 0:
+            ax[i].set_ylabel('Loss')
+
+        # Remove x and y labels for subplots that shouldn't have them
+        if i < len(ax) - 2:
+            ax[i].set_xlabel('')
+        else:
+            ax[i].set_xlabel(exp_xaxis)
+            
+        if i % 2 != 0:
+            ax[i].set_ylabel('')
+
+        ax[i].legend(loc='upper right')
+
+    # Remove unused subplots
+    if num_datasets % 2 != 0:
+        ax[-1].axis('off')
+
+    plt.tight_layout()
+    plt.savefig(os.path.join(exp_plot_dir, 'validation_loss_per_dataset.png'), dpi=300)
+    plt.close()
+
+    # Plot validation loss vs. exp_param (comparison)
+    fig, ax = plt.subplots(figsize=(15, 7))
+
+    # Plot validation loss vs. exp_param for all datasets
+    for color_idx, dataset in enumerate(losses.index.unique(level='dataset')):
+        df_subset_model = losses.loc[losses.index.get_level_values('dataset') == dataset, 'val_loss'].reset_index()
+        df_subset_baseline = losses.loc[losses.index.get_level_values('dataset') == dataset, 'val_baseline'].reset_index()
+
+        model_name = losses.loc[losses.index.get_level_values('dataset') == dataset, 'model_name'].values[0]
+
+        color = palette[color_idx]
+        
+        sns.scatterplot(data=df_subset_model, x='exp_param', y='val_loss', ax=ax, color=color, label=f'{model_name} (on {dataset})')
+        sns.lineplot(data=df_subset_baseline, x='exp_param', y='val_baseline', ax=ax, linestyle='--', color=color)
+
+        # Annotate number of val. worms
+        num_worms = losses.loc[losses.index.get_level_values('dataset') == dataset, 'num_worms'].values[0]
+        min_exp_param = df_subset_baseline['exp_param'].min()
+        max_val_baseline = df_subset_baseline['val_baseline'].max()
+        ax.annotate(r'$n_{val}=$'+f'{int(num_worms)}', (min_exp_param, max_val_baseline), textcoords="offset points", xytext=(0,2), ha='center', fontsize=8, color=color)
+
+        # Log-log scale
+        ax.set_xscale('log')
+        ax.set_yscale('log')
+
+        # Try to fit linear regression (log-log)
+        try:
+            x = np.log(df_subset_model['exp_param'].values)
+            y = np.log(df_subset_model['val_loss'].values)
+            slope, intercept, r_value, p_value, std_err = stats.linregress(x, y)
+            fit_label = f'y = {slope:.2f}x + {intercept:.2e} (R^2 = {r_value**2:.4f})'
+            ax.plot(df_subset_model['exp_param'].values, np.exp(intercept + slope * x), linestyle='-', color=color, label=fit_label)
+        except:
+            logger.info('Failed to fit linear regression (log-log scale) for dataset {}'.format(dataset))
+            pass
+
+    # Set axis labels and title
+    ax.set_xlabel(exp_xaxis)
+    ax.set_ylabel('Loss')
+    ax.set_title(f'Validation Loss spread across datasets')
+    ax.legend(loc='upper right', fontsize='small')
+
+    plt.tight_layout()
+    plt.savefig(os.path.join(exp_plot_dir, 'validation_loss_per_dataset_comparison.png'), dpi=300)
+    plt.close()

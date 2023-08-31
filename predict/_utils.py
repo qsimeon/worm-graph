@@ -7,10 +7,10 @@ logger = logging.getLogger(__name__)
 def model_predict(
         log_dir: str,
         model: torch.nn.Module,
-        dataset: torch.utils.data.Dataset,
+        experimental_datasets: DictConfig,
+        dataset_type: str,
         context_window: int,
         nb_ts_to_generate: int = None,
-        worms_to_predict: list = None,
 ):
     """Make predictions on a dataset with a trained model.
 
@@ -22,22 +22,46 @@ def model_predict(
         Directory to save the predictions.
     model : torch.nn.Module
         Trained model.
-    dataset : torch.utils.data.Dataset
-        Dataset with worm data examples.
+    experimentad_datasets : DictConfig
+        Configuration file with name of the experimental datasets and worms to predict.
+    dataset_type : str
+        Type of dataset to predict. Either 'train' or 'val'.
     context_window : int
         Number of time steps to use as context for the predictions.
     nb_ts_to_generate : int
         Number of time steps to generate.
-    worms_to_predict : list
-        List of worm IDs to predict.
     """
-    
-    x, y, mask, metadata = next(iter(dataset))
-    seq_len = x.shape[0]
+
+    # Retrieve information from training
+    train_dataset_info = pd.read_csv(os.path.join(log_dir, 'dataset', 'train_dataset_info.csv'))
+    seq_len = int(train_dataset_info['train_seq_len'].values[0])
+    num_train_samples = int(train_dataset_info['num_train_samples'].values[0])
+    k_splits = int(train_dataset_info['k_splits'].values[0])
+    tau = int(train_dataset_info['tau'].values[0])
+    use_residual = int(train_dataset_info['use_residual'].values[0])
+    smooth_data = int(train_dataset_info['smooth_data'].values[0])
 
     assert context_window < seq_len, (
-        "The context window must be smaller than the sequence length ({}).".format(seq_len)
+        "The context window must be smaller than the sequence length (model was trained with seq_len = {}).".format(seq_len)
     )
+
+    # Load dataset
+    combined_dataset, dataset_info = create_combined_dataset(experimental_datasets=experimental_datasets,
+                                                             num_named_neurons='all')
+    train_dataset, val_dataset, _ = split_combined_dataset(combined_dataset=combined_dataset,
+                                                            k_splits=k_splits,
+                                                            num_train_samples=num_train_samples,
+                                                            num_val_samples=num_train_samples, # use the same number of samples as in the train dataset
+                                                            seq_len=seq_len,
+                                                            tau=tau,
+                                                            use_residual=use_residual,
+                                                            smooth_data=smooth_data,
+                                                            reverse=False
+                                                            )
+    
+    # Select desired dataset and prepare the filters for predictions
+    dataset = train_dataset if dataset_type == 'train' else val_dataset
+    datasets_to_predict = [dataset_name for dataset_name in experimental_datasets.keys() if experimental_datasets[dataset_name] is not None]
 
     nb_gt_ts_to_generate = seq_len - context_window # Time steps for ground truth comparison
 
@@ -51,20 +75,34 @@ def model_predict(
     # Iterate over the examples in the dataset
     for x, y, mask, metadata in iter(dataset):
 
-        # Skip example if from the same worm
-        if metadata["wormID"] in worms_predicted:
+        # Skip example if not in the list of datasets to predict
+        if metadata["worm_dataset"] not in datasets_to_predict:
             continue
 
-        # Skip example if not in the list of worms to predict
-        if worms_to_predict is not None and metadata["wormID"] not in worms_to_predict:
+        # Filter worms to predict
+        worms_to_predict = experimental_datasets[metadata["worm_dataset"]]
+
+        assert not isinstance(worms_to_predict, int), (
+            "The worms you want to predict must be a string or a list of strings."
+        )
+
+        if isinstance(worms_to_predict, str):
+            if worms_to_predict == 'all':
+                worms_to_predict = [metadata["wormID"]]
+            else:
+                worms_to_predict = [worms_to_predict]
+        
+        # Skip example if already predicted
+        if (metadata["wormID"], metadata["worm_dataset"]) in worms_predicted:
             continue
+
 
         # Send tensors to device
         x = x.to(DEVICE)
         y = y.to(DEVICE)
         mask = mask.to(DEVICE)
 
-        worms_predicted.add(metadata["wormID"])
+        worms_predicted.add((metadata["wormID"], metadata["worm_dataset"]))
 
         gt_generated_activity = model.generate(
             input=x.unsqueeze(0),
@@ -106,7 +144,19 @@ def model_predict(
         result_df = pd.concat([df_context, df_ground_truth, df_gt_generated, df_ar_generated])
         result_df = result_df.reorder_levels(['Type', None]).sort_index()
 
+        # Prediction folder
+        pred_dir = os.path.join(log_dir, 'prediction', dataset_type)
+
+        # Create folder for dataset
+        os.makedirs(os.path.join(pred_dir, metadata['worm_dataset']), exist_ok=True) # ds level
+        os.makedirs(os.path.join(pred_dir, metadata['worm_dataset'], metadata['wormID']), exist_ok=True) # worm level
         # Save the DataFrame
-        result_df.to_csv(os.path.join(log_dir, f"{metadata['wormID']}.csv"))
+        result_df.to_csv(os.path.join(pred_dir, metadata['worm_dataset'], metadata['wormID'], "predictions.csv"))
+
+        # Query and save the named neurons to plot predictions afterwards
+        neurons = dataset_info.query('dataset == "{}" and original_index == "{}"'.format(metadata['worm_dataset'], metadata['wormID']))['neurons'].iloc[0]
+        neuron_df = pd.DataFrame(neurons, columns=['named_neurons'])
+        neuron_df.to_csv(os.path.join(pred_dir, metadata['worm_dataset'], metadata['wormID'], "named_neurons.csv"))
+
 
     logger.info("Done. {}".format(worms_predicted))

@@ -1,131 +1,8 @@
 from analysis._pkg import *
 
 
-def find_config_files(root_dir):
-    for file in os.listdir(root_dir):
-        file_path = os.path.join(root_dir, file)
-        if file == "config.yaml":
-            yield file_path
-        elif os.path.isdir(file_path) and not file.startswith("."):
-            for config_file in find_config_files(file_path):
-                yield config_file
-
-
-def plot_loss_vs_parameter(config_dir, varied_param, control_param, subplot_param):
-    """
-    Plots the minimum validation loss against a varied parameter for different levels of a control parameter.
-    Creates a separate subplot for each unique value of a third subplot parameter.
-
-    Args:
-        config_dir (str): Directory containing the config files.
-        varied_param (str): Parameter that is varied across the experiments.
-        control_param (str): Parameter that controls the color of the plot lines.
-        subplot_param (str): Parameter that determines the creation of separate subplots.
-
-    Returns:
-        df (pandas.DataFrame): DataFrame containing the data used to create the plot.
-    """
-    # Find the config files and their corresponding loss values
-    configs = {}  # dict maps config file path to (loss, config)
-    for file_path in find_config_files(config_dir):
-        with open(file_path, "r") as f:
-            data = yaml.safe_load(f)
-            parent_dir = os.path.dirname(file_path)
-            if os.path.exists(os.path.join(parent_dir, "loss_curves.csv")):
-                loss_df = pd.read_csv(
-                    os.path.join(parent_dir, "loss_curves.csv"), index_col=0
-                )
-                loss = loss_df["centered_test_losses"][
-                    loss_df["centered_test_losses"].idxmin()
-                ]
-                configs[os.path.dirname(file_path)] = (loss, OmegaConf.create(data))
-
-    # Split the parameters into their components
-    varied_param = varied_param.split(".")
-    control_param = control_param.split(".")
-    subplot_param = subplot_param.split(".")
-
-    # Create a data frame with the relevant data
-    records = []
-    for cfg_path, loss_cfg_tuple in configs.items():
-        val = loss_cfg_tuple[1][varied_param[0]][varied_param[1]]
-        lvl = loss_cfg_tuple[1][control_param[0]][control_param[1]]
-        sub = loss_cfg_tuple[1][subplot_param[0]][subplot_param[1]]
-        loss = loss_cfg_tuple[0]
-        records.append((val, lvl, sub, loss))
-
-    df = pd.DataFrame(
-        records,
-        columns=[
-            ".".join(varied_param),
-            ".".join(control_param),
-            ".".join(subplot_param),
-            "loss",
-        ],
-    )
-
-    # Sort the DataFrame by the varied parameter
-    df = df.sort_values(".".join(varied_param))
-
-    # Count the unique values in subplot_param to determine the number of rows (subplots)
-    num_subplots = df[".".join(subplot_param)].nunique()
-
-    # Define a base subplot height (you can adjust this as needed)
-    base_subplot_height = 2.5
-
-    # If there is only one subplot, increase the height
-    if num_subplots == 1:
-        subplot_height = 4
-    else:
-        # Otherwise, use the base height
-        subplot_height = base_subplot_height
-
-    # Create a grid of subplots, with one row for each unique value of 'subplot_param'
-    # The grid will share the y-axis across all subplots
-    g = sns.FacetGrid(
-        df, row=".".join(subplot_param), height=subplot_height, aspect=4, sharey=True
-    )
-
-    # For each subplot, plot a lineplot of 'loss' against 'varied_param',
-    # with different colors for each unique value of 'control_param'
-    # 'errorbar="sd"' and 'err_style="band"' to display standard deviation as shaded areas around the mean
-    g.map(
-        sns.lineplot,
-        ".".join(varied_param),
-        "loss",
-        ".".join(control_param),
-        err_style="band",
-        errorbar="sd",
-    )
-
-    # Customize the axis labels and title for each subplot
-    g.set_axis_labels("%s %s" % (varied_param[0], varied_param[1]), "Validation Loss")
-    g.fig.subplots_adjust(top=0.95)  # Adjust the Figure in `g`, increased to 0.95
-    g.fig.suptitle(
-        "Scaling plot: loss vs {} {} \n Validation loss after training on different {} {}".format(
-            *varied_param, *control_param
-        ),
-        fontsize="large",
-        y=1.11,  # Adjust y to push the title upwards a little
-    )
-
-    # Add a legend to the figure
-    g.add_legend(title="{} {}".format(*control_param))
-
-    # Set the y-axis limits for all subplots
-    g.set(ylim=(-0.1, None))
-
-    # Set x-axis scale to log if the varied parameter is train_size or hidden_size
-    if varied_param[1] in {"worm_timesteps", "hidden_size"}:
-        g.set(xscale="log")
-
-    # Save the figure as an image
-    if not os.path.exists("figures"):
-        os.mkdir("figures")
-    g.savefig("figures/scaling_plot_val_loss_vs_{}_{}.png".format(*varied_param))
-
-    # Return the DataFrame
-    return df
+# Init logger
+logger = logging.getLogger(__name__)
 
 
 def hierarchical_clustering_algorithm(
@@ -610,7 +487,7 @@ def hc_analyse_dataset(
 
     # Load data
     dataset_config = OmegaConf.create({"dataset": {"name": dataset_names}})
-    dataset = get_dataset(dataset_config)  # load dataset
+    dataset = get_datasets(dataset_config)  # load dataset
 
     if group_by == "four":
         groups = 4
@@ -793,3 +670,111 @@ def hc_analyse_dataset(
     plt.close()
 
     return all_worm_clusters, ref_dict, silhouettes
+
+
+def validation_loss_per_dataset(log_dir, experimental_datasets, task):
+
+    logger.info("Analyzing validation loss per dataset...")
+
+    # Retrieve information from training
+    train_dataset_info = pd.read_csv(os.path.join(log_dir, 'dataset', 'train_dataset_info.csv'))
+    seq_len = int(train_dataset_info['train_seq_len'].values[0])
+    num_train_samples = int(train_dataset_info['num_train_samples'].values[0])
+    k_splits = int(train_dataset_info['k_splits'].values[0])
+    tau = int(train_dataset_info['tau'].values[0])
+    use_residual = int(train_dataset_info['use_residual'].values[0])
+    smooth_data = int(train_dataset_info['smooth_data'].values[0])
+
+    # Loss metrics
+    val_running_base_loss = 0
+    val_running_loss = 0
+
+    dataset_val_loss = []
+    dataset_val_baseline = []
+    num_worms = []
+
+    # Load the model
+    model_chkpt = os.path.join(log_dir, 'train', 'checkpoints', f'model_best.pt')
+    model = get_model(OmegaConf.create({'use_this_pretrained_model': model_chkpt}))
+    model.to(DEVICE)
+    criterion = model.loss_fn()
+
+    for dataset, worms_to_use in experimental_datasets.items():
+
+        # Skip some datasets
+        if worms_to_use is None:
+            dataset_val_loss.append(np.NaN)
+            dataset_val_baseline.append(np.NaN)
+            num_worms.append(np.NaN)
+            continue
+
+        combined_dataset, _ = create_combined_dataset(experimental_datasets={dataset: worms_to_use},
+                                                    num_named_neurons='all')
+        _, val_dataset, _ = split_combined_dataset(combined_dataset=combined_dataset,
+                                                k_splits=k_splits,
+                                                num_train_samples=num_train_samples,
+                                                num_val_samples=num_train_samples, # use the same number of samples as in the train dataset
+                                                seq_len=seq_len,
+                                                tau=tau,
+                                                use_residual=use_residual,
+                                                smooth_data=smooth_data,
+                                                reverse=False
+                                                )
+
+        num_worms.append(len(combined_dataset))
+        
+        valloader = torch.utils.data.DataLoader(val_dataset, batch_size=32, shuffle=False)
+
+        # Evaluation loop
+        model.eval()
+
+        with torch.no_grad():
+            
+            for batch_idx, (X_val, Y_val, masks_val, metadata_val) in enumerate(valloader):
+
+                X_val = X_val.to(DEVICE)
+                Y_val = Y_val.to(DEVICE)
+                masks_val = masks_val.to(DEVICE)
+
+                # If many-to-one prediction, select last time step. Else, many-to-many prediction.
+                if task == "many-to-one":
+                    y_base = X_val[:, -1, :].unsqueeze(1)  # Select last time step
+                    Y_val = Y_val[:, -1, :].unsqueeze(1)  # Select last time step
+                else:
+                    y_base = X_val
+
+                # Baseline model: identity model - predict that the next time step is the same as the current one.
+                # This is the simplest model we can think of: predict that the next time step is the same as the current one
+                # is better than predict any other random number.
+                val_baseline = compute_loss_vectorized(loss_fn=criterion, X=y_base, Y=Y_val, masks=masks_val)
+
+                # Model
+                y_pred = model(X_val, masks_val, tau)
+
+                if task == "many-to-one":
+                    y_pred = y_pred[:, -1, :].unsqueeze(1)  # Select last time step
+                    
+                val_loss = compute_loss_vectorized(loss_fn=criterion, X=y_pred, Y=Y_val, masks=masks_val)
+
+                # Update running losses
+                val_running_base_loss += val_baseline.item()
+                val_running_loss += val_loss.item()
+
+
+            # Store metrics
+            dataset_val_loss.append(val_running_loss / len(valloader))
+            dataset_val_baseline.append(val_running_base_loss / len(valloader))
+
+            # Reset running losses
+            val_running_base_loss = 0
+            val_running_loss = 0
+
+    # Save losses in csv
+    losses = pd.DataFrame({'dataset': list(experimental_datasets.keys()),
+                           'val_loss': dataset_val_loss,
+                           'val_baseline': dataset_val_baseline,
+                           'num_worms': num_worms})
+
+    # Create analysis folder
+    os.makedirs(os.path.join(log_dir, 'analysis'), exist_ok=True)
+    losses.to_csv(os.path.join(log_dir, 'analysis', 'validation_loss_per_dataset.csv'), index=False)

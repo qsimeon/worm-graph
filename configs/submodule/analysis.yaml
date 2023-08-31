@@ -1,6 +1,15 @@
 analysis:
-  dataset_name: "Synthetic0000" # ["Flavell2023", "Kato2015"]
-  hierarchical_clustering:
-    group_by: four # None, three, four
-    method: 'ward' # ward, average, complete, single
-    metric: None # None, euclidean, cityblock, cosine, correlation...
+  # This directory is overwritten when using the a pipeline with train or predict submodules.
+  # If using the submodule alone, this directory is the path to the log folder you want to generate the analysis in.
+  analyse_this_log_dir: null
+
+  validation:
+    experimental_datasets:
+      Kato2015: worm0
+      Nichols2017: null
+      Skora2018: null
+      Uzel2022: null
+      Kaplan2020: null
+      Flavell2023: null
+      Leifer2023: null
+    task: 'many-to-many'

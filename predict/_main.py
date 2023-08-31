@@ -41,12 +41,12 @@ def make_predictions(
         logger.info("Start making predictions in %s dataset..." % (ds_type))
 
         model_predict(
-            log_dir = os.path.join(log_dir, 'prediction', ds_type),
+            log_dir = log_dir,
             model = model,
-            dataset = train_dataset if ds_type == 'train' else val_dataset,
+            experimental_datasets = predict_config.experimental_datasets,
+            dataset_type = ds_type,
             context_window = predict_config.context_window,
             nb_ts_to_generate = predict_config.nb_ts_to_generate,
-            worms_to_predict = predict_config.worms_to_predict,
         )
 
 if __name__ == "__main__":

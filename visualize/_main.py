@@ -26,14 +26,18 @@ def plot_figures(
             logger.info("Plotting submodule 'train'.")
             plot_loss_curves(log_dir=log_dir, info_to_display=None)
             histogram_weights_animation(log_dir=log_dir)
-            # plot_before_after_weights
+            #TODO plot_before_after_weights
 
         if submodule_dir == 'prediction':
             logger.info("Plotting submodule 'prediction'.")
             plot_predictions(log_dir=log_dir, neurons_to_plot=visualize_config.predict.neurons_to_plot, worms_to_plot=visualize_config.predict.worms_to_plot)
             plot_pca_trajectory(log_dir=log_dir, worms_to_plot=visualize_config.predict.worms_to_plot, plot_type='3D')
             plot_pca_trajectory(log_dir=log_dir, worms_to_plot=visualize_config.predict.worms_to_plot, plot_type='2D')
-            # plot_correlation_scatterplot
+            #TODO plot_correlation_scatterplot
+
+        if submodule_dir == 'analysis':
+            logger.info("Plotting submodule 'analysis'.")
+            plot_validation_loss_per_dataset(log_dir=log_dir)
 
 def plot_experiment(visualize_config: DictConfig, exp_config: DictConfig) -> None:
     """
@@ -77,6 +81,10 @@ def plot_experiment(visualize_config: DictConfig, exp_config: DictConfig) -> Non
 
         # Scaling law
         plot_scaling_law(exp_log_dir=exp_log_dir, exp_name=exp_key, exp_plot_dir=exp_plot_dir)
+
+        # Plot spread dataset losses analysis
+        plot_exp_validation_loss_per_dataset(exp_log_dir=exp_log_dir, exp_name=exp_key, exp_plot_dir=exp_plot_dir)
+
     except:
         logger.info(f"Not all experiments are finished. Skipping for now.")
         return None

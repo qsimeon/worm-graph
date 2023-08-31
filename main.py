@@ -48,6 +48,9 @@ def pipeline(cfg: DictConfig) -> None:
         
         if 'dataset' in cfg.submodule:
             train_dataset, val_dataset = get_datasets(cfg.submodule.dataset)
+            # Update visualize and analysis submodule to plot current run
+            if 'visualize' in cfg.submodule:
+                cfg.submodule.visualize.plot_figures_from_this_log_dir = log_dir
 
         if 'model' in cfg.submodule:
             model = get_model(cfg.submodule.model)
@@ -60,7 +63,9 @@ def pipeline(cfg: DictConfig) -> None:
                 val_dataset = val_dataset,
                 verbose = True if cfg.experiment.mode == 'MULTIRUN' else False,
             )
-            # Update visualize submodule to plot current run
+            # Update visualize and analysis submodule to plot current run
+            if 'analysis' in cfg.submodule:
+                cfg.submodule.analysis.analyse_this_log_dir = log_dir
             if 'visualize' in cfg.submodule:
                 cfg.submodule.visualize.plot_figures_from_this_log_dir = log_dir
 
@@ -71,7 +76,9 @@ def pipeline(cfg: DictConfig) -> None:
                 train_dataset = train_dataset,
                 val_dataset = val_dataset,
             )
-            # Update visualize submodule to plot current run
+            # Update visualize and analysis submodule to plot current run
+            if 'analysis' in cfg.submodule:
+                cfg.submodule.analysis.analyse_this_log_dir = log_dir
             if 'visualize' in cfg.submodule:
                 cfg.submodule.visualize.plot_figures_from_this_log_dir = log_dir
 
@@ -81,7 +88,9 @@ def pipeline(cfg: DictConfig) -> None:
         # ==========================================================
 
         if 'analysis' in cfg.submodule:
-            pass
+            analyse_run(
+                analysis_config = cfg.submodule.analysis,
+            )
 
         if 'visualize' in cfg.submodule:
             plot_figures(
