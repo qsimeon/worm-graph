@@ -474,15 +474,16 @@ def plot_predictions(log_dir, neurons_to_plot=None, worms_to_plot=None):
                         continue
 
                 url = os.path.join(log_dir, 'prediction', type_ds, ds_name, wormID, 'predictions.csv')
+                neurons_url = os.path.join(log_dir, 'prediction', type_ds, ds_name, wormID, 'named_neurons.csv')
 
                 # Acess the prediction directory
                 df = pd.read_csv(url)
                 df.set_index(['Type', 'Unnamed: 1'], inplace=True)
                 df.index.names = ['Type', '']
 
-                # Get the name of the neurons where the columns aren't all zeros
-                df_context = df.loc['Context', :]
-                neurons = df_context.loc[:, (df_context != 0).any(axis=0)].columns.tolist()
+                # Get the named neurons
+                neurons_df = pd.read_csv(neurons_url)
+                neurons = neurons_df['named_neurons']
 
                 # Treat neurons_to_plot
                 if isinstance(neurons_to_plot, int):
@@ -533,7 +534,7 @@ def plot_predictions(log_dir, neurons_to_plot=None, worms_to_plot=None):
                     # Add metadata textbox in upper left corner
                     ax.text(0.02, 0.95, metadata_text,
                             transform=ax.transAxes,
-                            fontsize=10,
+                            fontsize=8,
                             verticalalignment='top',
                             bbox=dict(boxstyle='round, pad=1', facecolor='white', edgecolor='black', alpha=0.5)
                             )
@@ -563,13 +564,14 @@ def plot_pca_trajectory(log_dir, worms_to_plot=None, plot_type='3D'):
 
                 # logger.info(f'Plotting PCA trajectory for {type_ds}/{wormID}...')
 
-                df = pd.read_csv(os.path.join(log_dir, 'prediction', type_ds, ds_name, wormID, 'predictions.csv'))
+                url = os.path.join(log_dir, 'prediction', type_ds, ds_name, wormID, 'predictions.csv')
+                neurons_url = os.path.join(log_dir, 'prediction', type_ds, ds_name, wormID, 'named_neurons.csv')
 
-                # Select only named neurons
-                df_context = df.loc[df['Type'] == 'Context']
-                df_context = df_context.loc[:, (df_context != 0).any(axis=0)]
-                df_context = df_context.drop(columns=['Type', 'Unnamed: 1'])
-                neurons = df_context.columns.tolist()
+                df = pd.read_csv(url)
+
+                # Get the named neurons
+                neurons_df = pd.read_csv(neurons_url)
+                neurons = neurons_df['named_neurons']
 
                 sns.set_style('whitegrid')
                 palette = sns.color_palette("tab10")

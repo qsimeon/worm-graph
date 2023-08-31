@@ -41,9 +41,13 @@ def model_predict(
     use_residual = int(train_dataset_info['use_residual'].values[0])
     smooth_data = int(train_dataset_info['smooth_data'].values[0])
 
+    assert context_window < seq_len, (
+        "The context window must be smaller than the sequence length (model was trained with seq_len = {}).".format(seq_len)
+    )
+
     # Load dataset
-    combined_dataset, _ = create_combined_dataset(experimental_datasets=experimental_datasets,
-                                                    num_named_neurons='all')
+    combined_dataset, dataset_info = create_combined_dataset(experimental_datasets=experimental_datasets,
+                                                             num_named_neurons='all')
     train_dataset, val_dataset, _ = split_combined_dataset(combined_dataset=combined_dataset,
                                                             k_splits=k_splits,
                                                             num_train_samples=num_train_samples,
@@ -58,13 +62,6 @@ def model_predict(
     # Select desired dataset and prepare the filters for predictions
     dataset = train_dataset if dataset_type == 'train' else val_dataset
     datasets_to_predict = [dataset_name for dataset_name in experimental_datasets.keys() if experimental_datasets[dataset_name] is not None]
-
-    x, y, mask, metadata = next(iter(dataset))
-    seq_len = x.shape[0]
-
-    assert context_window < seq_len, (
-        "The context window must be smaller than the sequence length ({}).".format(seq_len)
-    )
 
     nb_gt_ts_to_generate = seq_len - context_window # Time steps for ground truth comparison
 
@@ -155,5 +152,11 @@ def model_predict(
         os.makedirs(os.path.join(pred_dir, metadata['worm_dataset'], metadata['wormID']), exist_ok=True) # worm level
         # Save the DataFrame
         result_df.to_csv(os.path.join(pred_dir, metadata['worm_dataset'], metadata['wormID'], "predictions.csv"))
+
+        # Query and save the named neurons to plot predictions afterwards
+        neurons = dataset_info.query('dataset == "{}" and original_index == "{}"'.format(metadata['worm_dataset'], metadata['wormID']))['neurons'].iloc[0]
+        neuron_df = pd.DataFrame(neurons, columns=['named_neurons'])
+        neuron_df.to_csv(os.path.join(pred_dir, metadata['worm_dataset'], metadata['wormID'], "named_neurons.csv"))
+
 
     logger.info("Done. {}".format(worms_predicted))
