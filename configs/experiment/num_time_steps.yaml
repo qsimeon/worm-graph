@@ -9,7 +9,14 @@ hydra:
   # These parameters will be tested just when MULTIRUN mode is used.
   # Use the submodule parameters if RUN.
     params:
-      submodule.dataset.experimental_datasets: choice({Kato2015:2, Nichols2017:2, Skora2018:2, Uzel2022:2, Kaplan2020:2, Flavell2023:2, Leifer2023:2},{Kato2015:1, Nichols2017:1, Skora2018:1, Uzel2022:1, Kaplan2020:1, Flavell2023:1, Leifer2023:1})
+      submodule.dataset.experimental_datasets: choice({Kato2015:2, Nichols2017:2, Skora2018:2, Uzel2022:2, Kaplan2020:2, Flavell2023:2, Leifer2023:2},{Kato2015:6, Nichols2017:6, Skora2018:6, Uzel2022:6, Kaplan2020:6, Flavell2023:6, Leifer2023:6},{Kato2015:12, Nichols2017:17, Skora2018:12, Uzel2022:6, Kaplan2020:17, Flavell2023:17, Leifer2023:17},{Kato2015:12, Nichols2017:34, Skora2018:12, Uzel2022:6, Kaplan2020:19, Flavell2023:34, Leifer2023:34},{Kato2015:12, Nichols2017:44, Skora2018:12, Uzel2022:6, Kaplan2020:19, Flavell2023:50, Leifer2023:52},{Kato2015:12, Nichols2017:44, Skora2018:12, Uzel2022:6, Kaplan2020:19, Flavell2023:50, Leifer2023:102})
+      # {Kato2015:2, Nichols2017:2, Skora2018:2, Uzel2022:2, Kaplan2020:2, Flavell2023:2, Leifer2023:2} = 14
+      # {Kato2015:6, Nichols2017:6, Skora2018:6, Uzel2022:6, Kaplan2020:6, Flavell2023:6, Leifer2023:6} = 42
+      # {Kato2015:12, Nichols2017:17, Skora2018:12, Uzel2022:6, Kaplan2020:17, Flavell2023:17, Leifer2023:17} = 98
+      # {Kato2015:12, Nichols2017:34, Skora2018:12, Uzel2022:6, Kaplan2020:19, Flavell2023:34, Leifer2023:34} = 151
+      # {Kato2015:12, Nichols2017:44, Skora2018:12, Uzel2022:6, Kaplan2020:19, Flavell2023:50, Leifer2023:52} = 195
+      # {Kato2015:12, Nichols2017:44, Skora2018:12, Uzel2022:6, Kaplan2020:19, Flavell2023:50, Leifer2023:102} = 245
+
 
 submodule:
 
@@ -44,13 +51,13 @@ submodule:
     task: many-to-many
     optimizer: AdamW
     lr: 0.0001
-    epochs: 5
+    epochs: 900
     save_freq: 100
     batch_size: 32
     shuffle: true
     early_stopping:
       # Minimum change in validation loss to be considered an improvement
-      delta: 0.0
+      delta: 0
       # Number of epochs to wait for improvement before stopping
       patience: 25 
 

@@ -1,7 +1,7 @@
 visualize:
   # This directory is overwritten when using the a pipeline with train or predict submodules.
   # If using the submodule alone, this directory is the path to the log folder you want to generate the visualization in.
-  plot_figures_from_this_log_dir: /home/lrvnc/Projects/worm-graph/logs/hydra/2023_08_30_12_48_56
+  plot_figures_from_this_log_dir: null
   
   predict:
     worms_to_plot: null # if null, plot all the worms in the dataset. Otherwise, plot only the worms in this list
