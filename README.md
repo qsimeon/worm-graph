@@ -103,7 +103,7 @@ If you are running on a SLURM computing cluster:
 For one multi-worm dataset of neural activity, this pipeline will:
 1. Load the preprocessed calcium data for all worms in the dataset.
 2. Train a neural network model to predict future calcium activity from previous activity.
-3. Plot the train and validation loss curves for the model, and its predictions on train and validation data.
+3. Plot the train and validation loss curves for the model, and its predictions on validation data.
 
 For more tutorials on how to use the pipeline and configuration files, refer to the `worm-graph` GitHub Wiki page.
 
