@@ -233,7 +233,7 @@ def preprocess_connectome(raw_dir, raw_files):
     return None
 
 
-def gaussian_kernel_smooth(x, t, sigma=10):
+def gaussian_kernel_smooth(x, t, sigma=5):
     """Gaussian smoothing for a multidimensional time series.
 
     Parameters:
