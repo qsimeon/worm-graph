@@ -983,7 +983,7 @@ def plot_scaling_law(exp_log_dir, exp_name, exp_plot_dir=None, fig=None, ax=None
     # Regression
     try:
         slope, intercept, r_value, p_value, std_err = stats.linregress(np.log(exp_parameter), np.log(losses))
-        fit_label = 'y = {:.2f}x + {:.2f}'.format(slope, intercept)
+        fit_label = 'y = {:.2e}x + {:.2e}\n'.format(slope, intercept)+r'$R^2=$'+'{}'.format(round(r_value**2, 4))
         ax.plot(exp_parameter, np.exp(intercept + slope * np.log(exp_parameter)), 'r', label=fit_label)
     except:
         pass
@@ -1043,7 +1043,7 @@ def plot_validation_loss_per_dataset(log_dir):
     plt.close()
 
 
-def plot_exp_validation_loss_per_dataset(exp_log_dir, exp_name, exp_plot_dir):
+def plot_exp_validation_loss_per_dataset(exp_log_dir, exp_name, exp_plot_dir=None):
 
     # =============== Collect information ===============
     losses = pd.DataFrame(columns=['dataset', 'val_loss', 'val_baseline', 'exp_param'])
@@ -1205,5 +1205,9 @@ def plot_exp_validation_loss_per_dataset(exp_log_dir, exp_name, exp_plot_dir):
     ax.legend(loc='upper right', fontsize='small')
 
     plt.tight_layout()
-    plt.savefig(os.path.join(exp_plot_dir, 'validation_loss_per_dataset_comparison.png'), dpi=300)
-    plt.close()
+
+    if exp_plot_dir is not None:
+        plt.savefig(os.path.join(exp_plot_dir, 'validation_loss_per_dataset_comparison.png'), dpi=300)
+        plt.close()
+    else:
+        return fig, ax
