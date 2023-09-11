@@ -14,9 +14,11 @@ hydra:
 submodule:
   dataset:
     use_these_datasets:
-      path: null
+      path: /om2/user/lrvenan/worm-graph/data/datasets/custom01
       num_worms: all
-    # Create new datasets
+
+    save_datasets: false
+
     experimental_datasets:
       Kato2015: 5
       Nichols2017: null
@@ -35,7 +37,7 @@ submodule:
     smooth_data: true
     
   train:
-    epochs: 10
+    epochs: 2
 
 experiment:
   name: default_multirun

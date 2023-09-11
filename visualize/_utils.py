@@ -1019,35 +1019,22 @@ def plot_validation_loss_per_dataset(log_dir):
     sns.set_palette("tab10")
     palette = sns.color_palette()
 
-    fig, ax = plt.subplots(3,1,figsize=(10, 12))
+    fig, ax = plt.subplots(figsize=(10, 4))
 
     # First plot both model and baseline losses
-    ax[0].bar(np.arange(len(losses)), losses['val_loss'], color=palette[0], label='Model')
-    ax[0].bar(np.arange(len(losses)), losses['val_baseline'], color=palette[1], label='Baseline', alpha=0.4)
-    ax[0].set_xticks(np.arange(len(losses)))
-    ax[0].set_xticklabels(losses['dataset'].values, rotation=0, ha='center')
-    ax[0].set_ylabel('Loss')
-    ax[0].set_title('Validation loss across datasets')
-    ax[0].legend(loc='upper right')
+    ax.bar(np.arange(len(losses)), losses['val_loss'], color=palette[0], label='Model')
+    ax.bar(np.arange(len(losses)), losses['val_baseline'], color=palette[1], label='Baseline', alpha=0.4)
+    ax.set_xticks(np.arange(len(losses)))
+    ax.set_xticklabels(losses['dataset'].values, rotation=0, ha='center')
+    ax.set_ylabel('Loss')
+    ax.set_title('Validation loss across datasets')
+    ax.legend(loc='upper right')
     props = dict(boxstyle='round', facecolor='white', alpha=0.5)
     textstr = 'Datasets used for training: \n{}'.format(', '.join(train_dataset_names))
-    ax[0].text(0.02, 0.95, textstr, transform=ax[0].transAxes, fontsize=10,
+    ax.text(0.02, 0.95, textstr, transform=ax.transAxes, fontsize=10,
             verticalalignment='top', bbox=props)
     for i, v in enumerate(losses['num_worms']):
-        ax[0].text(i, max(losses.loc[i, ['val_loss', 'val_baseline']]), r'$n_{val} = $' + str(int(v)), ha='center', fontsize=8)
-
-    # Second plot only model losses
-    ax[1].bar(np.arange(len(losses)), losses['val_loss'], color=palette[0], label='Model')
-    ax[1].set_xticks(np.arange(len(losses)))
-    ax[1].set_xticklabels(losses['dataset'].values, rotation=0, ha='center')
-    ax[1].set_ylabel('Loss')
-
-    # Third plot only baseline losses
-    ax[2].bar(np.arange(len(losses)), losses['val_baseline'], color=palette[1], label='Baseline')
-    ax[2].set_xticks(np.arange(len(losses)))
-    ax[2].set_xticklabels(losses['dataset'].values, rotation=0, ha='center')
-    ax[2].set_ylabel('Loss')
-    ax[2].set_xlabel('Dataset')
+        ax.text(i, max(losses.loc[i, ['val_loss', 'val_baseline']]), r'$n_{val} = $' + str(int(v)), ha='center', fontsize=8)
 
     plt.tight_layout()
 

@@ -99,9 +99,8 @@ def get_datasets(dataset_config: DictConfig, save=True):
         # If both datasets exist, save and return them. Else, create them using the experimental datasets
         if train_dataset_exists and val_dataset_exists:
             # There's no need to save the datasets again, just their information (for visualization submodule use)
-            if save:
-                dataset_info_train.to_csv(os.path.join(log_dir, 'dataset', f"train_dataset_info.csv"), index=True, header=True)
-                dataset_info_val.to_csv(os.path.join(log_dir, 'dataset', f"val_dataset_info.csv"), index=True, header=True)
+            dataset_info_train.to_csv(os.path.join(log_dir, 'dataset', f"train_dataset_info.csv"), index=True, header=True)
+            dataset_info_val.to_csv(os.path.join(log_dir, 'dataset', f"val_dataset_info.csv"), index=True, header=True)
             return train_dataset, val_dataset
         
         else:
@@ -143,10 +142,10 @@ def get_datasets(dataset_config: DictConfig, save=True):
                 dataset_info_val = created_dataset_info_val
 
             # Save the datasets and their information (just train and validation, no need to save combined)
+            dataset_info_train.to_csv(os.path.join(log_dir, 'dataset', f"train_dataset_info.csv"), index=True, header=True)
+            dataset_info_val.to_csv(os.path.join(log_dir, 'dataset', f"val_dataset_info.csv"), index=True, header=True)
+            
             if save:
-                dataset_info_train.to_csv(os.path.join(log_dir, 'dataset', f"train_dataset_info.csv"), index=True, header=True)
-                dataset_info_val.to_csv(os.path.join(log_dir, 'dataset', f"val_dataset_info.csv"), index=True, header=True)
-
                 torch.save(train_dataset, os.path.join(log_dir, 'dataset', f"train_dataset.pt"))
                 torch.save(val_dataset, os.path.join(log_dir, 'dataset', f"val_dataset.pt"))
 
@@ -172,12 +171,11 @@ def get_datasets(dataset_config: DictConfig, save=True):
         dataset_info_val.drop(columns=['combined_dataset_index'], inplace=True)
 
         # Save the datasets and information about them
+        # => Train and val. datasets contain the same neurons, but with different time steps and other information
+        dataset_info.to_csv(os.path.join(log_dir, 'dataset', f"combined_dataset_info.csv"), index=True, header=True)
+        dataset_info_train.to_csv(os.path.join(log_dir, 'dataset', f"train_dataset_info.csv"), index=True, header=True)
+        dataset_info_val.to_csv(os.path.join(log_dir, 'dataset', f"val_dataset_info.csv"), index=True, header=True)
         if save:
-            # => Train and val. datasets contain the same neurons, but with different time steps and other information
-            dataset_info.to_csv(os.path.join(log_dir, 'dataset', f"combined_dataset_info.csv"), index=True, header=True)
-            dataset_info_train.to_csv(os.path.join(log_dir, 'dataset', f"train_dataset_info.csv"), index=True, header=True)
-            dataset_info_val.to_csv(os.path.join(log_dir, 'dataset', f"val_dataset_info.csv"), index=True, header=True)
-
             torch.save(train_dataset, os.path.join(log_dir, 'dataset', f"train_dataset.pt"))
             torch.save(val_dataset, os.path.join(log_dir, 'dataset', f"val_dataset.pt"))
             with open(os.path.join(log_dir, 'dataset', f"combined_dataset.pickle"), 'wb') as f:

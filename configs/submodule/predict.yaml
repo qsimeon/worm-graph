@@ -4,13 +4,13 @@ predict:
     # null = don't predict on this dataset
     # all = predict on all the worms in the dataset
     # positive integer = use this number of worms from the dataset (random pick)
-    Kato2015: worm0
-    Nichols2017: worm0
-    Skora2018: worm0
-    Uzel2022: worm0
-    Kaplan2020: worm0
-    Flavell2023: worm0
-    Leifer2023: worm0
+    Kato2015: worm1
+    Nichols2017: null
+    Skora2018: null
+    Uzel2022: null
+    Kaplan2020: null
+    Flavell2023: null
+    Leifer2023: null
   
   nb_ts_to_generate: null # if null, the number of time steps to generate = seq_len - context_window
   context_window: 60

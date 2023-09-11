@@ -47,7 +47,7 @@ def pipeline(cfg: DictConfig) -> None:
             process_data(cfg.submodule.preprocess)
         
         if 'dataset' in cfg.submodule:
-            train_dataset, val_dataset = get_datasets(cfg.submodule.dataset)
+            train_dataset, val_dataset = get_datasets(cfg.submodule.dataset, save=cfg.submodule.dataset.save_datasets)
             # Update visualize and analysis submodule to plot current run
             if 'visualize' in cfg.submodule:
                 cfg.submodule.visualize.plot_figures_from_this_log_dir = log_dir

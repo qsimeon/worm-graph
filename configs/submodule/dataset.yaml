@@ -9,17 +9,20 @@ dataset:
     path: null
     num_worms: 7
 
+  # Whether to save the datasets in the logs/dataset directory.
+  save_datasets: false
+
   experimental_datasets:
     # null = don't use this dataset
     # all = use all the worms in the dataset
     # positive integer = use this number of worms from the dataset (random pick)
     Kato2015: all
-    Nichols2017: all
-    Skora2018: all
-    Uzel2022: all
-    Kaplan2020: all
-    Flavell2023: all
-    Leifer2023: all
+    Nichols2017: null
+    Skora2018: null
+    Uzel2022: null
+    Kaplan2020: null
+    Flavell2023: null
+    Leifer2023: null
   num_named_neurons: all # number of neurons to train the model with (positive integer or 'all')
   k_splits: 2
   num_train_samples: 32
