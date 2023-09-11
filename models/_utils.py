@@ -556,19 +556,19 @@ class Model(torch.nn.Module):
                 prediction: (batch_size, seq_len, input_size)
                 target: (batch_size, seq_len, input_size)
             """
-            # apply exponential recency decay factor to original loss
+            # # apply exponential recency decay factor to original loss
             # # TODO: play around with time constant (a.k.a half-life, decay rate) parameter
-            half_life = prediction.size(1) / 2  # half-life = seq_len / 2
-            # half_life = 1e-10 # ~ infinitisemal time constant
-            # half_life = 1e10 # ~ infinite time constant
-            kernel = (
-                torch.flip(
-                    torch.exp(-torch.arange(prediction.size(1)) / half_life),
-                    dims=[-1],
-                )
-                .view(1, -1, 1)
-                .to(prediction.device)
-            )
+            # half_life = prediction.size(1) / 2  # half-life = seq_len / 2
+            # # half_life = 1e-10 # ~ infinitisemal time constant
+            # # half_life = 1e10 # ~ infinite time constant
+            # kernel = (
+            #     torch.flip(
+            #         torch.exp(-torch.arange(prediction.size(1)) / half_life),
+            #         dims=[-1],
+            #     )
+            #     .view(1, -1, 1)
+            #     .to(prediction.device)
+            # )
             # calculate next time step prediction loss
             original_loss = self.loss(reduction='none', **kwargs)(
                 # kernel * prediction,
