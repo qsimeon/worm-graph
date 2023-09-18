@@ -51,7 +51,7 @@ The available model implementations (i.e. subclasses of `Model`) are:
 
 - `NetworkGCN`: This is a graph neural network model of the _C. elegans_ nervous system. This model does not use a LayerNorm. The model assumes the connectome graph data to be present in a specific path and loads it.
 
-The overarching structure of these models is the same. They all contain an input-to-hidden transformation (embedding layer + activation function + LayerNorm (optional)), and a hidden-to-hidden transformation (usually a specific neural network layer or block). Also, they all have the `InnerHiddenModel` instantiated for use.
+The overarching structure of these models is the same. They all contain an input-to-hidden transformation (embedding layer + activation function + LayerNorm (optional)), and a hidden-to-hidden transformation (usually a specific neural network layer or block). Also, they all have the `InnerHiddenModel` instantiated for use. 
 
 The structure of all of the models is based on three primary components:
 
@@ -59,7 +59,7 @@ The structure of all of the models is based on three primary components:
 2. The _hidden_ to _hidden_ block
 3. The _hidden_ to _output_ block
 
-The first and last blocks act as linear maps, transforming the inputs to a latent representation (the hidden part) and transforming the latent representation to outputs, respectively. These blocks remain consistent across different network architectures, effectively serving to rescale the dimensions of the inputs/outputs. The computation within the hidden states, however, can vary. For instance, in a Linear model, the _hidden_ to _hidden_ block comprises a straightforward Feed Forward Network, while in an RNN model, it includes an RNN submodule.
+The first and last blocks act as linear maps, transforming the inputs to a latent representation (the hidden part) and transforming the latent representation to outputs, respectively. These blocks remain consistent across different network architectures, effectively serving to rescale the dimensions of the inputs/outputs. The computation within the hidden states, however, can vary. For instance, in a Linear model, the _hidden_ to _hidden_ block comprises a straightforward Feed Forward Network, while in an RNN model, it includes an RNN submodule. All the models have one hidden-layer. We account for the number of hidden layers differently than is typical machine learning. Specifically, we count the number hidden layers as being the number of layers in the _hidden_ to _hidden_ block.
 
 
 ## Customization

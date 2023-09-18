@@ -44,8 +44,11 @@ hydra:
   #   Comment the partition if working locally.
   launcher:
     setup:
-      - cd /om2/user/lrvenan/worm-graph
-      - source /om2/user/lrvenan/miniconda/bin/activate worm-graph
+      - cd /om2/user/qsimeon/worm-graph
+      # - cd /om2/user/lrvenan/worm-graph
+      # - source /om2/user/lrvenan/miniconda/bin/activate worm-graph
+      - cd /om2/user/qsimeon/worm-graph
+      - source /om2/user/qsimeon/miniconda3/bin/activate worm-graph
     nodes: 1
     gres: gpu:1
     exclude: dgx001, dgx002
