@@ -1118,7 +1118,7 @@ def plot_exp_validation_loss_per_dataset(exp_log_dir, exp_name, exp_plot_dir=Non
             x = np.log(df_subset_model['exp_param'].values)
             y = np.log(df_subset_model['val_loss'].values)
             slope, intercept, r_value, p_value, std_err = stats.linregress(x, y)
-            fit_label = 'y = {:.2f}x + {:.2e}\nR^2 = {:.4f}'.format(slope, intercept, r_value**2)
+            fit_label = 'y = {:.2e}x + {:.2e}\n'.format(slope, intercept)+r'$R^2=$'+'{}'.format(round(r_value**2, 4))
             ax[i].plot(df_subset_model['exp_param'].values, np.exp(intercept + slope * x), color=palette[3], linestyle='-', label=fit_label)
         except:
             logger.info('Failed to fit linear regression (log-log scale) for dataset {}'.format(dataset))

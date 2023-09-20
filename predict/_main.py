@@ -6,8 +6,6 @@ logger = logging.getLogger(__name__)
 def make_predictions(
     predict_config: DictConfig,
     model: torch.nn.Module,
-    train_dataset: torch.utils.data.Dataset,
-    val_dataset: torch.utils.data.Dataset,
 ) -> None:
     """Make predictions on a dataset with a trained model.
 
@@ -44,9 +42,7 @@ def make_predictions(
             log_dir = log_dir,
             model = model,
             experimental_datasets = predict_config.experimental_datasets,
-            dataset_type = ds_type,
             context_window = predict_config.context_window,
-            nb_ts_to_generate = predict_config.nb_ts_to_generate,
         )
 
 if __name__ == "__main__":
