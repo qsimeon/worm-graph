@@ -5,4 +5,4 @@ visualize:
   
   predict:
     worms_to_plot: null # if null, plot all the worms in the dataset. Otherwise, plot only the worms in this list
-    neurons_to_plot: 10 # if null, plot all the neurons in the dataset. Otherwise, plot only the neurons in this list
+    neurons_to_plot: 3 # if null, plot all the neurons in the dataset. Otherwise, plot only the neurons in this list

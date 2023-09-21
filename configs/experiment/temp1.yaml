@@ -16,13 +16,13 @@ submodule:
   dataset:
     # Generate train and validation dataset from scratch
     experimental_datasets:
-      Kato2015: 6
-      Nichols2017: 6
-      Skora2018: 6
-      Uzel2022: 6
-      Kaplan2020: 6
-      Flavell2023: 6
-      Leifer2023: 6
+      Kato2015: all
+      Nichols2017: all
+      Skora2018: all
+      Uzel2022: all
+      Kaplan2020: all
+      Flavell2023: all
+      Leifer2023: all
 
     use_these_datasets:
       path: null
