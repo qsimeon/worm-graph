@@ -6,4 +6,4 @@ mlflow
 ncps
 omegaconf
 pytest
-mlflow
+torch_geometric

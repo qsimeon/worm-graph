@@ -14,18 +14,34 @@ conda activate $ENV_NAME
 
 python -m pip install --upgrade pip
 
-# Install PyTorch with CUDA support
-echo "Installing PyTorch with CUDA."
+# Install PyTorch
+echo "Installing PyTorch."
 echo ""
-### uncomment line below for GPU: 
-conda install --name $ENV_NAME -y pytorch torchvision torchaudio pytorch-cuda=11.7 -c pytorch -c nvidia
-### uncomment line below if no GPU:
-# conda install --name $ENV_NAME -y pytorch torchvision torchaudio cpuonly -c pytorch
+# Detect the Operating System
+case "$(uname -s)" in
+    Darwin)
+        echo "Mac OS Detected"
+        # Command for Mac OS
+        conda install --name $ENV_NAME -y pytorch::pytorch torchvision torchaudio -c pytorch
+    ;;
 
-# Install PyTorch Geometric
-echo "Installing PyTorch Geometric."
-echo ""
-conda install --name $ENV_NAME -y pyg -c pyg
+    Linux)
+        echo "Linux OS Detected"
+        # Command for Linux
+        conda install --name $ENV_NAME -y pytorch torchvision torchaudio cpuonly -c pytorch
+    ;;
+
+    CYGWIN*|MINGW32*|MSYS*|MINGW*)
+        echo "Windows OS Detected"
+        # Command for Windows
+        conda install --name $ENV_NAME -y pytorch torchvision torchaudio cpuonly -c pytorch
+    ;;
+
+    *)
+        echo "unknown OS"
+        # Handle AmigaOS, CPM, and others if required.
+    ;;
+esac
 
 # Install large, complex dependencies
 echo "Installing large, complex dependencies."
