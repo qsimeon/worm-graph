@@ -23,3 +23,4 @@ from scipy import stats
 from typing import Union
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler
+from sklearn.metrics import r2_score

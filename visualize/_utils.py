@@ -938,7 +938,7 @@ def plot_exp_losses(exp_log_dir, exp_plot_dir, exp_name):
     plt.close()
 
 
-def plot_scaling_law(exp_log_dir, exp_name, exp_plot_dir=None, fig=None, ax=None):
+def plot_scaling_law(exp_log_dir, exp_name, exp_plot_dir=None, fig=None, ax=None, fit_deg=1):
 
     if fig is None or ax is None:
         # Create
@@ -981,12 +981,34 @@ def plot_scaling_law(exp_log_dir, exp_name, exp_plot_dir=None, fig=None, ax=None
     ax.set_yscale('log')
 
     # Regression
-    try:
-        slope, intercept, r_value, p_value, std_err = stats.linregress(np.log(exp_parameter), np.log(losses))
-        fit_label = 'y = {:.2e}x + {:.2e}\n'.format(slope, intercept)+r'$R^2=$'+'{}'.format(round(r_value**2, 4))
-        ax.plot(exp_parameter, np.exp(intercept + slope * np.log(exp_parameter)), 'r', label=fit_label)
-    except:
-        pass
+    if fit_deg == 1:
+        try:
+            slope, intercept, r_value, p_value, std_err = stats.linregress(np.log(exp_parameter), np.log(losses))
+            fit_label = 'y = {:.2f}x + {:.2f}\n'.format(slope, intercept)+r'$R^2=$'+'{}'.format(round(r_value**2, 2))
+            # Plot with more points
+            x = np.linspace(np.min(exp_parameter), np.max(exp_parameter), 10000)
+            ax.plot(x, np.exp(intercept + slope*np.log(x)), 'r', label=fit_label)
+        except:
+            pass
+
+    else:
+        # Fit polynomial of degree 3
+        try:
+            p = np.polyfit(np.log(exp_parameter), np.log(losses), fit_deg)
+            # Generate fit label automatically
+            fit_label = 'y = '
+            for i in range(fit_deg+1):
+                # Use latex notation
+                fit_label += r'${:.2f}x^{}$ + '.format(p[i], fit_deg-i)
+            fit_label = fit_label[:-3]
+            # Compute fit r^2
+            r2 = r2_score(np.log(losses), np.polyval(p, np.log(exp_parameter)))
+            fit_label += '\n'+r'$R^2=$'+'{}'.format(round(r2, 2))
+            # Plot with more points
+            x = np.linspace(np.min(exp_parameter), np.max(exp_parameter), 10000)
+            ax.plot(x, np.exp(np.polyval(p, np.log(x))), 'b', label=fit_label)
+        except:
+            pass
 
     # Legend
     ax.legend(fontsize=10)
