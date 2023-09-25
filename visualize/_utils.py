@@ -997,10 +997,10 @@ def plot_scaling_law(exp_log_dir, exp_name, exp_plot_dir=None, fig=None, ax=None
             p = np.polyfit(np.log(exp_parameter), np.log(losses), fit_deg)
             # Generate fit label automatically
             fit_label = 'y = '
-            for i in range(fit_deg+1):
+            for i in range(fit_deg):
                 # Use latex notation
                 fit_label += r'${:.2f}x^{}$ + '.format(p[i], fit_deg-i)
-            fit_label = fit_label[:-3]
+            fit_label += r'${:.2f}$'.format(p[-1])
             # Compute fit r^2
             r2 = r2_score(np.log(losses), np.polyval(p, np.log(exp_parameter)))
             fit_label += '\n'+r'$R^2=$'+'{}'.format(round(r2, 2))

@@ -742,7 +742,6 @@ class NeuralTransformer(Model):
         self,
         input_size: int,
         hidden_size: int,
-        num_layers: int = 1,
         loss: Union[Callable, None] = None,
         fft_reg_param: float = 0.0,
         l1_reg_param: float = 0.0,
@@ -759,7 +758,6 @@ class NeuralTransformer(Model):
         super(NeuralTransformer, self).__init__(
             input_size,
             hidden_size,
-            num_layers,
             loss,
             fft_reg_param,
             l1_reg_param,
@@ -786,18 +784,13 @@ class NeuralTransformer(Model):
             self.hidden_size,
         )  # combine input and mask
 
-        # Transformer blocks
-        self.blocks = torch.nn.Sequential(
-            *(
-                TransformerBlock(
-                    n_embd=self.hidden_size,
-                    block_size=self.block_size,
-                    n_head=self.n_head,
-                    dropout=self.dropout,
-                )
-                for _ in range(self.num_layers)
-            )
-        )
+        # # Transformer blocks
+        # self.blocks = TransformerBlock(
+        #     n_embd=self.hidden_size,
+        #     block_size=self.block_size,
+        #     n_head=self.n_head,
+        #     dropout=self.dropout,
+        # )
 
         # Input to hidden transformation
         self.input_hidden = torch.nn.Sequential(
@@ -809,11 +802,16 @@ class NeuralTransformer(Model):
         )
 
         # Hidden to hidden transformation: Transformer layer
-        self.hidden_hidden = torch.nn.Sequential(
-            self.blocks,
-            torch.nn.ReLU(),
-            # NOTE: Do NOT use LayerNorm here!
-        )
+        # self.hidden_hidden = torch.nn.Sequential(
+        #     self.blocks,
+        #     torch.nn.ReLU(),
+        #     # NOTE: Do NOT use LayerNorm here!
+        # )
+        # What if just use the Pytorch implementation?
+        self.hidden_hidden = torch.nn.TransformerEncoderLayer(d_model=self.hidden_size, nhead=1, 
+                                                              dim_feedforward=self.hidden_size, 
+                                                              activation="relu", batch_first=True, 
+                                                              norm_first=True)
 
         # Instantiate internal hidden model
         self.inner_hidden_model = InnerHiddenModel(self.hidden_hidden, self.hidden)
