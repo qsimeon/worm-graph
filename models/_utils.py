@@ -3,6 +3,7 @@ from models._pkg import *
 # Init logger
 logger = logging.getLogger(__name__)
 
+
 # # # Transformer Parts (Self-Attention, Feed-Forward, Positional Encoding) # # #
 # # # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
 class Head(torch.nn.Module):
@@ -132,8 +133,7 @@ class CTRNN(torch.nn.Module):
     Parameters:
         input_size: Number of input neurons
         hidden_size: Number of hidden neurons
-        dt: discretization time step in ms.
-            If None, dt equals time constant tau
+        alpha: Time constant of integration.
 
     Inputs:
         input: tensor of shape (seq_len, batch, input_size)
@@ -145,17 +145,15 @@ class CTRNN(torch.nn.Module):
         hidden: tensor of shape (batch, hidden_size), final hidden activity
     """
 
-    def __init__(self, input_size, hidden_size, tau=1, dt=None):
+    def __init__(self, input_size, hidden_size, tau=1, alpha=None):
         super().__init__()
         self.input_size = input_size
         self.hidden_size = hidden_size
-        self.tau = tau  # time constant
-        if dt is None:
-            alpha = 1
+        self.tau = tau
+        if alpha is None:
+            self.alpha = 1
         else:
-            alpha = dt / self.tau  # think of as a decay rate
-        self.alpha = alpha
-
+            self.alpha = alpha
         self.input2h = torch.nn.Linear(input_size, hidden_size)
         self.h2h = torch.nn.Linear(hidden_size, hidden_size)
 
@@ -231,7 +229,6 @@ class GCNModel(torch.nn.Module):
         self,
         input_size,
         hidden_size,
-        num_layers=1,
     ):
         super().__init__()
         # Load the connectome graph
@@ -248,8 +245,6 @@ class GCNModel(torch.nn.Module):
         # Set attributes
         self.input_size = input_size
         self.hidden_size = hidden_size
-        # TODO: Figure out how to use the `num_layers` parameter in this model.
-        self.num_layers = num_layers
         self.edge_index = graph.edge_index
         self.edge_attr = graph.edge_attr
 
@@ -393,14 +388,13 @@ class Model(torch.nn.Module):
             Need to read the literature on generative models, score-/energy-based
             models, and diffusion models to understand out how to implement this.
         7. Getter methods for the input size, hidden size, and number of layers called
-            `get_input_size`, `get_hidden_size`, and `get_num_layers`, respectively.
+            `get_input_size`, and `get_hidden_size`, respectively.
     """
 
     def __init__(
         self,
         input_size: int,
         hidden_size: int,
-        num_layers: int = 1,
         loss: Union[Callable, None] = None,
         fft_reg_param: float = 0.0,
         l1_reg_param: float = 0.0,
@@ -429,7 +423,6 @@ class Model(torch.nn.Module):
         self.input_size = input_size  # Number of neurons (302)
         self.output_size = input_size  # Number of neurons (302)
         self.hidden_size = hidden_size
-        self.num_layers = num_layers
         self.fft_reg_param = fft_reg_param
         self.l1_reg_param = l1_reg_param
         # Initialize hidden state
@@ -472,9 +465,6 @@ class Model(torch.nn.Module):
 
     def get_hidden_size(self):
         return self.hidden_size
-
-    def get_num_layers(self):
-        return self.num_layers
 
     def get_loss_name(self):
         return self.loss_name
@@ -570,7 +560,7 @@ class Model(torch.nn.Module):
             #     .to(prediction.device)
             # )
             # calculate next time step prediction loss
-            original_loss = self.loss(reduction='none', **kwargs)(
+            original_loss = self.loss(reduction="none", **kwargs)(
                 # kernel * prediction,
                 # kernel * target,  # weigh more recent time steps more heavily
                 # # NOTE: the next two options are the extreme ends of a spectrum from using an exponential recency decay
@@ -602,15 +592,14 @@ class Model(torch.nn.Module):
             return regularized_loss
 
         return loss
-    
 
     def generate(
-            self,
-            input: torch.Tensor,
-            mask: torch.Tensor,
-            nb_ts_to_generate: int,
-            context_window: int,
-            autoregressive: bool = True,
+        self,
+        input: torch.Tensor,
+        mask: torch.Tensor,
+        nb_ts_to_generate: int,
+        context_window: int,
+        autoregressive: bool = True,
     ):
         """
         Generate future neural activity from the model.
@@ -640,29 +629,35 @@ class Model(torch.nn.Module):
             # Generate values autoregressively
             input = input[:, :context_window, :]  # shape (1, context_window, 302)
 
-        with torch.no_grad(): 
+        with torch.no_grad():
             for t in range(nb_ts_to_generate):
-
                 # Get the last context_window values of the input tensor
-                x = input[:, t:context_window+t, :]  # shape (1, context_window, 302)
+                x = input[
+                    :, t : context_window + t, :
+                ]  # shape (1, context_window, 302)
 
                 # Get predictions
-                predictions = self(x, mask, tau=self.tau)  # shape (1, context_window, 302)
+                predictions = self(
+                    x, mask, tau=self.tau
+                )  # shape (1, context_window, 302)
 
                 # Get last predicted value
                 last_time_step = predictions[:, -1, :].unsqueeze(0)  # shape (1, 1, 302)
 
                 # Append the prediction to the generated_values list and input tensor
                 generated_values.append(last_time_step)
-                input = torch.cat((input, last_time_step), dim=1)  # add the prediction to the input tensor
+                input = torch.cat(
+                    (input, last_time_step), dim=1
+                )  # add the prediction to the input tensor
 
         # Stack the generated values to a tensor
-        generated_tensor = torch.cat(generated_values, dim=1)  # shape (nb_ts_to_generate, 302)
-        
+        generated_tensor = torch.cat(
+            generated_values, dim=1
+        )  # shape (nb_ts_to_generate, 302)
+
         return generated_tensor
 
-
-    def sample(self, timesteps):
+    def sample(self, nb_ts_to_sample: int):
         """
         Sample spontaneous neural activity from the model.
         TODO: Figure out how to use diffusion models to sample from the network.
@@ -680,7 +675,6 @@ class LinearNN(Model):
         self,
         input_size: int,
         hidden_size: int,
-        num_layers: int = 1,
         loss: Union[Callable, None] = None,
         fft_reg_param: float = 0.0,
         l1_reg_param: float = 0.0,
@@ -688,7 +682,6 @@ class LinearNN(Model):
         super(LinearNN, self).__init__(
             input_size,
             hidden_size,
-            num_layers,
             loss,
             fft_reg_param,
             l1_reg_param,
@@ -703,14 +696,9 @@ class LinearNN(Model):
         )  # combine input and mask
 
         # Feedforward blocks
-        self.blocks = torch.nn.Sequential(
-            *(
-                FeedForwardBlock(
-                    n_embd=self.hidden_size,
-                    dropout=self.dropout,
-                )
-                for _ in range(self.num_layers)
-            )
+        self.blocks = FeedForwardBlock(
+            n_embd=self.hidden_size,
+            dropout=self.dropout,
         )
 
         # Input to hidden transformation
@@ -742,7 +730,6 @@ class NeuralTransformer(Model):
         self,
         input_size: int,
         hidden_size: int,
-        num_layers: int = 1,
         loss: Union[Callable, None] = None,
         fft_reg_param: float = 0.0,
         l1_reg_param: float = 0.0,
@@ -759,7 +746,6 @@ class NeuralTransformer(Model):
         super(NeuralTransformer, self).__init__(
             input_size,
             hidden_size,
-            num_layers,
             loss,
             fft_reg_param,
             l1_reg_param,
@@ -787,16 +773,11 @@ class NeuralTransformer(Model):
         )  # combine input and mask
 
         # Transformer blocks
-        self.blocks = torch.nn.Sequential(
-            *(
-                TransformerBlock(
-                    n_embd=self.hidden_size,
-                    block_size=self.block_size,
-                    n_head=self.n_head,
-                    dropout=self.dropout,
-                )
-                for _ in range(self.num_layers)
-            )
+        self.blocks = TransformerBlock(
+            n_embd=self.hidden_size,
+            block_size=self.block_size,
+            n_head=self.n_head,
+            dropout=self.dropout,
         )
 
         # Input to hidden transformation
@@ -837,20 +818,16 @@ class NetworkRNN(Model):
         self,
         input_size: int,
         hidden_size: int,
-        num_layers: int = 1,
         loss: Union[Callable, None] = None,
         fft_reg_param: float = 0.0,
         l1_reg_param: float = 0.0,
     ):
         """
         The output size will be the same as the input size.
-        NOTE: The `num_layers` parameter is not being used in this model.
-        TODO: Implement a way to use the `num_layers` parameter in this model.
         """
         super(NetworkRNN, self).__init__(
             input_size,
             hidden_size,
-            num_layers,
             loss,
             fft_reg_param,
             l1_reg_param,
@@ -890,21 +867,17 @@ class NeuralCFC(Model):
         self,
         input_size: int,
         hidden_size: int,
-        num_layers: int = 1,  # unused
         loss: Union[Callable, None] = None,
         fft_reg_param: float = 0.0,
         l1_reg_param: float = 0.0,
     ):
         """
         The output size will be the same as the input size.
-        NOTE: The num_layers parameter is not being used in this model.
-        TODO: Implement a way to use the `num_layers` parameter in this model.
         """
 
         super(NeuralCFC, self).__init__(
             input_size,
             hidden_size,
-            num_layers,
             loss,
             fft_reg_param,
             l1_reg_param,
@@ -963,7 +936,6 @@ class NetworkLSTM(Model):
         self,
         input_size: int,
         hidden_size: int,
-        num_layers: int = 1,
         loss: Union[Callable, None] = None,
         fft_reg_param: float = 0.0,
         l1_reg_param: float = 0.0,
@@ -974,7 +946,6 @@ class NetworkLSTM(Model):
         super(NetworkLSTM, self).__init__(
             input_size,
             hidden_size,
-            num_layers,
             loss,
             fft_reg_param,
             l1_reg_param,
@@ -992,7 +963,6 @@ class NetworkLSTM(Model):
         self.hidden_hidden = torch.nn.LSTM(
             input_size=self.hidden_size,  # combine input and mask
             hidden_size=self.hidden_size,
-            num_layers=self.num_layers,
             bias=True,
             batch_first=True,
         )

@@ -2,6 +2,19 @@
 
 ### Simulating the _C. elegans_ whole brain with neural networks.
 
+### Table of Contents
+1. [Project Overview](#worm-graph)
+2. [Directory Structure](#directory-structure)
+3. [Environment Setup](#environment-setup)
+4. [Getting Started](#getting-started)
+5. [For Developers](#for-developers)
+    - [File Naming Conventions](#file-naming-conventions)
+    - [Code Style Conventions](#code-style-conventions)
+6. [Future Tasks](#future-tasks--todos)
+
+## Project Overview
+
+## Directory Structure
 `tree -L 1 worm-graph`
 ```
 ├── analysis
@@ -10,9 +23,9 @@
 ├── debugging
 ├── __init__.py
 ├── LICENSE
+├── logs
 ├── main.py
 ├── models
-├── opensource_data
 ├── pkg.py
 ├── predict
 ├── preprocess
@@ -26,16 +39,7 @@
 └── visualize
 ```
 
-### Table of Contents
-1. [Environment Setup](#environment-setup)
-2. [Getting Started](#getting-started)
-3. [File Naming Conventions](#file-naming-conventions)
-4. [Code Style Conventions](#code-style-conventions)
-5. [Future Tasks](#future-tasks)
-
-## For end users
-
-### Environment Setup
+## Environment Setup
 
 To prepare your environment for this project, you can use either the provided `.yml` files or the `init.sh` script. Choose the option that works most efficiently for your system.
 
@@ -79,11 +83,11 @@ After finishing one of the installations above, navigate back to the root direct
 
     conda develop .
 
-**Note:** Please ensure to carry out this step, otherwise you may encounter `ModuleNotFoundError`.
+**Note:** Please ensure to carry out this step, otherwise you may encounter `ModuleNotFoundError` later on.
 
 *You can check if the environment was successfully installed by running `conda env list` or `conda info --envs`.*
 
-**Important Reminder:** Always activate the environment before starting your work on the project using `conda activate worm-graph`.
+**Important Reminder:** Always activate the environment before starting your work on the project by running `conda activate worm-graph`.
 
 ## Getting Started
 
@@ -112,7 +116,7 @@ For more tutorials on how to use the pipeline and configuration files, refer to 
 ### File Naming Conventions
 
 For folders and script files, use the `lower_case_with_underscores` naming style.
-**Example:** `my_folder`, `my_script.py`.
+**Example:** `my_folder/my_script.py`.
 
 For Jupyter notebooks, use the `CamelCase` naming style.
 **Example:** `MyAnalysisNotebook.ipynb`.
@@ -134,10 +138,11 @@ For Jupyter notebooks, use the `CamelCase` naming style.
 
 - When in doubt about anything else style-related that's not addressed by the previous two points, reference the [Python Enhancement Protocols (PEP8)](https://peps.python.org/pep-0008/).
 
-- Always shape neural data matrices as `(time, neurons, [features])`. The braces `[]` indicate that the last `features` dimension is optional, as the `neurons` currently serve as the features for our models.
+- Always shape neural data matrices as `(time, neurons, {features})`. The braces `{}` indicate that the last `features` dimension is optional, as the `neurons` currently serve as the features for our models.
 
-### Future Tasks / TODOs:
+## Future Tasks
 
+- Post the preprocess datasets to a file-hosting site.
 - Add unit tests for each submodule.
 - Add docstrings to all functions and classes in all submodules.
    - Format using the Google Python Style Guide.
