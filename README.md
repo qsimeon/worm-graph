@@ -47,15 +47,7 @@ cd setup
 
 **Note:** Installing the environment can take up to 2 hours!
 
-### Option A: Setting up with the `.yml` files
-
-1. Open your terminal or Anaconda Prompt, and create a new Conda environment using the `.yml` file. The first line of the `.yml` file sets the name of the new environment.
-
-    ```
-    conda env create -f environment.yml
-    ```
-
-### Option B: Setting up with the bash script (recommended)
+### Option A: Setting up with the bash script (recommended) 
 
 1. Run the `env.sh` script. This will create the new `worm-graph` environment and install the required packages:
 
@@ -73,6 +65,14 @@ cd setup
 
     ```
     pip install --upgrade -r requirements.txt
+    ```
+
+### Option B: Setting up with the `.yml` file
+
+1. Open your terminal or Anaconda Prompt, and create a new Conda environment using the `.yml` file. The first line of the `.yml` file sets the name of the new environment.
+
+    ```
+    conda env create -f environment.yml
     ```
 
 After finishing one of the installations above, navigate back to the root directory (`worm-graph/`) and run:
@@ -138,10 +138,6 @@ For Jupyter notebooks, use the `CamelCase` naming style.
 
 ### Future Tasks / TODOs:
 
-- Perform extensive scaling experiments:
-  - Vary the training dataset size.
-  - Vary the model hidden size.
-  - Create scaling law plots.
 - Add unit tests for each submodule.
 - Add docstrings to all functions and classes in all submodules.
    - Format using the Google Python Style Guide.

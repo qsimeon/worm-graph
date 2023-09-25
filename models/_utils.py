@@ -107,8 +107,8 @@ class PositionalEncoding(torch.nn.Module):
         self.dropout = torch.nn.Dropout(p=dropout)
         position = torch.arange(max_len).unsqueeze(1)
         div_term = torch.exp(torch.arange(0, n_embd, 2) * (-math.log(10000.0) / n_embd))
-        pe = torch.zeros(1, max_len, n_embd)
-        pe[0, :, 0::2] = torch.sin(position * div_term)
+        pe = torch.zeros(1, max_len, n_embd) # we use batch_first=True
+        pe[0, :, 0::2] = torch.sin(position * div_term) 
         pe[0, :, 1::2] = torch.cos(position * div_term)
         self.register_buffer("pe", pe)
 
@@ -814,6 +814,11 @@ class NeuralTransformer(Model):
             torch.nn.ReLU(),
             # NOTE: Do NOT use LayerNorm here!
         )
+        # # What if just use the Pytorch implementation?
+        # self.hidden_hidden = torch.nn.TransformerEncoderLayer(d_model=self.hidden_size, n_head=1, 
+        #                                                       dim_feedforward=self.hidden_size, 
+        #                                                       activation="relu", batch_first=True, 
+        #                                                       norm_first=True)
 
         # Instantiate internal hidden model
         self.inner_hidden_model = InnerHiddenModel(self.hidden_hidden, self.hidden)

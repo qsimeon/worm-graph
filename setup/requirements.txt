@@ -6,4 +6,5 @@ mlflow
 ncps
 omegaconf
 pytest
+seaborn
 torch_geometric

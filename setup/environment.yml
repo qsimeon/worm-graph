@@ -29,7 +29,6 @@ dependencies:
   - pytorch 
   - torchvision 
   - torchaudio 
-  - pytorch-cuda=11.7 # uncomment if you have a GPU
   - omegaconf
   - black
   - "black[jupyter]"
@@ -40,7 +39,6 @@ dependencies:
     - hydra-core
     - hydra-optuna-sweeper
     - hydra-submitit-launcher
-    - pysindy
     - pytest
     - requests
     - torch-geometric
