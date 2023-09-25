@@ -139,6 +139,9 @@ def train_model(
             # Backpropagation (skip first epoch)
             if epoch > 0:
                 train_loss.backward()
+                # Gradient clipping for transformers
+                if type(model).__name__ == "NeuralTransformer":
+                    torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
                 optimizer.step()
 
             # Update running losses

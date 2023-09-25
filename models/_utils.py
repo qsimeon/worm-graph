@@ -742,6 +742,7 @@ class NeuralTransformer(Model):
         self,
         input_size: int,
         hidden_size: int,
+        num_layers: int = 1,
         loss: Union[Callable, None] = None,
         fft_reg_param: float = 0.0,
         l1_reg_param: float = 0.0,
@@ -758,6 +759,7 @@ class NeuralTransformer(Model):
         super(NeuralTransformer, self).__init__(
             input_size,
             hidden_size,
+            num_layers,
             loss,
             fft_reg_param,
             l1_reg_param,
