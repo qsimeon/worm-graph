@@ -23,6 +23,7 @@ dataset:
     Kaplan2020: null
     Flavell2023: null
     Leifer2023: null
+    
   num_named_neurons: all # number of neurons to train the model with (positive integer or 'all')
   k_splits: 2
   num_train_samples: 32

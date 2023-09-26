@@ -4,54 +4,6 @@ from models._pkg import *
 logger = logging.getLogger(__name__)
 
 
-# # # Transformer Parts (Self-Attention, Feed-Forward, Positional Encoding) # # #
-# # # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
-class Head(torch.nn.Module):
-    """
-    One head of self-attention.
-    """
-
-    def __init__(self, head_size, n_embd, block_size, dropout):
-        super().__init__()
-        self.key = torch.nn.Linear(n_embd, head_size, bias=False)
-        self.query = torch.nn.Linear(n_embd, head_size, bias=False)
-        self.value = torch.nn.Linear(n_embd, head_size, bias=False)
-        self.register_buffer("tril", torch.tril(torch.ones(block_size, block_size)))
-        self.dropout = torch.nn.Dropout(dropout)
-
-    def forward(self, x):
-        B, T, C = x.shape
-        k = self.key(x)  # (B,T,C)
-        q = self.query(x)  # (B,T,C)
-        # compute attention scores ("affinities")
-        wei = q @ k.transpose(-2, -1) * C**-0.5  # (B, T, C) @ (B, C, T) -> (B, T, T)
-        wei = wei.masked_fill(self.tril[:T, :T] == 0, float("-inf"))  # (B, T, T)
-        wei = torch.nn.functional.softmax(wei, dim=-1)  # (B, T, T)
-        wei = self.dropout(wei)
-        # perform the weighted aggregation of the values
-        v = self.value(x)  # (B,T,C)
-        out = wei @ v  # (B, T, T) @ (B, T, C) -> (B, T, C)
-        return out
-
-
-class MultiHeadAttention(torch.nn.Module):
-    """
-    Multiple heads of self-attention in parallel.
-    """
-
-    def __init__(self, n_head, head_size, n_embd, block_size, dropout):
-        super().__init__()
-        self.heads = torch.nn.ModuleList(
-            [Head(head_size, n_embd, block_size, dropout) for _ in range(n_head)]
-        )
-        self.proj = torch.nn.Linear(n_embd, n_embd)
-        self.dropout = torch.nn.Dropout(dropout)
-
-    def forward(self, x):
-        out = torch.cat([h(x) for h in self.heads], dim=-1)
-        out = self.dropout(self.proj(out))
-        return out
-
 
 class FeedFoward(torch.nn.Module):
     """
@@ -69,60 +21,6 @@ class FeedFoward(torch.nn.Module):
 
     def forward(self, x):
         return self.net(x)
-
-
-class TransformerBlock(torch.nn.Module):
-    """
-    Transformer block: communication followed by computation.
-    """
-
-    def __init__(self, n_embd, block_size, n_head, dropout):
-        # n_embd: embedding dimension, n_head: the number of heads we'd like
-        super().__init__()
-        head_size = n_embd // n_head
-        self.sa = MultiHeadAttention(n_head, head_size, n_embd, block_size, dropout)
-        self.ffwd = FeedFoward(n_embd, dropout)
-        self.ln1 = torch.nn.LayerNorm(n_embd)
-        self.ln2 = torch.nn.LayerNorm(n_embd)
-
-    def forward(self, x):
-        # notice the use of residual (skip) connections
-        x = x + self.sa(self.ln1(x))
-        x = x + self.ffwd(self.ln2(x))
-        return x
-
-
-class PositionalEncoding(torch.nn.Module):
-    """
-    Sinuosoidal positional encoding from Attention is All You Need paper.
-    """
-
-    def __init__(
-        self,
-        n_embd: int,
-        max_len: int = MAX_TOKEN_LEN,
-        dropout: float = 0.1,
-    ):
-        super().__init__()
-        self.max_len = max_len
-        self.dropout = torch.nn.Dropout(p=dropout)
-        position = torch.arange(max_len).unsqueeze(1)
-        div_term = torch.exp(torch.arange(0, n_embd, 2) * (-math.log(10000.0) / n_embd))
-        pe = torch.zeros(1, max_len, n_embd) # we use batch_first=True
-        pe[0, :, 0::2] = torch.sin(position * div_term) 
-        pe[0, :, 1::2] = torch.cos(position * div_term)
-        self.register_buffer("pe", pe)
-
-    def forward(self, x):
-        """
-        Args:
-            x: Tensor, shape (batch_size, seq_len, embedding_dim)
-        """
-        x = x + self.pe[:, : x.size(1), :]  # add positional encoding to input
-        return self.dropout(x)
-
-
-# # # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
 
 
 # # # Backbones or Inner Parts of Other Models # # #
@@ -378,16 +276,9 @@ class Model(torch.nn.Module):
             loss function we use is `torch.nn.MSELoss()`.
         3. A readout layer is implemented and will always be
             called `self.linear`.
-        4. There is at least 1 hidden layer. The value of the
-            argument `num_layers` specifies the number of hidden layers.
-        5. When it is possible for a model to be multi-layered,
-            the `num_layers` argument is used to create the desired number
-            of layers. Otherwise `num_layers` defaults to 1.
-        6. TODO: A method called `sample` or `generate` should be implemented to allow
-            sampling spontaneous neural activity from the network.
-            Need to read the literature on generative models, score-/energy-based
-            models, and diffusion models to understand out how to implement this.
-        7. Getter methods for the input size, hidden size, and number of layers called
+        4. The core of all models is called `self.hidden_hidden` and it is
+            comprised of a single hidden layer of an architecture of choice.
+        7. Getter methods for the input size and hidden size called
             `get_input_size`, and `get_hidden_size`, respectively.
     """
 
@@ -546,28 +437,10 @@ class Model(torch.nn.Module):
                 prediction: (batch_size, seq_len, input_size)
                 target: (batch_size, seq_len, input_size)
             """
-            # # apply exponential recency decay factor to original loss
-            # # TODO: play around with time constant (a.k.a half-life, decay rate) parameter
-            # half_life = prediction.size(1) / 2  # half-life = seq_len / 2
-            # # half_life = 1e-10 # ~ infinitisemal time constant
-            # # half_life = 1e10 # ~ infinite time constant
-            # kernel = (
-            #     torch.flip(
-            #         torch.exp(-torch.arange(prediction.size(1)) / half_life),
-            #         dims=[-1],
-            #     )
-            #     .view(1, -1, 1)
-            #     .to(prediction.device)
-            # )
             # calculate next time step prediction loss
             original_loss = self.loss(reduction="none", **kwargs)(
-                # kernel * prediction,
-                # kernel * target,  # weigh more recent time steps more heavily
-                # # NOTE: the next two options are the extreme ends of a spectrum from using an exponential recency decay
-                # prediction[:, -self.tau :, :],  # essentially considers only the most recent time steps
-                # target[:, -self.tau :, :],  # equivalent to infinitisemal time constant
-                prediction,  # consider all time steps weighted equally
-                target,  # equivalent to infinite time constant
+                prediction,  
+                target,  
             )
             # FFT regularization term
             fft_loss = 0.0
@@ -735,7 +608,6 @@ class NeuralTransformer(Model):
         l1_reg_param: float = 0.0,
     ):
         """
-        TODO: Cite Andrej Kaparthy's tutorial on "How to code GPT from scratch".
         Neural activity data is continuous valued and thus
         can naturally be treated as if it were already emebedded.
         However, to maintain notational similarity with the original
@@ -772,14 +644,6 @@ class NeuralTransformer(Model):
             self.hidden_size,
         )  # combine input and mask
 
-        # Transformer blocks
-        self.blocks = TransformerBlock(
-            n_embd=self.hidden_size,
-            block_size=self.block_size,
-            n_head=self.n_head,
-            dropout=self.dropout,
-        )
-
         # Input to hidden transformation
         self.input_hidden = torch.nn.Sequential(
             # NOTE: Position encoding before embedding improved performance.
@@ -790,16 +654,10 @@ class NeuralTransformer(Model):
         )
 
         # Hidden to hidden transformation: Transformer layer
-        self.hidden_hidden = torch.nn.Sequential(
-            self.blocks,
-            torch.nn.ReLU(),
-            # NOTE: Do NOT use LayerNorm here!
-        )
-        # # What if just use the Pytorch implementation?
-        # self.hidden_hidden = torch.nn.TransformerEncoderLayer(d_model=self.hidden_size, n_head=1, 
-        #                                                       dim_feedforward=self.hidden_size, 
-        #                                                       activation="relu", batch_first=True, 
-        #                                                       norm_first=True)
+        self.hidden_hidden = torch.nn.TransformerEncoderLayer(d_model=self.hidden_size, nhead=1, 
+                                                              dim_feedforward=self.hidden_size, 
+                                                              activation="relu", batch_first=True, 
+                                                              norm_first=True)
 
         # Instantiate internal hidden model
         self.inner_hidden_model = InnerHiddenModel(self.hidden_hidden, self.hidden)
@@ -979,8 +837,8 @@ class NetworkLSTM(Model):
         """
         device = next(self.parameters()).device
         batch_size = input_shape[0]  # because batch_first=True
-        h0 = torch.zeros(self.num_layers, batch_size, self.hidden_size).to(device)
-        c0 = torch.zeros(self.num_layers, batch_size, self.hidden_size).to(device)
+        h0 = torch.zeros(1, batch_size, self.hidden_size).to(device)
+        c0 = torch.zeros(1, batch_size, self.hidden_size).to(device)
         return (h0, c0)
 
     def init_weights(self):
@@ -1006,7 +864,6 @@ class NetworkGCN(Model):
         self,
         input_size: int,
         hidden_size: int,
-        num_layers: int = 1,
         loss: Union[Callable, None] = None,
         fft_reg_param: float = 0.0,
         l1_reg_param: float = 0.0,
@@ -1014,22 +871,19 @@ class NetworkGCN(Model):
         super(NetworkGCN, self).__init__(
             input_size,
             hidden_size,
-            num_layers,
             loss,
             fft_reg_param,
             l1_reg_param,
         )
 
         # Input to hidden transformation: Graph Convolutional Network (GCN) layer
-        self.input_hidden = GCNModel(self.input_size, self.hidden_size, num_layers=1)
+        self.input_hidden = GCNModel(self.input_size, self.hidden_size)
 
         # Hidden to hidden transformation: Identity layer
         self.hidden_hidden = torch.nn.Sequential(
             self.identity,
             torch.nn.ReLU(),
             # NOTE: Do NOT use LayerNorm here!
-            # # NOTE: YES use LayerNorm here!
-            # torch.nn.LayerNorm(self.hidden_size),
         )
 
         # Instantiate internal hidden model
