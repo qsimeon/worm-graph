@@ -12,6 +12,7 @@ import logging
 import ast
 
 from models._main import get_model
+from models._utils import print_parameters
 from matplotlib import gridspec
 from matplotlib.animation import FuncAnimation
 from datetime import datetime

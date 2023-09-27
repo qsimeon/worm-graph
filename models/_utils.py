@@ -3,6 +3,30 @@ from models._pkg import *
 # Init logger
 logger = logging.getLogger(__name__)
 
+
+def print_parameters(model, verbose=False):
+    table = PrettyTable(["Module", "Parameters", "Trainable"])
+
+    total_params = 0
+    total_trainable = 0
+
+    for name, parameter in model.named_parameters():
+        num_params = torch.prod(torch.tensor(parameter.size())).item()
+        total_params += num_params
+
+        trainable = parameter.requires_grad
+        if trainable:
+            total_trainable += num_params
+
+        table.add_row([name, num_params, trainable])
+
+    if verbose:
+        print(table)
+        print("Total Parameters:", total_params)
+        print("Total Trainable Parameters:", total_trainable)
+    return total_params, total_trainable
+
+
 # # # Transformer Parts (Self-Attention, Feed-Forward, Positional Encoding) # # #
 # # # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
 class Head(torch.nn.Module):
