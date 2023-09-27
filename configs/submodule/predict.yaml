@@ -13,4 +13,4 @@ predict:
     Leifer2023: null
   
   nb_ts_to_generate: null # if null, the number of time steps to generate = seq_len - context_window
-  context_window: 60
+  context_window: 120
