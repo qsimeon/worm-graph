@@ -2,7 +2,7 @@ train:
   task: many-to-many
   optimizer: AdamW
   lr: 0.0001
-  epochs: 2
+  epochs: 1000
   save_freq: 100
   batch_size: 32
   shuffle: true

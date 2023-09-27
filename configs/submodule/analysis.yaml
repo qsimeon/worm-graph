@@ -5,11 +5,11 @@ analysis:
 
   validation:
     experimental_datasets:
-      Kato2015: all
-      Nichols2017: all
-      Skora2018: all
-      Uzel2022: all
-      Kaplan2020: all
-      Flavell2023: all
-      Leifer2023: all
+      Kato2015: worm1
+      Nichols2017: worm1
+      Skora2018: worm1
+      Uzel2022: worm1
+      Kaplan2020: worm1
+      Flavell2023: worm1
+      Leifer2023: worm1
     task: 'many-to-many'

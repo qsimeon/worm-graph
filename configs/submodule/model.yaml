@@ -1,7 +1,7 @@
 model:
-  type: NeuralTransformer # options: LinearNN, NetworkLSTM, NetworkRNN, NeuralCFC, NetworkGCN, NeuralTransformer
+  type: LSTM # options: LinearNN, NetworkLSTM, NetworkRNN, NeuralCFC, NetworkGCN, NeuralTransformer
   input_size: 302 # keep fixed at input_size = 302; it is the number of neurons in the adult C. elegans hermaphrodite 
-  hidden_size: 312 # options: int > 0
+  hidden_size: 256 # options: int > 0
   num_layers: 1 # number of hidden layers in the model; options: int >= 1; keep this fixed
   # constraint: 1 <= int <= 5; keep fixed at num_layers: int = 1
   loss: MSE # options: MSE, Huber, L1, Poisson

@@ -10,7 +10,7 @@ dataset:
     num_worms: 7
 
   # Whether to save the datasets in the logs/dataset directory.
-  save_datasets: false
+  save_datasets: true
 
   experimental_datasets:
     # null = don't use this dataset
@@ -23,7 +23,7 @@ dataset:
     Kaplan2020: all
     Flavell2023: all
     Leifer2023: all
-  num_named_neurons: all # number of neurons to train the model with (positive integer or 'all')
+  num_named_neurons: 90 # number of neurons to train the model with (positive integer or 'all')
   k_splits: 2
   num_train_samples: 32
   num_val_samples: 32
