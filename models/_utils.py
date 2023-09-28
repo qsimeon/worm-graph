@@ -4,6 +4,29 @@ from models._pkg import *
 logger = logging.getLogger(__name__)
 
 
+def print_parameters(model, verbose=False):
+    table = PrettyTable(["Module", "Parameters", "Trainable"])
+
+    total_params = 0
+    total_trainable = 0
+
+    for name, parameter in model.named_parameters():
+        num_params = torch.prod(torch.tensor(parameter.size())).item()
+        total_params += num_params
+
+        trainable = parameter.requires_grad
+        if trainable:
+            total_trainable += num_params
+
+        table.add_row([name, num_params, trainable])
+
+    if verbose:
+        print(table)
+        print("Total Parameters:", total_params)
+        print("Total Trainable Parameters:", total_trainable)
+
+    return total_params, total_trainable
+
 # # # "Cores" or Inner Models for Different Model Architectures # # #
 # # # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
 
@@ -629,7 +652,7 @@ class NeuralTransformer(Model):
         # Input to hidden transformation
         self.input_hidden = torch.nn.Sequential(
             # NOTE: Position encoding before embedding improved performance.
-            self.position_encoding,
+            self.positional_encoding,
             self.embedding,
             torch.nn.ReLU(),
             # NOTE: Do NOT use LayerNorm here!

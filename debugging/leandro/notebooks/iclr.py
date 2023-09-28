@@ -46,9 +46,9 @@ def legend_code():
     color_palette = sns.color_palette("tab10", n_colors=7)
     # Add black color to the end of color palette
     color_palette.append((0, 0, 0))
-    datasets = ["Kato", "Nichols", "Skora", "Kaplan", "Uzel", "Flavell", "Leifer", "Mixed"]
+    datasets = ["Kato", "Nichols", "Skora", "Kaplan", "Uzel", "Flavell", "Leifer"]
 
-    dataset_labels = ["Kato (2015)", "Nichols (2017)", "Skora (2018)", "Kaplan (2020)", "Uzel (2022)", "Flavell (2023)", "Leifer (2023)", "Mixed dataset"]
+    dataset_labels = ["Kato (2015)", "Nichols (2017)", "Skora (2018)", "Kaplan (2020)", "Uzel (2022)", "Flavell (2023)", "Leifer (2023)"]
     original_dataset_names = ["Kato2015", "Nichols2017", "Skora2018", "Kaplan2020", "Uzel2022", "Flavell2023", "Leifer2023"]
 
     # Create rectangular color patches for datasets
@@ -173,14 +173,14 @@ def dataset_information(path_dict, legend_code):
     # Plot time steps per neuron
     ax6.bar(ts_per_neuron.index, ts_per_neuron['tsn']['mean'], yerr=ts_per_neuron['tsn']['std'], color=[ds_color_code[dataset[:-4]] for dataset in ts_per_neuron.index])
     ax6.errorbar(ts_per_neuron.index, ts_per_neuron['tsn']['mean'], yerr=ts_per_neuron['tsn']['std'], fmt='none', capsize=4, color='black', elinewidth=0.2)
-    ax6.set_ylabel('Mean # of time steps\nper neuron')
+    ax6.set_ylabel('Number of time steps\nper neuron')
     ax6.set_title('(E) Time steps per recorded neuron', fontsize=14)
     ax6.set_xticks([])  # Delete xticks
 
     # Plot mean dt
     ax7.bar(dt_info.index, dt_info['dt_mean'], yerr=dt_info['dt_std'], color=[ds_color_code[dataset[:-4]] for dataset in dt_info.index])
     ax7.errorbar(dt_info.index, dt_info['dt_mean'], yerr=dt_info['dt_std'], fmt='none', capsize=4, color='black', elinewidth=0.2)
-    ax7.set_ylabel(r'Mean $dt$ (s)')
+    ax7.set_ylabel(r'Time step interval $\Delta t$ (s)')
     ax7.set_title('(F) Time step interval of recorded neural activity', fontsize=14)
     ax7.set_xticks([])  # Delete xticks
 
