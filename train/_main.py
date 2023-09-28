@@ -69,8 +69,7 @@ def train_model(
     # Instantiate EarlyStopping
     es = EarlyStopping(
         patience = train_config.early_stopping.patience,
-        min_delta = train_config.early_stopping.delta,
-        )
+        min_delta = train_config.early_stopping.delta,)
 
     # Create dataloaders
     trainloader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=shuffle)

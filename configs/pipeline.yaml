@@ -44,17 +44,19 @@ hydra:
   #   Comment the partition if working locally.
   launcher:
     setup:
-      - cd /om2/user/lrvenan/worm-graph
-      - source /om2/user/lrvenan/miniconda/bin/activate worm-graph
+      # - cd /om2/user/lrvenan/worm-graph
+      # - source /om2/user/lrvenan/miniconda/bin/activate worm-graph
+      - cd /om2/user/qsimeon/worm-graph
+      - conda worm-graph
     nodes: 1
-    gres: gpu:1
+    gres: gpu:a100:1
     exclude: dgx001, dgx002
     mem_gb: 16
     cpus_per_task: 1
     gpus_per_node: 1
     tasks_per_node: 1
     timeout_min: 1440
-    #partition: yanglab # sinfo to see the available partitions in OpenMind
+    partition: yanglab # sinfo to see the available partitions in OpenMind
 
 
 # ============================ Pipeline Config ============================

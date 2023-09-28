@@ -42,7 +42,6 @@ def save_model(model, path):
                     # Model parameters
                     "input_size": model.get_input_size(),
                     "hidden_size": model.get_hidden_size(),
-                    "num_layers": model.get_num_layers(),
                     "loss_name": model.get_loss_name(),
                     "fft_reg_param": model.get_fft_reg_param(),
                     "l1_reg_param": model.get_l1_reg_param(),

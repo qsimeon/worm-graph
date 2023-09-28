@@ -3,6 +3,10 @@
 # Initialize conda for bash shell
 eval "$(conda shell.bash hook)"
 
+function has_gpu {
+    command -v nvidia-smi > /dev/null && nvidia-smi > /dev/null 2>&1
+}
+
 ENV_NAME="worm-graph"
 
 # Create a new conda environment with Python 3.9
@@ -14,23 +18,48 @@ conda activate $ENV_NAME
 
 python -m pip install --upgrade pip
 
-# Install PyTorch with CUDA support
-echo "Installing PyTorch with CUDA."
+# Install PyTorch
+echo "Installing PyTorch."
 echo ""
-### uncomment line below for GPU: 
-conda install --name $ENV_NAME -y pytorch torchvision torchaudio pytorch-cuda=11.7 -c pytorch -c nvidia
-### uncomment line below if no GPU:
-# conda install --name $ENV_NAME -y pytorch torchvision torchaudio cpuonly -c pytorch
+# Detect the Operating System and Check for GPU
+case "$(uname -s)" in
+    Darwin)
+        echo "Mac OS Detected"
+        # Macs typically do not have Nvidia GPUs, but you could still
+        # use the has_gpu function here if you wanted to.
+        conda install --name $ENV_NAME -y pytorch::pytorch torchvision torchaudio -c pytorch
+    ;;
 
-# Install PyTorch Geometric
-echo "Installing PyTorch Geometric."
-echo ""
-conda install --name $ENV_NAME -y pyg -c pyg
+    Linux)
+        echo "Linux OS Detected"
+        if has_gpu; then
+            echo "Nvidia GPU Detected"
+            conda install --name $ENV_NAME -y pytorch torchvision torchaudio -c pytorch
+        else
+            conda install --name $ENV_NAME -y pytorch torchvision torchaudio cpuonly -c pytorch
+        fi
+    ;;
+
+    CYGWIN*|MINGW32*|MSYS*|MINGW*)
+        echo "Windows OS Detected"
+        if has_gpu; then
+            echo "Nvidia GPU Detected"
+            conda install --name $ENV_NAME -y pytorch torchvision torchaudio -c pytorch
+        else
+            conda install --name $ENV_NAME -y pytorch torchvision torchaudio cpuonly -c pytorch
+        fi
+    ;;
+
+    *)
+        echo "unknown OS"
+    ;;
+esac
 
 # Install large, complex dependencies
 echo "Installing large, complex dependencies."
 echo ""
-conda install --name $ENV_NAME -y numpy scipy pandas matplotlib scikit-learn seaborn
+conda install --name $ENV_NAME -y numpy matplotlib scikit-learn scipy 
+conda install --name $ENV_NAME -y pandas seaborn dtaidistance -c conda-forge
 cond install --name $ENV_NAME -y jupyter jupyterlab notebook 
 
 # Install dependencies with moderate complexity

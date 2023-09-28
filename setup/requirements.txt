@@ -1,4 +1,3 @@
-dtaidistance
 hydra-core
 hydra-optuna-sweeper
 hydra-submitit-launcher
@@ -6,6 +5,5 @@ mat73
 mlflow
 ncps
 omegaconf
-pysindy
 pytest
-mlflow
+torch_geometric
