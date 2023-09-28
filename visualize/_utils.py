@@ -779,7 +779,7 @@ def experiment_parameter(exp_dir, key):
     title = 'MULTIRUN'
     xaxis = 'Experiment run'
 
-    if key == 'time_step_volume':
+    if key == 'time_steps_volume':
         df = pd.read_csv(os.path.join(exp_dir, 'dataset', 'train_dataset_info.csv'))
         df['tsv'] = df['train_time_steps'] / df['num_neurons']
         value = df['tsv'].sum() # Total volume of train time steps
@@ -791,6 +791,14 @@ def experiment_parameter(exp_dir, key):
         value = df['train_time_steps'].sum() # Total number of train time steps
         title = 'Amount of training data'
         xaxis = 'Number of time steps'
+
+    if key == 'num_parameters':
+        pipeline_info = OmegaConf.load(os.path.join(exp_dir, 'pipeline_info.yaml'))
+        model = get_model(pipeline_info.submodule.model)
+        total_params, total_trainable = print_parameters(model, verbose=False)
+        value = total_trainable # Total number of parameters
+        title = 'Number of trainable parameters'
+        xaxis = 'Number of trainable parameters'
 
     if key == 'hidden_volume':
         pipeline_info = OmegaConf.load(os.path.join(exp_dir, 'pipeline_info.yaml'))
