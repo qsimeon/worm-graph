@@ -6,8 +6,6 @@ logger = logging.getLogger(__name__)
 def make_predictions(
     predict_config: DictConfig,
     model: torch.nn.Module,
-    train_dataset: torch.utils.data.Dataset,
-    val_dataset: torch.utils.data.Dataset,
 ) -> None:
     """Make predictions on a dataset with a trained model.
 
@@ -33,21 +31,13 @@ def make_predictions(
     os.makedirs(os.path.join(log_dir, 'prediction', 'val'), exist_ok=True)
 
     # Make predictions in the train and validation datasets
-    for ds_type in os.listdir(os.path.join(log_dir, 'prediction')):
-
-        if ds_type not in ['train', 'val']:
-            continue
-
-        logger.info("Start making predictions in %s dataset..." % (ds_type))
-
-        model_predict(
-            log_dir = log_dir,
-            model = model,
-            experimental_datasets = predict_config.experimental_datasets,
-            dataset_type = ds_type,
-            context_window = predict_config.context_window,
-            nb_ts_to_generate = predict_config.nb_ts_to_generate,
-        )
+    logger.info("Start making predictions.")
+    model_predict(
+        log_dir = log_dir,
+        model = model,
+        experimental_datasets = predict_config.experimental_datasets,
+        context_window = predict_config.context_window,
+    )
 
 if __name__ == "__main__":
     dataset_config = OmegaConf.load("configs/submodule/dataset.yaml")

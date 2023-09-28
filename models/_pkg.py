@@ -10,4 +10,5 @@ from torch.cuda.amp import autocast
 from torch_geometric.data import Data, Batch
 from torch_geometric.nn import GCNConv
 from typing import Callable, Union
+from prettytable import PrettyTable
 from utils import DEVICE, ROOT_DIR, MAX_TOKEN_LEN

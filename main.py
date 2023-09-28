@@ -73,8 +73,6 @@ def pipeline(cfg: DictConfig) -> None:
             make_predictions(
                 predict_config = cfg.submodule.predict,
                 model = model,
-                train_dataset = train_dataset,
-                val_dataset = val_dataset,
             )
             # Update visualize and analysis submodule to plot current run
             if 'analysis' in cfg.submodule:

@@ -138,6 +138,9 @@ def train_model(
             # Backpropagation (skip first epoch)
             if epoch > 0:
                 train_loss.backward()
+                # Gradient clipping for transformers
+                if type(model).__name__ == "NeuralTransformer":
+                    torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
                 optimizer.step()
 
             # Update running losses
@@ -234,10 +237,10 @@ def train_model(
 
         # Print statistics if in verbose mode
         if verbose:
-            logger.info("Epoch: {}/{} | Train loss: {:.4f} | Val. loss: {:.4f}".format(epoch+1, epochs, train_epoch_loss[-1], val_epoch_loss[-1]))
+            logger.info("Epoch: {}/{} | Train loss: {:.4f} | Val. loss: {:.4f}".format(epoch, epochs+1, train_epoch_loss[-1], val_epoch_loss[-1]))
 
         # Update progress bar
-        pbar.set_description(f'Epoch {epoch}/{epochs+1}')
+        pbar.set_description(f'Epoch {epoch}/{epochs}')
         pbar.set_postfix({'Train loss': train_epoch_loss[-1], 'Val. loss': val_epoch_loss[-1]})
 
     # Restore best model and save it
