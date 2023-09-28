@@ -3,7 +3,8 @@ from train._pkg import *
 # Init logger
 logger = logging.getLogger(__name__)
 
-class EarlyStopping():
+
+class EarlyStopping:
     # https://github.com/jeffheaton/t81_558_deep_learning/blob/pytorch/t81_558_class_03_4_early_stop.ipynb
     def __init__(self, patience=5, min_delta=0):
         self.patience = patience
@@ -11,9 +12,8 @@ class EarlyStopping():
         self.best_model = None
         self.best_loss = None
         self.counter = 0
-        
-    def __call__(self, model, val_loss):
 
+    def __call__(self, model, val_loss):
         if val_loss is None or math.isnan(val_loss):
             logger.info("Validation loss is not a valid number (NaN).")
             return True
@@ -31,23 +31,25 @@ class EarlyStopping():
         if self.counter >= self.patience:
             return True
         return False
-    
+
+
 def save_model(model, path):
     torch.save(
-                {
-                    # State dictionaries
-                    "model_state_dict": model.state_dict(),
-                    # Names
-                    "model_name": model.__class__.__name__,
-                    # Model parameters
-                    "input_size": model.get_input_size(),
-                    "hidden_size": model.get_hidden_size(),
-                    "loss_name": model.get_loss_name(),
-                    "fft_reg_param": model.get_fft_reg_param(),
-                    "l1_reg_param": model.get_l1_reg_param(),
-                },
-                path
-            )
+        {
+            # State dictionaries
+            "model_state_dict": model.state_dict(),
+            # Names
+            "model_name": model.__class__.__name__,
+            # Model parameters
+            "input_size": model.get_input_size(),
+            "hidden_size": model.get_hidden_size(),
+            "loss_name": model.get_loss_name(),
+            "fft_reg_param": model.get_fft_reg_param(),
+            "l1_reg_param": model.get_l1_reg_param(),
+        },
+        path,
+    )
+
 
 def compute_loss_vectorized(loss_fn, X, Y, masks):
     """

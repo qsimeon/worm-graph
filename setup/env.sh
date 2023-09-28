@@ -75,7 +75,7 @@ conda install --name $ENV_NAME -y pickleshare requests tqdm yaml conda-build
 # Install code formatting and linting tools
 echo "Installing code formatting and linting tools."
 echo ""
-conda install --name $ENV_NAME -y black "black[jupyter]"
+conda install --name $ENV_NAME -y black black[jupyter]
 
 echo ""
 echo "Run conda activate $ENV_NAME to activate the environment."

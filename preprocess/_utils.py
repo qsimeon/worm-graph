@@ -3,6 +3,7 @@ from preprocess._pkg import *
 # Init logger
 logger = logging.getLogger(__name__)
 
+
 def preprocess_connectome(raw_dir, raw_files):
     """Convert the raw connectome data to a graph tensor.
 

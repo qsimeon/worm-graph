@@ -3,6 +3,7 @@ from data._utils import *
 # Init logger
 logger = logging.getLogger(__name__)
 
+
 def get_datasets(dataset_config: DictConfig, save=True):
     """
     Retrieve or generate training and validation datasets based on the provided configuration.
@@ -15,7 +16,7 @@ def get_datasets(dataset_config: DictConfig, save=True):
     dataset_config: (DictConfig)
         A configuration dictionary containing the following keys:
 
-        - use_these_datasets (str or None): Directory containing train and validation datasets. 
+        - use_these_datasets (str or None): Directory containing train and validation datasets.
             If provided, datasets will be loaded from this directory if they exist.
             If not provided or datasets don't exist in the directory, they will be generated using the other parameters.
 
@@ -34,7 +35,7 @@ def get_datasets(dataset_config: DictConfig, save=True):
     save: (bool)
         Whether to save the datasets and their information to the log directory.
         Setting not available to modify in the config file (just for devs).
-        
+
     Returns
     -------
     tuple: A tuple containing two elements:
@@ -58,19 +59,19 @@ def get_datasets(dataset_config: DictConfig, save=True):
     # Verifications
     assert isinstance(k_splits, int) and k_splits > 1, "k_splits must be an integer > 1"
 
-    assert isinstance(num_named_neurons, int) or num_named_neurons == "all", (
-        "num_named_neurons must be a positive integer or 'all'."
-    )
+    assert (
+        isinstance(num_named_neurons, int) or num_named_neurons == "all"
+    ), "num_named_neurons must be a positive integer or 'all'."
 
     log_dir = os.getcwd()  # logs/hydra/${now:%Y_%m_%d_%H_%M_%S}
-    os.makedirs(os.path.join(log_dir, 'dataset'), exist_ok=True)
+    os.makedirs(os.path.join(log_dir, "dataset"), exist_ok=True)
 
     if dataset_config.use_these_datasets.path is not None:
         # Assert that the directory exists
-        assert os.path.isdir(dataset_config.use_these_datasets.path), (
-            f"Directory {dataset_config.use_these_datasets.path} does not exist."
-        )
-        
+        assert os.path.isdir(
+            dataset_config.use_these_datasets.path
+        ), f"Directory {dataset_config.use_these_datasets.path} does not exist."
+
         # Flags to know if the datasets already exist
         train_dataset_exists = False
         val_dataset_exists = False
@@ -78,60 +79,146 @@ def get_datasets(dataset_config: DictConfig, save=True):
         # Check what files are in the directory
         ds_files = os.listdir(dataset_config.use_these_datasets.path)
 
-        if 'train_dataset.pt' in ds_files:
-            assert 'train_dataset_info.csv' in ds_files, (
-                "train_dataset.pt exists but train_dataset_info.csv does not."
+        if "train_dataset.pt" in ds_files:
+            assert (
+                "train_dataset_info.csv" in ds_files
+            ), "train_dataset.pt exists but train_dataset_info.csv does not."
+            logger.info(
+                "Loading provided train dataset from %s"
+                % dataset_config.use_these_datasets.path
             )
-            logger.info("Loading provided train dataset from %s" % dataset_config.use_these_datasets.path)
             train_dataset_exists = True
-            train_dataset = torch.load(os.path.join(dataset_config.use_these_datasets.path, 'train_dataset.pt'))
-            dataset_info_train = pd.read_csv(os.path.join(dataset_config.use_these_datasets.path, 'train_dataset_info.csv'), index_col=0)
-
-        if 'val_dataset.pt' in ds_files:
-            assert 'val_dataset_info.csv' in ds_files, (
-                "val_dataset.pt exists but val_dataset_info.csv does not."
+            train_dataset = torch.load(
+                os.path.join(dataset_config.use_these_datasets.path, "train_dataset.pt")
             )
-            logger.info("Loading provided validation dataset from %s" % dataset_config.use_these_datasets.path)
+            dataset_info_train = pd.read_csv(
+                os.path.join(
+                    dataset_config.use_these_datasets.path, "train_dataset_info.csv"
+                ),
+                index_col=0,
+            )
+
+        if "val_dataset.pt" in ds_files:
+            assert (
+                "val_dataset_info.csv" in ds_files
+            ), "val_dataset.pt exists but val_dataset_info.csv does not."
+            logger.info(
+                "Loading provided validation dataset from %s"
+                % dataset_config.use_these_datasets.path
+            )
             val_dataset_exists = True
-            val_dataset = torch.load(os.path.join(dataset_config.use_these_datasets.path, 'val_dataset.pt'))
-            dataset_info_val = pd.read_csv(os.path.join(dataset_config.use_these_datasets.path, 'val_dataset_info.csv'), index_col=0)
+            val_dataset = torch.load(
+                os.path.join(dataset_config.use_these_datasets.path, "val_dataset.pt")
+            )
+            dataset_info_val = pd.read_csv(
+                os.path.join(
+                    dataset_config.use_these_datasets.path, "val_dataset_info.csv"
+                ),
+                index_col=0,
+            )
 
         # If both datasets exist, save and return them. Else, create them using the experimental datasets
         if train_dataset_exists and val_dataset_exists:
             # There's no need to save the datasets again, just their information (for visualization submodule use)
-            dataset_info_train.to_csv(os.path.join(log_dir, 'dataset', f"train_dataset_info.csv"), index=True, header=True)
-            dataset_info_val.to_csv(os.path.join(log_dir, 'dataset', f"val_dataset_info.csv"), index=True, header=True)
+            dataset_info_train.to_csv(
+                os.path.join(log_dir, "dataset", f"train_dataset_info.csv"),
+                index=True,
+                header=True,
+            )
+            dataset_info_val.to_csv(
+                os.path.join(log_dir, "dataset", f"val_dataset_info.csv"),
+                index=True,
+                header=True,
+            )
             return train_dataset, val_dataset
-        
+
         else:
             # Logging info
             if not train_dataset_exists:
-                logger.info("No train dataset found in %s, creating a new one" % dataset_config.use_these_datasets.path)
+                logger.info(
+                    "No train dataset found in %s, creating a new one"
+                    % dataset_config.use_these_datasets.path
+                )
             if not val_dataset_exists:
-                logger.info("No validation dataset found in %s, creating a new one" % dataset_config.use_these_datasets.path)
+                logger.info(
+                    "No validation dataset found in %s, creating a new one"
+                    % dataset_config.use_these_datasets.path
+                )
 
             # Check if combined dataset was provided. If so, load it, otherwise create it from the experimental datasets
-            if 'combined_dataset.pickle' in ds_files:
-                logger.info("Using provided combined dataset from %s to create the missing datasets" % dataset_config.use_these_datasets.path)
-                with open(os.path.join(dataset_config.use_these_datasets.path, 'combined_dataset.pickle'), 'rb') as f:
+            if "combined_dataset.pickle" in ds_files:
+                logger.info(
+                    "Using provided combined dataset from %s to create the missing datasets"
+                    % dataset_config.use_these_datasets.path
+                )
+                with open(
+                    os.path.join(
+                        dataset_config.use_these_datasets.path,
+                        "combined_dataset.pickle",
+                    ),
+                    "rb",
+                ) as f:
                     combined_dataset = pickle.load(f)
-                combined_dataset, dataset_info = filter_loaded_combined_dataset(combined_dataset, dataset_config.use_these_datasets.num_worms, num_named_neurons)
-                
+                combined_dataset, dataset_info = filter_loaded_combined_dataset(
+                    combined_dataset,
+                    dataset_config.use_these_datasets.num_worms,
+                    num_named_neurons,
+                )
+
             else:
                 logger.info("Creating combined dataset from experimental datasets")
-                combined_dataset, dataset_info = create_combined_dataset(experimental_datasets,
-                                                                         num_named_neurons
-                                                                         )
-                
-            created_train_dataset, created_val_dataset, dataset_info2 = split_combined_dataset(
-                    combined_dataset, k_splits, num_train_samples,
-                    num_val_samples, seq_len, tau, reverse,
-                    use_residual, smooth_data
+                combined_dataset, dataset_info = create_combined_dataset(
+                    experimental_datasets, num_named_neurons
                 )
-            
+
+            (
+                created_train_dataset,
+                created_val_dataset,
+                dataset_info2,
+            ) = split_combined_dataset(
+                combined_dataset,
+                k_splits,
+                num_train_samples,
+                num_val_samples,
+                seq_len,
+                tau,
+                reverse,
+                use_residual,
+                smooth_data,
+            )
+
             # Merge dataset_info and time_step_info
-            created_dataset_info_train = dataset_info.merge(dataset_info2[['combined_dataset_index', 'train_time_steps', 'tau', 'num_train_samples', 'train_seq_len', 'smooth_data', 'use_residual', 'k_splits']], on='combined_dataset_index', how='outer')
-            created_dataset_info_val = dataset_info.merge(dataset_info2[['combined_dataset_index', 'val_time_steps', 'num_val_samples', 'val_seq_len', 'smooth_data', 'use_residual', 'k_splits']], on='combined_dataset_index', how='outer')
+            created_dataset_info_train = dataset_info.merge(
+                dataset_info2[
+                    [
+                        "combined_dataset_index",
+                        "train_time_steps",
+                        "tau",
+                        "num_train_samples",
+                        "train_seq_len",
+                        "smooth_data",
+                        "use_residual",
+                        "k_splits",
+                    ]
+                ],
+                on="combined_dataset_index",
+                how="outer",
+            )
+            created_dataset_info_val = dataset_info.merge(
+                dataset_info2[
+                    [
+                        "combined_dataset_index",
+                        "val_time_steps",
+                        "num_val_samples",
+                        "val_seq_len",
+                        "smooth_data",
+                        "use_residual",
+                        "k_splits",
+                    ]
+                ],
+                on="combined_dataset_index",
+                how="outer",
+            )
 
             # Replace missing dataset
             if not train_dataset_exists:
@@ -142,46 +229,111 @@ def get_datasets(dataset_config: DictConfig, save=True):
                 dataset_info_val = created_dataset_info_val
 
             # Save the datasets and their information (just train and validation, no need to save combined)
-            dataset_info_train.to_csv(os.path.join(log_dir, 'dataset', f"train_dataset_info.csv"), index=True, header=True)
-            dataset_info_val.to_csv(os.path.join(log_dir, 'dataset', f"val_dataset_info.csv"), index=True, header=True)
-            
+            dataset_info_train.to_csv(
+                os.path.join(log_dir, "dataset", f"train_dataset_info.csv"),
+                index=True,
+                header=True,
+            )
+            dataset_info_val.to_csv(
+                os.path.join(log_dir, "dataset", f"val_dataset_info.csv"),
+                index=True,
+                header=True,
+            )
+
             if save:
-                torch.save(train_dataset, os.path.join(log_dir, 'dataset', f"train_dataset.pt"))
-                torch.save(val_dataset, os.path.join(log_dir, 'dataset', f"val_dataset.pt"))
+                torch.save(
+                    train_dataset, os.path.join(log_dir, "dataset", f"train_dataset.pt")
+                )
+                torch.save(
+                    val_dataset, os.path.join(log_dir, "dataset", f"val_dataset.pt")
+                )
 
             return train_dataset, val_dataset
-            
+
     else:
         # Create the datasets using the experimental datasets
         logger.info("Creating validation and train datasets from experimental datasets")
-        combined_dataset, dataset_info = create_combined_dataset(experimental_datasets,
-                                                                 num_named_neurons
-                                                                 )
-        train_dataset, val_dataset, dataset_info2 = split_combined_dataset(combined_dataset, k_splits, num_train_samples,
-                                                                            num_val_samples, seq_len, tau, reverse,
-                                                                            use_residual, smooth_data
-                                                                            )
-        
+        combined_dataset, dataset_info = create_combined_dataset(
+            experimental_datasets, num_named_neurons
+        )
+        train_dataset, val_dataset, dataset_info2 = split_combined_dataset(
+            combined_dataset,
+            k_splits,
+            num_train_samples,
+            num_val_samples,
+            seq_len,
+            tau,
+            reverse,
+            use_residual,
+            smooth_data,
+        )
+
         # Merge dataset_info and dataset_info2
-        dataset_info_train = dataset_info.merge(dataset_info2[['combined_dataset_index', 'train_time_steps', 'tau', 'num_train_samples', 'train_seq_len', 'smooth_data', 'use_residual', 'k_splits']], on='combined_dataset_index', how='outer')
-        dataset_info_val = dataset_info.merge(dataset_info2[['combined_dataset_index', 'val_time_steps', 'num_val_samples', 'val_seq_len', 'smooth_data', 'use_residual', 'k_splits']], on='combined_dataset_index', how='outer')
+        dataset_info_train = dataset_info.merge(
+            dataset_info2[
+                [
+                    "combined_dataset_index",
+                    "train_time_steps",
+                    "tau",
+                    "num_train_samples",
+                    "train_seq_len",
+                    "smooth_data",
+                    "use_residual",
+                    "k_splits",
+                ]
+            ],
+            on="combined_dataset_index",
+            how="outer",
+        )
+        dataset_info_val = dataset_info.merge(
+            dataset_info2[
+                [
+                    "combined_dataset_index",
+                    "val_time_steps",
+                    "num_val_samples",
+                    "val_seq_len",
+                    "smooth_data",
+                    "use_residual",
+                    "k_splits",
+                ]
+            ],
+            on="combined_dataset_index",
+            how="outer",
+        )
 
         # Delete the combined dataset column after merging (not necessary anymore)
-        dataset_info_train.drop(columns=['combined_dataset_index'], inplace=True)
-        dataset_info_val.drop(columns=['combined_dataset_index'], inplace=True)
+        dataset_info_train.drop(columns=["combined_dataset_index"], inplace=True)
+        dataset_info_val.drop(columns=["combined_dataset_index"], inplace=True)
 
         # Save the datasets and information about them
         # => Train and val. datasets contain the same neurons, but with different time steps and other information
-        dataset_info.to_csv(os.path.join(log_dir, 'dataset', f"combined_dataset_info.csv"), index=True, header=True)
-        dataset_info_train.to_csv(os.path.join(log_dir, 'dataset', f"train_dataset_info.csv"), index=True, header=True)
-        dataset_info_val.to_csv(os.path.join(log_dir, 'dataset', f"val_dataset_info.csv"), index=True, header=True)
+        dataset_info.to_csv(
+            os.path.join(log_dir, "dataset", f"combined_dataset_info.csv"),
+            index=True,
+            header=True,
+        )
+        dataset_info_train.to_csv(
+            os.path.join(log_dir, "dataset", f"train_dataset_info.csv"),
+            index=True,
+            header=True,
+        )
+        dataset_info_val.to_csv(
+            os.path.join(log_dir, "dataset", f"val_dataset_info.csv"),
+            index=True,
+            header=True,
+        )
         if save:
-            torch.save(train_dataset, os.path.join(log_dir, 'dataset', f"train_dataset.pt"))
-            torch.save(val_dataset, os.path.join(log_dir, 'dataset', f"val_dataset.pt"))
-            with open(os.path.join(log_dir, 'dataset', f"combined_dataset.pickle"), 'wb') as f:
+            torch.save(
+                train_dataset, os.path.join(log_dir, "dataset", f"train_dataset.pt")
+            )
+            torch.save(val_dataset, os.path.join(log_dir, "dataset", f"val_dataset.pt"))
+            with open(
+                os.path.join(log_dir, "dataset", f"combined_dataset.pickle"), "wb"
+            ) as f:
                 pickle.dump(combined_dataset, f)
 
         return train_dataset, val_dataset
+
 
 if __name__ == "__main__":
     config = OmegaConf.load("configs/submodule/dataset.yaml")

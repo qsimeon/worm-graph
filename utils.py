@@ -57,8 +57,9 @@ VALID_DATASETS = {
     "Flavell2023",  # TODO: something wrong with worm0.
 }
 
-SYNTHETIC_DATASETS = {"Synthetic0000",
-                      "Custom", # Dataset created when 'dataset.save' is True
+SYNTHETIC_DATASETS = {
+    "Synthetic0000",
+    "Custom",  # Dataset created when 'dataset.save' is True
 }
 
 # List of all 302 hermaphrodite neurons
@@ -71,6 +72,7 @@ NEURONS_302 = sorted(
     ).neuron
 )
 
+
 def init_random_seeds(seed=0):
     """
     Initialize random seeds for numpy, torch, and random.
@@ -80,17 +82,19 @@ def init_random_seeds(seed=0):
     random.seed(seed)
     return None
 
+
 def log_params_from_omegaconf_dict(params):
     for param_name, element in params.items():
         _explore_recursive(param_name, element)
+
 
 def _explore_recursive(parent_name, element):
     if isinstance(element, DictConfig):
         for k, v in element.items():
             if isinstance(v, DictConfig) or isinstance(v, ListConfig):
-                _explore_recursive(f'{parent_name}.{k}', v)
+                _explore_recursive(f"{parent_name}.{k}", v)
             else:
-                mlflow.log_param(f'{parent_name}.{k}', v)
+                mlflow.log_param(f"{parent_name}.{k}", v)
     elif isinstance(element, ListConfig):
         for i, v in enumerate(element):
-            mlflow.log_param(f'{parent_name}.{i}', v)
+            mlflow.log_param(f"{parent_name}.{i}", v)

@@ -3,9 +3,59 @@ from models._pkg import *
 # Init logger
 logger = logging.getLogger(__name__)
 
+def print_parameters(model, verbose=False):
+    table = PrettyTable(["Module", "Parameters", "Trainable"])
+
+    total_params = 0
+    total_trainable = 0
+
+    for name, parameter in model.named_parameters():
+        num_params = torch.prod(torch.tensor(parameter.size())).item()
+        total_params += num_params
+
+        trainable = parameter.requires_grad
+        if trainable:
+            total_trainable += num_params
+
+        table.add_row([name, num_params, trainable])
+
+    if verbose:
+        print(table)
+        print("Total Parameters:", total_params)
+        print("Total Trainable Parameters:", total_trainable)
+    return total_params, total_trainable
 
 # # # "Cores" or Inner Models for Different Model Architectures # # #
 # # # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
+
+class PositionalEncoding(torch.nn.Module):
+    """
+    Sinuosoidal positional encoding from Attention is All You Need paper.
+    """
+
+    def __init__(
+        self,
+        n_embd: int,
+        max_len: int = 1000,
+        dropout: float = 0.1,
+    ):
+        super().__init__()
+        self.max_len = max_len
+        self.dropout = torch.nn.Dropout(p=dropout)
+        position = torch.arange(max_len).unsqueeze(1)
+        div_term = torch.exp(torch.arange(0, n_embd, 2) * (-math.log(10000.0) / n_embd))
+        pe = torch.zeros(1, max_len, n_embd) # we use batch_first=True
+        pe[0, :, 0::2] = torch.sin(position * div_term) 
+        pe[0, :, 1::2] = torch.cos(position * div_term)
+        self.register_buffer("pe", pe)
+
+    def forward(self, x):
+        """
+        Args:
+            x: Tensor, shape (batch_size, seq_len, embedding_dim)
+        """
+        x = x + self.pe[:, : x.size(1), :]  # add positional encoding to input
+        return self.dropout(x)
 
 class FeedForward(torch.nn.Module):
     """
@@ -29,6 +79,7 @@ class FeedForward(torch.nn.Module):
         x = x + self.ffwd(x)
         return x
 
+
 class CTRNN(torch.nn.Module):
     """Continuous-time RNN.
 
@@ -50,7 +101,9 @@ class CTRNN(torch.nn.Module):
         super().__init__()
         self.input_size = input_size
         self.hidden_size = hidden_size
-        self.register_parameter(name="alpha", param=torch.nn.Parameter(torch.ones(1, hidden_size)))
+        self.register_parameter(
+            name="alpha", param=torch.nn.Parameter(torch.ones(1, hidden_size))
+        )
         self.input2h = torch.nn.Linear(input_size, hidden_size)
         self.h2h = torch.nn.Linear(hidden_size, hidden_size)
 
@@ -77,7 +130,6 @@ class CTRNN(torch.nn.Module):
         h_new = hidden * (1 - self.alpha.sigmoid()) + h_new * self.alpha.sigmoid()
         return h_new
 
-
     def forward(self, input, hidden=None):
         """
         Propagate input through the network.
@@ -99,7 +151,8 @@ class CTRNN(torch.nn.Module):
         output = torch.stack(output, dim=1)  # (batch, seq_len, hidden_size)
         return output, hidden
 
-#region Graph Convolutional Network (GCN): Core / Inner Model for NetworkGCN (work-in-progress)
+
+# region Graph Convolutional Network (GCN): Core / Inner Model for NetworkGCN (work-in-progress)
 # # TODO: Work on this model more.
 # class GCNModel(torch.nn.Module):
 #     """
@@ -220,13 +273,14 @@ class CTRNN(torch.nn.Module):
 #         x = x.reshape(batch_size, seq_len, self.hidden_size)
 
 #         return x  # (batch_size, seq_len, hidden_size)
-#endregion
+# endregion
 
 # # # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
 
 
 ### A commmon interface that encapsulates the "Core" of Inner Model of different architectures ###
 # # # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
+
 
 class InnerHiddenModel(torch.nn.Module):
     """
@@ -248,13 +302,15 @@ class InnerHiddenModel(torch.nn.Module):
     def set_hidden(self, hidden_state):
         self.hidden = hidden_state
         return None
-    
+
+
 # # # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
 
 
 # # # Model super class: Common interface all model architectures # # # #
-# Provides the input-output backbone and allows changeable mode "cores" # 
+# Provides the input-output backbone and allows changeable mode "cores" #
 # # # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
+
 
 class Model(torch.nn.Module):
     """
@@ -312,7 +368,7 @@ class Model(torch.nn.Module):
         # Initialize hidden state
         self._init_hidden()
         # Initialize the tau (1 := next-timestep prediction)
-        self.tau = 1  
+        self.tau = 1
         # Identity layer
         self.identity = torch.nn.Identity()
         # Input to hidden transformation - placeholder
@@ -432,8 +488,8 @@ class Model(torch.nn.Module):
             """
             # calculate next time step prediction loss
             original_loss = self.loss(reduction="none", **kwargs)(
-                prediction,  
-                target,  
+                prediction,
+                target,
             )
             # FFT regularization term
             fft_loss = 0.0
@@ -488,7 +544,6 @@ class Model(torch.nn.Module):
         """
 
         self.eval()  # set model to evaluation mode
-        
 
         if autoregressive:
             # Generate values autoregressively
@@ -496,7 +551,6 @@ class Model(torch.nn.Module):
 
         generated_values = []
         with torch.no_grad():
-
             for t in range(nb_ts_to_generate):
                 # Get the last context_window values of the input tensor
                 x = input[
@@ -533,8 +587,9 @@ class Model(torch.nn.Module):
 
 
 # # # Models subclasses: Indidividually differentiated model architectures # # # #
-# Use the same model backbone provided by Model but with a distinct core or inner hidden model # 
+# Use the same model backbone provided by Model but with a distinct core or inner hidden model #
 # # # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
+
 
 class LinearNN(Model):
     """
@@ -558,14 +613,13 @@ class LinearNN(Model):
             l1_reg_param,
         )
         # Special parameters for this model
-        self.dropout = 0.0  # dropout rate
+        self.dropout = 0.1  # dropout rate
 
         # Embedding
         self.embedding = torch.nn.Linear(
             self.input_size,
             self.hidden_size,
         )  # combine input and mask
-
 
         # Input to hidden transformation
         self.input_hidden = torch.nn.Sequential(
@@ -617,8 +671,16 @@ class NeuralTransformer(Model):
         )
 
         # Special transformer parameters
-        self.n_head = 1 # number of attention heads; NOTE: this must be divisor of `hidden_size`
-        self.dropout = 0.0  # dropout ratedropout=self.dropout,
+        self.n_head = (
+            1  # number of attention heads; NOTE: this must be divisor of `hidden_size`
+        )
+        self.dropout = 0.1  # dropout ratedropout=self.dropout,
+        
+        # Positional encoding
+        self.positional_encoding = PositionalEncoding(
+            self.input_size,
+            dropout=self.dropout,
+        )
 
         # Embedding
         self.embedding = torch.nn.Linear(
@@ -628,18 +690,23 @@ class NeuralTransformer(Model):
 
         # Input to hidden transformation
         self.input_hidden = torch.nn.Sequential(
-            # NOTE: Position encoding before embedding improved performance.
-            self.position_encoding,
+            # NOTE: Positional encoding before embedding improved performance.
+            self.positional_encoding,
             self.embedding,
             torch.nn.ReLU(),
             # NOTE: Do NOT use LayerNorm here!
         )
 
         # Hidden to hidden transformation: Transformer Encoder layer
-        self.hidden_hidden = torch.nn.TransformerEncoderLayer(d_model=self.hidden_size, nhead=self.n_head, 
-                                                              dim_feedforward=self.hidden_size, dropout=self.dropout,
-                                                              activation="relu", batch_first=True, 
-                                                              norm_first=True)
+        self.hidden_hidden = torch.nn.TransformerEncoderLayer(
+            d_model=self.hidden_size,
+            nhead=self.n_head,
+            dim_feedforward=self.hidden_size,
+            dropout=self.dropout,
+            activation="relu",
+            batch_first=True,
+            norm_first=True,
+        )
 
         # Instantiate internal hidden model
         self.inner_hidden_model = InnerHiddenModel(self.hidden_hidden, self.hidden)
@@ -836,7 +903,7 @@ class NetworkLSTM(Model):
                 torch.nn.init.zeros_(param.data)
 
 
-#region NetworkGCN: attempt Graph Neural Neural Network Architecture (work-in-progress)
+# region NetworkGCN: attempt Graph Neural Neural Network Architecture (work-in-progress)
 # # TODO: Work on this model more.
 # class NetworkGCN(Model):
 #     """
@@ -876,6 +943,6 @@ class NetworkLSTM(Model):
 #         """Initialize the hidden state of the inner model."""
 #         self.hidden = None
 #         return None
-#endregion
+# endregion
 
 # # # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#

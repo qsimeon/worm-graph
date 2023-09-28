@@ -1,5 +1,5 @@
 model:
-  type: LinearNN # options: LinearNN, NetworkLSTM, NetworkRNN, NeuralCFC, NeuralTransformer, # NetworkGCN not implemented yet
+  type: NeuralTransformer # options: LinearNN, NetworkLSTM, NetworkRNN, NeuralCFC, NeuralTransformer, # NetworkGCN not implemented yet
   input_size: 302 # keep fixed at input_size = 302; it is the number of neurons in the adult C. elegans hermaphrodite 
   hidden_size: 256 # options: int > 0
   loss: MSE # options: MSE, Huber, L1, Poisson
