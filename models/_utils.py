@@ -8,7 +8,7 @@ logger = logging.getLogger(__name__)
 # # # "Cores" or Inner Models for Different Model Architectures # # #
 # # # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
 
-class FeedFoward(torch.nn.Module):
+class FeedForward(torch.nn.Module):
     """
     A simple linear layer followed by a non-linearity and dropout.
     n_embd: embedding dimension or width of the single hidden layer.
@@ -22,13 +22,12 @@ class FeedFoward(torch.nn.Module):
             torch.nn.ReLU(),
             torch.nn.Dropout(dropout),
         )
-        self.ln = torch.nn.LayerNorm(n_embd)
 
     def forward(self, x):
         """
-        Uses residual ("skip") connection and layer norm.
+        Uses residual ("skip") connection.
         """
-        x = x + self.ffwd(self.ln(x))
+        x = x + self.ffwd(x)
         return x
 
 class CTRNN(torch.nn.Module):
@@ -568,11 +567,6 @@ class LinearNN(Model):
             self.hidden_size,
         )  # combine input and mask
 
-        # Feedforward blocks
-        self.blocks = FeedFoward(
-            n_embd=self.hidden_size,
-            dropout=self.dropout,
-        )
 
         # Input to hidden transformation
         self.input_hidden = torch.nn.Sequential(
@@ -582,10 +576,10 @@ class LinearNN(Model):
             torch.nn.LayerNorm(self.hidden_size),
         )
 
-        # Hidden to hidden transformation: Linear layer
-        self.hidden_hidden = torch.nn.Sequential(
-            self.blocks,
-            torch.nn.ReLU(),
+        # Hidden to hidden transformation: FeedForward layer
+        self.hidden_hidden = FeedForward(
+            n_embd=self.hidden_size,
+            dropout=self.dropout,
         )
         # Instantiate internal hidden model
         self.inner_hidden_model = InnerHiddenModel(self.hidden_hidden, self.hidden)
@@ -642,7 +636,7 @@ class NeuralTransformer(Model):
             # NOTE: Do NOT use LayerNorm here!
         )
 
-        # Hidden to hidden transformation: Transformer layer
+        # Hidden to hidden transformation: Transformer Encoder layer
         self.hidden_hidden = torch.nn.TransformerEncoderLayer(d_model=self.hidden_size, nhead=self.n_head, 
                                                               dim_feedforward=self.hidden_size, dropout=self.dropout,
                                                               activation="relu", batch_first=True, 
