@@ -44,7 +44,15 @@ ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
 LOGS_DIR = os.path.join(ROOT_DIR, "logs")
 
 # get GPU if available
-DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+if torch.backends.mps.is_available():
+    print ("MPS device found.")
+    DEVICE = torch.device("mps")
+elif torch.cuda.is_available():
+    print ("CUDA device found.")
+    DEVICE = torch.device("cuda")
+else:
+    print ("Defaulting to CPU.")
+    DEVICE = torch.device("cpu")
 
 # set real C. elegans datasets we have processed
 VALID_DATASETS = {

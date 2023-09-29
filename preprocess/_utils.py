@@ -766,7 +766,11 @@ def pickle_neural_data(
     """
     zip_path = os.path.join(ROOT_DIR, zipfile)
     source_path = os.path.join(ROOT_DIR, zipfile.strip(".zip"))
+    
+    # Make the neural data directory if it doesn't exist
     processed_path = os.path.join(ROOT_DIR, "data/processed/neural")
+    if not os.path.exists(processed_path):
+        os.makedirs(processed_path, exist_ok=True)
 
     # If .zip not found in the root directory, download the curated
     # open-source worm datasets from the host server
@@ -821,7 +825,7 @@ def pickle_neural_data(
     # shutil.rmtree(source_path)
 
     # Create a file to indicate that the preprocessing was successful
-    # open(os.path.join(processed_path, ".processed"), "a").close()
+    open(os.path.join(processed_path, ".processed"), "a").close()
 
     return None
 
