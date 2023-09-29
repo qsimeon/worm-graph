@@ -125,19 +125,19 @@ def dataset_information(path_dict, legend_code):
     ds_color_code = legend_code['ds_color_code']
     color_legend = legend_code['color_legend']
 
-    fig = plt.figure(figsize=(12, 10))
+    fig = plt.figure(figsize=(20, 7))
 
     # Setting up the grid
-    gs = gridspec.GridSpec(3, 3, height_ratios=[1, 1, 1], width_ratios=[1, 1, 0.45])
+    gs = gridspec.GridSpec(2, 4, height_ratios=[1, 1], width_ratios=[1, 1, 1, 0.25])
 
     # Assigning the subplots to positions in the grid
     ax1 = plt.subplot(gs[0, 0])  # Top left, 'Number of worms analyzed' pie chart
-    ax2 = plt.subplot(gs[0, 1:3])  # Top right, 'Number of neurons per worm' bar plot
+    ax2 = plt.subplot(gs[0, 1])  # Top right, 'Number of neurons per worm' bar plot
     ax3 = plt.subplot(gs[1, 0])  # Bottom left, 'Total duration of recorded neural activity' pie chart
     ax4 = plt.subplot(gs[1, 1])  # Bottom middle, 'Duration of recorded neural activity per worm' bar plot
-    ax5 = plt.subplot(gs[1, 2])  # Bottom right, legend
-    ax6 = plt.subplot(gs[2, 0])  # Bottom, 'Number of worms analyzed' pie chart
-    ax7 = plt.subplot(gs[2, 1:3])  # Top right, 'Number of neurons per worm' bar plot
+    ax5 = plt.subplot(gs[0, 3])  # Bottom right, legend
+    ax6 = plt.subplot(gs[0, 2])
+    ax7 = plt.subplot(gs[1, 2:4])
 
     # Plotting the first pie chart
     ax1.pie(worms_info['num_worms'], labels=[f"{percentage:.1%}" for percentage in worms_info['percentage']], labeldistance=1.075, startangle=45, colors=[ds_color_code[dataset[:-4]] for dataset in worms_info['dataset']])
@@ -300,9 +300,11 @@ def hidden_scaling_plot(data_scaling_df, legend_code, fit_deg=2):
     # Group by model_label and expID, and compute the mean and std
     data_scaling_results = data_scaling_df.groupby(['model', 'expID']).agg(['mean', 'std'])
 
-    fig, ax = plt.subplots(1, 1, figsize=(10, 5))
-    ax.set_xscale('log')
-    ax.set_yscale('log')
+    fig, ax = plt.subplots(1, 2, figsize=(20, 5))
+    ax[0].set_xscale('log')
+    ax[0].set_yscale('log')
+    ax[1].set_xscale('log')
+    ax[1].set_yscale('log')
 
     model_names = data_scaling_results.index.get_level_values(0).unique()
 
@@ -317,12 +319,12 @@ def hidden_scaling_plot(data_scaling_df, legend_code, fit_deg=2):
         baseline_mean = data_scaling_results.loc[model]['val_baseline']['mean'].values
 
         model_label = model_labels[model]
-        ax.errorbar(hdv_mean, val_loss_mean, xerr=hdv_std, yerr=val_loss_std, fmt=model_marker_code[model_label],
+        ax[1].errorbar(hdv_mean, val_loss_mean, xerr=hdv_std, yerr=val_loss_std, fmt=model_marker_code[model_label],
                     color=model_color_code[model_label], ecolor='black', capsize=2, capthick=1, markersize=5)
 
 
         if model_idx == 2:
-            ax.plot(np.sort(hdv_mean), np.sort(baseline_mean), label='Baseline', color='black', alpha=0.5, linestyle='--')
+            ax[1].plot(np.sort(hdv_mean), np.sort(baseline_mean), label='Baseline', color='black', alpha=0.5, linestyle='--')
 
         # Regression line
         p = np.polyfit(np.log(hdv_mean), np.log(val_loss_mean), fit_deg)
@@ -337,21 +339,61 @@ def hidden_scaling_plot(data_scaling_df, legend_code, fit_deg=2):
         fit_label += '\n'+r'$R^2=$'+'{}'.format(round(r2, 2))
         # Plot with more points
         x = np.linspace(np.min(hdv_mean), np.max(hdv_mean), 10000)
-        ax.plot(x, np.exp(np.polyval(p, np.log(x))), color=model_color_code[model_label], label=fit_label)
+        ax[1].plot(x, np.exp(np.polyval(p, np.log(x))), color=model_color_code[model_label], label=fit_label)
 
     # Handles and labels for first legend
-    handles, labels = ax.get_legend_handles_labels()
+    handles, labels = ax[1].get_legend_handles_labels()
 
     # Create the first legend
-    legend1 = ax.legend(handles=marker_legend, loc='center right', bbox_to_anchor=(0.995, 0.15), title='Model')
-    ax.get_legend().get_title().set_fontstyle('italic')
-    ax.get_legend().get_title().set_fontsize('large')
-    ax.add_artist(legend1)
+    legend1 = ax[1].legend(handles=marker_legend, loc='center right', bbox_to_anchor=(0.995, 0.15), title='Model')
+    ax[1].get_legend().get_title().set_fontstyle('italic')
+    ax[1].get_legend().get_title().set_fontsize('large')
+    ax[1].add_artist(legend1)
 
-    ax.legend(handles, labels, loc='center left', bbox_to_anchor=(0.01, 0.75), fontsize=10)
+    ax[1].legend(handles, labels, loc='center left', bbox_to_anchor=(0.001, 0.76), fontsize=10)
 
-    ax.set_xlabel('Hidden dimension / Number of trainable parameters', fontsize=14, fontweight='bold')
-    ax.set_ylabel('MSE Loss', fontsize=14, fontweight='bold')
+    ax[1].set_xlabel('Hidden dimension ÷ Number of trainable parameters', fontsize=14, fontweight='bold')
+    ax[1].set_ylabel('MSE Loss', fontsize=14, fontweight='bold')
+
+    # Plot
+    for model_idx, model in enumerate(model_names):
+        hdv_mean = data_scaling_results.loc[model]['model_hidden_size']['mean'].values
+        hdv_std = data_scaling_results.loc[model]['model_hidden_size']['std'].values
+
+        val_loss_mean = data_scaling_results.loc[model]['min_val_loss']['mean'].values
+        val_loss_std = data_scaling_results.loc[model]['min_val_loss']['std'].values
+
+        baseline_mean = data_scaling_results.loc[model]['val_baseline']['mean'].values
+
+        model_label = model_labels[model]
+        ax[0].errorbar(hdv_mean, val_loss_mean, xerr=hdv_std, yerr=val_loss_std, fmt=model_marker_code[model_label],
+                    color=model_color_code[model_label], ecolor='black', capsize=2, capthick=1, markersize=5)
+
+
+        if model_idx == 2:
+            ax[0].plot(np.sort(hdv_mean), np.sort(baseline_mean), label='Baseline', color='black', alpha=0.5, linestyle='--')
+
+        # Regression line
+        p = np.polyfit(np.log(hdv_mean), np.log(val_loss_mean), fit_deg)
+        # Generate fit label automatically
+        fit_label = 'y = '
+        for i in range(fit_deg):
+            # Use latex notation
+            fit_label += r'${:.2f}x^{}$ + '.format(p[i], fit_deg-i)
+        fit_label += r'${:.2f}$'.format(p[-1])
+        # Compute fit r^2
+        r2 = r2_score(np.log(val_loss_mean), np.polyval(p, np.log(hdv_mean)))
+        fit_label += '\n'+r'$R^2=$'+'{}'.format(round(r2, 2))
+        # Plot with more points
+        x = np.linspace(np.min(hdv_mean), np.max(hdv_mean), 10000)
+        ax[0].plot(x, np.exp(np.polyval(p, np.log(x))), color=model_color_code[model_label], label=fit_label)
+
+    ax[0].legend(handles, labels, loc='center left', bbox_to_anchor=(0.001, 0.24), fontsize=10)
+
+    ax[0].set_xlabel('Hidden dimension', fontsize=14, fontweight='bold')
+    ax[0].set_ylabel('MSE Loss', fontsize=14, fontweight='bold')
+    ax[0].set_title('(A)', fontsize=16)
+    ax[1].set_title('(B)', fontsize=16)
 
     plt.show()
 
@@ -660,6 +702,15 @@ def prediction_gap(exp_nts_log_dir, legend_code, neuronID, datasetID, wormID):
         'num_time_steps': [],
     }
 
+    fig = plt.figure(figsize=(12, 8))  # Create a figure
+
+    # Create 2x2 grid
+    gs = gridspec.GridSpec(2, 2, height_ratios=[0.8, 1])
+
+    ax0 = plt.subplot(gs[0, 0])  # First subplot in the first row
+    ax1 = plt.subplot(gs[0, 1])  # Second subplot in the first row
+    ax2 = plt.subplot(gs[1, 0:2])  # Spanned subplot in the second row
+
     for exp_dir in np.sort(os.listdir(exp_nts_log_dir)):
         
         # Skip if not starts with exp
@@ -703,7 +754,7 @@ def prediction_gap(exp_nts_log_dir, legend_code, neuronID, datasetID, wormID):
     prediction_gap = pd.DataFrame(prediction_gap)
 
     # Plot gap mean with bar errors vs. num_time_steps for all datasets
-    fig, ax = plt.subplots(1,2, figsize=(10, 5))
+    #fig, ax = plt.subplots(1,2, figsize=(10, 5))
 
     dataset_names = prediction_gap['dataset'].unique()
 
@@ -716,7 +767,7 @@ def prediction_gap(exp_nts_log_dir, legend_code, neuronID, datasetID, wormID):
     for ds_name in np.sort(dataset_names):
         df_subset = prediction_gap[prediction_gap['dataset'] == ds_name]
         # Plot mean gap with var as yerr, use the color code as in the previous plot
-        ax[0].errorbar(df_subset['num_time_steps'], df_subset['gap_mean'], yerr=df_subset['gap_var'], color=ds_color_code[ds_name[:-4]], marker=model_marker_code['LSTM'], linestyle='')
+        ax0.errorbar(df_subset['num_time_steps'], df_subset['gap_mean'], yerr=df_subset['gap_var'], color=ds_color_code[ds_name[:-4]], marker=model_marker_code['LSTM'], linestyle='')
 
         # Try to fit linear regression (log-log)
         try:
@@ -724,7 +775,7 @@ def prediction_gap(exp_nts_log_dir, legend_code, neuronID, datasetID, wormID):
             y = np.log(df_subset['gap_mean'].values)
             slope, intercept, r_value, p_value, std_err = stats.linregress(x, y)
             fit_label = 'y = {:.2e}x + {:.2e} ('.format(slope, intercept)+r'$R^2=$'+'{})'.format(round(r_value**2, 3))
-            ax[0].plot(df_subset['num_time_steps'].values, np.exp(intercept + slope * x), color=ds_color_code[ds_name[:-4]], linestyle='-')
+            ax0.plot(df_subset['num_time_steps'].values, np.exp(intercept + slope * x), color=ds_color_code[ds_name[:-4]], linestyle='-')
             pred_slopes_info['dataset'].append(ds_name)
             pred_slopes_info['slope'].append(slope)
             pred_slopes_info['model'].append('LSTM')
@@ -732,39 +783,39 @@ def prediction_gap(exp_nts_log_dir, legend_code, neuronID, datasetID, wormID):
             pass
 
     # Set axis labels and title
-    ax[0].set_xlabel('Time steps per neuron', fontdict={'fontsize': 12, 'fontweight':'bold'})
-    ax[0].set_ylabel("Absolute mean gap", fontdict={'fontsize': 12, 'fontweight':'bold'})
-    ax[0].set_title('LSTM model: evolution of prediction gap\nwith duration of training data', fontsize=16)
+    ax0.set_xlabel('Time steps per neuron', fontdict={'fontsize': 12, 'fontweight':'bold'})
+    ax0.set_ylabel("Absolute mean gap", fontdict={'fontsize': 12, 'fontweight':'bold'})
+    ax0.set_title('(A) LSTM model: evolution of prediction gap\nwith duration of training data', fontsize=16)
 
     # Log-log scale
-    ax[0].set_xscale('log')
-    ax[0].set_yscale('log')
+    ax0.set_xscale('log')
+    ax0.set_yscale('log')
 
     # boxplot slopes
-    sns.boxplot(data=pred_slopes_info, x='model', y='slope', ax=ax[1], color='lightgrey', showfliers=False)
-    sns.stripplot(data=pred_slopes_info, x='model', y='slope', hue='dataset', palette=original_ds_color_code, size=7, ax=ax[1], dodge=False,
+    sns.boxplot(data=pred_slopes_info, x='model', y='slope', ax=ax1, color='lightgrey', showfliers=False)
+    sns.stripplot(data=pred_slopes_info, x='model', y='slope', hue='dataset', palette=original_ds_color_code, size=7, ax=ax1, dodge=False,
                 marker=model_marker_code['LSTM'], jitter=False)
-    ax[1].set_title('LSTM model: variation in prediction\nscaling exponents', fontsize=16)
-    ax[1].set_ylabel(r'Scaling exponent $(e^{slope})$', fontsize=12, fontweight='bold')
-    ax[1].set_xlabel('Model Architecture', fontsize=12, fontweight='bold')
-    ax[1].yaxis.set_label_position("right")
-    ax[1].yaxis.tick_right()
+    ax1.set_title('(B) LSTM model: variation in prediction\nscaling exponents', fontsize=16)
+    ax1.set_ylabel(r'Scaling exponent $(e^{slope})$', fontsize=12, fontweight='bold')
+    ax1.set_xlabel('Model Architecture', fontsize=12, fontweight='bold')
+    ax1.yaxis.set_label_position("right")
+    ax1.yaxis.tick_right()
 
     # Change legend title
-    ax[1].get_legend().set_title('Experimental dataset')
-    ax[1].legend(loc='upper right')
+    ax1.get_legend().set_title('Experimental dataset')
+    ax1.legend(loc='upper right')
     # Change legend to color_legend
-    ax[1].get_legend().remove()
-    ax[1].legend(handles=color_legend, loc='upper right', title='Validation dataset')
+    ax1.get_legend().remove()
+    ax1.legend(handles=color_legend, loc='upper right', title='Validation dataset')
 
     plt.tight_layout(pad=0.5)
-    plt.show()
+    #plt.show()
 
     worms_to_plot = [wormID]
     neurons_to_plot = [neuronID]
     datasets_to_plot = [datasetID]
 
-    fig, ax = plt.subplots(figsize=(10, 4))
+    #fig, ax = plt.subplots(figsize=(10, 5))
 
     for expID, exp_dir in enumerate(np.sort(os.listdir(exp_nts_log_dir))):
 
@@ -835,39 +886,39 @@ def prediction_gap(exp_nts_log_dir, legend_code, neuronID, datasetID, wormID):
 
                     for neuron in neurons:
 
-                        ax.plot(time_gt_generated, df.loc['GT Generation', neuron], color=gt_generation_color[expID], label='Timesteps per neuron: {:.2f}'.format(num_time_steps))
+                        ax2.plot(time_gt_generated, df.loc['GT Generation', neuron], color=gt_generation_color[expID], label='TSN: {:.2f}'.format(num_time_steps))
                         #ax.plot(time_ar_generated, df.loc['AR Generation', neuron], color=ar_generation_color[expID], label=num_time_steps)
                     
                     if expID == 1:
                         up_gap_val = df.loc['Ground Truth', neuron].iloc[0]
                         low_gap_val = df.loc['GT Generation', neuron].iloc[0]
 
-    ax.plot(time_context, df.loc['Context', neuron], color=gt_color, label='Ground truth activity')
-    ax.plot(time_ground_truth, df.loc['Ground Truth', neuron], color=gt_color)
+    ax2.plot(time_context, df.loc['Context', neuron], color=gt_color, label='Ground truth activity')
+    ax2.plot(time_ground_truth, df.loc['Ground Truth', neuron], color=gt_color)
 
     # Fill the context window
-    ax.axvspan(time_context[0], time_context[-1], alpha=0.1, color=gt_color, label='Context window')
+    ax2.axvspan(time_context[0], time_context[-1], alpha=0.1, color=gt_color, label='Context window')
 
-    ax.set_title(f"Teacher forcing generation of {neuron}'s Neuronal Activity", fontsize=16)
-    ax.set_xlabel('Time steps (s)', fontsize=14, fontweight='bold')
-    ax.set_ylabel('Activity ($\Delta F / F$)', fontsize=14, fontweight='bold')
-    ax.legend(loc='upper right')
+    ax2.set_title(f"(C) Teacher forcing generation of {neuron}'s Neuronal Activity", fontsize=16)
+    ax2.set_xlabel('Time (s)', fontsize=14, fontweight='bold')
+    ax2.set_ylabel('Activity ($\Delta F / F$)', fontsize=14, fontweight='bold')
+    ax2.legend(loc='upper right')
 
     # Add metadata textbox in upper left corner
-    ax.text(0.02, 0.95, metadata_text,
-            transform=ax.transAxes,
+    ax2.text(0.02, 0.95, metadata_text,
+            transform=ax2.transAxes,
             fontsize=8,
             verticalalignment='top',
             bbox=dict(boxstyle='round, pad=1', facecolor='white', edgecolor='black', alpha=0.5)
             )
 
-    ax.set_xlim([0, 240])
+    ax2.set_xlim([0, 240])
 
 
     # Vertical line to show gap
-    ax.plot([120, 120], [up_gap_val, low_gap_val], color='black', linestyle='--', linewidth=1)
+    ax2.plot([120, 120], [up_gap_val, low_gap_val], color='black', linestyle='--', linewidth=1)
     # Text box with gap
-    ax.text(116, (up_gap_val+low_gap_val)/2, 'Gap'.format(up_gap_val-low_gap_val), fontsize=10, horizontalalignment='center', verticalalignment='center')
+    ax2.text(116, (up_gap_val+low_gap_val)/2, 'Gap'.format(up_gap_val-low_gap_val), fontsize=10, horizontalalignment='center', verticalalignment='center')
 
 
     plt.tight_layout()
@@ -1270,12 +1321,6 @@ def autoregressive(experiment_log_folders, model_names, legend_code):
         ax.plot(time_vector[len(context_lstm)-1:max_time_steps], ar_gen_lstm, color=model_color_code['LSTM'], label='LSTM')
         ax.plot(time_vector[len(context_lstm)-1:max_time_steps], ar_gen_tr, color=model_color_code['Transformer'], label='Transformer')
         ax.plot(time_vector[len(context_lstm)-1:max_time_steps], ar_gen_lin, color=model_color_code['Linear'], label='Linear')
-
-        # Baseline model prediction
-        baseline_activity = np.zeros(len(gt_lstm))
-        baseline_activity[0] = context_lstm.iloc[-2]
-        baseline_activity[1:] = gt_lstm[:-1]
-        ax.plot(time_vector[len(context_lstm)-1:max_time_steps], baseline_activity, color='black', linestyle='--', label='Baseline model')
         
         ax.axvspan(time_vector[0], time_vector[len(context_lstm)-1], alpha=0.15, color='tab:red', label='Context window')
         ax.set_ylabel('Activity ($\Delta F / F$)', fontsize=14, fontweight='bold')
