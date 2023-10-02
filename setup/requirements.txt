@@ -1,3 +1,4 @@
+black[jupyter]
 hydra-core
 hydra-optuna-sweeper
 hydra-submitit-launcher

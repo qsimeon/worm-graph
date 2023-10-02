@@ -4,6 +4,7 @@ from data._pkg import *
 # Init logger
 logger = logging.getLogger(__name__)
 
+
 class NeuralActivityDataset(torch.utils.data.Dataset):
     """A custom neural activity time-series prediction dataset.
 
@@ -184,7 +185,7 @@ class NeuralActivityDataset(torch.utils.data.Dataset):
 
         # update the unique_time_steps set
         for _, _, _, metadata in data_samples:
-            time_steps = metadata['time_vec'].numpy()  # assuming it's a torch tensor
+            time_steps = metadata["time_vec"].numpy()  # assuming it's a torch tensor
             self.unique_time_steps.update(time_steps)
 
         return data_samples
@@ -272,14 +273,13 @@ def select_named_neurons(multi_worm_dataset, num_named_neurons):
     worms_to_drop = []
 
     for wormID, data in multi_worm_dataset.items():
-
         # Check if worm has named neurons
         if torch.sum(data["named_neurons_mask"]) == 0:
             worms_to_drop.append(wormID)
             continue
 
         # Skip if num_named_neurons is 'all'
-        if num_named_neurons == 'all':
+        if num_named_neurons == "all":
             continue
 
         # Verify if new num_named_neurons <= actual num_named_neurons
@@ -293,46 +293,66 @@ def select_named_neurons(multi_worm_dataset, num_named_neurons):
             data["num_unknown_neurons"] = data["num_neurons"] - num_named_neurons
 
             # Select the neurons to keep
-            named_neurons_mask = data['named_neurons_mask']
-            neurons_to_keep = np.random.choice(np.where(named_neurons_mask == True)[0], num_named_neurons, replace=False)
+            named_neurons_mask = data["named_neurons_mask"]
+            neurons_to_keep = np.random.choice(
+                np.where(named_neurons_mask == True)[0],
+                num_named_neurons,
+                replace=False,
+            )
 
             # Overwrite the named neuron masks
             named_neurons_mask = torch.zeros_like(named_neurons_mask)
             named_neurons_mask[neurons_to_keep] = True
 
             # Overwrite the unknown neuron masks
-            unknown_neurons_mask = data['unknown_neurons_mask']
+            unknown_neurons_mask = data["unknown_neurons_mask"]
             unknown_neurons_mask = ~(named_neurons_mask ^ unknown_neurons_mask)
 
-            slot_to_named_neuron = data['slot_to_named_neuron']
-            slot_to_unknown_neuron = data['slot_to_unknown_neuron']
+            slot_to_named_neuron = data["slot_to_named_neuron"]
+            slot_to_unknown_neuron = data["slot_to_unknown_neuron"]
 
             # New unknown neurons
-            new_unknown_neurons_map = {slot: named_neuron for slot, named_neuron in slot_to_named_neuron.items() if slot not in neurons_to_keep}
+            new_unknown_neurons_map = {
+                slot: named_neuron
+                for slot, named_neuron in slot_to_named_neuron.items()
+                if slot not in neurons_to_keep
+            }
             slot_to_unknown_neuron.update(new_unknown_neurons_map)
 
             # New named neurons
-            slot_to_named_neuron = {slot: named_neuron for slot, named_neuron in slot_to_named_neuron.items() if slot in neurons_to_keep}
+            slot_to_named_neuron = {
+                slot: named_neuron
+                for slot, named_neuron in slot_to_named_neuron.items()
+                if slot in neurons_to_keep
+            }
 
             # Invert new mappings
-            named_neuron_to_slot = {named_neuron: slot for slot, named_neuron in slot_to_named_neuron.items()}
-            unknown_neuron_to_slot = {unknown_neuron: slot for slot, unknown_neuron in slot_to_unknown_neuron.items()}
+            named_neuron_to_slot = {
+                named_neuron: slot
+                for slot, named_neuron in slot_to_named_neuron.items()
+            }
+            unknown_neuron_to_slot = {
+                unknown_neuron: slot
+                for slot, unknown_neuron in slot_to_unknown_neuron.items()
+            }
 
             # Update the dataset
-            data['named_neurons_mask'] = named_neurons_mask
-            data['unknown_neurons_mask'] = unknown_neurons_mask
-            data['slot_to_named_neuron'] = slot_to_named_neuron
-            data['slot_to_unknown_neuron'] = slot_to_unknown_neuron
-            data['named_neuron_to_slot'] = named_neuron_to_slot
-            data['unknown_neuron_to_slot'] = unknown_neuron_to_slot
+            data["named_neurons_mask"] = named_neurons_mask
+            data["unknown_neurons_mask"] = unknown_neurons_mask
+            data["slot_to_named_neuron"] = slot_to_named_neuron
+            data["slot_to_unknown_neuron"] = slot_to_unknown_neuron
+            data["named_neuron_to_slot"] = named_neuron_to_slot
+            data["unknown_neuron_to_slot"] = unknown_neuron_to_slot
 
     # Drop worms with less than `num_named_neurons` neurons
     if len(worms_to_drop) > 0:
-        logger.info("Dropping {} worms from {}. {} remaining.".format(
-            len(worms_to_drop),
-            data['dataset'],
-            len(list(set(multi_worm_dataset.keys()) - set(worms_to_drop))))
+        logger.info(
+            "Dropping {} worms from {}. {} remaining.".format(
+                len(worms_to_drop),
+                data["dataset"],
+                len(list(set(multi_worm_dataset.keys()) - set(worms_to_drop))),
             )
+        )
 
     for wormID in worms_to_drop:
         del multi_worm_dataset[wormID]
@@ -342,14 +362,14 @@ def select_named_neurons(multi_worm_dataset, num_named_neurons):
 
 def rename_worm_keys(d):
     """
-        Auxiliar function to rename the keys of a combined dataset.
+    Auxiliar function to rename the keys of a combined dataset.
     """
     # Sort the keys
-    sorted_keys = sorted(d.keys(), key=lambda x: int(x.replace('worm', '')))
-    
+    sorted_keys = sorted(d.keys(), key=lambda x: int(x.replace("worm", "")))
+
     # Create a mapping from old keys to new keys
-    key_mapping = {old_key: f'worm{i}' for i, old_key in enumerate(sorted_keys)}
-    
+    key_mapping = {old_key: f"worm{i}" for i, old_key in enumerate(sorted_keys)}
+
     # Return the dictionary with keys renamed
     return {key_mapping[key]: d[key] for key in sorted_keys}
 
@@ -377,14 +397,18 @@ def filter_loaded_combined_dataset(combined_dataset, num_worms, num_named_neuron
 
     # Verify if len(combined_dataset) is >= num_worms
     if num_worms != "all":
-        assert len(combined_dataset) >= num_worms, (
-            "num_worms must be less than or equal to the number of worms in the combined dataset. "
-        )
+        assert (
+            len(combined_dataset) >= num_worms
+        ), "num_worms must be less than or equal to the number of worms in the combined dataset. "
 
         # Select `num_worms` worms
         wormIDs = [wormID for wormID in combined_dataset.keys()]
         wormIDs_to_keep = np.random.choice(wormIDs, size=num_worms, replace=False)
-        logger.info('Selecting {} worms from {} in the combined dataset'.format(len(wormIDs_to_keep), len(combined_dataset)))
+        logger.info(
+            "Selecting {} worms from {} in the combined dataset".format(
+                len(wormIDs_to_keep), len(combined_dataset)
+            )
+        )
 
         # Remove the worms that are not in `wormIDs_to_keep`
         for wormID in wormIDs:
@@ -395,18 +419,18 @@ def filter_loaded_combined_dataset(combined_dataset, num_worms, num_named_neuron
 
     # Information about the dataset
     dataset_info = {
-        'dataset': [],
-        'original_index': [],
-        'combined_dataset_index': [],
-        'neurons': [],
+        "dataset": [],
+        "original_index": [],
+        "combined_dataset_index": [],
+        "neurons": [],
     }
 
     for worm, data in combined_dataset.items():
-        dataset_info['dataset'].append(data['dataset'])
-        dataset_info['original_index'].append(data['original_worm'])
-        dataset_info['combined_dataset_index'].append(worm)
-        worm_neurons = [neuron for slot, neuron in data['slot_to_named_neuron'].items()]
-        dataset_info['neurons'].append(worm_neurons)
+        dataset_info["dataset"].append(data["dataset"])
+        dataset_info["original_index"].append(data["original_worm"])
+        dataset_info["combined_dataset_index"].append(worm)
+        worm_neurons = [neuron for slot, neuron in data["slot_to_named_neuron"].items()]
+        dataset_info["neurons"].append(worm_neurons)
 
     dataset_info = pd.DataFrame(dataset_info)
 
@@ -648,33 +672,34 @@ def load_Leifer2023():
 
 
 def select_desired_worms(multi_worm_dataset, num_worms):
-
     # If num_worms is 'all', return the whole dataset
     if num_worms == "all":
         return multi_worm_dataset
-    
+
     wormIDs = [wormID for wormID in multi_worm_dataset.keys()]
-    dataset_name = multi_worm_dataset[wormIDs[0]]['dataset']
-    
+    dataset_name = multi_worm_dataset[wormIDs[0]]["dataset"]
+
     # num_worms can be string, list or int
     if isinstance(num_worms, str):
         # User requested one specific worm
-        logger.info('Using {} from {}'.format(num_worms, dataset_name))
+        logger.info("Using {} from {}".format(num_worms, dataset_name))
         wormIDs_to_keep = [num_worms]
     elif isinstance(num_worms, int):
         # User requested a specific number of worms (random pick)
-        assert num_worms <= len(multi_worm_dataset), (
-            f"Chosen number of worms must be less than or equal to the number of worms in {dataset_name}."
-        )
+        assert num_worms <= len(
+            multi_worm_dataset
+        ), f"Chosen number of worms must be less than or equal to the number of worms in {dataset_name}."
         wormIDs_to_keep = np.random.choice(wormIDs, size=num_worms, replace=False)
-        logger.info('Using {} worms from {} (random pick)'.format(num_worms, dataset_name))
+        logger.info(
+            "Using {} worms from {} (random pick)".format(num_worms, dataset_name)
+        )
     else:
         # User requested specific worms
-        assert len(num_worms) <= len(multi_worm_dataset), (
-            f"Chosen number of worms must be less than or equal to the number of worms in {dataset_name}."
-        )
+        assert len(num_worms) <= len(
+            multi_worm_dataset
+        ), f"Chosen number of worms must be less than or equal to the number of worms in {dataset_name}."
         wormIDs_to_keep = num_worms
-        logger.info('Using {} from {}'.format(wormIDs_to_keep, dataset_name))
+        logger.info("Using {} from {}".format(wormIDs_to_keep, dataset_name))
 
     # Remove the worms that are not in `wormIDs_to_keep`
     for wormID in wormIDs:
@@ -719,12 +744,11 @@ def create_combined_dataset(experimental_datasets, num_named_neurons):
 
     # Load the dataset(s)
     combined_dataset = dict()
-    
-    for dataset_name, num_worms in experimental_datasets.items():
 
+    for dataset_name, num_worms in experimental_datasets.items():
         # Skip if not worms requested for this dataset
         if num_worms is None or num_worms == 0:
-            logger.info('Skipping worms from {} dataset'.format(dataset_name))
+            logger.info("Skipping worms from {} dataset".format(dataset_name))
             continue
 
         multi_worms_dataset = load_dataset(dataset_name)
@@ -733,12 +757,17 @@ def create_combined_dataset(experimental_datasets, num_named_neurons):
         multi_worms_dataset = select_desired_worms(multi_worms_dataset, num_worms)
 
         # Select the `num_named_neurons` neurons (overwrite the masks)
-        multi_worms_dataset = select_named_neurons(multi_worms_dataset, num_named_neurons)
+        multi_worms_dataset = select_named_neurons(
+            multi_worms_dataset, num_named_neurons
+        )
 
         for worm in multi_worms_dataset:
             if worm in combined_dataset:
-                worm_ = max([int(key.split('worm')[-1]) for key in combined_dataset.keys()]) + 1
-                worm_ = 'worm' + str(worm_)
+                worm_ = (
+                    max([int(key.split("worm")[-1]) for key in combined_dataset.keys()])
+                    + 1
+                )
+                worm_ = "worm" + str(worm_)
                 combined_dataset[worm_] = multi_worms_dataset[worm]
                 combined_dataset[worm_]["worm"] = worm_
                 combined_dataset[worm_]["original_worm"] = worm
@@ -746,27 +775,26 @@ def create_combined_dataset(experimental_datasets, num_named_neurons):
                 combined_dataset[worm] = multi_worms_dataset[worm]
                 combined_dataset[worm]["original_worm"] = worm
 
-    
-    logger.info('Combined dataset has {} worms'.format(len(combined_dataset)))
+    logger.info("Combined dataset has {} worms".format(len(combined_dataset)))
 
     combined_dataset = rename_worm_keys(combined_dataset)
 
     # Information about the dataset
     dataset_info = {
-        'dataset': [],
-        'original_index': [],
-        'combined_dataset_index': [],
-        'neurons': [],
-        'num_neurons': [],
+        "dataset": [],
+        "original_index": [],
+        "combined_dataset_index": [],
+        "neurons": [],
+        "num_neurons": [],
     }
 
     for worm, data in combined_dataset.items():
-        dataset_info['dataset'].append(data['dataset'])
-        dataset_info['original_index'].append(data['original_worm'])
-        dataset_info['combined_dataset_index'].append(worm)
-        worm_neurons = [neuron for slot, neuron in data['slot_to_named_neuron'].items()]
-        dataset_info['neurons'].append(worm_neurons)
-        dataset_info['num_neurons'].append(len(worm_neurons))
+        dataset_info["dataset"].append(data["dataset"])
+        dataset_info["original_index"].append(data["original_worm"])
+        dataset_info["combined_dataset_index"].append(worm)
+        worm_neurons = [neuron for slot, neuron in data["slot_to_named_neuron"].items()]
+        dataset_info["neurons"].append(worm_neurons)
+        dataset_info["num_neurons"].append(len(worm_neurons))
 
     dataset_info = pd.DataFrame(dataset_info)
 
@@ -795,7 +823,7 @@ def distribute_samples(data_splits, total_nb_samples):
     remainder = total_nb_samples % len(data_splits)
 
     samples_to_take = []
-    
+
     # Distribute the samples
     for i in range(len(data_splits)):
         if i < remainder:
@@ -806,9 +834,19 @@ def distribute_samples(data_splits, total_nb_samples):
     return samples_to_take
 
 
-def split_combined_dataset(combined_dataset, k_splits, num_train_samples, num_val_samples, seq_len, tau, reverse, use_residual, smooth_data):
+def split_combined_dataset(
+    combined_dataset,
+    k_splits,
+    num_train_samples,
+    num_val_samples,
+    seq_len,
+    tau,
+    reverse,
+    use_residual,
+    smooth_data,
+):
     """Creates the training and validation datasets from the combined dataset.
-    
+
     Also returns the number of unique time steps for each worm and each split.
 
     Parameters
@@ -859,25 +897,22 @@ def split_combined_dataset(combined_dataset, k_splits, num_train_samples, num_va
     val_dataset = []
 
     # Store the time steps info
-    dataset_info2 = {'combined_dataset_index': [],
-                     
-                      'train_time_steps': [],
-                      'num_train_samples': [],
-                      'tau': [],
-                      'train_seq_len': [],
-
-                      'val_time_steps': [],
-                      'num_val_samples': [],
-                      'val_seq_len': [],
-
-                      'smooth_data': [],
-                      'use_residual': [],
-                      'k_splits': [],
-                      }
+    dataset_info2 = {
+        "combined_dataset_index": [],
+        "train_time_steps": [],
+        "num_train_samples": [],
+        "tau": [],
+        "train_seq_len": [],
+        "val_time_steps": [],
+        "num_val_samples": [],
+        "val_seq_len": [],
+        "smooth_data": [],
+        "use_residual": [],
+        "k_splits": [],
+    }
 
     # Loop through the worms in the dataset
     for wormID, single_worm_dataset in combined_dataset.items():
-
         # Extract relevant features from the dataset
         data = single_worm_dataset[key_data]
         neurons_mask = single_worm_dataset["named_neurons_mask"]
@@ -886,9 +921,15 @@ def split_combined_dataset(combined_dataset, k_splits, num_train_samples, num_va
         original_wormID = single_worm_dataset["original_worm"]
 
         # Verifications
-        assert isinstance(seq_len, int) and 0 < seq_len < len(data), "seq_len must be an integer > 0 and < len(data)"
-        assert isinstance(tau, int) and tau < (len(data) - seq_len), "The desired tau is too long. Try a smaller value"
-        assert seq_len < (len(data) // k_splits), "The desired seq_len is too long. Try a smaller seq_len or decreasing k_splits"
+        assert isinstance(seq_len, int) and 0 < seq_len < len(
+            data
+        ), "seq_len must be an integer > 0 and < len(data)"
+        assert isinstance(tau, int) and tau < (
+            len(data) - seq_len
+        ), "The desired tau is too long. Try a smaller value"
+        assert seq_len < (
+            len(data) // k_splits
+        ), "The desired seq_len is too long. Try a smaller seq_len or decreasing k_splits"
 
         # Split the data and the time vector into k splits
         data_splits = np.array_split(data, k_splits)
@@ -901,70 +942,80 @@ def split_combined_dataset(combined_dataset, k_splits, num_train_samples, num_va
         val_time_vec_splits = time_vec_splits[1::2]
 
         # Number of samples in each split
-        train_samples_per_split = distribute_samples(train_data_splits, num_train_samples)
+        train_samples_per_split = distribute_samples(
+            train_data_splits, num_train_samples
+        )
         val_samples_per_split = distribute_samples(val_data_splits, num_val_samples)
 
         # Number of unique time steps across all samples for each worm and each split
         train_split_time_steps, val_split_time_steps = 0, 0
 
         # Create a dataset for each split
-        for train_split, train_time_split, num_samples_split in zip(train_data_splits, train_time_vec_splits, train_samples_per_split):
+        for train_split, train_time_split, num_samples_split in zip(
+            train_data_splits, train_time_vec_splits, train_samples_per_split
+        ):
             train_dataset.append(
                 NeuralActivityDataset(
-                    data = train_split.detach(),
-                    time_vec = train_time_split.detach(),
-                    neurons_mask = neurons_mask,
-                    wormID = original_wormID, # worm ID of the experimental dataset (original)
-                    worm_dataset = worm_dataset, # dataset where the worm comes from
-                    seq_len = seq_len,
-                    num_samples = num_samples_split,
-                    tau = tau,
-                    use_residual = use_residual,
-                    reverse = reverse,
+                    data=train_split.detach(),
+                    time_vec=train_time_split.detach(),
+                    neurons_mask=neurons_mask,
+                    wormID=original_wormID,  # worm ID of the experimental dataset (original)
+                    worm_dataset=worm_dataset,  # dataset where the worm comes from
+                    seq_len=seq_len,
+                    num_samples=num_samples_split,
+                    tau=tau,
+                    use_residual=use_residual,
+                    reverse=reverse,
                 )
             )
             train_split_time_steps += len(train_dataset[-1].unique_time_steps)
             if len(train_dataset[-1].unique_time_steps) > len(train_split):
                 raise ValueError("More time steps from samples than in the train split")
-        
-        for val_split, val_time_split, num_samples_split in zip(val_data_splits, val_time_vec_splits, val_samples_per_split):
+
+        for val_split, val_time_split, num_samples_split in zip(
+            val_data_splits, val_time_vec_splits, val_samples_per_split
+        ):
             val_dataset.append(
                 NeuralActivityDataset(
-                    data = val_split.detach(),
-                    time_vec = val_time_split.detach(),
-                    neurons_mask = neurons_mask,
-                    wormID = original_wormID, # worm ID of the experimental dataset (original)
-                    worm_dataset = worm_dataset, # dataset where the worm comes from
-                    seq_len = seq_len,
-                    num_samples = num_samples_split,
-                    tau = tau,
-                    use_residual = use_residual,
-                    reverse = reverse,
+                    data=val_split.detach(),
+                    time_vec=val_time_split.detach(),
+                    neurons_mask=neurons_mask,
+                    wormID=original_wormID,  # worm ID of the experimental dataset (original)
+                    worm_dataset=worm_dataset,  # dataset where the worm comes from
+                    seq_len=seq_len,
+                    num_samples=num_samples_split,
+                    tau=tau,
+                    use_residual=use_residual,
+                    reverse=reverse,
                 )
             )
             val_split_time_steps += len(val_dataset[-1].unique_time_steps)
             if len(val_dataset[-1].unique_time_steps) > len(val_split):
                 raise ValueError("More time steps from samples than in the val. split")
-            
+
         # Store the number of unique time steps for each worm
-        dataset_info2['combined_dataset_index'].append(wormID)
+        dataset_info2["combined_dataset_index"].append(wormID)
 
-        dataset_info2['train_time_steps'].append(train_split_time_steps)
-        dataset_info2['train_seq_len'].append(seq_len)
-        dataset_info2['num_train_samples'].append(num_train_samples)
-        dataset_info2['tau'].append(tau)
+        dataset_info2["train_time_steps"].append(train_split_time_steps)
+        dataset_info2["train_seq_len"].append(seq_len)
+        dataset_info2["num_train_samples"].append(num_train_samples)
+        dataset_info2["tau"].append(tau)
 
-        dataset_info2['val_time_steps'].append(val_split_time_steps)
-        dataset_info2['val_seq_len'].append(seq_len)
-        dataset_info2['num_val_samples'].append(num_val_samples)
+        dataset_info2["val_time_steps"].append(val_split_time_steps)
+        dataset_info2["val_seq_len"].append(seq_len)
+        dataset_info2["num_val_samples"].append(num_val_samples)
 
-        dataset_info2['smooth_data'].append(smooth_data)
-        dataset_info2['use_residual'].append(use_residual)
-        dataset_info2['k_splits'].append(k_splits)
+        dataset_info2["smooth_data"].append(smooth_data)
+        dataset_info2["use_residual"].append(use_residual)
+        dataset_info2["k_splits"].append(k_splits)
 
     # Concatenate the datasets
-    train_dataset = torch.utils.data.ConcatDataset(train_dataset) # Nb of train examples = nb train samples * nb of worms
-    val_dataset = torch.utils.data.ConcatDataset(val_dataset) # Nb of val examples = nb train samples * nb of worms
+    train_dataset = torch.utils.data.ConcatDataset(
+        train_dataset
+    )  # Nb of train examples = nb train samples * nb of worms
+    val_dataset = torch.utils.data.ConcatDataset(
+        val_dataset
+    )  # Nb of val examples = nb train samples * nb of worms
 
     # Convert time_step_info to a dataframe
     dataset_info2 = pd.DataFrame(dataset_info2)

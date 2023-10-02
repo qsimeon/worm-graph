@@ -3,6 +3,7 @@ from models._utils import *
 # Init logger
 logger = logging.getLogger(__name__)
 
+
 def get_model(model_config: DictConfig, verbose=True) -> torch.nn.Module:
     """Instantiate or load a model as specified in 'model.yaml'.
 
@@ -52,7 +53,11 @@ def get_model(model_config: DictConfig, verbose=True) -> torch.nn.Module:
         )
         model.load_state_dict(model_state_dict)
         if verbose:
-            logger.info("Loading model from checkpoint: {}".format(model_config.use_this_pretrained_model))
+            logger.info(
+                "Loading model from checkpoint: {}".format(
+                    model_config.use_this_pretrained_model
+                )
+            )
 
     # Otherwise, instantiate a new model
     else:

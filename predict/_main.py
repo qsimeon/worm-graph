@@ -3,6 +3,7 @@ from predict._utils import *
 # Init logger
 logger = logging.getLogger(__name__)
 
+
 def make_predictions(
     predict_config: DictConfig,
     model: torch.nn.Module,
@@ -26,18 +27,19 @@ def make_predictions(
     log_dir = os.getcwd()  # logs/hydra/${now:%Y_%m_%d_%H_%M_%S}
 
     # Create prediction directories
-    os.makedirs(os.path.join(log_dir, 'prediction'), exist_ok=True)
-    os.makedirs(os.path.join(log_dir, 'prediction', 'train'), exist_ok=True)
-    os.makedirs(os.path.join(log_dir, 'prediction', 'val'), exist_ok=True)
+    os.makedirs(os.path.join(log_dir, "prediction"), exist_ok=True)
+    os.makedirs(os.path.join(log_dir, "prediction", "train"), exist_ok=True)
+    os.makedirs(os.path.join(log_dir, "prediction", "val"), exist_ok=True)
 
     # Make predictions in the train and validation datasets
     logger.info("Start making predictions.")
     model_predict(
-        log_dir = log_dir,
-        model = model,
-        experimental_datasets = predict_config.experimental_datasets,
-        context_window = predict_config.context_window,
+        log_dir=log_dir,
+        model=model,
+        experimental_datasets=predict_config.experimental_datasets,
+        context_window=predict_config.context_window,
     )
+
 
 if __name__ == "__main__":
     dataset_config = OmegaConf.load("configs/submodule/dataset.yaml")
@@ -56,7 +58,7 @@ if __name__ == "__main__":
 
     # Move to new log directory
     os.chdir(log_dir)
-    
+
     # Get the model
     model = get_model(model_config.model)
 

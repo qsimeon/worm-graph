@@ -673,17 +673,18 @@ def hc_analyse_dataset(
 
 
 def validation_loss_per_dataset(log_dir, experimental_datasets, task):
-
     logger.info("Analyzing validation loss per dataset...")
 
     # Retrieve information from training
-    train_dataset_info = pd.read_csv(os.path.join(log_dir, 'dataset', 'train_dataset_info.csv'))
-    seq_len = int(train_dataset_info['train_seq_len'].values[0])
-    num_train_samples = int(train_dataset_info['num_train_samples'].values[0])
-    k_splits = int(train_dataset_info['k_splits'].values[0])
-    tau = int(train_dataset_info['tau'].values[0])
-    use_residual = int(train_dataset_info['use_residual'].values[0])
-    smooth_data = int(train_dataset_info['smooth_data'].values[0])
+    train_dataset_info = pd.read_csv(
+        os.path.join(log_dir, "dataset", "train_dataset_info.csv")
+    )
+    seq_len = int(train_dataset_info["train_seq_len"].values[0])
+    num_train_samples = int(train_dataset_info["num_train_samples"].values[0])
+    k_splits = int(train_dataset_info["k_splits"].values[0])
+    tau = int(train_dataset_info["tau"].values[0])
+    use_residual = int(train_dataset_info["use_residual"].values[0])
+    smooth_data = int(train_dataset_info["smooth_data"].values[0])
 
     # Loss metrics
     val_running_base_loss = 0
@@ -694,13 +695,12 @@ def validation_loss_per_dataset(log_dir, experimental_datasets, task):
     num_worms = []
 
     # Load the model
-    model_chkpt = os.path.join(log_dir, 'train', 'checkpoints', f'model_best.pt')
-    model = get_model(OmegaConf.create({'use_this_pretrained_model': model_chkpt}))
+    model_chkpt = os.path.join(log_dir, "train", "checkpoints", f"model_best.pt")
+    model = get_model(OmegaConf.create({"use_this_pretrained_model": model_chkpt}))
     model.to(DEVICE)
     criterion = model.loss_fn()
 
     for dataset, worms_to_use in experimental_datasets.items():
-
         # Skip some datasets
         if worms_to_use is None:
             dataset_val_loss.append(np.NaN)
@@ -708,30 +708,34 @@ def validation_loss_per_dataset(log_dir, experimental_datasets, task):
             num_worms.append(np.NaN)
             continue
 
-        combined_dataset, _ = create_combined_dataset(experimental_datasets={dataset: worms_to_use},
-                                                    num_named_neurons='all')
-        _, val_dataset, _ = split_combined_dataset(combined_dataset=combined_dataset,
-                                                k_splits=k_splits,
-                                                num_train_samples=num_train_samples,
-                                                num_val_samples=num_train_samples, # use the same number of samples as in the train dataset
-                                                seq_len=seq_len,
-                                                tau=tau,
-                                                use_residual=use_residual,
-                                                smooth_data=smooth_data,
-                                                reverse=False
-                                                )
+        combined_dataset, _ = create_combined_dataset(
+            experimental_datasets={dataset: worms_to_use}, num_named_neurons="all"
+        )
+        _, val_dataset, _ = split_combined_dataset(
+            combined_dataset=combined_dataset,
+            k_splits=k_splits,
+            num_train_samples=num_train_samples,
+            num_val_samples=num_train_samples,  # use the same number of samples as in the train dataset
+            seq_len=seq_len,
+            tau=tau,
+            use_residual=use_residual,
+            smooth_data=smooth_data,
+            reverse=False,
+        )
 
         num_worms.append(len(combined_dataset))
-        
-        valloader = torch.utils.data.DataLoader(val_dataset, batch_size=32, shuffle=False)
+
+        valloader = torch.utils.data.DataLoader(
+            val_dataset, batch_size=32, shuffle=False
+        )
 
         # Evaluation loop
         model.eval()
 
         with torch.no_grad():
-            
-            for batch_idx, (X_val, Y_val, masks_val, metadata_val) in enumerate(valloader):
-
+            for batch_idx, (X_val, Y_val, masks_val, metadata_val) in enumerate(
+                valloader
+            ):
                 X_val = X_val.to(DEVICE)
                 Y_val = Y_val.to(DEVICE)
                 masks_val = masks_val.to(DEVICE)
@@ -746,20 +750,23 @@ def validation_loss_per_dataset(log_dir, experimental_datasets, task):
                 # Baseline model: identity model - predict that the next time step is the same as the current one.
                 # This is the simplest model we can think of: predict that the next time step is the same as the current one
                 # is better than predict any other random number.
-                val_baseline = compute_loss_vectorized(loss_fn=criterion, X=y_base, Y=Y_val, masks=masks_val)
+                val_baseline = compute_loss_vectorized(
+                    loss_fn=criterion, X=y_base, Y=Y_val, masks=masks_val
+                )
 
                 # Model
                 y_pred = model(X_val, masks_val, tau)
 
                 if task == "many-to-one":
                     y_pred = y_pred[:, -1, :].unsqueeze(1)  # Select last time step
-                    
-                val_loss = compute_loss_vectorized(loss_fn=criterion, X=y_pred, Y=Y_val, masks=masks_val)
+
+                val_loss = compute_loss_vectorized(
+                    loss_fn=criterion, X=y_pred, Y=Y_val, masks=masks_val
+                )
 
                 # Update running losses
                 val_running_base_loss += val_baseline.item()
                 val_running_loss += val_loss.item()
-
 
             # Store metrics
             dataset_val_loss.append(val_running_loss / len(valloader))
@@ -770,11 +777,18 @@ def validation_loss_per_dataset(log_dir, experimental_datasets, task):
             val_running_loss = 0
 
     # Save losses in csv
-    losses = pd.DataFrame({'dataset': list(experimental_datasets.keys()),
-                           'val_loss': dataset_val_loss,
-                           'val_baseline': dataset_val_baseline,
-                           'num_worms': num_worms})
+    losses = pd.DataFrame(
+        {
+            "dataset": list(experimental_datasets.keys()),
+            "val_loss": dataset_val_loss,
+            "val_baseline": dataset_val_baseline,
+            "num_worms": num_worms,
+        }
+    )
 
     # Create analysis folder
-    os.makedirs(os.path.join(log_dir, 'analysis'), exist_ok=True)
-    losses.to_csv(os.path.join(log_dir, 'analysis', 'validation_loss_per_dataset.csv'), index=False)
+    os.makedirs(os.path.join(log_dir, "analysis"), exist_ok=True)
+    losses.to_csv(
+        os.path.join(log_dir, "analysis", "validation_loss_per_dataset.csv"),
+        index=False,
+    )

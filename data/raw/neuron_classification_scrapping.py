@@ -1,6 +1,8 @@
 # URL of the HTML page containing the table
 root_url = "https://www.wormatlas.org/neurons/Individual%20Neurons/"
-all_neurons_url = "https://www.wormatlas.org/neurons/Individual%20Neurons/Neuronframeset.html"
+all_neurons_url = (
+    "https://www.wormatlas.org/neurons/Individual%20Neurons/Neuronframeset.html"
+)
 
 import time
 import pandas as pd
@@ -36,17 +38,27 @@ for neuron in NEURONS_302:
     neuron_group = neuron[:3]
 
     if len(neuron_group) == 2:
-         neuron_group = neuron_group
-    elif (neuron_group.startswith('P') or neuron_group.startswith('A')) and (neuron_group.endswith('R') or neuron_group.endswith('L')):
-         neuron_group = neuron_group
-    elif neuron_group == 'RIR':
         neuron_group = neuron_group
-    elif neuron_group[-1] == 'R' or neuron_group[-1] == 'L' and (neuron_group.startswith('I') or neuron_group.startswith('M')):
+    elif (neuron_group.startswith("P") or neuron_group.startswith("A")) and (
+        neuron_group.endswith("R") or neuron_group.endswith("L")
+    ):
+        neuron_group = neuron_group
+    elif neuron_group == "RIR":
+        neuron_group = neuron_group
+    elif (
+        neuron_group[-1] == "R"
+        or neuron_group[-1] == "L"
+        and (neuron_group.startswith("I") or neuron_group.startswith("M"))
+    ):
         neuron_group = neuron_group[:2]
-    elif neuron_group[-1].isdigit() and not neuron_group.startswith('I'):
-            neuron_group = neuron_group[:-1] + 'N'
+    elif neuron_group[-1].isdigit() and not neuron_group.startswith("I"):
+        neuron_group = neuron_group[:-1] + "N"
 
-    neuron_url = 'https://www.wormatlas.org/neurons/Individual%20Neurons/' + neuron_group + 'mainframe.htm'
+    neuron_url = (
+        "https://www.wormatlas.org/neurons/Individual%20Neurons/"
+        + neuron_group
+        + "mainframe.htm"
+    )
 
     # Open a new window and switch to it
     driver.execute_script("window.open('about:blank', 'new_window')")
@@ -56,7 +68,14 @@ for neuron in NEURONS_302:
     driver.get(neuron_url)
 
     # Scrape the text from the new page
-    text_element = wait.until(EC.presence_of_element_located((By.XPATH, "/html/body/table[2]/tbody/tr/td/table[1]/tbody/tr/td/table[1]/tbody/tr/td[1]")))
+    text_element = wait.until(
+        EC.presence_of_element_located(
+            (
+                By.XPATH,
+                "/html/body/table[2]/tbody/tr/td/table[1]/tbody/tr/td/table[1]/tbody/tr/td[1]",
+            )
+        )
+    )
     text = text_element.text
     time.sleep(0.5)
 
@@ -78,32 +97,36 @@ for neuron in NEURONS_302:
 driver.quit()
 
 json_string = json.dumps(neuron_classification)
-with open("/home/lrvnc/Projects/worm-graph/tests/leandro/data/neuron_classification_raw.json", "w") as file:
+with open(
+    "/home/lrvnc/Projects/worm-graph/tests/leandro/data/neuron_classification_raw.json",
+    "w",
+) as file:
     file.write(json_string)
 
 
 new_data = {}
 
 for neuron, description in neuron_classification.items():
-
     new_classification = []
     # Just PDB -> Motor neuron in the hermaphrodite, motor neuron and interneuron in the male
 
-    if 'sensory' in description.lower():
-        new_classification.append('sensory')
-    
-    if 'motor' in description.lower():
-        new_classification.append('motor')
+    if "sensory" in description.lower():
+        new_classification.append("sensory")
 
-    if 'interneuron' in description.lower():
-        new_classification.append('interneuron')
+    if "motor" in description.lower():
+        new_classification.append("motor")
 
-    if 'unknown' in description.lower():
-        new_classification.append('unknown')
+    if "interneuron" in description.lower():
+        new_classification.append("interneuron")
+
+    if "unknown" in description.lower():
+        new_classification.append("unknown")
 
     new_data[neuron] = new_classification
 
 json_string = json.dumps(new_data)
 
-with open("/home/lrvnc/Projects/worm-graph/tests/leandro/data/neuron_clusters.json", "w") as file:
+with open(
+    "/home/lrvnc/Projects/worm-graph/tests/leandro/data/neuron_clusters.json", "w"
+) as file:
     file.write(json_string)
