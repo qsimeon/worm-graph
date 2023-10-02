@@ -324,7 +324,7 @@ def moving_average_smooth(x, t, window_size=15):
     # TODO: vectorize this smoothing operation
     for i in range(x.shape[1]):
         x_smooth[:, i] = (
-            torch.conv1d(
+            torch.nn.functional.conv1d(
                 x[:, i].unsqueeze(0).unsqueeze(0),
                 torch.ones(1, 1, window_size, dtype=x.dtype).to(x.device) / window_size,
                 padding=window_size // 2,
@@ -483,12 +483,14 @@ class CalciumDataReshaper:
         )
 
     def _tensor_time_data(self):
+        # Resampled data
         self.time_in_seconds = torch.from_numpy(self.time_in_seconds).to(self.dtype)
         if self.time_in_seconds.ndim == 1:
             self.time_in_seconds = self.time_in_seconds.unsqueeze(-1)
         dt = np.gradient(self.time_in_seconds, axis=0)
         dt[dt == 0] = np.finfo(float).eps
-        self.dt = torch.from_numpy(dt).to(self.dtype)
+        self.dt = dt
+        self.dt = torch.from_numpy(self.dt).to(self.dtype)
         if self.dt.ndim == 1:
             self.dt = self.dt.unsqueeze(-1)
 
@@ -500,7 +502,8 @@ class CalciumDataReshaper:
             self.original_time_in_seconds = self.time_in_seconds.unsqueeze(-1)
         original_dt = np.gradient(self.original_time_in_seconds, axis=0)
         original_dt[original_dt == 0] = np.finfo(float).eps
-        self.original_dt = torch.from_numpy(original_dt).to(self.dtype)
+        self.original_dt = original_dt
+        self.original_dt = torch.from_numpy(self.original_dt).to(self.dtype)
         if self.original_dt.ndim == 1:
             self.original_dt = self.original_dt.unsqueeze(-1)
 
@@ -997,7 +1000,6 @@ class BasePreprocessor:
             residual_calcium = (
                 np.gradient(calcium_data, axis=0) / dt
             )  # calcium dynamics
-            # ? Normalize residual calcium?
 
             # 4. Smooth data
             smooth_calcium_data = self.smooth_data(calcium_data, time_in_seconds)
