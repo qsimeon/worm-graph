@@ -7,6 +7,18 @@ function has_gpu {
     command -v nvidia-smi > /dev/null && nvidia-smi > /dev/null 2>&1
 }
 
+function get_cuda_version {
+    if ! type "nvidia-smi" > /dev/null; then
+        # CUDA is not installed; return an empty string
+        echo ""
+    else
+        # Extract the CUDA version from the nvidia-smi output
+        local cuda_version
+        cuda_version=$(nvidia-smi | grep -oP '(?<=CUDA Version: )\d+\.\d+')
+        echo "$cuda_version"
+    fi
+}
+
 ENV_NAME="worm-graph"
 
 # Create a new conda environment with Python 3.9
@@ -25,8 +37,7 @@ echo ""
 case "$(uname -s)" in
     Darwin)
         echo "Mac OS Detected"
-        # Macs typically do not have Nvidia GPUs, but you could still
-        # use the has_gpu function here if you wanted to.
+        # Macs typically do not have Nvidia GPUs
         conda install --name $ENV_NAME -y pytorch::pytorch torchvision torchaudio -c pytorch
     ;;
 
@@ -34,7 +45,13 @@ case "$(uname -s)" in
         echo "Linux OS Detected"
         if has_gpu; then
             echo "Nvidia GPU Detected"
-            conda install --name $ENV_NAME -y pytorch torchvision torchaudio -c pytorch
+            CUDA_VER=$(get_cuda_version)
+            if [ "$CUDA_VER" != "" ]; then
+                echo "CUDA Version $CUDA_VER Detected"
+                conda install --name $ENV_NAME -y pytorch torchvision torchaudio cudatoolkit=$CUDA_VER -c pytorch
+            else
+                conda install --name $ENV_NAME -y pytorch torchvision torchaudio -c pytorch
+            fi
         else
             conda install --name $ENV_NAME -y pytorch torchvision torchaudio cpuonly -c pytorch
         fi
