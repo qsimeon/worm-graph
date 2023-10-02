@@ -1,0 +1,117 @@
+# @package _global_
+defaults:
+  - override /submodule: [dataset, model, train, predict, analysis, visualize]
+  - _self_
+
+hydra:
+  mode: MULTIRUN
+  sweeper:
+  # These parameters will be tested just when MULTIRUN mode is used.
+  # Use the submodule parameters if RUN.
+    params:
+      submodule.dataset.experimental_datasets: choice({Kato2015:2, Nichols2017:2, Skora2018:2, Uzel2022:2, Kaplan2020:2, Flavell2023:2, Leifer2023:2},{Kato2015:6, Nichols2017:6, Skora2018:6, Uzel2022:6, Kaplan2020:6, Flavell2023:6, Leifer2023:6},{Kato2015:12, Nichols2017:17, Skora2018:12, Uzel2022:6, Kaplan2020:17, Flavell2023:17, Leifer2023:17},{Kato2015:12, Nichols2017:34, Skora2018:12, Uzel2022:6, Kaplan2020:19, Flavell2023:34, Leifer2023:34},{Kato2015:12, Nichols2017:44, Skora2018:12, Uzel2022:6, Kaplan2020:19, Flavell2023:50, Leifer2023:52},{Kato2015:12, Nichols2017:44, Skora2018:12, Uzel2022:6, Kaplan2020:19, Flavell2023:50, Leifer2023:103})
+      # {Kato2015:2, Nichols2017:2, Skora2018:2, Uzel2022:2, Kaplan2020:2, Flavell2023:2, Leifer2023:2} = 14
+      # {Kato2015:6, Nichols2017:6, Skora2018:6, Uzel2022:6, Kaplan2020:6, Flavell2023:6, Leifer2023:6} = 42
+      # {Kato2015:12, Nichols2017:17, Skora2018:12, Uzel2022:6, Kaplan2020:17, Flavell2023:17, Leifer2023:17} = 98
+      # {Kato2015:12, Nichols2017:34, Skora2018:12, Uzel2022:6, Kaplan2020:19, Flavell2023:34, Leifer2023:34} = 151
+      # {Kato2015:12, Nichols2017:44, Skora2018:12, Uzel2022:6, Kaplan2020:19, Flavell2023:50, Leifer2023:52} = 195
+      # {Kato2015:12, Nichols2017:44, Skora2018:12, Uzel2022:6, Kaplan2020:19, Flavell2023:50, Leifer2023:103} = 245
+      # choice({Kato2015:2, Nichols2017:2, Skora2018:2, Uzel2022:2, Kaplan2020:2, Flavell2023:2, Leifer2023:2},{Kato2015:6, Nichols2017:6, Skora2018:6, Uzel2022:6, Kaplan2020:6, Flavell2023:6, Leifer2023:6},{Kato2015:12, Nichols2017:17, Skora2018:12, Uzel2022:6, Kaplan2020:17, Flavell2023:17, Leifer2023:17},{Kato2015:12, Nichols2017:34, Skora2018:12, Uzel2022:6, Kaplan2020:19, Flavell2023:34, Leifer2023:34},{Kato2015:12, Nichols2017:44, Skora2018:12, Uzel2022:6, Kaplan2020:19, Flavell2023:50, Leifer2023:52},{Kato2015:12, Nichols2017:44, Skora2018:12, Uzel2022:6, Kaplan2020:19, Flavell2023:50, Leifer2023:103})
+
+      # {Kato2015:all, Nichols2017:null, Skora2018:null, Uzel2022:null, Kaplan2020:null, Flavell2023:null, Leifer2023:null} = Kato dataset
+      # {Kato2015:null, Nichols2017:all, Skora2018:null, Uzel2022:null, Kaplan2020:null, Flavell2023:null, Leifer2023:null} = Nichols dataset
+      # {Kato2015:null, Nichols2017:null, Skora2018:all, Uzel2022:null, Kaplan2020:null, Flavell2023:null, Leifer2023:null} = Skora dataset
+      # {Kato2015:null, Nichols2017:null, Skora2018:null, Uzel2022:all, Kaplan2020:null, Flavell2023:null, Leifer2023:null} = Uzel dataset
+      # {Kato2015:null, Nichols2017:null, Skora2018:null, Uzel2022:null, Kaplan2020:all, Flavell2023:null, Leifer2023:null} = Kaplan dataset
+      # {Kato2015:null, Nichols2017:null, Skora2018:null, Uzel2022:null, Kaplan2020:null, Flavell2023:all, Leifer2023:null} = Flavell dataset
+      # {Kato2015:null, Nichols2017:null, Skora2018:null, Uzel2022:null, Kaplan2020:null, Flavell2023:null, Leifer2023:all} = Leifer dataset
+      # choice({Kato2015:all, Nichols2017:null, Skora2018:null, Uzel2022:null, Kaplan2020:null, Flavell2023:null, Leifer2023:null},{Kato2015:null, Nichols2017:all, Skora2018:null, Uzel2022:null, Kaplan2020:null, Flavell2023:null, Leifer2023:null},{Kato2015:null, Nichols2017:null, Skora2018:all, Uzel2022:null, Kaplan2020:null, Flavell2023:null, Leifer2023:null},{Kato2015:null, Nichols2017:null, Skora2018:null, Uzel2022:all, Kaplan2020:null, Flavell2023:null, Leifer2023:null},{Kato2015:null, Nichols2017:null, Skora2018:null, Uzel2022:null, Kaplan2020:all, Flavell2023:null, Leifer2023:null},{Kato2015:null, Nichols2017:null, Skora2018:null, Uzel2022:null, Kaplan2020:null, Flavell2023:all, Leifer2023:null},{Kato2015:null, Nichols2017:null, Skora2018:null, Uzel2022:null, Kaplan2020:null, Flavell2023:null, Leifer2023:all})
+
+submodule:
+
+  dataset:
+    # Dataset directory contains:
+    #   - Validation dataset (validate experiment in standard dataset)
+    use_these_datasets:
+      path: /om2/user/lrvenan/worm-graph/data/datasets/custom01
+      num_worms: null
+
+    save_datasets: false
+
+    num_named_neurons: all
+    k_splits: 2
+    num_train_samples: 32
+    num_val_samples: 32
+    seq_len: 120
+    tau: 1
+    reverse: false
+    use_residual: false
+    smooth_data: true
+
+  model:
+    # Train model from scratch
+    type: NetworkRNN
+    input_size: 302
+    hidden_size: 256
+    num_layers: 1
+    loss: MSE
+    fft_reg_param: 0.0
+    l1_reg_param: 0.0
+    use_this_pretrained_model: null
+
+  train:
+    task: many-to-many
+    optimizer: AdamW
+    lr: 0.0001
+    epochs: 1000
+    save_freq: 100
+    batch_size: 32
+    shuffle: true
+    early_stopping:
+      # Minimum change in validation loss to be considered an improvement
+      delta: 0
+      # Number of epochs to wait for improvement before stopping
+      patience: 50
+
+  predict:
+    # Choose the worms that you want to predict
+    experimental_datasets:
+      # null = don't predict on this dataset
+      # all = predict on all the worms in the dataset
+      # positive integer = use this number of worms from the dataset (random pick)
+      Kato2015: worm1
+      Nichols2017: worm1
+      Skora2018: worm1
+      Uzel2022: worm1
+      Kaplan2020: worm1
+      Flavell2023: worm1
+      Leifer2023: worm1
+    # Number of time steps to generate = seq_len - context_window
+    nb_ts_to_generate: null
+    context_window: 60
+
+  analysis:
+    analyse_this_log_dir: null
+    # Validate using all worms of each experimental datasets
+    validation:
+      experimental_datasets:
+        Kato2015: all
+        Nichols2017: all
+        Skora2018: all
+        Uzel2022: all
+        Kaplan2020: all
+        Flavell2023: all
+        Leifer2023: all
+      task: 'many-to-many'
+
+  visualize:
+    plot_figures_from_this_log_dir: null
+    predict:
+      worms_to_plot: null # plot all predicted worms
+      neurons_to_plot: 5
+
+
+experiment:
+  name: num_time_steps
+  mode: MULTIRUN
+  seed: 42

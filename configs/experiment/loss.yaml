@@ -1,0 +1,71 @@
+# @package _global_
+defaults:
+  - override /submodule: [dataset, model, train, predict, visualize]
+  - _self_
+
+hydra:
+  mode: MULTIRUN
+  sweeper:
+  # These parameters will be tested just when MULTIRUN mode is used.
+  # Use the submodule parameters if RUN.
+      params:
+        submodule.model.loss: MSE, Huber, L1, Poisson
+
+submodule:
+
+  dataset:
+    # Combined, train and validation datasets provided
+    #  - Validation: all worms (245) with all named neurons
+    #  - Train: all worms (245) with all named neurons
+    use_these_datasets: /om2/user/lrvenan/worm-graph/data/standard_datasets/all_available_data
+
+    # Won't be used, because train and validation datasets are provided
+    experimental_datasets: [Kato2015, Nichols2017, Skora2018, Uzel2022, Kaplan2020, Flavell2023, Leifer2023] 
+    num_named_neurons: all
+    num_worms: all
+    k_splits: 2
+    num_train_samples: 32
+    num_val_samples: 32
+    seq_len: 120
+    tau: 1
+    smooth_data: true
+    reverse: false
+    use_residual: false
+
+  model:
+    type: NetworkLSTM
+    input_size: 302
+    hidden_size: 256
+    num_layers: 1
+    #loss: MSE
+    fft_reg_param: 0.0
+    l1_reg_param: 0.0
+    use_this_pretrained_model: null # create fresh model
+
+  train:
+    optimizer: AdamW
+    lr: 0.001
+    epochs: 600
+    save_freq: 100
+    batch_size: 16
+    shuffle: true
+    early_stopping:
+      delta: 0
+      patience: 200
+
+  predict:
+    worms_to_predict: [worm0]
+    nb_ts_to_generate: null # time steps to generate = seq_len - context_window
+    context_window: 60
+
+  visualize:
+    plot_figures_from_this_log_dir: null # plot figures of current experiment
+    predict:
+      worms_to_plot: null # plot all predicted worms (worm0)
+      neurons_to_plot: 10 # plot all the neurons
+
+
+experiment:
+  name: loss
+  mode: MULTIRUN
+  seed: 42

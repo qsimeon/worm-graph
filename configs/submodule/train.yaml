@@ -1,0 +1,12 @@
+train:
+  task: many-to-many
+  optimizer: AdamW
+  lr: 0.0001
+  epochs: 50
+  save_freq: 100
+  batch_size: 32
+  shuffle: true
+
+  early_stopping:
+    delta: 0 # minimum change in validation loss to be considered an improvement
+    patience: 50 # number of epochs to wait for improvement before stopping

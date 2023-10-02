@@ -1,0 +1,45 @@
+# @package _global_
+defaults:
+  - override /submodule: [dataset, model, train, predict, analysis, visualize]
+  - _self_
+
+hydra:
+  mode: MULTIRUN
+  sweeper:
+  # These parameters will be tested just when MULTIRUN mode is used.
+  # Use the submodule parameters if RUN.
+      params:
+        submodule.dataset.num_named_neurons: 5, 10
+
+submodule:
+  dataset:
+    use_these_datasets:
+      path: /om2/user/lrvenan/worm-graph/data/datasets/custom01
+      num_worms: all
+
+    save_datasets: false
+
+    experimental_datasets:
+      Kato2015: 5
+      Nichols2017: null
+      Skora2018: null
+      Uzel2022: [worm0]
+      Kaplan2020: null
+      Flavell2023: null
+      Leifer2023: null
+    k_splits: 2
+    num_train_samples: 16
+    num_val_samples: 4
+    seq_len: 120
+    tau: 1
+    reverse: false
+    use_residual: false
+    smooth_data: true
+    
+  train:
+    epochs: 2
+
+experiment:
+  name: default_multirun
+  mode: MULTIRUN
+  seed: 42

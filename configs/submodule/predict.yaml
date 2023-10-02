@@ -1,0 +1,16 @@
+predict:
+  # Choose the worms that you want to predict
+  experimental_datasets:
+    # null = don't predict on this dataset
+    # all = predict on all the worms in the dataset
+    # positive integer = use this number of worms from the dataset (random pick)
+    Kato2015: worm1
+    Nichols2017: worm1
+    Skora2018: worm1
+    Uzel2022: worm1
+    Kaplan2020: worm1
+    Flavell2023: worm1
+    Leifer2023: worm1
+  
+  nb_ts_to_generate: null # if null, the number of time steps to generate = seq_len - context_window
+  context_window: 120

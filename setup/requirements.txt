@@ -1,0 +1,10 @@
+black[jupyter]
+hydra-core
+hydra-optuna-sweeper
+hydra-submitit-launcher
+mat73
+mlflow
+ncps
+omegaconf
+pytest
+torch_geometric

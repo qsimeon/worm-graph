@@ -1,0 +1,8 @@
+# Mac file
+*.DS_Store
+*__MACOSX
+
+# Pickle files
+*.pickle
+processed/neural/*.pickle
+processed/neural/.processed

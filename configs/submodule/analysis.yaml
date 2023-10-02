@@ -1,0 +1,15 @@
+analysis:
+  # This directory is overwritten when using the a pipeline with train or predict submodules.
+  # If using the submodule alone, this directory is the path to the log folder you want to generate the analysis in.
+  analyse_this_log_dir: null
+
+  validation:
+    experimental_datasets:
+      Kato2015: worm1
+      Nichols2017: worm1
+      Skora2018: worm1
+      Uzel2022: worm1
+      Kaplan2020: worm1
+      Flavell2023: worm1
+      Leifer2023: worm1
+    task: 'many-to-many'
