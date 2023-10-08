@@ -107,7 +107,7 @@ def dataset_information(path_dict, legend_code):
     train_dataset_info = pd.read_csv(path_dict['train_dataset_info'])
     val_dataset_info = pd.read_csv(path_dict['val_dataset_info'])
     worms_info = pd.read_csv(path_dict['analysis_info'])
-    dt_info = pd.read_csv('/home/lrvnc/Projects/worm-graph/logs/results/dt.csv')
+    dt_info = pd.read_csv(path_dict['dt_info'])
 
     dt_info = dt_info.sort_values(by='dt_mean', ascending=False)
     dt_info = dt_info.reset_index().set_index('dataset')
@@ -212,7 +212,7 @@ def dataset_information(path_dict, legend_code):
     return dataset_info
 
 
-# 3a. Create dataframe with data scaling information for plotting
+# 3a. Create dataframe with data and hidden scaling results for plotting
 def data_scaling_df(nts_experiments):
     """
         nts_experiments: dictionary with the paths to the experiments
@@ -256,7 +256,7 @@ def data_scaling_df(nts_experiments):
 
     return pd.DataFrame(data_scaling_results)
 
-# 3b. Data scaling
+# 3b. Data scaling plot
 def data_scaling_plot(data_scaling_df, legend_code):
     model_marker_code = legend_code['model_marker_code']
     model_color_code = legend_code['model_color_code']
@@ -419,340 +419,113 @@ def hidden_scaling_plot(data_scaling_df, legend_code, fit_deg=2):
 
     plt.show()
 
-# OLD
-def data_scaling(experiment_log_folders, model_names, legend_code):
-    """
-    experiment_log_folders: list of paths to the experiment folders
-    model_names: list of model names
-    legend_code: dictionary with the color and marker codes
-    """
 
-    model_marker_code = legend_code["model_marker_code"]
-    model_color_code = legend_code["model_color_code"]
-    marker_legend = legend_code["marker_legend"]
+# 4a. Scaling slopes by model by individual exp. dataset results for plotting
+def scaling_slopes_df(nts_experiments):
+    data_scaling_results = {
+            'expID': [],
+            'model': [],
+            'validation_dataset': [],
+            'individual_validation_loss': [],
+            'individual_baseline_loss': [],
+            'model_hidden_size': [],
+            'model_hidden_volume': [],
+            'num_time_steps': [],
+            'time_steps_volume': [],
+            'min_val_loss': [],
+            'val_baseline': [],
+        }
 
-    fig, ax = plt.subplots(1, 1, figsize=(10, 5))
+    for model, exp_paths in nts_experiments.items():
 
-    for i, (path, model) in enumerate(zip(experiment_log_folders, model_names)):
-        fig, ax = plot_scaling_law(
-            exp_log_dir=path,
-            exp_name="num_time_steps",
-            exp_plot_dir=None,
-            fig=fig,
-            ax=ax,
-            fit_deg=1,
-        )
-        # Delete title
-        ax.set_title("")
-        ax.set_xlabel("Duration of training data (number of time steps)")
-        ax.set_ylabel("MSE Loss")
-        # Add experimental points legend
-        ax.lines[-3].set_marker(model_marker_code[model])
-        ax.lines[-3].set_color(model_color_code[model])
-        ax.lines[-1].set_color(model_color_code[model])
-        ax.lines[-2].set_marker("")
+        for exp_log_dir in exp_paths:
+            
+            # Loop over all the experiment files
+            for expID in np.sort(os.listdir(exp_log_dir)):
 
-        if i != 0:
-            # Delete baseline
-            ax.lines[-2].remove()
+                # Skip if not starts with exp
+                if not expID.startswith('exp') or expID.startswith('exp_'):
+                    continue
 
-    # Increase x and y label fontsize
-    ax.xaxis.label.set_size(14)
-    ax.yaxis.label.set_size(14)
+                exp_dir = os.path.join(exp_log_dir, expID)
 
-    # Bold x and y labels
-    ax.xaxis.label.set_weight("bold")
-    ax.yaxis.label.set_weight("bold")
+                # Load train metrics
+                df = pd.read_csv(os.path.join(exp_dir, 'train', 'train_metrics.csv'))
+                df_analysis = pd.read_csv(os.path.join(exp_dir, 'analysis', 'validation_loss_per_dataset.csv'))
 
-    # Handles and labels for first legend
-    handles, labels = ax.get_legend_handles_labels()
+                for val_dataset in df_analysis['dataset']:
+                    data_scaling_results['validation_dataset'].append(val_dataset)
+                    data_scaling_results['individual_validation_loss'].append(df_analysis[df_analysis['dataset'] == val_dataset]['val_loss'].values[0])
+                    data_scaling_results['individual_baseline_loss'].append(df_analysis[df_analysis['dataset'] == val_dataset]['val_baseline'].values[0])
+                    data_scaling_results['expID'].append(expID)
+                    data_scaling_results['model'].append(experiment_parameter(exp_dir, 'model_type')[0])
+                    data_scaling_results['model_hidden_size'].append(experiment_parameter(exp_dir, 'hidden_size')[0])
+                    data_scaling_results['model_hidden_volume'].append(experiment_parameter(exp_dir, 'hidden_volume')[0])
+                    data_scaling_results['num_time_steps'].append(experiment_parameter(exp_dir, 'num_time_steps')[0])
+                    data_scaling_results['time_steps_volume'].append(experiment_parameter(exp_dir, 'time_steps_volume')[0])
+                    data_scaling_results['min_val_loss'].append(df['val_loss'].min())
+                    data_scaling_results['val_baseline'].append(df['val_baseline'].mean())
 
-    # Create the first legend
-    legend1 = ax.legend(
-        handles=marker_legend,
-        loc="center right",
-        bbox_to_anchor=(0.995, 0.85),
-        title="Model",
-    )
-    ax.get_legend().get_title().set_fontstyle("italic")
-    ax.get_legend().get_title().set_fontsize("large")
-    ax.add_artist(legend1)
+    return pd.DataFrame(data_scaling_results)
 
-    ax.legend(
-        handles, labels, loc="center left", bbox_to_anchor=(0.01, 0.25), fontsize=12
-    )
+# 4b. Scaling slopes by model by individual exp. dataset plot
+def scaling_slopes_plot(scaling_slope_results, legend_code):
+    df = scaling_slope_results.groupby(['model', 'validation_dataset', 'expID']).agg(['mean', 'std'])
 
-    plt.show()
-
-# OLD
-def hidden_scaling(experiment_log_folders, model_names, legend_code):
-    """
-    experiment_log_folders: list of paths to the experiment folders
-    model_names: list of model names
-    legend_code: dictionary with the color and marker codes
-    """
-
-    model_marker_code = legend_code["model_marker_code"]
-    model_color_code = legend_code["model_color_code"]
-    ds_color_code = legend_code["ds_color_code"]
-    marker_legend = legend_code["marker_legend"]
-
-    fig, ax = plt.subplots(1, 1, figsize=(10, 5))
-
-    for i, (path, model) in enumerate(zip(experiment_log_folders, model_names)):
-        fig, ax = plot_scaling_law(
-            exp_log_dir=path,
-            exp_name="hidden_size",
-            exp_plot_dir=None,
-            fig=fig,
-            ax=ax,
-            fit_deg=2,
-        )
-        # Delete title
-        ax.set_title("")
-        ax.set_xlabel("Hidden dimension")
-        ax.set_ylabel("MSE Loss")
-        # Add experimental points legend
-        ax.lines[-3].set_marker(model_marker_code[model])
-        ax.lines[-3].set_color(model_color_code[model])
-        ax.lines[-1].set_color(model_color_code[model])
-        ax.lines[-2].set_marker("")
-
-        if i != 0:
-            # Delete baseline
-            ax.lines[-2].remove()
-
-    # Increase x and y label fontsize
-    ax.xaxis.label.set_size(14)
-    ax.yaxis.label.set_size(14)
-
-    # Bold x and y labels
-    ax.xaxis.label.set_weight("bold")
-    ax.yaxis.label.set_weight("bold")
-
-    # Handles and labels for first legend
-    handles, labels = ax.get_legend_handles_labels()
-
-    # Create the first legend
-    legend1 = ax.legend(
-        handles=marker_legend,
-        loc="center right",
-        bbox_to_anchor=(0.995, 0.85),
-        title="Model",
-    )
-    ax.get_legend().get_title().set_fontstyle("italic")
-    ax.get_legend().get_title().set_fontsize("large")
-    ax.add_artist(legend1)
-
-    ax.legend(
-        handles, labels, loc="center left", bbox_to_anchor=(0.01, 0.25), fontsize=12
-    )
-
-    plt.show()
-
-
-# 5. Data scaling in individual datasets
-def data_scaling_slopes(experiment_log_folders, model_names, legend_code):
-    model_marker_code = legend_code["model_marker_code"]
-    ds_color_code = legend_code["ds_color_code"]
-    original_ds_color_code = legend_code["original_ds_color_code"]
-
-    losses = []
-
-    loss_df = pd.DataFrame(
-        columns=["model", "dataset", "val_loss", "val_baseline", "exp_param"]
-    )
-
-    for i, (path, model) in enumerate(zip(experiment_log_folders, model_names)):
-        # Loop through all experiments
-        for file in np.sort(os.listdir(path)):
-            # Skip if not starts with exp
-            if not file.startswith("exp") or file.startswith("exp_"):
-                continue
-
-            # Get experiment directory
-            exp_dir = os.path.join(path, file)
-
-            # Experiment parameters
-            exp_param, exp_title, exp_xaxis = experiment_parameter(exp_dir, key='time_steps_volume')
-
-            # Load validation losses per dataset
-            tmp_df = pd.read_csv(
-                os.path.join(exp_dir, "analysis", "validation_loss_per_dataset.csv")
-            )
-
-            # Add experiment parameter to dataframe
-            tmp_df["exp_param"] = exp_param
-
-            # Load train information
-            train_info = pd.read_csv(
-                os.path.join(exp_dir, "dataset", "train_dataset_info.csv")
-            )
-
-            # Dataset names used for training
-            train_dataset_names = train_info["dataset"].unique()
-            tmp_df["train_dataset_names"] = ", ".join(train_dataset_names)
-
-            # Add model name to dataframe
-            tmp_df["model"] = model
-
-            # Add experiment to dataframe
-            tmp_df["exp"] = file
-
-            # Append to dataframe
-            loss_df = pd.concat([loss_df, tmp_df], axis=0)
-
-        # Make exp_param multi index with dataset
-        loss_df = loss_df.set_index(["exp_param", "dataset"])
-
-        # Drop NaNs
-        loss_df = loss_df.dropna()
-
-        losses.append(loss_df)
-
-        loss_df = pd.DataFrame(
-            columns=["dataset", "val_loss", "val_baseline", "exp_param"]
-        )
+    original_ds_color_code = legend_code['original_ds_color_code']
+    model_marker_code = legend_code['model_marker_code']
+    model_labels = legend_code['model_labels']
+    inverse_model_labels = {u:v for v,u in model_labels.items()}
 
     fig, ax = plt.subplots(2, 2, figsize=(15, 7))
 
-    # Scaling law df
-    slDF = pd.DataFrame(
-        columns=[
-            "model",
-            "dataset",
-            "slope",
-            "intercept",
-            "r_value",
-            "num_worms_val_dataset",
-        ]
-    )
+    slopes = {
+        'model': [],
+        'validation_dataset': [],
+        'slope': [],
+    }
 
-    # Create an empty list to hold custom legend patches
-    legend_patches = []
+    pd.DataFrame(columns=['model', 'dataset', 'slope', 'intercept', 'r_value'])
 
-    for subplot_idx, loss_df in enumerate(losses):
-        if subplot_idx > 1:
-            col = 1
-        else:
-            col = 0
+    for subplot_idx, model_name in enumerate(df.index.get_level_values('model').unique().to_list()):
+        
+        for val_dataset in df.index.get_level_values('validation_dataset').unique().to_list():
 
-        row = subplot_idx % 2
+            if subplot_idx > 1:
+                col = 1
+            else:
+                col = 0
+            
+            row = subplot_idx % 2
 
-        if row == 1 and col == 1:
-            continue
+            if row == 1 and col == 1:
+                continue
 
-        # Plot validation loss vs. exp_param for all datasets
-        for color_idx, dataset in enumerate(
-            [
-                "Kato2015",
-                "Nichols2017",
-                "Skora2018",
-                "Kaplan2020",
-                "Uzel2022",
-                "Flavell2023",
-                "Leifer2023",
-            ]
-        ):
-            df_subset_model = loss_df.loc[
-                loss_df.index.get_level_values("dataset") == dataset,
-                ["val_loss", "val_baseline", "model"],
-            ].reset_index()
-            df_subset_model["reduced_loss"] = (
-                df_subset_model["val_loss"] - df_subset_model["val_baseline"]
-            )
-            df_subset_model["reduced_loss"] = (
-                df_subset_model["reduced_loss"]
-                - df_subset_model["reduced_loss"].min()
-                + 1e-6
-            )
+            ax[row, col].set_xscale('log')
+            ax[row, col].set_yscale('log')
 
-            color = ds_color_code[dataset[:-4]]
-            model = df_subset_model["model"].values[0]
+            x = df.loc[model_name].loc[val_dataset]['time_steps_volume']['mean'].values
+            x_err = df.loc[model_name].loc[val_dataset]['time_steps_volume']['std'].values
 
-            # Append patches for legend
-            legend_patches.append(mpatches.Patch(color=color, label=f"{dataset[:-4]}"))
+            y = df.loc[model_name].loc[val_dataset]['individual_validation_loss']['mean'].values
+            y_err = df.loc[model_name].loc[val_dataset]['individual_validation_loss']['std'].values
 
-            sns.scatterplot(
-                data=df_subset_model,
-                x="exp_param",
-                y="val_loss",
-                ax=ax[row, col],
-                color=color,
-                marker=model_marker_code[model],
-            )
-            sns.lineplot(
-                data=df_subset_model,
-                x="exp_param",
-                y="val_baseline",
-                ax=ax[row, col],
-                linestyle="--",
-                color=color,
-            )
+            baseline = df.loc[model_name].loc[val_dataset]['individual_baseline_loss']['mean'].values
 
-            # Annotate number of val. worms
-            num_worms = loss_df.loc[
-                loss_df.index.get_level_values("dataset") == dataset, "num_worms"
-            ].values[0]
-            # min_exp_param = df_subset_baseline['exp_param'].min()
-            # max_val_baseline = df_subset_baseline['val_baseline'].max()
-            # ax.annotate(r'$n_{val}=$'+f'{int(num_worms)}', (min_exp_param, max_val_baseline), textcoords="offset points", xytext=(0,2), ha='center', fontsize=8, color=color)
+            slope, intercept, r_value, p_value, std_err = stats.linregress(np.log(x), np.log(y))
+            fit_label = 'y = {:.2e}x + {:.2e} ('.format(slope, intercept)+r'$R^2=$'+'{})'.format(round(r_value**2, 3))
 
-            # Log-log scale
-            ax[row, col].set_xscale("log")
-            ax[row, col].set_yscale("log")
 
-            # Try to fit linear regression (log-log)
-            try:
-                x = np.log(df_subset_model["exp_param"].values)
-                y = np.log(df_subset_model["val_loss"].values)
-                slope, intercept, r_value, p_value, std_err = stats.linregress(x, y)
-                fit_label = (
-                    "y = {:.2e}x + {:.2e} (".format(slope, intercept)
-                    + r"$R^2=$"
-                    + "{})".format(round(r_value**2, 3))
-                )
-                ax[row, col].plot(
-                    df_subset_model["exp_param"].values,
-                    np.exp(intercept + slope * x),
-                    linestyle="-",
-                    color=color,
-                )
-            except:
-                logger.info(
-                    "Failed to fit linear regression (log-log scale) for dataset {}".format(
-                        dataset
-                    )
-                )
-                pass
+            ax[row, col].errorbar(x=x, y=y, xerr=x_err, yerr=y_err, color=original_ds_color_code[val_dataset],
+                                fmt=model_marker_code[model_labels[model_name]], ecolor='black', capsize=2, elinewidth=1)
+            ax[row,col].plot(x, baseline, linestyle='--', color=original_ds_color_code[val_dataset])
+            ax[row,col].plot(x, np.exp(intercept + slope * np.log(x)), linestyle='-', color=original_ds_color_code[val_dataset])
 
-            # Append to scaling law dataframe
-            slDF = slDF.append(
-                {
-                    "model": model,
-                    "dataset": dataset,
-                    "slope": slope,
-                    "intercept": intercept,
-                    "r_value": r_value,
-                    "num_worms_val_dataset": num_worms,
-                },
-                ignore_index=True,
-            )
+            slopes['model'].append(model_name)
+            slopes['validation_dataset'].append(val_dataset)
+            slopes['slope'].append(slope)
 
-        # Adding the patches to the legend
-        # legend1 = ax[subplot_idx].legend(loc='center right', fontsize='small', bbox_to_anchor=(1.29, 0.5))
-        # ax[subplot_idx].add_artist(legend1)
-
-        # Floating legend box for dataset colors
-        # legend2 = ax.legend(handles=legend_patches, loc='center right', title="Datasets", fontsize='medium', bbox_to_anchor=(1.12, 0.5))
-        # ax.add_artist(legend2)
-
-        # Delete xlabel and ylabel
-        ax[row, col].set_xlabel("")
-        ax[row, col].set_ylabel("")
-
-        # Set title
-        ax[row, col].set_title("{} model".format(model), fontdict={"fontsize": 16})
+    slopes = pd.DataFrame(slopes)
 
     # Set axis labels and title
     ax[1,0].set_xlabel('Time steps per neuron', fontdict={'fontsize': 14, 'fontweight':'bold'})
@@ -760,61 +533,156 @@ def data_scaling_slopes(experiment_log_folders, model_names, legend_code):
     ax[0,0].set_xlabel('Time steps per neuron', fontdict={'fontsize': 14, 'fontweight':'bold'})
     ax[0,0].set_ylabel('MSE Loss', fontdict={'fontsize': 14, 'fontweight':'bold'})
     ax[1,0].set_ylabel('MSE Loss', fontdict={'fontsize': 14, 'fontweight':'bold'})
-    #ax[0,1].legend(handles=color_legend, loc='upper right', title='Validation datasets')
 
-    ax[0,0].set_title('(A) LSTM model', fontdict={'fontsize': 16})
-    ax[0,1].set_title('(B) Linear model', fontdict={'fontsize': 16})
-    ax[1,0].set_title('(C) Transformer model', fontdict={'fontsize': 16})
+    ax[0,0].set_title('(A) Linear model', fontdict={'fontsize': 16})
+    ax[0,1].set_title('(B) Transformer model', fontdict={'fontsize': 16})
+    ax[1,0].set_title('(C) LSTM model', fontdict={'fontsize': 16})
 
     # Use seaborn's boxplot function with model on the x-axis
-    sns.boxplot(
-        data=slDF,
-        x="model",
-        y="slope",
-        ax=ax[1, 1],
-        color="lightgrey",
-        showfliers=False,
-        order=["Transformer", "Linear", "LSTM"],
-    )  # You might want to set a neutral color for the boxplot
+    sns.boxplot(data=slopes, x='model', y='slope', ax=ax[1,1], color='lightgrey', showfliers=False,
+                order=['NeuralTransformer', 'LinearNN', 'NetworkLSTM'])  # You might want to set a neutral color for the boxplot
+    ax[1,1].set_xticklabels(['Transformer', 'Linear', 'LSTM'])
 
     for model, marker in model_marker_code.items():
-        model_data = slDF[slDF['model'] == model]
-        sns.stripplot(data=model_data, x='model', y='slope', hue='dataset', palette=original_ds_color_code, size=7, ax=ax[1,1],
-                    order=['Transformer', 'Linear', 'LSTM'], dodge=True, marker=marker)
+        model_data = slopes[slopes['model'] == inverse_model_labels[model]]
+        sns.stripplot(data=model_data, x='model', y='slope', hue='validation_dataset', ax=ax[1,1], palette=original_ds_color_code, size=7,
+                        order=['NeuralTransformer', 'LinearNN', 'NetworkLSTM'], dodge=True, marker=marker, legend=False)
 
     ax[1,1].set_title('(D) Distribution of the data scaling exponents', fontsize=16)
     ax[1,1].set_ylabel(r'Scaling exponent $(e^{slope})$', fontsize=14, fontweight='bold')
     ax[1,1].set_xlabel('Model Architecture', fontsize=14, fontweight='bold')
 
-    # Remove the automatic legend
-    ax[1, 1].get_legend().remove()
+    ax[1,1].yaxis.set_label_position("right")
+    ax[1,1].yaxis.tick_right()
 
-    # Get the legend object and set the legend labels with the dataset_labels list
-    # leg = ax[1,1].legend(title='Validation dataset', loc='upper right')
-    # for dataset_label, text in zip(dataset_labels, leg.get_texts()):
-    #    text.set_text(dataset_label)
-
-    # Place the y-axis label on the right side
-    ax[1, 1].yaxis.set_label_position("right")
-    ax[1, 1].yaxis.tick_right()
-
-    # ax.legend(title='Validation dataset', loc='upper right')
-
-    # Legend title in italic
-    # ax[1,1].get_legend().get_title().set_fontsize('large')
-    # ax[1,1].get_legend().get_title().set_fontstyle('italic')
-
-    plt.tight_layout(pad=0.5)
-
-    # Increase space between subplots
-    plt.subplots_adjust(wspace=0.1, hspace=0.5)
-
+    plt.tight_layout()
     plt.show()
 
-    return losses, slDF
+
+# 5. Cross-dataset Generalization plot
+def cross_dataset(experiment_log_folders, model_names, legend_code):
+    dataset_labels = legend_code["dataset_labels"]
+
+    analysis_df = pd.DataFrame(
+        columns=[
+            "exp",
+            "model",
+            "train_dataset",
+            "val_dataset",
+            "val_loss",
+            "val_baseline",
+        ]
+    )
+
+    for log_dir, model in zip(experiment_log_folders, model_names):
+        for exp_dir in np.sort(os.listdir(log_dir)):
+            # Skip if not starts with exp
+            if not exp_dir.startswith("exp") or exp_dir.startswith("exp_"):
+                continue
+
+            val_url = os.path.join(
+                log_dir, exp_dir, "analysis", "validation_loss_per_dataset.csv"
+            )
+            train_ds_url = os.path.join(
+                log_dir, exp_dir, "dataset", "train_dataset_info.csv"
+            )
+
+            val_df = pd.read_csv(val_url)
+            val_df["exp"] = exp_dir
+            val_df["model"] = model
+
+            train_dataset_info = pd.read_csv(train_ds_url)
+            val_df["train_dataset"] = train_dataset_info["dataset"].unique()[0]
+
+            # Change 'dataset' column name to 'val_dataset'
+            val_df = val_df.rename(columns={"dataset": "val_dataset"})
+
+            # Swap uzel and kaplan
+            val_df = val_df.iloc[[0, 1, 2, 4, 3, 5, 6], :]
+            val_df = val_df.reset_index(drop=True)
+
+            analysis_df = pd.concat([analysis_df, val_df], axis=0)
+
+    train_ds_names = [
+        "Kato2015",
+        "Nichols2017",
+        "Skora2018",
+        "Kaplan2020",
+        "Uzel2022",
+        "Flavell2023",
+        "Leifer2023",
+    ]
+    val_ds_names = analysis_df["val_dataset"].unique()
+    models = analysis_df["model"].unique()
+
+    # Figure size
+    fig, ax = plt.subplots(1, len(models), figsize=(12, 4), sharex="col", sharey="row")
+
+    # Initialize vmin and vmax for the color scale
+    vmin = analysis_df["val_loss"].min()
+    vmax = analysis_df["val_loss"].max()
+
+    for i, model_name in enumerate(models):
+        # Filter data for the specific model
+        df_model_subset = analysis_df[analysis_df["model"] == model_name]
+
+        # Create an empty matrix for the heatmap data
+        heatmap_data = pd.DataFrame(columns=train_ds_names, index=val_ds_names)
+
+        for train_ds in train_ds_names:
+            for val_ds in val_ds_names:
+                value = df_model_subset[
+                    (df_model_subset["train_dataset"] == train_ds)
+                    & (df_model_subset["val_dataset"] == val_ds)
+                ]["val_loss"].values
+                if value:
+                    heatmap_data.at[val_ds, train_ds] = value[0]
+
+        # Plot the heatmap
+        sns.heatmap(
+            heatmap_data.astype(float),
+            cmap="magma_r",
+            ax=ax[i],
+            annot=True,
+            square=True,
+            cbar=False,
+            vmin=vmin,
+            vmax=vmax,
+        )
+        ax[i].set_title("{}".format(model_name), fontsize=16)
+        # Set xlabel
+        ax[i].set_xlabel("Train dataset", fontsize=14, fontweight="bold")
+        ax[i].set_xticklabels(dataset_labels, rotation=90, fontsize=10)
+        # Set ylabel
+        ax[0].set_ylabel("Validation dataset", fontsize=14, fontweight="bold")
+        ax[i].set_yticklabels(dataset_labels, rotation=0, fontsize=10)
+        # Set xticks
+
+    # Add a single colorbar at the rightmost part
+    cbar_ax = fig.add_axes(
+        [0.92, 0.125, 0.02, 0.755]
+    )  # [left, bottom, width, height] of the colorbar axes in figure coordinates.
+    fig.colorbar(
+        ax[-1].collections[0], cax=cbar_ax
+    )  # ax[-1].collections[0] grabs the colormap of the last subplot
+
+    # Add title to cmap
+    cbar_ax.set_ylabel(
+        "Validation loss (MSE)",
+        fontsize=12,
+        fontweight="bold",
+        rotation=90,
+        labelpad=-57,
+    )
+
+    plt.tight_layout(pad=0.1)
+    plt.subplots_adjust(
+        right=0.9
+    )  # adjust the rightmost part to make room for the colorbar
+    plt.show()
 
 
-# 6. Prediction gap
+# 6. Prediction gap plots
 def prediction_gap(exp_nts_log_dir, legend_code, neuronID, datasetID, wormID):
     ds_color_code = legend_code["ds_color_code"]
     original_ds_color_code = legend_code["original_ds_color_code"]
@@ -1072,13 +940,10 @@ def prediction_gap(exp_nts_log_dir, legend_code, neuronID, datasetID, wormID):
                     num_time_steps, _, _ = experiment_parameter(exp_log_dir, key='time_steps_volume')
 
                     for neuron in neurons:
-                        ax.plot(
+                        ax2.plot(
                             time_gt_generated,
                             df.loc["GT Generation", neuron],
                             color=gt_generation_color[expID],
-                            label="Duration of training data: {}".format(
-                                num_time_steps
-                            ),
                         )
                         # ax.plot(time_ar_generated, df.loc['AR Generation', neuron], color=ar_generation_color[expID], label=num_time_steps)
                         ax2.plot(time_gt_generated, df.loc['GT Generation', neuron], color=gt_generation_color[expID], label='TSN: {:.2f}'.format(num_time_steps))
@@ -1122,68 +987,7 @@ def prediction_gap(exp_nts_log_dir, legend_code, neuronID, datasetID, wormID):
     return prediction_gap
 
 
-# 7. Predictions
-def plot_zoom(
-    ax,
-    time_vector,
-    max_time_steps,
-    context,
-    gt_lstm,
-    gt_gen_lstm,
-    gt_gen_tr,
-    gt_gen_lin,
-    model_color_code,
-    time_range=[140, 160],
-):
-    # Teacher forcing plot
-    ax.plot(
-        time_vector[: len(context)],
-        context,
-        color="tab:red",
-        label="Ground truth activity",
-        linewidth=2,
-    )
-    ax.plot(
-        time_vector[len(context) - 1 : max_time_steps],
-        gt_lstm,
-        color="tab:red",
-        linewidth=2,
-    )
-    ax.plot(
-        time_vector[len(context) - 1 : max_time_steps],
-        gt_gen_lstm,
-        color=model_color_code["LSTM"],
-        label="LSTM",
-    )
-    ax.plot(
-        time_vector[len(context) - 1 : max_time_steps],
-        gt_gen_tr,
-        color=model_color_code["Transformer"],
-        label="Transformer",
-    )
-    ax.plot(
-        time_vector[len(context) - 1 : max_time_steps],
-        gt_gen_lin,
-        color=model_color_code["Linear"],
-        label="Linear",
-    )
-
-    # Baseline model prediction
-    baseline_activity = np.zeros(len(gt_lstm))
-    baseline_activity[0] = context.iloc[-2]
-    baseline_activity[1:] = gt_lstm[:-1]
-    ax.plot(
-        time_vector[len(context) - 1 : max_time_steps],
-        baseline_activity,
-        color="black",
-        linestyle="--",
-        label="Baseline model",
-    )
-
-    ax.set_xlim(time_range)
-    ax.set_ylim(ax.get_ylim())  # Keep y-limits the same as the main plot
-
-
+# 7a. Prediction plots (autoregresive and teacher forcing side-by-side)
 def predictions(experiment_log_folders, model_names, legend_code):
     model_color_code = legend_code["model_color_code"]
 
@@ -1421,8 +1225,9 @@ def predictions(experiment_log_folders, model_names, legend_code):
 
     return predictions_df
 
-
-def teacher_forcing(experiment_log_folders, model_names, legend_code):
+# 7b. (Only) Teacher forcing prediction plots
+def teacher_forcing(experiment_log_folders, model_names, legend_code,
+                    ds_type, exp, neuron_to_plot):
     model_color_code = legend_code["model_color_code"]
 
     predictions_df = []
@@ -1486,9 +1291,6 @@ def teacher_forcing(experiment_log_folders, model_names, legend_code):
         "Flavell2023",
         "Leifer2023",
     ]
-    ds_type = "val"
-    exp = "exp5"  # model trained with maximum amount of data
-    neuron_to_plot = "AVER"
 
     fig = plt.figure(
         figsize=(20, 5 * len(dataset_names) // 3)
@@ -1634,7 +1436,9 @@ def teacher_forcing(experiment_log_folders, model_names, legend_code):
     # plt.tight_layout()
     plt.show()
 
-def autoregressive(experiment_log_folders, model_names, legend_code):
+# 7c. (Only) Autoregressive prediction plots
+def autoregressive(experiment_log_folders, model_names, legend_code,
+                    ds_type, exp, neuron_to_plot):
 
     model_color_code = legend_code['model_color_code']
 
@@ -1689,9 +1493,6 @@ def autoregressive(experiment_log_folders, model_names, legend_code):
     predictions_df = pd.concat(predictions_df, axis=0)
 
     dataset_names = ['Kato2015', 'Skora2018', 'Nichols2017', 'Kaplan2020', 'Uzel2022', 'Flavell2023', 'Leifer2023']
-    ds_type = 'val'
-    exp = 'exp5'  # model trained with maximum amount of data
-    neuron_to_plot = 'AVER'
 
     fig = plt.figure(figsize=(20, 5 * len(dataset_names)//3))  # Adjusted to account for 3 columns.
 
@@ -1766,126 +1567,4 @@ def autoregressive(experiment_log_folders, model_names, legend_code):
             ax.set_title(f"Autoregressive generation of {neuron_to_plot}'s Neuronal Activity", fontsize=16)
             
     #plt.tight_layout()
-    plt.show()
-
-# 8. Cross dataset
-def cross_dataset(experiment_log_folders, model_names, legend_code):
-    dataset_labels = legend_code["dataset_labels"]
-
-    analysis_df = pd.DataFrame(
-        columns=[
-            "exp",
-            "model",
-            "train_dataset",
-            "val_dataset",
-            "val_loss",
-            "val_baseline",
-        ]
-    )
-
-    for log_dir, model in zip(experiment_log_folders, model_names):
-        for exp_dir in np.sort(os.listdir(log_dir)):
-            # Skip if not starts with exp
-            if not exp_dir.startswith("exp") or exp_dir.startswith("exp_"):
-                continue
-
-            val_url = os.path.join(
-                log_dir, exp_dir, "analysis", "validation_loss_per_dataset.csv"
-            )
-            train_ds_url = os.path.join(
-                log_dir, exp_dir, "dataset", "train_dataset_info.csv"
-            )
-
-            val_df = pd.read_csv(val_url)
-            val_df["exp"] = exp_dir
-            val_df["model"] = model
-
-            train_dataset_info = pd.read_csv(train_ds_url)
-            val_df["train_dataset"] = train_dataset_info["dataset"].unique()[0]
-
-            # Change 'dataset' column name to 'val_dataset'
-            val_df = val_df.rename(columns={"dataset": "val_dataset"})
-
-            # Swap uzel and kaplan
-            val_df = val_df.iloc[[0, 1, 2, 4, 3, 5, 6], :]
-            val_df = val_df.reset_index(drop=True)
-
-            analysis_df = pd.concat([analysis_df, val_df], axis=0)
-
-    train_ds_names = [
-        "Kato2015",
-        "Nichols2017",
-        "Skora2018",
-        "Kaplan2020",
-        "Uzel2022",
-        "Flavell2023",
-        "Leifer2023",
-    ]
-    val_ds_names = analysis_df["val_dataset"].unique()
-    models = analysis_df["model"].unique()
-
-    # Figure size
-    fig, ax = plt.subplots(1, len(models), figsize=(12, 4), sharex="col", sharey="row")
-
-    # Initialize vmin and vmax for the color scale
-    vmin = analysis_df["val_loss"].min()
-    vmax = analysis_df["val_loss"].max()
-
-    for i, model_name in enumerate(models):
-        # Filter data for the specific model
-        df_model_subset = analysis_df[analysis_df["model"] == model_name]
-
-        # Create an empty matrix for the heatmap data
-        heatmap_data = pd.DataFrame(columns=train_ds_names, index=val_ds_names)
-
-        for train_ds in train_ds_names:
-            for val_ds in val_ds_names:
-                value = df_model_subset[
-                    (df_model_subset["train_dataset"] == train_ds)
-                    & (df_model_subset["val_dataset"] == val_ds)
-                ]["val_loss"].values
-                if value:
-                    heatmap_data.at[val_ds, train_ds] = value[0]
-
-        # Plot the heatmap
-        sns.heatmap(
-            heatmap_data.astype(float),
-            cmap="magma_r",
-            ax=ax[i],
-            annot=True,
-            square=True,
-            cbar=False,
-            vmin=vmin,
-            vmax=vmax,
-        )
-        ax[i].set_title("{}".format(model_name), fontsize=16)
-        # Set xlabel
-        ax[i].set_xlabel("Train dataset", fontsize=14, fontweight="bold")
-        ax[i].set_xticklabels(dataset_labels[:-1], rotation=90, fontsize=10)
-        # Set ylabel
-        ax[0].set_ylabel("Validation dataset", fontsize=14, fontweight="bold")
-        ax[i].set_yticklabels(dataset_labels[:-1], rotation=0, fontsize=10)
-        # Set xticks
-
-    # Add a single colorbar at the rightmost part
-    cbar_ax = fig.add_axes(
-        [0.92, 0.125, 0.02, 0.755]
-    )  # [left, bottom, width, height] of the colorbar axes in figure coordinates.
-    fig.colorbar(
-        ax[-1].collections[0], cax=cbar_ax
-    )  # ax[-1].collections[0] grabs the colormap of the last subplot
-
-    # Add title to cmap
-    cbar_ax.set_ylabel(
-        "Validation loss (MSE)",
-        fontsize=12,
-        fontweight="bold",
-        rotation=90,
-        labelpad=-57,
-    )
-
-    plt.tight_layout(pad=0.1)
-    plt.subplots_adjust(
-        right=0.9
-    )  # adjust the rightmost part to make room for the colorbar
     plt.show()
