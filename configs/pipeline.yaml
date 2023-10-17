@@ -51,7 +51,7 @@ hydra:
     nodes: 1
     gres: gpu:1
     exclude: dgx001, dgx002
-    mem_gb: 16
+    mem_gb: 32
     cpus_per_task: 1
     gpus_per_node: 1
     tasks_per_node: 1
@@ -62,6 +62,6 @@ hydra:
 # ============================ Pipeline Config ============================
 
 experiment:
-  name: submodule
+  name: dataset
   seed: null # If null, a random seed is generated for each run.
   mode: RUN
