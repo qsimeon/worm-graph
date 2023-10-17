@@ -259,9 +259,6 @@ def gaussian_kernel_smooth(x, t, sigma=5):
     return x_smooth
 
 
-# TODO: write a Kalman smoother
-
-
 def fourier_transform_smooth(x, t, percent=0.1):
     # TODO: Rewrite this to do windowed smoothing using mutitaper estimates
     """Uses the FFT to smooth a multidimensional time series.

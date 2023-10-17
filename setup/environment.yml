@@ -35,6 +35,7 @@ dependencies:
   - pip:
     - dtaidistance
     - mat73
+    - mlflow
     - ncps
     - hydra-core
     - hydra-optuna-sweeper
