@@ -22,7 +22,6 @@ from utils import ROOT_DIR, DEVICE
 import json
 from scipy.cluster.hierarchy import dendrogram, linkage, fcluster
 from scipy.spatial.distance import squareform
-from dtaidistance import dtw
 import sklearn.metrics as sm
 from visualize._utils import plot_heat_map
 from data._main import get_datasets

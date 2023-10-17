@@ -104,6 +104,6 @@ submodule:
 
 
 experiment:
-  name: num_named_neurons
+  name: nn_lstm_v1
   mode: MULTIRUN
   seed: 42

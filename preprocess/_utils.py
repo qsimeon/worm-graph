@@ -259,46 +259,6 @@ def gaussian_kernel_smooth(x, t, sigma=5):
     return x_smooth
 
 
-def fourier_transform_smooth(x, t, percent=0.1):
-    # TODO: Rewrite this to do windowed smoothing using mutitaper estimates
-    """Uses the FFT to smooth a multidimensional time series.
-
-    Smooths a multidimensional time series by keeping the lowest `percent`
-    fraction of the maximum frequency from the FFT of the input signal.
-
-    Parameters:
-        x (ndarray): The input time series to be smoothed.
-        t (ndarray): The time vector (in seconds) corresponding to the input time series.
-        percent (float): The percentage of the max frequency to keep.
-
-    Returns:
-        x_smooth (ndarray): The smoothed time series.
-    """
-    isnumpy = isinstance(x, np.ndarray)
-    if isnumpy:
-        x = torch.from_numpy(x)
-    dim = x.ndim
-    if dim == 1:
-        x = x.unsqueeze(-1)
-    t = t.squeeze()
-    dt = np.median(np.diff(t, prepend=t[0] - np.diff(t)[0]))  # sampling time
-    x_smooth = torch.zeros_like(x)
-    frequencies = torch.fft.rfftfreq(x.shape[0], d=dt)
-    threshold = torch.abs(frequencies)[
-        int(frequencies.shape[0] * percent)
-    ]  # keep lowest `percent` of frequencies
-    oneD_kernel = torch.abs(frequencies) < threshold
-    fft_input = torch.fft.rfftn(x, dim=0)
-    oneD_kernel = oneD_kernel.repeat(x.shape[1], 1).T
-    fft_result = torch.fft.irfftn(fft_input * oneD_kernel, dim=0)
-    x_smooth[0 : fft_result.shape[0]] = fft_result
-    if dim == 1:
-        x_smooth = x_smooth.squeeze(-1)
-    if isnumpy:
-        x_smooth = x_smooth.cpu().numpy()
-    return x_smooth
-
-
 def moving_average_smooth(x, t, window_size=15):
     """Applies a simple moving average smoothing filter to a multidimensional time series.
 
@@ -385,8 +345,6 @@ def smooth_data_preprocess(calcium_data, time_in_seconds, smooth_method):
 
     if smooth_method is None:
         smooth_ca_data = calcium_data
-    elif str(smooth_method).lower() == "fft":
-        smooth_ca_data = fourier_transform_smooth(calcium_data, time_in_seconds)
     elif str(smooth_method).lower() == "ga":
         smooth_ca_data = gaussian_kernel_smooth(calcium_data, time_in_seconds)
     elif str(smooth_method).lower() == "ma":
@@ -727,7 +685,7 @@ def pickle_neural_data(
     zipfile,
     dataset="all",
     transform=StandardScaler(),
-    smooth_method="fft",
+    smooth_method="ma",
     interpolate_method="linear",
     resample_dt=None,
 ):
@@ -749,9 +707,9 @@ def pickle_neural_data(
         If None, all datasets are pickled.
     transform : object, optional (default: StandardScaler())
         The sklearn transformation to be applied to the data.
-    smooth_method : str, optional (default: 'fft')
+    smooth_method : str, optional (default: 'ma')
         The smoothing method to apply to the data;
-        options are 'ga', 'fft', 'es' or 'ma'.
+        options are 'ga', 'es' or 'ma'.
     interpolate_method: str, optional (default: 'linear')
         The scipy interpolation method to use when resampling the data.
     resample_dt : float, optional (default: None)
@@ -871,7 +829,7 @@ class BasePreprocessor:
         self,
         dataset_name,
         transform=StandardScaler(),
-        smooth_method="FFT",
+        smooth_method="MA",
         interpolate_method="linear",
         resample_dt=0.1,
     ):
@@ -1280,7 +1238,7 @@ class Leifer2023Preprocessor(BasePreprocessor):
         real_data = real_data[:, mask]
         label_list = np.array(label_list)[mask].tolist()
         # impute any remaining NaN values
-        imputer = IterativeImputer(random_state=0, keep_empty_features=False)
+        imputer = IterativeImputer(random_state=0)
         if np.isnan(real_data).any():
             real_data = imputer.fit_transform(real_data)
         assert real_data.shape[1] == len(

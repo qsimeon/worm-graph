@@ -47,9 +47,9 @@ hydra:
       # - cd /om2/user/lrvenan/worm-graph
       # - source /om2/user/lrvenan/miniconda/bin/activate worm-graph
       - cd /om2/user/qsimeon/worm-graph
-      - conda worm-graph
+      - conda activate worm-graph
     nodes: 1
-    gres: gpu:a100:1
+    gres: gpu:1
     exclude: dgx001, dgx002
     mem_gb: 16
     cpus_per_task: 1

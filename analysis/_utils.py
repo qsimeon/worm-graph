@@ -52,15 +52,6 @@ def hierarchical_clustering_algorithm(
         np.fill_diagonal(D, 0)  # Make diagonal 0 (just in case)
         title_plot = "cosine similarity matrix"
 
-    elif distance == "dtw":
-        X = X.detach().numpy().astype(np.double).T
-        time_series = [vec for vec in X]
-        R = dtw.distance_matrix_fast(
-            time_series, window=1000
-        )  # window: anti-phase dynamics around 50s and 100s
-        D = R
-        title_plot = "DTW matrix"
-
     if verbose:
         print("X.shape:", X.shape)
         print("Distance matrix shape:", D.shape)

@@ -9,7 +9,7 @@ hydra:
   # These parameters will be tested just when MULTIRUN mode is used.
   # Use the submodule parameters if RUN.
     params:
-      submodule.model.hidden_size: 64, 128, 256, 512, 1024, 2048, 4096
+      submodule.model.hidden_size: 64, 128 #, 256, 512, 1024, 2048, 4096
 
 submodule:
 
@@ -103,6 +103,6 @@ submodule:
 
 
 experiment:
-  name: hidden_size
+  name: temp1
   mode: MULTIRUN
   seed: 42

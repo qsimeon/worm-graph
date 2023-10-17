@@ -9,12 +9,13 @@ hydra:
   # These parameters will be tested just when MULTIRUN mode is used.
   # Use the submodule parameters if RUN.
       params:
-        submodule.dataset.num_named_neurons: 5, 10
+        submodule.dataset.num_named_neurons: 10, 30
+        submodule.model.type: NetworkLSTM, NeuralTransformer
 
 submodule:
   dataset:
     use_these_datasets:
-      path: /om2/user/lrvenan/worm-graph/data/datasets/custom01
+      path: null
       num_worms: all
 
     save_datasets: false

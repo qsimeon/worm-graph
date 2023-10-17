@@ -103,6 +103,6 @@ submodule:
 
 
 experiment:
-  name: hidden_size
+  name: hidden_transformer
   mode: MULTIRUN
   seed: null

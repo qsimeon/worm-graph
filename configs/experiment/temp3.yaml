@@ -103,6 +103,6 @@ submodule:
 
 
 experiment:
-  name: hidden_size
+  name: temp3
   mode: MULTIRUN
   seed: 42

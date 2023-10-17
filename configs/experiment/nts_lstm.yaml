@@ -112,6 +112,6 @@ submodule:
 
 
 experiment:
-  name: num_time_steps
+  name: nts_lstm
   mode: MULTIRUN
   seed: null

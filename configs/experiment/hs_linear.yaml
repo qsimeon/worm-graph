@@ -73,6 +73,6 @@ submodule:
       neurons_to_plot: 4 # plot all the neurons
 
 experiment:
-  name: hyp_search
+  name: hs_linear
   mode: MULTIRUN
   seed: 42

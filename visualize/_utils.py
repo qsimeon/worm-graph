@@ -359,45 +359,6 @@ def setup_histograms_for_checkpoint(chkpt, axes, range_val, fig):
     fig.suptitle(f"Weights distribution at epoch {chkpt_name}", fontsize=16)
 
 
-def histogram_weights_animation(log_dir, output_video_name="weights_dynamics.mp4"):
-    # Get list of checkpoints
-    checkpoints = np.sort(
-        [
-            os.path.join(log_dir, "train", "checkpoints", chkpt)
-            for chkpt in os.listdir(os.path.join(log_dir, "train", "checkpoints"))
-            if "model_best" not in chkpt
-        ]
-    ).tolist()
-
-    # Get the global range of weights for a consistent plot across checkpoints
-    model_config = OmegaConf.create({"use_this_pretrained_model": checkpoints[0]})
-    model = get_model(model_config, verbose=False)
-    weights = [
-        param.detach().cpu().numpy().flatten()
-        for name, param in model.named_parameters()
-        if "weight" in name
-    ]
-    all_weights = np.concatenate(weights)
-    range_val = (all_weights.min(), all_weights.max())
-
-    # Initialize a figure
-    num_layers = len(weights)
-    fig = plt.figure(figsize=(20, 5 * ((num_layers + 1) // 2)))
-    gs = gridspec.GridSpec((num_layers + 1) // 2, 2)
-    axes = [fig.add_subplot(gs[i]) for i in range(num_layers)]
-
-    ani = FuncAnimation(
-        fig,
-        setup_histograms_for_checkpoint,
-        frames=checkpoints,
-        fargs=(axes, range_val, fig),
-        repeat=False,
-    )
-    ani.save(os.path.join(log_dir, "train", output_video_name), writer="ffmpeg", fps=1)
-
-    plt.close(fig)
-
-
 def plot_before_after_weights(log_dir: str) -> None:
     """Plots the model's readout weights from before and after training.
 
@@ -441,10 +402,9 @@ def plot_before_after_weights(log_dir: str) -> None:
     first_chkpt = torch.load(checkpoint_zero_dir, map_location=DEVICE)
     last_chkpt = torch.load(checkpoint_last_dir, map_location=DEVICE)
     # create the model
-    input_size, hidden_size, num_layers = (
+    input_size, hidden_size = (
         first_chkpt["input_size"],
         first_chkpt["hidden_size"],
-        first_chkpt["num_layers"],
     )
     loss_name = first_chkpt["loss_name"]
     fft_reg_param, l1_reg_param = (
@@ -454,7 +414,6 @@ def plot_before_after_weights(log_dir: str) -> None:
     model = eval(model_name)(
         input_size,
         hidden_size,
-        num_layers,
         loss=loss_name,
         fft_reg_param=fft_reg_param,
         l1_reg_param=l1_reg_param,
@@ -1066,34 +1025,34 @@ def plot_heat_map(
 
 
 def experiment_parameter(exp_dir, key):
-    value = exp_dir.split('/')[-1] # expN (default)
-    title = 'MULTIRUN'
-    xaxis = 'Experiment run'
+    value = exp_dir.split("/")[-1]  # expN (default)
+    title = "MULTIRUN"
+    xaxis = "Experiment run"
 
-    if key == 'time_steps_volume':
-        df = pd.read_csv(os.path.join(exp_dir, 'dataset', 'train_dataset_info.csv'))
-        df['tsv'] = df['train_time_steps'] / df['num_neurons']
-        value = df['tsv'].sum() # Total volume of train time steps
-        title = 'Volume of training data'
-        xaxis = 'Number of time steps / Number of Named Neurons'
+    if key == "time_steps_volume":
+        df = pd.read_csv(os.path.join(exp_dir, "dataset", "train_dataset_info.csv"))
+        df["tsv"] = df["train_time_steps"] / df["num_neurons"]
+        value = df["tsv"].sum()  # Total volume of train time steps
+        title = "Volume of training data"
+        xaxis = "Number of time steps / Number of Named Neurons"
 
-    if key == 'num_time_steps':
-        df = pd.read_csv(os.path.join(exp_dir, 'dataset', 'train_dataset_info.csv'))
-        value = df['train_time_steps'].sum() # Total number of train time steps
-        title = 'Amount of training data'
-        xaxis = 'Number of time steps'
+    if key == "num_time_steps":
+        df = pd.read_csv(os.path.join(exp_dir, "dataset", "train_dataset_info.csv"))
+        value = df["train_time_steps"].sum()  # Total number of train time steps
+        title = "Amount of training data"
+        xaxis = "Number of time steps"
 
-    if key == 'num_parameters':
-        pipeline_info = OmegaConf.load(os.path.join(exp_dir, 'pipeline_info.yaml'))
+    if key == "num_parameters":
+        pipeline_info = OmegaConf.load(os.path.join(exp_dir, "pipeline_info.yaml"))
         model = get_model(pipeline_info.submodule.model)
         total_params, total_trainable = print_parameters(model, verbose=False)
-        value = total_trainable # Total number of parameters
-        title = 'Number of trainable parameters'
-        xaxis = 'Number of trainable parameters'
+        value = total_trainable  # Total number of parameters
+        title = "Number of trainable parameters"
+        xaxis = "Number of trainable parameters"
 
-    if key == 'hidden_volume':
-        pipeline_info = OmegaConf.load(os.path.join(exp_dir, 'pipeline_info.yaml'))
-        h_size = pipeline_info.submodule.model.hidden_size # Model hidden dimension
+    if key == "hidden_volume":
+        pipeline_info = OmegaConf.load(os.path.join(exp_dir, "pipeline_info.yaml"))
+        h_size = pipeline_info.submodule.model.hidden_size  # Model hidden dimension
         model = get_model(pipeline_info.submodule.model)
         total_params, total_trainable = print_parameters(model, verbose=False)
         value = h_size / total_trainable  # Total volume of hidden states

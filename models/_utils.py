@@ -3,6 +3,7 @@ from models._pkg import *
 # Init logger
 logger = logging.getLogger(__name__)
 
+
 def print_parameters(model, verbose=False):
     table = PrettyTable(["Module", "Parameters", "Trainable"])
 
@@ -25,8 +26,10 @@ def print_parameters(model, verbose=False):
         print("Total Trainable Parameters:", total_trainable)
     return total_params, total_trainable
 
+
 # # # "Cores" or Inner Models for Different Model Architectures # # #
 # # # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
+
 
 class PositionalEncoding(torch.nn.Module):
     """
@@ -44,8 +47,8 @@ class PositionalEncoding(torch.nn.Module):
         self.dropout = torch.nn.Dropout(p=dropout)
         position = torch.arange(max_len).unsqueeze(1)
         div_term = torch.exp(torch.arange(0, n_embd, 2) * (-math.log(10000.0) / n_embd))
-        pe = torch.zeros(1, max_len, n_embd) # we use batch_first=True
-        pe[0, :, 0::2] = torch.sin(position * div_term) 
+        pe = torch.zeros(1, max_len, n_embd)  # we use batch_first=True
+        pe[0, :, 0::2] = torch.sin(position * div_term)
         pe[0, :, 1::2] = torch.cos(position * div_term)
         self.register_buffer("pe", pe)
 
@@ -56,6 +59,7 @@ class PositionalEncoding(torch.nn.Module):
         """
         x = x + self.pe[:, : x.size(1), :]  # add positional encoding to input
         return self.dropout(x)
+
 
 class FeedForward(torch.nn.Module):
     """
@@ -305,7 +309,6 @@ class InnerHiddenModel(torch.nn.Module):
 
 
 # # # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
-
 
 # # # Model super class: Common interface all model architectures # # # #
 # Provides the input-output backbone and allows changeable mode "cores" #
@@ -675,7 +678,7 @@ class NeuralTransformer(Model):
             1  # number of attention heads; NOTE: this must be divisor of `hidden_size`
         )
         self.dropout = 0.1  # dropout ratedropout=self.dropout,
-        
+
         # Positional encoding
         self.positional_encoding = PositionalEncoding(
             self.input_size,
