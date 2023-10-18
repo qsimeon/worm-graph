@@ -16,12 +16,12 @@ dataset:
     # null = don't use this dataset
     # all = use all the worms in the dataset
     # positive integer = use this number of worms from the dataset (random pick)
-    Kato2015: null
-    Nichols2017: null
-    Skora2018: null
-    Uzel2022: null
-    Kaplan2020: null
-    Flavell2023: null
+    Kato2015: all
+    Nichols2017: all
+    Skora2018: all
+    Uzel2022: all
+    Kaplan2020: all
+    Flavell2023: all
     Leifer2023: all
     
   num_named_neurons: all # number of neurons to train the model with (positive integer or 'all')
@@ -30,7 +30,6 @@ dataset:
   seq_len: 120
   num_train_samples: 32 # number of length seq_len samples to sample from the train set
   num_val_samples: 32 # number of length seq_len samples to sample from the validation set
-  tau: 1
   reverse: false
   use_residual: false
   smooth_data: true

@@ -69,7 +69,6 @@ def train_model(
     save_freq = train_config.save_freq
 
     _, _, _, metadata = next(iter(train_dataset))
-    tau = metadata["tau"]
 
     optim_name = "torch.optim." + train_config.optimizer
     lr = train_config.lr
@@ -146,7 +145,7 @@ def train_model(
             )
 
             # Model
-            y_pred = model(X_train, masks_train, tau)
+            y_pred = model(X_train, masks_train)
 
             if train_config.task == "many-to-one":
                 y_pred = y_pred[:, -1, :].unsqueeze(1)  # Select last time step
@@ -222,7 +221,7 @@ def train_model(
                 )
 
                 # Model
-                y_pred = model(X_val, masks_val, tau)
+                y_pred = model(X_val, masks_val)
 
                 if train_config.task == "many-to-one":
                     y_pred = y_pred[:, -1, :].unsqueeze(1)  # Select last time step

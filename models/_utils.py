@@ -370,8 +370,6 @@ class Model(torch.nn.Module):
         self.l1_reg_param = l1_reg_param
         # Initialize hidden state
         self._init_hidden()
-        # Initialize the tau (1 := next-timestep prediction)
-        self.tau = 1
         # Identity layer
         self.identity = torch.nn.Identity()
         # Input to hidden transformation - placeholder
@@ -419,7 +417,7 @@ class Model(torch.nn.Module):
         return self.l1_reg_param
 
     @autocast()
-    def forward(self, input: torch.Tensor, mask: torch.Tensor, tau: int = 1):
+    def forward(self, input: torch.Tensor, mask: torch.Tensor):
         """
         Forward method for simple linear regression model.
 
@@ -429,12 +427,8 @@ class Model(torch.nn.Module):
             Input data with shape (batch, seq_len, neurons)
         mask : torch.Tensor
             Mask on the neurons with shape (batch, neurons)
-        tau : int, optional
-            Time offset of target
         """
 
-        # store the tau
-        self.tau = tau
         # initialize hidden state
         self.hidden = self.init_hidden(input.shape)
         # set hidden state of internal model
@@ -443,19 +437,17 @@ class Model(torch.nn.Module):
         mask = mask.unsqueeze(1).expand_as(input)
         # initialize output tensor with input tensor
         output = self.identity(input * mask)
-        # loop through tau
-        for _ in range(tau):
-            # multiply input by the mask
-            input = output * mask
-            # transform the input
-            input_hidden_out = self.input_hidden(input)
-            # concatenate into a single latent
-            latent_out = input_hidden_out
-            # transform the latent
-            hidden_out = self.inner_hidden_model(latent_out)
-            # perform a linear readout to get the output
-            readout = self.linear(hidden_out)
-            output = readout
+        # multiply input by the mask
+        input = output * mask
+        # transform the input
+        input_hidden_out = self.input_hidden(input)
+        # concatenate into a single latent
+        latent_out = input_hidden_out
+        # transform the latent
+        hidden_out = self.inner_hidden_model(latent_out)
+        # perform a linear readout to get the output
+        readout = self.linear(hidden_out)
+        output = readout
         return output.float()  # casting to float fixed autocast problem
 
     def loss_fn(self):
@@ -561,9 +553,7 @@ class Model(torch.nn.Module):
                 ]  # shape (1, context_window, 302)
 
                 # Get predictions
-                predictions = self(
-                    x, mask, tau=self.tau
-                )  # shape (1, context_window, 302)
+                predictions = self(x, mask)  # shape (1, context_window, 302)
 
                 # Get last predicted value
                 last_time_step = predictions[:, -1, :].unsqueeze(0)  # shape (1, 1, 302)
@@ -836,9 +826,9 @@ class NeuralCFC(Model):
 class NetworkLSTM(Model):
     """
     A model of the _C. elegans_ neural network using an LSTM.
-    Given an input sequence of length $L$ and an offset $\tau$,
-    this model is trained to output the sequence of length $L$
-    that occurs $tau$ time steps after the start of the input sequence.
+    Given an input sequence of length $L$ and an offset this
+    model is trained to output the sequence of length $L$ that
+    occurs 1 time steps after the start of the input sequence.
     """
 
     def __init__(

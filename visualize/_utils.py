@@ -381,14 +381,10 @@ def plot_before_after_weights(log_dir: str) -> None:
     # get strings for plot title
     dataset_name = config.dataset.train.name
     model_name = config.model.type
-    tau_in = config.train.tau_in
     # Create the plot title
-    plt_title = (
-        "Model readout weights\nmodel: {}\ndataset: {}\ntraining tau: {}".format(
-            model_name,
-            dataset_name,
-            tau_in,
-        )
+    plt_title = "Model readout weights\nmodel: {}\ndataset: {}".format(
+        model_name,
+        dataset_name,
     )
     # return if no checkpoints found
     chkpt_dir = os.path.join(log_dir, "checkpoints")

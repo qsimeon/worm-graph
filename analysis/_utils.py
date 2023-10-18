@@ -673,7 +673,6 @@ def validation_loss_per_dataset(log_dir, experimental_datasets, task):
     seq_len = int(train_dataset_info["train_seq_len"].values[0])
     num_train_samples = int(train_dataset_info["num_train_samples"].values[0])
     k_splits = int(train_dataset_info["k_splits"].values[0])
-    tau = int(train_dataset_info["tau"].values[0])
     use_residual = int(train_dataset_info["use_residual"].values[0])
     smooth_data = int(train_dataset_info["smooth_data"].values[0])
 
@@ -708,7 +707,6 @@ def validation_loss_per_dataset(log_dir, experimental_datasets, task):
             num_train_samples=num_train_samples,
             num_val_samples=num_train_samples,  # use the same number of samples as in the train dataset
             seq_len=seq_len,
-            tau=tau,
             use_residual=use_residual,
             smooth_data=smooth_data,
             reverse=False,
@@ -746,7 +744,7 @@ def validation_loss_per_dataset(log_dir, experimental_datasets, task):
                 )
 
                 # Model
-                y_pred = model(X_val, masks_val, tau)
+                y_pred = model(X_val, masks_val)
 
                 if task == "many-to-one":
                     y_pred = y_pred[:, -1, :].unsqueeze(1)  # Select last time step

@@ -30,7 +30,6 @@ class NeuralActivityDataset(torch.utils.data.Dataset):
         seq_len=1,
         num_samples=100,
         reverse=False,
-        tau=1,
         use_residual=False,
     ):
         """Initializes a new instance of the NeuralActivityDataset.
@@ -53,10 +52,6 @@ class NeuralActivityDataset(torch.utils.data.Dataset):
             axis (axis=0) of the `data` tensor.
         reverse : bool, default=False
             Whether to sample sequences backward from end of the data.
-        tau : int, default=1
-            The number of timesteps to the right by which the target
-            sequence is offset from input sequence.
-            0 < tau < max_timesteps//2
 
         Returns
         -------
@@ -79,9 +74,6 @@ class NeuralActivityDataset(torch.utils.data.Dataset):
         assert isinstance(seq_len, int) and 0 < seq_len <= data.size(
             0
         ), "Enter an integer sequence length 0 < `seq_len` <= max_timesteps."
-        assert (
-            isinstance(tau, int) and 0 <= tau < data.size(0) // 2
-        ), "Enter a integer offset `0 <= tau < max_timesteps // 2`."
 
         # Create time vector if not provided
         assert torch.is_tensor(
@@ -97,7 +89,6 @@ class NeuralActivityDataset(torch.utils.data.Dataset):
         self.worm_dataset = worm_dataset
         self.seq_len = seq_len
         self.reverse = reverse
-        self.tau = tau
         self.use_residual = use_residual
         self.unique_time_steps = set()
 
@@ -132,28 +123,25 @@ class NeuralActivityDataset(torch.utils.data.Dataset):
         # Calculate the average dt
         avg_dt = torch.diff(time_vec).mean()
 
-        # Data samples: input (X_tau) and target (Y_tau)
-        X_tau = self.data[start:end, :].detach().clone()
-        Y_tau = (
-            self.data[start + self.tau : end + self.tau, :].detach().clone()
-        )  # Overlap
+        # Data samples: input (X) and target (Y)
+        X = self.data[start:end, :].detach().clone()
+        Y = self.data[start + 1 : end + 1, :].detach().clone()  # Overlap
 
         # Calculate the residual (forward first derivative)
-        Res_tau = (Y_tau - X_tau).detach() / (avg_dt * max(1, self.tau))
+        Res = (Y - X).detach() / avg_dt
 
         metadata = dict(
             wormID=self.wormID,
             worm_dataset=self.worm_dataset,
-            tau=self.tau,
             time_vec=time_vec,
             start_time=start,
         )
 
         # Return sample
         if self.use_residual:
-            Y_tau = Res_tau
+            Y = Res
 
-        return X_tau, Y_tau, self.neurons_mask, metadata
+        return X, Y, self.neurons_mask, metadata
 
     def __data_generator(self):
         """Private method for generating data samples.
@@ -174,10 +162,10 @@ class NeuralActivityDataset(torch.utils.data.Dataset):
 
         # All start indices
         start_range = (
-            np.linspace(0, T - L - self.tau, self.num_samples, dtype=int)
+            np.linspace(0, T - L - 1, self.num_samples, dtype=int)
             if not self.reverse  # generate from start to end
             else np.linspace(  # generate from end to start
-                T - L - self.tau, 0, self.num_samples, dtype=int
+                T - L - 1, 0, self.num_samples, dtype=int
             )
         )
         # Sequential processing (applying the function to each element)
@@ -840,7 +828,6 @@ def split_combined_dataset(
     num_train_samples,
     num_val_samples,
     seq_len,
-    tau,
     reverse,
     use_residual,
     smooth_data,
@@ -861,8 +848,6 @@ def split_combined_dataset(
         Number of validation samples.
     seq_len : int
         Length of the sequences.
-    tau : int
-        Time lag between the input and the target (in number of time steps).
     reverse : bool
         Whether to reverse the sequences.
     use_residual : bool
@@ -901,7 +886,6 @@ def split_combined_dataset(
         "combined_dataset_index": [],
         "train_time_steps": [],
         "num_train_samples": [],
-        "tau": [],
         "train_seq_len": [],
         "val_time_steps": [],
         "num_val_samples": [],
@@ -924,9 +908,6 @@ def split_combined_dataset(
         assert isinstance(seq_len, int) and 0 < seq_len < len(
             data
         ), "seq_len must be an integer > 0 and < len(data)"
-        assert isinstance(tau, int) and tau < (
-            len(data) - seq_len
-        ), "The desired tau is too long. Try a smaller value"
         assert seq_len < (
             len(data) // k_splits
         ), "The desired seq_len is too long. Try a smaller seq_len or decreasing k_splits"
@@ -963,7 +944,6 @@ def split_combined_dataset(
                     worm_dataset=worm_dataset,  # dataset where the worm comes from
                     seq_len=seq_len,
                     num_samples=num_samples_split,
-                    tau=tau,
                     use_residual=use_residual,
                     reverse=reverse,
                 )
@@ -984,7 +964,6 @@ def split_combined_dataset(
                     worm_dataset=worm_dataset,  # dataset where the worm comes from
                     seq_len=seq_len,
                     num_samples=num_samples_split,
-                    tau=tau,
                     use_residual=use_residual,
                     reverse=reverse,
                 )
@@ -999,7 +978,6 @@ def split_combined_dataset(
         dataset_info2["train_time_steps"].append(train_split_time_steps)
         dataset_info2["train_seq_len"].append(seq_len)
         dataset_info2["num_train_samples"].append(num_train_samples)
-        dataset_info2["tau"].append(tau)
 
         dataset_info2["val_time_steps"].append(val_split_time_steps)
         dataset_info2["val_seq_len"].append(seq_len)
