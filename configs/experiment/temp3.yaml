@@ -35,7 +35,6 @@ submodule:
     num_train_samples: 32
     num_val_samples: 32
     seq_len: 120
-    tau: 1
     reverse: false
     use_residual: false
     smooth_data: true
