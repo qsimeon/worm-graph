@@ -1347,20 +1347,34 @@ def plot_validation_loss_per_dataset(log_dir):
 
     fig, ax = plt.subplots(figsize=(10, 4))
 
+    bar_width = 0.35  # You can adjust this value for desired distance between bars
+
+    # Bar positions for two sets of data
+    index = np.arange(len(losses))
+    bar1_positions = index
+    bar2_positions = index + bar_width
+
     # First plot both model and baseline losses
-    ax.bar(np.arange(len(losses)), losses["val_loss"], color=palette[0], label="Model")
     ax.bar(
-        np.arange(len(losses)),
+        bar1_positions, losses["val_loss"], bar_width, label="Model", color=palette[0]
+    )
+    ax.bar(
+        bar2_positions,
         losses["val_baseline"],
-        color=palette[1],
+        bar_width,
         label="Baseline",
+        color=palette[1],
         alpha=0.4,
     )
-    ax.set_xticks(np.arange(len(losses)))
+
+    ax.set_xticks(
+        index + bar_width / 2
+    )  # Set x-ticks to be in the middle of the grouped bars
     ax.set_xticklabels(losses["dataset"].values, rotation=0, ha="center")
     ax.set_ylabel("Loss")
     ax.set_title("Validation loss across datasets")
     ax.legend(loc="upper right")
+
     props = dict(boxstyle="round", facecolor="white", alpha=0.5)
     textstr = "Datasets used for training: \n{}".format(", ".join(train_dataset_names))
     ax.text(
@@ -1372,9 +1386,10 @@ def plot_validation_loss_per_dataset(log_dir):
         verticalalignment="top",
         bbox=props,
     )
+
     for i, v in enumerate(losses["num_worms"]):
         ax.text(
-            i,
+            i + bar_width / 2,  # Adjusted x-position to align the text
             max(losses.loc[i, ["val_loss", "val_baseline"]]),
             r"$n_{val} = $" + str(int(v)),
             ha="center",
@@ -1388,6 +1403,66 @@ def plot_validation_loss_per_dataset(log_dir):
         os.path.join(log_dir, "analysis", "validation_loss_per_dataset.png"), dpi=300
     )
     plt.close()
+
+
+# def plot_validation_loss_per_dataset(log_dir):
+#     # Load validation losses
+#     losses = pd.read_csv(
+#         os.path.join(log_dir, "analysis", "validation_loss_per_dataset.csv")
+#     )
+#     losses = losses.dropna()
+
+#     # Train dataset names
+#     train_info = pd.read_csv(os.path.join(log_dir, "dataset", "train_dataset_info.csv"))
+#     train_dataset_names = train_info["dataset"].unique()
+
+#     sns.set_theme(style="whitegrid")
+#     sns.set_palette("tab10")
+#     palette = sns.color_palette()
+
+#     fig, ax = plt.subplots(figsize=(10, 4))
+
+#     # First plot both model and baseline losses
+#     ax.bar(np.arange(len(losses)), losses["val_loss"], color=palette[0], label="Model")
+#     ax.bar(
+#         np.arange(len(losses)),
+#         losses["val_baseline"],
+#         color=palette[1],
+#         label="Baseline",
+#         alpha=0.4,
+#     )
+#     ax.set_xticks(np.arange(len(losses)))
+#     ax.set_xticklabels(losses["dataset"].values, rotation=0, ha="center")
+#     ax.set_ylabel("Loss")
+#     ax.set_title("Validation loss across datasets")
+#     ax.legend(loc="upper right")
+#     props = dict(boxstyle="round", facecolor="white", alpha=0.5)
+#     textstr = "Datasets used for training: \n{}".format(", ".join(train_dataset_names))
+#     ax.text(
+#         0.02,
+#         0.95,
+#         textstr,
+#         transform=ax.transAxes,
+#         fontsize=10,
+#         verticalalignment="top",
+#         bbox=props,
+#     )
+#     for i, v in enumerate(losses["num_worms"]):
+#         ax.text(
+#             i,
+#             max(losses.loc[i, ["val_loss", "val_baseline"]]),
+#             r"$n_{val} = $" + str(int(v)),
+#             ha="center",
+#             fontsize=8,
+#         )
+
+#     plt.tight_layout()
+
+#     # Save figure
+#     plt.savefig(
+#         os.path.join(log_dir, "analysis", "validation_loss_per_dataset.png"), dpi=300
+#     )
+#     plt.close()
 
 
 def plot_exp_validation_loss_per_dataset(exp_log_dir, exp_name, exp_plot_dir=None):

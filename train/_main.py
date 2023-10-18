@@ -68,8 +68,7 @@ def train_model(
     criterion = model.loss_fn()
     save_freq = train_config.save_freq
 
-    _, _, _, metadata = next(iter(train_dataset))
-
+    # Optimizer parameters
     optim_name = "torch.optim." + train_config.optimizer
     lr = train_config.lr
     optimizer = eval(optim_name + "(model.parameters(), lr=" + str(lr) + ")")

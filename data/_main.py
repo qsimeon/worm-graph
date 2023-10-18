@@ -27,7 +27,6 @@ def get_datasets(dataset_config: DictConfig, save=True):
         - num_train_samples (int): Number of training samples.
         - num_val_samples (int): Number of validation samples.
         - seq_len (int): Sequence length for time series data.
-        - tau (int): Time delay for time series data.
         - reverse (bool): Whether to reverse the time series data.
         - use_residual (bool): Whether to use residuals in the data.
         - smooth_data (bool): Whether to smooth the data.
@@ -51,7 +50,6 @@ def get_datasets(dataset_config: DictConfig, save=True):
     num_train_samples = dataset_config.num_train_samples
     num_val_samples = dataset_config.num_val_samples
     seq_len = dataset_config.seq_len
-    tau = dataset_config.tau
     reverse = dataset_config.reverse
     use_residual = dataset_config.use_residual
     smooth_data = dataset_config.smooth_data
@@ -181,7 +179,6 @@ def get_datasets(dataset_config: DictConfig, save=True):
                 num_train_samples,
                 num_val_samples,
                 seq_len,
-                tau,
                 reverse,
                 use_residual,
                 smooth_data,
@@ -193,7 +190,6 @@ def get_datasets(dataset_config: DictConfig, save=True):
                     [
                         "combined_dataset_index",
                         "train_time_steps",
-                        "tau",
                         "num_train_samples",
                         "train_seq_len",
                         "smooth_data",
@@ -262,7 +258,6 @@ def get_datasets(dataset_config: DictConfig, save=True):
             num_train_samples,
             num_val_samples,
             seq_len,
-            tau,
             reverse,
             use_residual,
             smooth_data,
@@ -274,7 +269,6 @@ def get_datasets(dataset_config: DictConfig, save=True):
                 [
                     "combined_dataset_index",
                     "train_time_steps",
-                    "tau",
                     "num_train_samples",
                     "train_seq_len",
                     "smooth_data",
