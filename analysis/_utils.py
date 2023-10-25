@@ -715,7 +715,9 @@ def validation_loss_per_dataset(log_dir, experimental_datasets, task):
         num_worms.append(len(combined_dataset))
 
         valloader = torch.utils.data.DataLoader(
-            val_dataset, batch_size=32, shuffle=False
+            val_dataset,
+            batch_size=32,
+            shuffle=False,  # TODO: Get the batch size from config
         )
 
         # Evaluation loop

@@ -27,7 +27,7 @@ dataset:
   num_named_neurons: all # number of neurons to train the model with (positive integer or 'all')
   k_splits: 2 # split the data into k_splits and alternate in assigning them to the train and validation set
   
-  seq_len: 500
+  seq_len: 300
   num_train_samples: 36 # number of length seq_len samples to sample from the train set
   num_val_samples: 36 # number of length seq_len samples to sample from the validation set
   reverse: false
