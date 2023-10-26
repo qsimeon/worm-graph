@@ -1,4 +1,6 @@
 # @package _global_
+# cds = cross dataset (generalization)
+# We use single experimental datasets.
 defaults:
   - override /submodule: [dataset, model, train, predict, analysis, visualize]
   - _self_

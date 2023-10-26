@@ -9,7 +9,7 @@ hydra:
   # These parameters will be tested just when MULTIRUN mode is used.
   # Use the submodule parameters if RUN.
     params:
-      submodule.model.hidden_size: 64, 128, 256, 512, 1024, 2048, 4096
+      submodule.model.hidden_size: 64, 128, 256, 512, 1024, 2048, 4096, 8192
 
 submodule:
 
@@ -32,8 +32,8 @@ submodule:
 
     num_named_neurons: all
     k_splits: 2
-    num_train_samples: 36
-    num_val_samples: 36
+    num_train_samples: 32
+    num_val_samples: 32
     seq_len: 200
     reverse: false
     use_residual: false
@@ -55,7 +55,7 @@ submodule:
     lr: 0.0001
     epochs: 1000
     save_freq: 100
-    batch_size: 36
+    batch_size: 32
     shuffle: true
     early_stopping:
       # Minimum change in validation loss to be considered an improvement

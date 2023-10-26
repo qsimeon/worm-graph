@@ -1,4 +1,6 @@
 # @package _global_
+# nts = number of time steps
+# We increase gradually the quantity of worms from all datasets.
 defaults:
   - override /submodule: [dataset, model, train, predict, analysis, visualize]
   - _self_
