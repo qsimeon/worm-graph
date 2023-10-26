@@ -724,7 +724,7 @@ def pickle_neural_data(
     """
     zip_path = os.path.join(ROOT_DIR, zipfile)
     source_path = os.path.join(ROOT_DIR, zipfile.strip(".zip"))
-    
+
     # Make the neural data directory if it doesn't exist
     processed_path = os.path.join(ROOT_DIR, "data/processed/neural")
     if not os.path.exists(processed_path):
