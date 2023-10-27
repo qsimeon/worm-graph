@@ -36,7 +36,7 @@ submodule:
     k_splits: 2
     num_train_samples: 32
     num_val_samples: 32
-    seq_len: 120
+    seq_len: 200
     reverse: false
     use_residual: false
     smooth_data: true
@@ -81,7 +81,7 @@ submodule:
       Leifer2023: worm1
     # Number of time steps to generate = seq_len - context_window
     nb_ts_to_generate: null
-    context_window: 120
+    context_window: 200
 
   analysis:
     analyse_this_log_dir: null

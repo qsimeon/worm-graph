@@ -4,5 +4,11 @@ preprocess:
   dataset: all # [Kato2015, Nichols2017, Skora2018, Uzel2022, Kaplan2020, Flavell2023, Leifer2023] # any dataset in utils.VALID_DATASETS
   resample_dt: 0.5 # The time interval (in seconds) to use for resampling; if null, no resampling is performed
   interpolate: linear # The method to use for interpolation; options: null, linear, quadratic, cubic
-  smooth: MA
-  # null: No smoothing, # GA: Gaussian kernel filter, # ES: Exponential kernel smoothing filter, # MA: Moving average filter
+  smooth: 
+    method: GA # null: No smoothing, # GA: Gaussian kernel filter, # ES: Exponential kernel smoothing filter, # MA: Moving average filter
+    # hyperparameters of the different smoothing methods
+    alpha: 0.1
+    window_size: 21
+    sigma: 5
+
+  

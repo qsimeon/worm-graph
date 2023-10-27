@@ -6,11 +6,11 @@ dataset:
   # If not null, and the directory contains a combined dataset + train or val. dataset, create the missing dataset using the combined dataset.
   # Specify num_worms to random pick a subset worms from the combined dataset (when a combined dataset is provided).
   use_these_datasets:
-    path: null #/om2/user/qsimeon/worm-graph/data/datasets/TrainLeifer2023TestOthers
+    path: null #/om2/user/qsimeon/worm-graph/data/datasets/AllDatasets
     num_worms: all
 
   # Whether to save the datasets in the logs/dataset directory.
-  save_datasets: false
+  save_datasets: true
 
   experimental_datasets:
     # null = don't use this dataset
@@ -27,9 +27,9 @@ dataset:
   num_named_neurons: all # number of neurons to train the model with (positive integer or 'all')
   k_splits: 2 # split the data into k_splits and alternate in assigning them to the train and validation set
   
-  seq_len: 300
-  num_train_samples: 36 # number of length seq_len samples to sample from the train set
-  num_val_samples: 36 # number of length seq_len samples to sample from the validation set
+  seq_len: 200
+  num_train_samples: 32 # number of length seq_len samples to sample from the train set
+  num_val_samples: 32 # number of length seq_len samples to sample from the validation set
   reverse: false
   use_residual: false
   smooth_data: true

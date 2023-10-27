@@ -76,7 +76,7 @@ submodule:
       Kaplan2020: worm1
       Flavell2023: worm1
       Leifer2023: worm1
-    # Number of time steps to generate = seq_len - context_window
+    # Number of time steps to generate 
     nb_ts_to_generate: null
     context_window: 200
 

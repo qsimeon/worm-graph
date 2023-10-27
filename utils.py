@@ -1,12 +1,12 @@
-import logging
-import mlflow
-import numpy as np
 import os
-import pandas as pd
-import random
 import torch
-import torch.multiprocessing
+import mlflow
+import random
+import logging
 import warnings
+import numpy as np
+import pandas as pd
+import torch.multiprocessing
 from omegaconf import DictConfig, ListConfig
 
 # Ignore sklearn's RuntimeWarnings
@@ -25,7 +25,7 @@ USER = "qsimeon"  # OpenMind username
 
 NUM_NEURONS = 302  # number of neurons in the model organism
 
-MAX_TOKEN_LEN = 1000  # maximum attention block size for transformer models
+MAX_TOKEN_LEN = 1000  # maximum attention block size for Transformer models
 
 RAW_DATA_URL = "https://www.dropbox.com/s/45yqpvtsncx4095/raw_data.zip?dl=1"
 
@@ -66,8 +66,8 @@ VALID_DATASETS = {
 }
 
 SYNTHETIC_DATASETS = {
-    "Synthetic0000",
-    "Custom",  # Dataset created when 'dataset.save' is True
+    "Synthetic0000",  # Dataset created with the `CreateSyntheticDataset.ipynb` notebook.
+    "Custom",  # Dataset created when `save_datasets` is True in the dataset.yaml config.
 }
 
 # List of all 302 hermaphrodite neurons
@@ -83,11 +83,15 @@ NEURONS_302 = sorted(
 
 def init_random_seeds(seed=0):
     """
-    Initialize random seeds for numpy, torch, and random.
+    Initialize random seeds for random, numpy, torch and cuda.
     """
+    random.seed(seed)
     np.random.seed(seed)
     torch.manual_seed(seed)
-    random.seed(seed)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed(seed)
+        torch.cuda.manual_seed_all(seed)
+        torch.backends.cudnn.deterministic = True
     return None
 
 

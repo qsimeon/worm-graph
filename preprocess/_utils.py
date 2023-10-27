@@ -234,7 +234,7 @@ def preprocess_connectome(raw_dir, raw_files):
     return None
 
 
-def gaussian_kernel_smooth(x, t, sigma=5):
+def gaussian_kernel_smooth(x, t, sigma):
     """Gaussian smoothing for a multidimensional time series.
 
     Parameters:
@@ -259,17 +259,22 @@ def gaussian_kernel_smooth(x, t, sigma=5):
     return x_smooth
 
 
-def moving_average_smooth(x, t, window_size=15):
+def moving_average_smooth(x, t, window_size):
     """Applies a simple moving average smoothing filter to a multidimensional time series.
 
     Parameters:
         x (ndarray): The input time series to be smoothed.
         t (ndarray): The time vector (in seconds) corresponding to the input time series.
-        window_size (int): The size of the moving average window.
+        window_size (int): The size of the moving average window. Must be an odd number.
 
     Returns:
         x_smooth (ndarray): The smoothed time series.
     """
+    # make sure that window_size is odd
+    if window_size % 2 == 0:
+        window_size += 1
+
+    # check for correct dimensions
     isnumpy = isinstance(x, np.ndarray)
     if isnumpy:
         x = torch.from_numpy(x)
@@ -297,13 +302,17 @@ def moving_average_smooth(x, t, window_size=15):
     return x_smooth
 
 
-def exponential_kernel_smooth(x, t, alpha=0.1):
-    """Exponential smoothing for a multidimensional time series.
+def exponential_kernel_smooth(x, t, alpha):
+    """
+    Exponential smoothing for a multidimensional time series.
 
     Parameters:
         x (ndarray): The input time series to be smoothed (time, neurons).
         t (ndarray): The time vector (in seconds) corresponding to the input time series.
-        alpha (float): The smoothing factor, 0<alpha<1.
+        alpha (float): The smoothing factor, 0<alpha<1. A higher value of alpha will
+                       result in less smoothing (more weight is given to the current value),
+                       while a lower value of alpha will result in more smoothing
+                       (more weight is given to the previous smoothed values).
 
     Returns:
         x_smooth (ndarray): The smoothed time series.
@@ -329,7 +338,7 @@ def exponential_kernel_smooth(x, t, alpha=0.1):
     return x_smooth
 
 
-def smooth_data_preprocess(calcium_data, time_in_seconds, smooth_method):
+def smooth_data_preprocess(calcium_data, time_in_seconds, smooth_method, **kwargs):
     """Smooths the calcium data provided as a (time, neurons) array `calcium_data`.
 
     Returns the denoised signals calcium signals using the method specified by `smooth_method`.
@@ -346,11 +355,17 @@ def smooth_data_preprocess(calcium_data, time_in_seconds, smooth_method):
     if smooth_method is None:
         smooth_ca_data = calcium_data
     elif str(smooth_method).lower() == "ga":
-        smooth_ca_data = gaussian_kernel_smooth(calcium_data, time_in_seconds)
+        smooth_ca_data = gaussian_kernel_smooth(
+            calcium_data, time_in_seconds, sigma=kwargs.get("sigma", 5)
+        )
     elif str(smooth_method).lower() == "ma":
-        smooth_ca_data = moving_average_smooth(calcium_data, time_in_seconds)
+        smooth_ca_data = moving_average_smooth(
+            calcium_data, time_in_seconds, window_size=kwargs.get("window_size", 21)
+        )
     elif str(smooth_method).lower() == "es":
-        smooth_ca_data = exponential_kernel_smooth(calcium_data, time_in_seconds)
+        smooth_ca_data = exponential_kernel_smooth(
+            calcium_data, time_in_seconds, alpha=kwargs.get("alpha", 0.1)
+        )
     else:
         raise TypeError("Check `config/preprocess.yml` for available smooth methods.")
     return smooth_ca_data
@@ -688,6 +703,7 @@ def pickle_neural_data(
     smooth_method="ma",
     interpolate_method="linear",
     resample_dt=None,
+    **kwargs,
 ):
     """Preprocess and then saves C. elegans neural data to .pickle format.
 
@@ -758,7 +774,11 @@ def pickle_neural_data(
             logger.info(f"Start processing {dataset}.")
             # instantiate the relevant preprocessor class
             preprocessor = eval(dataset + "Preprocessor")(
-                transform, smooth_method, interpolate_method, resample_dt
+                transform,
+                smooth_method,
+                interpolate_method,
+                resample_dt,
+                **kwargs,
             )
             # call its method
             preprocessor.preprocess()
@@ -773,7 +793,11 @@ def pickle_neural_data(
         logger.info(f"Start processing {dataset}.")
         # instantiate the relevant preprocessor class
         preprocessor = eval(dataset + "Preprocessor")(
-            transform, smooth_method, interpolate_method, resample_dt
+            transform,
+            smooth_method,
+            interpolate_method,
+            resample_dt,
+            **kwargs,
         )
         # call its method
         preprocessor.preprocess()
@@ -832,10 +856,12 @@ class BasePreprocessor:
         smooth_method="MA",
         interpolate_method="linear",
         resample_dt=0.1,
+        **kwargs,
     ):
         self.dataset = dataset_name
         self.transform = transform
         self.smooth_method = smooth_method
+        self.smooth_kwargs = kwargs
         self.resample_dt = resample_dt
         self.interpolate_method = interpolate_method
         self.raw_data_path = os.path.join(ROOT_DIR, "opensource_data")
@@ -846,6 +872,7 @@ class BasePreprocessor:
             data,
             time_in_seconds,
             self.smooth_method,
+            **self.smooth_kwargs,
         )
 
     def resample_data(self, time_in_seconds, data):
@@ -1021,9 +1048,16 @@ class BasePreprocessor:
 
 
 class Skora2018Preprocessor(BasePreprocessor):
-    def __init__(self, transform, smooth_method, interpolate_method, resample_dt):
+    def __init__(
+        self, transform, smooth_method, interpolate_method, resample_dt, **kwargs
+    ):
         super().__init__(
-            "Skora2018", transform, smooth_method, interpolate_method, resample_dt
+            "Skora2018",
+            transform,
+            smooth_method,
+            interpolate_method,
+            resample_dt,
+            **kwargs,
         )
 
     def extract_data(self, arr):
@@ -1057,9 +1091,16 @@ class Skora2018Preprocessor(BasePreprocessor):
 
 
 class Kato2015Preprocessor(BasePreprocessor):
-    def __init__(self, transform, smooth_method, interpolate_method, resample_dt):
+    def __init__(
+        self, transform, smooth_method, interpolate_method, resample_dt, **kwargs
+    ):
         super().__init__(
-            "Kato2015", transform, smooth_method, interpolate_method, resample_dt
+            "Kato2015",
+            transform,
+            smooth_method,
+            interpolate_method,
+            resample_dt,
+            **kwargs,
         )
 
     def extract_data(self, arr):
@@ -1094,9 +1135,16 @@ class Kato2015Preprocessor(BasePreprocessor):
 
 
 class Nichols2017Preprocessor(BasePreprocessor):
-    def __init__(self, transform, smooth_method, interpolate_method, resample_dt):
+    def __init__(
+        self, transform, smooth_method, interpolate_method, resample_dt, **kwargs
+    ):
         super().__init__(
-            "Nichols2017", transform, smooth_method, interpolate_method, resample_dt
+            "Nichols2017",
+            transform,
+            smooth_method,
+            interpolate_method,
+            resample_dt,
+            **kwargs,
         )
 
     def extract_data(self, arr):
@@ -1134,9 +1182,16 @@ class Nichols2017Preprocessor(BasePreprocessor):
 
 
 class Kaplan2020Preprocessor(BasePreprocessor):
-    def __init__(self, transform, smooth_method, interpolate_method, resample_dt):
+    def __init__(
+        self, transform, smooth_method, interpolate_method, resample_dt, **kwargs
+    ):
         super().__init__(
-            "Kaplan2020", transform, smooth_method, interpolate_method, resample_dt
+            "Kaplan2020",
+            transform,
+            smooth_method,
+            interpolate_method,
+            resample_dt,
+            **kwargs,
         )
 
     def load_data(self, file_name):
@@ -1180,9 +1235,16 @@ class Kaplan2020Preprocessor(BasePreprocessor):
 
 
 class Uzel2022Preprocessor(BasePreprocessor):
-    def __init__(self, transform, smooth_method, interpolate_method, resample_dt):
+    def __init__(
+        self, transform, smooth_method, interpolate_method, resample_dt, **kwargs
+    ):
         super().__init__(
-            "Uzel2022", transform, smooth_method, interpolate_method, resample_dt
+            "Uzel2022",
+            transform,
+            smooth_method,
+            interpolate_method,
+            resample_dt,
+            **kwargs,
         )
 
     def load_data(self, file_name):
@@ -1218,9 +1280,16 @@ class Uzel2022Preprocessor(BasePreprocessor):
 
 
 class Leifer2023Preprocessor(BasePreprocessor):
-    def __init__(self, transform, smooth_method, interpolate_method, resample_dt):
+    def __init__(
+        self, transform, smooth_method, interpolate_method, resample_dt, **kwargs
+    ):
         super().__init__(
-            "Leifer2023", transform, smooth_method, interpolate_method, resample_dt
+            "Leifer2023",
+            transform,
+            smooth_method,
+            interpolate_method,
+            resample_dt,
+            **kwargs,
         )
 
     def load_data(self, file_name):
@@ -1428,9 +1497,16 @@ class Leifer2023Preprocessor(BasePreprocessor):
 
 
 class Flavell2023Preprocessor(BasePreprocessor):
-    def __init__(self, transform, smooth_method, interpolate_method, resample_dt):
+    def __init__(
+        self, transform, smooth_method, interpolate_method, resample_dt, **kwargs
+    ):
         super().__init__(
-            "Flavell2023", transform, smooth_method, interpolate_method, resample_dt
+            "Flavell2023",
+            transform,
+            smooth_method,
+            interpolate_method,
+            resample_dt,
+            **kwargs,
         )
 
     def load_data(self, file_name):

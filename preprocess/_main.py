@@ -28,13 +28,19 @@ def process_data(preprocess_config: DictConfig) -> None:
     # Pickle (and download) the data neural data if not already done
     if not os.path.exists(os.path.join(ROOT_DIR, "data/processed/neural/.processed")):
         logger.info("Preprocessing C. elegans neural data...")
+        kwargs = dict(
+            alpha=preprocess_config.smooth.alpha,
+            window_size=preprocess_config.smooth.window_size,
+            sigma=preprocess_config.smooth.sigma,
+        )
         pickle_neural_data(
             url=preprocess_config.url,
             zipfile=preprocess_config.zipfile,
             dataset=preprocess_config.dataset,
-            smooth_method=preprocess_config.smooth,
+            smooth_method=preprocess_config.smooth.method,
             resample_dt=preprocess_config.resample_dt,
             interpolate_method=preprocess_config.interpolate,
+            **kwargs,
         )
         logger.info("Finished preprocessing neural data.")
     else:
