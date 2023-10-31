@@ -9,7 +9,7 @@ hydra:
   # These parameters will be tested just when MULTIRUN mode is used.
   # Use the submodule parameters if RUN.
     params:
-      submodule.model.hidden_size: 64, 128, 256, 512, 1024, 2048, 4096, 8192
+      submodule.model.hidden_size: 512, 1024, 2048 #64, 128, 256, 512, 1024, 2048, 4096, 8192
 
 submodule:
 
@@ -25,8 +25,10 @@ submodule:
       Leifer2023: all
 
     use_these_datasets:
-      path: null
-      num_worms: null
+      path: data/datasets/AllDatasets # options: null, data/datasets/<DatasetFolder>
+      num_worms: all
+      # path: null
+      # num_worms: null
 
     save_datasets: false
 
@@ -43,17 +45,16 @@ submodule:
     # Train model from scratch
     type: NeuralTransformer
     input_size: 302
-    num_layers: 1
     loss: MSE
     fft_reg_param: 0.0
     l1_reg_param: 0.0
     use_this_pretrained_model: null
 
   train:
-    task: many-to-many
+    task: many-to-one, many-to-many
     optimizer: AdamW
     lr: 0.0001
-    epochs: 1000
+    epochs: 200
     save_freq: 100
     batch_size: 32
     shuffle: true
@@ -92,7 +93,7 @@ submodule:
         Kaplan2020: all
         Flavell2023: all
         Leifer2023: all
-      task: many-to-many
+      task: many-to-one, many-to-many
 
   visualize:
     plot_figures_from_this_log_dir: null
@@ -102,6 +103,6 @@ submodule:
 
 
 experiment:
-  name: temp3
+  name: test_config
   mode: MULTIRUN
   seed: 42

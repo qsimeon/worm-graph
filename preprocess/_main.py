@@ -40,6 +40,7 @@ def process_data(preprocess_config: DictConfig) -> None:
             smooth_method=preprocess_config.smooth.method,
             resample_dt=preprocess_config.resample_dt,
             interpolate_method=preprocess_config.interpolate,
+            cleanup=preprocess_config.cleanup,
             **kwargs,
         )
         logger.info("Finished preprocessing neural data.")

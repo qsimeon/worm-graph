@@ -703,6 +703,7 @@ def pickle_neural_data(
     smooth_method="ma",
     interpolate_method="linear",
     resample_dt=None,
+    cleanup=False,
     **kwargs,
 ):
     """Preprocess and then saves C. elegans neural data to .pickle format.
@@ -802,9 +803,9 @@ def pickle_neural_data(
         # call its method
         preprocessor.preprocess()
 
-    # TODO: uncomment below to delete the downloaded raw datasets after preprocessing
-    # # Delete the downloaded raw datasets
-    # shutil.rmtree(source_path)
+    if cleanup:
+        # Delete the downloaded raw datasets
+        shutil.rmtree(source_path)
 
     # Create a file to indicate that the preprocessing was successful
     open(os.path.join(processed_path, ".processed"), "a").close()

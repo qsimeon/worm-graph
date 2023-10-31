@@ -13,4 +13,4 @@ predict:
     Leifer2023: worm1
   
   nb_ts_to_generate: null # if null, the number of time steps to generate = seq_len - context_window
-  context_window: 120
+  context_window: 200

@@ -6,7 +6,7 @@ dataset:
   # If not null, and the directory contains a combined dataset + train or val. dataset, create the missing dataset using the combined dataset.
   # Specify num_worms to random pick a subset worms from the combined dataset (when a combined dataset is provided).
   use_these_datasets:
-    path: null #/om2/user/qsimeon/worm-graph/data/datasets/AllDatasets
+    path: data/datasets/AllDatasets # options: null, data/datasets/<DatasetFolder>
     num_worms: all
 
   # Whether to save the datasets in the logs/dataset directory.

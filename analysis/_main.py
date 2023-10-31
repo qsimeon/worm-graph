@@ -18,8 +18,6 @@ def analyse_run(analysis_config: DictConfig):
         task=analysis_config.validation.task,
     )
 
-    # TODO Hierarchical Clustering analysis
-
 
 if __name__ == "__main__":
     config = OmegaConf.load("conf/analysis.yaml")
