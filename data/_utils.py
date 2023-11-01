@@ -790,7 +790,7 @@ def create_combined_dataset(experimental_datasets, num_named_neurons):
 
 
 def distribute_samples(data_splits, total_nb_samples):
-    """Auxiliar function to distribute the samples across the splits.
+    """Auxiliary function to distribute the samples across the splits.
 
     Parameters
     ----------
