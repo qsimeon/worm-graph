@@ -663,7 +663,7 @@ def hc_analyse_dataset(
     return all_worm_clusters, ref_dict, silhouettes
 
 
-def validation_loss_per_dataset(log_dir, experimental_datasets, task):
+def validation_loss_per_dataset(log_dir, experimental_datasets):
     logger.info("Analyzing validation loss per dataset...")
 
     # Retrieve information from training
@@ -731,26 +731,16 @@ def validation_loss_per_dataset(log_dir, experimental_datasets, task):
                 Y_val = Y_val.to(DEVICE)
                 masks_val = masks_val.to(DEVICE)
 
-                # If many-to-one prediction, select last time step. Else, many-to-many prediction.
-                if task == "many-to-one":
-                    y_base = X_val[:, -1, :].unsqueeze(1)  # Select last time step
-                    Y_val = Y_val[:, -1, :].unsqueeze(1)  # Select last time step
-                else:
-                    y_base = X_val
-
                 # Baseline model: identity model - predict that the next time step is the same as the current one.
                 # This is the simplest model we can think of: predict that the next time step is the same as the current one
                 # is better than predict any other random number.
+                y_base = X_val
                 val_baseline = compute_loss_vectorized(
                     loss_fn=criterion, X=y_base, Y=Y_val, masks=masks_val
                 )
 
-                # Model
+                # All models operate sequence-to-sequence
                 y_pred = model(X_val, masks_val)
-
-                if task == "many-to-one":
-                    y_pred = y_pred[:, -1, :].unsqueeze(1)  # Select last time step
-
                 val_loss = compute_loss_vectorized(
                     loss_fn=criterion, X=y_pred, Y=Y_val, masks=masks_val
                 )

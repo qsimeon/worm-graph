@@ -15,7 +15,6 @@ def analyse_run(analysis_config: DictConfig):
     validation_loss_per_dataset(
         log_dir=log_dir,
         experimental_datasets=analysis_config.validation.experimental_datasets,
-        task=analysis_config.validation.task,
     )
 
 

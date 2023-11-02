@@ -3,8 +3,6 @@ from train._utils import *
 # Init logger
 logger = logging.getLogger(__name__)
 
-# TODO: Remove use of "many-to-one" everywhere (regime should just be "many-to-many" by default i.e. sequence-to-sequence)
-
 
 def train_model(
     train_config: DictConfig,
@@ -131,26 +129,16 @@ def train_model(
 
             optimizer.zero_grad()  # Reset gradients
 
-            # If many-to-one prediction, select last time step. Else, many-to-many prediction.
-            if train_config.task == "many-to-one":
-                y_base = X_train[:, -1, :].unsqueeze(1)  # Select last time step
-                Y_train = Y_train[:, -1, :].unsqueeze(1)  # Select last time step
-            else:
-                y_base = X_train
-
             # Baseline model: identity model - predict that the next time step is the same as the current one.
             # This is the naive predictor: predicting that the next time step is the same as the current one is
             # better in expectation than predicting a random value.
+            y_base = X_train
             train_baseline = compute_loss_vectorized(
                 loss_fn=criterion, X=y_base, Y=Y_train, masks=masks_train
             )
 
-            # Model
+            # Models operate sequence-to-sequence.
             y_pred = model(X_train, masks_train)
-
-            if train_config.task == "many-to-one":
-                y_pred = y_pred[:, -1, :].unsqueeze(1)  # Select last time step
-
             train_loss = compute_loss_vectorized(
                 loss_fn=criterion, X=y_pred, Y=Y_train, masks=masks_train
             )
@@ -204,26 +192,16 @@ def train_model(
                 Y_val = Y_val.to(DEVICE)
                 masks_val = masks_val.to(DEVICE)
 
-                # If many-to-one prediction, select last time step. Else, many-to-many prediction.
-                if train_config.task == "many-to-one":
-                    y_base = X_val[:, -1, :].unsqueeze(1)  # Select last time step
-                    Y_val = Y_val[:, -1, :].unsqueeze(1)  # Select last time step
-                else:
-                    y_base = X_val
-
                 # Baseline model: identity model - predict that the next time step is the same as the current one.
                 # This is the simplest model we can think of: predict that the next time step is the same as the current one
                 # is better than predict any other random number.
+                y_base = X_val
                 val_baseline = compute_loss_vectorized(
                     loss_fn=criterion, X=y_base, Y=Y_val, masks=masks_val
                 )
 
-                # Model
+                # Models operate sequence-to-sequence.
                 y_pred = model(X_val, masks_val)
-
-                if train_config.task == "many-to-one":
-                    y_pred = y_pred[:, -1, :].unsqueeze(1)  # Select last time step
-
                 val_loss = compute_loss_vectorized(
                     loss_fn=criterion, X=y_pred, Y=Y_val, masks=masks_val
                 )
