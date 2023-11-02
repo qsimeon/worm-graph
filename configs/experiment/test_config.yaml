@@ -28,10 +28,9 @@ submodule:
       path: null #/om2/user/qsimeon/worm-graph/data/datasets/AllDatasets # options: null, data/datasets/<DatasetFolder>
       num_worms: all # options: int, null, all
 
-    save_datasets: true
+    save_datasets: false
 
     num_named_neurons: all
-    k_splits: 2
     num_train_samples: 256
     num_val_samples: 256
     seq_len: 200
@@ -101,4 +100,4 @@ submodule:
 experiment:
   name: test_config
   mode: MULTIRUN
-  seed: null
+  seed: null # options: int, null (random seed)

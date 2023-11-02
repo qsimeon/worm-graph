@@ -5,6 +5,7 @@ import math
 import os
 import pickle
 import shutil
+import zipfile
 import subprocess
 
 # Third-party libraries
@@ -21,7 +22,7 @@ from sklearn import preprocessing
 from sklearn.experimental import enable_iterative_imputer
 from sklearn.impute import IterativeImputer
 from sklearn.preprocessing import MinMaxScaler, StandardScaler
-from torch_geometric.data import Data, download_url, extract_zip
+from torch_geometric.data import Data, download_url
 from torch_geometric.utils import coalesce
 
 # Local libraries

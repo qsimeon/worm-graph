@@ -672,7 +672,6 @@ def validation_loss_per_dataset(log_dir, experimental_datasets):
     )
     seq_len = int(train_dataset_info["train_seq_len"].values[0])
     num_train_samples = int(train_dataset_info["num_train_samples"].values[0])
-    k_splits = int(train_dataset_info["k_splits"].values[0])
     use_residual = int(train_dataset_info["use_residual"].values[0])
     smooth_data = int(train_dataset_info["smooth_data"].values[0])
 
@@ -703,7 +702,6 @@ def validation_loss_per_dataset(log_dir, experimental_datasets):
         )
         _, val_dataset, _ = split_combined_dataset(
             combined_dataset=combined_dataset,
-            k_splits=k_splits,
             num_train_samples=num_train_samples,
             num_val_samples=num_train_samples,  # use the same number of samples as in the train dataset
             seq_len=seq_len,

@@ -24,7 +24,6 @@ if __name__ == "__main__":
         train_size=128,
         test_size=128,
         time_vec=time_vec,
-        # shuffle=False,  # sequential train samples
         shuffle=True,  # shuffled train samples
         reverse=False,
         tau=500,

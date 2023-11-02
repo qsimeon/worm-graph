@@ -33,7 +33,6 @@ submodule:
 
     save_datasets: false
 
-    k_splits: 2
     num_train_samples: 128
     num_val_samples: 128
     seq_len: 200

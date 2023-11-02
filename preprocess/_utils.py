@@ -632,7 +632,6 @@ def interpolate_data(time, data, target_dt, method="linear"):
     elif method == "linear":
         for i in range(num_neurons):
             interpolated_data_np[:, i] = np.interp(target_time_np, time, data[:, i])
-    # TODO: implement other non-linear interpolation methods
     else:
         assert method in {
             "linear" "quadratic",
@@ -693,6 +692,24 @@ def aggregate_data(time, data, target_dt):
         downsampled_data[:, i] = reshaped_data.mean(axis=1)
 
     return target_time_np, downsampled_data
+
+
+def extract_zip(path: str, folder: str, log: bool = True):
+    """
+    Extracts a zip archive to a specific folder while ignoring the __MACOSX directory.
+
+    Args:
+        path (str): The path to the zip archive.
+        folder (str): The folder where the files will be extracted to.
+        log (bool, optional): If False, will not print anything to the console. Default is True.
+    """
+    if log:
+        print(f"Extracting {path}...")
+
+    with zipfile.ZipFile(path, "r") as zip_ref:
+        for member in zip_ref.namelist():
+            if not member.startswith("__MACOSX/"):
+                zip_ref.extract(member, folder)
 
 
 def pickle_neural_data(
@@ -763,6 +780,8 @@ def pickle_neural_data(
                 "{}/*".format(dataset),
                 "-d",
                 source_path,
+                "-x",
+                "__MACOSX/*"
             ]
             std_out = subprocess.run(bash_command, text=True)  # Run the bash command
             print(std_out, end="\n\n")

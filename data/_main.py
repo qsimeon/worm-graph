@@ -4,9 +4,6 @@ from data._utils import *
 logger = logging.getLogger(__name__)
 
 
-# TODO: Remove use of k_splits everywhere (k_splits should just be 2 by default i.e. half-half train-test split)
-
-
 def get_datasets(dataset_config: DictConfig, save=True):
     """
     Retrieve or generate training and validation datasets based on the provided configuration.
@@ -26,7 +23,6 @@ def get_datasets(dataset_config: DictConfig, save=True):
         - experimental_datasets: Path to the experimental datasets.
         - num_named_neurons (int or 'all'): Number of named neurons to include or 'all' to include all.
         - num_worms (int or 'all'): Number of worms to include or 'all' to include all.
-        - k_splits (int): Number of splits for k-fold cross-validation.
         - num_train_samples (int): Number of training samples.
         - num_val_samples (int): Number of validation samples.
         - seq_len (int): Sequence length for time series data.
@@ -49,7 +45,6 @@ def get_datasets(dataset_config: DictConfig, save=True):
 
     experimental_datasets = dataset_config.experimental_datasets
     num_named_neurons = dataset_config.num_named_neurons
-    k_splits = dataset_config.k_splits
     num_train_samples = dataset_config.num_train_samples
     num_val_samples = dataset_config.num_val_samples
     seq_len = dataset_config.seq_len
@@ -58,8 +53,6 @@ def get_datasets(dataset_config: DictConfig, save=True):
     smooth_data = dataset_config.smooth_data
 
     # Verifications
-    assert isinstance(k_splits, int) and k_splits > 1, "k_splits must be an integer > 1"
-
     assert (
         isinstance(num_named_neurons, int) or num_named_neurons == "all"
     ), "num_named_neurons must be a positive integer or 'all'."
@@ -178,7 +171,6 @@ def get_datasets(dataset_config: DictConfig, save=True):
                 dataset_info_split,
             ) = split_combined_dataset(
                 combined_dataset,
-                k_splits,
                 num_train_samples,
                 num_val_samples,
                 seq_len,
@@ -197,7 +189,6 @@ def get_datasets(dataset_config: DictConfig, save=True):
                         "train_seq_len",
                         "smooth_data",
                         "use_residual",
-                        "k_splits",
                     ]
                 ],
                 on="combined_dataset_index",
@@ -212,7 +203,6 @@ def get_datasets(dataset_config: DictConfig, save=True):
                         "val_seq_len",
                         "smooth_data",
                         "use_residual",
-                        "k_splits",
                     ]
                 ],
                 on="combined_dataset_index",
@@ -257,7 +247,6 @@ def get_datasets(dataset_config: DictConfig, save=True):
         )
         train_dataset, val_dataset, dataset_info_split = split_combined_dataset(
             combined_dataset,
-            k_splits,
             num_train_samples,
             num_val_samples,
             seq_len,
@@ -276,7 +265,6 @@ def get_datasets(dataset_config: DictConfig, save=True):
                     "train_seq_len",
                     "smooth_data",
                     "use_residual",
-                    "k_splits",
                 ]
             ],
             on="combined_dataset_index",
@@ -291,7 +279,6 @@ def get_datasets(dataset_config: DictConfig, save=True):
                     "val_seq_len",
                     "smooth_data",
                     "use_residual",
-                    "k_splits",
                 ]
             ],
             on="combined_dataset_index",

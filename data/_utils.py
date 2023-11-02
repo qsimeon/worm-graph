@@ -824,7 +824,6 @@ def distribute_samples(data_splits, total_nb_samples):
 
 def split_combined_dataset(
     combined_dataset,
-    k_splits,
     num_train_samples,
     num_val_samples,
     seq_len,
@@ -840,8 +839,6 @@ def split_combined_dataset(
     ----------
     combined_dataset : dict
         Combined dataset to split.
-    k_splits : int
-        Number of splits to create.
     num_train_samples : int
         Number of training samples.
     num_val_samples : int
@@ -882,7 +879,7 @@ def split_combined_dataset(
     val_dataset = []
 
     # Store the time steps info
-    dataset_info2 = {
+    dataset_info_split = {
         "combined_dataset_index": [],
         "train_time_steps": [],
         "num_train_samples": [],
@@ -892,7 +889,6 @@ def split_combined_dataset(
         "val_seq_len": [],
         "smooth_data": [],
         "use_residual": [],
-        "k_splits": [],
     }
 
     # Loop through the worms in the dataset
@@ -908,13 +904,10 @@ def split_combined_dataset(
         assert isinstance(seq_len, int) and 0 < seq_len < len(
             data
         ), "seq_len must be an integer > 0 and < len(data)"
-        assert seq_len < (
-            len(data) // k_splits
-        ), "The desired seq_len is too long. Try a smaller seq_len or decreasing k_splits"
 
-        # Split the data and the time vector into k splits
-        data_splits = np.array_split(data, k_splits)
-        time_vec_splits = np.array_split(time_vec, k_splits)
+        # Split the data and the time vector into two halves
+        data_splits = np.array_split(data, 2)
+        time_vec_splits = np.array_split(time_vec, 2)
 
         # Separate the splits into training and validation sets
         train_data_splits = data_splits[::2]
@@ -973,19 +966,18 @@ def split_combined_dataset(
                 raise ValueError("More time steps from samples than in the val. split")
 
         # Store the number of unique time steps for each worm
-        dataset_info2["combined_dataset_index"].append(wormID)
+        dataset_info_split["combined_dataset_index"].append(wormID)
 
-        dataset_info2["train_time_steps"].append(train_split_time_steps)
-        dataset_info2["train_seq_len"].append(seq_len)
-        dataset_info2["num_train_samples"].append(num_train_samples)
+        dataset_info_split["train_time_steps"].append(train_split_time_steps)
+        dataset_info_split["train_seq_len"].append(seq_len)
+        dataset_info_split["num_train_samples"].append(num_train_samples)
 
-        dataset_info2["val_time_steps"].append(val_split_time_steps)
-        dataset_info2["val_seq_len"].append(seq_len)
-        dataset_info2["num_val_samples"].append(num_val_samples)
+        dataset_info_split["val_time_steps"].append(val_split_time_steps)
+        dataset_info_split["val_seq_len"].append(seq_len)
+        dataset_info_split["num_val_samples"].append(num_val_samples)
 
-        dataset_info2["smooth_data"].append(smooth_data)
-        dataset_info2["use_residual"].append(use_residual)
-        dataset_info2["k_splits"].append(k_splits)
+        dataset_info_split["smooth_data"].append(smooth_data)
+        dataset_info_split["use_residual"].append(use_residual)
 
     # Concatenate the datasets
     train_dataset = torch.utils.data.ConcatDataset(
@@ -996,9 +988,9 @@ def split_combined_dataset(
     )  # Nb of val examples = nb train samples * nb of worms
 
     # Convert time_step_info to a dataframe
-    dataset_info2 = pd.DataFrame(dataset_info2)
+    dataset_info_split = pd.DataFrame(dataset_info_split)
 
-    return train_dataset, val_dataset, dataset_info2
+    return train_dataset, val_dataset, dataset_info_split
 
 
 def graph_inject_data(single_worm_dataset, connectome_graph):
