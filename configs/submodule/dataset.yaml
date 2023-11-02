@@ -10,7 +10,7 @@ dataset:
     num_worms: all
 
   # Whether to save the datasets in the logs/dataset directory.
-  save_datasets: true
+  save_datasets: false
 
   experimental_datasets:
     # null = don't use this dataset

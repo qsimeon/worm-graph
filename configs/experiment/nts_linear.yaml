@@ -35,15 +35,15 @@ submodule:
     # Dataset directory contains:
     #   - Validation dataset (validate experiment in standard dataset)
     use_these_datasets:
-      path: /om2/user/qsimeon/worm-graph/data/datasets/AllDatasets
+      path: data/datasets/<DatasetFolder>
       num_worms: null
 
     save_datasets: false
 
     num_named_neurons: all
     k_splits: 2
-    num_train_samples: 32
-    num_val_samples: 32
+    num_train_samples: 128
+    num_val_samples: 128
     seq_len: 200
     reverse: false
     use_residual: false
@@ -64,9 +64,9 @@ submodule:
     task: many-to-many
     optimizer: AdamW
     lr: 0.0001
-    epochs: 1000
+    epochs: 300
     save_freq: 100
-    batch_size: 32
+    batch_size: 64
     shuffle: true
     early_stopping:
       # Minimum change in validation loss to be considered an improvement
@@ -110,7 +110,6 @@ submodule:
     predict:
       worms_to_plot: null # plot all predicted worms
       neurons_to_plot: 2
-
 
 experiment:
   name: nts_linear

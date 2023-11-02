@@ -3,6 +3,8 @@ from train._utils import *
 # Init logger
 logger = logging.getLogger(__name__)
 
+# TODO: Remove use of "many-to-one" everywhere (regime should just be "many-to-many" by default i.e. sequence-to-sequence)
+
 
 def train_model(
     train_config: DictConfig,
@@ -137,8 +139,8 @@ def train_model(
                 y_base = X_train
 
             # Baseline model: identity model - predict that the next time step is the same as the current one.
-            # This is the simplest model we can think of: predict that the next time step is the same as the current one
-            # is better than predict any other random number.
+            # This is the naive predictor: predicting that the next time step is the same as the current one is
+            # better in expectation than predicting a random value.
             train_baseline = compute_loss_vectorized(
                 loss_fn=criterion, X=y_base, Y=Y_train, masks=masks_train
             )
@@ -156,9 +158,6 @@ def train_model(
             # Backpropagation (skip first epoch)
             if epoch > 0:
                 train_loss.backward()
-                # Gradient clipping for transformers
-                if type(model).__name__ == "NeuralTransformer":
-                    torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
                 optimizer.step()
 
             # Update running losses
@@ -274,7 +273,8 @@ def train_model(
             )
 
         # Early stopping
-        if es(model, train_epoch_loss[-1]):
+        # if es(model, train_epoch_loss[-1]): # on train loss
+        if es(model, val_epoch_loss[-1]):  # on validation loss
             logger.info("Early stopping triggered (epoch {}).".format(epoch))
             break
 

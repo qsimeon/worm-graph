@@ -4,6 +4,9 @@ from data._utils import *
 logger = logging.getLogger(__name__)
 
 
+# TODO: Remove use of k_splits everywhere (k_splits should just be 2 by default i.e. half-half train-test split)
+
+
 def get_datasets(dataset_config: DictConfig, save=True):
     """
     Retrieve or generate training and validation datasets based on the provided configuration.
@@ -172,7 +175,7 @@ def get_datasets(dataset_config: DictConfig, save=True):
             (
                 created_train_dataset,
                 created_val_dataset,
-                dataset_info2,
+                dataset_info_split,
             ) = split_combined_dataset(
                 combined_dataset,
                 k_splits,
@@ -186,7 +189,7 @@ def get_datasets(dataset_config: DictConfig, save=True):
 
             # Merge dataset_info and time_step_info
             created_dataset_info_train = dataset_info.merge(
-                dataset_info2[
+                dataset_info_split[
                     [
                         "combined_dataset_index",
                         "train_time_steps",
@@ -201,7 +204,7 @@ def get_datasets(dataset_config: DictConfig, save=True):
                 how="outer",
             )
             created_dataset_info_val = dataset_info.merge(
-                dataset_info2[
+                dataset_info_split[
                     [
                         "combined_dataset_index",
                         "val_time_steps",
@@ -252,7 +255,7 @@ def get_datasets(dataset_config: DictConfig, save=True):
         combined_dataset, dataset_info = create_combined_dataset(
             experimental_datasets, num_named_neurons
         )
-        train_dataset, val_dataset, dataset_info2 = split_combined_dataset(
+        train_dataset, val_dataset, dataset_info_split = split_combined_dataset(
             combined_dataset,
             k_splits,
             num_train_samples,
@@ -263,9 +266,9 @@ def get_datasets(dataset_config: DictConfig, save=True):
             smooth_data,
         )
 
-        # Merge dataset_info and dataset_info2
+        # Merge dataset_info and dataset_info_split
         dataset_info_train = dataset_info.merge(
-            dataset_info2[
+            dataset_info_split[
                 [
                     "combined_dataset_index",
                     "train_time_steps",
@@ -280,7 +283,7 @@ def get_datasets(dataset_config: DictConfig, save=True):
             how="outer",
         )
         dataset_info_val = dataset_info.merge(
-            dataset_info2[
+            dataset_info_split[
                 [
                     "combined_dataset_index",
                     "val_time_steps",

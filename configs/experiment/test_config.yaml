@@ -32,8 +32,8 @@ submodule:
 
     num_named_neurons: all
     k_splits: 2
-    num_train_samples: 128
-    num_val_samples: 128
+    num_train_samples: 256
+    num_val_samples: 256
     seq_len: 200
     reverse: false
     use_residual: false
@@ -41,7 +41,7 @@ submodule:
 
   model:
     # Train model from scratch
-    type: NetworkLSTM
+    type: NeuralTransformer
     input_size: 302
     loss: MSE
     fft_reg_param: 0.0
@@ -52,7 +52,7 @@ submodule:
     task: many-to-many
     optimizer: AdamW
     lr: 0.0001
-    epochs: 200
+    epochs: 300
     save_freq: 100
     batch_size: 64
     shuffle: true
@@ -103,4 +103,4 @@ submodule:
 experiment:
   name: test_config
   mode: MULTIRUN
-  seed: 42
+  seed: null

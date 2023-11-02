@@ -79,10 +79,11 @@ def compute_loss_vectorized(loss_fn, X, Y, masks):
     masked_X = X * expanded_masks.float()
     masked_Y = Y * expanded_masks.float()
 
+    # Compute the loss considering only the valid positions
     masked_loss = loss_fn(masked_X, masked_Y)
 
+    # Normalize the loss by the number of valid positions
     norm_factor = masked_loss[expanded_masks].shape[0]
-
     loss = masked_loss[expanded_masks].sum() / norm_factor
 
     return loss
