@@ -3,7 +3,7 @@ predict:
   experimental_datasets:
     # null = don't predict on this dataset
     # all = predict on all the worms in the dataset
-    # positive integer = use this number of worms from the dataset (random pick)
+    # positive integer = use this number of (randomly picked) worms from the dataset
     Kato2015: worm1
     Nichols2017: worm1
     Skora2018: worm1

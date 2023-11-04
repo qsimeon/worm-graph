@@ -536,7 +536,7 @@ def load_Custom():
 
 def load_Synthetic0000():
     """
-    Loads the syntheic dataset Synthetic0000.
+    Loads the synthetic dataset Synthetic0000.
     """
     # ensure the data has been created
     file = os.path.join(ROOT_DIR, "data", "processed", "neural", "Synthetic0000.pickle")
@@ -933,8 +933,8 @@ def split_combined_dataset(
                     data=train_split.detach(),
                     time_vec=train_time_split.detach(),
                     neurons_mask=neurons_mask,
-                    wormID=original_wormID,  # worm ID of the experimental dataset (original)
-                    worm_dataset=worm_dataset,  # dataset where the worm comes from
+                    wormID=original_wormID,  # worm ID from the original experimental dataset
+                    worm_dataset=worm_dataset,  # name of the original experimental dataset the data is from
                     seq_len=seq_len,
                     num_samples=num_samples_split,
                     use_residual=use_residual,
@@ -987,7 +987,7 @@ def split_combined_dataset(
         val_dataset
     )  # Nb of val examples = nb train samples * nb of worms
 
-    # Convert time_step_info to a dataframe
+    # Convert information about the split datasets into a dataframe
     dataset_info_split = pd.DataFrame(dataset_info_split)
 
     return train_dataset, val_dataset, dataset_info_split

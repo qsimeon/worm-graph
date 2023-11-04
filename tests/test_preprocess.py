@@ -25,9 +25,7 @@ logging.getLogger("h5py").setLevel(logging.WARNING)
 
 class TestPreprocessors(unittest.TestCase):
     def setUp(self):
-        self.processed_data_path = (
-            "/Users/quileesimeon/GitHub Repos/worm-graph/data/processed/neural"
-        )
+        self.processed_data_path = "/om2/user/qsimeon/worm-graph/data/processed/neural"
         # Load config file
         config = OmegaConf.load("conf/preprocess.yaml")
         preprocess_config = config.preprocess

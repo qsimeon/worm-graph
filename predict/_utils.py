@@ -35,7 +35,6 @@ def model_predict(
         os.path.join(log_dir, "dataset", "train_dataset_info.csv")
     )
     seq_len = int(train_dataset_info["train_seq_len"].values[0])
-    k_splits = int(train_dataset_info["k_splits"].values[0])
     use_residual = int(train_dataset_info["use_residual"].values[0])
     smooth_data = int(train_dataset_info["smooth_data"].values[0])
     key_data = "residual_calcium" if use_residual else "calcium_data"
@@ -63,9 +62,9 @@ def model_predict(
         worm_dataset = single_worm_dataset["dataset"]
         original_wormID = single_worm_dataset["original_worm"]
 
-        # Split the data and the time vector into k splits
-        data_splits = np.array_split(data, k_splits)
-        time_vec_splits = np.array_split(time_vec, k_splits)
+        # Split the data and the time vector into two halves
+        data_splits = np.array_split(data, 2)
+        time_vec_splits = np.array_split(time_vec, 2)
 
         # Separate the splits into training and validation sets
         train_data_splits = data_splits[::2]

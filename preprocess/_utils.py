@@ -379,17 +379,15 @@ class CalciumDataReshaper:
         self.slot_to_named_neuron = {}
         self.slot_to_unknown_neuron = {}
         self.slot_to_neuron = {}
-        self.max_timesteps = self.worm_dataset["max_timesteps"]
-        self.original_max_timesteps = self.worm_dataset["original_max_timesteps"]
         self.dtype = torch.float
         self._init_neuron_data()
         self._reshape_data()
 
     def _init_neuron_data(self):
         self.time_in_seconds = self.worm_dataset["time_in_seconds"]
-        self.original_median_dt = self.worm_dataset["original_median_dt"]
+        self.max_timesteps = self.worm_dataset["max_timesteps"]
         self.resample_median_dt = self.worm_dataset["resample_median_dt"]
-        self.origin_calcium_data = self.worm_dataset["calcium_data"]
+        self.calcium_data = self.worm_dataset["calcium_data"]
         self.smooth_calcium_data = self.worm_dataset["smooth_calcium_data"]
         self.residual_calcium = self.worm_dataset["residual_calcium"]
         self.smooth_residual_calcium = self.worm_dataset["smooth_residual_calcium"]
@@ -398,15 +396,28 @@ class CalciumDataReshaper:
         self.idx_to_neuron = self.worm_dataset["idx_to_neuron"]
 
         # Raw data
-        self.original_time_in_seconds = self.worm_dataset["original_time_in_seconds"]
-        self.original_calcium_data = self.worm_dataset["original_calcium_data"]
-        self.original_smooth_calcium_data = self.worm_dataset[
-            "original_smooth_calcium_data"
-        ]
-        self.original_residual_calcium = self.worm_dataset["original_residual_calcium"]
-        self.original_smooth_residual_calcium = self.worm_dataset[
-            "original_smooth_residual_calcium"
-        ]
+        self.original_time_in_seconds = self.worm_dataset.get(
+            "original_time_in_seconds", self.worm_dataset["time_in_seconds"]
+        )
+        self.original_max_timesteps = self.worm_dataset.get(
+            "original_max_timesteps", self.worm_dataset["max_timesteps"]
+        )
+        self.original_calcium_data = self.worm_dataset.get(
+            "original_calcium_data", self.worm_dataset["calcium_data"]
+        )
+        self.original_smooth_calcium_data = self.worm_dataset.get(
+            "original_smooth_calcium_data", self.worm_dataset["smooth_calcium_data"]
+        )
+        self.original_residual_calcium = self.worm_dataset.get(
+            "original_residual_calcium", self.worm_dataset["residual_calcium"]
+        )
+        self.original_smooth_residual_calcium = self.worm_dataset.get(
+            "original_smooth_residual_calcium",
+            self.worm_dataset["smooth_residual_calcium"],
+        )
+        self.original_median_dt = self.worm_dataset.get(
+            "original_median_dt", self.worm_dataset["resample_median_dt"]
+        )
 
     def _reshape_data(self):
         self._prepare_initial_data()
@@ -417,7 +428,7 @@ class CalciumDataReshaper:
 
     def _prepare_initial_data(self):
         assert (
-            len(self.idx_to_neuron) == self.origin_calcium_data.shape[1]
+            len(self.idx_to_neuron) == self.calcium_data.shape[1]
         ), "Number of neurons in calcium dataset does not match number of recorded neurons."
         self.named_neurons_mask = torch.zeros(NUM_NEURONS, dtype=torch.bool)
         self.unknown_neurons_mask = torch.zeros(NUM_NEURONS, dtype=torch.bool)
@@ -488,30 +499,30 @@ class CalciumDataReshaper:
 
     def _fill_calcium_data(self, idx, slot):
         self.standard_calcium_data[:, slot] = torch.from_numpy(
-            self.origin_calcium_data[:, idx]
+            self.calcium_data[:, idx], dtype=self.dtype
         )
         self.standard_residual_calcium[:, slot] = torch.from_numpy(
-            self.residual_calcium[:, idx]
+            self.residual_calcium[:, idx], dtype=self.dtype
         )
         self.standard_smooth_calcium_data[:, slot] = torch.from_numpy(
-            self.smooth_calcium_data[:, idx]
+            self.smooth_calcium_data[:, idx], dtype=self.dtype
         )
         self.standard_residual_smooth_calcium[:, slot] = torch.from_numpy(
-            self.smooth_residual_calcium[:, idx]
+            self.smooth_residual_calcium[:, idx], dtype=self.dtype
         )
 
         # Raw data
         self.standard_original_calcium_data[:, slot] = torch.from_numpy(
-            self.original_calcium_data[:, idx]
+            self.original_calcium_data[:, idx], dtype=self.dtype
         )
         self.standard_original_smooth_calcium_data[:, slot] = torch.from_numpy(
-            self.original_smooth_calcium_data[:, idx]
+            self.original_smooth_calcium_data[:, idx], dtype=self.dtype
         )
         self.standard_original_residual_calcium[:, slot] = torch.from_numpy(
-            self.original_residual_calcium[:, idx]
+            self.original_residual_calcium[:, idx], dtype=self.dtype
         )
         self.standard_original_smooth_residual_calcium[:, slot] = torch.from_numpy(
-            self.original_smooth_residual_calcium[:, idx]
+            self.original_smooth_residual_calcium[:, idx], dtype=self.dtype
         )
 
     def _fill_unknown_neurons_data(self):
@@ -608,11 +619,19 @@ def interpolate_data(time, data, target_dt, method="linear"):
     target_dt : float
         The desired time interval between the interpolated data points.
         If None, no interpolation is performed.
+    method : str, optional (default: 'linear')
+        The scipy interpolation method to use when resampling the data.
 
     Returns
     -------
     numpy.ndarray, numpy.ndarray: Two arrays containing the interpolated time points and data.
     """
+    # Check if correct interpolation method provided
+    assert method in {
+        None,
+        "linear" "quadratic",
+        "cubic",
+    }, "Invalid interpolation method. Choose from [None, 'linear', 'quadratic', 'cubic']."
     # If target_dt is None, return the original data
     if target_dt is None:
         return time, data
@@ -625,18 +644,14 @@ def interpolate_data(time, data, target_dt, method="linear"):
     num_neurons = data.shape[1]
     interpolated_data_np = np.zeros((len(target_time_np), num_neurons))
 
-    # TODO: vectorize the interpolation
+    # TODO: vectorize this interpolation method instead of using for loop
     if method is None:
         target_time_np = time
         interpolated_data_np = data
     elif method == "linear":
         for i in range(num_neurons):
             interpolated_data_np[:, i] = np.interp(target_time_np, time, data[:, i])
-    else:
-        assert method in {
-            "linear" "quadratic",
-            "cubic",
-        }, "Invalid interpolation method. Choose from ['linear', 'cubic', 'quadratic']."
+    else:  # either quadratic or cubic
         for i in range(num_neurons):
             interp = interp1d(x=time, y=data[:, i], kind=method)
             interpolated_data_np[:, i] = interp(target_time_np)
@@ -781,7 +796,7 @@ def pickle_neural_data(
                 "-d",
                 source_path,
                 "-x",
-                "__MACOSX/*"
+                "__MACOSX/*",
             ]
             std_out = subprocess.run(bash_command, text=True)  # Run the bash command
             print(std_out, end="\n\n")

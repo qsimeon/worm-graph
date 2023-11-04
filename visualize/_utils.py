@@ -496,7 +496,7 @@ def plot_predictions(log_dir, neurons_to_plot=None, worms_to_plot=None):
                     log_dir, "prediction", type_ds, ds_name, wormID, "named_neurons.csv"
                 )
 
-                # Acess the prediction directory
+                # Access the prediction directory
                 df = pd.read_csv(url)
                 df.set_index(["Type", "Unnamed: 1"], inplace=True)
                 df.index.names = ["Type", ""]
@@ -544,9 +544,7 @@ def plot_predictions(log_dir, neurons_to_plot=None, worms_to_plot=None):
                 ]  # orange (next time step prediction with gt)
                 ar_generation_color = palette[
                     2
-                ]  # gree (autoregressive next time step prediction)
-
-                # logger.info(f'Plotting neuron predictions for {type_ds}/{wormID}...')
+                ]  # green (autoregressive next time step prediction)
 
                 # Metadata textbox
                 metadata_text = "Dataset: {}\nWorm ID: {}".format(ds_name, wormID)
@@ -646,8 +644,6 @@ def plot_pca_trajectory(log_dir, worms_to_plot=None, plot_type="3D"):
                 if worms_to_plot is not None:
                     if wormID not in worms_to_plot:
                         continue
-
-                # logger.info(f'Plotting PCA trajectory for {type_ds}/{wormID}...')
 
                 url = os.path.join(
                     log_dir, "prediction", type_ds, ds_name, wormID, "predictions.csv"
@@ -1021,7 +1017,7 @@ def plot_heat_map(
 
 
 def experiment_parameter(exp_dir, key):
-    value = exp_dir.split("/")[-1]  # expN (default)
+    value = exp_dir.split("/")[-1]  # exp<int> (default)
     title = "MULTIRUN"
     xaxis = "Experiment run"
 
@@ -1265,6 +1261,7 @@ def plot_scaling_law(
 
         # Get experiment parameter
         exp_param, exp_title, xaxis_title = experiment_parameter(exp_dir, key=exp_name)
+        print("DEBUG", exp_param)
         exp_parameter.append(exp_param)
 
     # Plot
@@ -1403,66 +1400,6 @@ def plot_validation_loss_per_dataset(log_dir):
         os.path.join(log_dir, "analysis", "validation_loss_per_dataset.png"), dpi=300
     )
     plt.close()
-
-
-# def plot_validation_loss_per_dataset(log_dir):
-#     # Load validation losses
-#     losses = pd.read_csv(
-#         os.path.join(log_dir, "analysis", "validation_loss_per_dataset.csv")
-#     )
-#     losses = losses.dropna()
-
-#     # Train dataset names
-#     train_info = pd.read_csv(os.path.join(log_dir, "dataset", "train_dataset_info.csv"))
-#     train_dataset_names = train_info["dataset"].unique()
-
-#     sns.set_theme(style="whitegrid")
-#     sns.set_palette("tab10")
-#     palette = sns.color_palette()
-
-#     fig, ax = plt.subplots(figsize=(10, 4))
-
-#     # First plot both model and baseline losses
-#     ax.bar(np.arange(len(losses)), losses["val_loss"], color=palette[0], label="Model")
-#     ax.bar(
-#         np.arange(len(losses)),
-#         losses["val_baseline"],
-#         color=palette[1],
-#         label="Baseline",
-#         alpha=0.4,
-#     )
-#     ax.set_xticks(np.arange(len(losses)))
-#     ax.set_xticklabels(losses["dataset"].values, rotation=0, ha="center")
-#     ax.set_ylabel("Loss")
-#     ax.set_title("Validation loss across datasets")
-#     ax.legend(loc="upper right")
-#     props = dict(boxstyle="round", facecolor="white", alpha=0.5)
-#     textstr = "Datasets used for training: \n{}".format(", ".join(train_dataset_names))
-#     ax.text(
-#         0.02,
-#         0.95,
-#         textstr,
-#         transform=ax.transAxes,
-#         fontsize=10,
-#         verticalalignment="top",
-#         bbox=props,
-#     )
-#     for i, v in enumerate(losses["num_worms"]):
-#         ax.text(
-#             i,
-#             max(losses.loc[i, ["val_loss", "val_baseline"]]),
-#             r"$n_{val} = $" + str(int(v)),
-#             ha="center",
-#             fontsize=8,
-#         )
-
-#     plt.tight_layout()
-
-#     # Save figure
-#     plt.savefig(
-#         os.path.join(log_dir, "analysis", "validation_loss_per_dataset.png"), dpi=300
-#     )
-#     plt.close()
 
 
 def plot_exp_validation_loss_per_dataset(exp_log_dir, exp_name, exp_plot_dir=None):

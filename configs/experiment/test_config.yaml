@@ -9,7 +9,7 @@ hydra:
   # These parameters will be tested just when MULTIRUN mode is used.
   # Use the submodule parameters if RUN.
     params:
-      submodule.model.hidden_size: 512, 512, 512 #64, 128, 256, 512, 1024, 2048, 4096, 8192
+      submodule.model.hidden_size: 512 #64, 128, 256, 512, 1024, 2048, 4096, 8192
 
 submodule:
 
@@ -40,7 +40,7 @@ submodule:
 
   model:
     # Train model from scratch
-    type: NeuralTransformer
+    type: LinearNN
     input_size: 302
     loss: MSE
     fft_reg_param: 0.0
@@ -50,7 +50,7 @@ submodule:
   train:
     optimizer: AdamW
     lr: 0.0001
-    epochs: 300
+    epochs: 1 #300 # DEBUGGING
     save_freq: 100
     batch_size: 64
     shuffle: true
@@ -94,8 +94,7 @@ submodule:
     plot_figures_from_this_log_dir: null
     predict:
       worms_to_plot: null # plot all predicted worms
-      neurons_to_plot: 5
-
+      neurons_to_plot: 3
 
 experiment:
   name: test_config
