@@ -1261,7 +1261,6 @@ def plot_scaling_law(
 
         # Get experiment parameter
         exp_param, exp_title, xaxis_title = experiment_parameter(exp_dir, key=exp_name)
-        print("DEBUG", exp_param)
         exp_parameter.append(exp_param)
 
     # Plot

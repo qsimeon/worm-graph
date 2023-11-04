@@ -66,8 +66,9 @@ VALID_DATASETS = {
 }
 
 SYNTHETIC_DATASETS = {
-    "Synthetic0000",  # Dataset created with the `CreateSyntheticDataset.ipynb` notebook.
-    "Custom",  # Dataset created when `save_datasets` is True in the dataset.yaml config.
+    "Sines0000",  # Dataset created with the `CreateSyntheticDataset.ipynb` notebook.
+    "Lorenz0000",  # Dataset created with the `CreateSyntheticDataset.ipynb` notebook.
+    # "Custom<xxxx>",  # Dataset created when `save_datasets` is True in the dataset.yaml config.
 }
 
 # List of all 302 hermaphrodite neurons

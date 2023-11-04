@@ -22,50 +22,48 @@ class NeuralActivityDataset(torch.utils.data.Dataset):
 
     def __init__(
         self,
-        data,
-        time_vec,
-        neurons_mask,
-        wormID,
-        worm_dataset,
-        seq_len=1,
-        num_samples=100,
-        reverse=False,
-        use_residual=False,
-    ):
-        """Initializes a new instance of the NeuralActivityDataset.
+        data: torch.Tensor,
+        time_vec: torch.Tensor,
+        neurons_mask: torch.Tensor,
+        wormID: str,
+        worm_dataset: str,
+        seq_len: int = 100,
+        num_samples: int = 10,
+        reverse: bool = False,
+        use_residual: bool = False,
+    ) -> None:
+        """
+        Initializes a new instance of the NeuralActivityDataset.
 
         Parameters
         ----------
-        data : torch.tensor
+        data : torch.Tensor
             Data with shape (max_timesteps, num_neurons).
+        time_vec : torch.Tensor
+            A vector of the time (in seconds) corresponding to the time
+            axis (axis=0) of the `data` tensor.
+        neurons_mask : torch.Tensor
+            Index of neuron(s) to return data for. Returns data for all
+            neurons if None.
+        wormID : str
+            ID of the worm.
+        worm_dataset : str
+            Name of the worm dataset.
         seq_len : int, default=1
             Sequences of length `seq_len` are generated until the dataset
             size is achieved.
-        num_samples : int, default=100
+        num_samples : int, default=10
             Total number of (input, target) data pairs to generate.
             0 < num_samples <= max_timesteps
-        neurons : None, int or array-like, default=None
-            Index of neuron(s) to return data for. Returns data for all
-            neurons if None.
-        time_vec : None or array-like, default=None
-            A vector of the time (in seconds) corresponding to the time
-            axis (axis=0) of the `data` tensor.
         reverse : bool, default=False
             Whether to sample sequences backward from end of the data.
+        use_residual : bool, default=False
+            Whether to use residual connections in the model.
 
         Returns
         -------
-        (X, Y, metadata) : tuple
-            Batch of data samples, where
-        X : torch.tensor
-            Input tensor with shape (batch_size, seq_len, num_neurons)
-        Y: torch.tensor
-            Target tensor with same shape as X
-        metadata : dict
-            Metadata information about samples.
-            keys: 'seq_len', 'start' index , 'end' index
+        None
         """
-
         super().__init__()
 
         # Check the inputs
@@ -503,7 +501,7 @@ def load_dataset(name):
     -----
     load_{dataset} : function in data/_utils.py
         Where dataset = {Kato2015, Nichols2017, Nguyen2017, Skora2018,
-                         Kaplan2020, Uzel2022, Flavell2023, Leifer2023} | {Synthetic0000}
+                         Kaplan2020, Uzel2022, Flavell2023, Leifer2023} | {Sines0000}
 
     Returns
     -------
@@ -534,17 +532,17 @@ def load_Custom():
     return custom_dataset
 
 
-def load_Synthetic0000():
+def load_Sines0000():
     """
-    Loads the synthetic dataset Synthetic0000.
+    Loads the synthetic dataset Sines0000.
     """
     # ensure the data has been created
-    file = os.path.join(ROOT_DIR, "data", "processed", "neural", "Synthetic0000.pickle")
+    file = os.path.join(ROOT_DIR, "data", "processed", "neural", "Sines0000.pickle")
     assert os.path.exists(file)
     pickle_in = open(file, "rb")
     # unpickle the data
-    Synthetic0000 = pickle.load(pickle_in)
-    return Synthetic0000
+    Sines0000 = pickle.load(pickle_in)
+    return Sines0000
 
 
 def load_Kato2015():
