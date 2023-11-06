@@ -629,7 +629,8 @@ def interpolate_data(time, data, target_dt, method="linear"):
     # Check if correct interpolation method provided
     assert method in {
         None,
-        "linear" "quadratic",
+        "linear",
+        "quadratic",
         "cubic",
     }, "Invalid interpolation method. Choose from [None, 'linear', 'quadratic', 'cubic']."
     # If target_dt is None, return the original data

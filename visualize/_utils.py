@@ -1331,7 +1331,7 @@ def plot_validation_loss_per_dataset(log_dir):
     losses = pd.read_csv(
         os.path.join(log_dir, "analysis", "validation_loss_per_dataset.csv")
     )
-    losses = losses.dropna()
+    losses = losses.dropna().reset_index(drop=True)
 
     # Train dataset names
     train_info = pd.read_csv(os.path.join(log_dir, "dataset", "train_dataset_info.csv"))
@@ -1447,7 +1447,7 @@ def plot_exp_validation_loss_per_dataset(exp_log_dir, exp_name, exp_plot_dir=Non
     losses = losses.set_index(["exp_param", "dataset"])
 
     # Drop NaNs
-    losses = losses.dropna()
+    losses = losses.dropna().reset_index(drop=True)
 
     # Create one subplot per dataset, arranged in two columns
     num_datasets = len(losses.index.unique(level="dataset"))

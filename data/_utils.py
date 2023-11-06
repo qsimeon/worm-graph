@@ -508,7 +508,6 @@ def load_dataset(name):
     loader():
         The loaded dataset.
     """
-
     assert (name in VALID_DATASETS) or (
         name in SYNTHETIC_DATASETS
     ), "Unrecognized dataset! Please pick one from:\n{}".format(
@@ -524,12 +523,25 @@ def load_Custom():
     Loads the last used dataset.
     """
     # ensure the data has been preprocessed
-    file = os.path.join(ROOT_DIR, "data", "processed", "neural", "custom.pickle")
+    file = os.path.join(ROOT_DIR, "data", "processed", "neural", "Custom.pickle")
     assert os.path.exists(file)
     pickle_in = open(file, "rb")
     # unpickle the data
-    custom_dataset = pickle.load(pickle_in)
-    return custom_dataset
+    Custom = pickle.load(pickle_in)
+    return Custom
+
+
+def load_Lorenz0000():
+    """
+    Loads the synthetic dataset Sines0000.
+    """
+    # ensure the data has been created
+    file = os.path.join(ROOT_DIR, "data", "processed", "neural", "Lorenz0000.pickle")
+    assert os.path.exists(file)
+    pickle_in = open(file, "rb")
+    # unpickle the data
+    Lorenz0000 = pickle.load(pickle_in)
+    return Lorenz0000
 
 
 def load_Sines0000():

@@ -1,0 +1,7 @@
+The configuration to behave under different modes (`RUN` vs `MULTIRUN`).
+
+- **RUN Mode**: When Hydra is set to `RUN` mode, the configuration specified directly in your config file under the `submodule` section should be used. This means that whatever parameters you define there should override the corresponding parameters from the default configuration files specified in the `defaults` section.
+
+- **MULTIRUN Mode**: In `MULTIRUN` mode, Hydra uses the `sweeper` to run your application multiple times with different configurations. The `params` section within `sweeper` suggests that you're providing a list of values for `submodule.model.hidden_size` that Hydra will iterate over in `MULTIRUN` mode. During these runs, if there's no explicit setting in the `sweeper` for other parameters, the defaults from the configuration files specified in the `defaults` section should be used.
+
+The `sweeper` will only apply the changes to the parameters specified within its `params` block. If you want to ensure that `RUN` mode always uses the parameters defined in your config file under `submodule`, then your current setup should work. Just remember that `MULTIRUN` mode might require you to explicitly define overrides if you want them to differ from the defaults.
