@@ -499,31 +499,31 @@ class CalciumDataReshaper:
 
     def _fill_calcium_data(self, idx, slot):
         self.standard_calcium_data[:, slot] = torch.from_numpy(
-            self.calcium_data[:, idx], dtype=self.dtype
-        )
+            self.calcium_data[:, idx]
+        ).to(self.dtype)
         self.standard_residual_calcium[:, slot] = torch.from_numpy(
-            self.residual_calcium[:, idx], dtype=self.dtype
-        )
+            self.residual_calcium[:, idx]
+        ).to(self.dtype)
         self.standard_smooth_calcium_data[:, slot] = torch.from_numpy(
-            self.smooth_calcium_data[:, idx], dtype=self.dtype
-        )
+            self.smooth_calcium_data[:, idx]
+        ).to(self.dtype)
         self.standard_residual_smooth_calcium[:, slot] = torch.from_numpy(
-            self.smooth_residual_calcium[:, idx], dtype=self.dtype
-        )
+            self.smooth_residual_calcium[:, idx]
+        ).to(self.dtype)
 
         # Raw data
         self.standard_original_calcium_data[:, slot] = torch.from_numpy(
-            self.original_calcium_data[:, idx], dtype=self.dtype
-        )
+            self.original_calcium_data[:, idx]
+        ).to(self.dtype)
         self.standard_original_smooth_calcium_data[:, slot] = torch.from_numpy(
-            self.original_smooth_calcium_data[:, idx], dtype=self.dtype
-        )
+            self.original_smooth_calcium_data[:, idx]
+        ).to(self.dtype)
         self.standard_original_residual_calcium[:, slot] = torch.from_numpy(
-            self.original_residual_calcium[:, idx], dtype=self.dtype
-        )
+            self.original_residual_calcium[:, idx]
+        ).to(self.dtype)
         self.standard_original_smooth_residual_calcium[:, slot] = torch.from_numpy(
-            self.original_smooth_residual_calcium[:, idx], dtype=self.dtype
-        )
+            self.original_smooth_residual_calcium[:, idx]
+        ).to(self.dtype)
 
     def _fill_unknown_neurons_data(self):
         free_slots = list(np.where(~self.named_neurons_mask)[0])
