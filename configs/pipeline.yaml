@@ -5,9 +5,9 @@ defaults:
   - submodule: []
   # SubmitIt Launcher Plugin:
   #   This plugin provides SLURM launcher to work on the cluster.
-  #   - Use submitit_slurm when using OpenMind (add hydra/launcher=submitit_slurm if using command line)
+  #   - Use submitit_slurm when using OpenMind (add hydra/launcher=submitit_slurm in command line)
   #   - Use submitit_local when running locally
-  - override hydra/launcher: submitit_slurm
+  - override hydra/launcher: submitit_slurm # joblib
   - _self_
 
 hydra:
@@ -17,7 +17,7 @@ hydra:
   #               defined by the sweeper. If running locally, multi-run
   #               runs the jobs serially. If in the cluster, multi-run
   #               submits the jobs in parallel.
-  mode: RUN
+  mode: RUN #MULTIRUN
 
   # Hydra job:
   #   - chdir: Change the working directory to the log directory.
@@ -43,22 +43,35 @@ hydra:
   #   These are the launcher parameters for the SubmitIt plugin.
   #   Comment the partition if working locally.
   launcher:
+    _target_: hydra_plugins.hydra_submitit_launcher.submitit_launcher.SlurmLauncher
+    submitit_folder: ${hydra.sweep.dir}/.submitit/%j
+    timeout_min: 1440  # Job timeout in minutes
+    cpus_per_task: 1  # Number of CPU cores per task
+    gpus_per_node: 1  # Number of GPUs per node
+    tasks_per_node: 1  # Number of tasks to run on each node
+    mem_gb: 96  # Memory required per node in GB
+    nodes: 1  # Number of nodes to use
+    partition: yanglab  # Partition to submit to
+    qos: null  # Quality of Service level
+    comment: null  # Comment to pass to the job
+    constraint: null  # Constraint specification
+    exclude: dgx001, dgx002  # Hosts to exclude
+    gres: gpu:1  # Generic resources to request
+    cpus_per_gpu: null  # Number of CPUs per GPU
+    gpus_per_task: null  # Number of GPUs per task
+    mem_per_gpu: null  # Memory per GPU
+    mem_per_cpu: null  # Memory per CPU
+    account: null  # Account to charge
+    signal_delay_s: 120  # Delay for sending signal before timeout
+    max_num_timeout: 0  # Maximum number of timeouts
+    additional_parameters: {}  # Additional parameters for Slurm
+    array_parallelism: 256  # Max number of simultaneous jobs
     setup:
       - cd /om2/user/qsimeon/worm-graph
-    nodes: 1
-    gres: gpu:1
-    exclude: dgx001, dgx002
-    mem_gb: 128
-    cpus_per_task: 1
-    gpus_per_node: 1
-    tasks_per_node: 1
-    timeout_min: 1440
-    partition: yanglab # sinfo to see the available partitions in OpenMind
-
-
-# ============================ Pipeline Config ============================
 
 experiment:
   name: pipeline
   seed: null # If null, a random seed is generated for each run.
-  mode: RUN
+  mode: RUN #MULTIRUN
+
+# ============================ Pipeline Config ============================

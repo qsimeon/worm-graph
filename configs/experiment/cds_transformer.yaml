@@ -43,7 +43,7 @@ submodule:
     # Train model from scratch
     type: NeuralTransformer
     input_size: 302
-    hidden_size: 512
+    hidden_size: 256
     num_layers: 1
     loss: MSE
     fft_reg_param: 0.0
@@ -53,7 +53,7 @@ submodule:
   train:
     optimizer: AdamW
     lr: 0.0001
-    epochs: 300
+    epochs: 100
     save_freq: 100
     batch_size: 64
     shuffle: true

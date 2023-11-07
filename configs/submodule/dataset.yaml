@@ -28,8 +28,8 @@ dataset:
     
   num_named_neurons: all # number of neurons to train the model with (positive integer or 'all')
   seq_len: 200
-  num_train_samples: 256 # number of length seq_len samples to sample from the train set
-  num_val_samples: 256 # number of length seq_len samples to sample from the validation set
+  num_train_samples: 256 # number of length seq_len samples to draw from the training set per worm
+  num_val_samples: 256 # number of length seq_len samples to draw from the validation set per worm
   reverse: false
   use_residual: false
   smooth_data: true

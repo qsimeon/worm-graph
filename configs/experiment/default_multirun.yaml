@@ -37,7 +37,7 @@ submodule:
       Leifer2023: null
     
   train:
-    epochs: 300
+    epochs: q10
 
 experiment:
   name: default_multirun

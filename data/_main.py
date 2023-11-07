@@ -23,8 +23,8 @@ def get_datasets(dataset_config: DictConfig, save=True):
         - experimental_datasets: Path to the experimental datasets.
         - num_named_neurons (int or 'all'): Number of named neurons to include or 'all' to include all.
         - num_worms (int or 'all'): Number of worms to include or 'all' to include all.
-        - num_train_samples (int): Number of training samples.
-        - num_val_samples (int): Number of validation samples.
+        - num_train_samples (int): Number of training samples per worm.
+        - num_val_samples (int): Number of validation samples per worm.
         - seq_len (int): Sequence length for time series data.
         - reverse (bool): Whether to reverse the time series data.
         - use_residual (bool): Whether to use residuals in the data.

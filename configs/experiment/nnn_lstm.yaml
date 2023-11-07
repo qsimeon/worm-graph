@@ -44,7 +44,7 @@ submodule:
     # Train model from scratch
     type: NetworkLSTM
     input_size: 302
-    hidden_size: 512
+    hidden_size: 256
     num_layers: 1
     loss: MSE
     fft_reg_param: 0.0
@@ -54,7 +54,7 @@ submodule:
   train:
     optimizer: AdamW
     lr: 0.0001
-    epochs: 1000
+    epochs: 100
     save_freq: 100
     batch_size: 64
     shuffle: true

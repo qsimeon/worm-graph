@@ -1,0 +1,39 @@
+# submitit_launcher.yaml
+# @package _group_
+defaults:
+  - override hydra/launcher: submitit_slurm
+  - _self_
+
+hydra:
+  mode: MULTIRUN
+  launcher:
+    _target_: hydra_plugins.hydra_submitit_launcher.submitit_launcher.SlurmLauncher
+    submitit_folder: ${hydra.sweep.dir}/.submitit/%j
+    timeout_min: 1440  # Job timeout in minutes
+    cpus_per_task: 1  # Number of CPU cores per task
+    gpus_per_node: 1  # Number of GPUs per node
+    tasks_per_node: 1  # Number of tasks to run on each node
+    mem_gb: 80  # Memory required per node in GB
+    nodes: 1  # Number of nodes to use
+    name: ${hydra.job.name}  # Name of the job
+    partition: yanglab  # Partition to submit to
+    qos: null  # Quality of Service level
+    comment: null  # Comment to pass to the job
+    constraint: null  # Constraint specification
+    exclude: dgx001, dgx002  # Hosts to exclude
+    gres: gpu:1  # Generic resources to request
+    cpus_per_gpu: null  # Number of CPUs per GPU
+    gpus_per_task: null  # Number of GPUs per task
+    mem_per_gpu: null  # Memory per GPU
+    mem_per_cpu: null  # Memory per CPU
+    account: null  # Account to charge
+    signal_delay_s: 120  # Delay for sending signal before timeout
+    max_num_timeout: 0  # Maximum number of timeouts
+    additional_parameters: {}  # Additional parameters for Slurm
+    array_parallelism: 256  # Max number of simultaneous jobs
+    setup:
+      - cd /om2/user/qsimeon/worm-graph
+    srun_args: null  # Additional arguments for srun
+    # Add the new parameters for the wrapper script and the Python executable path
+    wrapper_script: /path/to/my_wrapper_script.sh
+    python_executable: /path/to/my_python_executable

@@ -9,7 +9,7 @@ hydra:
   # These parameters will be tested just when MULTIRUN mode is used.
   # Use the submodule parameters if RUN.
     params:
-      submodule.model.hidden_size: 512 #64, 128, 256, 512, 1024, 2048, 4096, 8192
+      submodule.model.hidden_size: 256 #64, 128, 256, 512, 1024, 2048, 4096, 8192
 
 submodule:
 
@@ -31,8 +31,8 @@ submodule:
     save_datasets: true
 
     num_named_neurons: all
-    num_train_samples: 256
-    num_val_samples: 256
+    num_train_samples: 128
+    num_val_samples: 128
     seq_len: 200
     reverse: false
     use_residual: false
@@ -50,7 +50,7 @@ submodule:
   train:
     optimizer: AdamW
     lr: 0.0001
-    epochs: 1 #300 # DEBUGGING
+    epochs: 100 
     save_freq: 100
     batch_size: 64
     shuffle: true

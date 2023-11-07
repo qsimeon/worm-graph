@@ -1,0 +1,24 @@
+# joblib_launcher.yaml
+# @package _group_
+defaults:
+  - override hydra/launcher: joblib
+  - _self_
+
+hydra:
+  mode: RUN
+  launcher:
+    _target_: hydra_plugins.hydra_joblib_launcher.joblib_launcher.JoblibLauncher
+    n_jobs: 10  # The number of jobs to run in parallel
+    backend: loky  # The backend to use. Possible values are: ‘loky’, ‘multiprocessing’, ‘threading’.
+    prefer: processes  # Soft hint to choose the default behavior. Can be: ‘processes’ or ‘threads’.
+    require: null  # Hard hint to choose the backend. Overrides ‘prefer’ if not None. Can be: ‘sharedmem’.
+    verbose: 0  # The verbosity level: if non zero, progress messages are printed.
+    timeout: null  # Timeout for each job in seconds.
+    pre_dispatch: '2*n_jobs'  # Number of batches (of size batch_size) to be pre-dispatched.
+    batch_size: 'auto'  # Number of jobs that are dispatched at once by the joblib parallel backend.
+    temp_folder: null  # Folder to use for temporary storage.
+    max_nbytes: null  # Threshold for automatic memmapping of large arrays to disk.
+    mmap_mode: 'r'  # Memmapping mode for numpy arrays passed to workers.
+    # Add the new parameters for the wrapper script and the Python executable path
+    wrapper_script: /path/to/my_wrapper_script.sh
+    python_executable: /path/to/my_python_executable
