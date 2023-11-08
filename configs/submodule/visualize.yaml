@@ -4,7 +4,7 @@ visualize:
   plot_figures_from_this_log_dir: null # options: null, logs/hydra/<FolderName> 
   
   predict:
-    # if null, plot all the worms in the dataset. Otherwise, if list plot only the worms in this list, or if int plot the number of (randomly picked) worms indicated
+    # if null, plot all the worms in the dataset. Otherwise, if <list> plot only the worms in that list, or if <int> plot the number of (randomly picked) worms indicated
     worms_to_plot: null 
-    # if null, plot all the neurons in the dataset. Otherwise, if list plot only the neurons in this list, or if int plot the number of (randomly chosen) neurons indicated
-    neurons_to_plot: 3 # options: null, <list>, <int>
+    # if null, plot all the neurons in the dataset. Otherwise, if <list> plot only the neurons in this list, or if <int> plot the number of (randomly chosen) neurons indicated
+    neurons_to_plot: null # options: null, <list>, <int>
