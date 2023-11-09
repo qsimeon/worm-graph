@@ -11,10 +11,16 @@ def analyse_run(analysis_config: DictConfig):
         log_dir is not None
     ), "log_dir is None. Please specify a log directory to analyse."
 
-    # Analyse loss spread across datasets
-    validation_loss_per_dataset(
+    # Analyse train and test loss across datasets
+    loss_per_dataset(
         log_dir=log_dir,
         experimental_datasets=analysis_config.validation.experimental_datasets,
+        mode="train",
+    )
+    loss_per_dataset(
+        log_dir=log_dir,
+        experimental_datasets=analysis_config.validation.experimental_datasets,
+        mode="validation",
     )
 
 

@@ -219,24 +219,25 @@ def load_reference(group_by=None):
     return neuron_classification
 
 
-def validation_loss_per_dataset(log_dir, experimental_datasets):
-    logger.info("Analyzing validation loss per dataset...")
+def loss_per_dataset(log_dir, experimental_datasets, mode="validation"):
+    logger.info(f"Analyzing {mode} loss per dataset...")
 
     # Retrieve information from training
     train_dataset_info = pd.read_csv(
         os.path.join(log_dir, "dataset", "train_dataset_info.csv")
     )
+
     seq_len = int(train_dataset_info["train_seq_len"].values[0])
     num_train_samples = int(train_dataset_info["num_train_samples"].values[0])
     use_residual = int(train_dataset_info["use_residual"].values[0])
     smooth_data = int(train_dataset_info["smooth_data"].values[0])
 
     # Loss metrics
-    val_running_base_loss = 0
-    val_running_loss = 0
+    running_base_loss = 0
+    running_loss = 0
 
-    dataset_val_loss = []
-    dataset_val_baseline = []
+    dataset_loss = []
+    dataset_baseline = []
     num_worms = []
 
     # Load the model
@@ -248,15 +249,15 @@ def validation_loss_per_dataset(log_dir, experimental_datasets):
     for dataset, worms_to_use in experimental_datasets.items():
         # Skip some datasets
         if worms_to_use is None:
-            dataset_val_loss.append(np.NaN)
-            dataset_val_baseline.append(np.NaN)
+            dataset_loss.append(np.NaN)
+            dataset_baseline.append(np.NaN)
             num_worms.append(np.NaN)
             continue
 
         combined_dataset, _ = create_combined_dataset(
             experimental_datasets={dataset: worms_to_use}, num_named_neurons="all"
         )
-        _, val_dataset, _ = split_combined_dataset(
+        train_dataset, val_dataset, _ = split_combined_dataset(
             combined_dataset=combined_dataset,
             num_train_samples=num_train_samples,
             num_val_samples=num_train_samples,  # use the same number of samples as in the train dataset
@@ -265,58 +266,58 @@ def validation_loss_per_dataset(log_dir, experimental_datasets):
             smooth_data=smooth_data,
             reverse=False,
         )
+        select_dataset = train_dataset if mode == "train" else val_dataset
 
         num_worms.append(len(combined_dataset))
 
-        valloader = torch.utils.data.DataLoader(
-            val_dataset,
-            batch_size=32,
-            shuffle=False,  # TODO: Get the batch size from config
+        batch_size = 1
+        dataloader = torch.utils.data.DataLoader(
+            select_dataset,
+            batch_size=batch_size,
+            shuffle=False,
         )
 
         # Evaluation loop
         model.eval()
 
         with torch.no_grad():
-            for batch_idx, (X_val, Y_val, masks_val, metadata_val) in enumerate(
-                valloader
-            ):
-                X_val = X_val.to(DEVICE)
-                Y_val = Y_val.to(DEVICE)
-                masks_val = masks_val.to(DEVICE)
+            for batch_idx, (X, Y, masks, metadata) in enumerate(dataloader):
+                X = X.to(DEVICE)
+                Y = Y.to(DEVICE)
+                masks = masks.to(DEVICE)
 
                 # Baseline model: identity model - predict that the next time step is the same as the current one.
                 # This is the simplest model we can think of: predict that the next time step is the same as the current one
                 # is better than predict any other random number.
-                y_base = X_val
-                val_baseline = compute_loss_vectorized(
-                    loss_fn=criterion, X=y_base, Y=Y_val, masks=masks_val
+                y_base = X
+                baseline = compute_loss_vectorized(
+                    loss_fn=criterion, X=y_base, Y=Y, masks=masks
                 )
 
                 # All models operate sequence-to-sequence
-                y_pred = model(X_val, masks_val)
-                val_loss = compute_loss_vectorized(
-                    loss_fn=criterion, X=y_pred, Y=Y_val, masks=masks_val
+                y_pred = model(X, masks)
+                loss = compute_loss_vectorized(
+                    loss_fn=criterion, X=y_pred, Y=Y, masks=masks
                 )
 
                 # Update running losses
-                val_running_base_loss += val_baseline.item()
-                val_running_loss += val_loss.item()
+                running_base_loss += baseline.item()
+                running_loss += loss.item()
 
             # Store metrics
-            dataset_val_loss.append(val_running_loss / len(valloader))
-            dataset_val_baseline.append(val_running_base_loss / len(valloader))
+            dataset_loss.append(running_loss / len(dataloader))
+            dataset_baseline.append(running_base_loss / len(dataloader))
 
             # Reset running losses
-            val_running_base_loss = 0
-            val_running_loss = 0
+            running_base_loss = 0
+            running_loss = 0
 
     # Save losses in csv
     losses = pd.DataFrame(
         {
             "dataset": list(experimental_datasets.keys()),
-            "val_loss": dataset_val_loss,
-            "val_baseline": dataset_val_baseline,
+            f"{mode}_loss": dataset_loss,
+            f"{mode}_baseline": dataset_baseline,
             "num_worms": num_worms,
         }
     )
@@ -324,6 +325,6 @@ def validation_loss_per_dataset(log_dir, experimental_datasets):
     # Create analysis folder
     os.makedirs(os.path.join(log_dir, "analysis"), exist_ok=True)
     losses.to_csv(
-        os.path.join(log_dir, "analysis", "validation_loss_per_dataset.csv"),
+        os.path.join(log_dir, "analysis", f"{mode}_loss_per_dataset.csv"),
         index=False,
     )

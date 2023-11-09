@@ -4,13 +4,12 @@ defaults:
   - _self_
 
 hydra:
-  # mode: RUN #MULTIRUN
   mode: MULTIRUN
   sweeper:
   # These parameters will be tested just when MULTIRUN mode is used.
   # Use the submodule parameters if RUN.
       params:
-        submodule.model.type: NetworkLSTM, NeuralTransformer, LinearNN
+        submodule.model.type: LinearNN, NetworkLSTM, NeuralTransformer
 
 # The submodule parameters set below will be used only if RUN mode is used. 
 # Otherwise, it uses the default parameters imported from the other config files in the submodule directory.
@@ -38,7 +37,7 @@ submodule:
     num_named_neurons: all
     num_train_samples: 128
     num_val_samples: 128
-    seq_len: 200
+    seq_len: 201
     reverse: false
     use_residual: false
     smooth_data: true
@@ -56,7 +55,7 @@ submodule:
   train:
     optimizer: AdamW
     lr: 0.0001
-    epochs: 200 
+    epochs: 1 #200 
     save_freq: 100
     batch_size: 64
     shuffle: true

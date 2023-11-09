@@ -50,7 +50,8 @@ def plot_figures(
 
         if submodule_dir == "analysis":
             logger.info("Plotting submodule 'analysis'.")
-            plot_validation_loss_per_dataset(log_dir=log_dir)
+            plot_loss_per_dataset(log_dir=log_dir, mode="train")
+            plot_loss_per_dataset(log_dir=log_dir, mode="validation")
 
 
 def plot_experiment(visualize_config: DictConfig, exp_config: DictConfig) -> None:
@@ -101,7 +102,7 @@ def plot_experiment(visualize_config: DictConfig, exp_config: DictConfig) -> Non
         logger.info(f"Plotting experiment {exp_key}.")
 
         # Plot losses and computation time
-        plot_exp_losses(exp_log_dir, exp_plot_dir, exp_key)
+        plot_experiment_losses(exp_log_dir, exp_plot_dir, exp_key)
 
         # Scaling law
         plot_scaling_law(
@@ -109,8 +110,17 @@ def plot_experiment(visualize_config: DictConfig, exp_config: DictConfig) -> Non
         )
 
         # Plot spread dataset losses analysis
-        plot_exp_validation_loss_per_dataset(
-            exp_log_dir=exp_log_dir, exp_name=exp_key, exp_plot_dir=exp_plot_dir
+        plot_experiment_loss_per_dataset(
+            exp_log_dir=exp_log_dir,
+            exp_name=exp_key,
+            mode="train",
+            exp_plot_dir=exp_plot_dir,
+        )
+        plot_experiment_loss_per_dataset(
+            exp_log_dir=exp_log_dir,
+            exp_name=exp_key,
+            mode="validation",
+            exp_plot_dir=exp_plot_dir,
         )
 
     except:

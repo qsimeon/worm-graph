@@ -848,18 +848,28 @@ def create_combined_dataset(experimental_datasets, num_named_neurons):
 
     Parameters
     ----------
-    config: DictConfig
-        Hydra configuration object.
+    experimental_datasets : dict
+        A dictionary containing the names of the datasets and the number of worms to select from each dataset.
+    num_named_neurons : int
+        The number of named neurons to select.
 
     Calls
     -----
     load_dataset : function in data/_utils.py
         Load a specified dataset by name.
+    select_desired_worms : function in data/_utils.py
+        Select the desired number of worms from a dataset.
+    select_named_neurons : function in data/_utils.py
+        Select the desired number of named neurons from a dataset.
+    rename_worm_keys : function in data/_utils.py
+        Rename the keys of the combined dataset.
 
     Returns
     -------
-    dataset: dict
-        Dictionary of single worm data objects.
+    combined_dataset : dict
+        A dictionary containing the worm data of all requested datasets.
+    dataset_info : pandas.DataFrame
+        A dataframe containing information about the combined dataset.
 
     Notes
     -----
@@ -873,8 +883,6 @@ def create_combined_dataset(experimental_datasets, num_named_neurons):
         'smooth_residual_calcium', 'time_in_seconds', 'unknown_neuron_to_slot',
         'unknown_neurons_mask', 'worm'.
     """
-
-    log_dir = os.getcwd()  # logs/hydra/${now:%Y_%m_%d_%H_%M_%S}
 
     # Load the dataset(s)
     combined_dataset = dict()

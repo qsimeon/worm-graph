@@ -1130,7 +1130,7 @@ def experiment_parameter(exp_dir, key):
     return value, title, xaxis
 
 
-def plot_exp_losses(exp_log_dir, exp_plot_dir, exp_name):
+def plot_experiment_losses(exp_log_dir, exp_plot_dir, exp_name):
     """
     * Plot validation loss curves and baselines for all experiments
     * Plot computation time for all experiments
@@ -1232,7 +1232,7 @@ def plot_exp_losses(exp_log_dir, exp_plot_dir, exp_name):
 
 
 def plot_scaling_law(
-    exp_log_dir, exp_name, exp_plot_dir=None, fig=None, ax=None, fit_deg=1
+    exp_log_dir, exp_name, exp_plot_dir=None, fig=None, ax=None, fit_deg=None
 ):
     if fig is None or ax is None:
         # Create
@@ -1270,11 +1270,13 @@ def plot_scaling_law(
     ax.set_ylabel("Validation loss", fontsize=12)
 
     # Log scale
-    ax.set_xscale("log")
     ax.set_yscale("log")
 
     # Regression
-    if fit_deg == 1:
+    if fit_deg is None:
+        pass
+
+    elif fit_deg == 1:
         try:
             slope, intercept, r_value, p_value, std_err = stats.linregress(
                 np.log(exp_parameter), np.log(losses)
@@ -1326,10 +1328,10 @@ def plot_scaling_law(
         plt.close()
 
 
-def plot_validation_loss_per_dataset(log_dir):
-    # Load validation losses
+def plot_loss_per_dataset(log_dir, mode="validation"):
+    # Load train/validation losses
     losses = pd.read_csv(
-        os.path.join(log_dir, "analysis", "validation_loss_per_dataset.csv")
+        os.path.join(log_dir, "analysis", f"{mode}_loss_per_dataset.csv")
     )
     losses = losses.dropna().reset_index(drop=True)
 
@@ -1352,11 +1354,15 @@ def plot_validation_loss_per_dataset(log_dir):
 
     # First plot both model and baseline losses
     ax.bar(
-        bar1_positions, losses["val_loss"], bar_width, label="Model", color=palette[0]
+        bar1_positions,
+        losses[f"{mode}_loss"],
+        bar_width,
+        label="Model",
+        color=palette[0],
     )
     ax.bar(
         bar2_positions,
-        losses["val_baseline"],
+        losses[f"{mode}_baseline"],
         bar_width,
         label="Baseline",
         color=palette[1],
@@ -1368,7 +1374,8 @@ def plot_validation_loss_per_dataset(log_dir):
     )  # Set x-ticks to be in the middle of the grouped bars
     ax.set_xticklabels(losses["dataset"].values, rotation=0, ha="center")
     ax.set_ylabel("Loss")
-    ax.set_title("Validation loss across datasets")
+    ax.set_yscale("log")  # log scale
+    ax.set_title(f"{mode.capitalize()} loss across datasets")
     ax.legend(loc="upper right")
 
     props = dict(boxstyle="round", facecolor="white", alpha=0.5)
@@ -1386,7 +1393,7 @@ def plot_validation_loss_per_dataset(log_dir):
     for i, v in enumerate(losses["num_worms"]):
         ax.text(
             i + bar_width / 2,  # Adjusted x-position to align the text
-            max(losses.loc[i, ["val_loss", "val_baseline"]]),
+            max(losses.loc[i, [f"{mode}_loss", f"{mode}_baseline"]]),
             r"$n_{val} = $" + str(int(v)),
             ha="center",
             fontsize=8,
@@ -1396,14 +1403,18 @@ def plot_validation_loss_per_dataset(log_dir):
 
     # Save figure
     plt.savefig(
-        os.path.join(log_dir, "analysis", "validation_loss_per_dataset.png"), dpi=300
+        os.path.join(log_dir, "analysis", f"{mode}_loss_per_dataset.png"), dpi=300
     )
     plt.close()
 
 
-def plot_exp_validation_loss_per_dataset(exp_log_dir, exp_name, exp_plot_dir=None):
+def plot_experiment_loss_per_dataset(
+    exp_log_dir, exp_name, mode="validation", exp_plot_dir=None
+):
     # =============== Collect information ===============
-    losses = pd.DataFrame(columns=["dataset", "val_loss", "val_baseline", "exp_param"])
+    losses = pd.DataFrame(
+        columns=["dataset", f"{mode}_loss", f"{mode}_baseline", "exp_param"]
+    )
 
     # Loop through all experiments
     for file in np.sort(os.listdir(exp_log_dir)):
@@ -1417,9 +1428,9 @@ def plot_exp_validation_loss_per_dataset(exp_log_dir, exp_name, exp_plot_dir=Non
         # Experiment parameters
         exp_param, exp_title, exp_xaxis = experiment_parameter(exp_dir, key=exp_name)
 
-        # Load validation losses per dataset
+        # Load losses per dataset
         tmp_df = pd.read_csv(
-            os.path.join(exp_dir, "analysis", "validation_loss_per_dataset.csv")
+            os.path.join(exp_dir, "analysis", f"{mode}_loss_per_dataset.csv")
         )
 
         # Add experiment parameter to dataframe
@@ -1464,16 +1475,16 @@ def plot_exp_validation_loss_per_dataset(exp_log_dir, exp_name, exp_plot_dir=Non
     # Plot validation loss vs. exp_param (individual plots)
     for i, dataset in enumerate(losses.index.unique(level="dataset")):
         df_subset_model = losses.loc[
-            losses.index.get_level_values("dataset") == dataset, "val_loss"
+            losses.index.get_level_values("dataset") == dataset, f"{mode}_loss"
         ].reset_index()
         df_subset_baseline = losses.loc[
-            losses.index.get_level_values("dataset") == dataset, "val_baseline"
+            losses.index.get_level_values("dataset") == dataset, f"{mode}_baseline"
         ].reset_index()
 
         sns.scatterplot(
             data=df_subset_model,
             x="exp_param",
-            y="val_loss",
+            y=f"{mode}_loss",
             ax=ax[i],
             label="Model",
             marker="o",
@@ -1481,7 +1492,7 @@ def plot_exp_validation_loss_per_dataset(exp_log_dir, exp_name, exp_plot_dir=Non
         sns.lineplot(
             data=df_subset_baseline,
             x="exp_param",
-            y="val_baseline",
+            y=f"{mode}_baseline",
             ax=ax[i],
             label="Baseline",
             linestyle="--",
@@ -1496,7 +1507,7 @@ def plot_exp_validation_loss_per_dataset(exp_log_dir, exp_name, exp_plot_dir=Non
         # Try to fit linear regression (log-log)
         try:
             x = np.log(df_subset_model["exp_param"].values)
-            y = np.log(df_subset_model["val_loss"].values)
+            y = np.log(df_subset_model[f"{mode}_loss"].values)
             slope, intercept, r_value, p_value, std_err = stats.linregress(x, y)
             fit_label = (
                 "y = {:.2e}x + {:.2e}\n".format(slope, intercept)
@@ -1564,19 +1575,19 @@ def plot_exp_validation_loss_per_dataset(exp_log_dir, exp_name, exp_plot_dir=Non
         ax[-1].axis("off")
 
     plt.tight_layout()
-    plt.savefig(os.path.join(exp_plot_dir, "validation_loss_per_dataset.png"), dpi=300)
+    plt.savefig(os.path.join(exp_plot_dir, f"{mode}_loss_per_dataset.png"), dpi=300)
     plt.close()
 
-    # Plot validation loss vs. exp_param (comparison)
+    # Plot loss vs. exp_param (comparison)
     fig, ax = plt.subplots(figsize=(15, 7))
 
-    # Plot validation loss vs. exp_param for all datasets
+    # Plot loss vs. exp_param for all datasets
     for color_idx, dataset in enumerate(losses.index.unique(level="dataset")):
         df_subset_model = losses.loc[
-            losses.index.get_level_values("dataset") == dataset, "val_loss"
+            losses.index.get_level_values("dataset") == dataset, f"{mode}_loss"
         ].reset_index()
         df_subset_baseline = losses.loc[
-            losses.index.get_level_values("dataset") == dataset, "val_baseline"
+            losses.index.get_level_values("dataset") == dataset, f"{mode}_baseline"
         ].reset_index()
 
         model_name = losses.loc[
@@ -1588,7 +1599,7 @@ def plot_exp_validation_loss_per_dataset(exp_log_dir, exp_name, exp_plot_dir=Non
         sns.scatterplot(
             data=df_subset_model,
             x="exp_param",
-            y="val_loss",
+            y=f"{mode}_loss",
             ax=ax,
             color=color,
             label=f"{model_name} (on {dataset})",
@@ -1596,7 +1607,7 @@ def plot_exp_validation_loss_per_dataset(exp_log_dir, exp_name, exp_plot_dir=Non
         sns.lineplot(
             data=df_subset_baseline,
             x="exp_param",
-            y="val_baseline",
+            y=f"{mode}_baseline",
             ax=ax,
             linestyle="--",
             color=color,
@@ -1607,10 +1618,10 @@ def plot_exp_validation_loss_per_dataset(exp_log_dir, exp_name, exp_plot_dir=Non
             losses.index.get_level_values("dataset") == dataset, "num_worms"
         ].values[0]
         min_exp_param = df_subset_baseline["exp_param"].min()
-        max_val_baseline = df_subset_baseline["val_baseline"].max()
+        max_baseline = df_subset_baseline[f"{mode}_baseline"].max()
         ax.annotate(
             r"$n_{val}=$" + f"{int(num_worms)}",
-            (min_exp_param, max_val_baseline),
+            (min_exp_param, max_baseline),
             textcoords="offset points",
             xytext=(0, 2),
             ha="center",
@@ -1625,7 +1636,7 @@ def plot_exp_validation_loss_per_dataset(exp_log_dir, exp_name, exp_plot_dir=Non
         # Try to fit linear regression (log-log)
         try:
             x = np.log(df_subset_model["exp_param"].values)
-            y = np.log(df_subset_model["val_loss"].values)
+            y = np.log(df_subset_model[f"{mode}_loss"].values)
             slope, intercept, r_value, p_value, std_err = stats.linregress(x, y)
             fit_label = f"y = {slope:.2f}x + {intercept:.2e} (R^2 = {r_value**2:.4f})"
             ax.plot(
@@ -1646,14 +1657,14 @@ def plot_exp_validation_loss_per_dataset(exp_log_dir, exp_name, exp_plot_dir=Non
     # Set axis labels and title
     ax.set_xlabel(exp_xaxis)
     ax.set_ylabel("Loss")
-    ax.set_title(f"Validation Loss spread across datasets")
+    ax.set_title(f"{mode.capitalize()} loss distributed across datasets")
     ax.legend(loc="upper right", fontsize="small")
 
     plt.tight_layout()
 
     if exp_plot_dir is not None:
         plt.savefig(
-            os.path.join(exp_plot_dir, "validation_loss_per_dataset_comparison.png"),
+            os.path.join(exp_plot_dir, f"{mode}_loss_per_dataset_comparison.png"),
             dpi=300,
         )
         plt.close()
