@@ -27,7 +27,6 @@ def plot_figures(
         if submodule_dir == "train":
             logger.info("Plotting submodule 'train'.")
             plot_loss_curves(log_dir=log_dir, info_to_display=None)
-            # TODO plot_before_after_weights
 
         if submodule_dir == "prediction":
             logger.info("Plotting submodule 'prediction'.")

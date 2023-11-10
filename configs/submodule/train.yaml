@@ -1,3 +1,4 @@
+# Train model 
 train:
   optimizer: AdamW # options: Adam, AdamW, Adadelta, Adagrad, RMSprop, SGD
   lr: 0.0001
@@ -7,5 +8,7 @@ train:
   shuffle: true
 
   early_stopping:
-    delta: 0 # Minimum change in validation loss to be considered an improvement.
-    patience: 50 # Number of epochs to wait for improvement before stopping.
+    # Minimum change in validation loss to be considered an improvement
+    delta: 0
+    # Number of epochs to wait for improvement before stopping
+    patience: 50

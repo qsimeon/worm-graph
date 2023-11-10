@@ -46,11 +46,13 @@ def model_predict(
         seq_len
     )
 
-    # Load dataset
+    # Load dataset with
     combined_dataset, dataset_info = create_combined_dataset(
-        experimental_datasets=experimental_datasets, num_named_neurons=None
+        experimental_datasets=experimental_datasets,
+        num_named_neurons=None,  # use all available neurons
     )
 
+    # Put model on device
     model = model.to(DEVICE)
 
     # Iterate over combined datasets (same process as in split_combined_dataset in data/_utils.py)

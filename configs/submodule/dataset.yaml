@@ -13,10 +13,12 @@ dataset:
   # Whether to save the datasets in the logs/dataset directory.
   save_datasets: false
 
+  # null = don't predict on this dataset
+  # all = predict on all the worms in the dataset
+  # <int> = use this number of (randomly picked) worms from the dataset
+  # <str> = predict on this wormID particular worm in the dataset
+  # <list> = predict on the worms with wormIDs in the list
   experimental_datasets:
-    # null = don't use this dataset
-    # all = use all the worms in the dataset
-    # positive integer = use this number of worms from the dataset (random pick)
     # Sines0000: all
     # Lorenz0000: all
     Kato2015: all

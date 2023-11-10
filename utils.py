@@ -1,6 +1,5 @@
 import os
 import torch
-import mlflow
 import random
 import logging
 import warnings
@@ -9,8 +8,8 @@ import pandas as pd
 import torch.multiprocessing
 from omegaconf import DictConfig, ListConfig
 
-# Ignore sklearn's RuntimeWarnings
-warnings.filterwarnings(action="ignore", category=RuntimeWarning)
+# Ignore all warnings
+warnings.filterwarnings(action="ignore")  # , category=RuntimeWarning)
 
 # set the start method for multiprocessing
 torch.multiprocessing.set_start_method("spawn", force=True)
@@ -61,6 +60,7 @@ VALID_DATASETS = {
     "Nichols2017",
     "Kato2015",
     "Kaplan2020",
+    "Eviatar2021",
     "Leifer2023",  # Different type of dataset: stimulus-response.
     "Flavell2023",  # TODO: something wrong with worm0.
 }
@@ -94,20 +94,3 @@ def init_random_seeds(seed=0):
         torch.cuda.manual_seed_all(seed)
         torch.backends.cudnn.deterministic = True
     return None
-
-
-def log_params_from_omegaconf_dict(params):
-    for param_name, element in params.items():
-        _explore_recursive(param_name, element)
-
-
-def _explore_recursive(parent_name, element):
-    if isinstance(element, DictConfig):
-        for k, v in element.items():
-            if isinstance(v, DictConfig) or isinstance(v, ListConfig):
-                _explore_recursive(f"{parent_name}.{k}", v)
-            else:
-                mlflow.log_param(f"{parent_name}.{k}", v)
-    elif isinstance(element, ListConfig):
-        for i, v in enumerate(element):
-            mlflow.log_param(f"{parent_name}.{i}", v)

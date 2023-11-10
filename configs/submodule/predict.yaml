@@ -1,9 +1,11 @@
+# Choose the worms that you want to predict
 predict:
-  # Choose the worms that you want to predict
+  # null = don't predict on this dataset
+  # all = predict on all the worms in the dataset
+  # <int> = use this number of (randomly picked) worms from the dataset
+  # <str> = predict on this wormID particular worm in the dataset
+  # <list> = predict on the worms with wormIDs in the list
   experimental_datasets:
-    # null = don't predict on this dataset
-    # all = predict on all the worms in the dataset
-    # positive integer = use this number of (randomly picked) worms from the dataset
     # Sines0000: worm0
     # Lorenz0000: worm0
     Kato2015: worm0

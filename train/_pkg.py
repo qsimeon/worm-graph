@@ -5,7 +5,6 @@ import time
 import copy
 import torch
 import hydra
-import mlflow
 import random
 import logging
 import numpy as np
@@ -22,4 +21,4 @@ from fvcore.nn import FlopCountAnalysis
 from omegaconf import DictConfig, OmegaConf
 from torch.utils.data import ConcatDataset, DataLoader
 from data._utils import NeuralActivityDataset, pick_worm
-from utils import DEVICE, LOGS_DIR, NEURONS_302, log_params_from_omegaconf_dict
+from utils import DEVICE, LOGS_DIR, NEURONS_302

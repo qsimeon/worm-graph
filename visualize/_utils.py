@@ -329,159 +329,6 @@ def plot_loss_curves(log_dir, info_to_display=None):
     return None
 
 
-def setup_histograms_for_checkpoint(chkpt, axes, range_val, fig):
-    model_config = OmegaConf.create({"use_this_pretrained_model": chkpt})
-    model = get_model(model_config, verbose=False)
-
-    # Extract weights and filter out biases
-    weights = [
-        param.detach().cpu().numpy().flatten()
-        for name, param in model.named_parameters()
-        if "weight" in name
-    ]
-
-    # Use a style for better aesthetics
-    with plt.style.context("ggplot"):
-        for ax, (name, weight) in zip(
-            axes,
-            zip(
-                [name for name, _ in model.named_parameters() if "weight" in name],
-                weights,
-            ),
-        ):
-            ax.clear()  # Clear previous histograms
-            ax.hist(weight, bins=50, range=range_val)
-            ax.set_title(f"Layer: {name}", fontsize=12)
-            ax.set_xlabel("Weight values", fontsize=10)
-            ax.set_ylabel("Frequency", fontsize=10)
-            ax.grid(True, which="both", ls="--", linewidth=0.5)
-
-    # Set the superior title to the figure with the checkpoint name
-    chkpt_name = os.path.basename(chkpt)  # Extract the file name from the full path
-    chkpt_name = chkpt_name.split(".")[0]  # Remove the extension
-    chkpt_name = chkpt_name.split("_")[-1]  # Remove the epoch number
-    fig.suptitle(f"Weights distribution at epoch {chkpt_name}", fontsize=16)
-
-
-def plot_before_after_weights(log_dir: str) -> None:
-    """Plots the model's readout weights from before and after training.
-
-    Args:
-        log_dir (str): The path to the log directory.
-
-    Returns:
-        None
-    """
-    # process the pipeline_info.yaml file inside the log folder
-    cfg_path = os.path.join(log_dir, "pipeline_info.yaml")
-    if os.path.exists(cfg_path):
-        config = OmegaConf.structured(OmegaConf.load(cfg_path))
-        config = config.submodule
-    else:
-        raise FileNotFoundError(
-            "No pipeline_info.yaml file found in {}".format(log_dir)
-        )
-
-    # get strings for plot title
-    dataset_name = config.dataset.train.name
-    model_name = config.model.type
-    # Create the plot title
-    plt_title = "Model readout weights\nmodel: {}\ndataset: {}".format(
-        model_name,
-        dataset_name,
-    )
-    # return if no checkpoints found
-    chkpt_dir = os.path.join(log_dir, "checkpoints")
-    if not os.path.exists(chkpt_dir):
-        logger.error("No checkpoints found in the log directory.")
-        return None
-    # load the first model checkpoint
-    chkpts = sorted(os.listdir(chkpt_dir), key=lambda x: int(x.split("_")[0]))
-    checkpoint_zero_dir = os.path.join(chkpt_dir, chkpts[0])
-    checkpoint_last_dir = os.path.join(chkpt_dir, chkpts[-1])
-    first_chkpt = torch.load(checkpoint_zero_dir, map_location=DEVICE)
-    last_chkpt = torch.load(checkpoint_last_dir, map_location=DEVICE)
-    # create the model
-    input_size, hidden_size = (
-        first_chkpt["input_size"],
-        first_chkpt["hidden_size"],
-    )
-    loss_name = first_chkpt["loss_name"]
-    fft_reg_param, l1_reg_param = (
-        first_chkpt["fft_reg_param"],
-        first_chkpt["l1_reg_param"],
-    )
-    model = eval(model_name)(
-        input_size,
-        hidden_size,
-        loss=loss_name,
-        fft_reg_param=fft_reg_param,
-        l1_reg_param=l1_reg_param,
-    )
-    # plot the readout weights
-    # Create a figure with a larger vertical size
-    fig, axs = plt.subplots(1, 2, figsize=(10, 6))
-    # before training
-    model.load_state_dict(first_chkpt["model_state_dict"])
-    model.eval()
-    weights_before = copy.deepcopy(model.linear.weight.detach().cpu().T)
-
-    # after training
-    model.load_state_dict(last_chkpt["model_state_dict"])
-    model.eval()
-    weights_after = copy.deepcopy(model.linear.weight.detach().cpu().T)
-
-    # check if the weights changed very much
-    if torch.allclose(weights_before, weights_after):
-        print("Model weights did not change much during training.")
-    # print what percentage of weights are close
-    print(
-        "Model weights changed by {:.2f}% during training.".format(
-            100
-            * (
-                1
-                - torch.isclose(weights_before, weights_after, atol=1e-8).sum().item()
-                / weights_before.numel()
-            )
-        ),
-        end="\n\n",
-    )
-
-    # find min and max across both datasets for the colormap
-    vmin = min(weights_before.min(), weights_after.min())
-    vmax = max(weights_before.max(), weights_after.max())
-
-    # plot
-    im1 = axs[0].imshow(weights_before, cmap="coolwarm", vmin=vmin, vmax=vmax)
-    axs[0].set_title("Initialized")
-    axs[0].set_ylabel("Hidden size")
-    axs[0].set_xlabel("Output size")
-
-    im2 = axs[1].imshow(weights_after, cmap="coolwarm", vmin=vmin, vmax=vmax)
-    axs[1].set_title("Trained")
-    axs[1].set_xlabel("Output size")
-
-    # create an axes on the right side of axs[1]. The width of cax will be 5%
-    # of axs[1] and the padding between cax and axs[1] will be fixed at 0.05 inch.
-    divider = make_axes_locatable(axs[1])
-    cax = divider.append_axes("right", size="5%", pad=0.05)
-    fig.colorbar(im2, cax=cax)
-
-    # After creating your subplots and setting their titles, adjust the plot layout
-    plt.tight_layout(
-        rect=[0, 0, 1, 0.92]
-    )  # Adjust the rectangle's top value as needed to give the suptitle more space
-    plt.subplots_adjust(top=0.85)  # Adjust the top to make space for the title
-    # Now add your suptitle, using the y parameter to control its vertical placement
-    plt.suptitle(
-        plt_title, fontsize="medium", y=0.95
-    )  # Adjust y as needed so the title doesn't overlap with the plot
-    # Save and close as before
-    plt.savefig(os.path.join(log_dir, "readout_weights.png"))
-    plt.close()
-    return None
-
-
 def plot_predictions(log_dir, neurons_to_plot=None, worms_to_plot=None):
     for type_ds in os.listdir(os.path.join(log_dir, "prediction")):
         for ds_name in os.listdir(os.path.join(log_dir, "prediction", type_ds)):
@@ -1021,8 +868,19 @@ def plot_heat_map(
 
 
 def experiment_parameter(exp_dir, key):
+    """
+    Returns a tuple containing the value, title, and x-axis label for a given experiment parameter.
+
+    Parameters:
+    exp_dir (str): The path to the experiment directory.
+    key (str): The name of the experiment parameter to retrieve.
+
+    Returns:
+    tuple: A tuple containing the value, title, and x-axis label for the experiment parameter.
+    """
+    # Set some default values
     value = exp_dir.split("/")[-1]  # exp<int> (default)
-    title = "MULTIRUN"
+    title = "Experiment"
     xaxis = "Experiment run"
 
     if key == "time_steps_volume":

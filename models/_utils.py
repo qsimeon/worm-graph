@@ -699,6 +699,7 @@ class NeuralTransformer(Model):
             activation="relu",
             batch_first=True,
             norm_first=True,
+            is_causal=True,  # we use a causal Transformer!
         )
 
         # Instantiate internal hidden model

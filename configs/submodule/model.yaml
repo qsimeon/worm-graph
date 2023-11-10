@@ -1,3 +1,4 @@
+# Build model from scratch
 model:
   type: LinearNN # options: LinearNN, NetworkLSTM, NetworkRNN, NeuralCFC, NeuralTransformer
   input_size: 302 # keep fixed at input_size = 302; it is the number of neurons in the adult C. elegans hermaphrodite 

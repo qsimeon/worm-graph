@@ -3,7 +3,6 @@ hydra-core
 hydra-optuna-sweeper
 hydra-submitit-launcher
 mat73
-mlflow
 fvcore
 ncps
 omegaconf

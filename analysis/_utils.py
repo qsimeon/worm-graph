@@ -254,8 +254,15 @@ def loss_per_dataset(log_dir, experimental_datasets, mode="validation"):
             num_worms.append(np.NaN)
             continue
 
+        # Type check for `worms_to_use` to be int, list, or str
+        assert isinstance(
+            worms_to_use, (int, list, str)
+        ), f"`worms_to_use must` be int, list, or str, but got {type(worms_to_use)}."
+
+        # Create dataset
         combined_dataset, _ = create_combined_dataset(
-            experimental_datasets={dataset: worms_to_use}, num_named_neurons=None
+            experimental_datasets={dataset: worms_to_use},
+            num_named_neurons=None,  # use all available neurons
         )
         train_dataset, val_dataset, _ = split_combined_dataset(
             combined_dataset=combined_dataset,

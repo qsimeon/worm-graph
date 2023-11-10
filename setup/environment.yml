@@ -35,7 +35,6 @@ dependencies:
   - pip:
     - dtaidistance
     - mat73
-    - mlflow
     - fvcore
     - ncps
     - hydra-core

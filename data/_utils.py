@@ -813,7 +813,7 @@ def select_desired_worms(multi_worm_dataset, worms):
     wormIDs = [wormID for wormID in multi_worm_dataset.keys()]
     dataset_name = multi_worm_dataset[wormIDs[0]]["dataset"]
 
-    # worms can be string, list or int
+    # worms can be str, list or int
     if isinstance(worms, str):
         # User requested one specific worm
         logger.info("Using {} from {}".format(worms, dataset_name))
@@ -825,13 +825,15 @@ def select_desired_worms(multi_worm_dataset, worms):
         ), f"Chosen number of worms must be less than or equal to the number of worms in {dataset_name}."
         wormIDs_to_keep = np.random.choice(wormIDs, size=worms, replace=False)
         logger.info("Using {} worms from {} (random pick)".format(worms, dataset_name))
-    else:
+    elif isinstance(worms, list):
         # User requested specific worms
         assert len(worms) <= len(
             multi_worm_dataset
         ), f"Chosen number of worms must be less than or equal to the number of worms in {dataset_name}."
         wormIDs_to_keep = worms
         logger.info("Using {} from {}".format(wormIDs_to_keep, dataset_name))
+    else:
+        raise Exception("Invalid type for `worms` argument.")
 
     # Remove the worms that are not in `wormIDs_to_keep`
     for wormID in wormIDs:
@@ -873,7 +875,7 @@ def create_combined_dataset(experimental_datasets, num_named_neurons):
     -----
     * The keys of the dictionary are the worm IDs ('worm0', 'worm1', etc.).
     * The main features of each worm are stored in the following keys:
-        'calcium_data', 'dataset', 'dt', 'max_timesteps', 
+        'calcium_data', 'dataset', 'dt', 'max_timesteps',
         'named_neurons_mask', 'neuron_to_slot', 'neurons_mask',
         'num_named_neurons', 'num_neurons', 'num_unknown_neurons',
         'residual_calcium', 'smooth_calcium_data', 'smooth_method',
@@ -884,7 +886,7 @@ def create_combined_dataset(experimental_datasets, num_named_neurons):
     combined_dataset = dict()
 
     for dataset_name, worms in experimental_datasets.items():
-        # Skip if not worms requested for this dataset
+        # Skip if no worms requested for this dataset
         if worms is None or worms == 0:
             logger.info("Skipping worms from {} dataset".format(dataset_name))
             continue
