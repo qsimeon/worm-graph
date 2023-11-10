@@ -15,7 +15,7 @@ def pipeline(cfg: DictConfig) -> None:
 
     # Start new experiment run (MLflow)
     mlflow.set_tracking_uri(LOGS_DIR + "/mlruns")
-    mlflow.set_experiment(cfg.experiment.name)
+    mlflow.set_experiment(cfg.experiment.key)
 
     with mlflow.start_run(run_name=datetime.now().strftime("%Y-%m-%d_%H:%M:%S")) as run:
         # Verifications

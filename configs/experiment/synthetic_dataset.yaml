@@ -30,14 +30,14 @@ submodule:
 
     use_these_datasets:
       path: null # options: null, data/datasets/<DatasetFolder>
-      num_worms: all # options: null, all,  <int>
+      num_worms: null # options: null,  <int>
 
     save_datasets: true
 
-    num_named_neurons: all
-    num_train_samples: 128
-    num_val_samples: 128
-    seq_len: 201
+    num_named_neurons: null
+    num_train_samples: 64
+    num_val_samples: 64
+    seq_len: 200
     reverse: false
     use_residual: false
     smooth_data: true
@@ -55,7 +55,7 @@ submodule:
   train:
     optimizer: AdamW
     lr: 0.0001
-    epochs: 1 #200 
+    epochs: 300 
     save_freq: 100
     batch_size: 64
     shuffle: true
@@ -105,9 +105,9 @@ submodule:
       # <list> = plot the worms named in the list
       # <int> = plot this number of (randomly picked) worms
       worms_to_plot: null 
-      neurons_to_plot: 3
+      neurons_to_plot: null
 
 experiment:
-  name: synthetic_dataset
+  key: synthetic_dataset # what parameter you are experimenting with
   mode: MULTIRUN
   seed: null # options: null (random seed), <int>

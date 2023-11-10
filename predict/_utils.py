@@ -48,7 +48,7 @@ def model_predict(
 
     # Load dataset
     combined_dataset, dataset_info = create_combined_dataset(
-        experimental_datasets=experimental_datasets, num_named_neurons="all"
+        experimental_datasets=experimental_datasets, num_named_neurons=None
     )
 
     model = model.to(DEVICE)

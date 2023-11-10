@@ -32,8 +32,8 @@ These are the plots for single runs:
 - `plot_pca_trajectory()`: Plots the PCA trajectory in 2D and 3D, comparing the predictions to the true signal.
 
 For running an experiment (multiple runs), these are the available plots:
-- `plot_exp_losses()`: Plots the validation loss of all runs in the experiment.
-- `plot_scaling_law()`: Plots the scaling law related to the experiment (if applicable).
+- `plot_experiment_losses()`: Plots the validation loss of all runs in the experiment.
+- `plot_experiment_summaries()`: Plots summary metrics related to the experiment (if applicable).
 
 ## Customization
 

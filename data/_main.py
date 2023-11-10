@@ -21,8 +21,8 @@ def get_datasets(dataset_config: DictConfig, save=True):
             If not provided or datasets don't exist in the directory, they will be generated using the other parameters.
 
         - experimental_datasets: Path to the experimental datasets.
-        - num_named_neurons (int or 'all'): Number of named neurons to include or 'all' to include all.
-        - num_worms (int or 'all'): Number of worms to include or 'all' to include all.
+        - num_named_neurons (int or None): Number of named neurons to include or None to include all.
+        - num_worms (int or None): Number of worms to include or None to include all.
         - num_train_samples (int): Number of training samples per worm.
         - num_val_samples (int): Number of validation samples per worm.
         - seq_len (int): Sequence length for time series data.
@@ -53,9 +53,9 @@ def get_datasets(dataset_config: DictConfig, save=True):
     smooth_data = dataset_config.smooth_data
 
     # Verifications
-    assert (
-        isinstance(num_named_neurons, int) or num_named_neurons == "all"
-    ), "num_named_neurons must be a positive integer or 'all'."
+    assert isinstance(num_named_neurons, int) or (
+        num_named_neurons is None
+    ), "num_named_neurons must be a positive integer or None."
 
     log_dir = os.getcwd()  # logs/hydra/${now:%Y_%m_%d_%H_%M_%S}
     os.makedirs(os.path.join(log_dir, "dataset"), exist_ok=True)

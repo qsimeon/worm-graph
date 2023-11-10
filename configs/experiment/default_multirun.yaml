@@ -9,13 +9,12 @@ hydra:
   # These parameters will be tested just when MULTIRUN mode is used.
   # Use the submodule parameters if RUN.
       params:
-        submodule.dataset.num_named_neurons: 10, 30
-        submodule.model.type: NetworkLSTM, NeuralTransformer
+        submodule.model.type: LinearNN, NeuralCFC, NetworkRNN, NetworkLSTM, NeuralTransformer
 
 submodule:
   dataset:
-    num_train_samples: 128
-    num_val_samples: 128
+    num_train_samples: 64
+    num_val_samples: 64
     seq_len: 200
     reverse: false
     use_residual: false
@@ -23,23 +22,23 @@ submodule:
 
     use_these_datasets:
       path: null
-      num_worms: all
+      num_worms: null
 
     save_datasets: false
 
     experimental_datasets:
-      Kato2015: 5
-      Nichols2017: null
-      Skora2018: null
-      Uzel2022: [worm0]
-      Kaplan2020: null
-      Flavell2023: null
-      Leifer2023: null
+      Kato2015: all
+      Nichols2017: all
+      Skora2018: all
+      Uzel2022: all
+      Kaplan2020: all
+      Flavell2023: all
+      Leifer2023: all
     
   train:
-    epochs: q10
+    epochs: 300
 
 experiment:
-  name: default_multirun
+  key: default_multirun # what parameter are you experimenting with
   mode: MULTIRUN
   seed: 42

@@ -7,7 +7,8 @@ dataset:
   # Specify num_worms to random pick a subset worms from the combined dataset (when a combined dataset is provided).
   use_these_datasets:
     path: null # options: null, data/datasets/<DatasetFolder>
-    num_worms: all
+    # If null, use all the worms in the dataset. Otherwise, if <int> use that number of worms (randomly picked) from the dataset.
+    num_worms: null # options: null or <int>.
 
   # Whether to save the datasets in the logs/dataset directory.
   save_datasets: false
@@ -25,11 +26,12 @@ dataset:
     Kaplan2020: all
     Flavell2023: all
     Leifer2023: all
-    
-  num_named_neurons: all # number of neurons to train the model with (positive integer or 'all')
+  
+  # If null, use all the worms in the dataset. Otherwise, if <int> use that number of worms (randomly picked) from the dataset.
+  num_named_neurons: null # number of neurons to train the model with (positive integer or null)
   seq_len: 200
-  num_train_samples: 256 # number of length seq_len samples to draw from the training set per worm
-  num_val_samples: 256 # number of length seq_len samples to draw from the validation set per worm
+  num_train_samples: 64 # number of length seq_len samples to draw from the training set per worm
+  num_val_samples: 64 # number of length seq_len samples to draw from the validation set per worm
   reverse: false
   use_residual: false
   smooth_data: true

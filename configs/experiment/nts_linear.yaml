@@ -40,7 +40,7 @@ submodule:
 
     save_datasets: false
 
-    num_named_neurons: all
+    num_named_neurons: null
     num_train_samples: 128
     num_val_samples: 128
     seq_len: 200

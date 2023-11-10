@@ -7,6 +7,6 @@ hydra:
   mode: RUN
 
 experiment:
-  name: default_run
+  key: default_run # what parameter are you experimenting with
   mode: RUN
   seed: 42

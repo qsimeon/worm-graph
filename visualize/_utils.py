@@ -295,8 +295,12 @@ def plot_loss_curves(log_dir, info_to_display=None):
     )
     sns.lineplot(x="epoch", y="train_loss", data=loss_df, ax=ax, label="Train")
     sns.lineplot(x="epoch", y="val_loss", data=loss_df, ax=ax, label="Validation")
-    plt.legend(frameon=True, loc="upper right", fontsize=12)
 
+    ax.xaxis.set_major_locator(
+        ticker.MaxNLocator(integer=True)
+    )  # Set x-axis to only use integer values
+
+    plt.legend(frameon=True, loc="upper right", fontsize=12)
     plt.title("Learning curves", fontsize=16)
 
     x_position_percent = 0.075  # Adjust this value to set the desired position
@@ -569,13 +573,13 @@ def plot_predictions(log_dir, neurons_to_plot=None, worms_to_plot=None):
                         time_gt_generated,
                         df.loc["GT Generation", neuron],
                         color=gt_generation_color,
-                        label="'Teacher forcing' generation",
+                        label="'Teacher forcing'",
                     )
                     ax.plot(
                         time_ar_generated,
                         df.loc["AR Generation", neuron],
                         color=ar_generation_color,
-                        label="Autoregressive generation",
+                        label="Autoregressive",
                     )
 
                     # Fill the context window
@@ -708,7 +712,7 @@ def plot_pca_trajectory(log_dir, worms_to_plot=None, plot_type="3D"):
                             reduced_data[: len(ar_gen_data), 0],
                             reduced_data[: len(ar_gen_data), 1],
                             color=ar_generation_color,
-                            label="Autoregressive generation",
+                            label="Autoregressive",
                             linestyle="-",
                             marker="o",
                         )
@@ -736,7 +740,7 @@ def plot_pca_trajectory(log_dir, worms_to_plot=None, plot_type="3D"):
                                 len(ar_gen_data) + len(ground_truth_data) :, 1
                             ],
                             color=gt_generation_color,
-                            label="'Teacher forcing' generation",
+                            label="'Teacher forcing'",
                             linestyle="-",
                             marker="o",
                         )
@@ -794,7 +798,7 @@ def plot_pca_trajectory(log_dir, worms_to_plot=None, plot_type="3D"):
                             reduced_data[: len(ar_gen_data), 1],
                             reduced_data[: len(ar_gen_data), 2],
                             color=ar_generation_color,
-                            label="Autoregressive generation",
+                            label="Autoregressive",
                             linestyle="-",
                             marker="o",
                         )
@@ -830,7 +834,7 @@ def plot_pca_trajectory(log_dir, worms_to_plot=None, plot_type="3D"):
                                 len(ar_gen_data) + len(ground_truth_data) :, 2
                             ],
                             color=gt_generation_color,
-                            label="'Teacher forcing' generation",
+                            label="'Teacher forcing'",
                             linestyle="-",
                             marker="o",
                         )
@@ -1120,28 +1124,44 @@ def experiment_parameter(exp_dir, key):
     if key == "computation_time":
         df = pd.read_csv(os.path.join(exp_dir, "train", "train_metrics.csv"))
         value = (
-            df["train_computation_time"].min(),
-            df["train_computation_time"].mean(),
-            df["train_computation_time"].max(),
+            df["computation_time"].min(),
+            df["computation_time"].mean(),
+            df["computation_time"].max(),
         )  # Computation time
         title = "Computation time"
         xaxis = "Computation time (s)"
 
+    if key == "computation_flops":
+        df = pd.read_csv(os.path.join(exp_dir, "train", "train_metrics.csv"))
+        value = (
+            df["computation_flops"].min(),
+            df["computation_flops"].mean(),
+            df["computation_flops"].max(),
+        )  # Computation time
+        title = "Computation FLOPs"
+        xaxis = "FLOPs"
+
     return value, title, xaxis
 
 
-def plot_experiment_losses(exp_log_dir, exp_plot_dir, exp_name):
+def plot_experiment_losses(exp_log_dir, exp_plot_dir, exp_key):
     """
-    * Plot validation loss curves and baselines for all experiments
-    * Plot computation time for all experiments
+    Plot train and validation loss curves and baseline losses for all experiments.
+
+    Args:
+    - exp_log_dir (str): path to directory containing experiment logs
+    - exp_plot_dir (str): path to directory to save the plot
+    - exp_key (str): key to identify the experiment
+
+    Returns:
+    - None
     """
 
-    fig, ax = plt.subplots(2, 1, figsize=(10, 8))
-
+    # Create figure
+    fig, ax = plt.subplots(1, 2, figsize=(10, 8))
     sns.set_style("whitegrid")
 
-    # Store computation time and parameters
-    computation_time = []
+    # Keep track of parameters
     parameters = []
 
     # Loop over all the experiment files
@@ -1153,179 +1173,146 @@ def plot_experiment_losses(exp_log_dir, exp_plot_dir, exp_name):
         # Get experiment directory
         exp_dir = os.path.join(exp_log_dir, file)
 
+        # Get and store parameters
+        exp_param, exp_title, exp_xaxis = experiment_parameter(exp_dir, key=exp_key)
+        parameters.append(exp_param)
+
         # Load train metrics
         df = pd.read_csv(os.path.join(exp_dir, "train", "train_metrics.csv"))
 
-        # Experiment parameters
-        exp_param, exp_title, exp_xaxis = experiment_parameter(exp_dir, key=exp_name)
-        ct_param, ct_title, ct_xaxis = experiment_parameter(
-            exp_dir, key="computation_time"
-        )
-
-        # Store computation time and parameters
-        computation_time.append(ct_param)
-        parameters.append(exp_param)
-
-        # Plot validation loss
-        ax[0].plot(df["epoch"], df["val_loss"], label=exp_param)
-        # Plot validation baseline
-        ax[0].plot(df["epoch"], df["val_baseline"], color="black", linestyle="--")
+        # Plot loss and baseline
+        ax[0].plot(df["epoch"], df["train_loss"], label=exp_param)
+        ax[0].plot(df["epoch"], df["train_baseline"], color="black", linestyle="--")
+        ax[1].plot(df["epoch"], df["val_loss"], label=exp_param)
+        ax[1].plot(df["epoch"], df["val_baseline"], color="black", linestyle="--")
 
     # Set loss labels
     ax[0].set_xlabel("Epoch", fontsize=12)
-    ax[0].set_ylabel("Validation loss", fontsize=12)
+    ax[0].set_ylabel("Train loss", fontsize=12)
+    ax[1].set_xlabel("Epoch", fontsize=12)
+    ax[1].set_ylabel("Validation loss", fontsize=12)
 
     # Set loss legend
-    legend = ax[0].legend(fontsize=10)
+    legend = ax[0].legend(fontsize=10, loc="best")
     legend.set_title(exp_xaxis)
 
     # Set loss title
-    ax[0].set_title(exp_title + " experiment", fontsize=14)
-
-    # Plot computation time with error bars
-    y = np.array(computation_time)[:, 1].T  # mean
-    yerr = np.array(computation_time)[:, ::2].T  # min max variation
-    yerr[0, :] = y - yerr[0, :]
-    yerr[1, :] = yerr[1, :] - y
-    ax[1].errorbar(
-        parameters,
-        y,
-        yerr=yerr,
-        fmt="o",
-        capsize=2,
-        ecolor="grey",
-        color="black",
-        elinewidth=1,
-    )
-
-    # Regression line computation time
-    try:
-        slope, intercept, r_value, p_value, std_err = stats.linregress(parameters, y)
-        x = np.linspace(np.min(parameters), np.max(parameters), 100)
-        ct_reg_label = "y = {:.2e}x + {:.2e}".format(slope, intercept)
-        ax[1].plot(
-            x,
-            intercept + slope * x,
-            color="red",
-            linestyle="-.",
-            alpha=0.5,
-            label=ct_reg_label,
-        )
-    except:
-        pass
-
-    # Set computation time labels
-    ax[1].set_xlabel(exp_xaxis, fontsize=12)
-    ax[1].set_ylabel("Computation time (s)", fontsize=12)
-
-    # Set computation time title
-    ax[1].set_title(ct_title, fontsize=14)
-
-    # Set computation time legend
-    legend = ax[1].legend(fontsize=10)
-
+    fig.suptitle(f"{exp_title} experiment", fontsize=14)
     plt.tight_layout()
 
     # Save figure
-    fig.savefig(os.path.join(exp_plot_dir, "val_loss.png"))
+    fig.savefig(os.path.join(exp_plot_dir, "all_losses.png"))
     plt.close()
 
 
-def plot_scaling_law(
-    exp_log_dir, exp_name, exp_plot_dir=None, fig=None, ax=None, fit_deg=None
-):
-    if fig is None or ax is None:
-        # Create
-        fig, ax = plt.subplots(1, 1, figsize=(10, 4))
+def plot_experiment_summaries(exp_log_dir, exp_key, exp_plot_dir=None):
+    """
+    Plots summaries of experiments given a directory of experiment logs.
 
-    # Store losses, parameter experiment and baselines
-    losses = []
-    exp_parameter = []
-    baselines = []
+    Args:
+        exp_log_dir (str): Path to directory containing experiment logs.
+        exp_key (str): Key to identify the experiment parameter to plot.
+        exp_plot_dir (str, optional): Path to directory to save the plot. Defaults to None.
 
-    # Loop over all the experiment files
+    Returns:
+        tuple: A tuple containing the figure and axes objects of the plot.
+    """
+    # Initialize figure with subplots
+    fig, axes = plt.subplots(
+        1, 4, figsize=(20, 5)
+    )  # Adjust the figsize to fit all subplots
+
+    # Lists to store data
+    val_losses = []
+    train_losses = []
+    computation_times = []
+    flops = []
+    exp_parameters = []
+
+    # Lists to store baselines
+    val_baselines = []
+    train_baselines = []
+
+    # Iterate over experiment directories
     for file in np.sort(os.listdir(exp_log_dir)):
-        # Skip if not starts with exp
         if not file.startswith("exp") or file.startswith("exp_"):
             continue
 
-        # Get experiment directory
         exp_dir = os.path.join(exp_log_dir, file)
+        metrics_csv = os.path.join(exp_dir, "train", "train_metrics.csv")
 
-        # Load train metrics
-        df = pd.read_csv(os.path.join(exp_dir, "train", "train_metrics.csv"))
+        if os.path.exists(metrics_csv):
+            df = pd.read_csv(metrics_csv)
 
-        # Lower validation loss
-        losses.append(df["val_loss"].min())
-        baselines.append(df["val_baseline"].mean())
+            # Append minimum losses and mean computation times
+            val_losses.append(df["val_loss"].min())
+            train_losses.append(df["train_loss"].min())
+            computation_times.append(df["computation_time"].tolist())
+            flops.append(
+                df["computation_flops"].iloc[-1]
+            )  # Assuming computation_flops is constant
 
-        # Get experiment parameter
-        exp_param, exp_title, xaxis_title = experiment_parameter(exp_dir, key=exp_name)
-        exp_parameter.append(exp_param)
+            # Append baselines
+            val_baselines.append(df["val_baseline"].mean())
+            train_baselines.append(df["train_baseline"].mean())
 
-    # Plot
-    ax.plot(exp_parameter, losses, "o")
-    ax.plot(exp_parameter, baselines, "--.", color="black", label="Baseline")
-    ax.set_xlabel(xaxis_title, fontsize=12)
-    ax.set_ylabel("Validation loss", fontsize=12)
-
-    # Log scale
-    ax.set_yscale("log")
-
-    # Regression
-    if fit_deg is None:
-        pass
-
-    elif fit_deg == 1:
-        try:
-            slope, intercept, r_value, p_value, std_err = stats.linregress(
-                np.log(exp_parameter), np.log(losses)
+            exp_param, exp_title, xaxis_title = experiment_parameter(
+                exp_dir, key=exp_key
             )
-            fit_label = (
-                "y = {:.2f}x + {:.2f}\n".format(slope, intercept)
-                + r"$R^2=$"
-                + "{}".format(round(r_value**2, 2))
-            )
-            # Plot with more points
-            x = np.linspace(np.min(exp_parameter), np.max(exp_parameter), 10000)
-            ax.plot(x, np.exp(intercept + slope * np.log(x)), "r", label=fit_label)
-        except:
-            pass
+            exp_parameters.append(exp_param)
 
-    else:
-        # Fit polynomial of degree 3
-        try:
-            p = np.polyfit(np.log(exp_parameter), np.log(losses), fit_deg)
-            # Generate fit label automatically
-            fit_label = "y = "
-            for i in range(fit_deg):
-                # Use latex notation
-                fit_label += r"${:.2f}x^{}$ + ".format(p[i], fit_deg - i)
-            fit_label += r"${:.2f}$".format(p[-1])
-            # Compute fit r^2
-            r2 = r2_score(np.log(losses), np.polyval(p, np.log(exp_parameter)))
-            fit_label += "\n" + r"$R^2=$" + "{}".format(round(r2, 2))
-            # Plot with more points
-            x = np.linspace(np.min(exp_parameter), np.max(exp_parameter), 10000)
-            ax.plot(x, np.exp(np.polyval(p, np.log(x))), "b", label=fit_label)
-        except:
-            pass
+    # Convert exp_parameters to numerical values for bar plot
+    exp_numeric = range(len(exp_parameters))
 
-    # Legend
-    ax.legend(fontsize=10)
+    # Validation loss bar plot
+    axes[0].bar(exp_numeric, val_losses, color="blue", label="Min Validation Loss")
+    for baseline in val_baselines:
+        axes[0].axhline(
+            y=baseline, color="black", linestyle="--", label="Validation Baseline"
+        )
+    axes[0].set_xticks(exp_numeric)
+    axes[0].set_xticklabels(exp_parameters, rotation=45, ha="right")
+    axes[0].set_title("Min Validation Loss")
+    axes[0].set_ylabel("Loss")
+    axes[0].set_yscale("log")
 
-    # Title
-    ax.set_title("Scaling law: " + exp_title.lower(), fontsize=14)
+    # Training loss bar plot
+    axes[1].bar(exp_numeric, train_losses, color="orange", label="Min Training Loss")
+    for baseline in train_baselines:
+        axes[1].axhline(
+            y=baseline, color="black", linestyle="--", label="Training Baseline"
+        )
+    axes[1].set_xticks(exp_numeric)
+    axes[1].set_xticklabels(exp_parameters, rotation=45, ha="right")
+    axes[1].set_title("Min Training Loss")
+    axes[1].set_ylabel("Loss")
+    axes[1].set_yscale("log")
 
+    # Computation times boxplot
+    axes[2].boxplot(computation_times)
+    axes[2].set_xticklabels(exp_parameters, rotation=45, ha="right")
+    axes[2].set_title("Computation Times")
+    axes[2].set_ylabel("Time (seconds)")
+
+    # FLOPs bar plot
+    axes[3].bar(exp_numeric, flops, color="green", label="FLOPs")
+    axes[3].set_xticks(exp_numeric)
+    axes[3].set_xticklabels(exp_parameters, rotation=45, ha="right")
+    axes[3].set_title("FLOPs")
+    axes[3].set_ylabel("FLOPs")
+    axes[3].set_yscale("log")
+
+    # Layout adjustments
     plt.tight_layout()
 
-    if exp_plot_dir is None:
-        # Used for plotting in jupyter notebook
-        return fig, ax
-    else:
-        # Save when running the pipeline
-        plt.savefig(os.path.join(exp_plot_dir, "scaling_law.png"), dpi=300)
+    # Save or display the plot
+    if exp_plot_dir:
+        plt.savefig(os.path.join(exp_plot_dir, "experiment_summaries.png"), dpi=300)
         plt.close()
+    else:
+        plt.show()
+
+    return fig, axes
 
 
 def plot_loss_per_dataset(log_dir, mode="validation"):
@@ -1409,7 +1396,10 @@ def plot_loss_per_dataset(log_dir, mode="validation"):
 
 
 def plot_experiment_loss_per_dataset(
-    exp_log_dir, exp_name, mode="validation", exp_plot_dir=None
+    exp_log_dir,
+    exp_key,
+    exp_plot_dir=None,
+    mode="validation",
 ):
     # =============== Collect information ===============
     losses = pd.DataFrame(
@@ -1426,7 +1416,7 @@ def plot_experiment_loss_per_dataset(
         exp_dir = os.path.join(exp_log_dir, file)
 
         # Experiment parameters
-        exp_param, exp_title, exp_xaxis = experiment_parameter(exp_dir, key=exp_name)
+        exp_param, exp_title, exp_xaxis = experiment_parameter(exp_dir, key=exp_key)
 
         # Load losses per dataset
         tmp_df = pd.read_csv(

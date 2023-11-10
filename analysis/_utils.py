@@ -255,7 +255,7 @@ def loss_per_dataset(log_dir, experimental_datasets, mode="validation"):
             continue
 
         combined_dataset, _ = create_combined_dataset(
-            experimental_datasets={dataset: worms_to_use}, num_named_neurons="all"
+            experimental_datasets={dataset: worms_to_use}, num_named_neurons=None
         )
         train_dataset, val_dataset, _ = split_combined_dataset(
             combined_dataset=combined_dataset,

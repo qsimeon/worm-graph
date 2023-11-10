@@ -99,9 +99,9 @@ def train_model(
     val_epoch_loss = []
     val_epoch_baseline = []
 
-    # Computation time metrics
-    train_computation_time = []
-    val_computation_time = []
+    # Computation metrics
+    computation_time = []
+    computation_flops = []
 
     # Start training
     logger.info("Starting training loop...")
@@ -118,6 +118,8 @@ def train_model(
         # ============================ Train loop ============================
 
         model.train()
+
+        # Measure the time for an epoch
         start_time = time.perf_counter()
 
         for batch_idx, (X_train, Y_train, masks_train, metadata) in enumerate(
@@ -164,12 +166,13 @@ def train_model(
                 step=epoch * len(trainloader) + batch_idx,
             )
 
+        # Compute the time taken
         end_time = time.perf_counter()
+        computation_time.append(end_time - start_time)
 
         # Store metrics
         train_epoch_loss.append(train_running_loss / len(trainloader))
         train_epoch_baseline.append(train_running_base_loss / len(trainloader))
-        train_computation_time.append(end_time - start_time)
 
         mlflow.log_metric("epoch_train_loss", train_epoch_loss[-1], step=epoch)
         mlflow.log_metric("epoch_train_baseline", train_epoch_baseline[-1], step=epoch)
@@ -183,8 +186,6 @@ def train_model(
         model.eval()
 
         with torch.no_grad():
-            start_time = time.perf_counter()
-
             for batch_idx, (X_val, Y_val, masks_val, metadata_val) in enumerate(
                 valloader
             ):
@@ -222,12 +223,13 @@ def train_model(
                     step=epoch * len(valloader) + batch_idx,
                 )
 
-            end_time = time.perf_counter()
+            # Compute FLOPs
+            flops = FlopCountAnalysis(model, (X_train, masks_train))
+            computation_flops.append(flops.total())
 
             # Store metrics
             val_epoch_loss.append(val_running_loss / len(valloader))
             val_epoch_baseline.append(val_running_base_loss / len(valloader))
-            val_computation_time.append(end_time - start_time)
 
             mlflow.log_metric("epoch_val_loss", val_epoch_loss[-1], step=epoch)
             mlflow.log_metric("epoch_val_baseline", val_epoch_baseline[-1], step=epoch)
@@ -251,7 +253,6 @@ def train_model(
             )
 
         # Early stopping
-        # if es(model, train_epoch_loss[-1]): # on train loss
         if es(model, val_epoch_loss[-1]):  # on validation loss
             logger.info("Early stopping triggered (epoch {}).".format(epoch))
             break
@@ -279,12 +280,12 @@ def train_model(
     train_metrics = pd.DataFrame(
         {
             "epoch": np.arange(len(train_epoch_loss)),
+            "computation_time": computation_time,
+            "computation_flops": computation_flops,
             "train_loss": train_epoch_loss,
             "train_baseline": train_epoch_baseline,
-            "train_computation_time": train_computation_time,
             "val_loss": val_epoch_loss,
             "val_baseline": val_epoch_baseline,
-            "val_computation_time": val_computation_time,
         }
     )
     train_metrics.to_csv(

@@ -102,6 +102,6 @@ submodule:
 
 
 experiment:
-  name: nn_lstm
+  key: nn_lstm # what parameter are you experimenting with
   mode: MULTIRUN
   seed: 42

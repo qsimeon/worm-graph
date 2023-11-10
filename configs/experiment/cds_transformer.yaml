@@ -31,9 +31,9 @@ submodule:
 
     save_datasets: false
 
-    num_named_neurons: all
-    num_train_samples: 128
-    num_val_samples: 128
+    num_named_neurons: null
+    num_train_samples: 64
+    num_val_samples: 64
     seq_len: 200
     reverse: false
     use_residual: false
@@ -44,7 +44,6 @@ submodule:
     type: NeuralTransformer
     input_size: 302
     hidden_size: 256
-    num_layers: 1
     loss: MSE
     fft_reg_param: 0.0
     l1_reg_param: 0.0
@@ -53,7 +52,7 @@ submodule:
   train:
     optimizer: AdamW
     lr: 0.0001
-    epochs: 100
+    epochs: 300
     save_freq: 100
     batch_size: 64
     shuffle: true
@@ -69,13 +68,13 @@ submodule:
       # null = don't predict on this dataset
       # all = predict on all the worms in the dataset
       # positive integer = use this number of worms from the dataset (random pick)
-      Kato2015: worm1
-      Nichols2017: worm1
-      Skora2018: worm1
-      Uzel2022: worm1
-      Kaplan2020: worm1
-      Flavell2023: worm1
-      Leifer2023: worm1
+      Kato2015: worm0
+      Nichols2017: worm0
+      Skora2018: worm0
+      Uzel2022: worm0
+      Kaplan2020: worm0
+      Flavell2023: worm0
+      Leifer2023: worm0
     # Number of time steps to generate
     nb_ts_to_generate: null
     context_window: 200
@@ -97,9 +96,9 @@ submodule:
     plot_figures_from_this_log_dir: null
     predict:
       worms_to_plot: null # plot all predicted worms
-      neurons_to_plot: 5
+      neurons_to_plot: null # plot all predicted neurons
 
 experiment:
-  name: cds_transformer
+  key: cds_transformer # what parameter are you experimenting with
   mode: MULTIRUN
   seed: null

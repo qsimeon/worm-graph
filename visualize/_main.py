@@ -88,7 +88,7 @@ def plot_experiment(visualize_config: DictConfig, exp_config: DictConfig) -> Non
         pipeline_info_exp0 = OmegaConf.load(
             os.path.join(exp_log_dir, "exp0", "pipeline_info.yaml")
         )
-        exp_key = pipeline_info_exp0.experiment.name
+        exp_key = pipeline_info_exp0.experiment.key
 
         value, title, xaxis = experiment_parameter(
             os.path.join(exp_log_dir, "exp0"), key=exp_key
@@ -105,22 +105,24 @@ def plot_experiment(visualize_config: DictConfig, exp_config: DictConfig) -> Non
         plot_experiment_losses(exp_log_dir, exp_plot_dir, exp_key)
 
         # Scaling law
-        plot_scaling_law(
-            exp_log_dir=exp_log_dir, exp_name=exp_key, exp_plot_dir=exp_plot_dir
+        plot_experiment_summaries(
+            exp_log_dir=exp_log_dir,
+            exp_key=exp_key,
+            exp_plot_dir=exp_plot_dir,
         )
 
         # Plot spread dataset losses analysis
         plot_experiment_loss_per_dataset(
             exp_log_dir=exp_log_dir,
-            exp_name=exp_key,
-            mode="train",
+            exp_key=exp_key,
             exp_plot_dir=exp_plot_dir,
+            mode="train",
         )
         plot_experiment_loss_per_dataset(
             exp_log_dir=exp_log_dir,
-            exp_name=exp_key,
-            mode="validation",
+            exp_key=exp_key,
             exp_plot_dir=exp_plot_dir,
+            mode="validation",
         )
 
     except:

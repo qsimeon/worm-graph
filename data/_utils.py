@@ -400,8 +400,8 @@ def filter_loaded_combined_dataset(combined_dataset, num_worms, num_named_neuron
     ----------
     combined_dataset : dict
         Multi-worm dataset to filter the worms from.
-    num_worms : int
-        Number of worms to keep.
+    num_worms : int or None
+        Number of worms to keep. If None keep all.
     num_named_neurons : int
         Number of named neurons to keep.
 
@@ -414,7 +414,7 @@ def filter_loaded_combined_dataset(combined_dataset, num_worms, num_named_neuron
     combined_dataset = select_named_neurons(combined_dataset, num_named_neurons)
 
     # Verify if len(combined_dataset) is >= num_worms
-    if num_worms != "all":
+    if num_worms is not None:  # must have been an integer otherwise
         assert (
             len(combined_dataset) >= num_worms
         ), "num_worms must be less than or equal to the number of worms in the combined dataset. "
@@ -723,8 +723,8 @@ def select_named_neurons(multi_worm_dataset, num_named_neurons):
             worms_to_drop.append(wormID)
             continue
 
-        # Skip if num_named_neurons is 'all'
-        if num_named_neurons == "all":
+        # Skip if num_named_neurons is None
+        if num_named_neurons is None:
             continue
 
         # Verify if new num_named_neurons <= actual num_named_neurons
@@ -805,34 +805,32 @@ def select_named_neurons(multi_worm_dataset, num_named_neurons):
     return multi_worm_dataset
 
 
-def select_desired_worms(multi_worm_dataset, num_worms):
-    # If num_worms is 'all', return the whole dataset
-    if num_worms == "all":
+def select_desired_worms(multi_worm_dataset, worms):
+    # If worms is 'all', return the whole dataset
+    if worms == "all":
         return multi_worm_dataset
 
     wormIDs = [wormID for wormID in multi_worm_dataset.keys()]
     dataset_name = multi_worm_dataset[wormIDs[0]]["dataset"]
 
-    # num_worms can be string, list or int
-    if isinstance(num_worms, str):
+    # worms can be string, list or int
+    if isinstance(worms, str):
         # User requested one specific worm
-        logger.info("Using {} from {}".format(num_worms, dataset_name))
-        wormIDs_to_keep = [num_worms]
-    elif isinstance(num_worms, int):
+        logger.info("Using {} from {}".format(worms, dataset_name))
+        wormIDs_to_keep = [worms]
+    elif isinstance(worms, int):
         # User requested a specific number of worms (random pick)
-        assert num_worms <= len(
+        assert worms <= len(
             multi_worm_dataset
         ), f"Chosen number of worms must be less than or equal to the number of worms in {dataset_name}."
-        wormIDs_to_keep = np.random.choice(wormIDs, size=num_worms, replace=False)
-        logger.info(
-            "Using {} worms from {} (random pick)".format(num_worms, dataset_name)
-        )
+        wormIDs_to_keep = np.random.choice(wormIDs, size=worms, replace=False)
+        logger.info("Using {} worms from {} (random pick)".format(worms, dataset_name))
     else:
         # User requested specific worms
-        assert len(num_worms) <= len(
+        assert len(worms) <= len(
             multi_worm_dataset
         ), f"Chosen number of worms must be less than or equal to the number of worms in {dataset_name}."
-        wormIDs_to_keep = num_worms
+        wormIDs_to_keep = worms
         logger.info("Using {} from {}".format(wormIDs_to_keep, dataset_name))
 
     # Remove the worms that are not in `wormIDs_to_keep`
@@ -874,29 +872,27 @@ def create_combined_dataset(experimental_datasets, num_named_neurons):
     Notes
     -----
     * The keys of the dictionary are the worm IDs ('worm0', 'worm1', etc.).
-    * The features of each worm are (22 in total):
-        'calcium_data', 'dataset', 'dt', 'max_timesteps', 'named_neuron_to_slot',
+    * The main features of each worm are stored in the following keys:
+        'calcium_data', 'dataset', 'dt', 'max_timesteps', 
         'named_neurons_mask', 'neuron_to_slot', 'neurons_mask',
         'num_named_neurons', 'num_neurons', 'num_unknown_neurons',
-        'residual_calcium', 'slot_to_named_neuron', 'slot_to_neuron',
-        'slot_to_unknown_neuron', 'smooth_calcium_data', 'smooth_method',
-        'smooth_residual_calcium', 'time_in_seconds', 'unknown_neuron_to_slot',
-        'unknown_neurons_mask', 'worm'.
+        'residual_calcium', 'smooth_calcium_data', 'smooth_method',
+        'smooth_residual_calcium', 'time_in_seconds', 'worm'.
     """
 
     # Load the dataset(s)
     combined_dataset = dict()
 
-    for dataset_name, num_worms in experimental_datasets.items():
+    for dataset_name, worms in experimental_datasets.items():
         # Skip if not worms requested for this dataset
-        if num_worms is None or num_worms == 0:
+        if worms is None or worms == 0:
             logger.info("Skipping worms from {} dataset".format(dataset_name))
             continue
 
         multi_worms_dataset = load_dataset(dataset_name)
 
         # Select desired worms from this dataset
-        multi_worms_dataset = select_desired_worms(multi_worms_dataset, num_worms)
+        multi_worms_dataset = select_desired_worms(multi_worms_dataset, worms)
 
         # Select the `num_named_neurons` neurons (overwrite the masks)
         multi_worms_dataset = select_named_neurons(
