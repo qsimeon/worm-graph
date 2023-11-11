@@ -3,6 +3,12 @@ from models._pkg import *
 # Init logger
 logger = logging.getLogger(__name__)
 
+# # # Helper functions # # #
+# # # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
+
+# Alias this causal mask function
+generate_square_subsequent_mask = torch.nn.Transformer.generate_square_subsequent_mask
+
 
 def print_parameters(model, verbose=False):
     table = PrettyTable(["Module", "Parameters", "Trainable"])
@@ -25,6 +31,9 @@ def print_parameters(model, verbose=False):
         print("Total Parameters:", total_params)
         print("Total Trainable Parameters:", total_trainable)
     return total_params, total_trainable
+
+
+# # # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
 
 
 # # # "Cores" or Inner Models for Different Model Architectures # # #
@@ -61,6 +70,30 @@ class PositionalEncoding(torch.nn.Module):
         return self.dropout(x)
 
 
+class CausalTransformer(torch.nn.Module):
+    """
+    Sets `is_causal=True` in forward method of TransformerEncoderLayer.
+    """
+
+    def __init__(self, d_model, nhead, dim_feedforward, dropout):
+        super().__init__()
+        self.transformer = torch.nn.TransformerEncoderLayer(
+            d_model,
+            nhead,
+            dim_feedforward,
+            dropout,
+            activation="relu",
+            batch_first=True,
+            norm_first=True,
+        )
+        self.is_causal = True
+
+    def forward(self, src):
+        causal_mask = generate_square_subsequent_mask(src.size(0), device=src.device)
+        out = self.transformer(src, src_mask=causal_mask, is_causal=self.is_causal)
+        return out
+
+
 class FeedForward(torch.nn.Module):
     """
     A simple linear layer followed by a non-linearity and dropout.
@@ -80,6 +113,7 @@ class FeedForward(torch.nn.Module):
         """
         Uses residual ("skip") connection.
         """
+        # TODO: Apply a causal mask to the input
         x = x + self.ffwd(x)
         return x
 
@@ -691,16 +725,21 @@ class NeuralTransformer(Model):
         )
 
         # Hidden to hidden transformation: Transformer Encoder layer
-        self.hidden_hidden = torch.nn.TransformerEncoderLayer(
+        self.hidden_hidden = CausalTransformer(
             d_model=self.hidden_size,
             nhead=self.n_head,
             dim_feedforward=self.hidden_size,
             dropout=self.dropout,
-            activation="relu",
-            batch_first=True,
-            norm_first=True,
-            is_causal=True,  # we use a causal Transformer!
         )
+        # self.hidden_hidden = torch.nn.TransformerEncoderLayer(
+        #     d_model=self.hidden_size,
+        #     nhead=self.n_head,
+        #     dim_feedforward=self.hidden_size,
+        #     dropout=self.dropout,
+        #     activation="relu",
+        #     batch_first=True,
+        #     norm_first=True,
+        # )
 
         # Instantiate internal hidden model
         self.inner_hidden_model = InnerHiddenModel(self.hidden_hidden, self.hidden)

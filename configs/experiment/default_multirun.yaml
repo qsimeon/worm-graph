@@ -9,7 +9,7 @@ hydra:
   mode: MULTIRUN
   sweeper:
       params:
-        submodule.model.type: LinearNN, NetworkLSTM, NeuralTransformer # NeuralCFC, NetworkRNN
+        submodule.model.type: NeuralTransformer #LinearNN, NetworkLSTM, NeuralTransformer # NeuralCFC, NetworkRNN
 
 # The submodule parameters set below will be used only if RUN mode is used. 
 # Otherwise, it uses the default parameters imported from the other config files in the submodule directory.
@@ -110,7 +110,7 @@ submodule:
       # null = plot all the neurons/worms in the dataset
       # <list> = plot the worms named in the list
       # <int> = plot this number of (randomly picked) worms
-      worms_to_plot: 1 
+      worms_to_plot: null 
       neurons_to_plot: null
 
 experiment:

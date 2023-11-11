@@ -72,17 +72,8 @@ def compute_loss_vectorized(loss_fn, X, Y, masks):
         The mean loss of X and Y.
     """
 
-    # # Non-causal
-    # X = X
-    # Y = Y
-
-    # Causal
-    X = X[:, -1, :]
-    Y = Y[:, -1, :]
-
     # Expand masks to match the shape of X and Y
-    # expanded_masks = masks.unsqueeze(1).expand_as(X)
-    expanded_masks = masks.expand_as(X)
+    expanded_masks = masks.unsqueeze(1).expand_as(X)
 
     # Mask the invalid positions in X and Y
     masked_X = X * expanded_masks.float()

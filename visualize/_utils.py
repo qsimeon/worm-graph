@@ -332,9 +332,22 @@ def plot_loss_curves(log_dir, info_to_display=None):
 def plot_predictions(log_dir, neurons_to_plot=None, worms_to_plot=None):
     for type_ds in os.listdir(os.path.join(log_dir, "prediction")):
         for ds_name in os.listdir(os.path.join(log_dir, "prediction", type_ds)):
-            for wormID in os.listdir(
+            # Get the list of worms
+            worm_list = os.listdir(
                 os.path.join(log_dir, "prediction", type_ds, ds_name)
-            ):
+            )
+
+            # If worms_to_plot is an integer, randomly select that many worms
+            print("worms_to_plot", worms_to_plot, type(worms_to_plot), end="\n\n")
+            if isinstance(worms_to_plot, int):
+                worm_list = np.random.choice(
+                    worm_list, size=min(worms_to_plot, len(worm_list)), replace=False
+                ).tolist()
+            elif isinstance(worms_to_plot, list):
+                # Filter out the worms not in worms_to_plot
+                worm_list = [worm for worm in worm_list if worm in worms_to_plot]
+
+            for wormID in worm_list:
                 # Skip if num_worms given
                 if worms_to_plot is not None:
                     if wormID not in worms_to_plot:
@@ -488,9 +501,22 @@ def plot_predictions(log_dir, neurons_to_plot=None, worms_to_plot=None):
 def plot_pca_trajectory(log_dir, worms_to_plot=None, plot_type="3D"):
     for type_ds in os.listdir(os.path.join(log_dir, "prediction")):
         for ds_name in os.listdir(os.path.join(log_dir, "prediction", type_ds)):
-            for wormID in os.listdir(
+            # Get the list of worms
+            worm_list = os.listdir(
                 os.path.join(log_dir, "prediction", type_ds, ds_name)
-            ):
+            )
+
+            # If worms_to_plot is an integer, randomly select that many worms
+            if isinstance(worms_to_plot, int):
+                worm_list = np.random.choice(
+                    worm_list, size=min(worms_to_plot, len(worm_list)), replace=False
+                ).tolist()
+            elif isinstance(worms_to_plot, list):
+                # Filter out the worms not in worms_to_plot
+                worm_list = [worm for worm in worm_list if worm in worms_to_plot]
+            # If worms_to_plot is None, keep the entire worm_list
+
+            for wormID in worm_list:
                 # Skip if num_worms given
                 if worms_to_plot is not None:
                     if wormID not in worms_to_plot:

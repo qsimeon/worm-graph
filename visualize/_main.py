@@ -45,7 +45,6 @@ def plot_figures(
                 worms_to_plot=visualize_config.predict.worms_to_plot,
                 plot_type="2D",
             )
-            # TODO plot_correlation_scatterplot
 
         if submodule_dir == "analysis":
             logger.info("Plotting submodule 'analysis'.")
