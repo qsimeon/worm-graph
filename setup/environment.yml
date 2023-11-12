@@ -7,40 +7,54 @@ channels:
   - defaults
 dependencies:
   - python=3.9
-  # large, complex dependencies
+  - pytorch=2.0.1
+  - pytorch-cuda=11.7
+  - torchvision=0.15.2 
+  - torchaudio=2.0.2
   - numpy
-  - scipy
-  - pandas
   - matplotlib
   - scikit-learn
+  - scipy
+  - pandas
+  - seaborn
+  - dtaidistance
+  - fvcore
+  - ipykernel
   - jupyter
   - jupyterlab
   - notebook
-  - seaborn
-  # dependencies with moderate complexity
   - h5py
   - networkx
   - ipython
+  - jinja2
+  - spectrum
   - typing
   - typing_extensions
-  # small, simple dependencies
+  - pickleshare
+  - pytest
+  - requests
   - tqdm
-  - pip
-  - pytorch 
-  - torchvision 
-  - torchaudio 
+  - yaml
+  - conda-build
+  - black
+  - hydra-core
+  - hydra-submitit-launcher
+  - mat73
+  - omegaconf
+  - statsmodels 
   - omegaconf
   - black
-  - black[jupyter]
+  - pip
   - pip:
-    - dtaidistance
-    - mat73
+    - black[jupyter]
     - fvcore
-    - ncps
     - hydra-core
     - hydra-optuna-sweeper
     - hydra-submitit-launcher
+    - mat73
+    - ncps
+    - omegaconf
     - pytest
-    - requests
-    - torch-geometric
+    - statsmodels
+    - torch_geometric
     
