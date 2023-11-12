@@ -40,9 +40,7 @@ def get_datasets(dataset_config: DictConfig, save=True):
         - train_dataset (torch.Tensor): The training dataset.
         - val_dataset (torch.Tensor): The validation dataset.
     """
-
-    train_dataset, val_dataset = None, None
-
+    # Parse out parameters from the config
     experimental_datasets = dataset_config.experimental_datasets
     num_named_neurons = dataset_config.num_named_neurons
     num_train_samples = dataset_config.num_train_samples
@@ -51,6 +49,9 @@ def get_datasets(dataset_config: DictConfig, save=True):
     reverse = dataset_config.reverse
     use_residual = dataset_config.use_residual
     smooth_data = dataset_config.smooth_data
+
+    # Initialize datasets
+    train_dataset, val_dataset = None, None
 
     # Verifications
     assert isinstance(num_named_neurons, int) or (

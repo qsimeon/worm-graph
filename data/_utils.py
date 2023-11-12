@@ -707,14 +707,15 @@ def select_named_neurons(multi_worm_dataset, num_named_neurons):
     Parameters
     ----------
     multi_worm_dataset : dict
-        Multi-worm dataset to select neurons from.
+        A dictionary containing the multi-worm dataset to select neurons from.
+    num_named_neurons : int
+        The number of named neurons to select from the dataset.
 
     Returns
     -------
     multi_worm_dataset : dict
-        Multi-worm dataset with selected neurons.
+        A dictionary containing the multi-worm dataset with selected neurons.
     """
-
     worms_to_drop = []
 
     for wormID, data in multi_worm_dataset.items():
@@ -843,13 +844,16 @@ def select_desired_worms(multi_worm_dataset, worms):
     return multi_worm_dataset
 
 
-def create_combined_dataset(experimental_datasets, num_named_neurons):
+def create_combined_dataset(
+    experimental_datasets: dict,
+    num_named_neurons: int,
+):
     """Returns a dict with the worm data of all requested datasets.
 
     Parameters
     ----------
     experimental_datasets : dict
-        A dictionary containing the names of the datasets and the number of worms to select from each dataset.
+        A dictionary mapping the names of the experimental datasets to worms to select.
     num_named_neurons : int
         The number of named neurons to select.
 
@@ -881,6 +885,9 @@ def create_combined_dataset(experimental_datasets, num_named_neurons):
         'residual_calcium', 'smooth_calcium_data', 'smooth_method',
         'smooth_residual_calcium', 'time_in_seconds', 'worm'.
     """
+    # Convert DictConfig to dict
+    if isinstance(experimental_datasets, DictConfig):
+        experimental_datasets = OmegaConf.to_object(experimental_datasets)
 
     # Load the dataset(s)
     combined_dataset = dict()

@@ -6,8 +6,16 @@ logger = logging.getLogger(__name__)
 # # # Helper functions # # #
 # # # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
 
-# Alias this causal mask function
-generate_square_subsequent_mask = torch.nn.Transformer.generate_square_subsequent_mask
+
+def find_largest_divisor(hidden_size):
+    # Set the maximum number of heads
+    max_heads = 5
+    # Iterate backwards from 5 down to 1 to find the largest divisor
+    for n in range(max_heads, 0, -1):
+        if hidden_size % n == 0:
+            return n
+    # If no divisor found between 1 and 5, default to 1
+    return 1
 
 
 def print_parameters(model, verbose=False):
@@ -89,7 +97,10 @@ class CausalTransformer(torch.nn.Module):
         self.is_causal = True
 
     def forward(self, src):
-        causal_mask = generate_square_subsequent_mask(src.size(0), device=src.device)
+        causal_mask = torch.nn.Transformer.generate_square_subsequent_mask(
+            src.size(1),
+            device=src.device,
+        )
         out = self.transformer(src, src_mask=causal_mask, is_causal=self.is_causal)
         return out
 
@@ -113,7 +124,6 @@ class FeedForward(torch.nn.Module):
         """
         Uses residual ("skip") connection.
         """
-        # TODO: Apply a causal mask to the input
         x = x + self.ffwd(x)
         return x
 
@@ -620,8 +630,7 @@ class Model(torch.nn.Module):
 
 class LinearNN(Model):
     """
-    TODO: Test model with/without using information from the neuron mask.
-    A simple linear regression model to use as a baseline.
+    A simple (non)linear regression model to use as a baseline.
     """
 
     def __init__(
@@ -698,9 +707,13 @@ class NeuralTransformer(Model):
         )
 
         # Special transformer parameters
-        self.n_head = (
-            1  # number of attention heads; NOTE: this must be divisor of `hidden_size`
-        )
+        # self.n_head = (
+        #     1  # number of attention heads; NOTE: this must be divisor of `hidden_size`
+        # )
+        self.n_head = find_largest_divisor(
+            hidden_size
+        )  # number of attention heads (NOTE: must be divisor of `hidden_size`)
+        logger.info(f"Num. attn. heads {self.n_head}")
         self.dropout = 0.1  # dropout ratedropout=self.dropout,
 
         # Positional encoding
@@ -731,15 +744,6 @@ class NeuralTransformer(Model):
             dim_feedforward=self.hidden_size,
             dropout=self.dropout,
         )
-        # self.hidden_hidden = torch.nn.TransformerEncoderLayer(
-        #     d_model=self.hidden_size,
-        #     nhead=self.n_head,
-        #     dim_feedforward=self.hidden_size,
-        #     dropout=self.dropout,
-        #     activation="relu",
-        #     batch_first=True,
-        #     norm_first=True,
-        # )
 
         # Instantiate internal hidden model
         self.inner_hidden_model = InnerHiddenModel(self.hidden_hidden, self.hidden)

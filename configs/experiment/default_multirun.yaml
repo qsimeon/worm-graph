@@ -9,7 +9,7 @@ hydra:
   mode: MULTIRUN
   sweeper:
       params:
-        submodule.model.type: NeuralTransformer #LinearNN, NetworkLSTM, NeuralTransformer # NeuralCFC, NetworkRNN
+        submodule.model.type: LinearNN, NeuralTransformer #LinearNN, NetworkLSTM, NeuralTransformer # NeuralCFC, NetworkRNN
 
 # The submodule parameters set below will be used only if RUN mode is used. 
 # Otherwise, it uses the default parameters imported from the other config files in the submodule directory.
@@ -31,7 +31,7 @@ submodule:
       path: null # options: null, data/datasets/<DatasetFolder>
       num_worms: null # options: null,  <int>
 
-    save_datasets: true
+    save_datasets: false
 
     num_named_neurons: null
     num_train_samples: 64
@@ -55,7 +55,7 @@ submodule:
   train:
     optimizer: AdamW
     lr: 0.0001
-    epochs: 1 #300 
+    epochs: 100 #300 
     save_freq: 100
     batch_size: 64
     shuffle: true
@@ -67,10 +67,10 @@ submodule:
   # Choose the worms that you want to predict 
   predict:
     # null = don't predict on this dataset
-    # all = predict on all the worms in the dataset
+    # all = predict all the worms in the dataset
     # <int> = use this number of (randomly picked) worms from the dataset
-    # <str> = predict on this wormID particular worm in the dataset
-    # <list> = predict on the worms with wormIDs in the list
+    # <str> = predict the worm with this particular wormID 
+    # <list> = predict the worms with wormIDs in the list
     experimental_datasets:
       Sines0000: worm0
       Lorenz0000: null
@@ -88,13 +88,13 @@ submodule:
     analyse_this_log_dir: null
     # Validate using some worms from each dataset
     validation:
-      # null = don't predict on this dataset
-      # all = predict on all the worms in the dataset
+      # null = don't analyze on this dataset
+      # all = analyze all the worms in the dataset
       # <int> = use this number of (randomly picked) worms from the dataset
-      # <str> = predict on this wormID particular worm in the dataset
-      # <list> = predict on the worms with wormIDs in the list
+      # <str> = analyze the worm with this particular wormID 
+      # <list> = analyze the worms with wormIDs in the list
       experimental_datasets:
-        Sines0000: worm0
+        Sines0000: all
         Lorenz0000: null
         Kato2015: null
         Nichols2017: null
@@ -110,8 +110,8 @@ submodule:
       # null = plot all the neurons/worms in the dataset
       # <list> = plot the worms named in the list
       # <int> = plot this number of (randomly picked) worms
-      worms_to_plot: null 
-      neurons_to_plot: null
+      worms_to_plot: 1
+      neurons_to_plot: 3
 
 experiment:
   key: default_multirun # what parameter you are experimenting with

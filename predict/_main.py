@@ -32,7 +32,8 @@ def make_predictions(
     os.makedirs(os.path.join(log_dir, "prediction", "val"), exist_ok=True)
 
     # Make predictions in the train and validation datasets
-    logger.info("Start making predictions.")
+    logger.info(f"Start making predictions.")
+    logger.info(f"predict_config {type(predict_config)}")
     model_predict(
         log_dir=log_dir,
         model=model,

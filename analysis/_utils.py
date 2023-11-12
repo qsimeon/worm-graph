@@ -6,23 +6,36 @@ logger = logging.getLogger(__name__)
 
 
 def hierarchical_clustering_algorithm(
-    single_worm_data,
-    distance="correlation",
-    method="ward",
-    metric=None,
-    truncate_mode="lastp",
-    p=12,
-    criterion="maxclust",
-    criterion_value=4,
-    save_fig=False,
-    verbose=False,
-    wormID=None,
-):
+    single_worm_data: Dict[str, Union[np.ndarray, Dict[str, np.ndarray]]],
+    distance: str = "correlation",
+    method: str = "ward",
+    metric: Union[str, None] = None,
+    truncate_mode: str = "lastp",
+    p: int = 12,
+    criterion: str = "maxclust",
+    criterion_value: int = 4,
+    save_fig: bool = False,
+    verbose: bool = False,
+    wormID: Union[str, None] = None,
+) -> Tuple[np.ndarray, float]:
     """
-    single_worm_data: single worm dataset
-    method: linkage method
-    metric: distance metric
-    plot: whether to plot the dendrogram or not
+    Perform hierarchical clustering on a single worm dataset.
+
+    Args:
+        single_worm_data (dict): A dictionary containing the single worm dataset.
+        distance (str, optional): The distance metric to use. Defaults to "correlation".
+        method (str, optional): The linkage method to use. Defaults to "ward".
+        metric (str, optional): The distance metric to use. Defaults to None.
+        truncate_mode (str, optional): The dendrogram truncation mode. Defaults to "lastp".
+        p (int, optional): The number of clusters to display in the dendrogram. Defaults to 12.
+        criterion (str, optional): The clustering criterion to use. Defaults to "maxclust".
+        criterion_value (int, optional): The clustering criterion value to use. Defaults to 4.
+        save_fig (bool, optional): Whether to save the dendrogram and distance matrix plots. Defaults to False.
+        verbose (bool, optional): Whether to print verbose output. Defaults to False.
+        wormID (str, optional): The ID of the worm. Defaults to None.
+
+    Returns:
+        tuple: A tuple containing the computed clusters and the silhouette score.
     """
 
     np.set_printoptions(precision=4, suppress=True)
@@ -169,7 +182,16 @@ def hierarchical_clustering_algorithm(
     return clusters, silhouette_avg
 
 
-def load_reference(group_by=None):
+def load_reference(group_by: Union[str, None] = None) -> Dict[str, str]:
+    """
+    Load neuron classification data from a JSON file and group neurons based on the specified criteria.
+
+    Args:
+        group_by (str, optional): The grouping criteria. Can be "four", "three", or None. Defaults to None.
+
+    Returns:
+        dict: A dictionary containing neuron IDs as keys and their corresponding group labels as values.
+    """
     file_path = "analysis/neuron_classification.json"
 
     try:
@@ -219,7 +241,33 @@ def load_reference(group_by=None):
     return neuron_classification
 
 
-def loss_per_dataset(log_dir, experimental_datasets, mode="validation"):
+def loss_per_dataset(
+    log_dir: str,
+    experimental_datasets: dict,
+    mode: Literal["train", "validation"] = "validation",
+) -> None:
+    """Uses the last model checkpoint in `log_dir` to evaluate the loss on
+    either the train or validation set (depending on `mode`) of each dataset
+    and set of worms in experimental_dataset. Saves the computed losses in a
+    CSV file.
+
+    Parameters
+    ----------
+    log_dir : str
+        The directory where the model checkpoint and the dataset information are stored.
+    experimental_datasets : dict
+        A dictionary mapping the names of the experimental datasets to worms to select.
+    mode : str, optional
+        The mode to evaluate the loss. Either "train" or "validation". Default is "validation".
+
+    Returns
+    -------
+    None
+    """
+    # Convert DictConfig to dict
+    if isinstance(experimental_datasets, DictConfig):
+        experimental_datasets = OmegaConf.to_object(experimental_datasets)
+
     logger.info(f"Analyzing {mode} loss per dataset...")
 
     # Retrieve information from training
@@ -257,7 +305,7 @@ def loss_per_dataset(log_dir, experimental_datasets, mode="validation"):
         # Type check for `worms_to_use` to be int, list, or str
         assert isinstance(
             worms_to_use, (int, list, str)
-        ), f"`worms_to_use must` be int, list, or str, but got {type(worms_to_use)}."
+        ), f"`worms_to_use` must be int, list, or str, but got {type(worms_to_use)}."
 
         # Create dataset
         combined_dataset, _ = create_combined_dataset(

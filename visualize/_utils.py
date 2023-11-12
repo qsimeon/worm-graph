@@ -337,22 +337,24 @@ def plot_predictions(log_dir, neurons_to_plot=None, worms_to_plot=None):
                 os.path.join(log_dir, "prediction", type_ds, ds_name)
             )
 
-            # If worms_to_plot is an integer, randomly select that many worms
-            print("worms_to_plot", worms_to_plot, type(worms_to_plot), end="\n\n")
+            logger.info(f"worms_to_plot:  {worms_to_plot, type(worms_to_plot)}")
+
+            # Treat worms_to_plot
             if isinstance(worms_to_plot, int):
+                # If worms_to_plot is an integer, randomly select that many worms
                 worm_list = np.random.choice(
                     worm_list, size=min(worms_to_plot, len(worm_list)), replace=False
                 ).tolist()
             elif isinstance(worms_to_plot, list):
-                # Filter out the worms not in worms_to_plot
+                # If it is a list, filter out any worms not in worms_to_plot
                 worm_list = [worm for worm in worm_list if worm in worms_to_plot]
+            elif isinstance(worms_to_plot, str):
+                # If worms_to_plot is a str, keep only the requested wormID
+                worm_list = [worm for worm in worm_list if worm == worms_to_plot]
+
+            logger.info(f"worm_list: {worm_list}")
 
             for wormID in worm_list:
-                # Skip if num_worms given
-                if worms_to_plot is not None:
-                    if wormID not in worms_to_plot:
-                        continue
-
                 url = os.path.join(
                     log_dir, "prediction", type_ds, ds_name, wormID, "predictions.csv"
                 )
@@ -369,16 +371,28 @@ def plot_predictions(log_dir, neurons_to_plot=None, worms_to_plot=None):
                 neurons_df = pd.read_csv(neurons_url)
                 neurons = neurons_df["named_neurons"]
 
+                logger.info(
+                    f"neurons_to_plot:  {neurons_to_plot, type(neurons_to_plot)}"
+                )
+
                 # Treat neurons_to_plot
                 if isinstance(neurons_to_plot, int):
+                    # Randomly select number of neurons
                     neurons = np.random.choice(
                         neurons, size=min(neurons_to_plot, len(neurons)), replace=False
                     ).tolist()
                 elif isinstance(neurons_to_plot, list):
-                    # Skip neurons that are not available
+                    # Filter out neurons not listed
                     neurons = [
                         neuron for neuron in neurons_to_plot if neuron in neurons
                     ]
+                elif isinstance(neurons_to_plot, str):
+                    # Get only the requested neuron
+                    neurons = [
+                        neuron for neuron in neurons if neuron == neurons_to_plot
+                    ]
+
+                logger.info(f"neurons: {neurons}")
 
                 seq_len = len(
                     pd.concat([df.loc["Context"], df.loc["Ground Truth"]], axis=0)
@@ -514,14 +528,11 @@ def plot_pca_trajectory(log_dir, worms_to_plot=None, plot_type="3D"):
             elif isinstance(worms_to_plot, list):
                 # Filter out the worms not in worms_to_plot
                 worm_list = [worm for worm in worm_list if worm in worms_to_plot]
+            elif isinstance(worms_to_plot, str):
+                worm_list = [worm for worm in worm_list if worm == worms_to_plot]
             # If worms_to_plot is None, keep the entire worm_list
 
             for wormID in worm_list:
-                # Skip if num_worms given
-                if worms_to_plot is not None:
-                    if wormID not in worms_to_plot:
-                        continue
-
                 url = os.path.join(
                     log_dir, "prediction", type_ds, ds_name, wormID, "predictions.csv"
                 )
@@ -1245,7 +1256,7 @@ def plot_loss_per_dataset(log_dir, mode="validation"):
     )  # Set x-ticks to be in the middle of the grouped bars
     ax.set_xticklabels(losses["dataset"].values, rotation=0, ha="center")
     ax.set_ylabel("Loss")
-    ax.set_yscale("log")  # log scale
+    # ax.set_yscale("log")  # log scale
     ax.set_title(f"{mode.capitalize()} loss across datasets")
     ax.legend(loc="upper right")
 

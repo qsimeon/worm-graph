@@ -7,7 +7,7 @@ logger = logging.getLogger(__name__)
 def model_predict(
     log_dir: str,
     model: torch.nn.Module,
-    experimental_datasets: DictConfig,
+    experimental_datasets: dict,
     context_window: int,
 ):
     """Make predictions on a dataset with a trained model.
@@ -20,8 +20,8 @@ def model_predict(
         Directory to save the predictions.
     model : torch.nn.Module
         Trained model.
-    experimentad_datasets : DictConfig
-        Configuration file with name of the experimental datasets and worms to predict.
+    experimentad_datasets : dict
+        A dictionary mapping the names of the experimental datasets to worms to predict.
     dataset_type : str
         Type of dataset to predict. Either 'train' or 'val'.
     context_window : int
@@ -29,6 +29,9 @@ def model_predict(
     nb_ts_to_generate : int
         Number of time steps to generate.
     """
+    # Convert DictConfig to dict
+    if isinstance(experimental_datasets, DictConfig):
+        experimental_datasets = OmegaConf.to_object(experimental_datasets)
 
     # Retrieve information from training
     train_dataset_info = pd.read_csv(
