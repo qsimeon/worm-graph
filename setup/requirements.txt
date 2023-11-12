@@ -1,10 +1,11 @@
 black[jupyter]
+fvcore
 hydra-core
 hydra-optuna-sweeper
 hydra-submitit-launcher
 mat73
-fvcore
 ncps
 omegaconf
 pytest
+statsmodels
 torch_geometric
