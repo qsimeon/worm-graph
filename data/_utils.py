@@ -4,6 +4,197 @@ from data._pkg import *
 # Init logger
 logger = logging.getLogger(__name__)
 
+def load_connectome():
+    """
+    Returns the whole nervous system C. elegans connectome.
+    """
+    return CElegansConnectome()[0]
+
+
+
+def load_dataset(name):
+    """Load a specified dataset by name.
+
+    This function takes a dataset name as input, checks whether it is in
+    the list of valid datasets, and then loads the dataset using the
+    corresponding loader function. The loader function is defined in the
+    form 'load_{name}', where '{name}' is replaced by the actual dataset name.
+
+    Parameters
+    ----------
+    name : str
+        The name of the dataset to load. Must be one of the valid dataset names.
+
+    Calls
+    -----
+    load_{dataset} : function in data/_utils.py
+        Where dataset = {Kato2015, Nichols2017, Nguyen2017, Skora2018,
+                         Kaplan2020, Uzel2022, Flavell2023, Leifer2023} | {Sines0000}
+
+    Returns
+    -------
+    loader():
+        The loaded dataset.
+    """
+    assert (name in VALID_DATASETS) or (
+        name in SYNTHETIC_DATASETS
+    ), "Unrecognized dataset! Please pick one from:\n{}".format(
+        list(VALID_DATASETS | SYNTHETIC_DATASETS)
+    )
+    loader = eval("load_" + name)  # call the "load" functions below
+
+    return loader()
+
+
+def load_Custom():
+    """
+    Loads the last used dataset.
+    """
+    # ensure the data has been preprocessed
+    file = os.path.join(ROOT_DIR, "data", "processed", "neural", "Custom.pickle")
+    assert os.path.exists(file)
+    pickle_in = open(file, "rb")
+    # unpickle the data
+    Custom = pickle.load(pickle_in)
+    return Custom
+
+
+def load_Lorenz0000():
+    """
+    Loads the synthetic dataset Sines0000.
+    """
+    # ensure the data has been created
+    file = os.path.join(ROOT_DIR, "data", "processed", "neural", "Lorenz0000.pickle")
+    assert os.path.exists(file)
+    pickle_in = open(file, "rb")
+    # unpickle the data
+    Lorenz0000 = pickle.load(pickle_in)
+    return Lorenz0000
+
+
+def load_Sines0000():
+    """
+    Loads the synthetic dataset Sines0000.
+    """
+    # ensure the data has been created
+    file = os.path.join(ROOT_DIR, "data", "processed", "neural", "Sines0000.pickle")
+    assert os.path.exists(file)
+    pickle_in = open(file, "rb")
+    # unpickle the data
+    Sines0000 = pickle.load(pickle_in)
+    return Sines0000
+
+
+def load_Kato2015():
+    """
+    Loads the worm neural activity datasets from Kato et al., Cell Reports 2015,
+    Global Brain Dynamics Embed the Motor Command Sequence of Caenorhabditis elegans.
+    """
+    # ensure the data has been preprocessed
+    file = os.path.join(ROOT_DIR, "data", "processed", "neural", "Kato2015.pickle")
+    assert os.path.exists(file)
+    pickle_in = open(file, "rb")
+    # unpickle the data
+    Kato2015 = pickle.load(pickle_in)
+    return Kato2015
+
+
+def load_Nichols2017():
+    """
+    Loads the worm neural activity datasets from Nichols et al., Science 2017,
+    A global brain state underlies C. elegans sleep behavior.
+    """
+    # ensure the data has been preprocessed
+    file = os.path.join(ROOT_DIR, "data", "processed", "neural", "Nichols2017.pickle")
+    assert os.path.exists(file)
+    pickle_in = open(file, "rb")
+    # unpickle the data
+    Nichols2017 = pickle.load(pickle_in)
+    return Nichols2017
+
+
+def load_Nguyen2017():
+    """
+    Loads the worm neural activity datasets from Nguyen et al., PLOS CompBio 2017,
+    Automatically tracking neurons in a moving and deforming brain.
+    """
+    # ensure the data has been preprocessedn
+    file = os.path.join(ROOT_DIR, "data", "processed", "neural", "Nguyen2017.pickle")
+    assert os.path.exists(file)
+    pickle_in = open(file, "rb")
+    # unpickle the data
+    Nguyen2017 = pickle.load(pickle_in)
+    return Nguyen2017
+
+
+def load_Skora2018():
+    """
+    Loads the worm neural activity datasets from Skora et al., Cell Reports 2018,
+    Energy Scarcity Promotes a Brain-wide Sleep State Modulated by Insulin Signaling in C. elegans.
+    """
+    # ensure the data has been preprocessed
+    file = os.path.join(ROOT_DIR, "data", "processed", "neural", "Skora2018.pickle")
+    assert os.path.exists(file)
+    pickle_in = open(file, "rb")
+    # unpickle the data
+    Skora2018 = pickle.load(pickle_in)
+    return Skora2018
+
+
+def load_Kaplan2020():
+    """
+    Loads the worm neural activity datasets from Kaplan et al., Neuron 2020,
+    Nested Neuronal Dynamics Orchestrate a Behavioral Hierarchy across Timescales.
+    """
+    # ensure the data has been preprocessed
+    file = os.path.join(ROOT_DIR, "data", "processed", "neural", "Kaplan2020.pickle")
+    assert os.path.exists(file)
+    pickle_in = open(file, "rb")
+    # unpickle the data
+    Kaplan2020 = pickle.load(pickle_in)
+    return Kaplan2020
+
+
+def load_Uzel2022():
+    """
+    Loads the worm neural activity datasets from Uzel et al 2022., Cell CurrBio 2022,
+    A set of hub neurons and non-local connectivity features support global brain dynamics in C. elegans.
+    """
+    # ensure the data has been preprocessed
+    file = os.path.join(ROOT_DIR, "data", "processed", "neural", "Uzel2022.pickle")
+    assert os.path.exists(file)
+    pickle_in = open(file, "rb")
+    # unpickle the data
+    Uzel2022 = pickle.load(pickle_in)
+    return Uzel2022
+
+
+def load_Flavell2023():
+    """
+    Loads the worm neural activity datasets from Flavell et al., bioRxiv 2023,
+    Brain-wide representations of behavior spanning multiple timescales and states in C. elegans.
+    """
+    # ensure the data has been preprocessed
+    file = os.path.join(ROOT_DIR, "data", "processed", "neural", "Flavell2023.pickle")
+    assert os.path.exists(file)
+    pickle_in = open(file, "rb")
+    # unpickle the data
+    Flavell2023 = pickle.load(pickle_in)
+    return Flavell2023
+
+
+def load_Leifer2023():
+    """
+    Loads the worm neural activity datasets from Leifer et al., bioRxiv 2023,
+    Neural signal propagation atlas of C. elegans.
+    """
+    # ensure the data has been preprocessed
+    file = os.path.join(ROOT_DIR, "data", "processed", "neural", "Leifer2023.pickle")
+    assert os.path.exists(file)
+    pickle_in = open(file, "rb")
+    # unpickle the data
+    Leifer2023 = pickle.load(pickle_in)
+    return Leifer2023
 
 class NeuralActivityDataset(torch.utils.data.Dataset):
     """A custom PyTorch dataset for neural activity time-series prediction.
@@ -394,7 +585,7 @@ def rename_worm_keys(d):
 
 def filter_loaded_combined_dataset(combined_dataset, num_worms, num_named_neurons):
     """
-    Auxiliar function to filter worms when loading a combined dataset.
+    Auxiliary function to filter worms when loading a combined dataset.
 
     Parameters
     ----------
@@ -509,198 +700,6 @@ def pick_worm(dataset, wormid):
     return single_worm_dataset
 
 
-def load_connectome():
-    """
-    Returns the whole nervous system C. elegans connectome.
-    """
-    return CElegansConnectome()[0]
-
-
-def load_dataset(name):
-    """Load a specified dataset by name.
-
-    This function takes a dataset name as input, checks whether it is in
-    the list of valid datasets, and then loads the dataset using the
-    corresponding loader function. The loader function is defined in the
-    form 'load_{name}', where '{name}' is replaced by the actual dataset name.
-
-    Parameters
-    ----------
-    name : str
-        The name of the dataset to load. Must be one of the valid dataset names.
-
-    Calls
-    -----
-    load_{dataset} : function in data/_utils.py
-        Where dataset = {Kato2015, Nichols2017, Nguyen2017, Skora2018,
-                         Kaplan2020, Uzel2022, Flavell2023, Leifer2023} | {Sines0000}
-
-    Returns
-    -------
-    loader():
-        The loaded dataset.
-    """
-    assert (name in VALID_DATASETS) or (
-        name in SYNTHETIC_DATASETS
-    ), "Unrecognized dataset! Please pick one from:\n{}".format(
-        list(VALID_DATASETS | SYNTHETIC_DATASETS)
-    )
-    loader = eval("load_" + name)  # call the "load" functions below
-
-    return loader()
-
-
-def load_Custom():
-    """
-    Loads the last used dataset.
-    """
-    # ensure the data has been preprocessed
-    file = os.path.join(ROOT_DIR, "data", "processed", "neural", "Custom.pickle")
-    assert os.path.exists(file)
-    pickle_in = open(file, "rb")
-    # unpickle the data
-    Custom = pickle.load(pickle_in)
-    return Custom
-
-
-def load_Lorenz0000():
-    """
-    Loads the synthetic dataset Sines0000.
-    """
-    # ensure the data has been created
-    file = os.path.join(ROOT_DIR, "data", "processed", "neural", "Lorenz0000.pickle")
-    assert os.path.exists(file)
-    pickle_in = open(file, "rb")
-    # unpickle the data
-    Lorenz0000 = pickle.load(pickle_in)
-    return Lorenz0000
-
-
-def load_Sines0000():
-    """
-    Loads the synthetic dataset Sines0000.
-    """
-    # ensure the data has been created
-    file = os.path.join(ROOT_DIR, "data", "processed", "neural", "Sines0000.pickle")
-    assert os.path.exists(file)
-    pickle_in = open(file, "rb")
-    # unpickle the data
-    Sines0000 = pickle.load(pickle_in)
-    return Sines0000
-
-
-def load_Kato2015():
-    """
-    Loads the worm neural activity datasets from Kato et al., Cell Reports 2015,
-    Global Brain Dynamics Embed the Motor Command Sequence of Caenorhabditis elegans.
-    """
-    # ensure the data has been preprocessed
-    file = os.path.join(ROOT_DIR, "data", "processed", "neural", "Kato2015.pickle")
-    assert os.path.exists(file)
-    pickle_in = open(file, "rb")
-    # unpickle the data
-    Kato2015 = pickle.load(pickle_in)
-    return Kato2015
-
-
-def load_Nichols2017():
-    """
-    Loads the worm neural activity datasets from Nichols et al., Science 2017,
-    A global brain state underlies C. elegans sleep behavior.
-    """
-    # ensure the data has been preprocessed
-    file = os.path.join(ROOT_DIR, "data", "processed", "neural", "Nichols2017.pickle")
-    assert os.path.exists(file)
-    pickle_in = open(file, "rb")
-    # unpickle the data
-    Nichols2017 = pickle.load(pickle_in)
-    return Nichols2017
-
-
-def load_Nguyen2017():
-    """
-    Loads the worm neural activity datasets from Nguyen et al., PLOS CompBio 2017,
-    Automatically tracking neurons in a moving and deforming brain.
-    """
-    # ensure the data has been preprocessedn
-    file = os.path.join(ROOT_DIR, "data", "processed", "neural", "Nguyen2017.pickle")
-    assert os.path.exists(file)
-    pickle_in = open(file, "rb")
-    # unpickle the data
-    Nguyen2017 = pickle.load(pickle_in)
-    return Nguyen2017
-
-
-def load_Skora2018():
-    """
-    Loads the worm neural activity datasets from Skora et al., Cell Reports 2018,
-    Energy Scarcity Promotes a Brain-wide Sleep State Modulated by Insulin Signaling in C. elegans.
-    """
-    # ensure the data has been preprocessed
-    file = os.path.join(ROOT_DIR, "data", "processed", "neural", "Skora2018.pickle")
-    assert os.path.exists(file)
-    pickle_in = open(file, "rb")
-    # unpickle the data
-    Skora2018 = pickle.load(pickle_in)
-    return Skora2018
-
-
-def load_Kaplan2020():
-    """
-    Loads the worm neural activity datasets from Kaplan et al., Neuron 2020,
-    Nested Neuronal Dynamics Orchestrate a Behavioral Hierarchy across Timescales.
-    """
-    # ensure the data has been preprocessed
-    file = os.path.join(ROOT_DIR, "data", "processed", "neural", "Kaplan2020.pickle")
-    assert os.path.exists(file)
-    pickle_in = open(file, "rb")
-    # unpickle the data
-    Kaplan2020 = pickle.load(pickle_in)
-    return Kaplan2020
-
-
-def load_Uzel2022():
-    """
-    Loads the worm neural activity datasets from Uzel et al 2022., Cell CurrBio 2022,
-    A set of hub neurons and non-local connectivity features support global brain dynamics in C. elegans.
-    """
-    # ensure the data has been preprocessed
-    file = os.path.join(ROOT_DIR, "data", "processed", "neural", "Uzel2022.pickle")
-    assert os.path.exists(file)
-    pickle_in = open(file, "rb")
-    # unpickle the data
-    Uzel2022 = pickle.load(pickle_in)
-    return Uzel2022
-
-
-def load_Flavell2023():
-    """
-    Loads the worm neural activity datasets from Flavell et al., bioRxiv 2023,
-    Brain-wide representations of behavior spanning multiple timescales and states in C. elegans.
-    """
-    # ensure the data has been preprocessed
-    file = os.path.join(ROOT_DIR, "data", "processed", "neural", "Flavell2023.pickle")
-    assert os.path.exists(file)
-    pickle_in = open(file, "rb")
-    # unpickle the data
-    Flavell2023 = pickle.load(pickle_in)
-    return Flavell2023
-
-
-def load_Leifer2023():
-    """
-    Loads the worm neural activity datasets from Leifer et al., bioRxiv 2023,
-    Neural signal propagation atlas of C. elegans.
-    """
-    # ensure the data has been preprocessed
-    file = os.path.join(ROOT_DIR, "data", "processed", "neural", "Leifer2023.pickle")
-    assert os.path.exists(file)
-    pickle_in = open(file, "rb")
-    # unpickle the data
-    Leifer2023 = pickle.load(pickle_in)
-    return Leifer2023
-
-
 def select_named_neurons(multi_worm_dataset, num_named_neurons):
     """Select the `num_named_neurons` neurons from the dataset.
 
@@ -708,8 +707,9 @@ def select_named_neurons(multi_worm_dataset, num_named_neurons):
     ----------
     multi_worm_dataset : dict
         A dictionary containing the multi-worm dataset to select neurons from.
-    num_named_neurons : int
-        The number of named neurons to select from the dataset.
+    num_named_neurons : int or None
+        The number of named neurons to select from the dataset. If None, selects all
+        available neurons.
 
     Returns
     -------
@@ -854,8 +854,8 @@ def create_combined_dataset(
     ----------
     experimental_datasets : dict
         A dictionary mapping the names of the experimental datasets to worms to select.
-    num_named_neurons : int
-        The number of named neurons to select.
+    num_named_neurons : int or None
+        The number of named neurons to select. If None, all available neurons are selected.
 
     Calls
     -----
@@ -948,6 +948,47 @@ def create_combined_dataset(
     return combined_dataset, dataset_info
 
 
+def generate_subsets_of_size(combined_dataset, subset_size):
+    """
+    Generate all subsets of a specific size from the combined dataset.
+
+    Parameters:
+    combined_dataset (dict): The combined dataset with each key being a worm ID.
+    subset_size (int): The size of each subset to generate.
+
+    Returns:
+    list: A list of subset datasets, each containing data for `subset_size` number of worms.
+    """
+    all_worm_ids = list(combined_dataset.keys())
+    subset_datasets = []
+    
+    for i, worm_subset in enumerate(combinations(all_worm_ids, subset_size)):
+        # Create a subset dataset with the selected worm IDs
+        new_worm_id = "worm"+str(i)
+        subset_dataset = {new_worm_id: combined_dataset[worm_id] for worm_id in worm_subset}
+        subset_datasets.append(subset_dataset)
+
+    return subset_datasets
+
+def generate_all_subsets(combined_dataset):
+    """
+    Generate all possible subsets of all sizes from the combined dataset.
+
+    Parameters:
+    combined_dataset (dict): The combined dataset with each key being a worm ID.
+
+    Returns:
+    dict: A dictionary where keys are subset sizes and values are lists of subset datasets.
+    """
+    all_subsets = {}
+    max_size = len(combined_dataset)
+    
+    for size in range(1, max_size + 1):
+        all_subsets[size] = generate_subsets_of_size(combined_dataset, size)
+
+    return all_subsets
+
+    
 def distribute_samples(data_splits, total_nb_samples):
     """Auxiliary function to distribute the samples across the splits.
 

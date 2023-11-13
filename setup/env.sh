@@ -51,7 +51,7 @@ case "$(uname -s)" in
             if [ "$CUDA_VER" != "" ]; then
                 echo "CUDA Version $CUDA_VER Detected"
                 conda install --name $ENV_NAME -y pytorch==2.0.1 torchvision==0.15.2 torchaudio==2.0.2 pytorch-cuda=$CUDA_VER -c pytorch -c nvidia
-                # conda install --name $ENV_NAME -y pytorch torchvision torchaudio pytorch-cuda==$CUDA_VER -c pytorch
+                # conda install --name $ENV_NAME -y pytorch torchvision torchaudio pytorch-cuda=$CUDA_VER -c pytorch -nvidia
                 conda install --name $ENV_NAME -y pyg -c pyg # Add this line for PyG with GPU support
             else
                 conda install --name $ENV_NAME -y pytorch==2.0.1 torchvision==0.15.2 torchaudio==2.0.2 cpuonly -c pytorch
@@ -69,9 +69,11 @@ case "$(uname -s)" in
         echo "Windows OS Detected"
         if has_gpu; then
             echo "Nvidia GPU Detected"
-            conda install --name $ENV_NAME -y pytorch torchvision torchaudio -c pytorch
+            # conda install --name $ENV_NAME -y pytorch==2.0.1 torchvision==0.15.2 torchaudio==2.0.2 pytorch-cuda=11.8 -c pytorch -c nvidia
+            conda install --name $ENV_NAME -y pytorch torchvision torchaudio pytorch-cuda -c pytorch -c nvidia
             conda install --name $ENV_NAME -y pyg -c pyg # Add this line for PyG with GPU support
         else
+            # conda install --name $ENV_NAME -y pytorch==2.0.1 torchvision==0.15.2 torchaudio==2.0.2 cpuonly -c pytorch
             conda install --name $ENV_NAME -y pytorch torchvision torchaudio cpuonly -c pytorch
             conda install --name $ENV_NAME -y pyg -c pyg # Add this line for PyG with CPU support
         fi
