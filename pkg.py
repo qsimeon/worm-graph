@@ -11,7 +11,7 @@ from train._main import train_model
 from analysis._main import analyse_run
 from preprocess._main import process_data
 from predict._main import make_predictions
-from omegaconf import DictConfig, OmegaConf
+from omegaconf import OmegaConf, DictConfig, ListConfig
 from hydra.core.config_store import ConfigStore
 from hydra.experimental import compose, initialize
 from visualize._main import plot_figures, plot_experiment

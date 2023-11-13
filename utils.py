@@ -1,12 +1,10 @@
 import os
 import torch
 import random
-import logging
 import warnings
 import numpy as np
 import pandas as pd
 import torch.multiprocessing
-from omegaconf import DictConfig, ListConfig
 
 # Ignore all warnings
 warnings.filterwarnings(action="ignore")  # , category=RuntimeWarning)
@@ -60,7 +58,7 @@ VALID_DATASETS = {
     "Nichols2017",
     "Kato2015",
     "Kaplan2020",
-    "Eviatar2021",
+    "Yemini2021",
     "Leifer2023",  # Different type of dataset: stimulus-response.
     "Flavell2023",  # TODO: something wrong with worm0.
 }

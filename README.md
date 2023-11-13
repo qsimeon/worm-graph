@@ -96,9 +96,15 @@ From the root (`worm-graph`) directory, run the command:
 
 `python main.py +submodule=[preprocess]`
 
+> If on a Mac, place `+submodule=[preprocess]` in quotations, like this:
+    `python main.py "+submodule=[preprocess]"`
+
 Now you can run the main script as a demo of the fully functional pipeline:
 
 `python main.py +experiment=default_run`
+
+> If on a Mac, place `+experiment=default_run` in quotations, like this:
+    `python main.py "+experiment=default_run"`
 
 If you are running on a SLURM computing cluster:
 

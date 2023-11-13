@@ -752,9 +752,9 @@ def pickle_neural_data(
         Download link to a zip file containing the opensource data in raw form.
     zipfile : str
         The name of the zipfile that is being downloaded.
-    dataset : str or list, optional (default: 'all')
-        The name(s) of the dataset(s) to be pickled.
-        If None, all datasets are pickled.
+    dataset : str, optional (default: 'all')
+        The name of the dataset to be pickled.
+        If None or 'all', all datasets are pickled.
     transform : object, optional (default: StandardScaler())
         The sklearn transformation to be applied to the data.
     smooth_method : str, optional (default: 'ma')
@@ -808,6 +808,29 @@ def pickle_neural_data(
     if dataset is None or dataset.lower() == "all":
         for dataset in VALID_DATASETS:
             logger.info(f"Start processing {dataset}.")
+            try:
+                # instantiate the relevant preprocessor class
+                preprocessor = eval(dataset + "Preprocessor")(
+                    transform,
+                    smooth_method,
+                    interpolate_method,
+                    resample_dt,
+                    **kwargs,
+                )
+                # call its method
+                preprocessor.preprocess()
+            except NameError:
+                continue
+
+    # ... (re)-Pickle a single dataset
+    else:
+        assert (
+            dataset in VALID_DATASETS
+        ), "Invalid dataset requested! Please pick one from:\n{}".format(
+            list(VALID_DATASETS)
+        )
+        logger.info(f"Start processing {dataset}.")
+        try:
             # instantiate the relevant preprocessor class
             preprocessor = eval(dataset + "Preprocessor")(
                 transform,
@@ -818,25 +841,8 @@ def pickle_neural_data(
             )
             # call its method
             preprocessor.preprocess()
-
-    # ... (re)-Pickle a single dataset
-    else:
-        assert (
-            dataset in VALID_DATASETS
-        ), "Invalid dataset requested! Please pick one from:\n{}".format(
-            list(VALID_DATASETS)
-        )
-        logger.info(f"Start processing {dataset}.")
-        # instantiate the relevant preprocessor class
-        preprocessor = eval(dataset + "Preprocessor")(
-            transform,
-            smooth_method,
-            interpolate_method,
-            resample_dt,
-            **kwargs,
-        )
-        # call its method
-        preprocessor.preprocess()
+        except NameError:
+            pass
 
     if cleanup:
         # Delete the downloaded raw datasets
@@ -978,7 +984,26 @@ class BasePreprocessor:
     def preprocess_traces(
         self, neuron_IDs, traces, raw_timeVectorSeconds, preprocessed_data, worm_idx
     ):
+        """
+        Preprocesses calcium imaging data for a given worm.
+
+        Args:
+            neuron_IDs (list): List of arrays of neuron IDs.
+            traces (list): List of arrays of calcium traces, with indices corresponding to neuron_IDs.
+            raw_timeVectorSeconds (list): List of arrays of time vectors, with indices corresponding to neuron_IDs.
+            preprocessed_data (dict): Dictionary of preprocessed data from previous worms that gets extended with more worms here.
+            worm_idx (int): Index of the current worm.
+
+        Returns:
+            dict: Dictionary of preprocessed data for the current worm.
+            int: Index of the next worm.
+        """
         for i, trace_data in enumerate(traces):
+            # `trace_data`` should be shaped as (time, neurons)
+
+            # 0. Ignore any worms with empty traces and name worm
+            if trace_data.size == 0:
+                continue
             worm = "worm" + str(worm_idx)  # Use global worm index
             worm_idx += 1  # Increment worm index
 
@@ -1288,7 +1313,7 @@ class Uzel2022Preprocessor(BasePreprocessor):
 
     def extract_data(self, arr):
         all_IDs = arr["IDs"]
-        all_traces = arr["traces"]
+        all_traces = arr["traces"]  # (time, neurons)
         timeVectorSeconds = arr["tv"]
         return all_IDs, all_traces, timeVectorSeconds
 
@@ -1302,6 +1327,12 @@ class Uzel2022Preprocessor(BasePreprocessor):
             neuron_IDs, traces, raw_timeVectorSeconds = self.extract_data(
                 raw_data
             )  # extract
+            print(
+                f"neuron_IDs: {type(neuron_IDs), len(neuron_IDs), type(neuron_IDs[0]), len(neuron_IDs[0])}"
+                f"\ntraces: {type(traces), len(traces), type(traces[0]), traces[0].shape}\n"
+                f"raw_timeVectorSeconds: {type(raw_timeVectorSeconds), len(raw_timeVectorSeconds), type(raw_timeVectorSeconds[0]), raw_timeVectorSeconds[0].shape}",
+                end="\n\n",
+            )  # DEBUGGING
             preprocessed_data, worm_idx = self.preprocess_traces(
                 neuron_IDs, traces, raw_timeVectorSeconds, preprocessed_data, worm_idx
             )  # preprocess
@@ -1313,6 +1344,145 @@ class Uzel2022Preprocessor(BasePreprocessor):
         # Save data
         self.save_data(preprocessed_data)
         logger.info(f"Finished processing {self.dataset}.")
+
+
+class Yemini2021Preprocessor(BasePreprocessor):
+    def __init__(
+        self, transform, smooth_method, interpolate_method, resample_dt, **kwargs
+    ):
+        super().__init__(
+            "Yemini2021",
+            transform,
+            smooth_method,
+            interpolate_method,
+            resample_dt,
+            **kwargs,
+        )
+
+    def load_data(self, file_name):
+        # Overriding the base class method to use scipy.io.loadmat for .mat files
+        data = loadmat(os.path.join(self.raw_data_path, self.dataset, file_name))
+        return data
+
+    def extract_data(self, raw_data):
+        # Frames per second
+        fps = raw_data["fps"].item()
+        # There several files (each is data for one worm) in each .mat file
+        files = [_.item() for _ in raw_data["files"].squeeze()]
+        # The list `bilat_neurons` does not disambiguate L/R neurons, so we need to do that
+        bilat_neurons = [_.item() for _ in raw_data["neurons"].squeeze()]
+        # List of lists. Outer list same length as `neuron`. Inner lists are boolean masks for L/R neurons organized by file in `files`.
+        is_left_neuron = [
+            _.squeeze().tolist() for _ in raw_data["is_L"].squeeze()
+        ]  # in each inner list, all L (1) neurons appear before all R (0) neurons. non-bilateral neurons are nan
+        #  Histogram-normalized neuronal traces linearly scaled and offset so that neurons are comparable
+        norm_traces = [
+            _.squeeze().tolist() for _ in raw_data["norm_traces"].squeeze()
+        ]  # list-of-lists like is_left_neuron
+
+        # This part is the extract_data
+        neuron_IDs = []
+        traces = []
+        time_vector_seconds = []
+
+        # Each file contains data for one worm
+        for f, file in enumerate(files):
+            neurons = []
+            activity = []
+            tvec = np.empty(0)
+            for i, neuron in enumerate(bilat_neurons):
+                # Assign neuron names with L/R and get associated traces
+                bilat_bools = is_left_neuron[i]  # tells us if neuron is L/R
+                bilat_traces = norm_traces[i]
+                assert len(bilat_traces) == len(
+                    bilat_bools
+                ), f"Something is wrong with the data. Traces don't match with bilateral mask: {len(bilat_traces)} != {len(bilat_bools)}"
+                righty = None
+                if len(bilat_bools) // len(files) == 2:
+                    # get lateral assignment
+                    lefty = bilat_bools[: len(bilat_bools) // 2][f]
+                    righty = bilat_bools[len(bilat_bools) // 2 :][f]
+                    # get traces
+                    left_traces = bilat_traces[: len(bilat_traces) // 2][f]
+                    right_traces = bilat_traces[len(bilat_traces) // 2 :][f]
+                elif len(bilat_bools) == len(files):
+                    # get lateral assignment
+                    lefty = bilat_bools[:][f]
+                    righty = None
+                    # get traces
+                    left_traces = bilat_traces[:][f]
+                    right_traces = None
+                else:
+                    raise ValueError(
+                        f"Something is wrong with the data.\nNeuron: {neuron}. File: {file}."
+                    )
+                if np.isnan(lefty):  # non-bilaterally symmetric neuron
+                    act = bilat_traces[f].squeeze().astype(float)
+                    neurons.append(f"{neuron}")
+                    activity.append(act)
+                else:
+                    if lefty == 1:  # left neuron
+                        act = left_traces.squeeze().astype(float)
+                        neurons.append(f"{neuron}L")
+                        activity.append(act)
+                    if righty != None:  # right neuron
+                        act = right_traces.squeeze().astype(float)
+                        tvec = np.arange(act.size) / fps
+                        neurons.append(f"{neuron}R")
+                        activity.append(act)
+
+                # Deal with  time vector which should be the same across all neurons
+                if act.size > 0 and act.size > tvec.size:
+                    tvec = np.arange(act.size) / fps
+
+            # Add neurons to list of neuron_IDs
+            neuron_IDs.append(neurons)
+            # Reshape activity to be a 2D array
+            activity = np.stack(
+                [
+                    np.empty_like(tvec) * np.nan if act.size == 0 else act
+                    for act in activity
+                ]
+            ).T  # (time, neurons)
+            # Add acitvity to list of traces
+            traces.append(activity)
+            # Add time vector to list of time vectors
+            time_vector_seconds.append(tvec)
+
+        return neuron_IDs, traces, time_vector_seconds
+
+    def preprocess(self):
+        preprocessed_data = {}  # Store preprocessed data
+        worm_idx = 0  # Initialize worm index outside file loop
+
+        # Assuming you have multiple .mat files that you iterate over
+        for file_name in [
+            "Head_Activity_OH15500.mat",
+            "Head_Activity_OH16230.mat",
+            "Tail_Activity_OH16230.mat",
+        ]:
+            raw_data = self.load_data(file_name)  # load
+            neuron_IDs, traces, raw_timeVectorSeconds = self.extract_data(
+                raw_data
+            )  # extract
+            print(
+                f"neuron_IDs: {type(neuron_IDs), len(neuron_IDs), type(neuron_IDs[0]), len(neuron_IDs[0])}"
+                f"\ntraces: {type(traces), len(traces), type(traces[0]), traces[0].shape}\n"
+                f"raw_timeVectorSeconds: {type(raw_timeVectorSeconds), len(raw_timeVectorSeconds), type(raw_timeVectorSeconds[0]), raw_timeVectorSeconds[0].shape}",
+                end="\n\n",
+            )  # DEBUGGING
+            # exit(0)
+            preprocessed_data, worm_idx = self.preprocess_traces(
+                neuron_IDs, traces, raw_timeVectorSeconds, preprocessed_data, worm_idx
+            )  # preprocess
+
+        # Reshape calcium data
+        for worm in preprocessed_data.keys():
+            preprocessed_data[worm] = reshape_calcium_data(preprocessed_data[worm])
+
+        # Save data
+        self.save_data(preprocessed_data)
+        print(f"Finished processing {self.dataset}.")
 
 
 class Leifer2023Preprocessor(BasePreprocessor):
