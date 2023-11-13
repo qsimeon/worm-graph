@@ -11,7 +11,7 @@ dataset:
     num_worms: null # options: null or <int>.
 
   # Whether to save the datasets in the logs/dataset directory.
-  save_datasets: true
+  save_datasets: false
 
   # null = don't predict on this dataset
   # all = predict on all the worms in the dataset
@@ -25,6 +25,7 @@ dataset:
     Nichols2017: all
     Skora2018: all
     Uzel2022: all
+    Yemini2021: all
     Kaplan2020: all
     Flavell2023: all
     Leifer2023: all

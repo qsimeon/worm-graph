@@ -1327,12 +1327,6 @@ class Uzel2022Preprocessor(BasePreprocessor):
             neuron_IDs, traces, raw_timeVectorSeconds = self.extract_data(
                 raw_data
             )  # extract
-            print(
-                f"neuron_IDs: {type(neuron_IDs), len(neuron_IDs), type(neuron_IDs[0]), len(neuron_IDs[0])}"
-                f"\ntraces: {type(traces), len(traces), type(traces[0]), traces[0].shape}\n"
-                f"raw_timeVectorSeconds: {type(raw_timeVectorSeconds), len(raw_timeVectorSeconds), type(raw_timeVectorSeconds[0]), raw_timeVectorSeconds[0].shape}",
-                end="\n\n",
-            )  # DEBUGGING
             preprocessed_data, worm_idx = self.preprocess_traces(
                 neuron_IDs, traces, raw_timeVectorSeconds, preprocessed_data, worm_idx
             )  # preprocess
@@ -1465,13 +1459,6 @@ class Yemini2021Preprocessor(BasePreprocessor):
             neuron_IDs, traces, raw_timeVectorSeconds = self.extract_data(
                 raw_data
             )  # extract
-            print(
-                f"neuron_IDs: {type(neuron_IDs), len(neuron_IDs), type(neuron_IDs[0]), len(neuron_IDs[0])}"
-                f"\ntraces: {type(traces), len(traces), type(traces[0]), traces[0].shape}\n"
-                f"raw_timeVectorSeconds: {type(raw_timeVectorSeconds), len(raw_timeVectorSeconds), type(raw_timeVectorSeconds[0]), raw_timeVectorSeconds[0].shape}",
-                end="\n\n",
-            )  # DEBUGGING
-            # exit(0)
             preprocessed_data, worm_idx = self.preprocess_traces(
                 neuron_IDs, traces, raw_timeVectorSeconds, preprocessed_data, worm_idx
             )  # preprocess
