@@ -337,7 +337,7 @@ def plot_predictions(log_dir, neurons_to_plot=None, worms_to_plot=None):
                 os.path.join(log_dir, "prediction", type_ds, ds_name)
             )
 
-            logger.info(f"worms_to_plot:  {worms_to_plot, type(worms_to_plot)}")
+            logger.info(f"worms_to_plot:  {worms_to_plot}")
 
             # Treat worms_to_plot
             if isinstance(worms_to_plot, int):
@@ -371,9 +371,7 @@ def plot_predictions(log_dir, neurons_to_plot=None, worms_to_plot=None):
                 neurons_df = pd.read_csv(neurons_url)
                 neurons = neurons_df["named_neurons"]
 
-                logger.info(
-                    f"neurons_to_plot:  {neurons_to_plot, type(neurons_to_plot)}"
-                )
+                logger.info(f"neurons_to_plot:  {neurons_to_plot}")
 
                 # Treat neurons_to_plot
                 if isinstance(neurons_to_plot, int):

@@ -77,6 +77,7 @@ submodule:
       Nichols2017: null
       Skora2018: null
       Uzel2022: null
+      Yemini2021: null
       Kaplan2020: null
       Flavell2023: null
       Leifer2023: null
@@ -99,6 +100,7 @@ submodule:
         Nichols2017: null
         Skora2018: null
         Uzel2022: null
+        Yemini2021: null
         Kaplan2020: null
         Flavell2023: null
         Leifer2023: null
@@ -109,7 +111,7 @@ submodule:
       # null = plot all the neurons/worms in the dataset
       # <list> = plot the worms named in the list
       # <int> = plot this number of (randomly picked) worms
-      worms_to_plot: 1
+      worms_to_plot: null
       neurons_to_plot: 3
 
 experiment:

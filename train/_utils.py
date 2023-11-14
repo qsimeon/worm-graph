@@ -18,6 +18,9 @@ class EarlyStopping:
             logger.info("Validation loss is not a valid number (NaN).")
             return True
 
+        if self.best_model is None:
+            self.best_model = copy.deepcopy(model)
+
         if self.best_loss is None:
             self.best_loss = val_loss
             self.best_model = copy.deepcopy(model)

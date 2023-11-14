@@ -817,20 +817,19 @@ def generate_subsets_of_size(combined_dataset, subset_size):
     all_worm_ids = list(combined_dataset.keys())
     subset_datasets = []
 
+    # Generate all possible subsets of size `subset_size`
     for i, worm_subset in enumerate(combinations(all_worm_ids, subset_size)):
         # Create a subset dataset with the selected worm IDs
-        new_worm_id = "worm" + str(i)
-        subset_dataset = {
-            new_worm_id: combined_dataset[worm_id] for worm_id in worm_subset
-        }
+        subset_dataset = {worm_id: combined_dataset[worm_id] for worm_id in worm_subset}
         subset_datasets.append(subset_dataset)
 
     return subset_datasets
 
 
-def generate_all_subsets(combined_dataset):
+def generate_all_subsets(combined_dataset, max_sets_per_size=10):
     """
-    Generate all possible subsets of all sizes from the combined dataset.
+    Generate up to `max_sets_per_size` of the possible subsets of each
+    size that can be made from the combined_dataset.
 
     Parameters:
     combined_dataset (dict): The combined dataset with each key being a worm ID.
@@ -842,7 +841,9 @@ def generate_all_subsets(combined_dataset):
     max_size = len(combined_dataset)
 
     for size in range(1, max_size + 1):
-        all_subsets[size] = generate_subsets_of_size(combined_dataset, size)
+        all_subsets[size] = generate_subsets_of_size(combined_dataset, size)[
+            :max_sets_per_size
+        ]
 
     return all_subsets
 

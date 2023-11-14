@@ -999,7 +999,11 @@ class BasePreprocessor:
             int: Index of the next worm.
         """
         for i, trace_data in enumerate(traces):
-            # `trace_data`` should be shaped as (time, neurons)
+            # `trace_data` should be shaped as (time, neurons)
+            assert trace_data.ndim == 2, "Calcium traces must be 2D arrays."
+            assert trace_data.shape[1] == len(
+                neuron_IDs[i]
+            ), "Calcium trace does not have the right number of neurons."
 
             # 0. Ignore any worms with empty traces and name worm
             if trace_data.size == 0:
@@ -1433,11 +1437,12 @@ class Yemini2021Preprocessor(BasePreprocessor):
             neuron_IDs.append(neurons)
             # Reshape activity to be a 2D array
             activity = np.stack(
-                [
-                    np.empty_like(tvec) * np.nan if act.size == 0 else act
-                    for act in activity
-                ]
+                [np.zeros_like(tvec) if act.size == 0 else act for act in activity]
             ).T  # (time, neurons)
+            # Impute any remaining NaN values
+            imputer = IterativeImputer(random_state=0)
+            if np.isnan(activity).any():
+                activity = imputer.fit_transform(activity)
             # Add acitvity to list of traces
             traces.append(activity)
             # Add time vector to list of time vectors

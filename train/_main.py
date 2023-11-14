@@ -122,7 +122,7 @@ def train_model(
         # Measure the time for an epoch
         start_time = time.perf_counter()
 
-        for batch_idx, (X_train, Y_train, masks_train, metadata) in enumerate(
+        for batch_idx, (X_train, Y_train, masks_train, metadata_train) in enumerate(
             trainloader
         ):
             X_train = X_train.to(DEVICE)
@@ -252,6 +252,7 @@ def train_model(
             "epoch": np.arange(len(train_epoch_loss)),
             "computation_time": computation_time,
             "computation_flops": computation_flops,
+            "learning_rate": current_lr,
             "train_loss": train_epoch_loss,
             "train_baseline": train_epoch_baseline,
             "val_loss": val_epoch_loss,

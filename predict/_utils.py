@@ -22,12 +22,8 @@ def model_predict(
         Trained model.
     experimentad_datasets : dict
         A dictionary mapping the names of the experimental datasets to worms to predict.
-    dataset_type : str
-        Type of dataset to predict. Either 'train' or 'val'.
     context_window : int
         Number of time steps to use as context for the predictions.
-    nb_ts_to_generate : int
-        Number of time steps to generate.
     """
     # Convert DictConfig to dict
     if isinstance(experimental_datasets, DictConfig):
@@ -67,16 +63,22 @@ def model_predict(
         worm_dataset = single_worm_dataset["dataset"]
         original_wormID = single_worm_dataset["original_worm"]
 
+        # Query and save the named neurons to plot predictions afterwards
+        neurons = dataset_info.query(
+            'dataset == "{}" and original_index == "{}"'.format(
+                worm_dataset, original_wormID
+            )
+        )["neurons"].iloc[0]
+        neuron_df = pd.DataFrame(neurons, columns=["named_neurons"])
+
         # Split the data and the time vector into two halves
         data_splits = np.array_split(data, 2)
         time_vec_splits = np.array_split(time_vec, 2)
 
-        # Separate the splits into training and validation sets
+        ### TRAIN ###
+        # Get the train split (first half of neural activity)
         train_data_splits = data_splits[::2]
         train_time_vec_splits = time_vec_splits[::2]
-        val_data_splits = data_splits[1::2]
-        val_time_vec_splits = time_vec_splits[1::2]
-
         # Predictions (GT and AR) using the first TRAIN split
         gt_generated_activity_train = (
             model.generate(
@@ -90,8 +92,7 @@ def model_predict(
             .detach()
             .cpu()
             .numpy()
-        )
-
+        )  # ground-truth feeding
         auto_reg_generated_activity_train = (
             model.generate(
                 input=train_data_splits[0].unsqueeze(0).to(DEVICE),
@@ -104,17 +105,16 @@ def model_predict(
             .detach()
             .cpu()
             .numpy()
-        )
-
-        # Save the results
+        )  # autorregressive generation
+        # Create directories for saving results
         os.makedirs(
             os.path.join(log_dir, "prediction", "train", worm_dataset), exist_ok=True
-        )  # ds level
+        )  # dataset level
         os.makedirs(
             os.path.join(log_dir, "prediction", "train", worm_dataset, original_wormID),
             exist_ok=True,
         )  # worm level
-
+        # Save results in dataframes
         result_df = prediction_dataframe_parser(
             x=train_data_splits[0],
             context_window=context_window,
@@ -131,7 +131,21 @@ def model_predict(
                 "predictions.csv",
             )
         )
+        neuron_df.to_csv(
+            os.path.join(
+                log_dir,
+                "prediction",
+                "train",
+                worm_dataset,
+                original_wormID,
+                "named_neurons.csv",
+            )
+        )
 
+        ### VALIDATION ###
+        # Get the validation split (second half of neural activity)
+        val_data_splits = data_splits[1::2]
+        val_time_vec_splits = time_vec_splits[1::2]
         # Predictions (GT and AR) using the first VALIDATION split
         gt_generated_activity_val = (
             model.generate(
@@ -145,8 +159,7 @@ def model_predict(
             .detach()
             .cpu()
             .numpy()
-        )
-
+        )  # ground-truth feeding
         auto_reg_generated_activity_val = (
             model.generate(
                 input=val_data_splits[0].unsqueeze(0).to(DEVICE),
@@ -159,17 +172,16 @@ def model_predict(
             .detach()
             .cpu()
             .numpy()
-        )
-
+        )  # autorregressive generation
         # Save the results
         os.makedirs(
             os.path.join(log_dir, "prediction", "val", worm_dataset), exist_ok=True
-        )  # ds level
+        )  # dataset level
         os.makedirs(
             os.path.join(log_dir, "prediction", "val", worm_dataset, original_wormID),
             exist_ok=True,
         )  # worm level
-
+        # Save results in dataframes
         result_df = prediction_dataframe_parser(
             x=val_data_splits[0],
             context_window=context_window,
@@ -184,24 +196,6 @@ def model_predict(
                 worm_dataset,
                 original_wormID,
                 "predictions.csv",
-            )
-        )
-
-        # Query and save the named neurons to plot predictions afterwards
-        neurons = dataset_info.query(
-            'dataset == "{}" and original_index == "{}"'.format(
-                worm_dataset, original_wormID
-            )
-        )["neurons"].iloc[0]
-        neuron_df = pd.DataFrame(neurons, columns=["named_neurons"])
-        neuron_df.to_csv(
-            os.path.join(
-                log_dir,
-                "prediction",
-                "train",
-                worm_dataset,
-                original_wormID,
-                "named_neurons.csv",
             )
         )
         neuron_df.to_csv(

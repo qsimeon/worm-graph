@@ -33,7 +33,6 @@ def make_predictions(
 
     # Make predictions in the train and validation datasets
     logger.info(f"Start making predictions.")
-    logger.info(f"predict_config {type(predict_config)}")
     model_predict(
         log_dir=log_dir,
         model=model,
