@@ -799,13 +799,14 @@ def create_combined_dataset(
     return combined_dataset, dataset_info
 
 
-def generate_subsets_of_size(combined_dataset, subset_size):
+def generate_subsets_of_size(combined_dataset, subset_size, max_subsets=1):
     """
     Generate all subsets of a specific size from the combined dataset.
 
     Parameters:
     combined_dataset (dict): The combined dataset with each key being a worm ID.
     subset_size (int): The size of each subset to generate.
+    max_subsets (int): The maximum number of subsets to generate.
 
     Returns:
     list: A list of subset datasets, each containing data for `subset_size` number of worms.
@@ -822,28 +823,36 @@ def generate_subsets_of_size(combined_dataset, subset_size):
         # Create a subset dataset with the selected worm IDs
         subset_dataset = {worm_id: combined_dataset[worm_id] for worm_id in worm_subset}
         subset_datasets.append(subset_dataset)
-
+        # Stop if we have generated `max_subsets` number of subsets
+        if i == max_subsets - 1:
+            break
     return subset_datasets
 
 
-def generate_all_subsets(combined_dataset, max_sets_per_size=10):
+def generate_all_subsets(combined_dataset, max_subsets_per_size=1, max_size=None):
     """
     Generate up to `max_sets_per_size` of the possible subsets of each
-    size that can be made from the combined_dataset.
+    size up to `max_size` that can be made from the combined_dataset.
 
     Parameters:
     combined_dataset (dict): The combined dataset with each key being a worm ID.
+    max_subsets_per_size (int): The maximum number of subsets to generate for each size.
+    max_size (int): The maximum size of the subsets to generate.
 
     Returns:
     dict: A dictionary where keys are subset sizes and values are lists of subset datasets.
     """
     all_subsets = {}
-    max_size = len(combined_dataset)
+    if max_size is None:
+        max_size = len(combined_dataset)
+    assert isinstance(max_size, int) and max_size <= len(
+        combined_dataset
+    ), f"Invalid `max_size`. Please choose an integer between 1 and {len(combined_dataset)} inclusive."
 
     for size in range(1, max_size + 1):
-        all_subsets[size] = generate_subsets_of_size(combined_dataset, size)[
-            :max_sets_per_size
-        ]
+        all_subsets[size] = generate_subsets_of_size(
+            combined_dataset, size, max_subsets_per_size
+        )
 
     return all_subsets
 

@@ -35,6 +35,7 @@ logs/
 
 # ICLR Results
 analysis/iclr2024/results
+data/combined_dataset
 
 # C extensions
 *.so
