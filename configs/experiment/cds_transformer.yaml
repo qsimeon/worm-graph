@@ -21,7 +21,7 @@ hydra:
 submodule:
 
   dataset:
-    # Chosen directory should contain fixed validation dataset
+    # Chosen directory should contain a fixed validation dataset
     use_these_datasets:
       path: data/datasets/<DatasetFolder>
       num_worms: null

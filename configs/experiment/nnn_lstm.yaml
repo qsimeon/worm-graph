@@ -21,13 +21,14 @@ submodule:
       Nichols2017: all
       Skora2018: all
       Uzel2022: all
+      Yemini2021: all
       Kaplan2020: all
       Flavell2023: all
       Leifer2023: all
 
     save_datasets: false
-    num_train_samples: 64
-    num_val_samples: 64
+    num_train_samples: 32
+    num_val_samples: 16
     seq_len: 200
     reverse: false
     use_residual: false

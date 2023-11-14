@@ -1,18 +1,13 @@
-import matplotlib.pyplot as plt
+import os
 import numpy as np
 import pandas as pd
 import seaborn as sns
-import matplotlib.patches as mpatches
-import matplotlib.colors as mcolors
+import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
-
-import os
-import matplotlib
 
 from visualize._utils import *
 from matplotlib.lines import Line2D
 from matplotlib.patches import Patch
-from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 
 
 # 1. Marker and Dataset color codes
@@ -20,13 +15,13 @@ def legend_code():
     markers = {
         "o": "LSTM",
         "s": "Transformer",
-        "^": "Linear",
+        "^": "Feedforward",
     }
 
     model_labels = {
         "NetworkLSTM": "LSTM",
         "NeuralTransformer": "Transformer",
-        "LinearNN": "Linear",
+        "LinearNN": "Feedforward",
     }
 
     marker_colors = sns.color_palette("tab10", n_colors=len(markers))
@@ -51,13 +46,23 @@ def legend_code():
     # Add black color to the end of color palette
     color_palette.append((0, 0, 0))
 
-    datasets = ["Kato", "Nichols", "Skora", "Kaplan", "Uzel", "Flavell", "Leifer"]
+    datasets = [
+        "Kato",
+        "Nichols",
+        "Skora",
+        "Kaplan",
+        "Yemini",
+        "Uzel",
+        "Flavell",
+        "Leifer",
+    ]
 
     dataset_labels = [
         "Kato (2015)",
         "Nichols (2017)",
         "Skora (2018)",
         "Kaplan (2020)",
+        "Yemini (2021)",
         "Uzel (2022)",
         "Flavell (2023)",
         "Leifer (2023)",
@@ -67,6 +72,7 @@ def legend_code():
         "Nichols2017",
         "Skora2018",
         "Kaplan2020",
+        "Yemini2021",
         "Uzel2022",
         "Flavell2023",
         "Leifer2023",
@@ -854,7 +860,7 @@ def scaling_slopes_plot(scaling_slope_results, legend_code):
         showfliers=False,
         order=["NeuralTransformer", "LinearNN", "NetworkLSTM"],
     )  # You might want to set a neutral color for the boxplot
-    ax[1, 1].set_xticklabels(["Transformer", "Linear", "LSTM"])
+    ax[1, 1].set_xticklabels(["Transformer", "Feedforward", "LSTM"])
 
     for model, marker in model_marker_code.items():
         model_data = slopes[slopes["model"] == inverse_model_labels[model]]
@@ -1460,7 +1466,7 @@ def predictions(experiment_log_folders, model_names, legend_code):
         "Leifer2023",
     ]
     ds_type = "val"
-    models = ["LSTM", "Transformer", "Linear"]
+    models = ["LSTM", "Transformer", "Feedforward"]
     exp = "exp5"  # model trained with maximum amount of data
     neuron_to_plot = "AVER"
 
@@ -1486,7 +1492,7 @@ def predictions(experiment_log_folders, model_names, legend_code):
             f'dataset_type == "{ds_type}" and dataset == "{ds_name}" and model == "Transformer" and exp == "{exp}" and Type == "Ground Truth"'
         )[neuron_to_plot]
         gt_lin = predictions_df.query(
-            f'dataset_type == "{ds_type}" and dataset == "{ds_name}" and model == "Linear" and exp == "{exp}" and Type == "Ground Truth"'
+            f'dataset_type == "{ds_type}" and dataset == "{ds_name}" and model == "Feedforward" and exp == "{exp}" and Type == "Ground Truth"'
         )[neuron_to_plot]
 
         gt_gen_lstm = predictions_df.query(
@@ -1496,7 +1502,7 @@ def predictions(experiment_log_folders, model_names, legend_code):
             f'dataset_type == "{ds_type}" and dataset == "{ds_name}" and model == "Transformer" and exp == "{exp}" and Type == "GT Generation"'
         )[neuron_to_plot]
         gt_gen_lin = predictions_df.query(
-            f'dataset_type == "{ds_type}" and dataset == "{ds_name}" and model == "Linear" and exp == "{exp}" and Type == "GT Generation"'
+            f'dataset_type == "{ds_type}" and dataset == "{ds_name}" and model == "Feedforward" and exp == "{exp}" and Type == "GT Generation"'
         )[neuron_to_plot]
 
         ar_gen_lstm = predictions_df.query(
@@ -1506,7 +1512,7 @@ def predictions(experiment_log_folders, model_names, legend_code):
             f'dataset_type == "{ds_type}" and dataset == "{ds_name}" and model == "Transformer" and exp == "{exp}" and Type == "AR Generation"'
         )[neuron_to_plot]
         ar_gen_lin = predictions_df.query(
-            f'dataset_type == "{ds_type}" and dataset == "{ds_name}" and model == "Linear" and exp == "{exp}" and Type == "AR Generation"'
+            f'dataset_type == "{ds_type}" and dataset == "{ds_name}" and model == "Feedforward" and exp == "{exp}" and Type == "AR Generation"'
         )[neuron_to_plot]
 
         context_lstm = predictions_df.query(
@@ -1516,7 +1522,7 @@ def predictions(experiment_log_folders, model_names, legend_code):
             f'dataset_type == "{ds_type}" and dataset == "{ds_name}" and model == "Transformer" and exp == "{exp}" and Type == "Context"'
         )[neuron_to_plot]
         context_lin = predictions_df.query(
-            f'dataset_type == "{ds_type}" and dataset == "{ds_name}" and model == "Linear" and exp == "{exp}" and Type == "Context"'
+            f'dataset_type == "{ds_type}" and dataset == "{ds_name}" and model == "Feedforward" and exp == "{exp}" and Type == "Context"'
         )[neuron_to_plot]
 
         max_time_steps = len(context_lstm) + len(gt_lstm) - 1
@@ -1549,8 +1555,8 @@ def predictions(experiment_log_folders, model_names, legend_code):
         ax[row_mapping[ds_name], 0].plot(
             time_vector[len(context_lstm) - 1 : max_time_steps],
             gt_gen_lin,
-            color=model_color_code["Linear"],
-            label="Linear",
+            color=model_color_code["Feedforward"],
+            label="Feedforward",
         )  # Plot ground truth generation
 
         # Autoregressive plot
@@ -1580,8 +1586,8 @@ def predictions(experiment_log_folders, model_names, legend_code):
         ax[row_mapping[ds_name], 1].plot(
             time_vector[len(context_lstm) - 1 : max_time_steps],
             ar_gen_lin,
-            color=model_color_code["Linear"],
-            label="Linear",
+            color=model_color_code["Feedforward"],
+            label="Feedforward",
         )  # Plot ground truth generation
 
         # Fill context with tab:blue
@@ -1728,7 +1734,7 @@ def teacher_forcing(
             f'dataset_type == "{ds_type}" and dataset == "{ds_name}" and model == "Transformer" and exp == "{exp}" and Type == "GT Generation"'
         )[neuron_to_plot]
         gt_gen_lin = predictions_df.query(
-            f'dataset_type == "{ds_type}" and dataset == "{ds_name}" and model == "Linear" and exp == "{exp}" and Type == "GT Generation"'
+            f'dataset_type == "{ds_type}" and dataset == "{ds_name}" and model == "Feedforward" and exp == "{exp}" and Type == "GT Generation"'
         )[neuron_to_plot]
 
         context_lstm = predictions_df.query(
@@ -1773,8 +1779,8 @@ def teacher_forcing(
         ax.plot(
             time_vector[len(context_lstm) - 1 : max_time_steps],
             gt_gen_lin,
-            color=model_color_code["Linear"],
-            label="Linear",
+            color=model_color_code["Feedforward"],
+            label="Feedforward",
         )
 
         # Baseline model prediction
@@ -1941,7 +1947,7 @@ def autoregressive(
             f'dataset_type == "{ds_type}" and dataset == "{ds_name}" and model == "Transformer" and exp == "{exp}" and Type == "AR Generation"'
         )[neuron_to_plot]
         ar_gen_lin = predictions_df.query(
-            f'dataset_type == "{ds_type}" and dataset == "{ds_name}" and model == "Linear" and exp == "{exp}" and Type == "AR Generation"'
+            f'dataset_type == "{ds_type}" and dataset == "{ds_name}" and model == "Feedforward" and exp == "{exp}" and Type == "AR Generation"'
         )[neuron_to_plot]
 
         context_lstm = predictions_df.query(
@@ -1986,8 +1992,8 @@ def autoregressive(
         ax.plot(
             time_vector[len(context_lstm) - 1 : max_time_steps],
             ar_gen_lin,
-            color=model_color_code["Linear"],
-            label="Linear",
+            color=model_color_code["Feedforward"],
+            label="Feedforward",
         )
 
         ax.axvspan(

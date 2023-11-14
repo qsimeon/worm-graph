@@ -1,11 +1,9 @@
 # @package _global_
 defaults:
-  - override /submodule: [dataset, model, train, predict, analysis, visualize]
+  - override /submodule: [preprocess, dataset, model, train, predict, analysis, visualize]
   - _self_
 
 hydra:
-  # The sweeper params will be used only when MULTIRUN mode is used.
-  # Uses the submodule parameters if in RUN mode.
   mode: MULTIRUN
   sweeper:
       params:
@@ -23,6 +21,7 @@ submodule:
       Nichols2017: null
       Skora2018: null
       Uzel2022: null
+      Yemini2021: null
       Kaplan2020: null
       Flavell2023: null
       Leifer2023: null
@@ -34,8 +33,8 @@ submodule:
     save_datasets: false
 
     num_named_neurons: null
-    num_train_samples: 64
-    num_val_samples: 64
+    num_train_samples: 32
+    num_val_samples: 16
     seq_len: 200
     reverse: false
     use_residual: false
