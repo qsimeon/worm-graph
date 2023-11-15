@@ -8,22 +8,24 @@ defaults:
 hydra:
   mode: MULTIRUN
   sweeper:
-    params:
-      submodule.dataset.experimental_datasets: choice({Kato2015:all, Nichols2017:null, Skora2018:null, Uzel2022:null, Kaplan2020:null, Flavell2023:null, Leifer2023:null},{Kato2015:null, Nichols2017:all, Skora2018:null, Uzel2022:null, Kaplan2020:null, Flavell2023:null, Leifer2023:null},{Kato2015:null, Nichols2017:null, Skora2018:all, Uzel2022:null, Kaplan2020:null, Flavell2023:null, Leifer2023:null},{Kato2015:null, Nichols2017:null, Skora2018:null, Uzel2022:all, Kaplan2020:null, Flavell2023:null, Leifer2023:null},{Kato2015:null, Nichols2017:null, Skora2018:null, Uzel2022:null, Kaplan2020:all, Flavell2023:null, Leifer2023:null},{Kato2015:null, Nichols2017:null, Skora2018:null, Uzel2022:null, Kaplan2020:null, Flavell2023:all, Leifer2023:null},{Kato2015:null, Nichols2017:null, Skora2018:null, Uzel2022:null, Kaplan2020:null, Flavell2023:null, Leifer2023:all})
-      # {Kato2015:all, Nichols2017:null, Skora2018:null, Uzel2022:null, Kaplan2020:null, Flavell2023:null, Leifer2023:null} = Kato dataset
-      # {Kato2015:null, Nichols2017:all, Skora2018:null, Uzel2022:null, Kaplan2020:null, Flavell2023:null, Leifer2023:null} = Nichols dataset
-      # {Kato2015:null, Nichols2017:null, Skora2018:all, Uzel2022:null, Kaplan2020:null, Flavell2023:null, Leifer2023:null} = Skora dataset
-      # {Kato2015:null, Nichols2017:null, Skora2018:null, Uzel2022:all, Kaplan2020:null, Flavell2023:null, Leifer2023:null} = Uzel dataset
-      # {Kato2015:null, Nichols2017:null, Skora2018:null, Uzel2022:null, Kaplan2020:all, Flavell2023:null, Leifer2023:null} = Kaplan dataset
-      # {Kato2015:null, Nichols2017:null, Skora2018:null, Uzel2022:null, Kaplan2020:null, Flavell2023:all, Leifer2023:null} = Flavell dataset
-      # {Kato2015:null, Nichols2017:null, Skora2018:null, Uzel2022:null, Kaplan2020:null, Flavell2023:null, Leifer2023:all} = Leifer dataset
+  params:
+    submodule.dataset.experimental_datasets: >
+      ${hydra.utils.call(choice, [
+        "{Kato2015:all, Nichols2017:null, Skora2018:null, Uzel2022:null, Yemini2021:null, Kaplan2020:null, Flavell2023:null, Leifer2023:null}", # Kato dataset
+        "{Kato2015:null, Nichols2017:all, Skora2018:null, Uzel2022:null, Yemini2021:null, Kaplan2020:null, Flavell2023:null, Leifer2023:null}", # Nichols dataset
+        "{Kato2015:null, Nichols2017:null, Skora2018:all, Uzel2022:null, Yemini2021:null, Kaplan2020:null, Flavell2023:null, Leifer2023:null}", # Skora dataset
+        "{Kato2015:null, Nichols2017:null, Skora2018:null, Uzel2022:all, Yemini2021:null, Kaplan2020:null, Flavell2023:null, Leifer2023:null}", # Uzel dataset
+        "{Kato2015:null, Nichols2017:null, Skora2018:null, Uzel2022:null, Yemini2021:all, Kaplan2020:null, Flavell2023:null, Leifer2023:null}", # Yemini dataset
+        "{Kato2015:null, Nichols2017:null, Skora2018:null, Uzel2022:null, Yemini2021:null, Kaplan2020:all, Flavell2023:null, Leifer2023:null}", # Kaplan dataset
+        "{Kato2015:null, Nichols2017:null, Skora2018:null, Uzel2022:null, Yemini2021:null, Kaplan2020:null, Flavell2023:all, Leifer2023:null}", # Flavell dataset
+        "{Kato2015:null, Nichols2017:null, Skora2018:null, Uzel2022:null, Yemini2021:null, Kaplan2020:null, Flavell2023:null, Leifer2023:all}"  # Leifer dataset
+      ])}
       
 submodule:
-
   dataset:
     # Chosen directory should contain a fixed validation dataset
     use_these_datasets:
-      path: data/datasets/<DatasetFolder>
+      path: <FullUserPath>/worm-graph/data/datasets/<DatasetFolder>
       num_worms: null
 
   model:

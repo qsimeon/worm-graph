@@ -76,14 +76,23 @@ def compute_loss_vectorized(loss_fn, X, Y, masks):
     """
 
     # Expand masks to match the shape of X and Y
-    expanded_masks = masks.unsqueeze(1).expand_as(X)
+    expanded_masks = masks.unsqueeze(1).expand_as(
+        X
+    )  # the mask is a feature mask; temporally invariant, feature equivariant
 
     # Mask the invalid positions in X and Y
     masked_X = X * expanded_masks.float()
     masked_Y = Y * expanded_masks.float()
 
+    # ### DEBUG ###
+    # TODO: What if we compute the loss only for the last timestep
+    expanded_masks = expanded_masks[:, -1, :]
+    masked_X = masked_X[:, -1, :]
+    masked_Y = masked_Y[:, -1, :]
+    # ### DEBUG ###
+
     # Compute the loss considering only the valid positions
-    masked_loss = loss_fn(masked_X, masked_Y)
+    masked_loss = loss_fn(masked_X, masked_Y)  # reduction='none' in `loss_fn`
 
     # Normalize the loss by the number of valid positions
     norm_factor = masked_loss[expanded_masks].shape[0]

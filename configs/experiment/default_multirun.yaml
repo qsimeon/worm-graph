@@ -17,6 +17,7 @@ submodule:
     experimental_datasets:
       Sines0000: all
       Lorenz0000: null
+      VanDerPol0000: null
       Kato2015: null
       Nichols2017: null
       Skora2018: null
@@ -73,6 +74,7 @@ submodule:
     experimental_datasets:
       Sines0000: worm0
       Lorenz0000: null
+      VanDerPol0000: null
       Kato2015: null
       Nichols2017: null
       Skora2018: null
@@ -96,6 +98,7 @@ submodule:
       experimental_datasets:
         Sines0000: all
         Lorenz0000: null
+        VanDerPol0000: null
         Kato2015: null
         Nichols2017: null
         Skora2018: null

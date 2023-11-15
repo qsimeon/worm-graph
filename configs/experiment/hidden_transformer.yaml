@@ -66,6 +66,7 @@ submodule:
     experimental_datasets:
       # Sines0000: worm0
       # Lorenz0000: worm0
+      # VanDerPol0000: worm0
       Kato2015: worm0
       Nichols2017: worm0
       Skora2018: worm0
@@ -84,6 +85,7 @@ submodule:
       experimental_datasets:
         # Sines0000: worm0
         # Lorenz0000: worm0
+        # VanDerPol0000: worm0
         Kato2015: worm0
         Nichols2017: worm0
         Skora2018: worm0

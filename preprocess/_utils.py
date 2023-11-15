@@ -1436,6 +1436,7 @@ class Yemini2021Preprocessor(BasePreprocessor):
             # Add neurons to list of neuron_IDs
             neuron_IDs.append(neurons)
             # Reshape activity to be a 2D array
+            # TODO: Get indices of where activity is empty and find the neuron names associated with that
             activity = np.stack(
                 [np.zeros_like(tvec) if act.size == 0 else act for act in activity]
             ).T  # (time, neurons)
