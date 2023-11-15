@@ -75,72 +75,74 @@ def model_predict(
         data_splits = np.array_split(data, 2)
         time_vec_splits = np.array_split(time_vec, 2)
 
-        # ### TRAIN ###
-        # # Get the train split (first half of neural activity)
-        # train_data_splits = data_splits[::2]
-        # train_time_vec_splits = time_vec_splits[::2]
-        # # Predictions (GT and AR) using the first TRAIN split
-        # gt_generated_activity_train = (
-        #     model.generate(
-        #         input=train_data_splits[0].unsqueeze(0).to(DEVICE),
-        #         mask=neurons_mask.unsqueeze(0).to(DEVICE),
-        #         nb_ts_to_generate=train_data_splits[0].shape[0] - context_window,
-        #         context_window=context_window,
-        #         autoregressive=False,
-        #     )
-        #     .squeeze(0)
-        #     .detach()
-        #     .cpu()
-        #     .numpy()
-        # )  # ground-truth feeding
-        # auto_reg_generated_activity_train = (
-        #     model.generate(
-        #         input=train_data_splits[0].unsqueeze(0).to(DEVICE),
-        #         mask=neurons_mask.unsqueeze(0).to(DEVICE),
-        #         nb_ts_to_generate=train_data_splits[0].shape[0] - context_window,
-        #         context_window=context_window,
-        #         autoregressive=True,
-        #     )
-        #     .squeeze(0)
-        #     .detach()
-        #     .cpu()
-        #     .numpy()
-        # )  # autorregressive generation
-        # # Create directories for saving results
-        # os.makedirs(
-        #     os.path.join(log_dir, "prediction", "train", worm_dataset), exist_ok=True
-        # )  # dataset level
-        # os.makedirs(
-        #     os.path.join(log_dir, "prediction", "train", worm_dataset, original_wormID),
-        #     exist_ok=True,
-        # )  # worm level
-        # # Save results in dataframes
-        # result_df = prediction_dataframe_parser(
-        #     x=train_data_splits[0],
-        #     context_window=context_window,
-        #     gt_generated_activity=gt_generated_activity_train,
-        #     auto_reg_generated_activity=auto_reg_generated_activity_train,
-        # )
-        # result_df.to_csv(
-        #     os.path.join(
-        #         log_dir,
-        #         "prediction",
-        #         "train",
-        #         worm_dataset,
-        #         original_wormID,
-        #         "predictions.csv",
-        #     )
-        # )
-        # neuron_df.to_csv(
-        #     os.path.join(
-        #         log_dir,
-        #         "prediction",
-        #         "train",
-        #         worm_dataset,
-        #         original_wormID,
-        #         "named_neurons.csv",
-        #     )
-        # )
+        ### TRAIN ###
+        # Get the train split (first half of neural activity)
+        train_data_splits = data_splits[::2]
+        train_time_vec_splits = time_vec_splits[::2]
+        # Predictions (GT and AR) using the first TRAIN split
+        gt_generated_activity_train = (
+            model.generate(
+                input=train_data_splits[0].unsqueeze(0).to(DEVICE),
+                mask=neurons_mask.unsqueeze(0).to(DEVICE),
+                nb_ts_to_generate=train_data_splits[0].shape[0] - context_window,
+                # nb_ts_to_generate=2 * context_window,  # DEBUG
+                context_window=context_window,
+                autoregressive=False,
+            )
+            .squeeze(0)
+            .detach()
+            .cpu()
+            .numpy()
+        )  # ground-truth feeding
+        auto_reg_generated_activity_train = (
+            model.generate(
+                input=train_data_splits[0].unsqueeze(0).to(DEVICE),
+                mask=neurons_mask.unsqueeze(0).to(DEVICE),
+                nb_ts_to_generate=train_data_splits[0].shape[0] - context_window,
+                # nb_ts_to_generate=2 * context_window,  # DEBUG
+                context_window=context_window,
+                autoregressive=True,
+            )
+            .squeeze(0)
+            .detach()
+            .cpu()
+            .numpy()
+        )  # autorregressive generation
+        # Create directories for saving results
+        os.makedirs(
+            os.path.join(log_dir, "prediction", "train", worm_dataset), exist_ok=True
+        )  # dataset level
+        os.makedirs(
+            os.path.join(log_dir, "prediction", "train", worm_dataset, original_wormID),
+            exist_ok=True,
+        )  # worm level
+        # Save results in dataframes
+        result_df = prediction_dataframe_parser(
+            x=train_data_splits[0],
+            context_window=context_window,
+            gt_generated_activity=gt_generated_activity_train,
+            auto_reg_generated_activity=auto_reg_generated_activity_train,
+        )
+        result_df.to_csv(
+            os.path.join(
+                log_dir,
+                "prediction",
+                "train",
+                worm_dataset,
+                original_wormID,
+                "predictions.csv",
+            )
+        )
+        neuron_df.to_csv(
+            os.path.join(
+                log_dir,
+                "prediction",
+                "train",
+                worm_dataset,
+                original_wormID,
+                "named_neurons.csv",
+            )
+        )
 
         ### VALIDATION ###
         # Get the validation split (second half of neural activity)
@@ -152,6 +154,7 @@ def model_predict(
                 input=val_data_splits[0].unsqueeze(0).to(DEVICE),
                 mask=neurons_mask.unsqueeze(0).to(DEVICE),
                 nb_ts_to_generate=val_data_splits[0].shape[0] - context_window,
+                # nb_ts_to_generate=2 * context_window,  # DEBUG
                 context_window=context_window,
                 autoregressive=False,
             )
@@ -165,6 +168,7 @@ def model_predict(
                 input=val_data_splits[0].unsqueeze(0).to(DEVICE),
                 mask=neurons_mask.unsqueeze(0).to(DEVICE),
                 nb_ts_to_generate=val_data_splits[0].shape[0] - context_window,
+                # nb_ts_to_generate=2 * context_window,  # DEBUG
                 context_window=context_window,
                 autoregressive=True,
             )
