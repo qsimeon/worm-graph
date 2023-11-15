@@ -11,5 +11,3 @@ preprocess:
     alpha: 0.1 # lower alpha = smoother
     window_size: 21 # larger window size = smoother
     sigma: 5 # larger sigma = smoother
-
-  
