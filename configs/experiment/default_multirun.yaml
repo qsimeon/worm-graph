@@ -7,31 +7,37 @@ hydra:
   mode: MULTIRUN
   sweeper:
       params:
-        submodule.model.type: LinearNN, NeuralTransformer #LinearNN, NetworkLSTM, NeuralTransformer # NeuralCFC, NetworkRNN
+        submodule.model.type: LinearNN, NetworkLSTM, NeuralTransformer # NeuralCFC, NetworkRNN
 
 # The submodule parameters set below will be used only if RUN mode is used. 
 # Otherwise, it uses the default parameters imported from the other config files in the submodule directory.
 submodule:
+
   # Generate train and validation dataset from scratch
   dataset:
+    # null = don't use on this dataset
+    # all = use all the worms in the dataset
+    # <int> = use this number of (randomly picked) worms from the dataset
+    # <str> = use this wormID particular worm in the dataset
+    # <list> = use the worms with wormIDs in the list
     experimental_datasets:
-      # Sines0000: null
-      # Lorenz0000: null
-      # VanDerPol0000: null
-      Kato2015: null
-      Nichols2017: null
-      Skora2018: null
-      Uzel2022: null
-      Yemini2021: null
-      Kaplan2020: null
-      Flavell2023: null
-      Leifer2023: null
+      # Sines0000: all
+      # Lorenz0000: all
+      # VanDerPol0000: all
+      Kato2015: all
+      Nichols2017: all
+      Skora2018: all
+      Uzel2022: all
+      Yemini2021: all
+      Kaplan2020: all
+      Flavell2023: all
+      Leifer2023: all
 
     use_these_datasets:
       path: null # options: null, data/datasets/<DatasetFolder>
       num_worms: null # options: null,  <int>
 
-    save_datasets: false
+    save_datasets: true
 
     num_named_neurons: null
     num_train_samples: 32
@@ -43,7 +49,6 @@ submodule:
 
   # Build model from scratch
   model:
-    # type: LinearNN
     input_size: 302
     hidden_size: 256
     loss: MSE

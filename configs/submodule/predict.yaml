@@ -6,17 +6,17 @@ predict:
   # <str> = predict on this wormID particular worm in the dataset
   # <list> = predict on the worms with wormIDs in the list
   experimental_datasets:
-    Sines0000: worm0
+    # Sines0000: worm0
     # Lorenz0000: worm0
     # VanDerPol0000: worm0
-    # Kato2015: worm0
-    # Nichols2017: worm0
-    # Skora2018: worm0
-    # Uzel2022: worm0
-    # Yemini2021: worm0
-    # Kaplan2020: worm0
-    # Flavell2023: worm0
-    # Leifer2023: worm0
+    Kato2015: worm0
+    Nichols2017: worm0
+    Skora2018: worm0
+    Uzel2022: worm0
+    Yemini2021: worm0
+    Kaplan2020: worm0
+    Flavell2023: worm0
+    Leifer2023: worm0
   
   # Number of time steps to generate 
   # null = generate all remaining time steps (max_timesteps - context_window)

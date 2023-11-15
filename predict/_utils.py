@@ -84,8 +84,8 @@ def model_predict(
             model.generate(
                 input=train_data_splits[0].unsqueeze(0).to(DEVICE),
                 mask=neurons_mask.unsqueeze(0).to(DEVICE),
-                nb_ts_to_generate=train_data_splits[0].shape[0] - context_window,
-                # nb_ts_to_generate=2 * context_window,  # DEBUG
+                # nb_ts_to_generate=train_data_splits[0].shape[0] - context_window,
+                nb_ts_to_generate=2 * context_window,  # DEBUG
                 context_window=context_window,
                 autoregressive=False,
             )
@@ -98,8 +98,8 @@ def model_predict(
             model.generate(
                 input=train_data_splits[0].unsqueeze(0).to(DEVICE),
                 mask=neurons_mask.unsqueeze(0).to(DEVICE),
-                nb_ts_to_generate=train_data_splits[0].shape[0] - context_window,
-                # nb_ts_to_generate=2 * context_window,  # DEBUG
+                # nb_ts_to_generate=train_data_splits[0].shape[0] - context_window,
+                nb_ts_to_generate=2 * context_window,  # DEBUG
                 context_window=context_window,
                 autoregressive=True,
             )
@@ -153,8 +153,8 @@ def model_predict(
             model.generate(
                 input=val_data_splits[0].unsqueeze(0).to(DEVICE),
                 mask=neurons_mask.unsqueeze(0).to(DEVICE),
-                nb_ts_to_generate=val_data_splits[0].shape[0] - context_window,
-                # nb_ts_to_generate=2 * context_window,  # DEBUG
+                # nb_ts_to_generate=val_data_splits[0].shape[0] - context_window,
+                nb_ts_to_generate=2 * context_window,  # DEBUG
                 context_window=context_window,
                 autoregressive=False,
             )
@@ -167,8 +167,8 @@ def model_predict(
             model.generate(
                 input=val_data_splits[0].unsqueeze(0).to(DEVICE),
                 mask=neurons_mask.unsqueeze(0).to(DEVICE),
-                nb_ts_to_generate=val_data_splits[0].shape[0] - context_window,
-                # nb_ts_to_generate=2 * context_window,  # DEBUG
+                # nb_ts_to_generate=val_data_splits[0].shape[0] - context_window,
+                nb_ts_to_generate=2 * context_window,  # DEBUG
                 context_window=context_window,
                 autoregressive=True,
             )

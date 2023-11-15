@@ -1,35 +1,36 @@
+# Generate train and validation dataset from scratch
 dataset:
   # Path to a directory containing the datasets to be used.
   # If null, create a new dataset in the logs/dataset directory using the experimental_datasets.
   # If not null, and the directory contains train and validation datasets, use them directly.
   # If not null, and the directory contains only the combined dataset, create both train and validation dataset from it.
-  # If not null, and the directory contains a combined dataset + train or val. dataset, create the missing dataset using the combined dataset.
-  # Specify num_worms to random pick a subset worms from the combined dataset (when a combined dataset is provided).
+  # If not null, and the directory contains a combined dataset plus one of the train or validation dataset, create the missing dataset using the combined dataset.
   use_these_datasets:
     path: null # options: null, data/datasets/<DatasetFolder>
+    # Specify num_worms to random pick a subset worms from the combined dataset (when a combined dataset is provided).
     # If null, use all the worms in the dataset. Otherwise, if <int> use that number of worms (randomly picked) from the dataset.
     num_worms: null # options: null or <int>.
 
   # Whether to save the datasets in the logs/dataset directory.
-  save_datasets: false
+  save_datasets: true
 
-  # null = don't predict on this dataset
-  # all = predict on all the worms in the dataset
+  # null = don't use on this dataset
+  # all = use all the worms in the dataset
   # <int> = use this number of (randomly picked) worms from the dataset
-  # <str> = predict on this wormID particular worm in the dataset
-  # <list> = predict on the worms with wormIDs in the list
+  # <str> = use this wormID particular worm in the dataset
+  # <list> = use the worms with wormIDs in the list
   experimental_datasets:
-    Sines0000: all
+    # Sines0000: all
     # Lorenz0000: all
     # VanDerPol0000: all
-    # Kato2015: all
-    # Nichols2017: all
-    # Skora2018: all
-    # Uzel2022: all
-    # Yemini2021: all
-    # Kaplan2020: all
-    # Flavell2023: all
-    # Leifer2023: all
+    Kato2015: all
+    Nichols2017: all
+    Skora2018: all
+    Uzel2022: all
+    Yemini2021: all
+    Kaplan2020: all
+    Flavell2023: all
+    Leifer2023: all
   
   # If null, use all the worms in the dataset. Otherwise, if <int> use that number of worms (randomly picked) from the dataset.
   num_named_neurons: null # number of neurons to train the model with (positive integer or null)

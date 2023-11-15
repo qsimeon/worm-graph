@@ -96,9 +96,6 @@ def compute_loss_vectorized(loss_fn, X, Y, masks):
     masked_loss = loss_fn(masked_X, masked_Y)  # reduction='none' in `loss_fn`
 
     # Normalize the loss by the number of valid positions
-    logger.info(
-        f"masked_loss[expanded_masks].shape = {masked_loss[expanded_masks].shape}"
-    )
     norm_factor = masked_loss[expanded_masks].shape[0]
     loss = masked_loss[expanded_masks].sum() / norm_factor
 
