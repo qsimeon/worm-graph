@@ -2,7 +2,7 @@
 # cds = cross dataset (generalization)
 # We use single experimental datasets.
 defaults:
-  - override /submodule: [dataset, model, train, predict, analysis, visualize]
+  - override /submodule: [preprocess, dataset, model, train, predict, analysis, visualize]
   - _self_
 
 hydra:

@@ -26,4 +26,13 @@ from torch_geometric.data import Data, download_url
 from torch_geometric.utils import coalesce
 
 # Local libraries
-from utils import ROOT_DIR, RAW_FILES, NUM_NEURONS, NEURONS_302, VALID_DATASETS
+from utils import (
+    ROOT_DIR,
+    RAW_DATA_URL,
+    RAW_DATA_DIR,
+    RAW_ZIP,
+    RAW_FILES,
+    NUM_NEURONS,
+    NEURONS_302,
+    VALID_DATASETS,
+)

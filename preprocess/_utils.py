@@ -41,7 +41,15 @@ def preprocess_connectome(raw_dir, raw_files):
     """
 
     # Check if the raw connectome data exists
-    # TODO: Automatic download if raw data not found (?)
+    if not os.path.exists(raw_dir):
+        download_url(url=RAW_DATA_URL, folder=ROOT_DIR, filename=RAW_ZIP)
+        extract_zip(
+            path=os.path.join(ROOT_DIR, RAW_ZIP),
+            folder=RAW_DATA_DIR,
+            delete_zip=True,
+        )
+
+    # Check that all the necessary raw files were extracted
     assert all([os.path.exists(os.path.join(raw_dir, rf)) for rf in raw_files])
 
     # List of names of all C. elegans neurons
@@ -645,7 +653,7 @@ def interpolate_data(time, data, target_dt, method="linear"):
     num_neurons = data.shape[1]
     interpolated_data_np = np.zeros((len(target_time_np), num_neurons))
 
-    # TODO: vectorize this interpolation method instead of using for loop
+    # TODO: vectorize this interpolation method
     if method is None:
         target_time_np = time
         interpolated_data_np = data
@@ -710,7 +718,7 @@ def aggregate_data(time, data, target_dt):
     return target_time_np, downsampled_data
 
 
-def extract_zip(path: str, folder: str, log: bool = True):
+def extract_zip(path: str, folder: str, log: bool = True, delete_zip: bool = True):
     """
     Extracts a zip archive to a specific folder while ignoring the __MACOSX directory.
 
@@ -718,6 +726,7 @@ def extract_zip(path: str, folder: str, log: bool = True):
         path (str): The path to the zip archive.
         folder (str): The folder where the files will be extracted to.
         log (bool, optional): If False, will not print anything to the console. Default is True.
+        delete_zip (bool, optional): If True, will delete the zip archive after extraction. Default is True.
     """
     if log:
         print(f"Extracting {path}...")
@@ -726,6 +735,8 @@ def extract_zip(path: str, folder: str, log: bool = True):
         for member in zip_ref.namelist():
             if not member.startswith("__MACOSX/"):
                 zip_ref.extract(member, folder)
+    if delete_zip:
+        os.unlink(path)
 
 
 def pickle_neural_data(
@@ -787,7 +798,9 @@ def pickle_neural_data(
 
         # Extract all the datasets ... OR
         if dataset.lower() == "all":
-            extract_zip(zip_path, folder=source_path)  # Extract zip file
+            extract_zip(
+                zip_path, folder=source_path, delete_zip=True
+            )  # Extract zip file then delete it
         # Extract just the requested dataset
         else:
             bash_command = [
@@ -801,8 +814,6 @@ def pickle_neural_data(
             ]
             std_out = subprocess.run(bash_command, text=True)  # Run the bash command
             print(std_out, end="\n\n")
-
-        os.unlink(zip_path)  # Remove zip file
 
     # (re)-Pickle all the datasets ... OR
     if dataset is None or dataset.lower() == "all":
@@ -1416,17 +1427,17 @@ class Yemini2021Preprocessor(BasePreprocessor):
                     )
                 if np.isnan(lefty):  # non-bilaterally symmetric neuron
                     act = bilat_traces[f].squeeze().astype(float)
-                    neurons.append(f"{neuron}")
+                    neurons.append(None if act.size == 0 else f"{neuron}")
                     activity.append(act)
                 else:
                     if lefty == 1:  # left neuron
                         act = left_traces.squeeze().astype(float)
-                        neurons.append(f"{neuron}L")
+                        neurons.append(None if act.size == 0 else f"{neuron}L")
                         activity.append(act)
                     if righty != None:  # right neuron
                         act = right_traces.squeeze().astype(float)
                         tvec = np.arange(act.size) / fps
-                        neurons.append(f"{neuron}R")
+                        neurons.append(None if act.size == 0 else f"{neuron}R")
                         activity.append(act)
 
                 # Deal with  time vector which should be the same across all neurons
@@ -1436,7 +1447,6 @@ class Yemini2021Preprocessor(BasePreprocessor):
             # Add neurons to list of neuron_IDs
             neuron_IDs.append(neurons)
             # Reshape activity to be a 2D array
-            # TODO: Get indices of where activity is empty and find the neuron names associated with that
             activity = np.stack(
                 [np.zeros_like(tvec) if act.size == 0 else act for act in activity]
             ).T  # (time, neurons)
@@ -1852,7 +1862,6 @@ class Flavell2023Preprocessor(BasePreprocessor):
             original_dt = np.median(dt).item()
 
             residual_calcium = np.gradient(calcium_data, axis=0) / dt
-            # ? Normalize residual calcium?
 
             # 4. Smooth data
             smooth_calcium_data = self.smooth_data(calcium_data, time_in_seconds)
