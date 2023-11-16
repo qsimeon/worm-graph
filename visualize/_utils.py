@@ -429,7 +429,7 @@ def plot_predictions(log_dir, neurons_to_plot=None, worms_to_plot=None):
                         time_context,
                         df.loc["Context", neuron],
                         color=gt_color,
-                        label="Ground truth activity",
+                        label="Ground truth signal",
                     )
                     ax.plot(
                         time_ground_truth,
@@ -442,7 +442,7 @@ def plot_predictions(log_dir, neurons_to_plot=None, worms_to_plot=None):
                         time_gt_generated,
                         df.loc["GT Generation", neuron],
                         color=gt_generation_color,
-                        label="'Teacher forcing'",
+                        label="'Ground truth feeding'",
                     )
                     ax.plot(
                         time_ar_generated,
@@ -458,7 +458,7 @@ def plot_predictions(log_dir, neurons_to_plot=None, worms_to_plot=None):
                         time_context[-1],
                         alpha=0.1,
                         color=gt_color,
-                        label="Context window",
+                        label="Initial context window",
                     )
 
                     ax.set_title(f"Neuronal Activity of {neuron}")
@@ -716,7 +716,7 @@ def plot_pca_trajectory(log_dir, worms_to_plot=None, plot_type="3D"):
                                 len(ar_gen_data) + len(ground_truth_data) :, 2
                             ],
                             color=gt_generation_color,
-                            label="'Teacher forcing'",
+                            label="'Ground truth feeding'",
                             linestyle="-",
                             marker="o",
                         )

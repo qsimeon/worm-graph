@@ -1338,7 +1338,7 @@ def prediction_gap(exp_nts_log_dir, legend_code, neuronID, datasetID, wormID):
         time_context,
         df.loc["Context", neuron],
         color=gt_color,
-        label="Ground truth activity",
+        label="Ground truth signal",
     )
     ax2.plot(time_ground_truth, df.loc["Ground Truth", neuron], color=gt_color)
 
@@ -1348,7 +1348,7 @@ def prediction_gap(exp_nts_log_dir, legend_code, neuronID, datasetID, wormID):
         time_context[-1],
         alpha=0.1,
         color=gt_color,
-        label="Context window",
+        label="Initial context window",
     )
 
     ax2.set_title(
@@ -1533,7 +1533,7 @@ def predictions(experiment_log_folders, model_names, legend_code):
             time_vector[: len(context_lstm)],
             context_lstm,
             color="tab:red",
-            label="Ground truth activity",
+            label="Ground truth signal",
         )  # Plot context
         ax[row_mapping[ds_name], 0].plot(
             time_vector[len(context_lstm) - 1 : max_time_steps],
@@ -1564,7 +1564,7 @@ def predictions(experiment_log_folders, model_names, legend_code):
             time_vector[: len(context_lstm)],
             context_lstm,
             color="tab:red",
-            label="Ground truth activity",
+            label="Ground truth signal",
         )  # Plot context
         ax[row_mapping[ds_name], 1].plot(
             time_vector[len(context_lstm) - 1 : max_time_steps],
@@ -1596,14 +1596,14 @@ def predictions(experiment_log_folders, model_names, legend_code):
             time_vector[len(context_lstm) - 1],
             alpha=0.15,
             color="tab:red",
-            label="Context window",
+            label="Initial context window",
         )
         ax[row_mapping[ds_name], 1].axvspan(
             time_vector[0],
             time_vector[len(context_lstm) - 1],
             alpha=0.15,
             color="tab:red",
-            label="Context window",
+            label="Initial context window",
         )
         ax[row_mapping[ds_name], 0].set_ylabel(
             "Activity ($\Delta F / F$)", fontsize=14, fontweight="bold"
@@ -1755,7 +1755,7 @@ def teacher_forcing(
             time_vector[: len(context_lstm)],
             context_lstm,
             color="tab:red",
-            label="Ground truth activity",
+            label="Ground truth signal",
             linewidth=2,
         )
         ax.plot(
@@ -1800,7 +1800,7 @@ def teacher_forcing(
             time_vector[len(context_lstm) - 1],
             alpha=0.15,
             color="tab:red",
-            label="Context window",
+            label="Initial context window",
         )
         ax.set_ylabel("Activity ($\Delta F / F$)", fontsize=14, fontweight="bold")
         ax.legend(loc="upper left", title=metadata_text, fontsize=12, title_fontsize=12)
@@ -1968,7 +1968,7 @@ def autoregressive(
             time_vector[: len(context_lstm)],
             context_lstm,
             color="tab:red",
-            label="Ground truth activity",
+            label="Ground truth signal",
             linewidth=2,
         )
         ax.plot(
@@ -2001,7 +2001,7 @@ def autoregressive(
             time_vector[len(context_lstm) - 1],
             alpha=0.15,
             color="tab:red",
-            label="Context window",
+            label="Initial context window",
         )
         ax.set_ylabel("Activity ($\Delta F / F$)", fontsize=14, fontweight="bold")
         ax.legend(loc="upper left", title=metadata_text, fontsize=12, title_fontsize=12)

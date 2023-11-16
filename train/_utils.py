@@ -83,13 +83,14 @@ def compute_loss_vectorized(loss_fn, X, Y, masks):
     masked_X = X * expanded_masks.float()
     masked_Y = Y * expanded_masks.float()
 
-    # ### DEBUG: Computing loss only at the new timestep ###
-    # TODO: Does training on the prediction objective of sequence to next 1-timestep result in a better
-    # autoregressive model  than training on the prediction objective of sequence to 1-timestep shifted sequence?
-    expanded_masks = expanded_masks[:, -1, :]
-    masked_X = masked_X[:, -1, :]
-    masked_Y = masked_Y[:, -1, :]
-    # ### DEBUG ###
+    # # ### DEBUG: Computing loss only at the new timestep ###
+    # # TODO: Does training on the prediction objective of sequence to next 1-timestep result in a better
+    # # autoregressive model  than training on the prediction objective of sequence to 1-timestep shifted sequence?
+    # # ANSWER: No! Sequence to sequence is better. But takes longer to train.
+    # expanded_masks = expanded_masks[:, -1, :]
+    # masked_X = masked_X[:, -1, :]
+    # masked_Y = masked_Y[:, -1, :]
+    # # ### DEBUG ###
 
     # Compute the loss considering only the valid positions
     masked_loss = loss_fn(masked_X, masked_Y)  # reduction='none' in `loss_fn`

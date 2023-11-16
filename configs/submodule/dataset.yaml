@@ -22,15 +22,15 @@ dataset:
   experimental_datasets:
     # Sines0000: all
     # Lorenz0000: all
-    # VanDerPol0000: all
-    Kato2015: all
-    Nichols2017: all
-    Skora2018: all
-    Uzel2022: all
-    Yemini2021: all
-    Kaplan2020: all
-    Flavell2023: all
-    Leifer2023: all
+    VanDerPol0000: all
+    # Kato2015: all
+    # Nichols2017: all
+    # Skora2018: all
+    # Uzel2022: all
+    # Yemini2021: all
+    # Kaplan2020: all
+    # Flavell2023: all
+    # Leifer2023: all
   
   # If null, use all the worms in the dataset. Otherwise, if <int> use that number of worms (randomly picked) from the dataset.
   num_named_neurons: null # number of neurons to train the model with (positive integer or null)
