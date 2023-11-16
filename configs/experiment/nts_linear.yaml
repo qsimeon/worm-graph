@@ -41,7 +41,7 @@ submodule:
     # Train model from scratch
     type: LinearNN
     input_size: 302
-    hidden_size: 256
+    hidden_size: 512
     num_layers: 1
     loss: MSE
     fft_reg_param: 0.0

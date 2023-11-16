@@ -185,6 +185,7 @@ def get_datasets(dataset_config: DictConfig, save=True):
                 dataset_info_split[
                     [
                         "combined_dataset_index",
+                        "original_median_dt",
                         "train_time_steps",
                         "num_train_samples",
                         "train_seq_len",
@@ -199,6 +200,7 @@ def get_datasets(dataset_config: DictConfig, save=True):
                 dataset_info_split[
                     [
                         "combined_dataset_index",
+                        "original_median_dt",
                         "val_time_steps",
                         "num_val_samples",
                         "val_seq_len",
@@ -261,6 +263,7 @@ def get_datasets(dataset_config: DictConfig, save=True):
             dataset_info_split[
                 [
                     "combined_dataset_index",
+                    "original_median_dt",
                     "train_time_steps",
                     "num_train_samples",
                     "train_seq_len",
@@ -275,6 +278,7 @@ def get_datasets(dataset_config: DictConfig, save=True):
             dataset_info_split[
                 [
                     "combined_dataset_index",
+                    "original_median_dt",
                     "val_time_steps",
                     "num_val_samples",
                     "val_seq_len",

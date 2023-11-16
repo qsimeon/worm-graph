@@ -10,7 +10,7 @@ analysis:
     # <str> = analyze the worm with this particular wormID 
     # <list> = analyze the worms with wormIDs in the list
     experimental_datasets:
-      Sines0000: 5
+      # Sines0000: 5
       # Lorenz0000: 5
       VanDerPol0000: 5
       # Kato2015: 5

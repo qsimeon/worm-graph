@@ -20,7 +20,6 @@ class EarlyStopping:
 
         if self.best_model is None:
             self.best_model = copy.deepcopy(model)
-
         if self.best_loss is None:
             self.best_loss = val_loss
             self.best_model = copy.deepcopy(model)

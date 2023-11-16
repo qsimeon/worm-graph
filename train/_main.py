@@ -102,6 +102,7 @@ def train_model(
     # Computation metrics
     computation_time = []
     computation_flops = []
+    num_trainable_params = []
 
     # Start training
     logger.info("Starting training loop...")
@@ -196,10 +197,12 @@ def train_model(
                 val_running_base_loss += val_baseline.item()
                 val_running_loss += val_loss.item()
 
-            # Compute FLOPs
+            # Compute FLOPs and number of trainable parametes
             if epoch == 0:
                 flops = FlopCountAnalysis(model, (X_train, masks_train))
+                param_ct = sum(p.numel() for p in model.parameters() if p.requires_grad)
             computation_flops.append(flops.total())
+            num_trainable_params.append(param_ct)
 
             # Store metrics
             val_epoch_loss.append(val_running_loss / len(valloader))
@@ -252,6 +255,7 @@ def train_model(
             "epoch": np.arange(len(train_epoch_loss)),
             "computation_time": computation_time,
             "computation_flops": computation_flops,
+            "num_trainable_params": num_trainable_params,
             "learning_rate": current_lr,
             "train_loss": train_epoch_loss,
             "train_baseline": train_epoch_baseline,

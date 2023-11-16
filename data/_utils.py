@@ -672,16 +672,20 @@ def select_desired_worms(multi_worm_dataset, worms):
         wormIDs_to_keep = [worms]
     elif isinstance(worms, int):
         # User requested a specific number of worms (random pick)
-        assert worms <= len(
-            multi_worm_dataset
-        ), f"Chosen number of worms must be less than or equal to the number of worms in {dataset_name}."
+        if worms > len(multi_worm_dataset):
+            logger.info(
+                f"Requested number of worms was more the number of worms in {dataset_name}. Defaulting to using all {len(multi_worm_dataset)} worms in {dataset_name}."
+            )
+            worms = len(multi_worm_dataset)
         wormIDs_to_keep = np.random.choice(wormIDs, size=worms, replace=False)
         logger.info("Using {} worms from {} (random pick)".format(worms, dataset_name))
     elif isinstance(worms, list):
         # User requested specific worms
-        assert len(worms) <= len(
-            multi_worm_dataset
-        ), f"Chosen number of worms must be less than or equal to the number of worms in {dataset_name}."
+        if len(worms) > len(multi_worm_dataset):
+            logger.info(
+                f"These worms {set(multi_worm_dataset) - set(worms)} were requested but are not in {dataset_name}. Defaulting to using all {len(multi_worm_dataset)} worms in {dataset_name}."
+            )
+            worms = list(multi_worm_dataset.keys())
         wormIDs_to_keep = worms
         logger.info("Using {} from {}".format(wormIDs_to_keep, dataset_name))
     else:
@@ -954,6 +958,7 @@ def split_combined_dataset(
         "val_time_steps": [],
         "num_val_samples": [],
         "val_seq_len": [],
+        "original_median_dt": [],
         "smooth_data": [],
         "use_residual": [],
     }
@@ -962,6 +967,7 @@ def split_combined_dataset(
     for wormID, single_worm_dataset in combined_dataset.items():
         # Extract relevant features from the dataset
         data = single_worm_dataset[key_data]
+        original_median_dt = single_worm_dataset["original_median_dt"]
         neurons_mask = single_worm_dataset["named_neurons_mask"]
         time_vec = single_worm_dataset["time_in_seconds"]
         worm_dataset = single_worm_dataset["dataset"]
@@ -1034,6 +1040,7 @@ def split_combined_dataset(
 
         # Store the number of unique time steps for each worm
         dataset_info_split["combined_dataset_index"].append(wormID)
+        dataset_info_split["original_median_dt"].append(original_median_dt)
 
         dataset_info_split["train_time_steps"].append(train_split_time_steps)
         dataset_info_split["train_seq_len"].append(seq_len)

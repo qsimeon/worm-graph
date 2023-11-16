@@ -50,7 +50,7 @@ submodule:
   # Build model from scratch
   model:
     input_size: 302
-    hidden_size: 256
+    hidden_size: 512
     loss: MSE
     fft_reg_param: 0.0
     l1_reg_param: 0.0
