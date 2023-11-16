@@ -70,9 +70,12 @@ def train_model(
 
     # Optimizer parameters
     optim_name = "torch.optim." + train_config.optimizer
-    lr = train_config.lr
+    lr = train_config.lr  # constant/starting learning rate
     optimizer = eval(optim_name + "(model.parameters(), lr=" + str(lr) + ")")
-    scheduler = lr_scheduler.ReduceLROnPlateau(optimizer, "min")
+    scheduler = lr_scheduler.ReduceLROnPlateau(optimizer, mode="min")
+    # # TODO: Try different learning rate schedulers
+    # scheduler = lr_scheduler.CyclicLR(base_lr=0.1 * lr, max_lr=10 * lr)
+    # scheduler = lr_scheduler.StepLR(optimizer, step_size=50, gamma=0.1)
 
     # Instantiate EarlyStopping
     es = EarlyStopping(
@@ -101,8 +104,6 @@ def train_model(
 
     # Computation metrics
     computation_time = []
-    computation_flops = []
-    num_trainable_params = []
 
     # Start training
     logger.info("Starting training loop...")
@@ -197,13 +198,6 @@ def train_model(
                 val_running_base_loss += val_baseline.item()
                 val_running_loss += val_loss.item()
 
-            # Compute FLOPs and number of trainable parametes
-            if epoch == 0:
-                flops = FlopCountAnalysis(model, (X_train, masks_train))
-                param_ct = sum(p.numel() for p in model.parameters() if p.requires_grad)
-            computation_flops.append(flops.total())
-            num_trainable_params.append(param_ct)
-
             # Store metrics
             val_epoch_loss.append(val_running_loss / len(valloader))
             val_epoch_baseline.append(val_running_base_loss / len(valloader))
@@ -218,11 +212,15 @@ def train_model(
 
         # Save model checkpoint
         if epoch % save_freq == 0:
+            computation_flops = FlopCountAnalysis(model, (X_train, masks_train)).total()
             save_model(
                 model,
                 os.path.join(
                     log_dir, "train", "checkpoints", "model_epoch_" + str(epoch) + ".pt"
                 ),
+                other_info={
+                    "computation_flops": computation_flops,  # add FLOPs info to checkpoint
+                },
             )
 
         # Early stopping
@@ -247,15 +245,19 @@ def train_model(
     # Restore best model and save it
     logger.info("Training loop is over. Loading best model.")
     model.load_state_dict(es.best_model.state_dict())
-    save_model(model, os.path.join(log_dir, "train", "checkpoints", "model_best.pt"))
+    save_model(
+        model,
+        os.path.join(log_dir, "train", "checkpoints", "model_best.pt"),
+        other_info={
+            "computation_flops": computation_flops
+        },  # add FLOPs info to checkpoint
+    )
 
     # Save training and evaluation metrics into a csv file
     train_metrics = pd.DataFrame(
         {
             "epoch": np.arange(len(train_epoch_loss)),
             "computation_time": computation_time,
-            "computation_flops": computation_flops,
-            "num_trainable_params": num_trainable_params,
             "learning_rate": current_lr,
             "train_loss": train_epoch_loss,
             "train_baseline": train_epoch_baseline,
