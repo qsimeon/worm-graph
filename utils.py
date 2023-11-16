@@ -65,7 +65,6 @@ VALID_DATASETS = {
     "Yemini2021",
     "Leifer2023",  # Different type of dataset: stimulus-response.
     "Flavell2023",  # TODO: Something wrong with worm0.
-    # "AllWorms",  # All experimental worm datasets combined.
 }
 
 SYNTHETIC_DATASETS = {

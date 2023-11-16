@@ -74,7 +74,6 @@ def compute_loss_vectorized(loss_fn, X, Y, masks):
     loss : torch.Tensor
         The mean loss of X and Y.
     """
-
     # Expand masks to match the shape of X and Y
     expanded_masks = masks.unsqueeze(1).expand_as(
         X

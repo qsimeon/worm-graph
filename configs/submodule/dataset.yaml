@@ -12,7 +12,7 @@ dataset:
     num_worms: null # options: null or <int>.
 
   # Whether to save the datasets in the logs/dataset directory.
-  save_datasets: true
+  save_datasets: false
 
   # null = don't use on this dataset
   # all = use all the worms in the dataset

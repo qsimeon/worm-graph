@@ -2,7 +2,7 @@
 train:
   optimizer: AdamW # options: Adam, AdamW, Adadelta, Adagrad, RMSprop, SGD
   lr: 0.0001
-  epochs: 100
+  epochs: 1 #100
   save_freq: 100
   batch_size: 64
   shuffle: true

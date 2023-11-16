@@ -3,6 +3,65 @@ from models._pkg import *
 # Init logger
 logger = logging.getLogger(__name__)
 
+
+### Custom loss function (MASE) # # #
+# # # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
+class MASELoss(torch.nn.Module):
+    """
+    Mean Absolute Scaled Error (MASE) Loss Function.
+    Supports 'none', 'mean', and 'sum' reductions.
+    ---
+    Example usage:
+    mase_loss = MASELoss(reduction='mean')
+    loss = mase_loss(y_pred, target)
+    """
+
+    def __init__(self, reduction="mean"):
+        super().__init__()
+        self.reduction = reduction
+
+    def forward(self, y_pred, target):
+        """
+        Forward pass for MASE Loss.
+
+        Parameters:
+            y_pred (torch.Tensor): Predicted values with shape (batch_size, seq_len, num_features)
+            target (torch.Tensor): Actual values with shape (batch_size, seq_len, num_features)
+
+        Returns:
+            torch.Tensor: The MASE loss.
+        """
+        # Ensure the target and predictions have the same shape
+        assert (
+            y_pred.shape == target.shape
+        ), "y_pred and target must have the same shape"
+        # Calculate the Mean Absolute Error of the one-step naive forecast
+        if target.ndim == 2:  # if 1-timestep
+            mean_naive_error = torch.tensor(1.0)
+        else:  # if sequence
+            naive_forecast_errors = torch.abs(target[:, 1:, :] - target[:, :-1, :])
+            mean_naive_error = 1e-8 + torch.mean(
+                naive_forecast_errors, dim=1, keepdim=True
+            )  # Average over seq_len
+
+        # Calculate the Mean Absolute Error of the predictions
+        prediction_errors = torch.abs(y_pred - target).expand_as(target)
+        mase_errors = prediction_errors / mean_naive_error
+
+        # Apply reduction
+        if self.reduction == "none":
+            return mase_errors
+        elif self.reduction == "mean":
+            return torch.mean(mase_errors)
+        elif self.reduction == "sum":
+            return torch.sum(mase_errors)
+        else:
+            raise ValueError(f"Invalid reduction type: {self.reduction}")
+
+
+# # # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
+
+
 # # # Helper functions # # #
 # # # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
 
@@ -401,6 +460,8 @@ class Model(torch.nn.Module):
             self.loss = torch.nn.MSELoss
         elif str(loss).lower() == "huber":
             self.loss = torch.nn.HuberLoss
+        elif str(loss).lower() == "mase":
+            self.loss = MASELoss
         else:
             self.loss = torch.nn.MSELoss
 

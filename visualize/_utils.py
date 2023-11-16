@@ -392,24 +392,21 @@ def plot_predictions(log_dir, neurons_to_plot=None, worms_to_plot=None):
 
                 logger.info(f"neurons: {neurons}")
 
-                seq_len = len(
+                data_window = len(
                     pd.concat([df.loc["Context"], df.loc["Ground Truth"]], axis=0)
                 )
-                max_time_steps = len(
+                generate_window = len(
                     pd.concat([df.loc["Context"], df.loc["AR Generation"]], axis=0)
                 )
-                time_vector = np.arange(max_time_steps)
+                time_vector = np.arange(generate_window)
 
                 time_context = time_vector[: len(df.loc["Context"])]
                 time_ground_truth = time_vector[
-                    len(df.loc["Context"]) - 1 : seq_len - 1
+                    len(df.loc["Context"]) - 1 : data_window - 1
                 ]
-                time_gt_generated = time_vector[
-                    len(df.loc["Context"]) - 1 : seq_len - 1
-                ]
-                time_ar_generated = time_vector[
-                    len(df.loc["Context"]) - 1 : max_time_steps - 1
-                ]  # -1 for plot continuity
+                # -1 for plot continuity
+                time_gt_generated = time_vector[len(df.loc["Context"]) - 1 : -1]
+                time_ar_generated = time_vector[len(df.loc["Context"]) - 1 : -1]
 
                 sns.set_style("whitegrid")
 
@@ -438,7 +435,7 @@ def plot_predictions(log_dir, neurons_to_plot=None, worms_to_plot=None):
                         time_ground_truth,
                         df.loc["Ground Truth", neuron],
                         color=gt_color,
-                        alpha=0.5,
+                        alpha=0.9,
                     )
 
                     ax.plot(
@@ -450,6 +447,7 @@ def plot_predictions(log_dir, neurons_to_plot=None, worms_to_plot=None):
                     ax.plot(
                         time_ar_generated,
                         df.loc["AR Generation", neuron],
+                        alpha=0.5,
                         color=ar_generation_color,
                         label="Autoregressive",
                     )
@@ -593,6 +591,7 @@ def plot_pca_trajectory(log_dir, worms_to_plot=None, plot_type="3D"):
                         plt.plot(
                             reduced_data[: len(ar_gen_data), 0],
                             reduced_data[: len(ar_gen_data), 1],
+                            alpha=0.5,
                             color=ar_generation_color,
                             label="Autoregressive",
                             linestyle="-",
@@ -679,6 +678,7 @@ def plot_pca_trajectory(log_dir, worms_to_plot=None, plot_type="3D"):
                             reduced_data[: len(ar_gen_data), 0],
                             reduced_data[: len(ar_gen_data), 1],
                             reduced_data[: len(ar_gen_data), 2],
+                            alpha=0.5,
                             color=ar_generation_color,
                             label="Autoregressive",
                             linestyle="-",
