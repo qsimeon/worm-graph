@@ -59,7 +59,7 @@ submodule:
   # Train model
   train:
     optimizer: AdamW
-    lr: 0.0001
+    lr: 0.001
     epochs: 100 
     save_freq: 100
     batch_size: 64
