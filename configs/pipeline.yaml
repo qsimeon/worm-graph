@@ -17,7 +17,7 @@ hydra:
   #               defined by the sweeper. If running locally, multi-run
   #               runs the jobs serially. If in the cluster, multi-run
   #               submits the jobs in parallel.
-  mode: RUN #MULTIRUN
+  mode: MULTIRUN
 
   # Hydra job:
   #   - chdir: Change the working directory to the log directory.
@@ -72,6 +72,6 @@ hydra:
 experiment:
   key: pipeline # what parameter are you experimenting with
   seed: null # If null, a random seed is generated for each run.
-  mode: RUN #MULTIRUN
+  mode: MULTIRUN
 
 # ============================ Pipeline Config ============================

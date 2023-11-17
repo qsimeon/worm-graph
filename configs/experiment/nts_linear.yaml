@@ -9,21 +9,17 @@ hydra:
   mode: MULTIRUN
   sweeper:
     params:
-      submodule.dataset.experimental_datasets: >
-        choice([
-          "{'Flavell2023': 1}",
-          "{'Leifer2023': 1, 'Skora2018': 1}",
-          "{'Nichols2017': 1, 'Flavell2023': 2}",
-          "{'Kaplan2020': 1, 'Flavell2023': 1, 'Nichols2017': 1, 'Leifer2023': 1}",
-          "{'Kato2015': 1, 'Yemini2021': 1, 'Nichols2017': 2, 'Leifer2023': 1}",
-          "{'Nichols2017': 2, 'Leifer2023': 4}",
-          "{'Leifer2023': 2, 'Yemini2021': 3, 'Kato2015': 1, 'Nichols2017': 1}",
-          "{'Leifer2023': 3, 'Kaplan2020': 1, 'Nichols2017': 1, 'Yemini2021': 2, 'Skora2018': 1}",
-          "{'Flavell2023': 4, 'Kaplan2020': 1, 'Leifer2023': 3, 'Yemini2021': 1}",
-          "{'Flavell2023': 2, 'Leifer2023': 2, 'Kaplan2020': 1, 'Uzel2022': 1, 'Kato2015': 1, 'Yemini2021': 2, 'Nichols2017': 1}",
-          "{'Yemini2021': 2, 'Leifer2023': 6, 'Nichols2017': 2, 'Kaplan2020': 1}",
-          "{'Leifer2023': 4, 'Nichols2017': 4, 'Yemini2021': 3, 'Flavell2023': 1}"
-        ])
+      submodule.dataset.experimental_datasets: choice({VanDerPol0000:1}, {VanDerPol0000:2})
+        #   "{'Kaplan2020': 1, 'Flavell2023': 1, 'Nichols2017': 1, 'Leifer2023': 1}",
+        #   "{'Kato2015': 1, 'Yemini2021': 1, 'Nichols2017': 2, 'Leifer2023': 1}",
+        #   "{'Nichols2017': 2, 'Leifer2023': 4}",
+        #   "{'Leifer2023': 2, 'Yemini2021': 3, 'Kato2015': 1, 'Nichols2017': 1}",
+        #   "{'Leifer2023': 3, 'Kaplan2020': 1, 'Nichols2017': 1, 'Yemini2021': 2, 'Skora2018': 1}",
+        #   "{'Flavell2023': 4, 'Kaplan2020': 1, 'Leifer2023': 3, 'Yemini2021': 1}",
+        #   "{'Flavell2023': 2, 'Leifer2023': 2, 'Kaplan2020': 1, 'Uzel2022': 1, 'Kato2015': 1, 'Yemini2021': 2, 'Nichols2017': 1}",
+        #   "{'Yemini2021': 2, 'Leifer2023': 6, 'Nichols2017': 2, 'Kaplan2020': 1}",
+        #   "{'Leifer2023': 4, 'Nichols2017': 4, 'Yemini2021': 3, 'Flavell2023': 1}"
+        # ])
 
 submodule:
 
@@ -34,19 +30,6 @@ submodule:
       num_worms: null
 
     save_datasets: false
-
-    experimental_datasets:
-      # Sines0000: all
-      # Lorenz0000: all
-      VanDerPol0000: all
-      # Kato2015: all
-      # Nichols2017: all
-      # Skora2018: all
-      # Uzel2022: all
-      # Yemini2021: all
-      # Kaplan2020: all
-      # Flavell2023: all
-      # Leifer2023: all
 
     num_named_neurons: null
     num_train_samples: 32
@@ -69,7 +52,7 @@ submodule:
   train:
     optimizer: AdamW
     lr: 0.001
-    epochs: 1 #100
+    epochs: 100
     save_freq: 100
     batch_size: 64
     shuffle: true
