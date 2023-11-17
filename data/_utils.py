@@ -803,7 +803,12 @@ def create_combined_dataset(
     return combined_dataset, dataset_info
 
 
-def generate_subsets_of_size(combined_dataset, subset_size, max_subsets=1):
+def generate_subsets_of_size(
+    combined_dataset,
+    subset_size,
+    max_subsets=1,
+    as_reference=False,
+):
     """
     Generate all subsets of a specific size from the combined dataset.
 
@@ -811,6 +816,8 @@ def generate_subsets_of_size(combined_dataset, subset_size, max_subsets=1):
     combined_dataset (dict): The combined dataset with each key being a worm ID.
     subset_size (int): The size of each subset to generate.
     max_subsets (int): The maximum number of subsets to generate.
+    as_refernce (bool): If True, instead of returning the mapping of wormID to data,
+                        returns the mapping of dataset name to number of worms.
 
     Returns:
     list: A list of subset datasets, each containing data for `subset_size` number of worms.
@@ -820,20 +827,44 @@ def generate_subsets_of_size(combined_dataset, subset_size, max_subsets=1):
         subset_size <= len(combined_dataset)
     ), f"Invalid `subset_size`. Please choose a value between 1 and {len(combined_dataset)}."
     all_worm_ids = list(combined_dataset.keys())
+    random.shuffle(all_worm_ids)  # shuffle so that combinations get ordered randomly
     subset_datasets = []
-
     # Generate all possible subsets of size `subset_size`
     for i, worm_subset in enumerate(combinations(all_worm_ids, subset_size)):
+        # for i, worm_subset in enumerate(combinations(all_worm_ids, subset_size)):
         # Create a subset dataset with the selected worm IDs
-        subset_dataset = {worm_id: combined_dataset[worm_id] for worm_id in worm_subset}
+        if as_reference:
+            # count up the number of worms from each dataset
+            dataset_list = [
+                combined_dataset[worm_id]["dataset"] for worm_id in worm_subset
+            ]
+            # create mapping of dataset name to number of worms
+            subset_dataset = dict()
+            for dataset in dataset_list:
+                if dataset not in subset_dataset:
+                    subset_dataset[dataset] = 1
+                else:
+                    subset_dataset[dataset] += 1
+        else:
+            # create mapping of wormID to data
+            subset_dataset = {
+                worm_id: combined_dataset[worm_id] for worm_id in worm_subset
+            }
+        # Add this subset dataset to the growing list of all subsets
         subset_datasets.append(subset_dataset)
         # Stop if we have generated `max_subsets` number of subsets
         if i == max_subsets - 1:
             break
+    # return list of subset datasets of size `subset_size`
     return subset_datasets
 
 
-def generate_all_subsets(combined_dataset, max_subsets_per_size=1, max_size=None):
+def generate_all_subsets(
+    combined_dataset,
+    max_subsets_per_size=1,
+    max_size=None,
+    as_reference=False,
+):
     """
     Generate up to `max_sets_per_size` of the possible subsets of each
     size up to `max_size` that can be made from the combined_dataset.
@@ -842,6 +873,8 @@ def generate_all_subsets(combined_dataset, max_subsets_per_size=1, max_size=None
     combined_dataset (dict): The combined dataset with each key being a worm ID.
     max_subsets_per_size (int): The maximum number of subsets to generate for each size.
     max_size (int): The maximum size of the subsets to generate.
+    as_refernce (bool): If True, instead of returning the mapping of wormID to data,
+                        returns the mapping of dataset name to number of worms.
 
     Returns:
     dict: A dictionary where keys are subset sizes and values are lists of subset datasets.
@@ -855,7 +888,7 @@ def generate_all_subsets(combined_dataset, max_subsets_per_size=1, max_size=None
 
     for size in range(1, max_size + 1):
         all_subsets[size] = generate_subsets_of_size(
-            combined_dataset, size, max_subsets_per_size
+            combined_dataset, size, max_subsets_per_size, as_reference
         )
 
     return all_subsets
