@@ -9,7 +9,7 @@ hydra:
   mode: MULTIRUN
   sweeper:
     params:
-      # TODO: Landro can you try this?
+      # TODO: Leandro can you try this?
       experiment.seed: range(2) # number of experiments you want to run
       submodule.dataset.experimental_datasets: >
         ${hydra.utils.call(choice, [

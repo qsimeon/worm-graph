@@ -9,7 +9,7 @@ hydra:
   mode: MULTIRUN
   sweeper:
     params:
-      submodule.dataset.num_named_neurons: 10, 30, 50, 70, 90
+      submodule.dataset.num_named_neurons: 10, 20, 30, 40, 50, 60, 70, 80
 
 submodule:
 

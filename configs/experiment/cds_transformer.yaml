@@ -29,7 +29,6 @@ submodule:
       num_worms: null
 
   model:
-    # Train model from scratch
     type: NeuralTransformer
 
 experiment:
