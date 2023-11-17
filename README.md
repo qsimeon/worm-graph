@@ -20,16 +20,13 @@
 ├── analysis
 ├── configs
 ├── data
-├── debugging
 ├── __init__.py
 ├── LICENSE
-├── logs
 ├── main.py
 ├── models
 ├── pkg.py
 ├── predict
 ├── preprocess
-├── __pycache__
 ├── pyproject.toml
 ├── README.md
 ├── setup
