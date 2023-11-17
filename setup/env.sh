@@ -50,7 +50,7 @@ case "$(uname -s)" in
             CUDA_VER=$(get_cuda_version)
             if [ "$CUDA_VER" != "" ]; then
                 echo "CUDA Version $CUDA_VER Detected"
-                conda install --name $ENV_NAME -y pytorch==2.0.1 torchvision==0.15.2 torchaudio==2.0.2 pytorch-cuda=$CUDA_VER -c pytorch -c nvidia
+                conda install --name $ENV_NAME -y pytorch==2.0.1 torchvision==0.15.2 torchaudio==2.0.2 pytorch-cuda=11.8 -c pytorch -c nvidia
                 # conda install --name $ENV_NAME -y pytorch torchvision torchaudio pytorch-cuda=$CUDA_VER -c pytorch -nvidia
                 conda install --name $ENV_NAME -y pyg -c pyg # Add this line for PyG with GPU support
             else
