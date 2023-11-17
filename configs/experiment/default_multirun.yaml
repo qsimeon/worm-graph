@@ -37,7 +37,7 @@ submodule:
       path: null # options: null, data/datasets/<DatasetFolder>
       num_worms: null # options: null,  <int>
 
-    save_datasets: true
+    save_datasets: false
 
     num_named_neurons: null
     num_train_samples: 32

@@ -8,4 +8,7 @@ ncps
 omegaconf
 pytest
 statsmodels
+torch 
+torchvision 
+torchaudio
 torch_geometric

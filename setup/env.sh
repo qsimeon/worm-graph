@@ -140,7 +140,7 @@ echo ""
 
 echo "Installing any remaining packages using pip."
 conda activate $ENV_NAME
-pip install --upgrade -r requirements.txt
+pip install --upgrade --force-reinstall -r requirements.txt
 cd ..
 conda develop .
 
