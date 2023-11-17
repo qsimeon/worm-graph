@@ -14,6 +14,7 @@ from tqdm import tqdm
 from datetime import datetime
 from typing import Tuple, Union
 from models._main import get_model
+from models._utils import print_parameters
 from data._main import get_datasets
 from torch.cuda.amp import autocast
 from torch.optim import lr_scheduler

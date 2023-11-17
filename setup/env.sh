@@ -24,7 +24,7 @@ ENV_NAME="worm-graph"
 # Create a new conda environment with Python 3.9
 echo "Creating $ENV_NAME environment."
 echo ""
-conda create -y -n $ENV_NAME python=3.9
+conda create -y -n $ENV_NAME python=3.9 pip
 echo ""
 conda activate $ENV_NAME
 
@@ -39,8 +39,10 @@ case "$(uname -s)" in
     Darwin)
         echo "Mac OS Detected"
         # Macs typically do not have Nvidia GPUs
-        conda install --name $ENV_NAME -y pytorch::pytorch torchvision torchaudio -c pytorch
-        conda install --name $ENV_NAME -y pyg -c pyg
+        pip install torch torchvision torchaudio
+        # conda install --name $ENV_NAME -y pytorch::pytorch torchvision torchaudio -c pytorch
+        # conda install --name $ENV_NAME -y pyg -c pyg
+        pip install torch_geometric
     ;;
 
     Linux)
@@ -50,18 +52,24 @@ case "$(uname -s)" in
             CUDA_VER=$(get_cuda_version)
             if [ "$CUDA_VER" != "" ]; then
                 echo "CUDA Version $CUDA_VER Detected"
-                conda install --name $ENV_NAME -y pytorch==2.0.1 torchvision==0.15.2 torchaudio==2.0.2 pytorch-cuda=11.8 -c pytorch -c nvidia
+                pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
+                # conda install --name $ENV_NAME -y pytorch==2.0.1 torchvision==0.15.2 torchaudio==2.0.2 pytorch-cuda=11.8 -c pytorch -c nvidia
                 # conda install --name $ENV_NAME -y pytorch torchvision torchaudio pytorch-cuda=$CUDA_VER -c pytorch -nvidia
-                conda install --name $ENV_NAME -y pyg -c pyg # Add this line for PyG with GPU support
+                # conda install --name $ENV_NAME -y pyg -c pyg # Add this line for PyG with GPU support
+                pip install torch_geometric
             else
-                conda install --name $ENV_NAME -y pytorch==2.0.1 torchvision==0.15.2 torchaudio==2.0.2 cpuonly -c pytorch
+                pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
+                # conda install --name $ENV_NAME -y pytorch==2.0.1 torchvision==0.15.2 torchaudio==2.0.2 cpuonly -c pytorch
                 # conda install --name $ENV_NAME -y pytorch torchvision torchaudio -c pytorch
-                conda install --name $ENV_NAME -y pyg -c pyg # Add this line for PyG with CPU support
+                # conda install --name $ENV_NAME -y pyg -c pyg # Add this line for PyG with CPU support
+                pip install torch_geometric
             fi
         else
-            conda install --name $ENV_NAME -y pytorch==2.0.1 torchvision==0.15.2 torchaudio==2.0.2 cpuonly -c pytorch
+            pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu
+            # conda install --name $ENV_NAME -y pytorch==2.0.1 torchvision==0.15.2 torchaudio==2.0.2 cpuonly -c pytorch
             # conda install --name $ENV_NAME -y pytorch torchvision torchaudio cpuonly -c pytorch
-            conda install --name $ENV_NAME -y pyg -c pyg # Add this line for PyG with CPU support
+            # conda install --name $ENV_NAME -y pyg -c pyg # Add this line for PyG with CPU support
+            pip install torch_geometric
         fi
     ;;
 
@@ -69,13 +77,17 @@ case "$(uname -s)" in
         echo "Windows OS Detected"
         if has_gpu; then
             echo "Nvidia GPU Detected"
+            pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
             # conda install --name $ENV_NAME -y pytorch==2.0.1 torchvision==0.15.2 torchaudio==2.0.2 pytorch-cuda=11.8 -c pytorch -c nvidia
-            conda install --name $ENV_NAME -y pytorch torchvision torchaudio pytorch-cuda -c pytorch -c nvidia
-            conda install --name $ENV_NAME -y pyg -c pyg # Add this line for PyG with GPU support
+            # conda install --name $ENV_NAME -y pytorch torchvision torchaudio pytorch-cuda -c pytorch -c nvidia
+            # conda install --name $ENV_NAME -y pyg -c pyg # Add this line for PyG with GPU support
+            pip install torch_geometric
         else
+            pip install torch torchvision torchaudio
             # conda install --name $ENV_NAME -y pytorch==2.0.1 torchvision==0.15.2 torchaudio==2.0.2 cpuonly -c pytorch
-            conda install --name $ENV_NAME -y pytorch torchvision torchaudio cpuonly -c pytorch
-            conda install --name $ENV_NAME -y pyg -c pyg # Add this line for PyG with CPU support
+            # conda install --name $ENV_NAME -y pytorch torchvision torchaudio cpuonly -c pytorch
+            # conda install --name $ENV_NAME -y pyg -c pyg # Add this line for PyG with CPU support
+            pip install torch_geometric
         fi
     ;;
 

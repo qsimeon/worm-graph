@@ -124,6 +124,9 @@ def train_model(
         # Measure the time for an epoch
         start_time = time.perf_counter()
 
+        # Initialize FLOPs count
+        computation_flops = np.NaN
+
         for batch_idx, (X_train, Y_train, masks_train, metadata_train) in enumerate(
             trainloader
         ):
@@ -151,6 +154,11 @@ def train_model(
             if epoch > 0:
                 train_loss.backward()
                 optimizer.step()
+            # Calculate FlOPs only at first epoch and first batch
+            elif batch_idx == 0:
+                computation_flops = FlopCountAnalysis(
+                    model, (X_train, masks_train)
+                ).total()
 
             # Update running losses
             train_running_base_loss += train_baseline.item()
@@ -212,7 +220,6 @@ def train_model(
 
         # Save model checkpoint
         if epoch % save_freq == 0:
-            computation_flops = FlopCountAnalysis(model, (X_train, masks_train)).total()
             save_model(
                 model,
                 os.path.join(
@@ -251,6 +258,9 @@ def train_model(
         other_info={
             "computation_flops": computation_flops
         },  # add FLOPs info to checkpoint
+    )
+    logger.info(
+        f"FLOPs: {computation_flops} \t Parameter counts (total, trainable): {print_parameters(model, verbose=False)}"
     )
 
     # Save training and evaluation metrics into a csv file
