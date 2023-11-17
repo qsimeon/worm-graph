@@ -807,7 +807,7 @@ def generate_subsets_of_size(
     combined_dataset,
     subset_size,
     max_subsets=1,
-    as_reference=False,
+    as_assignment=True,
 ):
     """
     Generate all subsets of a specific size from the combined dataset.
@@ -833,7 +833,7 @@ def generate_subsets_of_size(
     for i, worm_subset in enumerate(combinations(all_worm_ids, subset_size)):
         # for i, worm_subset in enumerate(combinations(all_worm_ids, subset_size)):
         # Create a subset dataset with the selected worm IDs
-        if as_reference:
+        if as_assignment:
             # count up the number of worms from each dataset
             dataset_list = [
                 combined_dataset[worm_id]["dataset"] for worm_id in worm_subset
@@ -863,7 +863,7 @@ def generate_all_subsets(
     combined_dataset,
     max_subsets_per_size=1,
     max_size=None,
-    as_reference=False,
+    as_assignment=True,
 ):
     """
     Generate up to `max_sets_per_size` of the possible subsets of each
@@ -888,7 +888,7 @@ def generate_all_subsets(
 
     for size in range(1, max_size + 1):
         all_subsets[size] = generate_subsets_of_size(
-            combined_dataset, size, max_subsets_per_size, as_reference
+            combined_dataset, size, max_subsets_per_size, as_assignment
         )
 
     return all_subsets
