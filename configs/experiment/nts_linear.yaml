@@ -9,7 +9,7 @@ hydra:
   mode: MULTIRUN
   sweeper:
     params:
-      experiment.seed: choice(0, 1) # number of times to run this experiment
+      experiment.seed: range(3) # number of times to run this experiment
       submodule.dataset.experimental_datasets: choice({VanDerPol0000:1},{VanDerPol0000:2},{VanDerPol0000:3},{VanDerPol0000:4},{VanDerPol0000:5},{VanDerPol0000:6})
 
 
@@ -95,7 +95,8 @@ submodule:
       worms_to_plot: null # number of worms to plot
       neurons_to_plot: 3 # number of neurons to plot
 
-experiment:
+experiment: 
+  key: nts_linear # what parameter you are experimenting with
   name: nts_linear
   mode: MULTIRUN
-  # seed: null
+  seed: 42
