@@ -9,7 +9,7 @@ hydra:
   mode: MULTIRUN
   sweeper:
     params:
-      experiment.seed: 0 #range(3) # number of repetitions for this experiment
+      experiment.seed: 0 # number of repetitions for this experiment
       submodule.dataset.experimental_datasets: choice({RandWalk0000:5},{RandWalk0000:6}) # test
       ### Synthetic datasets ###
       # choice({RandWalk0000:1},{RandWalk0000:2},{RandWalk0000:3},{RandWalk0000:4},{RandWalk0000:5},{RandWalk0000:6})
@@ -43,7 +43,7 @@ submodule:
     # Train model from scratch
     type: LinearNN
     input_size: 302
-    hidden_size: 256
+    hidden_size: 512
     loss: MSE
     fft_reg_param: 0.0
     l1_reg_param: 0.0
