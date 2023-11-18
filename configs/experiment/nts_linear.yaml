@@ -9,7 +9,7 @@ hydra:
   mode: MULTIRUN
   sweeper:
     params:
-      experiment.seed: range(3) # number of times to run this experiment
+      experiment.seed: range(3) # number of repetitions for this experiment
       submodule.dataset.experimental_datasets: choice({VanDerPol0000:1},{VanDerPol0000:2},{VanDerPol0000:3},{VanDerPol0000:4},{VanDerPol0000:5},{VanDerPol0000:6})
 
 
