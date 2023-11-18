@@ -1079,6 +1079,10 @@ def plot_experiment_losses(exp_log_dir, exp_plot_dir, exp_key):
         ax[1].plot(df["epoch"], df["val_loss"], label=exp_param)
         ax[1].plot(df["epoch"], df["val_baseline"], color="black", linestyle="--")
 
+        # Set x-axes to only use integer values
+        ax[0].xaxis.set_major_locator(ticker.MaxNLocator(integer=True))  
+        ax[1].xaxis.set_major_locator(ticker.MaxNLocator(integer=True))  
+
     # Set loss labels
     ax[0].set_xlabel("Epoch", fontsize=12)
     ax[0].set_ylabel("Train loss", fontsize=12)

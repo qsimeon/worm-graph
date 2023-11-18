@@ -225,8 +225,9 @@ def train_model(
                     log_dir, "train", "checkpoints", "model_epoch_" + str(epoch) + ".pt"
                 ),
                 other_info={
-                    "computation_flops": computation_flops,  # add FLOPs info to checkpoint
-                },
+                    "computation_flops": computation_flops,  
+                    "time_last_epoch:": computation_time[-1], 
+                }, # add FLOPs info to checkpoint
             )
 
         # Early stopping
@@ -256,10 +257,11 @@ def train_model(
         os.path.join(log_dir, "train", "checkpoints", "model_best.pt"),
         other_info={
             "computation_flops": computation_flops
+            "time_last_epoch:": computation_time[-1],  
         },  # add FLOPs info to checkpoint
     )
     logger.info(
-        f"FLOPs: {computation_flops}, \t Parameter counts (total, trainable): {print_parameters(model, verbose=False)}"
+        f"FLOPs: {computation_flops}, \t Time (s) last epoch: {computation_time[-1]}, \t Parameter counts (total, trainable): {print_parameters(model, verbose=False)}"
     )
 
     # Save training and evaluation metrics into a csv file

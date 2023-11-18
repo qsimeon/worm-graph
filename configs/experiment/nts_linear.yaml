@@ -9,7 +9,7 @@ hydra:
   mode: MULTIRUN
   sweeper:
     params:
-      submodule.dataset.experimental_datasets: choice({VanDerPol0000:1})
+      submodule.dataset.experimental_datasets: choice({VanDerPol0000:1},{VanDerPol0000:2},{VanDerPol0000:3},{VanDerPol0000:4},{VanDerPol0000:5},{VanDerPol0000:6})
 
 
 submodule:
@@ -34,7 +34,7 @@ submodule:
     # Train model from scratch
     type: LinearNN
     input_size: 302
-    hidden_size: 512
+    hidden_size: 256 #512
     loss: MSE
     fft_reg_param: 0.0
     l1_reg_param: 0.0
@@ -45,7 +45,7 @@ submodule:
     lr: 0.001
     epochs: 2 #100
     save_freq: 100
-    batch_size: 64
+    batch_size: 32 #64
     shuffle: true
     early_stopping:
       # Minimum change in validation loss to be considered an improvement
