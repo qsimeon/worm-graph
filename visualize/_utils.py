@@ -909,6 +909,22 @@ def experiment_parameter(exp_dir, key):
     Parameters:
     exp_dir (str): The path to the experiment directory.
     key (str): The name of the experiment parameter to retrieve.
+        Options for the different experiment parameters (key) are:
+        - num_time_steps: The total number of train time steps
+        - time_steps_per_neuron: The average number of train time steps per neuron
+        - num_neurons: The number of training sequences sampled per worm
+        - num_train_samples: The total number of training samples
+        - hidden_size: The hidden size of the model
+        - batch_size: The batch size used for training
+        - seq_len: The sequence length used for training
+        - lr: The learning rate used for training
+        - model: The type of neural net model used for training
+        - optimizer: The type of optimizer used for training
+        - time_last_epoch: The computation time in seconds for the last epoch
+        - computation_flops: The number of floating point operations (FLOPs)
+        - num_parameters: The total number of trainable parameters in the model
+
+    TODO: @Leandro update plots to use these values appropriately
 
     Returns:
     tuple: A tuple containing the value, title, and x-axis label for the experiment parameter.
@@ -918,121 +934,110 @@ def experiment_parameter(exp_dir, key):
     title = "Experiment"
     xaxis = "Experiment run"
 
-    if key == "time_steps_volume":
-        df = pd.read_csv(os.path.join(exp_dir, "dataset", "train_dataset_info.csv"))
-        df["tsv"] = df["train_time_steps"] / df["num_neurons"]
-        value = df["tsv"].sum()  # Total volume of train time steps
-        title = "Volume of training data"
-        xaxis = "Number of time steps / Number of Named Neurons"
-
     if key == "num_time_steps":
+        # Total number of train time steps in the dataset
         df = pd.read_csv(os.path.join(exp_dir, "dataset", "train_dataset_info.csv"))
-        value = df["train_time_steps"].sum()  # Total number of train time steps
-        title = "Amount of training data"
-        xaxis = "Number of time steps"
+        value = df["train_time_steps"].sum()
+        title = "Total amount of training data"
+        xaxis = "Num. time steps"
 
-    if key == "num_parameters":
-        pipeline_info = OmegaConf.load(os.path.join(exp_dir, "pipeline_info.yaml"))
-        model = get_model(pipeline_info.submodule.model)
-        total_params, total_trainable = print_parameters(model, verbose=False)
-        value = total_trainable  # Total number of parameters
-        title = "Number of trainable parameters"
-        xaxis = "Number of trainable parameters"
+    if key == "time_steps_per_neuron":
+        # Average number of train time steps per neurons
+        df = pd.read_csv(os.path.join(exp_dir, "dataset", "train_dataset_info.csv"))
+        value = (df["train_time_steps"] / df["num_neurons"]).mean()
+        title = "Average amount of training data per neuron"
+        xaxis = "Num. time steps per neuron"
 
-    if key == "hidden_volume":
+    if key == "num_neurons" or key == "num_named_neurons":
+        # Number of named neurons used for training
         pipeline_info = OmegaConf.load(os.path.join(exp_dir, "pipeline_info.yaml"))
-        h_size = pipeline_info.submodule.model.hidden_size  # Model hidden dimension
-        model = get_model(pipeline_info.submodule.model)
-        total_params, total_trainable = print_parameters(model, verbose=False)
-        value = h_size / total_trainable  # Total volume of hidden states
-        title = "Volume of hidden states"
-        xaxis = "Hidden dimension / Number of trainable parameters"
+        value = pipeline_info.submodule.dataset.num_named_neurons
+        title = "Number of labelled measured neurons"
+        xaxis = "Num. neurons"
+
+    if key == "num_train_samples" or key == "num_samples":
+        # The number of training sequences sampled per worm
+        pipeline_info = OmegaConf.load(os.path.join(exp_dir, "pipeline_info.yaml"))
+        value = pipeline_info.submodule.dataset.num_train_samples
+        title = "Number of training samples"
+        xaxis = "Num. training samples"
 
     if key == "hidden_size":
+        # The hidden size of the neural network model
         pipeline_info = OmegaConf.load(os.path.join(exp_dir, "pipeline_info.yaml"))
-        value = pipeline_info.submodule.model.hidden_size  # Model hidden dimension
-        title = "Hidden dimension"
-        xaxis = "Hidden dimension"
-
-    if key == "optimizer":
-        pipeline_info = OmegaConf.load(os.path.join(exp_dir, "pipeline_info.yaml"))
-        value = pipeline_info.submodule.train.optimizer
-        title = "Optimizer"
-        xaxis = "Optimizer type"
+        value = pipeline_info.submodule.model.hidden_size
+        title = "Hidden size"
+        xaxis = "Hidden size"
 
     if key == "batch_size":
+        # The batch size used for training the model
         pipeline_info = OmegaConf.load(os.path.join(exp_dir, "pipeline_info.yaml"))
-        value = pipeline_info.submodule.train.batch_size  # Experiment batch size
+        value = pipeline_info.submodule.train.batch_size
         title = "Batch size"
         xaxis = "Batch size"
 
-    if key == "lr":
+    if key == "seq_len":
+        # Sequence length used for training the models
+        pipeline_info = OmegaConf.load(os.path.join(exp_dir, "pipeline_info.yaml"))
+        value = pipeline_info.submodule.dataset.seq_len
+        title = "Sequence length"
+        xaxis = "Sequence length"
+
+    if key == "lr" or key == "learning_rate":
+        # The learning rate used for training the model
         pipeline_info = OmegaConf.load(os.path.join(exp_dir, "pipeline_info.yaml"))
         value = pipeline_info.submodule.train.lr  # Learning rate used for training
         title = "Learning rate"
         xaxis = "Learning rate"
 
-    if key == "num_named_neurons":
+    if key == "model" or key == "model_type":
+        # The type of neural network model used
         pipeline_info = OmegaConf.load(os.path.join(exp_dir, "pipeline_info.yaml"))
-        value = (
-            pipeline_info.submodule.dataset.num_named_neurons
-        )  # Number of named neurons used for training
-        title = "Neuron population"
-        xaxis = "Number of neurons"
-
-    if key == "seq_len":
-        pipeline_info = OmegaConf.load(os.path.join(exp_dir, "pipeline_info.yaml"))
-        value = (
-            pipeline_info.submodule.dataset.seq_len
-        )  # Sequence length used for training
-        title = "Sequence length"
-        xaxis = "Sequence length"
-
-    if key == "loss":
-        pipeline_info = OmegaConf.load(os.path.join(exp_dir, "pipeline_info.yaml"))
-        value = pipeline_info.submodule.model.loss  # Loss function used for training
-        title = "Loss function"
-        xaxis = "Loss function type"
-
-    if key == "num_train_samples":
-        pipeline_info = OmegaConf.load(os.path.join(exp_dir, "pipeline_info.yaml"))
-        value = pipeline_info.submodule.dataset.num_train_samples
-        title = "Number of training samples"
-        xaxis = "Number of training samples"
-
-    if key == "model_type":
-        pipeline_info = OmegaConf.load(os.path.join(exp_dir, "pipeline_info.yaml"))
-        value = pipeline_info.submodule.model.type  # Model type used for training
+        value = pipeline_info.submodule.model.type
         title = "Model"
         xaxis = "Model type"
 
-    if key == "num_train_samples":
+    if key == "optimizer" or key == "optimizer_type":
+        # The type of optimizer used for training the model
         pipeline_info = OmegaConf.load(os.path.join(exp_dir, "pipeline_info.yaml"))
-        value = (
-            pipeline_info.submodule.dataset.num_train_samples
-        )  # Number of training samples used for training
-        title = "Number of training samples"
-        xaxis = "Number of training samples"
+        value = pipeline_info.submodule.train.optimizer
+        title = "Optimizer"
+        xaxis = "Optimizer type"
 
-    if key == "computation_time":
-        df = pd.read_csv(os.path.join(exp_dir, "train", "train_metrics.csv"))
-        value = (
-            df["computation_time"].min(),
-            df["computation_time"].mean(),
-            df["computation_time"].max(),
-        )  # Computation time
-        title = "Computation time"
-        xaxis = "Computation time (s)"
+    if key == "loss" or key == "loss_type":
+        # The type of loss function used for training
+        pipeline_info = OmegaConf.load(os.path.join(exp_dir, "pipeline_info.yaml"))
+        value = pipeline_info.submodule.model.loss
+        title = "Loss function"
+        xaxis = "Loss function type"
 
-    if key == "computation_flops":
-        df = pd.read_csv(os.path.join(exp_dir, "train", "train_metrics.csv"))
-        value = (
-            df["computation_flops"].min(),
-            df["computation_flops"].mean(),
-            df["computation_flops"].max(),
-        )  # Computation time
-        title = "Computation FLOPs"
+    if key == "time_last_epoch" or key == "computation_time":
+        # The computation time in seconds for the last epoch
+        pipeline_info = OmegaConf.load(os.path.join(exp_dir, "pipeline_info.yaml"))
+        log_dir = pipeline_info.analysis.analyse_this_log_dir
+        chkpt_path = os.path.join(log_dir, "train", "checkpoints", f"model_best.pt")
+        model_chkpt = torch.load(chkpt_path, map_location=torch.device(DEVICE))
+        value = model_chkpt["time_last_epoch"]
+        title = "Computation time of last epoch"
+        xaxis = "Time (s)"
+
+    if key == "computation_flops" or key == "flops":
+        # The number of floating point operations (FLOPs) for the model
+        log_dir = pipeline_info.analysis.analyse_this_log_dir
+        chkpt_path = os.path.join(log_dir, "train", "checkpoints", f"model_best.pt")
+        model_chkpt = torch.load(chkpt_path, map_location=torch.device(DEVICE))
+        value = model_chkpt["computation_flops"]
+        title = "Computation floating point operations"
         xaxis = "FLOPs"
+
+    if key == "num_parameters" or key == "num_trainable_params":
+        # The total number of trainable parameters in the model
+        log_dir = pipeline_info.analysis.analyse_this_log_dir
+        chkpt_path = os.path.join(log_dir, "train", "checkpoints", f"model_best.pt")
+        model_chkpt = torch.load(chkpt_path, map_location=torch.device(DEVICE))
+        value = model_chkpt["num_trainable_params"]
+        title = "Number of trainable parameters"
+        xaxis = "Num. trainable parameters"
 
     return value, title, xaxis
 
@@ -1080,8 +1085,8 @@ def plot_experiment_losses(exp_log_dir, exp_plot_dir, exp_key):
         ax[1].plot(df["epoch"], df["val_baseline"], color="black", linestyle="--")
 
         # Set x-axes to only use integer values
-        ax[0].xaxis.set_major_locator(ticker.MaxNLocator(integer=True))  
-        ax[1].xaxis.set_major_locator(ticker.MaxNLocator(integer=True))  
+        ax[0].xaxis.set_major_locator(ticker.MaxNLocator(integer=True))
+        ax[1].xaxis.set_major_locator(ticker.MaxNLocator(integer=True))
 
     # Set loss labels
     ax[0].set_xlabel("Epoch", fontsize=12)

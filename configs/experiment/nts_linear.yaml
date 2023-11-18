@@ -10,7 +10,15 @@ hydra:
   sweeper:
     params:
       experiment.seed: 0 #range(3) # number of repetitions for this experiment
-      submodule.dataset.experimental_datasets: choice({RandWalk0000:1},{RandWalk0000:2},{RandWalk0000:3},{RandWalk0000:4},{RandWalk0000:5},{RandWalk0000:6})
+      submodule.dataset.experimental_datasets: choice({RandWalk0000:5},{RandWalk0000:6}) # test
+      ### Synthetic datasets ###
+      # choice({RandWalk0000:1},{RandWalk0000:2},{RandWalk0000:3},{RandWalk0000:4},{RandWalk0000:5},{RandWalk0000:6})
+      # choice({Sines0000:1},{Sines0000:2},{Sines0000:3},{Sines0000:4},{Sines0000:5},{Sines0000:6})
+      # choice({Lorenz0000:1},{Lorenz0000:2},{Lorenz0000:3},{Lorenz0000:4},{Lorenz0000:5},{Lorenz0000:6})
+      # choice({VanDerPol0000:1},{VanDerPol0000:2},{VanDerPol0000:3},{VanDerPol0000:4},{VanDerPol0000:5},{VanDerPol0000:6})     
+      ############################
+      ### Experimental datasets ###
+      ############################
 
 
 submodule:
@@ -35,7 +43,7 @@ submodule:
     # Train model from scratch
     type: LinearNN
     input_size: 302
-    hidden_size: 256 #512
+    hidden_size: 256
     loss: MSE
     fft_reg_param: 0.0
     l1_reg_param: 0.0
@@ -44,7 +52,7 @@ submodule:
   train:
     optimizer: AdamW
     lr: 0.001
-    epochs: 2 #100
+    epochs: 100
     save_freq: 100
     batch_size: 64
     shuffle: true
@@ -101,4 +109,3 @@ experiment:
   key: nts_linear # what parameter you are experimenting with
   name: nts_linear
   mode: MULTIRUN
-  seed: 42
