@@ -72,6 +72,7 @@ SYNTHETIC_DATASETS = {  # Datasets created with the `CreateSyntheticDataset.ipyn
     "Lorenz0000",
     "VanDerPol0000",
     "RandWalk0000",
+    "WhiteNoise0000",
     # "Custom<xxxx>",  # Dataset created when `save_datasets` is True in the dataset.yaml config.
 }
 
