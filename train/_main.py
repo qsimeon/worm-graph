@@ -110,7 +110,7 @@ def train_model(
     logger.info("Starting training loop...")
 
     pbar = tqdm(
-        range(epochs + 1),  # +1 because we skip the first epoch
+        range(epochs + 1),  # +1 because we don't step() the first epoch
         total=epochs + 1,
         position=0,
         leave=True,  # position at top and remove when done
@@ -235,7 +235,7 @@ def train_model(
             logger.info("Early stopping triggered (epoch {}).".format(epoch))
             break
 
-        # Print statistics if in verbose mode
+        # Print training progress metrics if in verbose mode
         if verbose:
             logger.info(
                 "Epoch: {}/{} | Train loss: {:.4f} | Val. loss: {:.4f}".format(
@@ -256,7 +256,7 @@ def train_model(
         model,
         os.path.join(log_dir, "train", "checkpoints", "model_best.pt"),
         other_info={
-            "computation_flops": computation_flops
+            "computation_flops": computation_flops,
             "time_last_epoch:": computation_time[-1],  
         },  # add FLOPs info to checkpoint
     )

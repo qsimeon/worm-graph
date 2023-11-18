@@ -9,6 +9,7 @@ hydra:
   mode: MULTIRUN
   sweeper:
     params:
+      experiment.seed: choice(0, 1) # number of times to run this experiment
       submodule.dataset.experimental_datasets: choice({VanDerPol0000:1},{VanDerPol0000:2},{VanDerPol0000:3},{VanDerPol0000:4},{VanDerPol0000:5},{VanDerPol0000:6})
 
 
@@ -45,7 +46,7 @@ submodule:
     lr: 0.001
     epochs: 2 #100
     save_freq: 100
-    batch_size: 32 #64
+    batch_size: 64
     shuffle: true
     early_stopping:
       # Minimum change in validation loss to be considered an improvement
@@ -97,4 +98,4 @@ submodule:
 experiment:
   name: nts_linear
   mode: MULTIRUN
-  seed: null
+  # seed: null
