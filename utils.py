@@ -67,10 +67,11 @@ VALID_DATASETS = {
     "Flavell2023",  # TODO: Something wrong with worm0.
 }
 
-SYNTHETIC_DATASETS = {
-    "Sines0000",  # Dataset created with the `CreateSyntheticDataset.ipynb` notebook.
-    "Lorenz0000",  # Dataset created with the `CreateSyntheticDataset.ipynb` notebook.
-    "VanDerPol0000",  # Dataset created with the `CreateSyntheticDataset.ipynb` notebook.
+SYNTHETIC_DATASETS = {  # Datasets created with the `CreateSyntheticDataset.ipynb` notebook.
+    "Sines0000",
+    "Lorenz0000",
+    "VanDerPol0000",
+    "RandWalk0000",
     # "Custom<xxxx>",  # Dataset created when `save_datasets` is True in the dataset.yaml config.
 }
 

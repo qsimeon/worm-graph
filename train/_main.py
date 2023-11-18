@@ -225,9 +225,9 @@ def train_model(
                     log_dir, "train", "checkpoints", "model_epoch_" + str(epoch) + ".pt"
                 ),
                 other_info={
-                    "computation_flops": computation_flops,  
-                    "time_last_epoch:": computation_time[-1], 
-                }, # add FLOPs info to checkpoint
+                    "computation_flops": computation_flops,
+                    "time_last_epoch:": computation_time[-1],
+                },  # add FLOPs info to checkpoint
             )
 
         # Early stopping
@@ -238,8 +238,12 @@ def train_model(
         # Print training progress metrics if in verbose mode
         if verbose:
             logger.info(
-                "Epoch: {}/{} | Train loss: {:.4f} | Val. loss: {:.4f}".format(
-                    epoch, epochs + 1, train_epoch_loss[-1], val_epoch_loss[-1]
+                "Epoch: {}/{} | Train loss: {:.4f} | Val. loss: {:.4f} | Val. baseline: {:.4f}".format(
+                    epoch,
+                    epochs + 1,
+                    train_epoch_loss[-1],
+                    val_epoch_loss[-1],
+                    val_epoch_baseline[-1],
                 )
             )
 
@@ -257,7 +261,7 @@ def train_model(
         os.path.join(log_dir, "train", "checkpoints", "model_best.pt"),
         other_info={
             "computation_flops": computation_flops,
-            "time_last_epoch:": computation_time[-1],  
+            "time_last_epoch:": computation_time[-1],
         },  # add FLOPs info to checkpoint
     )
     logger.info(

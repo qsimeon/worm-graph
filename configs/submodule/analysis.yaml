@@ -12,7 +12,8 @@ analysis:
     experimental_datasets:
       # Sines0000: 5
       # Lorenz0000: 5
-      VanDerPol0000: 5
+      # VanDerPol0000: 5
+      RandWalk0000: 5
       # Kato2015: 5
       # Nichols2017: 5
       # Skora2018: 5
