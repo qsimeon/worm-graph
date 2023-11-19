@@ -36,6 +36,7 @@ submodule:
       # Leifer2023: all
 
     use_these_datasets:
+      # Dataset directory should contain a validation dataset
       path: null # options: null, data/datasets/<DatasetFolder>
       num_worms: null # options: null,  <int>
 

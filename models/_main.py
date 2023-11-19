@@ -21,6 +21,7 @@ def get_model(model_config: DictConfig, verbose=True) -> torch.nn.Module:
     -----
     NeuralTransformer : class in models/_utils.py
     NetworkLSTM : class in models/_utils.py
+    NetworkRNN : class in models/_utils.py
     NeuralCFC : class in models/_utils.py
     LinearNN : class in models/_utils.py
         If no model type is specified, LinearNN is used by default.
@@ -33,7 +34,7 @@ def get_model(model_config: DictConfig, verbose=True) -> torch.nn.Module:
 
     """
 
-    # If a checkpoint is given (True), load a saved model
+    # If a checkpoint is given (not None), load a saved model
     if model_config.use_this_pretrained_model:
         PATH = os.path.join(ROOT_DIR, model_config.use_this_pretrained_model)
         checkpoint = torch.load(PATH, map_location=torch.device(DEVICE))

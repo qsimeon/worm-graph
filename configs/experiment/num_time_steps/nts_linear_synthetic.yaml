@@ -4,6 +4,7 @@
 #   linear = LinearNN model
 #   synthetic = synthetic datasets (Sines, Lorenz, VanDerPol, RandWalk, WhiteNoise)
 # We increase gradually the quantity of worms from all datasets.
+# We choose the hidden size to get a model with ~0.574M (trainable) parameters.
 defaults:
   - override /submodule: [model, train, visualize]
   - _self_
@@ -33,9 +34,8 @@ submodule:
     epochs: 100
 
   dataset:
-    # Dataset directory should contain a validation dataset
     use_these_datasets:
-      path: null #data/datasets/<DatasetFolder>
+      path: null 
       num_worms: null
 
     save_datasets: false
@@ -80,6 +80,7 @@ submodule:
         WhiteNoise0000: all
 
 experiment: 
-  key: nts_linear # what parameter you are experimenting with
+  # What parameter you are experimenting with (key)
+  key: num_time_steps 
   name: nts_linear
   mode: MULTIRUN
