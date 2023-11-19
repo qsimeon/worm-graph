@@ -912,8 +912,8 @@ def experiment_parameter(exp_dir, key):
         Options for the different experiment parameters (key) are:
         - num_time_steps: The total number of train time steps
         - time_steps_per_neuron: The average number of train time steps per neuron
-        - num_neurons: The number of training sequences sampled per worm
-        - num_train_samples: The total number of training samples
+        - num_named_neurons: The number of distinct named neurons recorded across all worms
+        - num_train_samples: The number of training sequences sampled per worm
         - hidden_size: The hidden size of the model
         - batch_size: The batch size used for training
         - seq_len: The sequence length used for training
@@ -948,7 +948,7 @@ def experiment_parameter(exp_dir, key):
         title = "Average amount of training data per neuron"
         xaxis = "Num. time steps per neuron"
 
-    if key == "num_neurons" or key == "num_named_neurons":
+    if key == "num_named_neurons" or key == "num_neurons":
         # Number of named neurons used for training
         pipeline_info = OmegaConf.load(os.path.join(exp_dir, "pipeline_info.yaml"))
         value = pipeline_info.submodule.dataset.num_named_neurons
@@ -1094,8 +1094,17 @@ def plot_experiment_losses(exp_log_dir, exp_plot_dir, exp_key):
     ax[1].set_xlabel("Epoch", fontsize=12)
     ax[1].set_ylabel("Validation loss", fontsize=12)
 
-    # Set loss legend
-    legend = ax[0].legend(fontsize=10, loc="best")
+    # Get handles and labels for the legend
+    handles, labels = ax[0].get_legend_handles_labels()
+
+    # Randomly sample a subset of handles and labels (up to 10)
+    num_samples = min(10, len(handles))  # Ensure not to sample more than available
+    sampled_indices = np.random.choice(len(handles), num_samples, replace=False)
+    sampled_handles = [handles[i] for i in sampled_indices]
+    sampled_labels = [labels[i] for i in sampled_indices]
+
+    # Set the legend with the sampled subset
+    legend = ax[0].legend(sampled_handles, sampled_labels, fontsize=10, loc="best")
     legend.set_title(exp_xaxis)
 
     # Set loss title

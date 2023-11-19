@@ -26,6 +26,7 @@ submodule:
   model:
     # Build model from scratch
     type: LinearNN 
+    hidden_size: 512
 
   train:
     # Train model
