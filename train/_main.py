@@ -103,6 +103,7 @@ def train_model(
     val_epoch_baseline = []
 
     # Computation metrics
+    learning_rate = []
     computation_time = []
     computation_flops = np.NaN
 
@@ -215,7 +216,9 @@ def train_model(
 
         # Step the scheduler
         scheduler.step(val_epoch_loss[-1])
-        current_lr = optimizer.param_groups[0]["lr"]
+        learning_rate.append(
+            optimizer.param_groups[0]["lr"]
+        )  # store current learning rate
 
         # Save model checkpoint
         if epoch % save_freq == 0:
@@ -227,6 +230,7 @@ def train_model(
                 other_info={
                     "computation_flops": computation_flops,
                     "time_last_epoch:": computation_time[-1],
+                    "current_lr": learning_rate[-1],
                 },  # add FLOPs info to checkpoint
             )
 
@@ -253,7 +257,7 @@ def train_model(
             {"Train loss": train_epoch_loss[-1], "Val. loss": val_epoch_loss[-1]}
         )
 
-    # Restore best model and save it
+    # Restore best model and save it with additional info
     logger.info("Training loop is over. Loading best model.")
     model.load_state_dict(es.best_model.state_dict())
     save_model(
@@ -262,6 +266,7 @@ def train_model(
         other_info={
             "computation_flops": computation_flops,
             "time_last_epoch:": computation_time[-1],
+            "current_lr": learning_rate[-1],
         },  # add FLOPs info to checkpoint
     )
     logger.info(
@@ -273,7 +278,7 @@ def train_model(
         {
             "epoch": np.arange(len(train_epoch_loss)),
             "computation_time": computation_time,
-            "learning_rate": current_lr,
+            "learning_rate": learning_rate,
             "train_loss": train_epoch_loss,
             "train_baseline": train_epoch_baseline,
             "val_loss": val_epoch_loss,

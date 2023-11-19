@@ -246,6 +246,10 @@ def plot_dataset_info(log_dir):
         ),
     )
 
+    # Set y-axes to only use integer values
+    ax[0].yaxis.set_major_locator(ticker.MaxNLocator(integer=True))  # DEBUG
+    ax[1].yaxis.set_major_locator(ticker.MaxNLocator(integer=True))  # DEBUG
+
     plt.tight_layout()
 
     # Save figure
@@ -296,13 +300,14 @@ def plot_loss_curves(log_dir, info_to_display=None):
     sns.lineplot(x="epoch", y="train_loss", data=loss_df, ax=ax, label="Train")
     sns.lineplot(x="epoch", y="val_loss", data=loss_df, ax=ax, label="Validation")
 
-    ax.xaxis.set_major_locator(
-        ticker.MaxNLocator(integer=True)
-    )  # Set x-axis to only use integer values
+    # Set x-axis to only use integer values
+    ax.xaxis.set_major_locator(ticker.MaxNLocator(integer=True))
 
+    # Legend and title
     plt.legend(frameon=True, loc="upper right", fontsize=12)
     plt.title("Learning curves", fontsize=16)
 
+    # Do some repositioning
     x_position_percent = 0.075  # Adjust this value to set the desired position
     x_position_box = (
         ax.get_xlim()[0] + (ax.get_xlim()[1] - ax.get_xlim()[0]) * x_position_percent
@@ -1102,6 +1107,11 @@ def plot_experiment_losses(exp_log_dir, exp_plot_dir, exp_key):
     sampled_indices = np.random.choice(len(handles), num_samples, replace=False)
     sampled_handles = [handles[i] for i in sampled_indices]
     sampled_labels = [labels[i] for i in sampled_indices]
+
+    # Sort the labels and then sort handles accordingly
+    sampled_labels, sampled_handles = zip(
+        *sorted(zip(sampled_labels, sampled_handles), key=lambda t: t[0])
+    )  # DEBUG
 
     # Set the legend with the sampled subset
     legend = ax[0].legend(sampled_handles, sampled_labels, fontsize=10, loc="best")
