@@ -7,7 +7,8 @@ hydra:
   mode: MULTIRUN
   sweeper:
       params:
-        submodule.model.type: LinearNN #LinearNN, NetworkLSTM, NeuralTransformer # NeuralCFC, NetworkRNN
+        experiment.seed: range(5) # number of repetitions of this experiment
+        submodule.model.type: LinearNN, NetworkLSTM, NeuralTransformer # NeuralCFC, NetworkRNN
 
 # The submodule parameters set below will be used only if RUN mode is used. 
 # Otherwise, it uses the default parameters imported from the other config files in the submodule directory.
