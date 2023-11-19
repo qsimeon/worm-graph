@@ -80,7 +80,7 @@ def model_predict(
         train_data_splits = data_splits[::2]
         train_time_vec_splits = time_vec_splits[::2]
         # nb_ts_to_generate=train_data_splits[0].shape[0] - context_window
-        nb_ts_to_generate = 2 * context_window  # DEBUG
+        nb_ts_to_generate = 2 * context_window
         # Predictions (GT and AR) using the first TRAIN split
         gt_generated_activity_train = (
             model.generate(
@@ -150,7 +150,7 @@ def model_predict(
         val_data_splits = data_splits[1::2]
         val_time_vec_splits = time_vec_splits[1::2]
         # nb_ts_to_generate=val_data_splits[0].shape[0] - context_window
-        nb_ts_to_generate = 2 * context_window  # DEBUG
+        nb_ts_to_generate = 2 * context_window
         # Predictions (GT and AR) using the first VALIDATION split
         gt_generated_activity_val = (
             model.generate(

@@ -247,8 +247,8 @@ def plot_dataset_info(log_dir):
     )
 
     # Set y-axes to only use integer values
-    ax[0].yaxis.set_major_locator(ticker.MaxNLocator(integer=True))  # DEBUG
-    ax[1].yaxis.set_major_locator(ticker.MaxNLocator(integer=True))  # DEBUG
+    ax[0].yaxis.set_major_locator(ticker.MaxNLocator(integer=True))
+    ax[1].yaxis.set_major_locator(ticker.MaxNLocator(integer=True))
 
     plt.tight_layout()
 
@@ -1110,8 +1110,11 @@ def plot_experiment_losses(exp_log_dir, exp_plot_dir, exp_key):
 
     # Sort the labels and then sort handles accordingly
     sampled_labels, sampled_handles = zip(
-        *sorted(zip(sampled_labels, sampled_handles), key=lambda t: t[0])
-    )  # DEBUG
+        *sorted(
+            zip(sampled_labels, sampled_handles),
+            key=lambda t: float(t[0]) if str.is_numeric(t[0]) else t[0],
+        )
+    )
 
     # Set the legend with the sampled subset
     legend = ax[0].legend(sampled_handles, sampled_labels, fontsize=10, loc="best")

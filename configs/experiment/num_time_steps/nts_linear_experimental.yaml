@@ -77,7 +77,7 @@ submodule:
 
   analysis:
     analyse_this_log_dir: null
-    # Validate using all worms of each experimental datasets
+    # Validate using 10 worms from each experimental dataset
     validation:
       experimental_datasets:
         Kato2015: 10

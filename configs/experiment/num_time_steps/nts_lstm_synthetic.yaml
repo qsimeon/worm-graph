@@ -1,7 +1,7 @@
 # @package _global_
-# File name: nts_linear_synthetic.yaml
+# File name: nts_lstm_synthetic.yaml
 #   nts = number of time steps
-#   linear = LinearNN model
+#   lstm = NetworkLSTM model
 #   synthetic = synthetic datasets (Sines, Lorenz, VanDerPol, RandWalk, WhiteNoise)
 # We increase gradually the quantity of worms from all datasets.
 # We choose the hidden size to get a model with ~0.574M (trainable) parameters.
@@ -26,8 +26,8 @@ submodule:
 
   model:
     # Build model from scratch
-    type: LinearNN 
-    hidden_size: 512
+    type: NetworkLSTM 
+    hidden_size: 232
 
   train:
     # Train model
@@ -82,5 +82,5 @@ submodule:
 experiment: 
   # What parameter you are experimenting with (key)
   key: num_time_steps 
-  name: nts_linear_synthetic
+  name: nts_lstm_synthetic
   mode: MULTIRUN

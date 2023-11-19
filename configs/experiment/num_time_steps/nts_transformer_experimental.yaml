@@ -1,5 +1,5 @@
 # @package _global_
-# File name: nts_linear_experimental.yaml
+# File name: nts_transformer_experimental.yaml
 #   nts = number of time steps (key: num_time_steps)
 #   transformer = NeuralTransformer model
 #   experimental = experimental datasets (Kato, Nichols, Skora, Uzel, Yemini, Kaplan, Flavell, Leifer)
@@ -77,7 +77,7 @@ submodule:
 
   analysis:
     analyse_this_log_dir: null
-    # Validate using all worms of each experimental datasets
+    # Validate using 10 worms from each experimental dataset
     validation:
       experimental_datasets:
         Kato2015: 10
