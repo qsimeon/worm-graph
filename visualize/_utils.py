@@ -917,7 +917,7 @@ def experiment_parameter(exp_dir, key):
         - hidden_size: The hidden size of the model
         - batch_size: The batch size used for training
         - seq_len: The sequence length used for training
-        - lr: The learning rate used for training
+        - learn_rate: The learning rate used for training
         - model: The type of neural net model used for training
         - optimizer: The type of optimizer used for training
         - time_last_epoch: The computation time in seconds for the last epoch
@@ -983,7 +983,7 @@ def experiment_parameter(exp_dir, key):
         title = "Sequence length"
         xaxis = "Sequence length"
 
-    if key == "lr" or key == "learning_rate":
+    if key == "lr" or key == "learn_rate" or key == "learning_rate":
         # The learning rate used for training the model
         pipeline_info = OmegaConf.load(os.path.join(exp_dir, "pipeline_info.yaml"))
         value = pipeline_info.submodule.train.lr  # Learning rate used for training
@@ -1030,7 +1030,7 @@ def experiment_parameter(exp_dir, key):
         title = "Computation floating point operations"
         xaxis = "FLOPs"
 
-    if key == "num_parameters" or key == "num_trainable_params":
+    if key == "num_parameters" or key == "num_params" or key == "num_trainable_params":
         # The total number of trainable parameters in the model
         log_dir = pipeline_info.analysis.analyse_this_log_dir
         chkpt_path = os.path.join(log_dir, "train", "checkpoints", f"model_best.pt")

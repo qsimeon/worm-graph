@@ -7,7 +7,7 @@ hydra:
   mode: MULTIRUN
   sweeper:
       params:
-        experiment.seed: range(5) # number of repetitions of this experiment
+        experiment.seed: range(5) # assign each repetition of the experiment a distinct random seed
         submodule.model.type: LinearNN, NetworkLSTM, NeuralTransformer # NeuralCFC, NetworkRNN
 
 # The submodule parameters set below will be used only if RUN mode is used. 
@@ -127,6 +127,11 @@ submodule:
       neurons_to_plot: 3
 
 experiment:
-  key: default_multirun # what parameter you are experimenting with
+  # What parameter you are experimenting with (key)
+  # Options: num_time_steps, time_steps_per_neuron, num_named_neurons,
+  #          num_train_samples, hidden_size, batch_size, seq_len, learn_rate,
+  #          model_type, loss_type, optimizer_type, num_parameters,
+  #          computation_time, computation_flops
+  key: model_type
   mode: MULTIRUN
   seed: null # options: null (random seed), <int>
