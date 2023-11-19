@@ -1,7 +1,7 @@
 # @package _global_
 # File name: nts_linear_experimental.yaml
 #   nts = number of time steps (key: num_time_steps)
-#   linear = LinearNN model
+#   lstm = NetworkLSTM model
 #   experimental = experimental datasets (Kato, Nichols, Skora, Uzel, Yemini, Kaplan, Flavell, Leifer)
 # We increase gradually the quantity of worms from all datasets.
 # We choose the hidden size to get a model with ~0.574M (trainable) parameters.
@@ -27,8 +27,8 @@ submodule:
 
   model:
     # Build model from scratch
-    type: LinearNN 
-    hidden_size: 512
+    type: NetworkLSTM 
+    hidden_size: 232
 
   train:
     # Train model
@@ -92,5 +92,5 @@ submodule:
 experiment: 
   # What parameter you are experimenting with (key)
   key: num_time_steps 
-  name: nts_linear_experimental
+  name: nts_lstm_experimental
   mode: MULTIRUN
