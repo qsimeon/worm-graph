@@ -434,7 +434,7 @@ def plot_predictions(log_dir, neurons_to_plot=None, worms_to_plot=None):
                         time_context,
                         df.loc["Context", neuron],
                         color=gt_color,
-                        label="Ground truth signal",
+                        label="Ground truth",
                     )
                     ax.plot(
                         time_ground_truth,
@@ -466,7 +466,7 @@ def plot_predictions(log_dir, neurons_to_plot=None, worms_to_plot=None):
                         label="Initial context window",
                     )
 
-                    ax.set_title(f"Neuronal Activity of {neuron}")
+                    ax.set_title(f"Calcium Activity of Neuron {neuron}")
                     ax.set_xlabel("Time steps")
                     ax.set_ylabel("Activity ($\Delta F / F$)")
                     ax.legend(loc="upper right")
@@ -626,7 +626,7 @@ def plot_pca_trajectory(log_dir, worms_to_plot=None, plot_type="3D"):
                                 len(ar_gen_data) + len(ground_truth_data) :, 1
                             ],
                             color=gt_generation_color,
-                            label="'Teacher forcing'",
+                            label="'Ground truth feeding'",
                             linestyle="-",
                             marker="o",
                         )
@@ -818,7 +818,7 @@ def plot_worm_data(worm_data, num_neurons=5, smooth=False):
     :param num_neurons: The number of neurons to plot.
     """
 
-    np.random.seed(42)  # set random seed for reproducibility
+    np.random.seed(42)  # random seed for reproducibility
 
     worm = worm_data["worm"]
     dataset = worm_data["dataset"]
@@ -840,7 +840,7 @@ def plot_worm_data(worm_data, num_neurons=5, smooth=False):
             ValueError("No neurons with data were selected.")
 
     plt.xlabel("Time (seconds)")
-    plt.ylabel("Calcium Signal")
+    plt.ylabel("Calcium Activity")
     plt.title(
         f"Dataset: {dataset}, Worm: {worm}\nCalcium Traces of Random {num_neurons} Neurons"
     )

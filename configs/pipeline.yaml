@@ -69,9 +69,11 @@ hydra:
     setup:
       - cd /om2/user/qsimeon/worm-graph
 
+# ============================ Pipeline Config ============================
+
 experiment:
   key: pipeline # what parameter are you experimenting with
   seed: null # If null, a random seed is generated for each run.
   mode: MULTIRUN
 
-# ============================ Pipeline Config ============================
+

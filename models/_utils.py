@@ -506,9 +506,9 @@ class Model(torch.nn.Module):
         Parameters
         ----------
         input : torch.Tensor
-            Input data with shape (batch, seq_len, neurons)
+            Input data with shape (batch_size, seq_len, neurons)
         mask : torch.Tensor
-            Mask on the neurons with shape (batch, neurons)
+            Mask on the neurons with shape (batch_size, neurons)
         nb_ts_to_generate : int
             Number of time steps to generate
         context_window : int
@@ -524,7 +524,9 @@ class Model(torch.nn.Module):
 
         if autoregressive:
             # Generate values autoregressively
-            input = input[:, :context_window, :]  # shape (1, context_window, 302)
+            input = input[
+                :, :context_window, :
+            ]  # shape (batch_size, context_window, 302)
 
         generated_values = []
         with torch.no_grad():
@@ -532,13 +534,15 @@ class Model(torch.nn.Module):
                 # Get the last context_window values of the input tensor
                 x = input[
                     :, t : context_window + t, :
-                ]  # shape (1, context_window, 302)
+                ]  # shape (batch_size, context_window, 302)
 
                 # Get predictions
-                predictions = self(x, mask)  # shape (1, context_window, 302)
+                predictions = self(x, mask)  # shape (batch_size, context_window, 302)
 
                 # Get last predicted value
-                last_time_step = predictions[:, -1, :].unsqueeze(0)  # shape (1, 1, 302)
+                last_time_step = predictions[:, -1, :].unsqueeze(
+                    0
+                )  # shape (batch_size, 1, 302)
 
                 # Append the prediction to the generated_values list and input tensor
                 generated_values.append(last_time_step)
@@ -549,7 +553,7 @@ class Model(torch.nn.Module):
         # Stack the generated values to a tensor
         generated_tensor = torch.cat(
             generated_values, dim=1
-        )  # shape (nb_ts_to_generate, 302)
+        )  # shape (batch_size, nb_ts_to_generate, 302)
 
         return generated_tensor
 
