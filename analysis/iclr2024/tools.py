@@ -230,11 +230,13 @@ def dataset_information(path_dict, legend_code):
     # Add a dashed horizontal line at y=302
     ax2.axhline(y=302, color="black", linestyle="dashed", linewidth=1)
     # Annotate the line
+    # Use the right edge of the subplot for text annotation to prevent overflow
+    right_edge = ax2.get_xlim()[1]
     ax2.text(
-        0.5,
-        305,  # slightly above the line
+        right_edge,  # x position at the right edge
+        302,  # y position at the line
         "Number of neurons in C. elegans hermaphrodite",
-        horizontalalignment="center",
+        horizontalalignment="right",  # Align text to the right
         fontsize=10,
         fontstyle="italic",
     )
@@ -242,36 +244,6 @@ def dataset_information(path_dict, legend_code):
     ax2.set_ylabel("Neuron population size")
     ax2.set_xticklabels(neuron_pop_stats["dataset"], rotation=45, ha="right")
     ax2.set_xticks([])  # Delete xticks
-
-    # # ########### TOTAL DURATION OF RECORDED NEURAL ACTIVITY PIE CHART ###############
-    # ax3 = plt.subplot(
-    #     gs[1, 0]
-    # )  # Subplot for 'Total duration of recorded neural activity' pie chart
-    # # Compute data for total duration pie chart
-    # total_duration_stats = (
-    #     train_dataset_info.groupby("dataset")["total_time_steps"]
-    #     .sum()
-    #     .reset_index()
-    #     .sort_values(by="total_time_steps", ascending=False)
-    # )
-    # total_duration_stats["percentage"] = (
-    #     total_duration_stats["total_time_steps"]
-    #     / total_duration_stats["total_time_steps"].sum()
-    # )
-    # total_duration_colors = total_duration_stats["dataset"].apply(
-    #     lambda x: ds_color_code.get(x.split("20")[0], "grey")
-    # )
-    # # Plotting the total duration pie chart
-    # ax3.pie(
-    #     total_duration_stats["total_time_steps"],
-    #     labels=[
-    #         f"{percentage:.1%}" for percentage in total_duration_stats["percentage"]
-    #     ],
-    #     labeldistance=1.075,
-    #     startangle=90,
-    #     colors=total_duration_colors,
-    # )
-    # ax3.set_title("(C) Total duration of recorded neural activity", fontsize=14)
 
     # ########### TOTAL DURATION OF RECORDED NEURAL ACTIVITY PIE CHART ###############
     ax3 = plt.subplot(

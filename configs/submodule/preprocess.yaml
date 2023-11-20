@@ -6,7 +6,7 @@ preprocess:
   resample_dt: 0.5 # The time interval (in seconds) to use for resampling; if null, no resampling is performed
   interpolate: linear # The method to use for interpolation; options: null, linear, quadratic, cubic
   smooth: 
-    method: GA # null: No smoothing, # GA: Gaussian kernel filter, # ES: Exponential kernel smoothing filter, # MA: Moving average filter
+    method: ES # null: No smoothing, # GA: Gaussian kernel filter, # ES: Exponential kernel smoothing filter, # MA: Moving average filter
     # hyperparameters of the different smoothing methods
     alpha: 0.1 # ES; lower alpha = smoother
     sigma: 5 # GA; larger sigma = smoother

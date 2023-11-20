@@ -310,6 +310,90 @@ def moving_average_smooth(x, t, window_size):
     return x_smooth
 
 
+# We define causal version of the above Gaussian (GA) and Moveing Average (MA)
+# smoothing methods and alias the original functions to these.
+def causal_gaussian_kernel_smooth(x, t, sigma):
+    """
+    Causal Gaussian smoothing for a multidimensional time series.
+
+    Parameters:
+        x (ndarray): The input time series to be smoothed (time, neurons).
+        t (ndarray): The time vector (in seconds) corresponding to the input time series.
+        sigma (float): Standard deviation for Gaussian kernel.
+
+    Returns:
+        x_smooth (ndarray): The smoothed time series.
+    """
+    istensor = isinstance(x, torch.Tensor)
+    if istensor:
+        x = x.cpu().numpy()
+    dim = x.ndim
+    if dim == 1:
+        x = x.reshape(-1, 1)
+
+    # Apply one-sided exponential decay
+    x_smooth = np.zeros_like(x)
+    alpha = 1 / (2 * sigma**2)
+    for i in range(x.shape[0]):
+        weights = np.exp(-alpha * np.arange(i, -1, -1) ** 2)
+        weights /= weights.sum()
+        for j in range(x.shape[1]):
+            x_smooth[i, j] = np.dot(weights, x[: i + 1, j])
+
+    if dim == 1:
+        x_smooth = x_smooth.squeeze(-1)
+    if istensor:
+        x_smooth = torch.from_numpy(x_smooth)
+    return x_smooth
+
+
+def causal_moving_average_smooth(x, t, window_size):
+    """
+    Applies a causal moving average smoothing filter to a multidimensional time series.
+
+    Parameters:
+        x (ndarray): The input time series to be smoothed.
+        t (ndarray): The time vector (in seconds) corresponding to the input time series.
+        window_size (int): The size of the moving average window. Must be an odd number.
+
+    Returns:
+        x_smooth (ndarray): The smoothed time series.
+    """
+    # Ensure window_size is odd for symmetry
+    if window_size % 2 == 0:
+        window_size += 1
+
+    # Check for correct dimensions
+    isnumpy = isinstance(x, np.ndarray)
+    if isnumpy:
+        x = torch.from_numpy(x)
+    dim = x.ndim
+    if dim == 1:
+        x = x.unsqueeze(-1)
+
+    x_smooth = torch.zeros_like(x)
+    for i in range(x.shape[1]):
+        for j in range(x.shape[0]):
+            start = max(j - window_size // 2, 0)
+            end = j + 1
+            window = x[start:end, i]
+            x_smooth[j, i] = window.mean()
+
+    if dim == 1:
+        x_smooth = x_smooth.squeeze(-1)
+    if isnumpy:
+        x_smooth = x_smooth.cpu().numpy()
+    return x_smooth
+
+
+##############################################
+# Aliasing
+moving_average_smooth = causal_moving_average_smooth
+gaussian_kernel_smooth = causal_gaussian_kernel_smooth
+##############################################
+
+
+# The Exponential Kernel Smooth (ES) methog is already causal.
 def exponential_kernel_smooth(x, t, alpha):
     """
     Exponential smoothing for a multidimensional time series.
