@@ -421,7 +421,7 @@ class CElegansConnectome(InMemoryDataset):
 
 def rename_worm_keys(d):
     """
-    Auxiliar function to rename the keys of a combined dataset.
+    Auxiliary function to rename the keys (wormIDs) of a combined dataset.
     """
     # Sort the keys
     sorted_keys = sorted(d.keys(), key=lambda x: int(x.replace("worm", "")))
@@ -479,17 +479,21 @@ def filter_loaded_combined_dataset(combined_dataset, num_worms, num_named_neuron
     # Information about the dataset
     dataset_info = {
         "dataset": [],
+        "original_median_dt": [],
         "original_index": [],
         "combined_dataset_index": [],
         "neurons": [],
+        "num_neurons": [],
     }
 
     for worm, data in combined_dataset.items():
         dataset_info["dataset"].append(data["dataset"])
+        dataset_info["original_median_dt"].append(data["original_median_dt"])
         dataset_info["original_index"].append(data["original_worm"])
         dataset_info["combined_dataset_index"].append(worm)
         worm_neurons = [neuron for slot, neuron in data["slot_to_named_neuron"].items()]
         dataset_info["neurons"].append(worm_neurons)
+        dataset_info["num_neurons"].append(len(worm_neurons))
 
     dataset_info = pd.DataFrame(dataset_info)
 
@@ -784,6 +788,7 @@ def create_combined_dataset(
     # Information about the dataset
     dataset_info = {
         "dataset": [],
+        "original_median_dt": [],
         "original_index": [],
         "combined_dataset_index": [],
         "neurons": [],
@@ -792,6 +797,7 @@ def create_combined_dataset(
 
     for worm, data in combined_dataset.items():
         dataset_info["dataset"].append(data["dataset"])
+        dataset_info["original_median_dt"].append(data["original_median_dt"])
         dataset_info["original_index"].append(data["original_worm"])
         dataset_info["combined_dataset_index"].append(worm)
         worm_neurons = [neuron for slot, neuron in data["slot_to_named_neuron"].items()]
@@ -991,7 +997,6 @@ def split_combined_dataset(
         "val_time_steps": [],
         "num_val_samples": [],
         "val_seq_len": [],
-        "original_median_dt": [],
         "smooth_data": [],
         "use_residual": [],
     }
@@ -1000,7 +1005,6 @@ def split_combined_dataset(
     for wormID, single_worm_dataset in combined_dataset.items():
         # Extract relevant features from the dataset
         data = single_worm_dataset[key_data]
-        original_median_dt = single_worm_dataset["original_median_dt"]
         neurons_mask = single_worm_dataset["named_neurons_mask"]
         time_vec = single_worm_dataset["time_in_seconds"]
         worm_dataset = single_worm_dataset["dataset"]
@@ -1073,7 +1077,8 @@ def split_combined_dataset(
 
         # Store the number of unique time steps for each worm
         dataset_info_split["combined_dataset_index"].append(wormID)
-        dataset_info_split["original_median_dt"].append(original_median_dt)
+        dataset_info_split["smooth_data"].append(smooth_data)
+        dataset_info_split["use_residual"].append(use_residual)
 
         dataset_info_split["train_time_steps"].append(train_split_time_steps)
         dataset_info_split["train_seq_len"].append(seq_len)
@@ -1082,9 +1087,6 @@ def split_combined_dataset(
         dataset_info_split["val_time_steps"].append(val_split_time_steps)
         dataset_info_split["val_seq_len"].append(seq_len)
         dataset_info_split["num_val_samples"].append(num_val_samples)
-
-        dataset_info_split["smooth_data"].append(smooth_data)
-        dataset_info_split["use_residual"].append(use_residual)
 
     # Concatenate the datasets
     train_dataset = torch.utils.data.ConcatDataset(

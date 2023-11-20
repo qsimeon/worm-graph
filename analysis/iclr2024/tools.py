@@ -42,7 +42,7 @@ def legend_code():
     axs[0].get_legend().get_title().set_fontstyle("italic")
     axs[0].axis("off")
 
-    color_palette = sns.color_palette("tab10", n_colors=7)
+    color_palette = sns.color_palette("tab10", n_colors=8)
     # Add black color to the end of color palette
     color_palette.append((0, 0, 0))
 
@@ -122,16 +122,39 @@ def legend_code():
 def dataset_information(path_dict, legend_code):
     """
     path_dict: dictionary with the path to train_dataset_info,
-        validation_dataset_info and analysis_info
+        validation_dataset_info and combined_dataset_info.
     """
+
+    # ### SET UP FOR FIGURES ###
+    ds_color_code = legend_code["ds_color_code"]
+    color_legend = legend_code["color_legend"]
+
+    fig = plt.figure(figsize=(20, 7))
+
+    # Setting up the grid
+    gs = gridspec.GridSpec(2, 4, height_ratios=[1, 1], width_ratios=[1, 1, 1, 0.25])
+
+    # Assigning the subplots to positions in the grid
+    ax1 = plt.subplot(gs[0, 0])  # Top left, 'Number of worms analyzed' pie chart
+    ax2 = plt.subplot(gs[0, 1])  # Top right, 'Number of neurons per worm' bar plot
+    ax3 = plt.subplot(
+        gs[1, 0]
+    )  # Bottom left, 'Total duration of recorded neural activity' pie chart
+    ax4 = plt.subplot(
+        gs[1, 1]
+    )  # Bottom middle, 'Duration of recorded neural activity per worm' bar plot
+    ax5 = plt.subplot(gs[0, 3])  # Bottom right, legend
+    ax6 = plt.subplot(gs[0, 2])
+    ax7 = plt.subplot(gs[1, 2:4])
+    # ##########################################################
 
     train_dataset_info = pd.read_csv(path_dict["train_dataset_info"])
     val_dataset_info = pd.read_csv(path_dict["val_dataset_info"])
-    worms_info = pd.read_csv(path_dict["analysis_info"])
-    dt_info = pd.read_csv(path_dict["dt_info"])
 
-    dt_info = dt_info.sort_values(by="dt_mean", ascending=False)
+    ############### dt data ###############
+    dt_info = train_dataset_info.sort_values(by="original_median_dt", ascending=False)
     dt_info = dt_info.reset_index().set_index("dataset")
+    ########################################
 
     train_dataset_info["total_time_steps"] = (
         train_dataset_info["train_time_steps"] + val_dataset_info["val_time_steps"]
@@ -151,9 +174,51 @@ def dataset_information(path_dict, legend_code):
         / amount_of_data_distribution["total_time_steps"].sum()
     )
 
-    worms_info["percentage"] = worms_info["num_worms"] / worms_info["num_worms"].sum()
-    worms_info = worms_info.sort_values(by="percentage", ascending=False)
-    worm_label = worms_info["num_worms"][:6].tolist() + [""]
+    ########### for worms pie chart ###############
+    num_worms_per_dataset = pd.read_csv(path_dict["combined_dataset_info"])
+    # Count the unique 'original_index' for each 'dataset'
+    num_worms_per_dataset = (
+        num_worms_per_dataset.groupby("dataset")["original_index"]
+        .nunique()
+        .reset_index(name="num_worms")
+    )
+    # Calculate the percentage for each dataset
+    num_worms_per_dataset["percentage"] = (
+        num_worms_per_dataset["num_worms"] / num_worms_per_dataset["num_worms"].sum()
+    )
+    # Sort the values by percentage in descending order
+    num_worms_per_dataset = num_worms_per_dataset.sort_values(
+        by="percentage", ascending=False
+    )
+    print(
+        f"num_worms_per_dataset: \n {num_worms_per_dataset.head()} \n {num_worms_per_dataset.tail()}"
+    )
+    worm_label = num_worms_per_dataset["num_worms"][:7].tolist() + [""]
+    print(f"worm_label: {worm_label}")
+    #####################################################
+    # Plotting the first pie chart
+    ax1.pie(
+        num_worms_per_dataset["num_worms"],
+        labels=[
+            f"{percentage:.1%}" for percentage in num_worms_per_dataset["percentage"]
+        ],
+        labeldistance=1.075,
+        startangle=45,
+        colors=[
+            ds_color_code[dataset[:-4]] for dataset in num_worms_per_dataset["dataset"]
+        ],
+    )
+    ax1.pie(
+        num_worms_per_dataset["num_worms"],
+        labels=[f"{n}" for n in worm_label],
+        labeldistance=0.70,
+        startangle=45,
+        colors=[
+            ds_color_code[dataset[:-4]] for dataset in num_worms_per_dataset["dataset"]
+        ],
+    )
+    ax1.set_title("(A) Number of worms analyzed", fontsize=14)
+    ##############################################
 
     neuron_pop_distribution = (
         train_dataset_info[["dataset", "num_neurons"]]
@@ -191,48 +256,10 @@ def dataset_information(path_dict, legend_code):
     dataset_info = {
         "train_dataset_info": train_dataset_info,
         "amount_of_data_distribution": amount_of_data_distribution,
-        "worms_info": worms_info,
+        "num_worms_per_dataset": num_worms_per_dataset,
         "neuron_pop_distribution": neuron_pop_distribution,
         "recording_duration": recording_duration,
     }
-
-    ds_color_code = legend_code["ds_color_code"]
-    color_legend = legend_code["color_legend"]
-
-    fig = plt.figure(figsize=(20, 7))
-
-    # Setting up the grid
-    gs = gridspec.GridSpec(2, 4, height_ratios=[1, 1], width_ratios=[1, 1, 1, 0.25])
-
-    # Assigning the subplots to positions in the grid
-    ax1 = plt.subplot(gs[0, 0])  # Top left, 'Number of worms analyzed' pie chart
-    ax2 = plt.subplot(gs[0, 1])  # Top right, 'Number of neurons per worm' bar plot
-    ax3 = plt.subplot(
-        gs[1, 0]
-    )  # Bottom left, 'Total duration of recorded neural activity' pie chart
-    ax4 = plt.subplot(
-        gs[1, 1]
-    )  # Bottom middle, 'Duration of recorded neural activity per worm' bar plot
-    ax5 = plt.subplot(gs[0, 3])  # Bottom right, legend
-    ax6 = plt.subplot(gs[0, 2])
-    ax7 = plt.subplot(gs[1, 2:4])
-
-    # Plotting the first pie chart
-    ax1.pie(
-        worms_info["num_worms"],
-        labels=[f"{percentage:.1%}" for percentage in worms_info["percentage"]],
-        labeldistance=1.075,
-        startangle=45,
-        colors=[ds_color_code[dataset[:-4]] for dataset in worms_info["dataset"]],
-    )
-    ax1.pie(
-        worms_info["num_worms"],
-        labels=[f"{n}" for n in worm_label],
-        labeldistance=0.70,
-        startangle=45,
-        colors=[ds_color_code[dataset[:-4]] for dataset in worms_info["dataset"]],
-    )
-    ax1.set_title("(A) Number of worms analyzed", fontsize=14)
 
     # Plotting the first bar chart
     ax2.bar(
@@ -332,6 +359,7 @@ def dataset_information(path_dict, legend_code):
     ax6.set_title("(E) Time steps per recorded neuron", fontsize=14)
     ax6.set_xticks([])  # Delete xticks
 
+    ############## dt plot ############
     # Plot mean dt
     ax7.bar(
         dt_info.index,
@@ -351,6 +379,7 @@ def dataset_information(path_dict, legend_code):
     ax7.set_ylabel(r"Time step interval $\Delta t$ (s)")
     ax7.set_title("(F) Time step interval of recorded neural activity", fontsize=14)
     ax7.set_xticks([])  # Delete xticks
+    #####################
 
     plt.tight_layout()
     plt.show()
