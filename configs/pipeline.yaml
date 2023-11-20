@@ -51,7 +51,7 @@ hydra:
     tasks_per_node: 1  # Number of tasks to run on each node
     mem_gb: 64  # Memory required per node in GB
     nodes: 1  # Number of nodes to use
-    partition: normal  # Partition to submit to
+    partition: yanglab  #normal # Partition to submit to
     qos: null  # Quality of Service level
     comment: null  # Comment to pass to the job
     constraint: null  # Constraint specification
