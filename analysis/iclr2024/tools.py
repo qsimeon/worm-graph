@@ -227,6 +227,17 @@ def dataset_information(path_dict, legend_code):
         color=neuron_pop_colors,
         capsize=5,
     )
+    # Add a dashed horizontal line at y=302
+    ax2.axhline(y=302, color="black", linestyle="dashed", linewidth=1)
+    # Annotate the line
+    ax2.text(
+        0.5,
+        305,  # slightly above the line
+        "Number of neurons in C. elegans hermaphrodite",
+        horizontalalignment="center",
+        fontsize=10,
+        fontstyle="italic",
+    )
     ax2.set_title("(B) Number of recorded neurons per worm", fontsize=14)
     ax2.set_ylabel("Neuron population size")
     ax2.set_xticklabels(neuron_pop_stats["dataset"], rotation=45, ha="right")
@@ -374,7 +385,7 @@ def dataset_information(path_dict, legend_code):
         capsize=5,
     )
     ax7.set_title("(F) Sampling interval of recorded neural activity", fontsize=14)
-    ax7.set_ylabel(r"Mean sampling interval ($\Delta$ s)")
+    ax7.set_ylabel(r"Mean sampling interval ($\Delta$s)")
     ax7.set_xticklabels(dt_stats["dataset"], rotation=45, ha="right")
     ax7.set_xticks([])  # Delete xticks
 
