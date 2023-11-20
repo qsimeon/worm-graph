@@ -112,6 +112,7 @@ conda install --name $ENV_NAME -c defaults -c conda-forge -y \
     jupyterlab \
     notebook \
     h5py \
+    nbimporter \
     networkx \
     ipython \
     jinja2 \

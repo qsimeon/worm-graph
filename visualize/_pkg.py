@@ -14,7 +14,7 @@ import matplotlib.ticker as ticker
 from scipy import stats
 from datetime import datetime
 from matplotlib.lines import Line2D
-from utils import DEVICE, NEURONS_302
 from sklearn.decomposition import PCA
 from omegaconf import OmegaConf, DictConfig
+from utils import DEVICE, ROOT_DIR, NEURONS_302
 from sklearn.preprocessing import StandardScaler

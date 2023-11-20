@@ -18,6 +18,18 @@ def plot_figures(
         log_dir is not None
     ), "log_dir is None. Please specify a log directory to plot figures from."
 
+    # Convert relative path to absolute path if necessary
+    logger.info(
+        f"log_dir (BEFORE): {log_dir}\nisabs(log_dir) {os.path.isabs(log_dir)}."
+    )  # DEBUG
+    log_dir = os.path.join(ROOT_DIR, log_dir) if not os.path.isabs(log_dir) else log_dir
+    logger.info(
+        f"log_dir (AFTER): {log_dir}\nisabs(log_dir) {os.path.isabs(log_dir)}."
+    )  # DEBUG
+
+    # Check if the log directory exists
+    assert os.path.exists(log_dir), f"log directory {log_dir} does not exist."
+
     # Loop through submodules log directories
     for submodule_dir in os.listdir(log_dir):
         if submodule_dir == "dataset":

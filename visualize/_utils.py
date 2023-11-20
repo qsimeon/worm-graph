@@ -1110,10 +1110,7 @@ def plot_experiment_losses(exp_log_dir, exp_plot_dir, exp_key):
 
     # Sort the labels and then sort handles accordingly
     sampled_labels, sampled_handles = zip(
-        *sorted(
-            zip(sampled_labels, sampled_handles),
-            key=lambda t: float(t[0]) if str.is_numeric(t[0]) else t[0],
-        )
+        *sorted(zip(sampled_labels, sampled_handles), key=lambda t: t[0])
     )
 
     # Set the legend with the sampled subset

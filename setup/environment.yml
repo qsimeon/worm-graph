@@ -52,6 +52,7 @@ dependencies:
     - hydra-optuna-sweeper
     - hydra-submitit-launcher
     - mat73
+    - nbimporter
     - ncps
     - omegaconf
     - pytest
