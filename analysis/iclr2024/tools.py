@@ -118,20 +118,41 @@ def legend_code():
     return leg_code
 
 
-# 2. Dataset information
 def dataset_information(path_dict, legend_code):
     """
     path_dict: dictionary with the path to train_dataset_info,
         validation_dataset_info and combined_dataset_info.
     """
 
-    # ### SET UP FOR FIGURES ###
+    # ### LOAD IN DATASET INFORMATION ###
+    train_dataset_info = pd.read_csv(path_dict["train_dataset_info"])
+    val_dataset_info = pd.read_csv(path_dict["val_dataset_info"])
+    combined_dataset_info = pd.read_csv(path_dict["combined_dataset_info"])
+
+    train_dataset_info["total_time_steps"] = (
+        train_dataset_info["train_time_steps"] + val_dataset_info["val_time_steps"]
+    )
+    train_dataset_info["tsn"] = (
+        train_dataset_info["total_time_steps"] / train_dataset_info["num_neurons"]
+    )
+    amount_of_data_distribution = (
+        train_dataset_info[["dataset", "total_time_steps"]]
+        .groupby("dataset")
+        .sum()
+        .sort_values(by="total_time_steps", ascending=False)
+    )
+    amount_of_data_distribution["percentage"] = (
+        amount_of_data_distribution["total_time_steps"]
+        / amount_of_data_distribution["total_time_steps"].sum()
+    )
+
+    # ########### SET UP FOR FIGURES ###########
+    # Get color code and legend from legend_code
     ds_color_code = legend_code["ds_color_code"]
     color_legend = legend_code["color_legend"]
 
+    # Initialize figure
     fig = plt.figure(figsize=(20, 7))
-
-    # Setting up the grid
     gs = gridspec.GridSpec(2, 4, height_ratios=[1, 1], width_ratios=[1, 1, 1, 0.25])
 
     # Assigning the subplots to positions in the grid
@@ -146,36 +167,9 @@ def dataset_information(path_dict, legend_code):
     ax5 = plt.subplot(gs[0, 3])  # Bottom right, legend
     ax6 = plt.subplot(gs[0, 2])
     ax7 = plt.subplot(gs[1, 2:4])
-    # ##########################################################
 
-    train_dataset_info = pd.read_csv(path_dict["train_dataset_info"])
-    val_dataset_info = pd.read_csv(path_dict["val_dataset_info"])
-
-    ############### dt data ###############
-    dt_info = train_dataset_info.sort_values(by="original_median_dt", ascending=False)
-    dt_info = dt_info.reset_index().set_index("dataset")
-    ########################################
-
-    train_dataset_info["total_time_steps"] = (
-        train_dataset_info["train_time_steps"] + val_dataset_info["val_time_steps"]
-    )
-    train_dataset_info["tsn"] = (
-        train_dataset_info["total_time_steps"] / train_dataset_info["num_neurons"]
-    )
-
-    amount_of_data_distribution = (
-        train_dataset_info[["dataset", "total_time_steps"]]
-        .groupby("dataset")
-        .sum()
-        .sort_values(by="total_time_steps", ascending=False)
-    )
-    amount_of_data_distribution["percentage"] = (
-        amount_of_data_distribution["total_time_steps"]
-        / amount_of_data_distribution["total_time_steps"].sum()
-    )
-
-    ########### for worms pie chart ###############
-    num_worms_per_dataset = pd.read_csv(path_dict["combined_dataset_info"])
+    # ########### FOR WORMS PIE CHART ###############
+    num_worms_per_dataset = combined_dataset_info[["dataset", "original_index"]]
     # Count the unique 'original_index' for each 'dataset'
     num_worms_per_dataset = (
         num_worms_per_dataset.groupby("dataset")["original_index"]
@@ -190,13 +184,8 @@ def dataset_information(path_dict, legend_code):
     num_worms_per_dataset = num_worms_per_dataset.sort_values(
         by="percentage", ascending=False
     )
-    print(
-        f"num_worms_per_dataset: \n {num_worms_per_dataset.head()} \n {num_worms_per_dataset.tail()}"
-    )
-    worm_label = num_worms_per_dataset["num_worms"][:7].tolist() + [""]
-    print(f"worm_label: {worm_label}")
-    #####################################################
-    # Plotting the first pie chart
+    worm_count_label = num_worms_per_dataset["num_worms"][:7].tolist() + [""]
+    # Plotting the worms per dataset pie chart
     ax1.pie(
         num_worms_per_dataset["num_worms"],
         labels=[
@@ -210,125 +199,187 @@ def dataset_information(path_dict, legend_code):
     )
     ax1.pie(
         num_worms_per_dataset["num_worms"],
-        labels=[f"{n}" for n in worm_label],
+        labels=[f"{n}" for n in worm_count_label],
         labeldistance=0.70,
         startangle=45,
         colors=[
             ds_color_code[dataset[:-4]] for dataset in num_worms_per_dataset["dataset"]
         ],
     )
-    ax1.set_title("(A) Number of worms analyzed", fontsize=14)
-    ##############################################
+    ax1.set_title("(A) Number of worms in dataset", fontsize=14)
 
-    neuron_pop_distribution = (
-        train_dataset_info[["dataset", "num_neurons"]]
-        .groupby("dataset")
-        .mean()
-        .sort_values(by="num_neurons", ascending=False)
+    # ########### NEURON POPULATION DISTRIBUTION BAR PLOT ###############
+    ax2 = plt.subplot(gs[0, 1])  # Subplot for 'Number of neurons per worm' bar plot
+    # Compute data for the neuron population distribution bar plot
+    neuron_pop_stats = (
+        train_dataset_info.groupby("dataset")["num_neurons"]
+        .agg(["mean", "sem"])
+        .reset_index()
+        .sort_values(by="mean", ascending=False)
     )
-    neuron_pop_distribution["std"] = (
-        train_dataset_info[["dataset", "num_neurons"]]
-        .groupby("dataset")
-        .std()
-        .sort_values(by="num_neurons", ascending=False)
+    neuron_pop_colors = neuron_pop_stats["dataset"].apply(
+        lambda x: ds_color_code.get(x.split("20")[0], "grey")
     )
-
-    recording_duration = (
-        train_dataset_info[["dataset", "total_time_steps"]]
-        .groupby("dataset")
-        .mean()
-        .sort_values(by="total_time_steps", ascending=False)
-    )
-    recording_duration["std"] = (
-        train_dataset_info[["dataset", "total_time_steps"]]
-        .groupby("dataset")
-        .std()
-        .sort_values(by="total_time_steps", ascending=False)
-    )
-
-    ts_per_neuron = (
-        train_dataset_info[["dataset", "tsn"]]
-        .groupby(["dataset"])
-        .agg(["mean", "std"])
-        .sort_values(by=("tsn", "mean"), ascending=False)
-    )
-
-    dataset_info = {
-        "train_dataset_info": train_dataset_info,
-        "amount_of_data_distribution": amount_of_data_distribution,
-        "num_worms_per_dataset": num_worms_per_dataset,
-        "neuron_pop_distribution": neuron_pop_distribution,
-        "recording_duration": recording_duration,
-    }
-
-    # Plotting the first bar chart
     ax2.bar(
-        neuron_pop_distribution.index,
-        neuron_pop_distribution["num_neurons"],
-        yerr=neuron_pop_distribution["std"],
-        color=[
-            ds_color_code[dataset[:-4]] for dataset in neuron_pop_distribution.index
-        ],
+        neuron_pop_stats["dataset"],
+        neuron_pop_stats["mean"],
+        yerr=2 * neuron_pop_stats["sem"],
+        color=neuron_pop_colors,
+        capsize=5,
     )
-    ax2.errorbar(
-        neuron_pop_distribution.index,
-        neuron_pop_distribution["num_neurons"],
-        yerr=neuron_pop_distribution["std"],
-        fmt="none",
-        capsize=4,
-        color="black",
-        elinewidth=0.2,
-    )
-    ax2.set_title("(B) Number of neurons per worm recorded simultaneously", fontsize=14)
-    ax2.hlines(302, -0.5, 6.5, colors="black", linestyles="dashed")
-    ax2.text(
-        5,
-        290,
-        "Number of neurons in C. elegans*",
-        fontsize=12,
-        verticalalignment="center",
-        horizontalalignment="center",
-        fontstyle="italic",
-    )
+    ax2.set_title("(B) Number of recorded neurons per worm", fontsize=14)
     ax2.set_ylabel("Neuron population size")
+    ax2.set_xticklabels(neuron_pop_stats["dataset"], rotation=45, ha="right")
     ax2.set_xticks([])  # Delete xticks
 
-    # Plotting the second pie chart
+    # # ########### TOTAL DURATION OF RECORDED NEURAL ACTIVITY PIE CHART ###############
+    # ax3 = plt.subplot(
+    #     gs[1, 0]
+    # )  # Subplot for 'Total duration of recorded neural activity' pie chart
+    # # Compute data for total duration pie chart
+    # total_duration_stats = (
+    #     train_dataset_info.groupby("dataset")["total_time_steps"]
+    #     .sum()
+    #     .reset_index()
+    #     .sort_values(by="total_time_steps", ascending=False)
+    # )
+    # total_duration_stats["percentage"] = (
+    #     total_duration_stats["total_time_steps"]
+    #     / total_duration_stats["total_time_steps"].sum()
+    # )
+    # total_duration_colors = total_duration_stats["dataset"].apply(
+    #     lambda x: ds_color_code.get(x.split("20")[0], "grey")
+    # )
+    # # Plotting the total duration pie chart
+    # ax3.pie(
+    #     total_duration_stats["total_time_steps"],
+    #     labels=[
+    #         f"{percentage:.1%}" for percentage in total_duration_stats["percentage"]
+    #     ],
+    #     labeldistance=1.075,
+    #     startangle=90,
+    #     colors=total_duration_colors,
+    # )
+    # ax3.set_title("(C) Total duration of recorded neural activity", fontsize=14)
+
+    # ########### TOTAL DURATION OF RECORDED NEURAL ACTIVITY PIE CHART ###############
+    ax3 = plt.subplot(
+        gs[1, 0]
+    )  # Subplot for 'Total duration of recorded neural activity' pie chart
+    # Compute data for total duration pie chart
+    total_duration_stats = (
+        train_dataset_info.groupby("dataset")["total_time_steps"]
+        .sum()
+        .reset_index()
+        .sort_values(by="total_time_steps", ascending=False)
+    )
+    total_duration_stats["percentage"] = (
+        total_duration_stats["total_time_steps"]
+        / total_duration_stats["total_time_steps"].sum()
+    )
+
+    # Determine the smallest slice
+    smallest_slice_index = total_duration_stats["percentage"].idxmin()
+
+    # Generate labels, omitting the smallest slice
+    labels = [
+        f"{percentage:.1%}" if i != smallest_slice_index else ""
+        for i, percentage in enumerate(total_duration_stats["percentage"])
+    ]
+
+    total_duration_colors = total_duration_stats["dataset"].apply(
+        lambda x: ds_color_code.get(x.split("20")[0], "grey")
+    )
+    # Plotting the total duration pie chart
     ax3.pie(
-        amount_of_data_distribution["total_time_steps"],
-        labels=[
-            f"{percentage:.1%}"
-            for percentage in amount_of_data_distribution["percentage"]
-        ],
+        total_duration_stats["total_time_steps"],
+        labels=labels,
         labeldistance=1.075,
-        startangle=45,
-        colors=[
-            ds_color_code[dataset[:-4]] for dataset in amount_of_data_distribution.index
-        ],
+        startangle=90,
+        colors=total_duration_colors,
     )
     ax3.set_title("(C) Total duration of recorded neural activity", fontsize=14)
 
-    # Plotting the second bar chart
-    ax4.bar(
-        recording_duration.index,
-        recording_duration["total_time_steps"],
-        yerr=recording_duration["std"],
-        color=[ds_color_code[dataset[:-4]] for dataset in recording_duration.index],
+    # ########### RECORDING DURATION BAR PLOT ###############
+    ax4 = plt.subplot(
+        gs[1, 1]
+    )  # Subplot for 'Duration of recorded neural activity per worm' bar plot
+    # Compute data for recording duration bar plot
+    recording_duration_stats = (
+        train_dataset_info.groupby("dataset")["total_time_steps"]
+        .agg(["mean", "sem"])
+        .reset_index()
+        .sort_values(by="mean", ascending=False)
     )
-    ax4.errorbar(
-        recording_duration.index,
-        recording_duration["total_time_steps"],
-        yerr=recording_duration["std"],
-        fmt="none",
-        capsize=4,
-        color="black",
-        elinewidth=0.2,
+    recording_duration_colors = recording_duration_stats["dataset"].apply(
+        lambda x: ds_color_code.get(x.split("20")[0], "grey")
+    )
+    ax4.bar(
+        recording_duration_stats["dataset"],
+        recording_duration_stats["mean"],
+        yerr=2 * recording_duration_stats["sem"],
+        color=recording_duration_colors,
+        capsize=5,
     )
     ax4.set_title("(D) Duration of recorded neural activity per worm", fontsize=14)
     ax4.set_ylabel("Time (s)")
+    ax4.set_xticklabels(recording_duration_stats["dataset"], rotation=45, ha="right")
     ax4.set_xticks([])  # Delete xticks
 
-    # Adding the legend to the last subplot
+    # ########### TIME STEPS PER NEURON BAR PLOT ###############
+    ax6 = plt.subplot(
+        gs[0, 2]
+    )  # Subplot for 'Number of time steps per recorded neuron' bar plot
+    # Compute data for time steps per neuron bar plot
+    ts_per_neuron_stats = (
+        train_dataset_info.groupby("dataset")["tsn"]
+        .agg(["mean", "sem"])
+        .reset_index()
+        .sort_values(by="mean", ascending=False)
+    )
+    ts_per_neuron_colors = ts_per_neuron_stats["dataset"].apply(
+        lambda x: ds_color_code.get(x.split("20")[0], "grey")
+    )
+    ax6.bar(
+        ts_per_neuron_stats["dataset"],
+        ts_per_neuron_stats["mean"],
+        yerr=2 * ts_per_neuron_stats["sem"],
+        color=ts_per_neuron_colors,
+        capsize=5,
+    )
+    ax6.set_title("(E) Number of time steps per recorded neuron", fontsize=14)
+    ax6.set_ylabel("Time steps per neuron")
+    ax6.set_xticklabels(ts_per_neuron_stats["dataset"], rotation=45, ha="right")
+    ax6.set_xticks([])  # Delete xticks
+
+    # ########### SAMPLING INTERVAL BAR PLOT ###############
+    ax7 = plt.subplot(
+        gs[1, 2:4]
+    )  # Subplot for 'Sampling interval of recorded neural activity' bar plot
+    # Compute data for the sampling interval bar plot
+    dt_stats = (
+        train_dataset_info.groupby("dataset")["original_median_dt"]
+        .agg(["mean", "sem"])
+        .reset_index()
+        .sort_values(by="mean", ascending=False)
+    )
+    dt_colors = dt_stats["dataset"].apply(
+        lambda x: ds_color_code.get(x.split("20")[0], "grey")
+    )
+    ax7.bar(
+        dt_stats["dataset"],
+        dt_stats["mean"],
+        yerr=2 * dt_stats["sem"],
+        color=dt_colors,
+        capsize=5,
+    )
+    ax7.set_title("(F) Sampling interval of recorded neural activity", fontsize=14)
+    ax7.set_ylabel(r"Mean sampling interval ($\Delta$ s)")
+    ax7.set_xticklabels(dt_stats["dataset"], rotation=45, ha="right")
+    ax7.set_xticks([])  # Delete xticks
+
+    # ########### LEGEND SUBPLOT ###############
+    ax5 = plt.subplot(gs[0, 3])  # Subplot for legend
     ax5.legend(
         handles=color_legend,
         loc="center",
@@ -337,52 +388,22 @@ def dataset_information(path_dict, legend_code):
         title_fontsize=12,
     )
     ax5.get_legend().get_title().set_fontstyle("italic")
-    ax5.axis("off")  # Turn off axis for the legend
-
-    # Plot time steps per neuron
-    ax6.bar(
-        ts_per_neuron.index,
-        ts_per_neuron["tsn"]["mean"],
-        yerr=ts_per_neuron["tsn"]["std"],
-        color=[ds_color_code[dataset[:-4]] for dataset in ts_per_neuron.index],
-    )
-    ax6.errorbar(
-        ts_per_neuron.index,
-        ts_per_neuron["tsn"]["mean"],
-        yerr=ts_per_neuron["tsn"]["std"],
-        fmt="none",
-        capsize=4,
-        color="black",
-        elinewidth=0.2,
-    )
-    ax6.set_ylabel("Number of time steps\nper neuron")
-    ax6.set_title("(E) Time steps per recorded neuron", fontsize=14)
-    ax6.set_xticks([])  # Delete xticks
-
-    ############## dt plot ############
-    # Plot mean dt
-    ax7.bar(
-        dt_info.index,
-        dt_info["dt_mean"],
-        yerr=dt_info["dt_std"],
-        color=[ds_color_code[dataset[:-4]] for dataset in dt_info.index],
-    )
-    ax7.errorbar(
-        dt_info.index,
-        dt_info["dt_mean"],
-        yerr=dt_info["dt_std"],
-        fmt="none",
-        capsize=4,
-        color="black",
-        elinewidth=0.2,
-    )
-    ax7.set_ylabel(r"Time step interval $\Delta t$ (s)")
-    ax7.set_title("(F) Time step interval of recorded neural activity", fontsize=14)
-    ax7.set_xticks([])  # Delete xticks
-    #####################
+    ax5.axis("off")
 
     plt.tight_layout()
     plt.show()
+
+    # Construct and return the dataset_info dictionary with all the computed stats
+    dataset_info = {
+        "train_dataset_info": train_dataset_info,
+        "amount_of_data_distribution": amount_of_data_distribution,
+        "num_worms_per_dataset": num_worms_per_dataset,
+        "total_duration_stats": total_duration_stats,
+        "neuron_pop_stats": neuron_pop_stats,
+        "recording_duration_stats": recording_duration_stats,
+        "ts_per_neuron_stats": ts_per_neuron_stats,
+        "dt_stats": dt_stats,
+    }
 
     return dataset_info
 
