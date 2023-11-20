@@ -1,7 +1,7 @@
 # @package _global_
-# File name: nts_lstm_synthetic.yaml
+# File name: nts_linear_synthetic.yaml
 #   nts = number of time steps
-#   lstm = NetworkLSTM model
+#   linear = LinearNN model
 #   synthetic = synthetic datasets (Sines, Lorenz, VanDerPol, RandWalk, WhiteNoise)
 # We increase gradually the quantity of worms from all datasets.
 # We choose the hidden size to get a model with ~0.574M (trainable) parameters.
@@ -13,21 +13,20 @@ hydra:
   mode: MULTIRUN
   sweeper:
     params:
-      experiment.seed: 0 # assign each repetition of the experiment a distinct random seed
-      submodule.dataset.experimental_datasets: choice({Sines0000:6},{Sines0000:12},{Sines0000:18},{Sines0000:24},{Sines0000:30},{Sines0000:36},{Sines0000:42},{Sines0000:48},{Sines0000:54},{Sines0000:60},{Sines0000:66},{Sines0000:72},{Sines0000:78},{Sines0000:84},{Sines0000:90},{Sines0000:96})
+      experiment.seed: 1 # assign each repetition of the experiment a distinct random seed
+      submodule.dataset.experimental_datasets: choice({Lorenz0000:7},{Lorenz0000:14},{Lorenz0000:21},{Lorenz0000:28},{Lorenz0000:35},{Lorenz0000:42},{Lorenz0000:49},{Lorenz0000:56},{Lorenz0000:63},{Lorenz0000:70},{Lorenz0000:77},{Lorenz0000:84},{Lorenz0000:91},{Lorenz0000:98})
       ### Synthetic datasets ###
       # seed 0: choice({Sines0000:6},{Sines0000:12},{Sines0000:18},{Sines0000:24},{Sines0000:30},{Sines0000:36},{Sines0000:42},{Sines0000:48},{Sines0000:54},{Sines0000:60},{Sines0000:66},{Sines0000:72},{Sines0000:78},{Sines0000:84},{Sines0000:90},{Sines0000:96})
       # seed 1: choice({Lorenz0000:7},{Lorenz0000:14},{Lorenz0000:21},{Lorenz0000:28},{Lorenz0000:35},{Lorenz0000:42},{Lorenz0000:49},{Lorenz0000:56},{Lorenz0000:63},{Lorenz0000:70},{Lorenz0000:77},{Lorenz0000:84},{Lorenz0000:91},{Lorenz0000:98})
       # seed 2: choice({WhiteNoise0000:6},{WhiteNoise0000:12},{WhiteNoise0000:18},{WhiteNoise0000:24},{WhiteNoise0000:30},{WhiteNoise0000:36},{WhiteNoise0000:42},{WhiteNoise0000:48},{WhiteNoise0000:54},{WhiteNoise0000:60},{WhiteNoise0000:66},{WhiteNoise0000:72},{WhiteNoise0000:78},{WhiteNoise0000:84},{WhiteNoise0000:90},{WhiteNoise0000:96})
       # seed 3: choice({RandWalk0000:5},{RandWalk0000:10},{RandWalk0000:15},{RandWalk0000:20},{RandWalk0000:25},{RandWalk0000:30},{RandWalk0000:35},{RandWalk0000:40},{RandWalk0000:45},{RandWalk0000:50},{RandWalk0000:55},{RandWalk0000:60},{RandWalk0000:65},{RandWalk0000:70},{RandWalk0000:75},{RandWalk0000:80},{RandWalk0000:85},{RandWalk0000:90},{RandWalk0000:95},{RandWalk0000:100})
       # seed 4: choice({VanDerPol0000:4},{VanDerPol0000:8},{VanDerPol0000:12},{VanDerPol0000:16},{VanDerPol0000:20},{VanDerPol0000:24},{VanDerPol0000:28},{VanDerPol0000:32},{VanDerPol0000:36},{VanDerPol0000:40},{VanDerPol0000:44},{VanDerPol0000:48},{VanDerPol0000:52},{VanDerPol0000:56},{VanDerPol0000:60},{VanDerPol0000:64},{VanDerPol0000:68},{VanDerPol0000:72},{VanDerPol0000:76},{VanDerPol0000:80},{VanDerPol0000:84},{VanDerPol0000:88},{VanDerPol0000:92},{VanDerPol0000:96},{VanDerPol0000:100}) 
-
 submodule:
 
   model:
     # Build model from scratch
-    type: NetworkLSTM 
-    hidden_size: 232
+    type: LinearNN 
+    hidden_size: 512
 
   train:
     # Train model
@@ -82,5 +81,5 @@ submodule:
 experiment: 
   # What parameter you are experimenting with (key)
   key: num_time_steps 
-  name: nts_lstm_synthetic
+  name: nts_linear_synthetic
   mode: MULTIRUN
