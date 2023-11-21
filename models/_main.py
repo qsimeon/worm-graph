@@ -41,6 +41,7 @@ def get_model(model_config: DictConfig, verbose=True) -> torch.nn.Module:
         model_name = checkpoint["model_name"]
         input_size = checkpoint["input_size"]
         hidden_size = checkpoint["hidden_size"]
+        logger.info(f"Hidden size: {hidden_size}")
         loss_name = checkpoint["loss_name"]
         fft_reg_param = checkpoint["fft_reg_param"]
         l1_reg_param = checkpoint["l1_reg_param"]
