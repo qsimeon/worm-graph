@@ -31,7 +31,7 @@ submodule:
 
   train:
     # Train model
-    epochs: 100
+    epochs: 500
 
   dataset:
     use_these_datasets:
@@ -51,7 +51,7 @@ submodule:
     num_named_neurons: null
     num_train_samples: 32
     num_val_samples: 16
-    seq_len: 200
+    seq_len: 100
     reverse: false
     use_residual: false
     smooth_data: true
@@ -66,11 +66,11 @@ submodule:
       WhiteNoise0000: worm0
     # Number of time steps to generate
     nb_ts_to_generate: null
-    context_window: 200
+    context_window: 100
 
   analysis:
     analyse_this_log_dir: null
-    # Validate using all worms from each synthetic dataset
+    # Validate final model using all worms from each synthetic dataset
     validation:
       experimental_datasets:
         Sines0000: all

@@ -35,7 +35,7 @@ submodule:
     num_named_neurons: null
     num_train_samples: 32
     num_val_samples: 16
-    seq_len: 200
+    seq_len: 100
     reverse: false
     use_residual: false
     smooth_data: true
@@ -52,7 +52,7 @@ submodule:
   train:
     optimizer: AdamW
     lr: 0.001
-    epochs: 100
+    epochs: 500
     save_freq: 100
     batch_size: 64
     shuffle: true
@@ -78,24 +78,24 @@ submodule:
       Leifer2023: worm0
     # Number of time steps to generate
     nb_ts_to_generate: null
-    context_window: 200
+    context_window: 100
 
   analysis:
     analyse_this_log_dir: null
-    # Validate using all worms of each experimental datasets
+    # Validate final model using all worms of each experimental datasets
     validation:
       experimental_datasets:
-        # Sines0000: 5
-        # Lorenz0000: 5
-        # VanDerPol0000: 5
-        Kato2015: 5
-        Nichols2017: 5
-        Skora2018: 5
-        Uzel2022: 5
-        Yemin2021: 5
-        Kaplan2020: 5
-        Flavell2023: 5
-        Leifer2023: 5
+        # Sines0000: all
+        # Lorenz0000: all
+        # VanDerPol0000: all
+        Kato2015: all
+        Nichols2017: all
+        Skora2018: all
+        Uzel2022: all
+        Yemin2021: all
+        Kaplan2020: all
+        Flavell2023: all
+        Leifer2023: all
 
   visualize:
     plot_figures_from_this_log_dir: null

@@ -93,8 +93,16 @@ From the root (`worm-graph`) directory, run the command:
 
 `python main.py +submodule=[preprocess]`
 
+> If chaining submodules together (e.g. `dataset`, `preproces`) don't put spaces after the comma:
+    `python main.py +submodule=[preprocess,dataset]`
+
 > If on a Mac, place `+submodule=[preprocess]` in quotations, like this:
     `python main.py "+submodule=[preprocess]"`
+
+    OR
+
+    `python main.py +submodule="[preprocess,dataset]"`
+
 
 Now you can run the main script as a demo of the fully functional pipeline:
 

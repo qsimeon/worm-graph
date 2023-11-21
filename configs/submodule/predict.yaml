@@ -22,4 +22,4 @@ predict:
   # Number of time steps to generate 
   # null = generate all remaining time steps (max_timesteps - context_window)
   nb_ts_to_generate: null 
-  context_window: 200
+  context_window: 100
