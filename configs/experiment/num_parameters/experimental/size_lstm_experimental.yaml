@@ -1,7 +1,7 @@
 # @package _global_
-# File name: size_transformer_experimental.yaml
+# File name: size_lstm_experimental.yaml
 #   size = model size (key: num_parameters)
-#   transformer = NeuralTransformer model
+#   lstm = NetworkLSTM model
 #   experimental = experimental datasets (Kato, Nichols, Skora, Uzel, Yemini, Kaplan, Flavell, Leifer)
 # We increase gradually the hidden size of the models as a way to increase the number of parameters.
 defaults:
@@ -48,7 +48,7 @@ submodule:
 
   # Build model from scratch
   model:
-    type: NeuralTransformer
+    type: NetworkLSTM
 
   train:
     epochs: 500
@@ -84,5 +84,5 @@ submodule:
 
 experiment:
   key: num_parameters
-  name: size_transformer_experimental
+  name: size_lstm_experimental
   mode: MULTIRUN

@@ -41,7 +41,6 @@ def get_model(model_config: DictConfig, verbose=True) -> torch.nn.Module:
         model_name = checkpoint["model_name"]
         input_size = checkpoint["input_size"]
         hidden_size = checkpoint["hidden_size"]
-        logger.info(f"Hidden size: {hidden_size}")
         loss_name = checkpoint["loss_name"]
         fft_reg_param = checkpoint["fft_reg_param"]
         l1_reg_param = checkpoint["l1_reg_param"]
@@ -60,6 +59,7 @@ def get_model(model_config: DictConfig, verbose=True) -> torch.nn.Module:
                     model_config.use_this_pretrained_model
                 )
             )
+            logger.info(f"Hidden size: {hidden_size}")
 
     # Otherwise, instantiate a new model
     else:
@@ -89,6 +89,7 @@ def get_model(model_config: DictConfig, verbose=True) -> torch.nn.Module:
             model = LinearNN(**args)
         if verbose:
             logger.info("Initialized a new model: {}.".format(model_config.type))
+            logger.info(f"Hidden size: {model_config.hidden_size}")
 
     return model.to(torch.float32)
 
