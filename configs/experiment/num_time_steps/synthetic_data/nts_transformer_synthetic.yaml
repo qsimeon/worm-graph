@@ -70,14 +70,14 @@ submodule:
 
   analysis:
     analyse_this_log_dir: null
-    # Validate final model using all worms from each synthetic dataset
+    # Validate final model using some worms from each synthetic dataset
     validation:
       experimental_datasets:
-        Sines0000: all
-        Lorenz0000: all
-        VanDerPol0000: all
-        RandWalk0000: all
-        WhiteNoise0000: all
+        Sines0000: 10
+        Lorenz0000: 10
+        VanDerPol0000: 10
+        RandWalk0000: 10
+        WhiteNoise0000: 10
 
 experiment: 
   # What parameter you are experimenting with (key)

@@ -4,6 +4,7 @@ defaults:
   - _self_
 
 hydra:
+  # Uses the submodule parameters if in RUN mode.
   mode: RUN
 
 experiment:

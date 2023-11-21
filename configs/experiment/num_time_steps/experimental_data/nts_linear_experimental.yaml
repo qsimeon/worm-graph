@@ -78,17 +78,17 @@ submodule:
 
   analysis:
     analyse_this_log_dir: null
-    # Validate final model using all worms from each experimental dataset
+    # Validate final model using some worms from each experimental dataset
     validation:
       experimental_datasets:
-        Kato2015: all
-        Nichols2017: all
-        Skora2018: all
-        Uzel2022: all
-        Yemini2021: all
-        Kaplan2020: all
-        Flavell2023: all
-        Leifer2023: all
+        Kato2015: 10
+        Nichols2017: 10
+        Skora2018: 10
+        Uzel2022: 10
+        Yemini2021: 10
+        Kaplan2020: 10
+        Flavell2023: 10
+        Leifer2023: 10
 
 experiment: 
   # What parameter you are experimenting with (key)

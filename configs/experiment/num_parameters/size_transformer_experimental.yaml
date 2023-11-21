@@ -1,6 +1,11 @@
 # @package _global_
+# File name: size_transformer_experimental.yaml
+#   size = model size (key: num_parameters)
+#   transformer = NeuralTransformer model
+#   experimental = experimental datasets (Kato, Nichols, Skora, Uzel, Yemini, Kaplan, Flavell, Leifer)
+# We increase gradually the hidden size of the models as a way to increase the number of parameters.
 defaults:
-  - override /submodule: [preprocess, dataset, model, train, predict, analysis, visualize]
+  - override /submodule: [model, train, visualize]
   - _self_
 
 hydra:
@@ -9,15 +14,12 @@ hydra:
   mode: MULTIRUN
   sweeper:
     params:
-      submodule.model.hidden_size: 16, 32, 48, 64, 96, 128, 256, 512, 1024, 2048, 4096, 8192
+      submodule.model.hidden_size: range(16,21,2) #range(8,8193,32)
 
 submodule:
   # Generate train and validation dataset from scratch
   dataset:
     experimental_datasets:
-      # Sines0000: all
-      # Lorenz0000: all
-      # VanDerPol0000: all
       Kato2015: all
       Nichols2017: all
       Skora2018: all
@@ -27,8 +29,9 @@ submodule:
       Flavell2023: all
       Leifer2023: all
 
+    # Set path to a directory with a fixed train and validation set
     use_these_datasets:
-      path: null
+      path: /om2/user/qsimeon/worm-graph/data/custom_combined
       num_worms: null
 
     save_datasets: false
@@ -82,20 +85,20 @@ submodule:
 
   analysis:
     analyse_this_log_dir: null
-    # Validate final model using all worms of each experimental datasets
+    # Validate final model using some worms of each experimental datasets
     validation:
       experimental_datasets:
-        # Sines0000: all
-        # Lorenz0000: all
-        # VanDerPol0000: all
-        Kato2015: all
-        Nichols2017: all
-        Skora2018: all
-        Uzel2022: all
-        Yemin2021: all
-        Kaplan2020: all
-        Flavell2023: all
-        Leifer2023: all
+        # Sines0000: 10
+        # Lorenz0000: 10
+        # VanDerPol0000: 10
+        Kato2015: 10
+        Nichols2017: 10
+        Skora2018: 10
+        Uzel2022: 10
+        Yemin2021: 10
+        Kaplan2020: 10
+        Flavell2023: 10
+        Leifer2023: 10
 
   visualize:
     plot_figures_from_this_log_dir: null
