@@ -42,8 +42,8 @@ submodule:
 
     save_datasets: false
 
+    # This gets overwritten by the sweeper
     experimental_datasets:
-      # This gets overwritten by the sweeper
       Kato2015: null
       Nichols2017: null
       Skora2018: null
@@ -56,7 +56,7 @@ submodule:
     num_named_neurons: null
     num_train_samples: 32
     num_val_samples: 16
-    seq_len: 200
+    seq_len: 100
     reverse: false
     use_residual: false
     smooth_data: true

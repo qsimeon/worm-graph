@@ -42,8 +42,8 @@ submodule:
 
     save_datasets: false
 
+    # This gets overwritten by the sweeper
     experimental_datasets:
-      # This gets overwritten by the sweeper
       Kato2015: null
       Nichols2017: null
       Skora2018: null

@@ -16,7 +16,7 @@ hydra:
 # Otherwise, it uses the default parameters imported from the other config files in the submodule directory.
 submodule:
 
-  # Generate train and validation dataset from scratch
+  # Make the train and validation dataset from scratch
   dataset:
     # null = don't use on this dataset
     # all = use all the worms in the dataset

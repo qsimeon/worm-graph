@@ -1,4 +1,4 @@
-# Generate train and validation dataset from scratch
+# Make the train and validation dataset from scratch
 dataset:
   # Path to a directory containing the datasets to be used.
   # If null, create a new dataset in the logs/dataset directory using the experimental_datasets.
