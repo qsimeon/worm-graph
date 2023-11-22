@@ -49,7 +49,7 @@ hydra:
     cpus_per_task: 1  # Number of CPU cores per task
     gpus_per_node: 1  # Number of GPUs per node
     tasks_per_node: 1  # Number of tasks to run on each node
-    mem_gb: 64  # Memory required per node in GB
+    mem_gb: 32  # Memory required per node in GB
     nodes: 1  # Number of nodes to use
     partition: normal  #yanglab # Partition to submit to
     qos: null  # Quality of Service level

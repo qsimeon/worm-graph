@@ -923,6 +923,7 @@ def experiment_parameter(exp_dir, key):
         - batch_size: The batch size used for training
         - seq_len: The sequence length used for training
         - learn_rate: The learning rate used for training
+        - dataset: The name of a single dataset used for training
         - model: The type of neural net model used for training
         - optimizer: The type of optimizer used for training
         - time_last_epoch: The computation time in seconds for the last epoch
@@ -994,6 +995,10 @@ def experiment_parameter(exp_dir, key):
         value = pipeline_info.submodule.train.lr  # Learning rate used for training
         title = "Learning rate"
         xaxis = "Learning rate"
+
+    if key == "dataset" or key == "dataset_name" or key == "worm_dataset":
+        # The name of the single dataset used for training
+        pass
 
     if key == "model" or key == "model_type":
         # The type of neural network model used
