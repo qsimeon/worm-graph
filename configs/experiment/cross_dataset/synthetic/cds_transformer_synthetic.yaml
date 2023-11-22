@@ -2,8 +2,8 @@
 # File name: cds_transformer_experimental.yaml
 #   cds = cross dataset [generalization] (key: worm_dataset)
 #   transformer = NeuralTransformer model
-#   experimental = experimental datasets (Kato, Nichols, Skora, Uzel, Yemini, Kaplan, Flavell, Leifer)
-# We train a model on each individual experimental dataset (all worms from each) then evaluate them on all other experimental datasets (all worms from each).
+#   synthetic = synthetic datasets (Sines, Lorenz, VanDerPol, RandWalk, WhiteNoise)
+# We train a model on each individual synthetic dataset (all worms from each) then evaluate them on all other synthetic datasets (all worms from each).
 # We choose the hidden size to get a model with ~0.574M (trainable) parameters.
 # We use single experimental datasets.
 defaults:
@@ -14,16 +14,14 @@ hydra:
   mode: MULTIRUN
   sweeper:
     params:
-      experiment.seed: 1 #range(1) # using range(n) repeats each experiment n times
-      submodule.dataset.experimental_datasets: choice({Kato2015:all, Nichols2017:null, Skora2018:null, Uzel2022:null, Yemini2021:null, Kaplan2020:null, Flavell2023:null, Leifer2023:null},{Kato2015:null, Nichols2017:all, Skora2018:null, Uzel2022:null, Yemini2021:null, Kaplan2020:null, Flavell2023:null, Leifer2023:null},{Kato2015:null, Nichols2017:null, Skora2018:all, Uzel2022:null, Yemini2021:null, Kaplan2020:null, Flavell2023:null, Leifer2023:null},{Kato2015:null, Nichols2017:null, Skora2018:null, Uzel2022:all, Yemini2021:null, Kaplan2020:null, Flavell2023:null, Leifer2023:null},{Kato2015:null, Nichols2017:null, Skora2018:null, Uzel2022:null, Yemini2021:all, Kaplan2020:null, Flavell2023:null, Leifer2023:null},{Kato2015:null, Nichols2017:null, Skora2018:null, Uzel2022:null, Yemini2021:null, Kaplan2020:all, Flavell2023:null, Leifer2023:null},{Kato2015:null, Nichols2017:null, Skora2018:null, Uzel2022:null, Yemini2021:null, Kaplan2020:null, Flavell2023:all, Leifer2023:null},{Kato2015:null, Nichols2017:null, Skora2018:null, Uzel2022:null, Yemini2021:null, Kaplan2020:null, Flavell2023:null, Leifer2023:all})
-          # {Kato2015:all, Nichols2017:null, Skora2018:null, Uzel2022:null, Yemini2021:null, Kaplan2020:null, Flavell2023:null, Leifer2023:null}, # Kato dataset
-          # {Kato2015:null, Nichols2017:all, Skora2018:null, Uzel2022:null, Yemini2021:null, Kaplan2020:null, Flavell2023:null, Leifer2023:null}, # Nichols dataset
-          # {Kato2015:null, Nichols2017:null, Skora2018:all, Uzel2022:null, Yemini2021:null, Kaplan2020:null, Flavell2023:null, Leifer2023:null}, # Skora dataset
-          # {Kato2015:null, Nichols2017:null, Skora2018:null, Uzel2022:all, Yemini2021:null, Kaplan2020:null, Flavell2023:null, Leifer2023:null}, # Uzel dataset
-          # {Kato2015:null, Nichols2017:null, Skora2018:null, Uzel2022:null, Yemini2021:all, Kaplan2020:null, Flavell2023:null, Leifer2023:null}, # Yemini dataset
-          # {Kato2015:null, Nichols2017:null, Skora2018:null, Uzel2022:null, Yemini2021:null, Kaplan2020:all, Flavell2023:null, Leifer2023:null}, # Kaplan dataset
-          # {Kato2015:null, Nichols2017:null, Skora2018:null, Uzel2022:null, Yemini2021:null, Kaplan2020:null, Flavell2023:all, Leifer2023:null}, # Flavell dataset
-          # {Kato2015:null, Nichols2017:null, Skora2018:null, Uzel2022:null, Yemini2021:null, Kaplan2020:null, Flavell2023:null, Leifer2023:all}, # Leifer dataset
+      experiment.seed: 0 # assign a unique seed to each synthetic dataset class
+      submodule.dataset.use_these_datasets.path: choice(/om2/user/qsimeon/worm-graph/data/sines_validation, /om2/user/qsimeon/worm-graph/data/lorenz_validation, /om2/user/qsimeon/worm-graph/data/whitenoise_validation, /om2/user/qsimeon/worm-graph/data/randwalk_validation, /om2/user/qsimeon/worm-graph/data/vanderpol_validation)
+      submodule.dataset.experimental_datasets: choice({Sines0000:all, Lorenz0000:null, WhiteNoise0000:null, RandWalk0000:null, VanDerPol0000:null})
+          # seed 0: {Sines0000:all, Lorenz0000:null, WhiteNoise0000:null, RandWalk0000:null, VanDerPol0000:null}, # Sines dataset
+          # seed 1: {Sines0000:null, Lorenz0000:all, WhiteNoise0000:null, RandWalk0000:null, VanDerPol0000:null}, # Lorenz dataset
+          # seed 2: {Sines0000:null, Lorenz0000:null, WhiteNoise0000:all, RandWalk0000:null, VanDerPol0000:null}, # WhiteNoise dataset
+          # seed 3: {Sines0000:null, Lorenz0000:null, WhiteNoise0000:null, RandWalk0000:all, VanDerPol0000:null}, # RandWalk dataset
+          # seed 4: {Sines0000:null, Lorenz0000:null, WhiteNoise0000:null, RandWalk0000:null, VanDerPol0000:all}, # VanDerPol dataset
       
 submodule:
 
@@ -37,23 +35,20 @@ submodule:
     epochs: 500
 
   dataset:
-    # Set path to a directory with a fixed validation set
     use_these_datasets:
-      path: /om2/user/qsimeon/worm-graph/data/custom_validation
+      # This gets overwritten by the sweeper
+      path: null
       num_worms: null
 
     save_datasets: false
 
-    # This gets overwritten by the sweeper
     experimental_datasets:
-      Kato2015: null
-      Nichols2017: null
-      Skora2018: null
-      Uzel2022: null
-      Yemini2021: null
-      Kaplan2020: null
-      Flavell2023: null
-      Leifer2023: null
+      # This gets overwritten by the sweeper
+      Sines0000: null
+      Lorenz0000: null
+      WhiteNoise0000: null
+      RandWalk0000: null
+      VanDerPol0000: null
 
     num_named_neurons: null
     num_train_samples: 32
@@ -66,35 +61,28 @@ submodule:
   predict:
     # Choose the worms that you want to predict
     experimental_datasets:
-      Kato2015: worm0
-      Nichols2017: worm0
-      Skora2018: worm0
-      Uzel2022: worm0
-      Yemini2021: worm0
-      Kaplan2020: worm0
-      Flavell2023: worm1 # something is wrong with worm0 in Flavell2023
-      Leifer2023: worm0
+      Sines0000: [worm0, worm1] # test to check if distinct neuron signatures preserved across worms
+      Lorenz0000: worm0
+      WhiteNoise0000: worm0
+      RandWalk0000: worm0
+      VanDerPol0000: worm0
     # Number of time steps to generate
     nb_ts_to_generate: null
     context_window: 100
 
   analysis:
     analyse_this_log_dir: null
-    # Validate final model using all worms from each experimental dataset
+    # Validate final model all some worms from each synthetic dataset
     validation:
       experimental_datasets:
-        Kato2015: all
-        Nichols2017: all
-        Skora2018: all
-        Uzel2022: all
-        Yemini2021: all
-        Kaplan2020: all
-        Flavell2023: all
-        Leifer2023: all
+        Sines0000: 10
+        Lorenz0000: 10
+        WhiteNoise0000: 10
+        RandWalk0000: 10
+        VanDerPol0000: 10
 
 experiment: 
   # What parameter you are experimenting with (key)
-  key: worm_dataset 
-  name: cds_transformer_experimental
+  key: dataset_name 
+  name: cds_transformer_synthetic
   mode: MULTIRUN
-  seed: null
