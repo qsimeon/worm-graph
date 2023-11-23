@@ -649,9 +649,7 @@ class NeuralTransformer(Model):
         )
 
         # Special transformer parameters
-        # self.n_head = (
-        #     1  # number of attention heads; NOTE: this must be divisor of `hidden_size`
-        # )
+        # self.n_head = 1 # TODO: Figure out if the signel attention head verison was better.
         self.n_head = find_largest_divisor(
             hidden_size
         )  # number of attention heads (NOTE: must be divisor of `hidden_size`)

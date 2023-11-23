@@ -2,7 +2,7 @@ analysis:
   # This directory is overwritten when using the a pipeline with train or predict submodules.
   # If using the submodule alone, this directory is the path to the log folder you want to generate the analysis in.
   analyse_this_log_dir: null # options: null, logs/hydra/<YYYY_MM_DD_HH_MM_SS>
-  # Validate final model using some worms from each dataset
+  # Validate final model using some/all worms from each dataset
   validation:
     # null = don't analyze on this dataset
     # all = analyze all the worms in the dataset
