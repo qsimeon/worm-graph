@@ -228,7 +228,7 @@ def dataset_information(path_dict, legend_code):
         capsize=5,
     )
     # Add a dashed horizontal line at y=302
-    ax2.axhline(y=302, color="black", linestyle="dashed", linewidth=1)
+    ax2.axhline(y=302, color="black", linestyle="dashed", linewidth=1, alpha=0.5)
     # Annotate the line
     # Use the right edge of the subplot for text annotation to prevent overflow
     right_edge = ax2.get_xlim()[1]
@@ -283,7 +283,7 @@ def dataset_information(path_dict, legend_code):
     )
     ax3.set_title("(C) Total duration of recorded neural activity", fontsize=14)
 
-    # ########### RECORDING DURATION BAR PLOT ###############
+    # ########### DURATION OF RECORDED NEURAL ACTIVITY PER WORM BAR PLOT ###############
     ax4 = plt.subplot(
         gs[1, 1]
     )  # Subplot for 'Duration of recorded neural activity per worm' bar plot
@@ -303,6 +303,19 @@ def dataset_information(path_dict, legend_code):
         yerr=2 * recording_duration_stats["sem"],
         color=recording_duration_colors,
         capsize=5,
+    )
+    # Add a dashed horizontal line at y=3600
+    ax4.axhline(y=3600, color="black", linestyle="dashed", linewidth=1, alpha=0.5)
+    # Annotate the line
+    # Use the right edge of the subplot for text annotation to prevent overflow
+    right_edge = ax4.get_xlim()[1]
+    ax4.text(
+        right_edge,  # x position at the right edge
+        3600,  # y position at the line
+        "3600 seconds = 1 hour of calcium imaging",
+        horizontalalignment="right",  # Align text to the right
+        fontsize=10,
+        fontstyle="italic",
     )
     ax4.set_title("(D) Duration of recorded neural activity per worm", fontsize=14)
     ax4.set_ylabel("Time (s)")
@@ -330,6 +343,19 @@ def dataset_information(path_dict, legend_code):
         color=ts_per_neuron_colors,
         capsize=5,
     )
+    # Add a dashed horizontal line at y=100
+    ax6.axhline(y=100, color="black", linestyle="dashed", linewidth=1, alpha=0.5)
+    # Annotate the line
+    # Use the right edge of the subplot for text annotation to prevent overflow
+    right_edge = ax6.get_xlim()[1]
+    ax6.text(
+        right_edge,  # x position at the right edge
+        100,  # y position at the line
+        "Sequence length $L=100$ was used in our experiments",
+        horizontalalignment="right",  # Align text to the right
+        fontsize=10,
+        fontstyle="italic",
+    )
     ax6.set_title("(E) Number of time steps per recorded neuron", fontsize=14)
     ax6.set_ylabel("Time steps per neuron")
     ax6.set_xticklabels(ts_per_neuron_stats["dataset"], rotation=45, ha="right")
@@ -355,6 +381,19 @@ def dataset_information(path_dict, legend_code):
         yerr=2 * dt_stats["sem"],
         color=dt_colors,
         capsize=5,
+    )
+    # Add a dashed horizontal line at y=1.0
+    ax7.axhline(y=1.0, color="black", linestyle="dashed", linewidth=1, alpha=0.5)
+    # Annotate the line
+    # Use the right edge of the subplot for text annotation to prevent overflow
+    right_edge = ax7.get_xlim()[1]
+    ax7.text(
+        right_edge,  # x position at the right edge
+        1.0,  # y position at the line
+        "We downsampled all data to $\Delta s = 1.0s$ (1 Hz)",
+        horizontalalignment="right",  # Align text to the right
+        fontsize=10,
+        fontstyle="italic",
     )
     ax7.set_title("(F) Sampling interval of recorded neural activity", fontsize=14)
     ax7.set_ylabel(r"Mean sampling interval ($\Delta$s)")
