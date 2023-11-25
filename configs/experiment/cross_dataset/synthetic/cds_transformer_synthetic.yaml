@@ -15,7 +15,7 @@ hydra:
   sweeper:
     params:
       experiment.seed: 4 # assign a unique seed to each synthetic dataset class
-      submodule.dataset.use_these_datasets.path: choice(/om2/user/qsimeon/worm-graph/data/sines_validation, /om2/user/qsimeon/worm-graph/data/lorenz_validation, /om2/user/qsimeon/worm-graph/data/whitenoise_validation, /om2/user/qsimeon/worm-graph/data/randwalk_validation, /om2/user/qsimeon/worm-graph/data/vanderpol_validation)
+      submodule.dataset.use_these_datasets.path: choice(/om2/user/qsimeon/worm-graph/data/validation_Sines0000, /om2/user/qsimeon/worm-graph/data/validation_Lorenz0000, /om2/user/qsimeon/worm-graph/data/validation_WhiteNoise0000, /om2/user/qsimeon/worm-graph/data/validation_RandWalk0000, /om2/user/qsimeon/worm-graph/data/validation_VanDerPol0000)
       submodule.dataset.experimental_datasets: choice({Sines0000:null, Lorenz0000:null, WhiteNoise0000:null, RandWalk0000:null, VanDerPol0000:all})
           # seed 0: {Sines0000:all, Lorenz0000:null, WhiteNoise0000:null, RandWalk0000:null, VanDerPol0000:null}, # Sines dataset
           # seed 1: {Sines0000:null, Lorenz0000:all, WhiteNoise0000:null, RandWalk0000:null, VanDerPol0000:null}, # Lorenz dataset

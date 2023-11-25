@@ -36,11 +36,11 @@ submodule:
   dataset:
     # Set path to a directory with a fixed validation set for the current synthetic dataset
     use_these_datasets:
-      # path: /om2/user/qsimeon/worm-graph/data/sines_validation 
-      # path: /om2/user/qsimeon/worm-graph/data/lorenz_validation 
-      # path: /om2/user/qsimeon/worm-graph/data/whitenoise_validation 
-      # path: /om2/user/qsimeon/worm-graph/data/randwalk_validation 
-      path: /om2/user/qsimeon/worm-graph/data/vanderpol_validation 
+      # path: /om2/user/qsimeon/worm-graph/data/validation_Sines0000 
+      # path: /om2/user/qsimeon/worm-graph/data/validation_Lorenz0000
+      # path: /om2/user/qsimeon/worm-graph/data/validation_WhiteNoise0000 
+      # path: /om2/user/qsimeon/worm-graph/data/validation_RandWalk0000 
+      path: /om2/user/qsimeon/worm-graph/data/validation_VanDerPol0000
       num_worms: null
 
     save_datasets: false

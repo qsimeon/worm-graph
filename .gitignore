@@ -35,9 +35,9 @@ logs/
 
 # ICLR Results
 analysis/iclr2024/results
-data/custom*
-data/combined*dataset
-data/*_validation
+data/combined_*
+data/train_*
+data/validation_*
 
 # C extensions
 *.so

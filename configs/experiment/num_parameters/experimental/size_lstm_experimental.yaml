@@ -25,7 +25,7 @@ submodule:
   dataset:
     # Set path to a directory with a fixed train and validation set
     use_these_datasets:
-      path: /om2/user/qsimeon/worm-graph/data/custom_combined
+      path: /om2/user/qsimeon/worm-graph/data/combined_AllExperimental
       num_worms: null
 
     save_datasets: false

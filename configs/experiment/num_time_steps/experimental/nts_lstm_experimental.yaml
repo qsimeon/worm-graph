@@ -39,7 +39,7 @@ submodule:
   dataset:
     # Set path to a directory with a fixed validation set
     use_these_datasets:
-      path: /om2/user/qsimeon/worm-graph/data/custom_validation
+      path: /om2/user/qsimeon/worm-graph/data/validation_AllExperimental
       num_worms: null
 
     save_datasets: false
