@@ -14,7 +14,7 @@ hydra:
   mode: MULTIRUN
   sweeper:
     params:
-      experiment.seed: 1 #range(1) # using range(n) repeats each experiment n times
+      experiment.seed: 1 #0,1
       submodule.dataset.experimental_datasets: choice({Kato2015:all, Nichols2017:null, Skora2018:null, Uzel2022:null, Yemini2021:null, Kaplan2020:null, Flavell2023:null, Leifer2023:null},{Kato2015:null, Nichols2017:all, Skora2018:null, Uzel2022:null, Yemini2021:null, Kaplan2020:null, Flavell2023:null, Leifer2023:null},{Kato2015:null, Nichols2017:null, Skora2018:all, Uzel2022:null, Yemini2021:null, Kaplan2020:null, Flavell2023:null, Leifer2023:null},{Kato2015:null, Nichols2017:null, Skora2018:null, Uzel2022:all, Yemini2021:null, Kaplan2020:null, Flavell2023:null, Leifer2023:null},{Kato2015:null, Nichols2017:null, Skora2018:null, Uzel2022:null, Yemini2021:all, Kaplan2020:null, Flavell2023:null, Leifer2023:null},{Kato2015:null, Nichols2017:null, Skora2018:null, Uzel2022:null, Yemini2021:null, Kaplan2020:all, Flavell2023:null, Leifer2023:null},{Kato2015:null, Nichols2017:null, Skora2018:null, Uzel2022:null, Yemini2021:null, Kaplan2020:null, Flavell2023:all, Leifer2023:null},{Kato2015:null, Nichols2017:null, Skora2018:null, Uzel2022:null, Yemini2021:null, Kaplan2020:null, Flavell2023:null, Leifer2023:all})
           # {Kato2015:all, Nichols2017:null, Skora2018:null, Uzel2022:null, Yemini2021:null, Kaplan2020:null, Flavell2023:null, Leifer2023:null}, # Kato dataset
           # {Kato2015:null, Nichols2017:all, Skora2018:null, Uzel2022:null, Yemini2021:null, Kaplan2020:null, Flavell2023:null, Leifer2023:null}, # Nichols dataset

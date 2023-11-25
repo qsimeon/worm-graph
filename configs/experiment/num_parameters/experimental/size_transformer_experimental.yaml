@@ -14,8 +14,11 @@ hydra:
   mode: MULTIRUN
   sweeper:
     params:
-      experiment.seed: 1 #range(1) # using range(n) repeats each experiment n times 
-      submodule.model.hidden_size: range(16,129,16) #range(64,193,8) #range(64,2881,64)
+      experiment.seed: 1
+      submodule.model.hidden_size: range(16,129,16)
+      # seed 1: range(16,129,16) 
+      # seed 0: range(64,2881,64)
+      # seed 2: range(64,193,8) 
 
 submodule:
   
