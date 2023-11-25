@@ -10,7 +10,7 @@ hydra:
   sweeper:
       params:
         experiment.seed: range(1) # assign each repetition of the experiment a distinct random seed
-        submodule.model.type: LinearNN, NetworkLSTM, NeuralTransformer # NeuralCFC, NetworkRNN
+        submodule.model.type: FeatureFFNN, NetworkLSTM, NeuralTransformer # NeuralCFC, NetworkRNN
 
 # The submodule parameters set below will be used only if RUN mode is used. 
 # Otherwise, it uses the default parameters imported from the other config files in the submodule directory.

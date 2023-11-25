@@ -1,7 +1,7 @@
 # @package _global_
 # File name: nts_linear_synthetic.yaml
 #   nts = number of time steps
-#   linear = LinearNN model
+#   linear = FeatureFFNN model
 #   synthetic = synthetic datasets (Sines, Lorenz, VanDerPol, RandWalk, WhiteNoise)
 # We increase gradually the quantity of worms from all datasets.
 # We choose the hidden size to get a model with ~0.574M (trainable) parameters.
@@ -26,7 +26,7 @@ submodule:
 
   model:
     # Build model from scratch
-    type: LinearNN 
+    type: FeatureFFNN 
     hidden_size: 512
 
   train:

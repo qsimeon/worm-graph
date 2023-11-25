@@ -23,8 +23,8 @@ def get_model(model_config: DictConfig, verbose=True) -> torch.nn.Module:
     NetworkLSTM : class in models/_utils.py
     NetworkRNN : class in models/_utils.py
     NeuralCFC : class in models/_utils.py
-    LinearNN : class in models/_utils.py
-        If no model type is specified, LinearNN is used by default.
+    FeatureFFNN : class in models/_utils.py
+        If no model type is specified, FeatureFFNN is used by default.
 
     Returns
     -------
@@ -83,10 +83,10 @@ def get_model(model_config: DictConfig, verbose=True) -> torch.nn.Module:
             model = NeuralCFC(**args)
         # elif model_config.type == "NetworkGCN": # TODO: work-in-progress
         #     model = NetworkGCN(**args)
-        elif model_config.type == "LinearNN":
-            model = LinearNN(**args)
-        else:  # default to "LinearNN" model
-            model = LinearNN(**args)
+        elif model_config.type == "FeatureFFNN":
+            model = FeatureFFNN(**args)
+        else:  # default to "FeatureFFNN" model
+            model = FeatureFFNN(**args)
         if verbose:
             logger.info("Initialized a new model: {}.".format(model_config.type))
             logger.info(f"Hidden size: {model_config.hidden_size}")

@@ -21,7 +21,7 @@ def legend_code():
     model_labels = {
         "NetworkLSTM": "LSTM",
         "NeuralTransformer": "Transformer",
-        "LinearNN": "Feedforward",
+        "FeatureFFNN": "Feedforward",
     }
 
     marker_colors = sns.color_palette("tab10", n_colors=len(markers))
@@ -930,7 +930,7 @@ def scaling_slopes_plot(scaling_slope_results, legend_code):
         ax=ax[1, 1],
         color="lightgrey",
         showfliers=False,
-        order=["NeuralTransformer", "LinearNN", "NetworkLSTM"],
+        order=["NeuralTransformer", "FeatureFFNN", "NetworkLSTM"],
     )  # You might want to set a neutral color for the boxplot
     ax[1, 1].set_xticklabels(["Transformer", "Feedforward", "LSTM"])
 
@@ -944,7 +944,7 @@ def scaling_slopes_plot(scaling_slope_results, legend_code):
             ax=ax[1, 1],
             palette=original_ds_color_code,
             size=7,
-            order=["NeuralTransformer", "LinearNN", "NetworkLSTM"],
+            order=["NeuralTransformer", "FeatureFFNN", "NetworkLSTM"],
             dodge=True,
             marker=marker,
             legend=False,

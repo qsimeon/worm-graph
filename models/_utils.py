@@ -570,9 +570,13 @@ class Model(torch.nn.Module):
 # # # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
 
 
-class LinearNN(Model):
+class FeatureFFNN(Model):
     """
-    A simple (non)linear regression model to use as a baseline.
+    A simple nonlinear regression model to use as a baseline.
+    FFNN stands for FeedForward Neural Network. Unlike the LSTM
+    and Transformer models, this model has no temporal memory
+    and can only learn a fixed nonlinear feature regression
+    function that gets apploed at each time step independently.
     """
 
     def __init__(
@@ -583,7 +587,7 @@ class LinearNN(Model):
         fft_reg_param: float = 0.0,
         l1_reg_param: float = 0.0,
     ):
-        super(LinearNN, self).__init__(
+        super(FeatureFFNN, self).__init__(
             input_size,
             hidden_size,
             loss,

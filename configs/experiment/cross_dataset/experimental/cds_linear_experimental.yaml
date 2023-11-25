@@ -1,7 +1,7 @@
 # @package _global_
 # File name: cds_linear_experimental.yaml
 #   cds = cross dataset [generalization] (key: worm_dataset)
-#   linear = LinearNN model
+#   linear = FeatureFFNN model
 #   experimental = experimental datasets (Kato, Nichols, Skora, Uzel, Yemini, Kaplan, Flavell, Leifer)
 # We train a model on each individual experimental dataset (all worms from each) then evaluate them on all other experimental datasets (all worms from each).
 # We choose the hidden size to get a model with ~0.574M (trainable) parameters.
@@ -14,7 +14,7 @@ hydra:
   mode: MULTIRUN
   sweeper:
     params:
-      experiment.seed: 1 #range(1) # using range(n) repeats each experiment n times
+      experiment.seed: 1 #0,1
       submodule.dataset.experimental_datasets: choice({Kato2015:all, Nichols2017:null, Skora2018:null, Uzel2022:null, Yemini2021:null, Kaplan2020:null, Flavell2023:null, Leifer2023:null},{Kato2015:null, Nichols2017:all, Skora2018:null, Uzel2022:null, Yemini2021:null, Kaplan2020:null, Flavell2023:null, Leifer2023:null},{Kato2015:null, Nichols2017:null, Skora2018:all, Uzel2022:null, Yemini2021:null, Kaplan2020:null, Flavell2023:null, Leifer2023:null},{Kato2015:null, Nichols2017:null, Skora2018:null, Uzel2022:all, Yemini2021:null, Kaplan2020:null, Flavell2023:null, Leifer2023:null},{Kato2015:null, Nichols2017:null, Skora2018:null, Uzel2022:null, Yemini2021:all, Kaplan2020:null, Flavell2023:null, Leifer2023:null},{Kato2015:null, Nichols2017:null, Skora2018:null, Uzel2022:null, Yemini2021:null, Kaplan2020:all, Flavell2023:null, Leifer2023:null},{Kato2015:null, Nichols2017:null, Skora2018:null, Uzel2022:null, Yemini2021:null, Kaplan2020:null, Flavell2023:all, Leifer2023:null},{Kato2015:null, Nichols2017:null, Skora2018:null, Uzel2022:null, Yemini2021:null, Kaplan2020:null, Flavell2023:null, Leifer2023:all})
           # {Kato2015:all, Nichols2017:null, Skora2018:null, Uzel2022:null, Yemini2021:null, Kaplan2020:null, Flavell2023:null, Leifer2023:null}, # Kato dataset
           # {Kato2015:null, Nichols2017:all, Skora2018:null, Uzel2022:null, Yemini2021:null, Kaplan2020:null, Flavell2023:null, Leifer2023:null}, # Nichols dataset
@@ -29,7 +29,7 @@ submodule:
 
   model:
     # Build model from scratch
-    type: LinearNN 
+    type: FeatureFFNN 
     hidden_size: 512
 
   train:

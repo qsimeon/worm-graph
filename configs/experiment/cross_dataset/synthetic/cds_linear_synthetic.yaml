@@ -1,7 +1,7 @@
 # @package _global_
 # File name: cds_linear_experimental.yaml
 #   cds = cross dataset [generalization] (key: worm_dataset)
-#   linear = LinearNN model
+#   linear = FeatureFFNN model
 #   synthetic = synthetic datasets (Sines, Lorenz, VanDerPol, RandWalk, WhiteNoise)
 # We train a model on each individual synthetic dataset (all worms from each) then evaluate them on all other synthetic datasets (all worms from each).
 # We choose the hidden size to get a model with ~0.574M (trainable) parameters.
@@ -27,7 +27,7 @@ submodule:
 
   model:
     # Build model from scratch
-    type: LinearNN 
+    type: FeatureFFNN 
     hidden_size: 512
 
   train:
