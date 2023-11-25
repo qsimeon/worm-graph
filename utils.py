@@ -57,24 +57,25 @@ else:
 
 # Set real C. elegans datasets we have processed
 VALID_DATASETS = {
+    "Leifer2023",  # Different type of dataset: stimulus-response.
+    "Flavell2023",  # TODO: Something wrong with worm0.
     "Uzel2022",
+    "Yemini2021",
+    "Kaplan2020",
     "Skora2018",
     "Nichols2017",
     "Kato2015",
-    "Kaplan2020",
-    "Yemini2021",
-    "Leifer2023",  # Different type of dataset: stimulus-response.
-    "Flavell2023",  # TODO: Something wrong with worm0.
 }
 
-SYNTHETIC_DATASETS = {  # Datasets created with the `CreateSyntheticDataset.ipynb` notebook.
-    "Sines0000",
-    "Lorenz0000",
-    "VanDerPol0000",
-    "RandWalk0000",
-    "WhiteNoise0000",
-    # "Custom<xxxx>",  # Dataset created when `save_datasets` is True in the dataset.yaml config.
-}
+SYNTHETIC_DATASETS = (
+    {  # Datasets created with the `CreateSyntheticDataset.ipynb` notebook.
+        "Sines0000",
+        "Lorenz0000",
+        "WhiteNoise0000",
+        "RandWalk0000",
+        "VanDerPol0000",
+    }
+)
 
 # List of all 302 hermaphrodite neurons
 if os.path.exists(RAW_DATA_DIR):
