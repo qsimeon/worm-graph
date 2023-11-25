@@ -2,6 +2,7 @@
 
 ### Simulating the _C. elegans_ whole brain with neural networks.
 
+
 ### Table of Contents
 1. [Project Overview](#worm-graph)
 2. [Directory Structure](#directory-structure)
@@ -12,7 +13,15 @@
     - [Code Style Conventions](#code-style-conventions)
 6. [Future Tasks](#future-tasks--todos)
 
+
 ## Project Overview
+
+`worm-graph` is a computational framework for modeling and simulating the neural dynamics of _Caenorhabditis elegans_ (_C. elegans_) using artificial neural networks (ANNs). The project focuses on self-supervised learning to predict future neural activity from historical data without behavioral context, rooted in the understanding that intrinsic neural dynamics can be inherently predictable. It employs a range of neural network architectures such as LSTM, Transformer, and Feed-Forward networks, evaluating their performance based on mean squared error (MSE) as they scale with training data volume and model complexity.
+
+This repository serves as a platform to investigate the effects of training data size, network architecture, and model parameters on the accuracy of neural state predictions. It utilizes diverse datasets, recorded under various conditions, to ensure robustness and generalizability of the models. A key finding of this work is the logarithmic reduction in MSE with increased training data, highlighting the critical role of data volume in model performance. The research also reveals a nonlinear dependency of prediction accuracy on model size, identifying an optimal range for the number of trainable parameters.
+
+The `worm-graph` project not only contributes to the field of computational neuroscience by enhancing the predictability of neural dynamics but also informs AI research, providing insights into the scaling properties of ANNs. Future directions involve refining model architectures, integrating behavioral data for context, and extending methodologies to more complex nervous systems.
+
 
 ## Directory Structure
 `tree -L 1 worm-graph`
@@ -39,6 +48,7 @@
 └── visualize
 ```
 
+
 ## Environment Setup
 
 To prepare your environment for this project, you can use either the provided `.yml` files or the `init.sh` script. Choose the option that works most efficiently for your system.
@@ -50,6 +60,7 @@ cd setup
 ```
 
 **Note:** Installing the environment can take up to 2 hours!
+
 
 ### Option A: Setting up with the bash script (recommended) 
 
@@ -71,6 +82,7 @@ cd setup
     pip install --upgrade -r requirements.txt
     ```
 
+
 ### Option B: Setting up with the `.yml` file
 
 1. Open your terminal or Anaconda Prompt, and create a new Conda environment using the `.yml` file. The first line of the `.yml` file sets the name of the new environment.
@@ -89,6 +101,7 @@ After finishing one of the installations above, navigate back to the root direct
 
 **Important Reminder:** Always activate the environment before starting your work on the project by running `conda activate worm-graph`.
 
+
 ## Getting Started
 
 To make sure nothing breaks, the first thing you need to do is download and preprocess our curated collection of _C. elegans_ neural activity datasets. 
@@ -96,27 +109,29 @@ From the root (`worm-graph`) directory, run the command:
 
 `python main.py +submodule=[preprocess]`
 
-> If chaining submodules together (e.g. `dataset`, `preproces`) don't put spaces after the comma:
-    `python main.py +submodule=[preprocess,dataset]`
+* If chaining multiple submodules together (e.g. `dataset` and `preprocess`) do not use spaces after commas:
+    
+    - `python main.py +submodule=[preprocess,dataset]`
 
-> If on a Mac, place `+submodule=[preprocess]` in quotations, like this:
-    `python main.py "+submodule=[preprocess]"`
+* If on a Mac, place `+submodule=[preprocess]` in quotations:
+    
+    - `python main.py "+submodule=[preprocess]"`
 
-    OR
-
-    `python main.py +submodule="[preprocess,dataset]"`
+    - `python main.py "+submodule=[preprocess,dataset]"`
 
 
 Now you can run the main script as a demo of the fully functional pipeline:
 
 `python main.py +experiment=default_run`
 
-> If on a Mac, place `+experiment=default_run` in quotations, like this:
-    `python main.py "+experiment=default_run"`
+* If on a Mac, place `+experiment=default_run` in quotations:
 
-If you are running on a SLURM computing cluster:
+    - `python main.py "+experiment=default_run"`
 
-`python main.py +experiment=default_run hydra/launcher=submitit_slurm`
+* If you are running on a SLURM computing cluster:
+
+    - `python main.py +experiment=default_multirun`
+
 
 For one multi-worm dataset of neural activity, this pipeline will:
 1. Load the preprocessed calcium data for all worms in the dataset.
@@ -125,7 +140,9 @@ For one multi-worm dataset of neural activity, this pipeline will:
 
 For more tutorials on how to use the pipeline and configuration files, refer to the `worm-graph` GitHub Wiki page.
 
+
 ## For Developers
+
 
 ### File Naming Conventions
 
@@ -134,6 +151,7 @@ For folders and script files, use the `lower_case_with_underscores` naming style
 
 For Jupyter notebooks, use the `CamelCase` naming style.
 **Example:** `MyAnalysisNotebook.ipynb`.
+
 
 ### Code Style Conventions
 
@@ -154,9 +172,10 @@ For Jupyter notebooks, use the `CamelCase` naming style.
 
 - Always shape neural data matrices as `(time, neurons, {features})`. The braces `{}` indicate that the last `features` dimension is optional, as the `neurons` currently serve as the features for our models.
 
+
 ## Future Tasks
 
+- Write the Project Overview section of the README.
 - Post the preprocess datasets to a file-hosting site.
-- Add unit tests for each submodule.
-- Add docstrings to all functions and classes in all submodules.
-   - Format using the Google Python Style Guide.
+- Implement unit tests for all submodules in the `tests` directory.
+- Add docstrings to all functions and classes. Follow the Google Python Style Guide for formating.

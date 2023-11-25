@@ -1,8 +1,8 @@
 preprocess:
   url: https://www.dropbox.com/scl/fi/2nqh0m9eq8lgnie6eeclk/opensource_data.zip?rlkey=gcw5flke92s4qnrn4zptdgqxl&dl=1
   zipfile: opensource_data.zip
-  cleanup: false # Whether to delete the downloaded and unzipped opensource data folder
-  dataset: all # [Kato2015, Nichols2017, Skora2018, Yemini2021, Uzel2022, Kaplan2020, Flavell2023, Leifer2023] # any dataset in utils.VALID_DATASETS
+  cleanup: true # Whether to delete the downloaded and unzipped opensource data folder
+  dataset: all # [Kato2015, Nichols2017, Skora2018, Kaplan2020, Yemini2021, Uzel2022, Flavell2023, Leifer2023] # any dataset in utils.VALID_DATASETS
   resample_dt: 1.0 # The time interval (in seconds) to use for resampling; if null, no resampling is performed
   interpolate: linear # The method to use for interpolation; options: null, linear, quadratic, cubic
   smooth: 

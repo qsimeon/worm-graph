@@ -1569,7 +1569,7 @@ class Yemini2021Preprocessor(BasePreprocessor):
 
         # Save data
         self.save_data(preprocessed_data)
-        print(f"Finished processing {self.dataset}.")
+        logger.info(f"Finished processing {self.dataset}.")
 
 
 class Leifer2023Preprocessor(BasePreprocessor):
