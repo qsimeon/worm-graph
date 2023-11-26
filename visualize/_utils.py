@@ -1069,7 +1069,7 @@ def plot_experiment_losses(exp_log_dir, exp_plot_dir, exp_key):
     fig, ax = plt.subplots(1, 2, figsize=(10, 8))
     sns.set_style("whitegrid")
 
-    # Keep track of parameters
+    # Keep track of parameters and losses for colormap normalization
     parameters = []
 
     # Loop over all the experiment files
@@ -1085,18 +1085,33 @@ def plot_experiment_losses(exp_log_dir, exp_plot_dir, exp_key):
         exp_param, exp_title, exp_xaxis = experiment_parameter(exp_dir, key=exp_key)
         parameters.append(exp_param)
 
+    # Normalize the exp_param values for colormap
+    logger.info(f"parameters: {parameters} \n type: {type(parameters[-1])}")  # DEBUG
+    norm = Normalize(vmin=min(parameters), vmax=max(parameters))
+    scalar_map = cm.ScalarMappable(norm=norm, cmap=cm.viridis)
+
+    # Plot each experiment
+    for i, file in enumerate(np.sort(os.listdir(exp_log_dir))):
+        if not file.startswith("exp") or file.startswith("exp_"):
+            continue
+
+        exp_dir = os.path.join(exp_log_dir, file)
+
+        # Get color for current num_time_steps
+        color_val = scalar_map.to_rgba(parameters[i])
+
         # Load train metrics
         df = pd.read_csv(os.path.join(exp_dir, "train", "train_metrics.csv"))
 
         # Plot loss and baseline
-        ax[0].plot(df["epoch"], df["train_loss"], label=exp_param)
+        ax[0].plot(df["epoch"], df["train_loss"], label=parameters[i], color=color_val)
         ax[0].plot(df["epoch"], df["train_baseline"], color="black", linestyle="--")
-        ax[1].plot(df["epoch"], df["val_loss"], label=exp_param)
+        ax[1].plot(df["epoch"], df["val_loss"], label=parameters[i], color=color_val)
         ax[1].plot(df["epoch"], df["val_baseline"], color="black", linestyle="--")
 
-        # Set x-axes to only use integer values
-        ax[0].xaxis.set_major_locator(ticker.MaxNLocator(integer=True))
-        ax[1].xaxis.set_major_locator(ticker.MaxNLocator(integer=True))
+    # Set x-axes to only use integer values
+    ax[0].xaxis.set_major_locator(ticker.MaxNLocator(integer=True))
+    ax[1].xaxis.set_major_locator(ticker.MaxNLocator(integer=True))
 
     # Set loss labels
     ax[0].set_xlabel("Epoch", fontsize=12)
@@ -1121,6 +1136,10 @@ def plot_experiment_losses(exp_log_dir, exp_plot_dir, exp_key):
     # Set the legend with the sampled subset
     legend = ax[0].legend(sampled_handles, sampled_labels, fontsize=10, loc="best")
     legend.set_title(exp_xaxis)
+
+    # Add colorbar to the figure
+    scalar_map.set_array([])
+    fig.colorbar(scalar_map, ax=ax, orientation="vertical", label=exp_xaxis)
 
     # Set loss title
     fig.suptitle(f"{exp_title} experiment", fontsize=14)
