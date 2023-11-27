@@ -105,17 +105,21 @@ def plot_experiment(visualize_config: DictConfig, exp_config: DictConfig) -> Non
 
         logger.info(f"Plotting experiment {exp_key}.")
 
-        # Plot losses and computation time
-        plot_experiment_losses(exp_log_dir, exp_plot_dir, exp_key)
+        # Plot loss curves
+        plot_experiment_losses(
+            exp_log_dir=exp_log_dir,
+            exp_key=exp_key,
+            exp_plot_dir=exp_plot_dir,
+        )
 
-        # Scaling law
+        # Plot summary statistics
         plot_experiment_summaries(
             exp_log_dir=exp_log_dir,
             exp_key=exp_key,
             exp_plot_dir=exp_plot_dir,
         )
 
-        # Plot spread dataset losses analysis
+        # Plot loss per individual dataset
         plot_experiment_loss_per_dataset(
             exp_log_dir=exp_log_dir,
             exp_key=exp_key,
@@ -129,8 +133,10 @@ def plot_experiment(visualize_config: DictConfig, exp_config: DictConfig) -> Non
             mode="validation",
         )
 
-    except:
+    except Exception as e:
         logger.info(f"Not all experiments are finished. Skipping for now.")
+        logger.error(f"The error that occurred: {e}")
+        logger.error(traceback.format_exc())  # This will print the full traceback
         return None
 
 
