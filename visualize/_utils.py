@@ -1309,7 +1309,7 @@ def plot_experiment_summaries(exp_log_dir, exp_key, exp_plot_dir=None):
     axes[1].set_yscale("log")
 
     # Epoch computation times boxplot
-    axes[2].boxplot(computation_times, notch=True, sym="", bootstrap=1000)
+    axes[2].boxplot(computation_times, notch=True, sym="")  # , bootstrap=1000)
     axes[2].set_xticklabels(parameters, rotation=90, ha="right", fontsize=6)
     axes[2].set_title("Computation Time per Epoch")
     axes[2].set_xlabel(exp_xaxis)
@@ -1385,8 +1385,8 @@ def plot_loss_per_dataset(log_dir, mode="validation"):
     )  # Set x-ticks to be in the middle of the grouped bars
     ax.set_xticklabels(losses["dataset"].values, rotation=0, ha="center")
     ax.set_ylabel("Loss")
-    # ax.set_yscale("log")  # log scale
-    ax.set_title(f"{mode.capitalize()} loss across datasets")
+    ax.set_yscale("log")  # Set y-axis to log-scale
+    ax.set_title(f"{mode.capitalize()} set loss across datasets")
     ax.legend(loc="upper right")
 
     props = dict(boxstyle="round", facecolor="white", alpha=0.5)
@@ -1581,7 +1581,8 @@ def plot_experiment_loss_per_dataset(
     # Set axis labels and title
     ax.set_xlabel(exp_xaxis)
     ax.set_ylabel("Loss")
-    ax.set_title(f"{mode.capitalize()} loss across datasets")
+    ax.set_yscale("log")  # Set y-axis to log-scale
+    ax.set_title(f"{mode.capitalize()} set loss across datasets")
     ax.legend(loc="upper right", fontsize="x-small")
 
     plt.tight_layout()

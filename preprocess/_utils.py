@@ -1103,8 +1103,6 @@ class BasePreprocessor:
             # 0. Ignore any worms with empty traces and name worm
             if trace_data.size == 0:
                 continue
-            worm = "worm" + str(worm_idx)  # Use global worm index
-            worm_idx += 1  # Increment worm index
 
             # 1. Map named neurons
             unique_IDs = [
@@ -1118,13 +1116,17 @@ class BasePreprocessor:
             _, unique_indices = np.unique(unique_IDs, return_index=True)
             unique_IDs = [unique_IDs[_] for _ in unique_indices]
 
-            trace_data = trace_data[
-                :, unique_indices.astype(int)
-            ]  # only get data for unique neurons
-
             neuron_to_idx, num_named_neurons = self.create_neuron_idx(
                 unique_IDs
             )  # create neuron label to index mapping
+
+            if num_named_neurons == 0:  # skip worms with no labelled neurons
+                logger.info(f"DEBUG num_named_neurons: {num_named_neurons}")  # DEBUG
+                continue
+
+            trace_data = trace_data[
+                :, unique_indices.astype(int)
+            ]  # only get data for unique neurons
 
             # 2. Transform data
             calcium_data = self.normalize_data(trace_data)
@@ -1168,7 +1170,11 @@ class BasePreprocessor:
             max_timesteps, num_neurons = resampled_calcium_data.shape
             num_unknown_neurons = int(num_neurons) - num_named_neurons
 
-            # 6. Save data
+            # 6. Name worm and update index
+            worm = "worm" + str(worm_idx)  # Use global worm index
+            worm_idx += 1  # Increment worm index
+
+            # 7. Save data
             worm_dict = {
                 worm: {
                     "dataset": self.dataset,
@@ -1702,7 +1708,7 @@ class Leifer2023Preprocessor(BasePreprocessor):
                 data_file, labels_file, time_file
             )  # load and extract
 
-            if len(label_list) == 0:  # skip worms with no neuron labels
+            if len(label_list) == 0:  # skip worms with no recorded neurons
                 worm_idx -= 1
                 continue
             if len(time_in_seconds) < 1000:  # skip worms with very short recordings
@@ -1711,6 +1717,10 @@ class Leifer2023Preprocessor(BasePreprocessor):
 
             # 1. Map named neurons
             neuron_to_idx, num_named_neurons = self.create_neuron_idx(label_list)
+            if num_named_neurons == 0:  # skip worms with no labelled neuron
+                logger.info(f"DEBUG num_named_neurons: {num_named_neurons}")  # DEBUG
+                worm_idx -= 1
+                continue
 
             # 2. Transform data
             calcium_data = self.normalize_data(real_data)
