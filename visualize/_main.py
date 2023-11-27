@@ -125,7 +125,7 @@ def plot_experiment(visualize_config: DictConfig, exp_config: DictConfig) -> Non
             exp_key=exp_key,
             exp_plot_dir=exp_plot_dir,
             mode="train",
-        )
+        )  # TODO: Is this a useful plot?
         plot_experiment_loss_per_dataset(
             exp_log_dir=exp_log_dir,
             exp_key=exp_key,

@@ -90,7 +90,6 @@ submodule:
         Flavell2023: all
         Leifer2023: all
         
-
 experiment: 
   # What parameter you are experimenting with (key)
   key: num_time_steps 

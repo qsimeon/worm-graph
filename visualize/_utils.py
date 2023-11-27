@@ -920,9 +920,10 @@ def experiment_parameter(exp_dir, key):
     key (str): The name of the experiment parameter to retrieve.
         Options for the different experiment parameters (key) are:
         - num_time_steps: The total number of train time steps
+        - num_worms: The number of worms in the trainining set
         - time_steps_per_neuron: The average number of train time steps per neuron
         - num_named_neurons: The number of distinct named neurons recorded across all worms
-        - num_train_samples: The number of training sequences sampled per worm
+        - num_samples: The number of training sequences sampled per worm
         - hidden_size: The hidden size of the model
         - batch_size: The batch size used for training
         - seq_len: The sequence length used for training
@@ -942,6 +943,13 @@ def experiment_parameter(exp_dir, key):
     title = "Experiment"
     xaxis = "Experiment run"
 
+    if key == "num_worms" or key == "num_train_worms":
+        # The number of worms in the training set
+        df = pd.read_csv(os.path.join(exp_dir, "dataset", "train_dataset_info.csv"))
+        value = df["combined_dataset_index"].nunique()
+        title = "Number of worms in training set"
+        xaxis = "Num. worms"
+
     if key == "num_time_steps":
         # Total number of train time steps in the dataset
         df = pd.read_csv(os.path.join(exp_dir, "dataset", "train_dataset_info.csv"))
@@ -956,7 +964,7 @@ def experiment_parameter(exp_dir, key):
         title = "Average amount of training data per neuron"
         xaxis = "Num. time steps per neuron"
 
-    if key == "num_named_neurons" or key == "num_neurons":
+    if key == "num_neurons" or key == "num_named_neurons":
         # Number of named neurons used for training
         pipeline_info = OmegaConf.load(os.path.join(exp_dir, "pipeline_info.yaml"))
         value = pipeline_info.submodule.dataset.num_named_neurons
@@ -1026,8 +1034,7 @@ def experiment_parameter(exp_dir, key):
     if key == "time_last_epoch" or key == "computation_time":
         # The computation time in seconds for the last epoch
         pipeline_info = OmegaConf.load(os.path.join(exp_dir, "pipeline_info.yaml"))
-        log_dir = pipeline_info.analysis.analyse_this_log_dir
-        chkpt_path = os.path.join(log_dir, "train", "checkpoints", f"model_best.pt")
+        chkpt_path = os.path.join(exp_dir, "train", "checkpoints", f"model_best.pt")
         model_chkpt = torch.load(chkpt_path, map_location=torch.device(DEVICE))
         value = model_chkpt["time_last_epoch"]
         title = "Computation time of last epoch"
@@ -1035,8 +1042,8 @@ def experiment_parameter(exp_dir, key):
 
     if key == "computation_flops" or key == "flops":
         # The number of floating point operations (FLOPs) for the model
-        log_dir = pipeline_info.analysis.analyse_this_log_dir
-        chkpt_path = os.path.join(log_dir, "train", "checkpoints", f"model_best.pt")
+        pipeline_info = OmegaConf.load(os.path.join(exp_dir, "pipeline_info.yaml"))
+        chkpt_path = os.path.join(exp_dir, "train", "checkpoints", f"model_best.pt")
         model_chkpt = torch.load(chkpt_path, map_location=torch.device(DEVICE))
         value = model_chkpt["computation_flops"]
         title = "Computation floating point operations"
@@ -1044,8 +1051,8 @@ def experiment_parameter(exp_dir, key):
 
     if key == "num_parameters" or key == "num_params" or key == "num_trainable_params":
         # The total number of trainable parameters in the model
-        log_dir = pipeline_info.analysis.analyse_this_log_dir
-        chkpt_path = os.path.join(log_dir, "train", "checkpoints", f"model_best.pt")
+        pipeline_info = OmegaConf.load(os.path.join(exp_dir, "pipeline_info.yaml"))
+        chkpt_path = os.path.join(exp_dir, "train", "checkpoints", f"model_best.pt")
         model_chkpt = torch.load(chkpt_path, map_location=torch.device(DEVICE))
         value = model_chkpt["num_trainable_params"]
         title = "Number of trainable parameters"
@@ -1476,9 +1483,6 @@ def plot_experiment_loss_per_dataset(
 
     # Now set the multi-index with 'exp_param' and 'dataset'
     losses.set_index(["exp_param", "dataset"], inplace=True)
-    logger.info(f"DEBUG losses.columns:\n{losses.columns}")  # DEBUG
-    logger.info(f"DEBUG losses.index:\n{losses.index}")  # DEBUG
-    logger.info(f"DEBUG losses.head():\n{losses.head()}")  # DEBUG
 
     # After this, your unique call should work correctly
     # Create one subplot per dataset, arranged in two columns
@@ -1518,6 +1522,7 @@ def plot_experiment_loss_per_dataset(
             y=f"{mode}_loss",
             ax=ax,
             color=color,
+            alpha=0.5,
             label=f"{model_name} ({dataset})",
         )
 
