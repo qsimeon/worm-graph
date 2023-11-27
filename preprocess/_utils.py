@@ -1121,7 +1121,9 @@ class BasePreprocessor:
             )  # create neuron label to index mapping
 
             if num_named_neurons == 0:  # skip worms with no labelled neurons
-                logger.info(f"DEBUG num_named_neurons: {num_named_neurons}")  # DEBUG
+                logger.info(
+                    f"DEBUG num_named_neurons ({self.dataset_name}.preprocess_traces): {num_named_neurons}"
+                )  # DEBUG
                 continue
 
             trace_data = trace_data[
@@ -1690,6 +1692,16 @@ class Leifer2023Preprocessor(BasePreprocessor):
         return timeVectorSeconds
 
     def preprocess(self):
+        """
+        We needed to write a special `preprocess` method for the Leifer 2023 dataset
+        because the data is stored in a different format than the other datasets.
+        Unlike the `preprocess` method in the other dataset classes which makes
+        use of the `preprocess_traces` method from the BasePreprocessor class, this
+        one does not. This was dues to differences between the file structure contianing
+        the raw data for this Leifer2023 dataset compared to the other datasets.
+        The Leifer2023 raw data uses 6 files per worm each containing distinct information.
+        The other datasets use 1 file containing all the information for multiple worms.
+        """
         # load and preprocess data
         preprocessed_data = {}
         data_dir = os.path.join(self.raw_data_path, self.dataset)
@@ -1718,7 +1730,9 @@ class Leifer2023Preprocessor(BasePreprocessor):
             # 1. Map named neurons
             neuron_to_idx, num_named_neurons = self.create_neuron_idx(label_list)
             if num_named_neurons == 0:  # skip worms with no labelled neuron
-                logger.info(f"DEBUG num_named_neurons: {num_named_neurons}")  # DEBUG
+                logger.info(
+                    f"DEBUG num_named_neurons ({self.dataset_name}.preprocess): {num_named_neurons}"
+                )  # DEBUG
                 worm_idx -= 1
                 continue
 
