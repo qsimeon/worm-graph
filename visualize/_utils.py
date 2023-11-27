@@ -1105,6 +1105,15 @@ def plot_experiment_losses(exp_log_dir, exp_key, exp_plot_dir=None):
         else:
             continue
 
+    # Get indices for sorting parameters and sort all the lists
+    sorted_indices = np.argsort(parameters)
+    parameters = [parameters[i] for i in sorted_indices]
+    epochs = [epochs[i] for i in sorted_indices]
+    train_losses = [train_losses[i] for i in sorted_indices]
+    train_baselines = [train_baselines[i] for i in sorted_indices]
+    val_losses = [val_losses[i] for i in sorted_indices]
+    val_baselines = [val_baselines[i] for i in sorted_indices]
+
     # Plot all trials/repetitions of the experiment
     # Create figure
     fig, ax = plt.subplots(1, 2, figsize=(10, 8))
@@ -1112,7 +1121,7 @@ def plot_experiment_losses(exp_log_dir, exp_key, exp_plot_dir=None):
 
     # Normalize the exp_param values for colormap
     norm = Normalize(vmin=min(parameters), vmax=max(parameters))
-    scalar_map = cm.ScalarMappable(norm=norm, cmap=cm.viridis)
+    scalar_map = cm.ScalarMappable(norm=norm, cmap=cm.YlOrRd)
 
     # Loop over parameter values and plot losses
     for i, param_val in enumerate(parameters):
@@ -1150,6 +1159,10 @@ def plot_experiment_losses(exp_log_dir, exp_key, exp_plot_dir=None):
     # Set x-axes to only use integer values
     ax[0].xaxis.set_major_locator(ticker.MaxNLocator(integer=True))
     ax[1].xaxis.set_major_locator(ticker.MaxNLocator(integer=True))
+
+    # Set y-axes to use log-scale
+    ax[0].set_yscale("log")
+    ax[1].set_yscale("log")
 
     # Set loss labels
     ax[0].set_xlabel("Epoch", fontsize=12)
@@ -1210,10 +1223,10 @@ def plot_experiment_summaries(exp_log_dir, exp_key, exp_plot_dir=None):
 
     # Store parameters and losses for plotting
     parameters = []
-    val_losses = []
-    val_baselines = []
     train_losses = []
     train_baselines = []
+    val_losses = []
+    val_baselines = []
     computation_times = []
     computation_flops = []
 
@@ -1252,6 +1265,16 @@ def plot_experiment_summaries(exp_log_dir, exp_key, exp_plot_dir=None):
         else:
             continue
 
+    # Get indices for sorting parameters and sort all the lists
+    sorted_indices = np.argsort(parameters)
+    parameters = [parameters[i] for i in sorted_indices]
+    train_losses = [train_losses[i] for i in sorted_indices]
+    train_baselines = [train_baselines[i] for i in sorted_indices]
+    val_losses = [val_losses[i] for i in sorted_indices]
+    val_baselines = [val_baselines[i] for i in sorted_indices]
+    computation_times = [computation_times[i] for i in sorted_indices]
+    computation_flops = [computation_flops[i] for i in sorted_indices]
+
     # Plot figure summarizing various experiment metrics
     # Create figure
     fig, axes = plt.subplots(
@@ -1266,7 +1289,7 @@ def plot_experiment_summaries(exp_log_dir, exp_key, exp_plot_dir=None):
             y=baseline, color="black", linestyle="--", label="Validation Baseline"
         )
     axes[0].set_xticks(param_range)
-    axes[0].set_xticklabels(parameters, rotation=45, ha="right")
+    axes[0].set_xticklabels(parameters, rotation=90, ha="right", fontsize=6)
     axes[0].set_title("Min Validation Loss")
     axes[0].set_xlabel(exp_xaxis)
     axes[0].set_ylabel("Loss")
@@ -1279,15 +1302,15 @@ def plot_experiment_summaries(exp_log_dir, exp_key, exp_plot_dir=None):
             y=baseline, color="black", linestyle="--", label="Training Baseline"
         )
     axes[1].set_xticks(param_range)
-    axes[1].set_xticklabels(parameters, rotation=45, ha="right")
+    axes[1].set_xticklabels(parameters, rotation=90, ha="right", fontsize=6)
     axes[1].set_title("Min Training Loss")
     axes[1].set_xlabel(exp_xaxis)
     axes[1].set_ylabel("Loss")
     axes[1].set_yscale("log")
 
     # Epoch computation times boxplot
-    axes[2].boxplot(computation_times)
-    axes[2].set_xticklabels(parameters, rotation=45, ha="right")
+    axes[2].boxplot(computation_times, notch=True, sym="", bootstrap=1000)
+    axes[2].set_xticklabels(parameters, rotation=90, ha="right", fontsize=6)
     axes[2].set_title("Computation Time per Epoch")
     axes[2].set_xlabel(exp_xaxis)
     axes[2].set_ylabel("Time (seconds)")
@@ -1295,7 +1318,7 @@ def plot_experiment_summaries(exp_log_dir, exp_key, exp_plot_dir=None):
     # FLOPs bar plot
     axes[3].bar(param_range, computation_flops, color="green", label="FLOPs")
     axes[3].set_xticks(param_range)
-    axes[3].set_xticklabels(parameters, rotation=90, ha="right")
+    axes[3].set_xticklabels(parameters, rotation=90, ha="right", fontsize=6)
     axes[3].set_title("Model FLOPs")
     axes[3].set_xlabel(exp_xaxis)
     axes[3].set_ylabel("FLOPs")
@@ -1397,19 +1420,21 @@ def plot_loss_per_dataset(log_dir, mode="validation"):
 
 
 def plot_experiment_loss_per_dataset(
-    exp_log_dir,
-    exp_key,
-    exp_plot_dir=None,
-    mode="validation",
+    exp_log_dir, exp_key, exp_plot_dir=None, mode="validation"
 ):
+    """
+    This function plots the experiment loss per dataset.
+    It collects information from experiment log directories and loads the losses per dataset.
+    It then plots the loss vs. experiment parameter for each dataset.
+    """
     # =============== Collect information ===============
+    # Create an empty DataFrame to store the losses
     losses = pd.DataFrame(
         columns=["dataset", f"{mode}_loss", f"{mode}_baseline", "exp_param"]
     )
-    logger.info(f"DEBUG (before loop) losses.index: {losses.index}")
 
     # Loop through all experiments
-    for file in np.sort(os.listdir(exp_log_dir)):
+    for file in sorted(os.listdir(exp_log_dir), key=lambda x: x.strip("exp_")):
         # Skip if not starts with exp
         if not file.startswith("exp") or file.startswith("exp_"):
             continue
@@ -1424,7 +1449,6 @@ def plot_experiment_loss_per_dataset(
         tmp_df = pd.read_csv(
             os.path.join(exp_dir, "analysis", f"{mode}_loss_per_dataset.csv")
         )
-        logger.info(f"DEBUG tmp_df.head(): {tmp_df.head()}")  # DEBUG
 
         # Add experiment parameter to dataframe
         tmp_df["exp_param"] = exp_param
@@ -1446,16 +1470,15 @@ def plot_experiment_loss_per_dataset(
 
         # Append to dataframe
         losses = pd.concat([losses, tmp_df], axis=0)
-        logger.info(f"DEBUG losses.head(): {losses.head()}")  # DEBUG
 
     # Make sure all NaNs are dropped before setting the index
-    logger.info(f"DEBUG (after loop, before dropna) losses.index: {losses.index}")
-    losses = losses.dropna()  # Do not reset_index here
-    logger.info(f"DEBUG (after loop, after dropna) losses.index: {losses.index}")
+    losses = losses.dropna()  # Do not use reset_index here
 
     # Now set the multi-index with 'exp_param' and 'dataset'
-    logger.info(f"DEBUG losses.columns: {losses.columns}")  # DEBUG
     losses.set_index(["exp_param", "dataset"], inplace=True)
+    logger.info(f"DEBUG losses.columns:\n{losses.columns}")  # DEBUG
+    logger.info(f"DEBUG losses.index:\n{losses.index}")  # DEBUG
+    logger.info(f"DEBUG losses.head():\n{losses.head()}")  # DEBUG
 
     # After this, your unique call should work correctly
     # Create one subplot per dataset, arranged in two columns
@@ -1464,126 +1487,15 @@ def plot_experiment_loss_per_dataset(
 
     # =============== Start plotting ===============
 
-    # # Plot loss vs. exp_param (individual plots)
-    # fig, ax = plt.subplots(num_rows, 1, figsize=(14, 12))
-    # sns.set_style("whitegrid")
-    # sns.set_palette("tab10")
-    # # Get a color palette with enough colors for all the datasets
-    # palette = sns.color_palette("tab10", len(losses.index.unique(level="dataset")))
-    # ax = ax.flatten()  # Flatten the ax array for easy iteration
-
-    # for i, dataset in enumerate(losses.index.unique(level="dataset")):
-    #     df_subset_model = losses.loc[
-    #         losses.index.get_level_values("dataset") == dataset, f"{mode}_loss"
-    #     ].reset_index()
-    #     df_subset_baseline = losses.loc[
-    #         losses.index.get_level_values("dataset") == dataset, f"{mode}_baseline"
-    #     ].reset_index()
-
-    #     sns.scatterplot(
-    #         data=df_subset_model,
-    #         x="exp_param",
-    #         y=f"{mode}_loss",
-    #         ax=ax[i],
-    #         label="Model",
-    #         marker="o",
-    #     )
-    #     sns.lineplot(
-    #         data=df_subset_baseline,
-    #         x="exp_param",
-    #         y=f"{mode}_baseline",
-    #         ax=ax[i],
-    #         label="Baseline",
-    #         linestyle="--",
-    #         marker="o",
-    #         color="black",
-    #     )
-
-    #     # Log-log scale
-    #     ax[i].set_xscale("log")
-    #     ax[i].set_yscale("log")
-
-    #     # Try to fit linear regression (log-log)
-    #     try:
-    #         x = np.log(df_subset_model["exp_param"].values)
-    #         y = np.log(df_subset_model[f"{mode}_loss"].values)
-    #         slope, intercept, r_value, p_value, std_err = stats.linregress(x, y)
-    #         fit_label = (
-    #             "y = {:.2f}x + {:.2f}\n".format(slope, intercept)
-    #             + r"$R^2=$"
-    #             + "{:.3f}".format(r_value**2)
-    #         )
-    #         ax[i].plot(
-    #             df_subset_model["exp_param"].values,
-    #             np.exp(intercept + slope * x),
-    #             color=palette[3],
-    #             linestyle="-",
-    #             label=fit_label,
-    #         )
-    #     except Exception as e:
-    #         logger.info(
-    #             "Failed to fit linear regression (log-log scale) for dataset {}".format(
-    #                 dataset
-    #             )
-    #         )
-    #         logger.error(f"The error that occurred: {e}")
-    #         logger.error(traceback.format_exc())  # This will print the full traceback
-    #         pass
-
-    #     # Add number of worms to title
-    #     num_worms = losses.loc[
-    #         losses.index.get_level_values("dataset") == dataset, "num_worms"
-    #     ].values[0]
-    #     ax[i].set_title(f"{dataset}: " + r"$n_{val}=$" + f"{int(num_worms)} worms")
-
-    #     # Add text box with metadata
-    #     model = losses.loc[
-    #         losses.index.get_level_values("dataset") == dataset, "model_name"
-    #     ].values[0]
-    #     props = dict(boxstyle="round", facecolor="white", alpha=0.5)
-    #     textstr = "Model: {}".format(model_name)
-    #     ax[i].text(
-    #         0.02,
-    #         0.02,
-    #         textstr,
-    #         transform=ax[i].transAxes,
-    #         fontsize=10,
-    #         verticalalignment="bottom",
-    #         bbox=props,
-    #     )
-
-    #     # Only set x-label for bottom row
-    #     if i >= len(ax) - 2:
-    #         ax[i].set_xlabel(exp_xaxis)
-
-    #     # Only set y-label for leftmost columns
-    #     if i % 2 == 0:
-    #         ax[i].set_ylabel("Loss")
-
-    #     # Remove x and y labels for subplots that shouldn't have them
-    #     if i < len(ax) - 2:
-    #         ax[i].set_xlabel("")
-    #     else:
-    #         ax[i].set_xlabel(exp_xaxis)
-
-    #     if i % 2 != 0:
-    #         ax[i].set_ylabel("")
-
-    #     ax[i].legend(loc="upper right")
-
-    # # Remove unused subplots
-    # if num_datasets % 2 != 0:
-    #     ax[-1].axis("off")
-
-    # plt.tight_layout()
-    # plt.savefig(os.path.join(exp_plot_dir, f"{mode}_loss_per_dataset.png"), dpi=300)
-    # plt.close()
-
     # Plot loss vs. exp_param (comparison)
     fig, ax = plt.subplots(figsize=(15, 7))
+    sns.set_style("whitegrid")
+    sns.set_palette("tab10")
 
     # Plot loss vs. exp_param for all datasets
+    palette = sns.color_palette("tab10", len(losses.index.unique(level="dataset")))
     for color_idx, dataset in enumerate(losses.index.unique(level="dataset")):
+        # Get the subset of losses and baselines for the current dataset
         df_subset_model = losses.loc[
             losses.index.get_level_values("dataset") == dataset, f"{mode}_loss"
         ].reset_index()
@@ -1591,20 +1503,25 @@ def plot_experiment_loss_per_dataset(
             losses.index.get_level_values("dataset") == dataset, f"{mode}_baseline"
         ].reset_index()
 
+        # Get the model name for the current dataset
         model_name = losses.loc[
             losses.index.get_level_values("dataset") == dataset, "model_name"
         ].values[0]
 
+        # Get the color for the current dataset
         color = palette[color_idx]
 
+        # Scatter plot of model losses vs. experiment parameter
         sns.scatterplot(
             data=df_subset_model,
             x="exp_param",
             y=f"{mode}_loss",
             ax=ax,
             color=color,
-            label=f"{model_name} (on {dataset})",
+            label=f"{model_name} ({dataset})",
         )
+
+        # Line plot of baseline losses vs. experiment parameter
         sns.lineplot(
             data=df_subset_baseline,
             x="exp_param",
@@ -1664,14 +1581,14 @@ def plot_experiment_loss_per_dataset(
     # Set axis labels and title
     ax.set_xlabel(exp_xaxis)
     ax.set_ylabel("Loss")
-    ax.set_title(f"{mode.capitalize()} loss distributed across datasets")
-    ax.legend(loc="upper right", fontsize="small")
+    ax.set_title(f"{mode.capitalize()} loss across datasets")
+    ax.legend(loc="upper right", fontsize="x-small")
 
     plt.tight_layout()
 
     if exp_plot_dir is not None:
         plt.savefig(
-            os.path.join(exp_plot_dir, f"{mode}_loss_per_dataset_comparison.png"),
+            os.path.join(exp_plot_dir, f"{mode}_loss_per_dataset.png"),
             dpi=300,
         )
         plt.close()

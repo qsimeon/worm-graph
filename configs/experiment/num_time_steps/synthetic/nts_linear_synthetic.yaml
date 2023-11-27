@@ -15,7 +15,7 @@ hydra:
     params:
       experiment.seed: 0 # assign each repetition of the experiment a distinct random seed
       submodule.dataset.use_these_datasets.path: choice(/om2/user/qsimeon/worm-graph/data/validation_Sines0000)
-      submodule.dataset.experimental_datasets: choice({Sines0000:3},{Sines0000:6},{Sines0000:9},{Sines0000:12},{Sines0000:15}) #,{Sines0000:18},{Sines0000:21},{Sines0000:24},{Sines0000:27},{Sines0000:30},{Sines0000:33},{Sines0000:36},{Sines0000:39},{Sines0000:42},{Sines0000:45},{Sines0000:48},{Sines0000:51},{Sines0000:54},{Sines0000:57},{Sines0000:60},{Sines0000:63},{Sines0000:66},{Sines0000:69},{Sines0000:72},{Sines0000:75},{Sines0000:78},{Sines0000:81},{Sines0000:84},{Sines0000:87},{Sines0000:90},{Sines0000:93},{Sines0000:96},{Sines0000:99})
+      submodule.dataset.experimental_datasets: choice({Sines0000:3},{Sines0000:6},{Sines0000:9},{Sines0000:12},{Sines0000:15},{Sines0000:18},{Sines0000:21},{Sines0000:24},{Sines0000:27},{Sines0000:30},{Sines0000:33},{Sines0000:36},{Sines0000:39},{Sines0000:42},{Sines0000:45},{Sines0000:48},{Sines0000:51},{Sines0000:54},{Sines0000:57},{Sines0000:60},{Sines0000:63},{Sines0000:66},{Sines0000:69},{Sines0000:72},{Sines0000:75},{Sines0000:78},{Sines0000:81},{Sines0000:84},{Sines0000:87},{Sines0000:90},{Sines0000:93},{Sines0000:96},{Sines0000:99})
       submodule.predict.experimental_datasets: choice({Sines0000:[worm0, worm1]})
       submodule.analysis.validation.experimental_datasets: choice({Sines0000:all})
       ### submodule.dataset.use_these_datasets.path ###
