@@ -54,7 +54,7 @@ def plot_figures(
 
         if submodule_dir == "analysis":
             logger.info("Plotting submodule 'analysis'.")
-            plot_loss_per_dataset(log_dir=log_dir, mode="train")
+            # plot_loss_per_dataset(log_dir=log_dir, mode="train") # DEBUG: Is this a useful plot?
             plot_loss_per_dataset(log_dir=log_dir, mode="validation")
 
 
@@ -119,13 +119,13 @@ def plot_experiment(visualize_config: DictConfig, exp_config: DictConfig) -> Non
             exp_plot_dir=exp_plot_dir,
         )
 
-        # Plot loss per individual dataset
+        # Plot train and validation loss per individual dataset
         # plot_experiment_loss_per_dataset(
         #     exp_log_dir=exp_log_dir,
         #     exp_key=exp_key,
         #     exp_plot_dir=exp_plot_dir,
         #     mode="train",
-        # )  # TODO: Is this a useful plot?
+        # )  # DEBUG: Is this a useful plot?
         plot_experiment_loss_per_dataset(
             exp_log_dir=exp_log_dir,
             exp_key=exp_key,

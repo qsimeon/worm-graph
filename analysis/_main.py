@@ -16,7 +16,7 @@ def analyse_run(analysis_config: DictConfig):
     #     log_dir=log_dir,
     #     experimental_datasets=analysis_config.validation.experimental_datasets,
     #     mode="train",
-    # )  # TODO: Is it useful to do this for the train data?
+    # )  # DEBUG: Is it useful to do this for the train data?
     loss_per_dataset(
         log_dir=log_dir,
         experimental_datasets=analysis_config.validation.experimental_datasets,
