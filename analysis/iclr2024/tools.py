@@ -684,7 +684,7 @@ def scaling_slopes_df(nts_experiments):
         "val_baseline": [],
     }
 
-    for model, exp_paths in nts_experiments.items():
+    for model_label, exp_paths in nts_experiments.items():
         for exp_log_dir in exp_paths:
             # Loop over all the experiment files
             for experiment_ID in sorted(
@@ -753,8 +753,8 @@ def scaling_slopes_plot(scaling_slope_results, legend_code):
     # Extract necessary information from legend_code
     original_ds_color_code = legend_code["original_ds_color_code"]
     model_marker_code = legend_code["model_marker_code"]
-    model_labels = legend_code["model_labels"]
-    inverse_model_labels = {u: v for v, u in model_labels.items()}
+    model_type_to_label = legend_code["model_labels"]
+    # inverse_model_labels = {u: v for v, u in model_labels.items()}
 
     # Create a figure with three subplots
     fig, ax = plt.subplots(1, 3, figsize=(15, 5))
@@ -767,23 +767,27 @@ def scaling_slopes_plot(scaling_slope_results, legend_code):
     }
 
     # Iterate over unique model types
-    for subplot_idx, model_name in enumerate(
+    model_labels = []
+    for subplot_idx, model_type in enumerate(
         scaling_slope_results["model_type"].unique()
     ):
+        model_labels.append(model_type_to_label[model_type])
         # Iterate over unique validation datasets
         for val_dataset in scaling_slope_results["validation_dataset"].unique():
             # Filter the data for the current model and validation dataset
-            filt = scaling_slope_results[
-                scaling_slope_results["model_type"] == model_name
+            filtered_results = scaling_slope_results[
+                scaling_slope_results["model_type"] == model_type
             ]
-            x = x[filt["validation_dataset"] == val_dataset]["num_time_steps"].values
-            y = y[filt["validation_dataset"] == val_dataset][
+            x = filtered_results[filtered_results["validation_dataset"] == val_dataset][
+                "num_time_steps"
+            ].values
+            y = filtered_results[filtered_results["validation_dataset"] == val_dataset][
                 "individual_validation_loss"
             ].values
 
             # Compute the baseline values
             baseline = scaling_slope_results[
-                scaling_slope_results["model_type"] == model_name
+                scaling_slope_results["model_type"] == model_type
             ]
             baseline = baseline[baseline["validation_dataset"] == val_dataset][
                 "individual_baseline_loss"
@@ -827,7 +831,7 @@ def scaling_slopes_plot(scaling_slope_results, legend_code):
             )
 
             # Store the slope information
-            slopes["model_type"].append(model_name)
+            slopes["model_type"].append(model_type)
             slopes["validation_dataset"].append(val_dataset)
             slopes["slope"].append(slope)
 
@@ -847,9 +851,9 @@ def scaling_slopes_plot(scaling_slope_results, legend_code):
     ax[0].set_ylabel(
         "Validation MSE Loss", fontdict={"fontsize": 14, "fontweight": "bold"}
     )
-    ax[0].set_title("(A) LSTM model", fontdict={"fontsize": 16})
-    ax[1].set_title("(B) Transformer model", fontdict={"fontsize": 16})
-    ax[2].set_title("(C) Feedforward model", fontdict={"fontsize": 16})
+    ax[0].set_title(f"(A) {model_labels[0]} model", fontdict={"fontsize": 16})
+    ax[1].set_title(f"(B) {model_labels[1]} model", fontdict={"fontsize": 16})
+    ax[2].set_title(f"(C) {model_labels[2]} model", fontdict={"fontsize": 16})
 
     # Display the legend in the top right subplot
     ax[2].legend(
