@@ -240,7 +240,7 @@ class NeuralActivityDataset(torch.utils.data.Dataset):
         # Get the time vector
         time_vec = self.time_vec[start:end].detach().clone()
         # Calculate the average dt
-        avg_dt = torch.diff(time_vec).mean()
+        avg_dt = torch.diff(time_vec).median()
 
         # Data samples: input (X) and target (Y)
         X = self.data[start:end, :].detach().clone()

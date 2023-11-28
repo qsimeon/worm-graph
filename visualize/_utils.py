@@ -960,15 +960,19 @@ def experiment_parameter(exp_dir, key):
     if key == "time_steps_per_neuron":
         # Average number of train time steps per neurons
         df = pd.read_csv(os.path.join(exp_dir, "dataset", "train_dataset_info.csv"))
-        value = (df["train_time_steps"] / df["num_neurons"]).mean()
+        value = (df["train_time_steps"] / df["num_neurons"]).median()
         title = "Average amount of training data per neuron"
         xaxis = "Num. time steps per neuron"
 
     if key == "num_neurons" or key == "num_named_neurons":
         # Number of named neurons used for training
         pipeline_info = OmegaConf.load(os.path.join(exp_dir, "pipeline_info.yaml"))
+        df = pd.read_csv(os.path.join(exp_dir, "dataset", "train_dataset_info.csv"))
         value = pipeline_info.submodule.dataset.num_named_neurons
-        title = "Number of labelled measured neurons"
+        if value is None:
+            unique_neurons_count = len(set.union(*df["neurons"].apply(set)))
+            value = unique_neurons_count
+        title = "Number of unique labelled neurons"
         xaxis = "Num. neurons"
 
     if key == "num_train_samples" or key == "num_samples":
@@ -1258,9 +1262,9 @@ def plot_experiment_summaries(exp_log_dir, exp_key, exp_plot_dir=None):
 
             # Store all summary statistics to be plotted
             train_losses.append(df["train_loss"].min())
-            train_baselines.append(df["train_baseline"].mean())
+            train_baselines.append(df["train_baseline"].median())
             val_losses.append(df["val_loss"].min())
-            val_baselines.append(df["val_baseline"].mean())
+            val_baselines.append(df["val_baseline"].median())
             computation_times.append(df["computation_time"].tolist())
             computation_flops.append(best_model["computation_flops"])
 

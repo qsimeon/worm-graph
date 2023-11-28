@@ -377,7 +377,7 @@ def causal_moving_average_smooth(x, t, window_size):
             start = max(j - window_size // 2, 0)
             end = j + 1
             window = x[start:end, i]
-            x_smooth[j, i] = window.mean()
+            x_smooth[j, i] = window.median()
 
     if dim == 1:
         x_smooth = x_smooth.squeeze(-1)

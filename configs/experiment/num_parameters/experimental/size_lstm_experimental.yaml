@@ -14,11 +14,12 @@ hydra:
   mode: MULTIRUN
   sweeper:
     params:
-      experiment.seed: 1 
-      submodule.model.hidden_size: range(16,129,16) 
-      # seed 1: range(16,129,16) 
-      # seed 0: range(64,2881,64)
-      # seed 2: range(64,193,8) 
+      experiment.seed: 0 # assign each repetition of the experiment a distinct random seed
+      submodule.model.hidden_size: range(1024,2881,128)
+      ### Different ranges of hidden_size ###
+      # seed 0: range(1024,2881,128)
+      # seed 1: range(128,1153,64)  
+      # seed 2: range(16,289,16)
 
 submodule:
   
@@ -35,9 +36,9 @@ submodule:
       Kato2015: null
       Nichols2017: null
       Skora2018: null
-      Uzel2022: null
-      Yemini2021: null
       Kaplan2020: null
+      Yemini2021: null
+      Uzel2022: null
       Flavell2023: null
       Leifer2023: null
 
@@ -62,9 +63,9 @@ submodule:
       Kato2015: worm0
       Nichols2017: worm0
       Skora2018: worm0
-      Uzel2022: worm0
-      Yemini2021: worm0
       Kaplan2020: worm0
+      Yemini2021: worm0
+      Uzel2022: worm0
       Flavell2023: worm1 # something is wrong with worm0 in Flavell2023
       Leifer2023: worm0
     # Number of time steps to generate
@@ -73,17 +74,17 @@ submodule:
 
   analysis:
     analyse_this_log_dir: null
-    # Validate final model using some worms of each experimental datasets
+    # Validate final model using all worms from each experimental datasets
     validation:
       experimental_datasets:
-        Kato2015: 10
-        Nichols2017: 10
-        Skora2018: 10
-        Uzel2022: 10
-        Yemini2021: 10
-        Kaplan2020: 10
-        Flavell2023: 10
-        Leifer2023: 10
+        Kato2015: all
+        Nichols2017: all
+        Skora2018: all
+        Kaplan2020: all
+        Yemini2021: all
+        Uzel2022: all
+        Flavell2023: all
+        Leifer2023: all
 
 experiment:
   key: num_parameters

@@ -457,12 +457,13 @@ def data_scaling_df(nts_experiments):
         "num_parameters": [],
         "num_worms": [],
         "num_time_steps": [],
+        "time_steps_per_neuron": [],
         "num_named_neurons": [],
         "min_val_loss": [],
         "val_baseline": [],
     }
 
-    for model, exp_paths in nts_experiments.items():
+    for model_name, exp_paths in nts_experiments.items():
         for exp_log_dir in exp_paths:
             # Loop over all the experiment files
             for exp_ID in np.sort(os.listdir(exp_log_dir)):
@@ -491,11 +492,14 @@ def data_scaling_df(nts_experiments):
                 data_scaling_results["num_time_steps"].append(
                     experiment_parameter(exp_dir, "num_time_steps")[0]
                 )
+                data_scaling_results["time_steps_per_neuron"].append(
+                    experiment_parameter(exp_dir, "time_steps_per_neuron")[0]
+                )
                 data_scaling_results["num_named_neurons"].append(
                     experiment_parameter(exp_dir, "num_named_neurons")[0]
                 )
                 data_scaling_results["min_val_loss"].append(df["val_loss"].min())
-                data_scaling_results["val_baseline"].append(df["val_baseline"].mean())
+                data_scaling_results["val_baseline"].append(df["val_baseline"].median())
 
     return pd.DataFrame(data_scaling_results)
 
@@ -612,13 +616,13 @@ def hidden_scaling_plot(data_scaling_df, legend_code):
             "num_parameters"
         ].values
 
-        val_loss_mean = data_scaling_results[data_scaling_results["model_type"] == model][
-            "min_val_loss"
-        ].values
+        val_loss_mean = data_scaling_results[
+            data_scaling_results["model_type"] == model
+        ]["min_val_loss"].values
 
-        baseline_mean = data_scaling_results[data_scaling_results["model_type"] == model][
-            "val_baseline"
-        ].values
+        baseline_mean = data_scaling_results[
+            data_scaling_results["model_type"] == model
+        ]["val_baseline"].values
 
         model_label = model_labels[model]
         ax.scatter(
@@ -724,7 +728,7 @@ def scaling_slopes_df(nts_experiments):
                     )
                     data_scaling_results["min_val_loss"].append(df["val_loss"].min())
                     data_scaling_results["val_baseline"].append(
-                        df["val_baseline"].mean()
+                        df["val_baseline"].median()
                     )
 
     return pd.DataFrame(data_scaling_results)
@@ -1101,7 +1105,7 @@ def prediction_gap(exp_nts_log_dir, legend_code, neuronID, datasetID, wormID):
             # Save gap statistics
             prediction_gap["experiment_ID"].append(exp_dir)
             prediction_gap["dataset"].append(exp_ds)
-            prediction_gap["gap_mean"].append(gap.mean())
+            prediction_gap["gap_mean"].append(gap.median())
             prediction_gap["gap_var"].append(gap.var())
             prediction_gap["num_time_steps"].append(num_time_steps)
 
