@@ -21,8 +21,8 @@ def get_model(model_config: DictConfig, verbose=True) -> torch.nn.Module:
     -----
     NeuralTransformer : class in models/_utils.py
     NetworkLSTM : class in models/_utils.py
-    NetworkRNN : class in models/_utils.py
-    NeuralCFC : class in models/_utils.py
+    NetworkCTRNN : class in models/_utils.py
+    LiquidCfC : class in models/_utils.py
     FeatureFFNN : class in models/_utils.py
         If no model type is specified, FeatureFFNN is used by default.
 
@@ -77,10 +77,10 @@ def get_model(model_config: DictConfig, verbose=True) -> torch.nn.Module:
             model = NeuralTransformer(**args)
         elif model_config.type == "NetworkLSTM":
             model = NetworkLSTM(**args)
-        elif model_config.type == "NetworkRNN":
-            model = NetworkRNN(**args)
-        elif model_config.type == "NeuralCFC":
-            model = NeuralCFC(**args)
+        elif model_config.type == "NetworkCTRNN":
+            model = NetworkCTRNN(**args)
+        elif model_config.type == "LiquidCfC":
+            model = LiquidCfC(**args)
         # elif model_config.type == "NetworkGCN": # TODO: work-in-progress
         #     model = NetworkGCN(**args)
         elif model_config.type == "FeatureFFNN":

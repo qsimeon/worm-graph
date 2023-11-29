@@ -43,9 +43,9 @@ The available model implementations (i.e. subclasses of `Model`) are:
 
 - `NeuralTransformer`: This model is a transformer for neural activity data. It includes a positional encoding layer, an embedding layer, and transformer blocks. This model does not use LayerNorm in its input to hidden and hidden to hidden transformations.
 
-- `NetworkRNN`: This model is a representation of the _C. elegans_ nervous system using a continuous-time RNN backbone. It uses a LayerNorm in its input to hidden transformation.
+- `NetworkCTRNN`: This model is a representation of the _C. elegans_ nervous system using a continuous-time RNN backbone. It uses a LayerNorm in its input to hidden transformation.
 
-- `NeuralCFC`: This is a Neural Circuit Policy (NCP) Closed-form continuous time (CfC) model. It uses a LayerNorm in its input to hidden transformation and also provides methods for initializing hidden state and weights.
+- `LiquidCfC`: This is a Neural Circuit Policy (NCP) Closed-form continuous time (CfC) model. It uses a LayerNorm in its input to hidden transformation and also provides methods for initializing hidden state and weights.
 
 - `NetworkLSTM`: This model is a representation of the _C. elegans_ neural network using an LSTM. It uses a LayerNorm in its input to hidden transformation and also provides methods for initializing hidden state and weights.
 

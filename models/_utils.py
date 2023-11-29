@@ -698,7 +698,7 @@ class NeuralTransformer(Model):
         return None
 
 
-class NetworkRNN(Model):
+class NetworkCTRNN(Model):
     """
     A model of the C. elegans nervous system using a continuous-time RNN backbone.
     TODO: Cite tutorial by Guangyu Robert Yang and the paper: Artificial Neural Networks for Neuroscientists: A Primer.
@@ -715,7 +715,7 @@ class NetworkRNN(Model):
         """
         The output size will be the same as the input size.
         """
-        super(NetworkRNN, self).__init__(
+        super(NetworkCTRNN, self).__init__(
             input_size,
             hidden_size,
             loss,
@@ -746,7 +746,7 @@ class NetworkRNN(Model):
         return hidden
 
 
-class NeuralCFC(Model):
+class LiquidCfC(Model):
     """
     Neural Circuit Policy (NCP) Closed-form continuous time (CfC) model.
     TODO: Cite Nature Machine Intelligence 2022 paper by Ramin Hasani, Daniela Rus et al.
@@ -764,7 +764,7 @@ class NeuralCFC(Model):
         The output size will be the same as the input size.
         """
 
-        super(NeuralCFC, self).__init__(
+        super(LiquidCfC, self).__init__(
             input_size,
             hidden_size,
             loss,
