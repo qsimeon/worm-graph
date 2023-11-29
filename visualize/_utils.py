@@ -969,9 +969,16 @@ def experiment_parameter(exp_dir, key):
         pipeline_info = OmegaConf.load(os.path.join(exp_dir, "pipeline_info.yaml"))
         df = pd.read_csv(os.path.join(exp_dir, "dataset", "train_dataset_info.csv"))
         value = pipeline_info.submodule.dataset.num_named_neurons
+        title = "Number of unique labelled neurons"
+        xaxis = "Num. neurons"
         if value is None:
-            unique_neurons_count = len(set.union(*df["neurons"].apply(set)))
-            value = unique_neurons_count
+            # Convert string representation of list to actual list
+            df["neurons"] = df["neurons"].apply(ast.literal_eval)
+            # Create a set of all unique neurons
+            unique_neurons = set()
+            for neuron_list in df["neurons"]:
+                unique_neurons.update(neuron_list)
+                value = len(unique_neurons)
         title = "Number of unique labelled neurons"
         xaxis = "Num. neurons"
 
@@ -1210,7 +1217,7 @@ def plot_experiment_losses(exp_log_dir, exp_key, exp_plot_dir=None):
 
     # Save or display the plot
     if exp_plot_dir:
-        fig.savefig(os.path.join(exp_plot_dir, "exp_loss_curves.png"))
+        fig.savefig(os.path.join(exp_plot_dir, "exp_loss_curves.png"), dpi=300)
         plt.close()
     else:  # exp_plot_dir is None
         plt.show()
@@ -1566,7 +1573,7 @@ def plot_experiment_loss_per_dataset(
             y = np.log(df_subset_model[f"{mode}_loss"].values)
             slope, intercept, r_value, p_value, std_err = stats.linregress(x, y)
             fit_label = (
-                "y = {:.2f}x + {:.2f}\n".format(slope, intercept)
+                "y = {:.2f}x + {:.1f}\n".format(slope, intercept)
                 + r"$R^2=$"
                 + "{:.3f}".format(r_value**2)
             )
