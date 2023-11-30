@@ -21,10 +21,10 @@ function get_cuda_version {
 
 ENV_NAME="worm-graph"
 
-# Create a new conda environment with Python 3.11
+# Create a new conda environment with Python 3.10
 echo "Creating $ENV_NAME environment."
 echo ""
-conda create -y -n $ENV_NAME python=3.10 pip
+conda create -y -n $ENV_NAME python=3.10 conda-build pip
 echo ""
 conda activate $ENV_NAME
 
@@ -46,14 +46,14 @@ case "$(uname -s)" in
             CUDA_VER=$(get_cuda_version)
             if [ "$CUDA_VER" != "" ]; then
                 echo "CUDA Version $CUDA_VER Detected"
-                pip install torch torchvision torchaudio #--index-url https://download.pytorch.org/whl/cu118
+                pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
                 pip install torch_geometric
             else
-                pip install torch torchvision torchaudio #--index-url https://download.pytorch.org/whl/cu118
+                pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
                 pip install torch_geometric
             fi
         else
-            pip install torch torchvision torchaudio #--index-url https://download.pytorch.org/whl/cpu
+            pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu
             pip install torch_geometric
         fi
     ;;
@@ -62,7 +62,7 @@ case "$(uname -s)" in
         echo "Windows OS Detected"
         if has_gpu; then
             echo "Nvidia GPU Detected"
-            pip install torch torchvision torchaudio #--index-url https://download.pytorch.org/whl/cu118
+            pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
             pip install torch_geometric
         else
             pip install torch torchvision torchaudio
@@ -75,17 +75,17 @@ case "$(uname -s)" in
     ;;
 esac
 
-# # Install cudf Pandas accelerator and related packages
-# echo "Installing cudf Pandas accelerator and related packages."
-# if has_gpu && [ "$(get_cuda_version)" != "" ] && [ "$(uname -s)" == "Linux" ]; then
-#     pip install --extra-index-url=https://pypi.nvidia.com cudf-cu12
-# else
-#     echo "Skipping cudf installation as no compatible GPU/CUDA version found."
-# fi
+# Install cudf Pandas accelerator and related packages
+echo "Installing cudf Pandas accelerator and related packages."
+if has_gpu && [ "$(get_cuda_version)" != "" ] && [ "$(uname -s)" == "Linux" ]; then
+    pip install --extra-index-url=https://pypi.nvidia.com cudf-cu11
+else
+    echo "Skipping cudf installation as no compatible GPU/CUDA version found."
+fi
 
 # Install common packages using pip
 echo "Installing common packages using pip."
-pip install --force-reinstall --upgrade -r requirements.txt
+pip install -r requirements.txt
 
 echo ""
 echo "Run conda activate $ENV_NAME to activate the environment."        
