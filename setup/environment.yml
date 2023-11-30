@@ -6,11 +6,7 @@ channels:
   - pyg
   - defaults
 dependencies:
-  - python=3.9
-  - pytorch=2.0.1
-  - pytorch-cuda=11.7
-  - torchvision=0.15.2 
-  - torchaudio=2.0.2
+  - python=3.10
   - numpy
   - matplotlib
   - scikit-learn
@@ -34,16 +30,14 @@ dependencies:
   - pytest
   - requests
   - tqdm
-  - yaml
   - conda-build
   - black
   - hydra-core
   - hydra-submitit-launcher
   - mat73
   - omegaconf
-  - statsmodels 
-  - omegaconf
-  - black
+  - statsmodels
+  - pyyaml  
   - pip
   - pip:
     - black[jupyter]
@@ -57,5 +51,8 @@ dependencies:
     - omegaconf
     - pytest
     - statsmodels
+    - torch
+    - torchvision
+    - torchaudio
     - torch_geometric
-    
+    # Add any other pip packages here

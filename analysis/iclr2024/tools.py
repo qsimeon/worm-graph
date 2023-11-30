@@ -541,7 +541,8 @@ def data_scaling_plot(data_scaling_df, legend_code):
             val_loss,
             marker=model_marker_code[model_label],
             color=model_color_code[model_label],
-            alpha=0.5,
+            s=10,
+            alpha=0.3,
         )
 
         if model_idx < 1:
@@ -551,7 +552,7 @@ def data_scaling_plot(data_scaling_df, legend_code):
                 np.ones(10000) * baseline_loss[0],
                 label="Baseline",
                 color="black",
-                alpha=0.5,
+                alpha=0.7,
                 linestyle="--",
             )
 
@@ -562,7 +563,7 @@ def data_scaling_plot(data_scaling_df, legend_code):
         fit_label = (
             "y = {:.2f}x + {:.1f}\n".format(slope, intercept)
             + r"$R^2=$"
-            + "{:.3f}".format(r_value**2)
+            + "{:.2f}".format(r_value**2)
         )
         x = np.linspace(np.min(nts), np.max(nts), 10000)
         ax.plot(
@@ -612,37 +613,36 @@ def hidden_scaling_plot(data_scaling_df, legend_code):
 
     model_names = data_scaling_results["model_type"].unique()
 
-    # Plot
+    # Plot the points for each model
+    min_num_params = float("+inf")
+    max_num_params = float("-inf")
     for model_idx, model in enumerate(model_names):
-        hdv_mean = data_scaling_results[data_scaling_results["model_type"] == model][
-            "num_parameters"
-        ].values
+        num_parameters = data_scaling_results[
+            data_scaling_results["model_type"] == model
+        ]["num_parameters"].values
+        min_num_params = min(min_num_params, num_parameters.min())
+        max_num_params = max(max_num_params, num_parameters.max())
 
-        val_loss_mean = data_scaling_results[
+        validation_loss = data_scaling_results[
             data_scaling_results["model_type"] == model
         ]["min_val_loss"].values
 
-        baseline_mean = data_scaling_results[
+        baseline_loss = data_scaling_results[
             data_scaling_results["model_type"] == model
         ]["val_baseline"].values
 
         model_label = model_labels[model]
         ax.scatter(
-            hdv_mean,
-            val_loss_mean,
+            num_parameters,
+            validation_loss,
             marker=model_marker_code[model_label],
             color=model_color_code[model_label],
         )
 
-        if model_idx == 0:
-            ax.plot(
-                np.sort(hdv_mean),
-                np.sort(baseline_mean),
-                label="Baseline",
-                color="black",
-                alpha=0.5,
-                linestyle="--",
-            )
+    # Plot the baseline 
+    x = np.linspace(min_num_params, max_num_params, len(baseline_loss))
+    y = np.sort(baseline_loss)
+    ax.plot(x, y, label="Baseline", color="black", alpha=0.5, linestyle="--")
 
     # Handles and labels for first legend
     handles, labels = ax.get_legend_handles_labels()
@@ -800,7 +800,7 @@ def scaling_slopes_plot(scaling_slope_results, legend_code):
 
             # Plot scatter plots of  each individual dataset
             ax[subplot_idx].scatter(
-                x, y, s=5, alpha=0.1, color=original_ds_color_code[val_dataset]
+                x, y, s=10, alpha=0.1, color=original_ds_color_code[val_dataset]
             )
 
             # Perform linear regression
@@ -877,6 +877,27 @@ def scaling_slopes_plot(scaling_slope_results, legend_code):
 
 
 def compute_confidence_interval(x, y, confidence=0.95):
+    """
+    Compute the confidence interval for a linear regression model at all values of x.
+
+    Args:
+        x (array-like): The independent variable values.
+        y (array-like): The dependent variable values.
+        confidence (float, optional): The confidence level for the interval. Default is 0.95.
+
+    Returns:
+        tuple: A tuple containing the predicted y values and the confidence interval.
+
+    Explanation:
+    The function first performs a linear regression using the linregress function from scipy.stats.
+    It calculates the slope, intercept, r-value, p-value, and standard error of the regression.
+    Then, it computes the predicted y values (y_fit) using the equation y = slope * x + intercept.
+    Next, it calculates the mean of x and the number of data points (n).
+    The t-value is obtained using the t.ppf function from scipy.stats, with the confidence level and degrees of freedom (n-2).
+    Finally, the confidence interval is computed using the formula:
+    conf_int = t_val * std_err * sqrt(1/n + (x - mean_x)^2 / sum((x - mean_x)^2))
+    """
+
     slope, intercept, r_value, p_value, std_err = linregress(x, y)
     y_fit = slope * x + intercept
     mean_x = np.mean(x)
@@ -1011,7 +1032,7 @@ def scaling_slopes_plot(scaling_slope_results, legend_code):
 
 #             # Plot scatter plots of  each individual dataset
 #             ax[subplot_idx].scatter(
-#                 x, y, s=7, alpha=0.4, color=original_ds_color_code[val_dataset]
+#                 x, y, s=10, alpha=0.4, color=original_ds_color_code[val_dataset]
 #             )
 
 #             # Perform linear regression
@@ -1322,7 +1343,7 @@ def prediction_gap(exp_nts_log_dir, legend_code, neuronID, datasetID, wormID):
             fit_label = (
                 "y = {:.2f}x + {:.1f}\n".format(slope, intercept)
                 + r"$R^2=$"
-                + "{:.3f}".format(r_value**2)
+                + "{:.2f}".format(r_value**2)
             )
             ax0.plot(
                 df_subset["num_time_steps"].values,

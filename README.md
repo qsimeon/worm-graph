@@ -16,11 +16,9 @@
 
 ## Project Overview
 
-`worm-graph` is a computational framework for modeling and simulating the neural dynamics of _Caenorhabditis elegans_ (_C. elegans_) using artificial neural networks (ANNs). The project focuses on self-supervised learning to predict future neural activity from historical data without behavioral context, rooted in the understanding that intrinsic neural dynamics can be inherently predictable. It employs a range of neural network architectures such as LSTM, Transformer, and Feed-Forward networks, evaluating their performance based on mean squared error (MSE) as they scale with training data volume and model complexity.
+`worm-graph` is a computational framework for modeling and simulating the neural dynamics of _Caenorhabditis elegans_ (_C. elegans_) using artificial neural networks (ANNs). The project focuses on self-supervised learning to predict future neural activity from historical data without behavioral context. It employs a range of neural network architectures such as LSTM, Transformer, and Feed-Forward networks, evaluating their performance based on mean squared error (MSE) as they scale with training data volume and model complexity.
 
 This repository serves as a platform to investigate the effects of training data size, network architecture, and model parameters on the accuracy of neural state predictions. It utilizes diverse datasets, recorded under various conditions, to ensure robustness and generalizability of the models. A key finding of this work is the logarithmic reduction in MSE with increased training data, highlighting the critical role of data volume in model performance. The research also reveals a nonlinear dependency of prediction accuracy on model size, identifying an optimal range for the number of trainable parameters.
-
-The `worm-graph` project not only contributes to the field of computational neuroscience by enhancing the predictability of neural dynamics but also informs AI research, providing insights into the scaling properties of ANNs. Future directions involve refining model architectures, integrating behavioral data for context, and extending methodologies to more complex nervous systems.
 
 
 ## Directory Structure
@@ -85,19 +83,31 @@ cd setup
 
 ### Option B: Setting up with the `.yml` file
 
-1. Open your terminal or Anaconda Prompt, and create a new Conda environment using the `.yml` file. The first line of the `.yml` file sets the name of the new environment.
+1. Open the `environment.yml` file. If you have a compatible Nvidia GPU, uncomment the lines under the NVIDIA packages section.
+
+2. Create a new Conda environment using the `.yml` file. The first line of the `.yml` file sets the name of the new environment:
 
     ```
     conda env create -f environment.yml
     ```
 
+3. After creating the environment, activate it:
+
+    ```
+    conda activate worm-graph
+    ```
+
+**Note:** This approach simplifies the environment setup but requires manual intervention for GPU-specific packages.
+
+
 After finishing one of the installations above, navigate back to the root directory (`worm-graph/`) and run:
 
     conda develop .
 
-**Note:** Please ensure to carry out this step, otherwise you may encounter `ModuleNotFoundError` later on.
+**Note:** 
+* Please ensure to carry out this step, otherwise you may encounter `ModuleNotFoundError` later on.
 
-*You can check if the environment was successfully installed by running `conda env list` or `conda info --envs`.*
+* You can check if the environment was successfully installed by running `conda env list` or `conda info --envs`.
 
 **Important Reminder:** Always activate the environment before starting your work on the project by running `conda activate worm-graph`.
 

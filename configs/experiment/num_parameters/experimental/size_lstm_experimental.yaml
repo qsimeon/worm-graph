@@ -14,13 +14,14 @@ hydra:
   mode: MULTIRUN
   sweeper:
     params:
-      experiment.seed: 3 # assign each repetition of the experiment a distinct random seed
-      submodule.model.hidden_size: range(8,65,4)
+      experiment.seed: 4 # assign each repetition of the experiment a distinct random seed
+      submodule.model.hidden_size: range(2880,8193,512)
       ### Different ranges of hidden_size ###
       # seed 0: range(1024,2881,128)
       # seed 1: range(128,1153,64)  
       # seed 2: range(16,289,16)
       # seed 3: range(8,65,4)
+      # seed 4: range(2880,8193,512)
 
 submodule:
   

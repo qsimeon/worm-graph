@@ -1575,7 +1575,7 @@ def plot_experiment_loss_per_dataset(
             fit_label = (
                 "y = {:.2f}x + {:.1f}\n".format(slope, intercept)
                 + r"$R^2=$"
-                + "{:.3f}".format(r_value**2)
+                + "{:.2f}".format(r_value**2)
             )
             ax.plot(
                 df_subset_model["exp_param"].values,
