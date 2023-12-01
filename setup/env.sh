@@ -19,7 +19,7 @@ function get_cuda_version {
     fi
 }
 
-ENV_NAME="worm-graph-v2"
+ENV_NAME="worm-graph"
 
 # Create a new conda environment with Python 3.10
 echo ""
