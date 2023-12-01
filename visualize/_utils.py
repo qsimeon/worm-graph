@@ -919,10 +919,11 @@ def experiment_parameter(exp_dir, key):
     exp_dir (str): The path to the experiment directory.
     key (str): The name of the experiment parameter to retrieve.
         Options for the different experiment parameters (key) are:
-        - num_time_steps: The total number of train time steps
+        - experiment_seed: The random seed used for the experiment
         - num_worms: The number of worms in the trainining set
-        - time_steps_per_neuron: The average number of train time steps per neuron
+        - num_time_steps: The total number of train time steps
         - num_named_neurons: The number of distinct named neurons recorded across all worms
+        - time_steps_per_neuron: The average number of train time steps per neuron
         - num_samples: The number of training sequences sampled per worm
         - hidden_size: The hidden size of the model
         - batch_size: The batch size used for training
@@ -943,6 +944,13 @@ def experiment_parameter(exp_dir, key):
     title = "Experiment"
     xaxis = "Experiment run"
 
+    if key == "experiment_seed" or key == "exp_seed" or key == "seed":
+        # The random seed used for the experiment
+        pipeline_info = OmegaConf.load(os.path.join(exp_dir, "pipeline_info.yaml"))
+        value = pipeline_info.experiment.seed
+        title = "Experiment random seed"
+        xaxis = "Seed"
+
     if key == "num_worms" or key == "num_train_worms":
         # The number of worms in the training set
         df = pd.read_csv(os.path.join(exp_dir, "dataset", "train_dataset_info.csv"))
@@ -956,13 +964,6 @@ def experiment_parameter(exp_dir, key):
         value = df["train_time_steps"].sum()
         title = "Total amount of training data"
         xaxis = "Num. time steps"
-
-    if key == "time_steps_per_neuron":
-        # Average number of train time steps per neurons
-        df = pd.read_csv(os.path.join(exp_dir, "dataset", "train_dataset_info.csv"))
-        value = (df["train_time_steps"] / df["num_neurons"]).median()
-        title = "Average amount of training data per neuron"
-        xaxis = "Num. time steps per neuron"
 
     if key == "num_neurons" or key == "num_named_neurons":
         # Number of named neurons used for training
@@ -981,6 +982,13 @@ def experiment_parameter(exp_dir, key):
                 value = len(unique_neurons)
         title = "Number of unique labelled neurons"
         xaxis = "Num. neurons"
+
+    if key == "time_steps_per_neuron":
+        # Average number of train time steps per neurons
+        df = pd.read_csv(os.path.join(exp_dir, "dataset", "train_dataset_info.csv"))
+        value = (df["train_time_steps"] / df["num_neurons"]).median()
+        title = "Average amount of training data per neuron"
+        xaxis = "Num. time steps per neuron"
 
     if key == "num_train_samples" or key == "num_samples":
         # The number of training sequences sampled per worm

@@ -1,5 +1,8 @@
 import os
 import numpy as np
+import cudf.pandas
+
+cudf.pandas.install()
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
@@ -452,18 +455,7 @@ def data_scaling_df(nts_experiments):
         - computation_flops: The number of floating point operations (FLOPs)
         - num_parameters: The total number of trainable parameters in the model
     """
-    data_scaling_results = {
-        "experiment_ID": [],
-        "model_type": [],
-        "hidden_size": [],
-        "num_parameters": [],
-        "num_worms": [],
-        "num_time_steps": [],
-        "time_steps_per_neuron": [],
-        "num_named_neurons": [],
-        "min_val_loss": [],
-        "val_baseline": [],
-    }
+    data_scaling_results = []
 
     for model_name, exp_paths in nts_experiments.items():
         for exp_log_dir in exp_paths:
@@ -478,30 +470,28 @@ def data_scaling_df(nts_experiments):
                 # Load train metrics
                 df = pd.read_csv(os.path.join(exp_dir, "train", "train_metrics.csv"))
 
-                data_scaling_results["experiment_ID"].append(exp_ID)
-                data_scaling_results["model_type"].append(
-                    experiment_parameter(exp_dir, "model_type")[0]
+                data_scaling_results.append(
+                    {
+                        "experiment_ID": exp_ID,
+                        "model_type": experiment_parameter(exp_dir, "model_type")[0],
+                        "hidden_size": experiment_parameter(exp_dir, "hidden_size")[0],
+                        "num_parameters": experiment_parameter(
+                            exp_dir, "num_parameters"
+                        )[0],
+                        "num_worms": experiment_parameter(exp_dir, "num_worms")[0],
+                        "num_time_steps": experiment_parameter(
+                            exp_dir, "num_time_steps"
+                        )[0],
+                        "time_steps_per_neuron": experiment_parameter(
+                            exp_dir, "time_steps_per_neuron"
+                        )[0],
+                        "num_named_neurons": experiment_parameter(
+                            exp_dir, "num_named_neurons"
+                        )[0],
+                        "min_val_loss": df["val_loss"].min(),
+                        "val_baseline": df["val_baseline"].median(),
+                    }
                 )
-                data_scaling_results["hidden_size"].append(
-                    experiment_parameter(exp_dir, "hidden_size")[0]
-                )
-                data_scaling_results["num_parameters"].append(
-                    experiment_parameter(exp_dir, "num_parameters")[0]
-                )
-                data_scaling_results["num_worms"].append(
-                    experiment_parameter(exp_dir, "num_worms")[0]
-                )
-                data_scaling_results["num_time_steps"].append(
-                    experiment_parameter(exp_dir, "num_time_steps")[0]
-                )
-                data_scaling_results["time_steps_per_neuron"].append(
-                    experiment_parameter(exp_dir, "time_steps_per_neuron")[0]
-                )
-                data_scaling_results["num_named_neurons"].append(
-                    experiment_parameter(exp_dir, "num_named_neurons")[0]
-                )
-                data_scaling_results["min_val_loss"].append(df["val_loss"].min())
-                data_scaling_results["val_baseline"].append(df["val_baseline"].median())
 
     return pd.DataFrame(data_scaling_results)
 
@@ -639,7 +629,7 @@ def hidden_scaling_plot(data_scaling_df, legend_code):
             color=model_color_code[model_label],
         )
 
-    # Plot the baseline 
+    # Plot the baseline
     x = np.linspace(min_num_params, max_num_params, len(baseline_loss))
     y = np.sort(baseline_loss)
     ax.plot(x, y, label="Baseline", color="black", alpha=0.5, linestyle="--")
@@ -678,8 +668,8 @@ def scaling_slopes_df(nts_experiments):
         "experiment_ID": [],
         "model_type": [],
         "validation_dataset": [],
-        "individual_validation_loss": [],
-        "individual_baseline_loss": [],
+        "validation_loss": [],
+        "baseline_loss": [],
         "num_parameters": [],
         "num_worms": [],
         "num_time_steps": [],
@@ -689,36 +679,30 @@ def scaling_slopes_df(nts_experiments):
 
     for model_label, exp_paths in nts_experiments.items():
         for exp_log_dir in exp_paths:
-            # Loop over all the experiment files
-            for experiment_ID in sorted(
-                os.listdir(exp_log_dir), key=lambda x: x.strip("exp_")
-            ):
-                # Skip if not starts with exp
-                if not experiment_ID.startswith("exp") or experiment_ID.startswith(
-                    "exp_"
-                ):
-                    continue
+            experiment_IDs = [
+                exp_id
+                for exp_id in sorted(
+                    os.listdir(exp_log_dir), key=lambda x: x.strip("exp_")
+                )
+                if exp_id.startswith("exp") and not exp_id.startswith("exp_")
+            ]
 
+            for experiment_ID in experiment_IDs:
                 exp_dir = os.path.join(exp_log_dir, experiment_ID)
 
-                # Load train metrics
                 df = pd.read_csv(os.path.join(exp_dir, "train", "train_metrics.csv"))
                 df_analysis = pd.read_csv(
                     os.path.join(exp_dir, "analysis", "validation_loss_per_dataset.csv")
                 )
 
-                for val_dataset in df_analysis["dataset"]:
+                for _, row in df_analysis.iterrows():
+                    val_dataset = row["dataset"]
+                    val_loss = row["validation_loss"]
+                    val_baseline = row["validation_baseline"]
+
                     data_scaling_results["validation_dataset"].append(val_dataset)
-                    data_scaling_results["individual_validation_loss"].append(
-                        df_analysis[df_analysis["dataset"] == val_dataset][
-                            "validation_loss"
-                        ].values[0]
-                    )
-                    data_scaling_results["individual_baseline_loss"].append(
-                        df_analysis[df_analysis["dataset"] == val_dataset][
-                            "validation_baseline"
-                        ].values[0]
-                    )
+                    data_scaling_results["validation_loss"].append(val_loss)
+                    data_scaling_results["baseline_loss"].append(val_baseline)
                     data_scaling_results["experiment_ID"].append(experiment_ID)
                     data_scaling_results["model_type"].append(
                         experiment_parameter(exp_dir, "model_type")[0]
@@ -784,10 +768,10 @@ def scaling_slopes_plot(scaling_slope_results, legend_code):
             ]
 
             x = filtered_results["num_time_steps"].values
-            y = filtered_results["individual_validation_loss"].values
+            y = filtered_results["validation_loss"].values
 
             # Compute the baseline values
-            baseline = filtered_results["individual_baseline_loss"].values
+            baseline = filtered_results["baseline_loss"].values
             baseline_mean = np.mean(baseline)
 
             # Plot the baseline
@@ -873,222 +857,123 @@ def scaling_slopes_plot(scaling_slope_results, legend_code):
     plt.show()
 
 
-############################################################
-
-
-def compute_confidence_interval(x, y, confidence=0.95):
-    """
-    Compute the confidence interval for a linear regression model at all values of x.
-
-    Args:
-        x (array-like): The independent variable values.
-        y (array-like): The dependent variable values.
-        confidence (float, optional): The confidence level for the interval. Default is 0.95.
-
-    Returns:
-        tuple: A tuple containing the predicted y values and the confidence interval.
-
-    Explanation:
-    The function first performs a linear regression using the linregress function from scipy.stats.
-    It calculates the slope, intercept, r-value, p-value, and standard error of the regression.
-    Then, it computes the predicted y values (y_fit) using the equation y = slope * x + intercept.
-    Next, it calculates the mean of x and the number of data points (n).
-    The t-value is obtained using the t.ppf function from scipy.stats, with the confidence level and degrees of freedom (n-2).
-    Finally, the confidence interval is computed using the formula:
-    conf_int = t_val * std_err * sqrt(1/n + (x - mean_x)^2 / sum((x - mean_x)^2))
-    """
-
-    slope, intercept, r_value, p_value, std_err = linregress(x, y)
-    y_fit = slope * x + intercept
-    mean_x = np.mean(x)
-    n = len(x)
-    t_val = t.ppf((1 + confidence) / 2.0, n - 2)
-    conf_int = (
-        t_val * std_err * np.sqrt(1 / n + (x - mean_x) ** 2 / np.sum((x - mean_x) ** 2))
-    )
-    return y_fit, conf_int
-
-
 # 4b. Scaling slopes by model by individual exp. dataset plot
 def scaling_slopes_plot(scaling_slope_results, legend_code):
-    fig, ax = plt.subplots(1, 3, figsize=(15, 5))
-    model_labels = []
+    """
+    Plot the scaling slopes for different models and validation datasets.
 
+    Args:
+        scaling_slope_results (DataFrame): DataFrame containing the scaling slope results.
+        legend_code (dict): Dictionary containing the legend codes for colors and markers.
+
+    Returns:
+        None
+    """
+
+    # Extract necessary information from legend_code
+    original_ds_color_code = legend_code["original_ds_color_code"]
+    model_marker_code = legend_code["model_marker_code"]
+    model_type_to_label = legend_code["model_labels"]
+
+    # Create a figure with three subplots
+    fig, ax = plt.subplots(1, 3, figsize=(15, 5))
+
+    # Initialize a dictionary to store the slopes
+    slopes = {
+        "model_type": [],
+        "validation_dataset": [],
+        "slope": [],
+    }
+
+    # Iterate over unique model types
+    model_labels = []
     for subplot_idx, model_type in enumerate(
         scaling_slope_results["model_type"].unique()
     ):
-        model_labels.append(legend_code["model_labels"][model_type])
-        ax_model = ax[subplot_idx]
-        model_data = scaling_slope_results[
-            scaling_slope_results["model_type"] == model_type
-        ]
+        model_labels.append(model_type_to_label[model_type])
 
-        for val_dataset in model_data["validation_dataset"].unique():
-            dataset_data = model_data[model_data["validation_dataset"] == val_dataset]
-            x = np.log(dataset_data["num_time_steps"].values)
-            y = np.log(dataset_data["individual_validation_loss"].values)
-            y_fit, conf_int = compute_confidence_interval(x, y)
+        # Iterate over unique validation datasets
+        for val_dataset in scaling_slope_results["validation_dataset"].unique():
+            # Filter the data for the current model and validation dataset
+            filtered_results = scaling_slope_results[
+                (scaling_slope_results["model_type"] == model_type)
+                & (scaling_slope_results["validation_dataset"] == val_dataset)
+            ]
+
+            x = filtered_results["num_time_steps"].values
+            y = filtered_results["validation_loss"].values
+
+            # Compute the baseline values
+            baseline = filtered_results["baseline_loss"].values
+            baseline_mean = np.mean(baseline)
+
+            # Plot the baseline
+            ax[subplot_idx].plot(
+                np.linspace(min(x), max(x), len(baseline)),
+                baseline,
+                linestyle="--",
+                color=original_ds_color_code[val_dataset],
+            )
+
+            # Plot scatter plots of  each individual dataset
+            ax[subplot_idx].scatter(
+                x, y, s=5, alpha=0.3, color=original_ds_color_code[val_dataset]
+            )
+
+            # Perform linear regression
+            slope, intercept, r_value, p_value, std_err = stats.linregress(
+                np.log(x), np.log(y)
+            )
+
+            # Create a range of x-values for plotting the regression line and error band
+            x_range = np.logspace(np.log10(min(x)), np.log10(max(x)), 100)
+            y_range = np.exp(intercept + slope * np.log(x_range))
 
             # Plot the regression line
-            ax_model.plot(
-                dataset_data["num_time_steps"],
-                np.exp(y_fit),
-                label=val_dataset,
-                color=legend_code["original_ds_color_code"][val_dataset],
+            ax[subplot_idx].plot(
+                x_range, y_range, color=original_ds_color_code[val_dataset], zorder=10
             )
 
-            # Plot the confidence interval
-            ax_model.fill_between(
-                dataset_data["num_time_steps"],
-                np.exp(y_fit - 2 * conf_int),
-                np.exp(y_fit + 2 * conf_int),
-                color=legend_code["original_ds_color_code"][val_dataset],
-                alpha=0.3,
-            )
+            # Set axes to use a log-log scale
+            ax[subplot_idx].set_xscale("log")
+            ax[subplot_idx].set_yscale("log")
 
-        ax_model.set_xscale("log")
-        ax_model.set_yscale("log")
-        ax_model.set_title(f"{model_labels[subplot_idx]}")
-        ax_model.set_xlabel("Num. train time steps")
-        if subplot_idx == 0:
-            ax_model.set_ylabel("Validation MSE Loss")
+            # Store the slope information
+            slopes["model_type"].append(model_type)
+            slopes["validation_dataset"].append(val_dataset)
+            slopes["slope"].append(slope)
 
-        # Plot baselines
-        for val_dataset in model_data["validation_dataset"].unique():
-            baseline = model_data[model_data["validation_dataset"] == val_dataset][
-                "individual_baseline_loss"
-            ].mean()
-            ax_model.axhline(
-                baseline,
-                ls="--",
-                color=legend_code["original_ds_color_code"][val_dataset],
-            )
+    # Create a DataFrame from the slopes dictionary
+    slopes = pd.DataFrame(slopes)
 
-    handles, labels = ax[-1].get_legend_handles_labels()
-    fig.legend(handles, labels, loc="upper right", title="Experimental datasets")
+    # Set axis labels and title for each subplot
+    ax[0].set_xlabel(
+        "Num. train time steps", fontdict={"fontsize": 14, "fontweight": "bold"}
+    )
+    ax[1].set_xlabel(
+        "Num. train time steps", fontdict={"fontsize": 14, "fontweight": "bold"}
+    )
+    ax[2].set_xlabel(
+        "Num. train time steps", fontdict={"fontsize": 14, "fontweight": "bold"}
+    )
+    ax[0].set_ylabel(
+        "Validation MSE Loss", fontdict={"fontsize": 14, "fontweight": "bold"}
+    )
+    ax[0].set_title(f"(A) {model_labels[0]} model", fontdict={"fontsize": 16})
+    ax[1].set_title(f"(B) {model_labels[1]} model", fontdict={"fontsize": 16})
+    ax[2].set_title(f"(C) {model_labels[2]} model", fontdict={"fontsize": 16})
+
+    # Display the legend in the top right subplot
+    ax[2].legend(
+        handles=legend_code["color_legend"],
+        loc="center right",
+        bbox_to_anchor=(1.5, 0.5),
+        title="Experimental datasets",
+    )
+
+    # Adjust the layout and display the plot
     plt.tight_layout()
     plt.show()
-
-
-############################################################
-
-# # 4b. Scaling slopes by model by individual exp. dataset plot
-# def scaling_slopes_plot(scaling_slope_results, legend_code):
-#     """
-#     Plot the scaling slopes for different models and validation datasets.
-
-#     Args:
-#         scaling_slope_results (DataFrame): DataFrame containing the scaling slope results.
-#         legend_code (dict): Dictionary containing the legend codes for colors and markers.
-
-#     Returns:
-#         None
-#     """
-
-#     # Extract necessary information from legend_code
-#     original_ds_color_code = legend_code["original_ds_color_code"]
-#     model_marker_code = legend_code["model_marker_code"]
-#     model_type_to_label = legend_code["model_labels"]
-
-#     # Create a figure with three subplots
-#     fig, ax = plt.subplots(1, 3, figsize=(15, 5))
-
-#     # Initialize a dictionary to store the slopes
-#     slopes = {
-#         "model_type": [],
-#         "validation_dataset": [],
-#         "slope": [],
-#     }
-
-#     # Iterate over unique model types
-#     model_labels = []
-#     for subplot_idx, model_type in enumerate(
-#         scaling_slope_results["model_type"].unique()
-#     ):
-#         model_labels.append(model_type_to_label[model_type])
-
-#         # Iterate over unique validation datasets
-#         for val_dataset in scaling_slope_results["validation_dataset"].unique():
-#             # Filter the data for the current model and validation dataset
-#             filtered_results = scaling_slope_results[
-#                 (scaling_slope_results["model_type"] == model_type)
-#                 & (scaling_slope_results["validation_dataset"] == val_dataset)
-#             ]
-
-#             x = filtered_results["num_time_steps"].values
-#             y = filtered_results["individual_validation_loss"].values
-
-#             # Compute the baseline values
-#             baseline = filtered_results["individual_baseline_loss"].values
-#             baseline_mean = np.mean(baseline)
-
-#             # Plot the baseline
-#             ax[subplot_idx].plot(
-#                 np.linspace(min(x), max(x), len(baseline)),
-#                 baseline,
-#                 linestyle="--",
-#                 color=original_ds_color_code[val_dataset],
-#             )
-
-#             # Plot scatter plots of  each individual dataset
-#             ax[subplot_idx].scatter(
-#                 x, y, s=10, alpha=0.4, color=original_ds_color_code[val_dataset]
-#             )
-
-#             # Perform linear regression
-#             slope, intercept, r_value, p_value, std_err = stats.linregress(
-#                 np.log(x), np.log(y)
-#             )
-
-#             # Create a range of x-values for plotting the regression line and error band
-#             x_range = np.logspace(np.log10(min(x)), np.log10(max(x)), 100)
-#             y_range = np.exp(intercept + slope * np.log(x_range))
-
-#             # Plot the regression line
-#             ax[subplot_idx].plot(
-#                 x_range, y_range, color=original_ds_color_code[val_dataset], zorder=10
-#             )
-
-#             # Set axes to use a log-log scale
-#             ax[subplot_idx].set_xscale("log")
-#             ax[subplot_idx].set_yscale("log")
-
-#             # Store the slope information
-#             slopes["model_type"].append(model_type)
-#             slopes["validation_dataset"].append(val_dataset)
-#             slopes["slope"].append(slope)
-
-#     # Create a DataFrame from the slopes dictionary
-#     slopes = pd.DataFrame(slopes)
-
-#     # Set axis labels and title for each subplot
-#     ax[0].set_xlabel(
-#         "Num. train time steps", fontdict={"fontsize": 14, "fontweight": "bold"}
-#     )
-#     ax[1].set_xlabel(
-#         "Num. train time steps", fontdict={"fontsize": 14, "fontweight": "bold"}
-#     )
-#     ax[2].set_xlabel(
-#         "Num. train time steps", fontdict={"fontsize": 14, "fontweight": "bold"}
-#     )
-#     ax[0].set_ylabel(
-#         "Validation MSE Loss", fontdict={"fontsize": 14, "fontweight": "bold"}
-#     )
-#     ax[0].set_title(f"(A) {model_labels[0]} model", fontdict={"fontsize": 16})
-#     ax[1].set_title(f"(B) {model_labels[1]} model", fontdict={"fontsize": 16})
-#     ax[2].set_title(f"(C) {model_labels[2]} model", fontdict={"fontsize": 16})
-
-#     # Display the legend in the top right subplot
-#     ax[2].legend(
-#         handles=legend_code["color_legend"],
-#         loc="center right",
-#         bbox_to_anchor=(1.5, 0.5),
-#         title="Experimental datasets",
-#     )
-
-#     # Adjust the layout and display the plot
-#     plt.tight_layout()
-#     plt.show()
 
 
 # 5. Cross-dataset Generalization plot

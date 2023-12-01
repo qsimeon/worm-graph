@@ -3,6 +3,9 @@ import torch
 import random
 import warnings
 import numpy as np
+import cudf.pandas
+
+cudf.pandas.install()
 import pandas as pd
 import torch.multiprocessing
 

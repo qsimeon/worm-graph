@@ -1,10 +1,10 @@
-black[jupyter]
+black[jupyter] # uses pip
 dtaidistance
 fvcore
 h5py
-hydra-core
-hydra-optuna-sweeper
-hydra-submitit-launcher
+hydra-core # uses pip
+hydra-optuna-sweeper # uses pip
+hydra-submitit-launcher # uses pip
 ipykernel
 ipython
 jinja2
@@ -12,8 +12,8 @@ jupyter
 jupyterlab
 mat73
 matplotlib
-nbimporter
-ncps
+nbimporter # uses pip
+ncps # uses pip
 networkx
 notebook
 numpy==1.24
@@ -27,10 +27,6 @@ scipy
 seaborn
 spectrum
 statsmodels
-torch
-torch_geometric
-torchaudio
-torchvision
 tqdm
 typing
 typing_extensions

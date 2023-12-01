@@ -12,6 +12,8 @@ __pycache__/
 *tempCodeRunnerFile.py
 nohup.out
 .processed
+setup/requirements_pip.txt
+setup/requirements_conda.txt
 
 # Large files
 opensource_data.zip
