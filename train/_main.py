@@ -229,7 +229,7 @@ def train_model(
                 ),
                 other_info={
                     "computation_flops": computation_flops,
-                    "time_last_epoch:": computation_time[-1],
+                    "time_last_epoch": computation_time[-1],
                     "current_lr": learning_rate[-1],
                 },  # add FLOPs info to checkpoint
             )
@@ -265,7 +265,7 @@ def train_model(
         os.path.join(log_dir, "train", "checkpoints", "model_best.pt"),
         other_info={
             "computation_flops": computation_flops,
-            "time_last_epoch:": computation_time[-1],
+            "time_last_epoch": computation_time[-1],
             "current_lr": learning_rate[-1],
         },  # add FLOPs info to checkpoint
     )

@@ -653,12 +653,9 @@ class NeuralTransformer(Model):
         )
 
         # Special transformer parameters
-        self.n_head = (
-            1  # TODO: Figure out if using single attention head performs better.
-        )
-        # self.n_head = find_largest_divisor(
-        #     hidden_size
-        # )  # number of attention heads (NOTE: must be divisor of `hidden_size`)
+        self.n_head = find_largest_divisor(
+            hidden_size
+        )  # number of attention heads (NOTE: must be divisor of `hidden_size`)
         logger.info(f"Num. attn. heads {self.n_head}")
         self.dropout = 0.1  # dropout ratedropout=self.dropout,
 

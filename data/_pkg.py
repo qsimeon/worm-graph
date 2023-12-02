@@ -7,6 +7,11 @@ import pickle
 import subprocess
 import logging
 import numpy as np
+try:
+    import cudf.pandas
+    cudf.pandas.install()
+except:
+    pass
 import pandas as pd
 
 from itertools import combinations

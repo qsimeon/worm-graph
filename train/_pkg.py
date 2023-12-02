@@ -8,6 +8,11 @@ import hydra
 import random
 import logging
 import numpy as np
+try:
+    import cudf.pandas
+    cudf.pandas.install()
+except:
+    pass
 import pandas as pd
 
 from tqdm import tqdm

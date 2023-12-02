@@ -929,7 +929,7 @@ def experiment_parameter(exp_dir, key):
         - batch_size: The batch size used for training
         - seq_len: The sequence length used for training
         - learn_rate: The learning rate used for training
-        - dataset: The name of a single dataset used for training
+        - dataset: The name of the dataset used for training (TODO)
         - model: The type of neural net model used for training
         - optimizer: The type of optimizer used for training
         - time_last_epoch: The computation time in seconds for the last epoch
@@ -1055,7 +1055,7 @@ def experiment_parameter(exp_dir, key):
         pipeline_info = OmegaConf.load(os.path.join(exp_dir, "pipeline_info.yaml"))
         chkpt_path = os.path.join(exp_dir, "train", "checkpoints", f"model_best.pt")
         model_chkpt = torch.load(chkpt_path, map_location=torch.device(DEVICE))
-        value = model_chkpt["time_last_epoch"]
+        value = model_chkpt["time_last_epoch"] # TODO: Fix! should be `time_last_epoch`
         title = "Computation time of last epoch"
         xaxis = "Time (s)"
 
