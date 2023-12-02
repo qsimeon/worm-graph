@@ -1,7 +1,7 @@
 # @package _global_
-# File name: nts_linear_experimental.yaml
+# File name: nts_ffnn_experimental.yaml
 #   nts = number of time steps (key: num_time_steps)
-#   linear = FeatureFFNN model
+#   ffnn = FeatureFFNN model
 #   experimental = experimental datasets (Kato, Nichols, Skora, Uzel, Yemini, Kaplan, Flavell, Leifer)
 # We increase gradually the quantity of worms from all datasets.
 # We choose the hidden size to get a model with ~0.574M (trainable) parameters.
@@ -93,5 +93,5 @@ submodule:
 experiment: 
   # What parameter you are experimenting with (key)
   key: num_time_steps 
-  name: nts_linear_experimental
+  name: nts_ffnn_experimental
   mode: MULTIRUN

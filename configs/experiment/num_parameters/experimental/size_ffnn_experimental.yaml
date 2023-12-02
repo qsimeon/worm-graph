@@ -1,7 +1,7 @@
 # @package _global_
-# File name: size_linear_experimental.yaml
+# File name: size_ffnn_experimental.yaml
 #   size = model size (key: num_parameters)
-#   linear = FeatureFFNN model
+#   ffnn = FeatureFFNN model
 #   experimental = experimental datasets (Kato, Nichols, Skora, Uzel, Yemini, Kaplan, Flavell, Leifer)
 # We increase gradually the hidden size of the models as a way to increase the number of parameters.
 defaults:
@@ -90,5 +90,5 @@ submodule:
 
 experiment:
   key: num_parameters
-  name: size_linear_experimental
+  name: size_ffnn_experimental
   mode: MULTIRUN

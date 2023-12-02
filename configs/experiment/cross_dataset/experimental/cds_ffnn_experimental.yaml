@@ -1,7 +1,7 @@
 # @package _global_
-# File name: cds_linear_experimental.yaml
+# File name: cds_ffnn_experimental.yaml
 #   cds = cross dataset [generalization] (key: worm_dataset)
-#   linear = FeatureFFNN model
+#   ffnn = FeatureFFNN model
 #   experimental = experimental datasets (Kato, Nichols, Skora, Uzel, Yemini, Kaplan, Flavell, Leifer)
 # We train a model on each individual experimental dataset (all worms from each) then evaluate them on all other experimental datasets (all worms from each).
 # We choose the hidden size to get a model with ~0.574M (trainable) parameters.
@@ -95,5 +95,5 @@ submodule:
 experiment: 
   # What parameter you are experimenting with (key)
   key: worm_dataset 
-  name: cds_linear_experimental
+  name: cds_ffnn_experimental
   mode: MULTIRUN
