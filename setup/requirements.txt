@@ -1,6 +1,6 @@
 black[jupyter] # uses pip
 dtaidistance
-fvcore
+fvcore # uses pip
 h5py
 hydra-core # uses pip
 hydra-optuna-sweeper # uses pip

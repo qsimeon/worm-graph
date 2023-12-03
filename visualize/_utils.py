@@ -157,50 +157,70 @@ def plot_frequency_distribution(data, ax, title, dt=0.5):
 
 
 def plot_dataset_info(log_dir):
+    logger.info(f"DEBUG log_dir: {log_dir}")  # DEBUG
     neuron_idx_mapping = {neuron: idx for idx, neuron in enumerate(NEURONS_302)}
 
     # Train dataset
-    df_train = pd.read_csv(os.path.join(log_dir, "dataset", "train_dataset_info.csv"))
-    # Convert 'neurons' column to list
-    df_train["neurons"] = df_train["neurons"].apply(lambda x: ast.literal_eval(x))
-    # Get all neurons
-    neurons_train, neuron_counts_train = np.unique(
-        np.concatenate(df_train["neurons"].values), return_counts=True
+    df_train = pd.read_csv(
+        os.path.join(log_dir, "dataset", "train_dataset_info.csv"),
+        converters={"neurons": ast.literal_eval},
     )
+    logger.info(f"df_train.head(): {df_train.head()}")  # DEBUG
+    neurons_train = df_train["neurons"]
+    logger.info(f"DEBUG neurons_train: \n{neurons_train}")  # DEBUG
+    # Flatten the list of lists into a single list of neurons
+    flattened_neurons_train = [
+        neuron for sublist in neurons_train for neuron in sublist
+    ]
+    logger.info(f"DEBUG flattened_neurons_train: \n{flattened_neurons_train}")  # DEBUG
+    # Now use np.unique on this flattened list
+    unique_neurons_train, neuron_counts_train = np.unique(
+        flattened_neurons_train, return_counts=True
+    )
+    logger.info(f"DEBUG unique_neurons_train: \n{unique_neurons_train}")  # DEBUG
     # Standard sorting
-    std_counts_train = np.zeros(302)
-    neuron_idx = [neuron_idx_mapping[neuron] for neuron in neurons_train]
-    std_counts_train[neuron_idx] = neuron_counts_train
+    standard_counts_train = np.zeros(302, dtype=int)
+    neuron_idx = [neuron_idx_mapping[neuron] for neuron in unique_neurons_train]
+    standard_counts_train[neuron_idx] = neuron_counts_train
     # Get unique datasets
     train_exp_datasets = df_train["dataset"].unique().tolist()
+    # Create DataFrame for train data
+    train_data = {"Neuron": NEURONS_302, "Count": standard_counts_train}
+    df_train_plot = pd.DataFrame(train_data)
 
     # Validation dataset
-    df_val = pd.read_csv(os.path.join(log_dir, "dataset", "val_dataset_info.csv"))
-    # Convert 'neurons' column to list
-    df_val["neurons"] = df_val["neurons"].apply(lambda x: ast.literal_eval(x))
-    # Get all neurons
-    neurons_val, neuron_counts_val = np.unique(
-        np.concatenate(df_val["neurons"].values), return_counts=True
+    df_val = pd.read_csv(
+        os.path.join(log_dir, "dataset", "val_dataset_info.csv"),
+        converters={"neurons": ast.literal_eval},
+    )
+    neurons_val = df_val["neurons"]
+    # Flatten the list of lists into a single list of neurons
+    flattened_neurons_val = [neuron for sublist in neurons_val for neuron in sublist]
+    # Now use np.unique on this flattened list
+    unique_neurons_val, neuron_counts_val = np.unique(
+        flattened_neurons_val, return_counts=True
     )
     # Standard sorting
-    std_counts_val = np.zeros(302)
-    neuron_idx_val = [neuron_idx_mapping[neuron] for neuron in neurons_val]
-    std_counts_val[neuron_idx_val] = neuron_counts_val
+    standard_counts_val = np.zeros(302, dtype=int)
+    neuron_idx_val = [neuron_idx_mapping[neuron] for neuron in unique_neurons_val]
+    standard_counts_val[neuron_idx_val] = neuron_counts_val
     # Get unique datasets
     val_exp_datasets = df_val["dataset"].unique().tolist()
+    # Create DataFrame for validation data
+    val_data = {"Neuron": NEURONS_302, "Count": standard_counts_val}
+    df_val_plot = pd.DataFrame(val_data)
 
     # Plot histogram using sns
     fig, ax = plt.subplots(2, 1, figsize=(10, 8))
     sns.set_style("whitegrid")
     sns.set_palette("tab10")
 
-    # Train dataset
-    sns.barplot(x=NEURONS_302, y=std_counts_train, ax=ax[0])
-    ax[0].set_xticklabels(NEURONS_302, rotation=45)
+    # Train dataset plot
+    sns.barplot(x="Neuron", y="Count", data=df_train_plot, ax=ax[0], errorbar=None)
+    ax[0].set_xticklabels(ax[0].get_xticklabels(), rotation=45, ha="right")
     ax[0].set_ylabel("Count", fontsize=12)
     ax[0].set_xlabel("Neuron", fontsize=12)
     ax[0].set_title("Neuron count of Train Dataset", fontsize=14)
-    # Reduce the number of xticks for readability
     ax[0].xaxis.set_major_locator(ticker.MultipleLocator(10))
     ax[0].xaxis.set_minor_locator(ticker.MultipleLocator(1))
     metadata_train_text = (
@@ -220,13 +240,12 @@ def plot_dataset_info(log_dir):
         ),
     )
 
-    # Validation dataset
-    sns.barplot(x=NEURONS_302, y=std_counts_val, ax=ax[1])
-    ax[1].set_xticklabels(NEURONS_302, rotation=45)
+    # Validation dataset plot
+    sns.barplot(x="Neuron", y="Count", data=df_val_plot, ax=ax[1], errorbar=None)
+    ax[1].set_xticklabels(ax[1].get_xticklabels(), rotation=45, ha="right")
     ax[1].set_ylabel("Count", fontsize=12)
     ax[1].set_xlabel("Neuron", fontsize=12)
     ax[1].set_title("Neuron count of Validation Dataset", fontsize=14)
-    # Reduce the number of xticks for readability
     ax[1].xaxis.set_major_locator(ticker.MultipleLocator(10))
     ax[1].xaxis.set_minor_locator(ticker.MultipleLocator(1))
     metadata_val_text = (
@@ -373,7 +392,10 @@ def plot_predictions(log_dir, neurons_to_plot=None, worms_to_plot=None):
                 df.index.names = ["Type", ""]
 
                 # Get the named neurons
-                neurons_df = pd.read_csv(neurons_url)
+                neurons_df = pd.read_csv(
+                    neurons_url,
+                    converters={"named_neurons": ast.literal_eval},
+                )
                 neurons = neurons_df["named_neurons"]
 
                 logger.info(f"neurons_to_plot:  {neurons_to_plot}")
@@ -544,7 +566,10 @@ def plot_pca_trajectory(log_dir, worms_to_plot=None, plot_type="3D"):
                 df = pd.read_csv(url)
 
                 # Get the named neurons
-                neurons_df = pd.read_csv(neurons_url)
+                neurons_df = pd.read_csv(
+                    neurons_url,
+                    converters={"named_neurons": ast.literal_eval},
+                )
                 neurons = neurons_df["named_neurons"]
 
                 sns.set_style("whitegrid")
@@ -953,14 +978,20 @@ def experiment_parameter(exp_dir, key):
 
     if key == "num_worms" or key == "num_train_worms":
         # The number of worms in the training set
-        df = pd.read_csv(os.path.join(exp_dir, "dataset", "train_dataset_info.csv"))
+        df = pd.read_csv(
+            os.path.join(exp_dir, "dataset", "train_dataset_info.csv"),
+            converters={"neurons": ast.literal_eval},
+        )
         value = df["combined_dataset_index"].nunique()
         title = "Number of worms in training set"
         xaxis = "Num. worms"
 
     if key == "num_time_steps":
         # Total number of train time steps in the dataset
-        df = pd.read_csv(os.path.join(exp_dir, "dataset", "train_dataset_info.csv"))
+        df = pd.read_csv(
+            os.path.join(exp_dir, "dataset", "train_dataset_info.csv"),
+            converters={"neurons": ast.literal_eval},
+        )
         value = df["train_time_steps"].sum()
         title = "Total amount of training data"
         xaxis = "Num. time steps"
@@ -968,13 +999,14 @@ def experiment_parameter(exp_dir, key):
     if key == "num_neurons" or key == "num_named_neurons":
         # Number of named neurons used for training
         pipeline_info = OmegaConf.load(os.path.join(exp_dir, "pipeline_info.yaml"))
-        df = pd.read_csv(os.path.join(exp_dir, "dataset", "train_dataset_info.csv"))
+        df = pd.read_csv(
+            os.path.join(exp_dir, "dataset", "train_dataset_info.csv"),
+            converters={"neurons": ast.literal_eval},
+        )
         value = pipeline_info.submodule.dataset.num_named_neurons
         title = "Number of unique labelled neurons"
         xaxis = "Num. neurons"
         if value is None:
-            # Convert string representation of list to actual list
-            df["neurons"] = df["neurons"].apply(ast.literal_eval)
             # Create a set of all unique neurons
             unique_neurons = set()
             for neuron_list in df["neurons"]:
@@ -985,7 +1017,10 @@ def experiment_parameter(exp_dir, key):
 
     if key == "time_steps_per_neuron":
         # Average number of train time steps per neurons
-        df = pd.read_csv(os.path.join(exp_dir, "dataset", "train_dataset_info.csv"))
+        df = pd.read_csv(
+            os.path.join(exp_dir, "dataset", "train_dataset_info.csv"),
+            converters={"neurons": ast.literal_eval},
+        )
         value = (df["train_time_steps"] / df["num_neurons"]).median()
         title = "Average amount of training data per neuron"
         xaxis = "Num. time steps per neuron"
@@ -1055,7 +1090,7 @@ def experiment_parameter(exp_dir, key):
         pipeline_info = OmegaConf.load(os.path.join(exp_dir, "pipeline_info.yaml"))
         chkpt_path = os.path.join(exp_dir, "train", "checkpoints", f"model_best.pt")
         model_chkpt = torch.load(chkpt_path, map_location=torch.device(DEVICE))
-        value = model_chkpt["time_last_epoch"] # TODO: Fix! should be `time_last_epoch`
+        value = model_chkpt["time_last_epoch"]  # TODO: Fix! should be `time_last_epoch`
         title = "Computation time of last epoch"
         xaxis = "Time (s)"
 
@@ -1373,7 +1408,10 @@ def plot_loss_per_dataset(log_dir, mode="validation"):
     losses = losses.dropna().reset_index(drop=True)
 
     # Train dataset names
-    train_info = pd.read_csv(os.path.join(log_dir, "dataset", "train_dataset_info.csv"))
+    train_info = pd.read_csv(
+        os.path.join(log_dir, "dataset", "train_dataset_info.csv"),
+        converters={"neurons": ast.literal_eval},
+    )
     train_dataset_names = train_info["dataset"].unique()
 
     sns.set_theme(style="whitegrid")
@@ -1481,7 +1519,8 @@ def plot_experiment_loss_per_dataset(
 
         # Load train information
         train_info = pd.read_csv(
-            os.path.join(exp_dir, "dataset", "train_dataset_info.csv")
+            os.path.join(exp_dir, "dataset", "train_dataset_info.csv"),
+            converters={"neurons": ast.literal_eval},
         )
 
         # Dataset names used for training

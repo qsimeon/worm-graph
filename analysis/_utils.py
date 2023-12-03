@@ -272,7 +272,8 @@ def loss_per_dataset(
 
     # Retrieve information from training
     train_dataset_info = pd.read_csv(
-        os.path.join(log_dir, "dataset", "train_dataset_info.csv")
+        os.path.join(log_dir, "dataset", "train_dataset_info.csv"),
+        converters={"neurons": ast.literal_eval},
     )
 
     seq_len = int(train_dataset_info["train_seq_len"].values[0])

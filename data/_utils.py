@@ -805,6 +805,7 @@ def create_combined_dataset(
         dataset_info["num_neurons"].append(len(worm_neurons))
 
     dataset_info = pd.DataFrame(dataset_info)
+    logger.info(f"DEBUG dataset_info.head(): \n{dataset_info.head()}")  # DEBUG
 
     return combined_dataset, dataset_info
 
