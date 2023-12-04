@@ -1,0 +1,94 @@
+# @package _global_
+# File name: size_ctrnn_experimental.yaml
+#   size = model size (key: num_parameters)
+#   ctrnn = NetworkCTRNN model
+#   experimental = experimental datasets (Kato, Nichols, Skora, Uzel, Yemini, Kaplan, Flavell, Leifer)
+# We increase gradually the hidden size of the models as a way to increase the number of parameters.
+defaults:
+  - override /submodule: [model, train, visualize]
+  - _self_
+
+hydra:
+  # The sweeper params will be used only when MULTIRUN mode is used.
+  # Uses the submodule parameters if in RUN mode.
+  mode: MULTIRUN
+  sweeper:
+    params:
+      experiment.seed: 4 # assign each repetition of the experiment a distinct random seed
+      submodule.model.hidden_size: range(8,65,4)
+      ### Different ranges of hidden_size ###
+      # seed 0: range(2368,7169,512)
+      # seed 1: range(1024,2881,128)
+      # seed 2: range(128,1153,64)  
+      # seed 3: range(16,289,16)
+      # seed 4: range(8,65,4)
+
+submodule:
+  
+  dataset:
+    # Set path to a directory with a fixed train and validation set
+    use_these_datasets:
+      path: /om2/user/qsimeon/worm-graph/data/combined_AllExperimental
+      num_worms: null
+
+    save_datasets: false
+
+    # No need to remake the datasets if we are using a fixed dataset
+    experimental_datasets:
+      Kato2015: null
+      Nichols2017: null
+      Skora2018: null
+      Kaplan2020: null
+      Yemini2021: null
+      Uzel2022: null
+      Flavell2023: null
+      Leifer2023: null
+
+    num_named_neurons: null
+    num_train_samples: 32
+    num_val_samples: 16
+    seq_len: 100
+    reverse: false
+    use_residual: false
+    smooth_data: true
+
+  # Build model from scratch
+  model:
+    type: NetworkCTRNN
+
+  train:
+    epochs: 500
+
+  # Choose the worms that you want to predict
+  predict:
+    experimental_datasets:
+      Kato2015: worm0
+      Nichols2017: worm0
+      Skora2018: worm0
+      Kaplan2020: worm0
+      Yemini2021: worm0
+      Uzel2022: worm0
+      Flavell2023: worm1 # something is wrong with worm0 in Flavell2023
+      Leifer2023: worm0
+    # Number of time steps to generate
+    nb_ts_to_generate: null
+    context_window: 100
+
+  analysis:
+    analyse_this_log_dir: null
+    # Validate final model using all worms from each experimental datasets
+    validation:
+      experimental_datasets:
+        Kato2015: all
+        Nichols2017: all
+        Skora2018: all
+        Kaplan2020: all
+        Yemini2021: all
+        Uzel2022: all
+        Flavell2023: all
+        Leifer2023: all
+
+experiment:
+  key: num_parameters
+  name: size_ctrnn_experimental
+  mode: MULTIRUN
