@@ -157,7 +157,7 @@ def plot_frequency_distribution(data, ax, title, dt=0.5):
 
 
 def plot_dataset_info(log_dir):
-    logger.info(f"DEBUG log_dir: {log_dir}")  # DEBUG
+    # Map the 302 C. elgans neurons to their index
     neuron_idx_mapping = {neuron: idx for idx, neuron in enumerate(NEURONS_302)}
 
     # Train dataset
@@ -165,19 +165,15 @@ def plot_dataset_info(log_dir):
         os.path.join(log_dir, "dataset", "train_dataset_info.csv"),
         converters={"neurons": ast.literal_eval},
     )
-    logger.info(f"df_train.head(): {df_train.head()}")  # DEBUG
     neurons_train = df_train["neurons"]
-    logger.info(f"DEBUG neurons_train: \n{neurons_train}")  # DEBUG
     # Flatten the list of lists into a single list of neurons
     flattened_neurons_train = [
         neuron for sublist in neurons_train for neuron in sublist
     ]
-    logger.info(f"DEBUG flattened_neurons_train: \n{flattened_neurons_train}")  # DEBUG
     # Now use np.unique on this flattened list
     unique_neurons_train, neuron_counts_train = np.unique(
         flattened_neurons_train, return_counts=True
     )
-    logger.info(f"DEBUG unique_neurons_train: \n{unique_neurons_train}")  # DEBUG
     # Standard sorting
     standard_counts_train = np.zeros(302, dtype=int)
     neuron_idx = [neuron_idx_mapping[neuron] for neuron in unique_neurons_train]
@@ -303,6 +299,7 @@ def plot_loss_curves(log_dir, info_to_display=None):
         label="Train baseline",
         color="c",
         alpha=0.8,
+        errorbar=None,
         **dict(linestyle=":"),
     )
 
@@ -314,10 +311,25 @@ def plot_loss_curves(log_dir, info_to_display=None):
         label="Validation baseline",
         color="r",
         alpha=0.8,
+        errorbar=None,
         **dict(linestyle=":"),
     )
-    sns.lineplot(x="epoch", y="train_loss", data=loss_df, ax=ax, label="Train")
-    sns.lineplot(x="epoch", y="val_loss", data=loss_df, ax=ax, label="Validation")
+    sns.lineplot(
+        x="epoch",
+        y="train_loss",
+        data=loss_df,
+        ax=ax,
+        label="Train",
+        errorbar=None,
+    )
+    sns.lineplot(
+        x="epoch",
+        y="val_loss",
+        data=loss_df,
+        ax=ax,
+        label="Validation",
+        errorbar=None,
+    )
 
     # Set x-axis to only use integer values
     ax.xaxis.set_major_locator(ticker.MaxNLocator(integer=True))
@@ -361,8 +373,6 @@ def plot_predictions(log_dir, neurons_to_plot=None, worms_to_plot=None):
                 os.path.join(log_dir, "prediction", type_ds, ds_name)
             )
 
-            logger.info(f"worms_to_plot:  {worms_to_plot}")
-
             # Treat worms_to_plot
             if isinstance(worms_to_plot, int):
                 # If worms_to_plot is an integer, randomly select that many worms
@@ -376,8 +386,7 @@ def plot_predictions(log_dir, neurons_to_plot=None, worms_to_plot=None):
                 # If worms_to_plot is a str, keep only the requested wormID
                 worm_list = [worm for worm in worm_list if worm == worms_to_plot]
 
-            logger.info(f"worm_list: {worm_list}")
-
+            # Iterate over the worms
             for wormID in worm_list:
                 url = os.path.join(
                     log_dir, "prediction", type_ds, ds_name, wormID, "predictions.csv"
@@ -394,11 +403,8 @@ def plot_predictions(log_dir, neurons_to_plot=None, worms_to_plot=None):
                 # Get the named neurons
                 neurons_df = pd.read_csv(
                     neurons_url,
-                    converters={"named_neurons": ast.literal_eval},
                 )
                 neurons = neurons_df["named_neurons"]
-
-                logger.info(f"neurons_to_plot:  {neurons_to_plot}")
 
                 # Treat neurons_to_plot
                 if isinstance(neurons_to_plot, int):
@@ -417,8 +423,7 @@ def plot_predictions(log_dir, neurons_to_plot=None, worms_to_plot=None):
                         neuron for neuron in neurons if neuron == neurons_to_plot
                     ]
 
-                logger.info(f"neurons: {neurons}")
-
+                # Get the time vectors
                 data_window = len(
                     pd.concat([df.loc["Context"], df.loc["Ground Truth"]], axis=0)
                 )
@@ -568,7 +573,6 @@ def plot_pca_trajectory(log_dir, worms_to_plot=None, plot_type="3D"):
                 # Get the named neurons
                 neurons_df = pd.read_csv(
                     neurons_url,
-                    converters={"named_neurons": ast.literal_eval},
                 )
                 neurons = neurons_df["named_neurons"]
 
@@ -580,7 +584,7 @@ def plot_pca_trajectory(log_dir, worms_to_plot=None, plot_type="3D"):
                 ]  # orange (next time step prediction with gt)
                 ar_generation_color = palette[
                     2
-                ]  # gree (autoregressive next time step prediction)
+                ]  # green (autoregressive next time step prediction)
 
                 # Split data by Type
                 ar_gen_data = df[df["Type"] == "AR Generation"].drop(
@@ -1592,6 +1596,7 @@ def plot_experiment_loss_per_dataset(
             ax=ax,
             linestyle="--",
             color=color,
+            errorbar=None,
         )
 
         # Annotate number of val. worms

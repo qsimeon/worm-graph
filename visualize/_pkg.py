@@ -5,11 +5,6 @@ import torch
 import logging
 import traceback
 import numpy as np
-try:
-    import cudf.pandas
-    cudf.pandas.install()
-except:
-    pass
 import pandas as pd
 import seaborn as sns
 import networkx as nx

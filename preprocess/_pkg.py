@@ -12,11 +12,6 @@ import subprocess
 import h5py
 import mat73
 import numpy as np
-try:
-    import cudf.pandas
-    cudf.pandas.install()
-except:
-    pass
 import pandas as pd
 import torch
 from omegaconf import DictConfig, OmegaConf

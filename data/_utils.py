@@ -678,7 +678,7 @@ def select_desired_worms(multi_worm_dataset, worms):
         # User requested a specific number of worms (random pick)
         if worms > len(multi_worm_dataset):
             logger.info(
-                f"Requested number of worms was more the number of worms in {dataset_name}. Defaulting to using all {len(multi_worm_dataset)} worms in {dataset_name}."
+                f"Requested number of worms was more than the number of worms in {dataset_name}. Defaulting to using all {len(multi_worm_dataset)} worms in {dataset_name}."
             )
             worms = len(multi_worm_dataset)
         wormIDs_to_keep = np.random.choice(wormIDs, size=worms, replace=False)
@@ -805,7 +805,6 @@ def create_combined_dataset(
         dataset_info["num_neurons"].append(len(worm_neurons))
 
     dataset_info = pd.DataFrame(dataset_info)
-    logger.info(f"DEBUG dataset_info.head(): \n{dataset_info.head()}")  # DEBUG
 
     return combined_dataset, dataset_info
 

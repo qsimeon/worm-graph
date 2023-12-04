@@ -248,7 +248,6 @@ def get_datasets(dataset_config: DictConfig, save=True):
         combined_dataset, dataset_info = create_combined_dataset(
             experimental_datasets, num_named_neurons
         )
-        logger.info(f"DEBUG dataset_info: \n{dataset_info.head()}")  # DEBUG
         train_dataset, val_dataset, dataset_info_split = split_combined_dataset(
             combined_dataset,
             num_train_samples,
@@ -274,9 +273,6 @@ def get_datasets(dataset_config: DictConfig, save=True):
             on="combined_dataset_index",
             how="outer",
         )
-        logger.info(
-            f"DEBUG dataset_info_train['neurons']: \n{dataset_info_train['neurons']}"
-        )  # DEBUG
         dataset_info_val = dataset_info.merge(
             dataset_info_split[
                 [
@@ -294,9 +290,6 @@ def get_datasets(dataset_config: DictConfig, save=True):
 
         # Delete the combined dataset column after merging (not necessary anymore)
         dataset_info_train.drop(columns=["combined_dataset_index"], inplace=True)
-        logger.info(
-            f"DEBUG dataset_info_train['neurons']: \n{dataset_info_train['neurons']}"
-        )  # DEBUG
         dataset_info_val.drop(columns=["combined_dataset_index"], inplace=True)
 
         # Save the datasets and information about them
@@ -311,16 +304,6 @@ def get_datasets(dataset_config: DictConfig, save=True):
             index=True,
             header=True,
         )
-        ##### DEBUG ########
-        # Read from CSV safely
-        dataset_info_train = pd.read_csv(
-            os.path.join(log_dir, "dataset", f"train_dataset_info.csv"),
-            converters={"neurons": ast.literal_eval},
-        )
-        logger.info(
-            f"DEBUG dataset_info_train['neurons']: \n{dataset_info_train['neurons']}"
-        )
-        ###################
         dataset_info_val.to_csv(
             os.path.join(log_dir, "dataset", f"val_dataset_info.csv"),
             index=True,

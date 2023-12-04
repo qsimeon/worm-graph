@@ -1121,9 +1121,6 @@ class BasePreprocessor:
             )  # create neuron label to index mapping
 
             if num_named_neurons == 0:  # skip worms with no labelled neurons
-                logger.info(
-                    f"DEBUG num_named_neurons ({self.dataset_name}.preprocess_traces): {num_named_neurons}"
-                )  # DEBUG
                 continue
 
             trace_data = trace_data[
@@ -1730,9 +1727,6 @@ class Leifer2023Preprocessor(BasePreprocessor):
             # 1. Map named neurons
             neuron_to_idx, num_named_neurons = self.create_neuron_idx(label_list)
             if num_named_neurons == 0:  # skip worms with no labelled neuron
-                logger.info(
-                    f"DEBUG num_named_neurons ({self.dataset_name}.preprocess): {num_named_neurons}"
-                )  # DEBUG
                 worm_idx -= 1
                 continue
 

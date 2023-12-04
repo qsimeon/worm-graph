@@ -4,13 +4,6 @@ import ast
 import torch
 import logging
 import numpy as np
-
-try:
-    import cudf.pandas
-
-    cudf.pandas.install()
-except:
-    pass
 import pandas as pd
 
 from typing import Union

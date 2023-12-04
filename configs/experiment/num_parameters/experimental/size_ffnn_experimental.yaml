@@ -15,7 +15,7 @@ hydra:
   sweeper:
     params:
       experiment.seed: 4 # assign each repetition of the experiment a distinct random seed
-      submodule.model.hidden_size: range(8,65,4)
+      submodule.model.hidden_size: range(8,9,1) #range(8,65,4)
       ### Different ranges of hidden_size ###
       # seed 0: range(2368,7169,512)
       # seed 1: range(1024,2881,128)

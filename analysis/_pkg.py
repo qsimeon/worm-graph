@@ -5,13 +5,6 @@ import torch
 import logging
 import datetime
 import numpy as np
-
-try:
-    import cudf.pandas
-
-    cudf.pandas.install()
-except:
-    pass
 import pandas as pd
 import sklearn.metrics as sm
 import matplotlib.pyplot as plt
