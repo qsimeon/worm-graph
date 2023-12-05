@@ -68,7 +68,6 @@ hydra:
     array_parallelism: 256  # Max number of simultaneous jobs
     setup:
       - cd /om2/user/qsimeon/worm-graph
-      - conda activate worm-graph
 
 # ============================ Pipeline Config ============================
 

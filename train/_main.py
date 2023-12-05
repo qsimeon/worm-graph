@@ -112,7 +112,6 @@ def train_model(
 
     pbar = tqdm(
         range(epochs + 1),  # +1 because we don't step() the first epoch
-        total=epochs + 1,
         position=0,
         leave=True,  # position at top and remove when done
         dynamic_ncols=True,  # adjust width to terminal window size
@@ -242,10 +241,11 @@ def train_model(
         # Print training progress metrics if in verbose mode
         if verbose:
             logger.info(
-                "Epoch: {}/{} | Train loss: {:.4f} | Val. loss: {:.4f} | Val. baseline: {:.4f}".format(
+                "Epoch: {}/{} | Train loss: {:.4f} | Train time: {:.4f} | Val. loss: {:.4f} | Val. baseline: {:.4f}".format(
                     epoch,
-                    epochs + 1,
+                    epochs,
                     train_epoch_loss[-1],
+                    computation_time[-1],
                     val_epoch_loss[-1],
                     val_epoch_baseline[-1],
                 )
