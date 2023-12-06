@@ -1,0 +1,111 @@
+# @package _global_
+# File name: size_ffnn_synthetic.yaml
+#   size = model size (key: num_parameters)
+#   ffnn = FeatureFFNN model
+#   synthetic = synthetic datasets (Sines, Lorenz, VanDerPol, RandWalk, WhiteNoise)
+# We increase gradually the hidden size of the models as a way to increase the number of parameters.
+defaults:
+  - override /submodule: [model, train, visualize]
+  - _self_
+
+hydra:
+  # The sweeper params will be used only when MULTIRUN mode is used.
+  # Uses the submodule parameters if in RUN mode.
+  mode: MULTIRUN
+  sweeper:
+    params:
+      experiment.seed: 0 # assign each repetition of the experiment a distinct random seed
+      submodule.model.hidden_size: range(8,1345,16)
+      submodule.dataset.use_these_datasets.path: /om2/user/qsimeon/worm-graph/data/validation_Sines0000
+      submodule.dataset.experimental_datasets: choice({Sines0000:all})
+      submodule.predict.experimental_datasets: choice({Sines0000:[worm0, worm1]})
+      submodule.analysis.validation.experimental_datasets: choice({Sines0000:all})
+      ### submodule.dataset.use_these_datasets.path ###
+      # seed 0: choice(/om2/user/qsimeon/worm-graph/data/validation_Sines0000)
+      # seed 1: choice(/om2/user/qsimeon/worm-graph/data/validation_Lorenz0000)
+      # seed 2: choice(/om2/user/qsimeon/worm-graph/data/validation_WhiteNoise0000)
+      # seed 3: choice(/om2/user/qsimeon/worm-graph/data/validation_RandWalk0000)
+      # seed 4: choice(/om2/user/qsimeon/worm-graph/data/validation_VanDerPol0000)
+      ### submodule.dataset.experimental_datasets ###
+      # seed 0: choice({Sines0000:all})
+      # seed 1: choice({Lorenz0000:all})
+      # seed 2: choice({WhiteNoise0000:all})
+      # seed 3: choice({RandWalk0000:all})
+      # seed 4: choice({VanDerPol0000:all})
+      ### submodule.predict.experimental_datasets ###
+      # seed 0: choice({Sines0000:[worm0, worm1]})
+      # seed 1: choice({Lorenz0000:worm0})
+      # seed 2: choice({WhiteNoise0000:worm0})
+      # seed 3: choice({RandWalk0000:worm0})
+      # seed 4: choice({VanDerPol0000:worm0})
+      ### submodule.analysis.validation.experimental_datasets ###
+      # seed 0: choice({Sines0000:all})
+      # seed 1: choice({Lorenz0000:all})
+      # seed 2: choice({WhiteNoise0000:all})
+      # seed 3: choice({RandWalk0000:all})
+      # seed 4: choice({VanDerPol0000:all})
+
+submodule:
+  
+  dataset:
+    # Set path to a directory with a fixed train and validation set
+    use_these_datasets:
+      # This gets overwritten by the sweeper
+      path: null
+      num_worms: null
+
+    save_datasets: false
+
+    # No need to remake the datasets if we are using a fixed dataset
+    experimental_datasets:
+      # This gets overwritten by the sweeper
+      Sines0000: null
+      Lorenz0000: null
+      WhiteNoise0000: null
+      RandWalk0000: null
+      VanDerPol0000: null
+
+    num_named_neurons: null
+    num_train_samples: 32
+    num_val_samples: 16
+    # Set to the same value as submodule.predict.context_window
+    seq_len: 100
+    reverse: false
+    use_residual: false
+    smooth_data: true
+
+  # Build model from scratch
+  model:
+    type: FeatureFFNN
+
+  train:
+    epochs: 500
+
+  predict:
+    # This gets overwritten by the sweeper
+    experimental_datasets:
+      Sines0000: null
+      Lorenz0000: null
+      WhiteNoise0000: null
+      RandWalk0000: null
+      VanDerPol0000: null
+    # Number of time steps to generate
+    nb_ts_to_generate: null
+    # Set to the same value as submodule.dataset.seq_len
+    context_window: 100
+
+  analysis:
+    analyse_this_log_dir: null
+    validation:
+      # This gets overwritten by the sweeper
+      experimental_datasets:
+        Sines0000: null
+        Lorenz0000: null
+        WhiteNoise0000: null
+        RandWalk0000: null
+        VanDerPol0000: null
+
+experiment:
+  key: num_parameters
+  name: size_ffnn_synthetic
+  mode: MULTIRUN
