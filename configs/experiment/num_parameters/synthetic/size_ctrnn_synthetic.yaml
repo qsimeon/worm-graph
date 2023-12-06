@@ -1,7 +1,7 @@
 # @package _global_
-# File name: size_lstm_synthetic.yaml
+# File name: size_dtrnn_synthetic.yaml
 #   size = model size (key: num_parameters)
-#   lstm = NetworkLSTM model
+#   ctrnn = NetworkCTRNN model
 #   synthetic = synthetic datasets (Sines, Lorenz, VanDerPol, RandWalk, WhiteNoise)
 # We increase gradually the hidden size of the models as a way to increase the number of parameters.
 defaults:
@@ -76,7 +76,7 @@ submodule:
 
   # Build model from scratch
   model:
-    type: NetworkLSTM
+    type: NetworkCTRNN
 
   train:
     epochs: 500
@@ -107,5 +107,5 @@ submodule:
 
 experiment:
   key: num_parameters
-  name: size_lstm_synthetic
+  name: size_ctrnn_synthetic
   mode: MULTIRUN
