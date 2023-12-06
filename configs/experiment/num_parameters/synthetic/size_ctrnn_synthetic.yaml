@@ -1,5 +1,5 @@
 # @package _global_
-# File name: size_dtrnn_synthetic.yaml
+# File name: size_ctrnn_synthetic.yaml
 #   size = model size (key: num_parameters)
 #   ctrnn = NetworkCTRNN model
 #   synthetic = synthetic datasets (Sines, Lorenz, VanDerPol, RandWalk, WhiteNoise)
