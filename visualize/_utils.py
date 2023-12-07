@@ -219,10 +219,8 @@ def plot_dataset_info(log_dir):
     ax[0].set_title("Neuron count of Train Dataset", fontsize=14)
     ax[0].xaxis.set_major_locator(ticker.MultipleLocator(10))
     ax[0].xaxis.set_minor_locator(ticker.MultipleLocator(1))
-    metadata_train_text = (
-        "Experimental datasets used: {}\nTotal number of worms: {}".format(
-            ", ".join(train_exp_datasets), len(df_train)
-        )
+    metadata_train_text = "Datasets used: {}\nTotal number of worms: {}".format(
+        ", ".join(train_exp_datasets), len(df_train)
     )
     ax[0].text(
         0.02,
@@ -244,10 +242,8 @@ def plot_dataset_info(log_dir):
     ax[1].set_title("Neuron count of Validation Dataset", fontsize=14)
     ax[1].xaxis.set_major_locator(ticker.MultipleLocator(10))
     ax[1].xaxis.set_minor_locator(ticker.MultipleLocator(1))
-    metadata_val_text = (
-        "Experimental datasets used: {}\nTotal number of worms: {}".format(
-            ", ".join(val_exp_datasets), len(df_val)
-        )
+    metadata_val_text = "Datasets used: {}\nTotal number of worms: {}".format(
+        ", ".join(val_exp_datasets), len(df_val)
     )
     ax[1].text(
         0.02,

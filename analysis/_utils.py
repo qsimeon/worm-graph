@@ -285,6 +285,7 @@ def loss_per_dataset(
     running_base_loss = 0
     running_loss = 0
 
+    dataset_names = []  # DEBUG
     dataset_loss = []
     dataset_baseline = []
     num_worms = []
@@ -298,9 +299,10 @@ def loss_per_dataset(
     for dataset, worms_to_use in experimental_datasets.items():
         # Skip some datasets
         if worms_to_use is None:
-            dataset_loss.append(np.NaN)
-            dataset_baseline.append(np.NaN)
-            num_worms.append(np.NaN)
+            # DEBUG
+            # dataset_loss.append(np.NaN)
+            # dataset_baseline.append(np.NaN)
+            # num_worms.append(np.NaN)
             continue
 
         # Type check for `worms_to_use` to be int, list, or str
@@ -361,6 +363,7 @@ def loss_per_dataset(
                 running_loss += loss.item()
 
             # Store metrics
+            dataset_names.append(dataset)
             dataset_loss.append(running_loss / len(dataloader))
             dataset_baseline.append(running_base_loss / len(dataloader))
 
@@ -371,7 +374,7 @@ def loss_per_dataset(
     # Save losses in csv
     losses = pd.DataFrame(
         {
-            "dataset": list(experimental_datasets.keys()),
+            "dataset": dataset_names,  # DEBUG
             f"{mode}_loss": dataset_loss,
             f"{mode}_baseline": dataset_baseline,
             "num_worms": num_worms,
