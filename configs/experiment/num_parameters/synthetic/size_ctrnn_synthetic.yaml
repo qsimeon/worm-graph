@@ -15,11 +15,11 @@ hydra:
   sweeper:
     params:
       submodule.model.hidden_size: range(8,1345,16)
-      experiment.seed: 3
-      submodule.dataset.use_these_datasets.path: /om2/user/qsimeon/worm-graph/data/validation_RandWalk0000
-      submodule.dataset.experimental_datasets: choice({RandWalk0000:all})
-      submodule.predict.experimental_datasets: choice({RandWalk0000:worm0})
-      submodule.analysis.validation.experimental_datasets: choice({RandWalk0000:all})
+      experiment.seed: 2 
+      submodule.dataset.use_these_datasets.path: /om2/user/qsimeon/worm-graph/data/validation_WhiteNoise0000
+      submodule.dataset.experimental_datasets: choice({WhiteNoise0000:all})
+      submodule.predict.experimental_datasets: choice({WhiteNoise0000:worm0})
+      submodule.analysis.validation.experimental_datasets: choice({WhiteNoise0000:all})
       # ###############################################################################################
       ### SINES ###
       # submodule.model.hidden_size: range(8,1345,16)

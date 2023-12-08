@@ -39,7 +39,9 @@ The `_utils.py` script includes several model classes, which are subclasses of t
 
 The available model implementations (i.e. subclasses of `Model`) are:
 
-- `FeatureFFNN`: This model is a simple linear regression model with an embedding layer and feedforward blocks.
+- `LinearRegression`: This model is a simple linear regression model with no hidden layers.
+
+- `FeatureFFNN`: This model is a simple nonlinear regression model with an embedding layer and feedforward blocks.
 
 - `NeuralTransformer`: This model is a transformer for neural activity data. It includes a positional encoding layer, an embedding layer, and transformer blocks. This model does not use LayerNorm in its input to hidden and hidden to hidden transformations.
 

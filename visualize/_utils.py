@@ -957,6 +957,7 @@ def experiment_parameter(exp_dir, key):
         - dataset: The name of the dataset used for training (TODO)
         - model: The type of neural net model used for training
         - optimizer: The type of optimizer used for training
+        - loss: The type of loss function used for training
         - time_last_epoch: The computation time in seconds for the last epoch
         - computation_flops: The number of floating point operations (FLOPs)
         - num_parameters: The total number of trainable parameters in the model

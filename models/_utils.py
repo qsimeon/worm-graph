@@ -315,7 +315,7 @@ class Model(torch.nn.Module):
     def __init__(
         self,
         input_size: int,
-        hidden_size: int,
+        hidden_size: Union[int, None],
         loss: Union[Callable, None] = None,
         fft_reg_param: float = 0.0,
         l1_reg_param: float = 0.0,
@@ -347,7 +347,7 @@ class Model(torch.nn.Module):
         # Setup
         self.input_size = input_size  # Number of neurons (302)
         self.output_size = input_size  # Number of neurons (302)
-        self.hidden_size = hidden_size
+        self.hidden_size = hidden_size if hidden_size is not None else input_size
         self.fft_reg_param = fft_reg_param
         self.l1_reg_param = l1_reg_param
         # Initialize hidden state
@@ -355,9 +355,17 @@ class Model(torch.nn.Module):
         # Identity layer
         self.identity = torch.nn.Identity()
         # Input to hidden transformation - placeholder
-        self.input_hidden = torch.nn.Linear(self.input_size, self.hidden_size)
+        self.input_hidden = (
+            torch.nn.Linear(self.input_size, self.hidden_size)
+            if hidden_size is not None
+            else torch.nn.Identity()
+        )
         # Hidden to hidden transformation - placeholder
-        self.hidden_hidden = torch.nn.Linear(self.hidden_size, self.hidden_size)
+        self.hidden_hidden = (
+            torch.nn.Linear(self.hidden_size, self.hidden_size)
+            if hidden_size is not None
+            else torch.nn.Identity()
+        )
         # Instantiate internal hidden model - placeholder
         self.inner_hidden_model = InnerHiddenModel(self.hidden_hidden, self.hidden)
         # Linear readout
@@ -560,7 +568,7 @@ class Model(torch.nn.Module):
     def sample(self, nb_ts_to_sample: int):
         """
         Sample spontaneous neural activity from the model.
-        TODO: Figure out how to use diffusion models to sample from the network.
+        TODO: Figure out how to use diffusion models to do this.
         """
         pass
 
@@ -568,6 +576,39 @@ class Model(torch.nn.Module):
 # # # Models subclasses: Indidividually differentiated model architectures # # # #
 # Use the same model backbone provided by Model but with a distinct core or inner hidden model #
 # # # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
+
+
+class LinearRegression(Model):
+    """
+    A simple linear regression model to use as a baseline.
+    """
+
+    def __init__(
+        self,
+        input_size: int,
+        hidden_size: Union[int, None] = None,
+        loss: Union[Callable, None] = None,
+        fft_reg_param=0.0,
+        l1_reg_param=0.0,
+    ):
+        super(LinearRegression, self).__init__(
+            input_size,
+            None, # hidden_size
+            loss,
+            fft_reg_param,
+            l1_reg_param,
+        )
+
+        # Input to hidden transformation
+        self.input_hidden = torch.nn.Identity()
+
+        # Hidden to hidden transformation
+        self.hidden_hidden = torch.nn.Identity()
+        # Instantiate internal hidden model
+        self.inner_hidden_model = InnerHiddenModel(self.hidden_hidden, self.hidden)
+
+    def init_hidden(self, input_shape=None):
+        return None
 
 
 class FeatureFFNN(Model):
@@ -582,7 +623,7 @@ class FeatureFFNN(Model):
     def __init__(
         self,
         input_size: int,
-        hidden_size: int,
+        hidden_size: Union[int, None] = None,
         loss: Union[Callable, None] = None,
         fft_reg_param: float = 0.0,
         l1_reg_param: float = 0.0,
@@ -631,7 +672,7 @@ class NeuralTransformer(Model):
     def __init__(
         self,
         input_size: int,
-        hidden_size: int,
+        hidden_size: Union[int, None] = None,
         loss: Union[Callable, None] = None,
         fft_reg_param: float = 0.0,
         l1_reg_param: float = 0.0,
@@ -704,7 +745,7 @@ class NetworkCTRNN(Model):
     def __init__(
         self,
         input_size: int,
-        hidden_size: int,
+        hidden_size: Union[int, None] = None,
         loss: Union[Callable, None] = None,
         fft_reg_param: float = 0.0,
         l1_reg_param: float = 0.0,
@@ -752,7 +793,7 @@ class LiquidCfC(Model):
     def __init__(
         self,
         input_size: int,
-        hidden_size: int,
+        hidden_size: Union[int, None] = None,
         loss: Union[Callable, None] = None,
         fft_reg_param: float = 0.0,
         l1_reg_param: float = 0.0,
@@ -821,7 +862,7 @@ class NetworkLSTM(Model):
     def __init__(
         self,
         input_size: int,
-        hidden_size: int,
+        hidden_size: Union[int, None] = None,
         loss: Union[Callable, None] = None,
         fft_reg_param: float = 0.0,
         l1_reg_param: float = 0.0,
@@ -882,47 +923,5 @@ class NetworkLSTM(Model):
                 # param.data.fill_(0)
                 torch.nn.init.zeros_(param.data)
 
-
-# region NetworkGCN: attempt Graph Neural Neural Network Architecture (work-in-progress)
-# # TODO: Work on this model more.
-# class NetworkGCN(Model):
-#     """
-#     A graph neural network model of the _C. elegans_ nervous system.
-#     """
-
-#     def __init__(
-#         self,
-#         input_size: int,
-#         hidden_size: int,
-#         loss: Union[Callable, None] = None,
-#         fft_reg_param: float = 0.0,
-#         l1_reg_param: float = 0.0,
-#     ):
-#         super(NetworkGCN, self).__init__(
-#             input_size,
-#             hidden_size,
-#             loss,
-#             fft_reg_param,
-#             l1_reg_param,
-#         )
-
-#         # Input to hidden transformation: Graph Convolutional Network (GCN) layer
-#         self.input_hidden = GCNModel(self.input_size, self.hidden_size)
-
-#         # Hidden to hidden transformation: Identity layer
-#         self.hidden_hidden = torch.nn.Sequential(
-#             self.identity,
-#             torch.nn.ReLU(),
-#             # NOTE: Do NOT use LayerNorm here!
-#         )
-
-#         # Instantiate internal hidden model
-#         self.inner_hidden_model = InnerHiddenModel(self.hidden_hidden, self.hidden)
-
-#     def init_hidden(self, input_shape=None):
-#         """Initialize the hidden state of the inner model."""
-#         self.hidden = None
-#         return None
-# endregion
 
 # # # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#

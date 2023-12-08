@@ -24,7 +24,8 @@ def get_model(model_config: DictConfig, verbose=True) -> torch.nn.Module:
     NetworkCTRNN : class in models/_utils.py
     LiquidCfC : class in models/_utils.py
     FeatureFFNN : class in models/_utils.py
-        If no model type is specified, FeatureFFNN is used by default.
+    LinearRegression: class in models/_utils.py
+        If no model type is specified, LinearRegression is used by default.
 
     Returns
     -------
@@ -81,12 +82,12 @@ def get_model(model_config: DictConfig, verbose=True) -> torch.nn.Module:
             model = NetworkCTRNN(**args)
         elif model_config.type == "LiquidCfC":
             model = LiquidCfC(**args)
-        # elif model_config.type == "NetworkGCN": # TODO: work-in-progress
-        #     model = NetworkGCN(**args)
         elif model_config.type == "FeatureFFNN":
             model = FeatureFFNN(**args)
-        else:  # default to "FeatureFFNN" model
-            model = FeatureFFNN(**args)
+        elif model_config.type == "LinearRegression":
+            model = LinearRegression(**args)
+        else:  # default to "LinearRegression" model
+            model = LinearRegression(**args)
         if verbose:
             logger.info("Initialized a new model: {}.".format(model_config.type))
             logger.info(f"Hidden size: {model_config.hidden_size}")

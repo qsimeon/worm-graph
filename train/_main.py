@@ -312,7 +312,7 @@ if __name__ == "__main__":
     log_dir = os.path.join("logs/hydra", timestamp)
     os.makedirs(log_dir, exist_ok=True)
 
-    # Move to new log directory
+    # Switch to the log directory
     os.chdir(log_dir)
 
     # Dataset
