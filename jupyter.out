@@ -1,0 +1,22 @@
+/var/slurm/slurmd/job33982152/slurm_script: line 14: worm-graph: command not found
+                            
+>>> Command to create ssh tunnel: <<<                                                                                                  
+ssh -L 6666:node106:6666 qsimeon@openmind.mit.edu                                                                                
+>>> Address for jupyter-notebook: <<<                                                                                                  
+localhost:6666
+
+[I 2023-12-09 09:39:49.985 ServerApp] Package jupyterlab took 0.0000s to import
+[I 2023-12-09 09:39:50.078 ServerApp] Package jupyter_lsp took 0.0926s to import
+[W 2023-12-09 09:39:50.078 ServerApp] A `_jupyter_server_extension_points` function was not found in jupyter_lsp. Instead, a `_jupyter_server_extension_paths` function was found and will be used for now. This function name will be deprecated in future releases of Jupyter Server.
+[I 2023-12-09 09:39:50.107 ServerApp] Package jupyter_server_terminals took 0.0279s to import
+[I 2023-12-09 09:39:50.107 ServerApp] Package notebook took 0.0000s to import
+[I 2023-12-09 09:39:50.110 ServerApp] Package notebook_shim took 0.0000s to import
+[W 2023-12-09 09:39:50.111 ServerApp] A `_jupyter_server_extension_points` function was not found in notebook_shim. Instead, a `_jupyter_server_extension_paths` function was found and will be used for now. This function name will be deprecated in future releases of Jupyter Server.
+[I 2023-12-09 09:39:50.112 ServerApp] jupyter_lsp | extension was successfully linked.
+[I 2023-12-09 09:39:50.117 ServerApp] jupyter_server_terminals | extension was successfully linked.
+[W 2023-12-09 09:39:50.120 LabApp] 'allow_origin' has moved from NotebookApp to ServerApp. This config will be passed to ServerApp. Be sure to update your config before our next release.
+[W 2023-12-09 09:39:50.120 LabApp] 'port_retries' has moved from NotebookApp to ServerApp. This config will be passed to ServerApp. Be sure to update your config before our next release.
+[I 2023-12-09 09:39:50.122 ServerApp] jupyterlab | extension was successfully linked.
+[I 2023-12-09 09:39:50.127 ServerApp] notebook | extension was successfully linked.
+[I 2023-12-09 09:39:50.594 ServerApp] notebook_shim | extension was successfully linked.
+slurmstepd: error: *** JOB 33982152 ON node106 CANCELLED AT 2023-12-09T09:48:18 ***
