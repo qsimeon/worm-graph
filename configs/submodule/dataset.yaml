@@ -12,7 +12,7 @@ dataset:
     num_worms: null # options: null or <int>.
 
   # Whether to save the datasets in the logs/dataset directory.
-  save_datasets: false
+  save_datasets: true
 
   # null = don't use this dataset
   # all = use all the worms in the dataset
@@ -23,16 +23,16 @@ dataset:
     # Sines0000: all
     # Lorenz0000: all
     # WhiteNoise0000: all
-    # RandWalk0000: all
+    RandWalk0000: all
     # VanDerPol0000: all
-    Kato2015: all
-    Nichols2017: all
-    Skora2018: all
-    Kaplan2020: all
-    Yemini2021: all
-    Uzel2022: all
-    Flavell2023: all
-    Leifer2023: all
+    # Kato2015: all
+    # Nichols2017: all
+    # Skora2018: all
+    # Kaplan2020: all
+    # Yemini2021: all
+    # Uzel2022: all
+    # Flavell2023: all
+    # Leifer2023: all
   
   # If null, use all the worms in the dataset. Otherwise, if <int> use that number of worms (randomly picked) from the dataset.
   num_named_neurons: null # number of neurons to train the model with (positive integer or null)
