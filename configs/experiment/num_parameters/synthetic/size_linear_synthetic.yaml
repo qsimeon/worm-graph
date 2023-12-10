@@ -95,9 +95,6 @@ submodule:
   model:
     type: LinearRegression
 
-  train:
-    epochs: 500
-
   predict:
     # This gets overwritten by the sweeper
     experimental_datasets:

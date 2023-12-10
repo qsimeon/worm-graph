@@ -14,15 +14,15 @@ hydra:
   mode: MULTIRUN
   sweeper:
     params:
-      submodule.model.hidden_size: range(8,1345,16)
-      experiment.seed: 2 
-      submodule.dataset.use_these_datasets.path: /om2/user/qsimeon/worm-graph/data/validation_WhiteNoise0000
-      submodule.dataset.experimental_datasets: choice({WhiteNoise0000:all})
-      submodule.predict.experimental_datasets: choice({WhiteNoise0000:worm0})
-      submodule.analysis.validation.experimental_datasets: choice({WhiteNoise0000:all})
+      submodule.model.hidden_size: range(8,513,16)
+      experiment.seed: 3
+      submodule.dataset.use_these_datasets.path: /om2/user/qsimeon/worm-graph/data/validation_RandWalk0000
+      submodule.dataset.experimental_datasets: choice({RandWalk0000:all})
+      submodule.predict.experimental_datasets: choice({RandWalk0000:worm0})
+      submodule.analysis.validation.experimental_datasets: choice({RandWalk0000:all})
       # ###############################################################################################
       ### SINES ###
-      # submodule.model.hidden_size: range(8,1345,16)
+      # submodule.model.hidden_size: range(8,1025,32)
       # experiment.seed: 0 
       # submodule.dataset.use_these_datasets.path: /om2/user/qsimeon/worm-graph/data/validation_Sines0000
       # submodule.dataset.experimental_datasets: choice({Sines0000:all})
@@ -30,7 +30,7 @@ hydra:
       # submodule.analysis.validation.experimental_datasets: choice({Sines0000:all})
       # ###############################################################################################
       ### LORENZ ###
-      # submodule.model.hidden_size: range(8,1345,16)
+      # submodule.model.hidden_size: range(8,1025,32)
       # experiment.seed: 1 
       # submodule.dataset.use_these_datasets.path: /om2/user/qsimeon/worm-graph/data/validation_Lorenz0000
       # submodule.dataset.experimental_datasets: choice({Lorenz0000:all})
@@ -38,7 +38,7 @@ hydra:
       # submodule.analysis.validation.experimental_datasets: choice({Lorenz0000:all})
       # ###############################################################################################
       ### WHITE NOISE ###
-      # submodule.model.hidden_size: range(8,1345,16)
+      # submodule.model.hidden_size: range(8,513,16)
       # experiment.seed: 2 
       # submodule.dataset.use_these_datasets.path: /om2/user/qsimeon/worm-graph/data/validation_WhiteNoise0000
       # submodule.dataset.experimental_datasets: choice({WhiteNoise0000:all})
@@ -46,7 +46,7 @@ hydra:
       # submodule.analysis.validation.experimental_datasets: choice({WhiteNoise0000:all})
       # ###############################################################################################
       ### RAND WALK ###
-      # submodule.model.hidden_size: range(8,1345,16)
+      # submodule.model.hidden_size: range(8,513,16)
       # experiment.seed: 3
       # submodule.dataset.use_these_datasets.path: /om2/user/qsimeon/worm-graph/data/validation_RandWalk0000
       # submodule.dataset.experimental_datasets: choice({RandWalk0000:all})
@@ -54,14 +54,14 @@ hydra:
       # submodule.analysis.validation.experimental_datasets: choice({RandWalk0000:all})
       # ###############################################################################################
       ### VAN DER POL ###
-      # submodule.model.hidden_size: range(8,1345,16)
+      # submodule.model.hidden_size: range(8,1025,32)
       # experiment.seed: 4
       # submodule.dataset.use_these_datasets.path: /om2/user/qsimeon/worm-graph/data/validation_VanDerPol0000
       # submodule.dataset.experimental_datasets: choice({VanDerPol0000:all})
       # submodule.predict.experimental_datasets: choice({VanDerPol0000:worm0})
       # submodule.analysis.validation.experimental_datasets: choice({VanDerPol0000:all})
       # ###############################################################################################
-
+      
 submodule:
   
   dataset:
@@ -94,9 +94,6 @@ submodule:
   # Build model from scratch
   model:
     type: NetworkLSTM
-
-  train:
-    epochs: 500
 
   predict:
     # This gets overwritten by the sweeper

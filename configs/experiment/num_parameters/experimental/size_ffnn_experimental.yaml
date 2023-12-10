@@ -57,9 +57,6 @@ submodule:
   model:
     type: FeatureFFNN
 
-  train:
-    epochs: 500
-
   # Choose the worms that you want to predict
   predict:
     experimental_datasets:
