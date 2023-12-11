@@ -593,14 +593,18 @@ class LinearRegression(Model):
     ):
         super(LinearRegression, self).__init__(
             input_size,
-            None, # hidden_size
+            None,  # hidden_size
             loss,
             fft_reg_param,
             l1_reg_param,
         )
 
         # Input to hidden transformation
-        self.input_hidden = torch.nn.Identity()
+        self.input_hidden = torch.nn.Sequential(
+            torch.nn.Identity(),
+            # NOTE: YES use LayerNorm here!
+            torch.nn.LayerNorm(self.hidden_size),
+        )
 
         # Hidden to hidden transformation
         self.hidden_hidden = torch.nn.Identity()

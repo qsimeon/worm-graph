@@ -278,14 +278,16 @@ def loss_per_dataset(
 
     seq_len = int(train_dataset_info["train_seq_len"].values[0])
     num_train_samples = int(train_dataset_info["num_train_samples"].values[0])
-    use_residual = int(train_dataset_info["use_residual"].values[0])
-    smooth_data = int(train_dataset_info["smooth_data"].values[0])
+    train_split_ratio = float(train_dataset_info["train_split_ratio"].values[0])
+    use_residual = bool(train_dataset_info["use_residual"].values[0])
+    smooth_data = bool(train_dataset_info["smooth_data"].values[0])
+    train_split_first = bool(train_dataset_info["train_split_first"].values[0])
 
     # Loss metrics
     running_base_loss = 0
     running_loss = 0
 
-    dataset_names = []  # DEBUG
+    dataset_names = []
     dataset_loss = []
     dataset_baseline = []
     num_worms = []
@@ -299,10 +301,6 @@ def loss_per_dataset(
     for dataset, worms_to_use in experimental_datasets.items():
         # Skip some datasets
         if worms_to_use is None:
-            # DEBUG
-            # dataset_loss.append(np.NaN)
-            # dataset_baseline.append(np.NaN)
-            # num_worms.append(np.NaN)
             continue
 
         # Type check for `worms_to_use` to be int, list, or str
@@ -320,9 +318,11 @@ def loss_per_dataset(
             num_train_samples=num_train_samples,
             num_val_samples=num_train_samples,  # use the same number of samples as in the train dataset
             seq_len=seq_len,
+            reverse=False,
             use_residual=use_residual,
             smooth_data=smooth_data,
-            reverse=False,
+            train_split_first=train_split_first,
+            train_split_ratio=train_split_ratio,
         )
         select_dataset = train_dataset if mode == "train" else val_dataset
 

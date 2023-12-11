@@ -6,7 +6,7 @@ logger = logging.getLogger(__name__)
 
 def get_datasets(dataset_config: DictConfig, save=True):
     """
-    Retrieve or generate training and validation datasets based on the provided configuration.
+    Retrieve or generate training and validation sets based on the provided configuration.
 
     The function first checks if datasets are provided in the specified directory. If they are,
     it will load them. If not, it will generate the datasets from the requested experimental datasets.
@@ -49,6 +49,8 @@ def get_datasets(dataset_config: DictConfig, save=True):
     reverse = dataset_config.reverse
     use_residual = dataset_config.use_residual
     smooth_data = dataset_config.smooth_data
+    train_split_first = dataset_config.train_split_first
+    train_split_ratio = dataset_config.train_split_ratio
 
     # Initialize datasets
     train_dataset, val_dataset = None, None
@@ -180,6 +182,8 @@ def get_datasets(dataset_config: DictConfig, save=True):
                 reverse,
                 use_residual,
                 smooth_data,
+                train_split_first,
+                train_split_ratio,
             )
 
             # Merge dataset_info and time_step_info
@@ -190,8 +194,11 @@ def get_datasets(dataset_config: DictConfig, save=True):
                         "train_time_steps",
                         "num_train_samples",
                         "train_seq_len",
+                        "train_split_idx",
                         "smooth_data",
                         "use_residual",
+                        "train_split_first",
+                        "train_split_ratio",
                     ]
                 ],
                 on="combined_dataset_index",
@@ -203,9 +210,12 @@ def get_datasets(dataset_config: DictConfig, save=True):
                         "combined_dataset_index",
                         "val_time_steps",
                         "num_val_samples",
-                        "val_seq_len",
+                        "train_seq_len",
+                        "val_split_idx",
                         "smooth_data",
                         "use_residual",
+                        "train_split_first",
+                        "train_split_ratio",
                     ]
                 ],
                 on="combined_dataset_index",
@@ -256,6 +266,8 @@ def get_datasets(dataset_config: DictConfig, save=True):
             reverse,
             use_residual,
             smooth_data,
+            train_split_first,
+            train_split_ratio,
         )
 
         # Merge dataset_info and dataset_info_split
@@ -266,8 +278,11 @@ def get_datasets(dataset_config: DictConfig, save=True):
                     "train_time_steps",
                     "num_train_samples",
                     "train_seq_len",
+                    "train_split_idx",
                     "smooth_data",
                     "use_residual",
+                    "train_split_first",
+                    "train_split_ratio",
                 ]
             ],
             on="combined_dataset_index",
@@ -280,15 +295,18 @@ def get_datasets(dataset_config: DictConfig, save=True):
                     "val_time_steps",
                     "num_val_samples",
                     "val_seq_len",
+                    "val_split_idx",
                     "smooth_data",
                     "use_residual",
+                    "train_split_first",
+                    "train_split_ratio",
                 ]
             ],
             on="combined_dataset_index",
             how="outer",
         )
 
-        # Delete the combined dataset column after merging (not necessary anymore)
+        # Delete the combined dataset column after merging (since it is not necessary anymore)
         dataset_info_train.drop(columns=["combined_dataset_index"], inplace=True)
         dataset_info_val.drop(columns=["combined_dataset_index"], inplace=True)
 

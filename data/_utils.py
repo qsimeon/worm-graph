@@ -941,6 +941,8 @@ def split_combined_dataset(
     reverse,
     use_residual,
     smooth_data,
+    train_split_first,
+    train_split_ratio,
 ):
     """
     Splits the combined dataset into training and validation datasets.
@@ -961,6 +963,10 @@ def split_combined_dataset(
         Whether to use the residual data.
     smooth_data : bool
         Whether to use the smoothed data.
+    train_split_first : bool
+        Whether to use the first half for the training split.
+    train_split_ratio : bool
+        Ratio of neural data assigned to the training split.
 
     Returns
     -------
@@ -994,11 +1000,15 @@ def split_combined_dataset(
         "train_time_steps": [],
         "num_train_samples": [],
         "train_seq_len": [],
+        "train_split_idx": [],
         "val_time_steps": [],
         "num_val_samples": [],
         "val_seq_len": [],
-        "smooth_data": [],
+        "val_split_idx": [],
         "use_residual": [],
+        "smooth_data": [],
+        "train_split_first": [],
+        "train_split_ratio": [],
     }
 
     # Loop through the worms in the dataset
@@ -1010,20 +1020,33 @@ def split_combined_dataset(
         worm_dataset = single_worm_dataset["dataset"]
         original_wormID = single_worm_dataset["original_worm"]
 
+        # The index where to split the data
+        split_idx = int(train_split_ratio * len(data))
+
         # Verifications
-        assert isinstance(seq_len, int) and 0 < seq_len < len(
-            data
-        ), "seq_len must be an integer > 0 and < len(data)"
+        assert (
+            isinstance(seq_len, int) and 0 < seq_len < split_idx
+        ), "seq_len must be an integer > 0 and < floor(train_split_ratio * len(data))"
 
         # Split the data and the time vector into two halves
-        data_splits = np.array_split(data, 2)
-        time_vec_splits = np.array_split(time_vec, 2)
+        data_splits = np.array_split(data, indices_or_sections=[split_idx], axis=0)
+        time_vec_splits = np.array_split(
+            time_vec, indices_or_sections=[split_idx], axis=0
+        )
 
         # Separate the splits into training and validation sets
-        train_data_splits = data_splits[::2]
-        train_time_vec_splits = time_vec_splits[::2]
-        val_data_splits = data_splits[1::2]
-        val_time_vec_splits = time_vec_splits[1::2]
+        if train_split_first:
+            train_data_splits, val_data_splits = data_splits[::2], data_splits[1::2]
+            train_time_vec_splits, val_time_vec_splits = (
+                time_vec_splits[::2],
+                time_vec_splits[1::2],
+            )
+        else:
+            train_data_splits, val_data_splits = data_splits[1::2], data_splits[::2]
+            train_time_vec_splits, val_time_vec_splits = (
+                time_vec_splits[1::2],
+                time_vec_splits[::2],
+            )
 
         # Number of samples in each split
         train_samples_per_split = distribute_samples(
@@ -1081,12 +1104,17 @@ def split_combined_dataset(
         dataset_info_split["use_residual"].append(use_residual)
 
         dataset_info_split["train_time_steps"].append(train_split_time_steps)
-        dataset_info_split["train_seq_len"].append(seq_len)
         dataset_info_split["num_train_samples"].append(num_train_samples)
+        dataset_info_split["train_seq_len"].append(seq_len)
+        dataset_info_split["train_split_idx"].append(split_idx)
 
         dataset_info_split["val_time_steps"].append(val_split_time_steps)
-        dataset_info_split["val_seq_len"].append(seq_len)
         dataset_info_split["num_val_samples"].append(num_val_samples)
+        dataset_info_split["val_seq_len"].append(seq_len)
+        dataset_info_split["val_split_idx"].append(split_idx)
+
+        dataset_info_split["train_split_first"].append(train_split_first)
+        dataset_info_split["train_split_ratio"].append(train_split_ratio)
 
     # Concatenate the datasets
     train_dataset = torch.utils.data.ConcatDataset(
