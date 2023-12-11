@@ -328,7 +328,7 @@ def loss_per_dataset(
 
         num_worms.append(len(combined_dataset))
 
-        batch_size = 1
+        batch_size = 32  # DEBUG
         dataloader = torch.utils.data.DataLoader(
             select_dataset,
             batch_size=batch_size,
@@ -344,9 +344,8 @@ def loss_per_dataset(
                 Y = Y.to(DEVICE)
                 masks = masks.to(DEVICE)
 
-                # Baseline model: identity model - predict that the next time step is the same as the current one.
-                # This is the simplest model we can think of: predict that the next time step is the same as the current one
-                # is better than predict any other random number.
+                # Baseline model is the naive predictor: predict that the value at
+                # next time step is the same as the current value.
                 y_base = X
                 baseline = compute_loss_vectorized(
                     loss_fn=criterion, X=y_base, Y=Y, masks=masks
