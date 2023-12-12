@@ -497,8 +497,8 @@ class Model(torch.nn.Module):
             # combine original loss with regularization terms
             regularized_loss = (
                 original_loss
-                + self.fft_reg_param * fft_loss
-                + self.l1_reg_param * l1_loss
+                + (self.fft_reg_param * fft_loss)
+                + (self.l1_reg_param * l1_loss)
             ) / (1.0 + self.fft_reg_param + self.l1_reg_param)
             return regularized_loss
 
