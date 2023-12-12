@@ -12,7 +12,7 @@ hydra:
   # The sweeper params will be used only when MULTIRUN mode is used.
   # Uses the submodule parameters if in RUN mode.
   mode: MULTIRUN
-  submodule.model.hidden_size: range(8,641,16)
+      submodule.model.hidden_size: range(8,641,16)
       experiment.seed: 3
       submodule.dataset.use_these_datasets.path: /om2/user/qsimeon/worm-graph/data/validation_RandWalk0000
       submodule.dataset.experimental_datasets: choice({RandWalk0000:all})
