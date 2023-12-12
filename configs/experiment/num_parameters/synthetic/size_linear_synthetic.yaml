@@ -90,6 +90,7 @@ submodule:
   # Build model from scratch
   model:
     type: LinearRegression
+    # This gets overwritten by the sweeper
     hidden_size: null
 
   predict:
