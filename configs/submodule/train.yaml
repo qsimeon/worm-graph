@@ -11,4 +11,4 @@ train:
     # Minimum change in validation loss to be considered an improvement
     delta: 0
     # Number of epochs to wait for improvement before stopping
-    patience: 50
+    patience: 100

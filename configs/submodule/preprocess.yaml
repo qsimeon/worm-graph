@@ -8,6 +8,6 @@ preprocess:
   smooth: 
     method: ES # null: No smoothing, # GA: Gaussian kernel filter, # ES: Exponential kernel filter, # MA: Moving average filter
     # hyperparameters of the different smoothing methods
-    alpha: 0.1 # ES; lower alpha = smoother
+    alpha: 0.1 # ES; smaller alpha = smoother
     sigma: 5 # GA; larger sigma = smoother
-    window_size: 21 # MA; larger window size = smoother
+    window_size: 21 # MA; larger window_size = smoother
