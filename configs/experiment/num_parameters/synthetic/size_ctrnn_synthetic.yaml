@@ -94,6 +94,8 @@ submodule:
   # Build model from scratch
   model:
     type: NetworkCTRNN
+    # This gets overwritten by the sweeper
+    hidden_size: null
 
   predict:
     # This gets overwritten by the sweeper

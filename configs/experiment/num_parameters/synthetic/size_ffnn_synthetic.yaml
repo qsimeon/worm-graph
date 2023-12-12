@@ -94,6 +94,8 @@ submodule:
   # Build model from scratch
   model:
     type: FeatureFFNN
+    # This gets overwritten by the sweeper
+    hidden_size: null
 
   predict:
     # This gets overwritten by the sweeper

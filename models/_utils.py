@@ -347,7 +347,11 @@ class Model(torch.nn.Module):
         # Setup
         self.input_size = input_size  # Number of neurons (302)
         self.output_size = input_size  # Number of neurons (302)
-        self.hidden_size = hidden_size if hidden_size is not None else input_size
+        self.hidden_size = (
+            hidden_size
+            if ((hidden_size is not None) or (hidden_size > 0))
+            else input_size
+        )
         self.fft_reg_param = fft_reg_param
         self.l1_reg_param = l1_reg_param
         # Initialize hidden state
@@ -357,13 +361,13 @@ class Model(torch.nn.Module):
         # Input to hidden transformation - placeholder
         self.input_hidden = (
             torch.nn.Linear(self.input_size, self.hidden_size)
-            if hidden_size is not None
+            if ((hidden_size is not None) or (hidden_size > 0))
             else torch.nn.Identity()
         )
         # Hidden to hidden transformation - placeholder
         self.hidden_hidden = (
             torch.nn.Linear(self.hidden_size, self.hidden_size)
-            if hidden_size is not None
+            if ((hidden_size is not None) or (hidden_size > 0))
             else torch.nn.Identity()
         )
         # Instantiate internal hidden model - placeholder
