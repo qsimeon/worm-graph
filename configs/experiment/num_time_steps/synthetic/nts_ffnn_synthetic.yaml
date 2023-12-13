@@ -71,8 +71,8 @@ submodule:
       VanDerPol0000: null
 
     num_named_neurons: null
-    num_train_samples: 32
-    num_val_samples: 16
+    num_train_samples: 64
+    num_val_samples: 32
     # Set to the same value as submodule.predict.context_window
     seq_len: 100
     reverse: false

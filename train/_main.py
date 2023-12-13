@@ -68,7 +68,7 @@ def train_model(
     criterion = model.loss_fn()
     save_freq = train_config.save_freq
 
-    # Optimizer parameters
+    # Initialize optimizer, learning rate scheduler and gradient scaler
     optim_name = "torch.optim." + train_config.optimizer
     lr = train_config.lr  # constant/starting learning rate
     optimizer = eval(optim_name + "(model.parameters(), lr=" + str(lr) + ")")
@@ -76,8 +76,9 @@ def train_model(
     # # TODO: Try different learning rate schedulers
     # scheduler = lr_scheduler.CyclicLR(base_lr=0.1 * lr, max_lr=10 * lr)
     # scheduler = lr_scheduler.StepLR(optimizer, step_size=50, gamma=0.1)
+    scaler = GradScaler()
 
-    # Instantiate EarlyStopping
+    # Instantiate early stopping
     es = EarlyStopping(
         patience=train_config.early_stopping.patience,
         min_delta=train_config.early_stopping.delta,
@@ -126,37 +127,42 @@ def train_model(
         # Measure the time for an epoch
         start_time = time.perf_counter()
 
-        for batch_idx, (X_train, Y_train, masks_train, metadata_train) in enumerate(
+        for batch_idx, (X_train, Y_train, mask_train, metadata_train) in enumerate(
             trainloader
         ):
             X_train = X_train.to(DEVICE)
             Y_train = Y_train.to(DEVICE)
-            masks_train = masks_train.to(DEVICE)
+            mask_train = mask_train.to(DEVICE)
 
-            optimizer.zero_grad()  # Reset gradients
-
-            # Baseline model: identity model - predict that the next time step is the same as the current one.
-            # This is the naive predictor: predicting that the next time step is the same as the current one is
-            # better in expectation than predicting a random value.
+            # Baseline model/naive predictor: predict that the next time step is the same as the current one.
             y_base = X_train
             train_baseline = compute_loss_vectorized(
-                loss_fn=criterion, X=y_base, Y=Y_train, masks=masks_train
+                loss_fn=criterion, X=y_base, Y=Y_train, mask=mask_train
             )
 
-            # Models operate sequence-to-sequence.
-            y_pred = model(X_train, masks_train)
-            train_loss = compute_loss_vectorized(
-                loss_fn=criterion, X=y_pred, Y=Y_train, masks=masks_train
-            )
+            # Reset /sero-out  gradients
+            optimizer.zero_grad()
 
-            # Backpropagation (skip first epoch)
-            if epoch > 0:
-                train_loss.backward()
-                optimizer.step()
+            # Runs the forward pass with autocasting
+            with torch.autocast(device_type=DEVICE.type, dtype=torch.half):
+                # Models operate sequence-to-sequence.
+                y_pred = model(X_train, mask_train)
+                train_loss = compute_loss_vectorized(
+                    loss_fn=criterion, X=y_pred, Y=Y_train, mask=mask_train
+                )
+
+            # Backpropagation. NOTE: Backward passes under autocast are not recommended.
+            if epoch > 0:  # skip first epoch to get tabula rasa loss
+                # Backward pass
+                scaler.scale(train_loss).backward()
+                # Update model weights
+                scaler.step(optimizer)
+                # Update the grad scaler
+                scaler.update()
             # Calculate FLOPs only at first epoch and first batch
             elif batch_idx == 0:
                 computation_flops = FlopCountAnalysis(
-                    model, (X_train, masks_train)
+                    model, (X_train, mask_train)
                 ).total()
 
             # Update running losses
@@ -180,31 +186,28 @@ def train_model(
         model.eval()
 
         with torch.no_grad():
-            for batch_idx, (X_val, Y_val, masks_val, metadata_val) in enumerate(
+            for batch_idx, (X_val, Y_val, mask_val, metadata_val) in enumerate(
                 valloader
             ):
                 X_val = X_val.to(DEVICE)
                 Y_val = Y_val.to(DEVICE)
-                masks_val = masks_val.to(DEVICE)
+                mask_val = mask_val.to(DEVICE)
 
                 # Baseline model: identity model - predict that the next time step is the same as the current one.
                 # This is the simplest model we can think of: predict that the next time step is the same as the current one
                 # is better than predict any other random number.
                 y_base = X_val
                 val_baseline = compute_loss_vectorized(
-                    loss_fn=criterion, X=y_base, Y=Y_val, masks=masks_val
+                    loss_fn=criterion, X=y_base, Y=Y_val, mask=mask_val
                 )
 
-                # DEBUG
-                # # Runs the forward pass with autocasting
-                # with torch.autocast(device_type=DEVICE.type, dtype=torch.float16):
-                # DEBUG
-
-                # Models operate sequence-to-sequence.
-                y_pred = model(X_val, masks_val)
-                val_loss = compute_loss_vectorized(
-                    loss_fn=criterion, X=y_pred, Y=Y_val, masks=masks_val
-                )
+                # Run the forward pass with autocasting
+                with torch.autocast(device_type=DEVICE.type, dtype=torch.half):
+                    # Models operate sequence-to-sequence.
+                    y_pred = model(X_val, mask_val)
+                    val_loss = compute_loss_vectorized(
+                        loss_fn=criterion, X=y_pred, Y=Y_val, mask=mask_val
+                    )
 
                 # Update running losses
                 val_running_base_loss += val_baseline.item()

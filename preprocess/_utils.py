@@ -476,7 +476,7 @@ class CalciumDataReshaper:
         self.slot_to_named_neuron = {}
         self.slot_to_unknown_neuron = {}
         self.slot_to_neuron = {}
-        self.dtype = torch.float16  # torch.float
+        self.dtype = torch.half
         self._init_neuron_data()
         self._reshape_data()
 
@@ -754,11 +754,6 @@ def interpolate_data(time, data, target_dt, method="linear"):
         for i in range(num_neurons):
             interp = interp1d(x=time, y=data[:, i], kind=method)
             interpolated_data_np[:, i] = interp(target_time_np)
-
-    # Convert to half precision
-    target_time_np = halfnparray(target_time_np)
-    interpolated_data_np = halfnparray(interpolated_data_np)
-
     # Return the interpolated data
     return target_time_np, interpolated_data_np
 
@@ -809,11 +804,6 @@ def aggregate_data(time, data, target_dt):
             -1, downsample_rate
         )
         downsampled_data[:, i] = reshaped_data.mean(axis=1)
-
-    # Convert to half precision
-    target_time_np = halfnparray(target_time_np)
-    downsampled_data = halfnparray(downsampled_data)
-
     # Return the interpolated data
     return target_time_np, downsampled_data
 
@@ -1567,7 +1557,7 @@ class Yemini2021Preprocessor(BasePreprocessor):
             traces.append(activity)
             # Add time vector to list of time vectors
             time_vector_seconds.append(tvec)
-
+        # Return the extracted data
         return neuron_IDs, traces, time_vector_seconds
 
     def preprocess(self):
@@ -1614,8 +1604,6 @@ class Leifer2023Preprocessor(BasePreprocessor):
         with open(os.path.join(self.raw_data_path, self.dataset, file_name), "r") as f:
             data = [list(map(float, line.split(" "))) for line in f.readlines()]
         data_array = np.array(data, dtype=np.float32)
-        # convert to half precision
-        data_array = halfnparray(data_array)
         return data_array
 
     def extract_data(self, data_file, labels_file, time_file):
@@ -1626,20 +1614,18 @@ class Leifer2023Preprocessor(BasePreprocessor):
         mask = np.argwhere(~np.isnan(real_data).all(axis=0)).flatten()
         real_data = real_data[:, mask]
         label_list = np.array(label_list, dtype=str)[mask].tolist()
-        # impute any remaining NaN values
+        # Impute any remaining NaN values
         imputer = IterativeImputer(random_state=0)
         if np.isnan(real_data).any():
             real_data = imputer.fit_transform(real_data)
+        # Check that the data and labels match
         assert real_data.shape[1] == len(
             label_list
         ), "Data and labels do not match!\n Files: {data_file}, {labels_file}"
         assert (
             real_data.shape[0] == time_in_seconds.shape[0]
         ), "Time vector does not match data!\n Files: {data_file}, {time_file}"
-        # convert to half precision
-        real_data = halfnparray(real_data)
-        time_in_seconds = halfnparray(time_in_seconds)
-        # return the extracted data
+        # Return the extracted data
         return real_data, label_list, time_in_seconds
 
     def create_neuron_idx(self, label_list):
@@ -1962,11 +1948,6 @@ class Flavell2023Preprocessor(BasePreprocessor):
 
         else:
             raise ValueError(f"Unsupported data type: {type(file_data)}")
-
-        # Convert to half precision
-        time_in_seconds = halfnparray(time_in_seconds)
-        calcium_data = halfnparray(calcium_data)
-
         # Return the data
         return time_in_seconds, calcium_data, neurons
 

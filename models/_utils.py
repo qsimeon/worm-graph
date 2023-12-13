@@ -216,7 +216,7 @@ class CTRNN(torch.nn.Module):
 
     def init_hidden(self, input_shape):
         device = next(self.parameters()).device
-        batch_size = input_shape[0]  # beacuse batch_first=True
+        batch_size = input_shape[0]  # because batch_first=True
         hidden = torch.zeros(batch_size, self.hidden_size).to(device)
         return hidden
 
@@ -406,7 +406,7 @@ class Model(torch.nn.Module):
     def get_l1_reg_param(self):
         return self.l1_reg_param
 
-    @torch.autocast(device_type=DEVICE.type, dtype=torch.float16)
+    @torch.autocast(device_type=DEVICE.type, dtype=torch.half)
     def forward(self, input: torch.Tensor, mask: torch.Tensor):
         """
         Forward method for simple linear regression model.
@@ -438,7 +438,7 @@ class Model(torch.nn.Module):
         # perform a linear readout to get the output
         readout = self.linear(hidden_out)
         output = readout
-        return output 
+        return output
 
     def loss_fn(self):
         """
@@ -483,13 +483,13 @@ class Model(torch.nn.Module):
                 input_fft = torch.fft.rfft(prediction, dim=-2).real
                 target_fft = torch.fft.rfft(target, dim=-2).real
                 # calculate average difference between real parts of FFTs
-                fft_loss += torch.mean(torch.abs(input_fft - target_fft))
+                fft_loss += torch.abs(input_fft - target_fft).mean()
             # L1 regularization term
             l1_loss = 0.0
             if self.l1_reg_param > 0.0:
                 # calculate L1 regularization term for all weights
                 for param in self.parameters():
-                    l1_loss += torch.mean(torch.abs(param))
+                    l1_loss += torch.abs(param).mean()
             # combine original loss with regularization terms
             regularized_loss = (
                 original_loss
@@ -783,7 +783,7 @@ class NetworkCTRNN(Model):
 
     def init_hidden(self, input_shape):
         device = next(self.parameters()).device
-        batch_size = input_shape[0]  # beacuse batch_first=True
+        batch_size = input_shape[0]  # because batch_first=True
         hidden = torch.zeros(batch_size, self.hidden_size).to(device)
         return hidden
 

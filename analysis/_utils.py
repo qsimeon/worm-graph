@@ -328,6 +328,7 @@ def loss_per_dataset(
 
         num_worms.append(len(combined_dataset))
 
+        # TODO: Make batch_size configurable parameters
         batch_size = 32  # DEBUG
         dataloader = torch.utils.data.DataLoader(
             select_dataset,
@@ -339,22 +340,22 @@ def loss_per_dataset(
         model.eval()
 
         with torch.no_grad():
-            for batch_idx, (X, Y, masks, metadata) in enumerate(dataloader):
+            for batch_idx, (X, Y, mask, metadata) in enumerate(dataloader):
                 X = X.to(DEVICE)
                 Y = Y.to(DEVICE)
-                masks = masks.to(DEVICE)
+                mask = mask.to(DEVICE)
 
                 # Baseline model is the naive predictor: predict that the value at
                 # next time step is the same as the current value.
                 y_base = X
                 baseline = compute_loss_vectorized(
-                    loss_fn=criterion, X=y_base, Y=Y, masks=masks
+                    loss_fn=criterion, X=y_base, Y=Y, mask=mask
                 )
 
                 # All models operate sequence-to-sequence
-                y_pred = model(X, masks)
+                y_pred = model(X, mask)
                 loss = compute_loss_vectorized(
-                    loss_fn=criterion, X=y_pred, Y=Y, masks=masks
+                    loss_fn=criterion, X=y_pred, Y=Y, mask=mask
                 )
 
                 # Update running losses

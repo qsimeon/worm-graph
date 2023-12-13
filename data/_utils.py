@@ -26,7 +26,8 @@ def load_dataset(name):
          The name of the dataset to load. Must be one of the valid dataset names.
 
     name = {Kato2015, Nichols2017, Nguyen2017, Skora2018,
-             Kaplan2020, Uzel2022, Flavell2023, Leifer2023} | {Lorenz000, Sines0000}
+             Kaplan2020, Uzel2022, Flavell2023, Leifer2023}
+            | {Lorenz000, Sines0000, RandWalk0000, VanDerPol0000, WhiteNoise0000}
 
      Returns
      -------
@@ -253,7 +254,6 @@ class NeuralActivityDataset(torch.utils.data.Dataset):
             wormID=self.wormID,
             worm_dataset=self.worm_dataset,
             time_vec=time_vec,
-            start_idx=start,
         )
 
         # Return sample
@@ -757,16 +757,18 @@ def create_combined_dataset(
             logger.info("Skipping worms from {} dataset".format(dataset_name))
             continue
 
+        # Create a multi-worm dataset
         multi_worms_dataset = load_dataset(dataset_name)
 
         # Select desired worms from this dataset
         multi_worms_dataset = select_desired_worms(multi_worms_dataset, worms)
 
-        # Select the `num_named_neurons` neurons (overwrite the masks)
+        # Select the `num_named_neurons` neurons and overwrite the masks
         multi_worms_dataset = select_named_neurons(
             multi_worms_dataset, num_named_neurons
         )
 
+        # Add the worms from this dataset to the combined dataset
         for worm in multi_worms_dataset:
             if worm in combined_dataset:
                 worm_ = (
@@ -783,7 +785,17 @@ def create_combined_dataset(
 
     logger.info("Combined dataset has {} worms".format(len(combined_dataset)))
 
+    # Rename the worm keys so that they are ordered
     combined_dataset = rename_worm_keys(combined_dataset)
+
+    print(f"DEBUG keys: {combined_dataset.keys()}")  # DEBUG
+    for worm in combined_dataset.keys():
+        print(
+            f"\tDEBUG dtype: {combined_dataset[worm]['smooth_calcium_data'].dtype}"
+        )  # DEBUG
+        print(
+            f"\tDEBUG nan: {combined_dataset[worm]['smooth_calcium_data'].isnan().sum()}"
+        )  # DEBUG
 
     # Information about the dataset
     dataset_info = {
@@ -1159,7 +1171,7 @@ def graph_inject_data(single_worm_dataset, connectome_graph):
         k_ for k_, v_ in id_neuron.items() if v_ in set(graph.id_neuron.values())
     ]  # neuron indices in sparse dataset
     # 'inject' the data by creating a clone graph with the desired features
-    new_x = torch.zeros(graph.num_nodes, max_timesteps, dtype=torch.float32)
+    new_x = torch.zeros(graph.num_nodes, max_timesteps, dtype=torch.half)
     new_x[graph_inds, :] = dataset[:, data_inds].T
     graph = Data(
         x=new_x,

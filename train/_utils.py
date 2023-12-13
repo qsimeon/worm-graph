@@ -63,7 +63,7 @@ def save_model(model, path, other_info=dict()):
     torch.save(save_info, path)
 
 
-def compute_loss_vectorized(loss_fn, X, Y, masks):
+def compute_loss_vectorized(loss_fn, X, Y, mask):
     """
     Computes the loss of X and Y, taking into account the masks.
 
@@ -75,7 +75,7 @@ def compute_loss_vectorized(loss_fn, X, Y, masks):
         A batch of input sequences. Shape: (batch_size, seq_len, input_size).
     Y : torch.Tensor
         A batch of target sequences. Shape: (batch_size, seq_len, input_size).
-    masks : torch.Tensor
+    mask : torch.Tensor
         A batch of masks. Shape: (batch_size, seq_len).
 
     Returns
@@ -84,19 +84,19 @@ def compute_loss_vectorized(loss_fn, X, Y, masks):
         The mean loss of X and Y.
     """
     # Expand masks to match the shape of X and Y
-    expanded_masks = masks.unsqueeze(1).expand_as(
+    expanded_mask = mask.unsqueeze(1).expand_as(
         X
     )  # the mask is a feature mask; temporally invariant, feature equivariant
 
     # Mask the invalid positions in X and Y
-    masked_X = X * expanded_masks.float()
-    masked_Y = Y * expanded_masks.float()
+    masked_X = X * expanded_mask.float()
+    masked_Y = Y * expanded_mask.float()
 
     # Compute the loss considering only the valid positions
     masked_loss = loss_fn(masked_X, masked_Y)  # reduction='none' in `loss_fn`
 
     # Normalize the loss by the number of valid positions
-    norm_factor = masked_loss[expanded_masks].shape[0]
-    loss = masked_loss[expanded_masks].sum() / norm_factor
+    norm_factor = masked_loss[expanded_mask].shape[0]
+    loss = masked_loss[expanded_mask].sum() / norm_factor
 
     return loss

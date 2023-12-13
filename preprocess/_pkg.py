@@ -33,5 +33,4 @@ from utils import (
     RAW_DATA_URL,
     RAW_DATA_DIR,
     VALID_DATASETS,
-    halfnparray,
 )
