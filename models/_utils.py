@@ -438,7 +438,7 @@ class Model(torch.nn.Module):
         # perform a linear readout to get the output
         readout = self.linear(hidden_out)
         output = readout
-        return output  # .float()  # casting to float fixed autocast problem
+        return output 
 
     def loss_fn(self):
         """
