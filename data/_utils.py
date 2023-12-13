@@ -788,15 +788,6 @@ def create_combined_dataset(
     # Rename the worm keys so that they are ordered
     combined_dataset = rename_worm_keys(combined_dataset)
 
-    print(f"DEBUG keys: {combined_dataset.keys()}")  # DEBUG
-    for worm in combined_dataset.keys():
-        print(
-            f"\tDEBUG dtype: {combined_dataset[worm]['smooth_calcium_data'].dtype}"
-        )  # DEBUG
-        print(
-            f"\tDEBUG nan: {combined_dataset[worm]['smooth_calcium_data'].isnan().sum()}"
-        )  # DEBUG
-
     # Information about the dataset
     dataset_info = {
         "dataset": [],
