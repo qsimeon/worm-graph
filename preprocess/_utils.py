@@ -34,7 +34,7 @@ def preprocess_connectome(raw_dir, raw_files):
       an organism's brain or nervous system. It is essentially the wiring
       diagram of the brain, detailing how neurons and their synapses are
       interconnected.
-    * The connectome data useed here is from Cook et al., 2019.
+    * The connectome data used here is from Cook et al., 2019.
       If the raw data isn't found, please download it at this link:
       https://wormwiring.org/matlab%20scripts/Premaratne%20MATLAB-ready%20files%20.zip
       and drop in the data/raw folder.
@@ -137,7 +137,7 @@ def preprocess_connectome(raw_dir, raw_files):
     # edge_attr for gap junctions
     num_edges = len(Ggap_edges)
     ggap_edge_attr = torch.empty(
-        num_edges, num_edge_features, dtype=torch.float32
+        num_edges, num_edge_features, dtype=torch.float
     )  # [num_edges, num_edge_features]
     for i, weight in enumerate(Ggap_edges.Weight.values):
         ggap_edge_attr[i, :] = torch.tensor(
@@ -147,11 +147,11 @@ def preprocess_connectome(raw_dir, raw_files):
     # edge_attr for chemical synapses
     num_edges = len(Gsyn_edges)
     gsyn_edge_attr = torch.empty(
-        num_edges, num_edge_features, dtype=torch.float32
+        num_edges, num_edge_features, dtype=torch.float
     )  # [num_edges, num_edge_features]
     for i, weight in enumerate(Gsyn_edges.Weight.values):
         gsyn_edge_attr[i, :] = torch.tensor(
-            [0, weight], dtype=torch.float32
+            [0, weight], dtype=torch.float
         )  # chemical synapse encoded as [0,1]
 
     # data.x node feature matrix
@@ -161,7 +161,7 @@ def preprocess_connectome(raw_dir, raw_files):
     # Generate random data
     # TODO: inject real data istead!
     x = torch.rand(
-        num_nodes, num_node_features, dtype=torch.float32
+        num_nodes, num_node_features, dtype=torch.float
     )  # [num_nodes, num_node_features]
 
     # data.y target to train against
@@ -214,7 +214,12 @@ def preprocess_connectome(raw_dir, raw_files):
     values = list(df[df.neuron.isin(valids)][["x", "z"]].values)
 
     # Initialize position dict then replace with atlas coordinates if available
-    pos = dict(zip(np.arange(graph.num_nodes), np.zeros(shape=(graph.num_nodes, 2))))
+    pos = dict(
+        zip(
+            np.arange(graph.num_nodes),
+            np.zeros(shape=(graph.num_nodes, 2), dtype=np.float32),
+        )
+    )
     for k, v in zip(keys, values):
         pos[k] = v
 
@@ -332,7 +337,7 @@ def causal_gaussian_kernel_smooth(x, t, sigma):
         x = x.reshape(-1, 1)
 
     # Apply one-sided exponential decay
-    x_smooth = np.zeros_like(x)
+    x_smooth = np.zeros_like(x, dtype=np.float32)
     alpha = 1 / (2 * sigma**2)
     for i in range(x.shape[0]):
         weights = np.exp(-alpha * np.arange(i, -1, -1) ** 2)
@@ -377,7 +382,7 @@ def causal_moving_average_smooth(x, t, window_size):
             start = max(j - window_size // 2, 0)
             end = j + 1
             window = x[start:end, i]
-            x_smooth[j, i] = window.median()
+            x_smooth[j, i] = window.mean()
 
     if dim == 1:
         x_smooth = x_smooth.squeeze(-1)
@@ -416,7 +421,7 @@ def exponential_kernel_smooth(x, t, alpha):
     if dim == 1:
         x = x.reshape(-1, 1)
 
-    x_smooth = np.zeros_like(x)
+    x_smooth = np.zeros_like(x, dtype=np.float32)
     x_smooth[0] = x[0]
 
     # TODO: vectorize this smoothing operation
@@ -471,7 +476,7 @@ class CalciumDataReshaper:
         self.slot_to_named_neuron = {}
         self.slot_to_unknown_neuron = {}
         self.slot_to_neuron = {}
-        self.dtype = torch.float
+        self.dtype = torch.float16  # torch.float
         self._init_neuron_data()
         self._reshape_data()
 
@@ -723,6 +728,7 @@ def interpolate_data(time, data, target_dt, method="linear"):
         "quadratic",
         "cubic",
     }, "Invalid interpolation method. Choose from [None, 'linear', 'cubic', 'quadratic']."
+
     # If target_dt is None, return the original data
     if target_dt is None:
         return time, data
@@ -733,9 +739,11 @@ def interpolate_data(time, data, target_dt, method="linear"):
     # Interpolate the data
     target_time_np = np.arange(time.min(), time.max(), target_dt)
     num_neurons = data.shape[1]
-    interpolated_data_np = np.zeros((len(target_time_np), num_neurons))
+    interpolated_data_np = np.zeros(
+        (len(target_time_np), num_neurons), dtype=np.float32
+    )
 
-    # TODO: vectorize this interpolation method
+    # TODO: Vectorize this interpolation method
     if method is None:
         target_time_np = time
         interpolated_data_np = data
@@ -747,6 +755,11 @@ def interpolate_data(time, data, target_dt, method="linear"):
             interp = interp1d(x=time, y=data[:, i], kind=method)
             interpolated_data_np[:, i] = interp(target_time_np)
 
+    # Convert to half precision
+    target_time_np = halfnparray(target_time_np)
+    interpolated_data_np = halfnparray(interpolated_data_np)
+
+    # Return the interpolated data
     return target_time_np, interpolated_data_np
 
 
@@ -785,7 +798,7 @@ def aggregate_data(time, data, target_dt):
 
     # Determine the number of intervals
     num_intervals = len(time) // downsample_rate
-    downsampled_data = np.zeros((num_intervals, data.shape[1]))
+    downsampled_data = np.zeros((num_intervals, data.shape[1]), dtype=np.float32)
 
     # Create the downsampled time array
     target_time_np = time[: num_intervals * downsample_rate : downsample_rate]
@@ -797,6 +810,11 @@ def aggregate_data(time, data, target_dt):
         )
         downsampled_data[:, i] = reshaped_data.mean(axis=1)
 
+    # Convert to half precision
+    target_time_np = halfnparray(target_time_np)
+    downsampled_data = halfnparray(downsampled_data)
+
+    # Return the interpolated data
     return target_time_np, downsampled_data
 
 
@@ -1485,7 +1503,7 @@ class Yemini2021Preprocessor(BasePreprocessor):
         for f, file in enumerate(files):
             neurons = []
             activity = []
-            tvec = np.empty(0)
+            tvec = np.empty(0, dtype=np.float32)
             for i, neuron in enumerate(bilat_neurons):
                 # Assign neuron names with L/R and get associated traces
                 bilat_bools = is_left_neuron[i]  # tells us if neuron is L/R
@@ -1535,7 +1553,11 @@ class Yemini2021Preprocessor(BasePreprocessor):
             neuron_IDs.append(neurons)
             # Reshape activity to be a 2D array
             activity = np.stack(
-                [np.zeros_like(tvec) if act.size == 0 else act for act in activity]
+                [
+                    np.zeros_like(tvec, dtype=np.float32) if act.size == 0 else act
+                    for act in activity
+                ],
+                dtype=np.float32,
             ).T  # (time, neurons)
             # Impute any remaining NaN values
             imputer = IterativeImputer(random_state=0)
@@ -1591,7 +1613,9 @@ class Leifer2023Preprocessor(BasePreprocessor):
     def load_data(self, file_name):
         with open(os.path.join(self.raw_data_path, self.dataset, file_name), "r") as f:
             data = [list(map(float, line.split(" "))) for line in f.readlines()]
-        data_array = np.array(data)
+        data_array = np.array(data, dtype=np.float32)
+        # convert to half precision
+        data_array = halfnparray(data_array)
         return data_array
 
     def extract_data(self, data_file, labels_file, time_file):
@@ -1601,7 +1625,7 @@ class Leifer2023Preprocessor(BasePreprocessor):
         # remove columns where all values are NaN
         mask = np.argwhere(~np.isnan(real_data).all(axis=0)).flatten()
         real_data = real_data[:, mask]
-        label_list = np.array(label_list)[mask].tolist()
+        label_list = np.array(label_list, dtype=str)[mask].tolist()
         # impute any remaining NaN values
         imputer = IterativeImputer(random_state=0)
         if np.isnan(real_data).any():
@@ -1612,6 +1636,10 @@ class Leifer2023Preprocessor(BasePreprocessor):
         assert (
             real_data.shape[0] == time_in_seconds.shape[0]
         ), "Time vector does not match data!\n Files: {data_file}, {time_file}"
+        # convert to half precision
+        real_data = halfnparray(real_data)
+        time_in_seconds = halfnparray(time_in_seconds)
+        # return the extracted data
         return real_data, label_list, time_in_seconds
 
     def create_neuron_idx(self, label_list):
@@ -1683,7 +1711,9 @@ class Leifer2023Preprocessor(BasePreprocessor):
             timeVectorSeconds = [
                 self.str_to_float(line.strip("\n")) for line in f.readlines()
             ]
-            timeVectorSeconds = np.array(timeVectorSeconds).reshape(-1, 1)
+            timeVectorSeconds = np.array(timeVectorSeconds, dtype=np.float32).reshape(
+                -1, 1
+            )
         return timeVectorSeconds
 
     def preprocess(self):
@@ -1851,7 +1881,7 @@ class Flavell2023Preprocessor(BasePreprocessor):
                     neurons_copy.append(neuron.replace("?", "L"))
                 else:
                     neurons_copy.append(neuron.replace("?", "R"))
-            neurons = np.array(neurons_copy)
+            neurons = np.array(neurons_copy, dtype=str)
 
         elif isinstance(file_data, dict):  # assuming JSON format
             time_in_seconds = np.array(
@@ -1921,7 +1951,7 @@ class Flavell2023Preprocessor(BasePreprocessor):
                         # Random pick one of the possibilities
                         neurons[i] = np.random.choice(possible_labels)
 
-            neurons = np.array(neurons)
+            neurons = np.array(neurons, dtype=str)
 
             neurons, unique_indices = np.unique(
                 neurons, return_index=True, return_counts=False
@@ -1933,6 +1963,11 @@ class Flavell2023Preprocessor(BasePreprocessor):
         else:
             raise ValueError(f"Unsupported data type: {type(file_data)}")
 
+        # Convert to half precision
+        time_in_seconds = halfnparray(time_in_seconds)
+        calcium_data = halfnparray(calcium_data)
+
+        # Return the data
         return time_in_seconds, calcium_data, neurons
 
     def preprocess(self):

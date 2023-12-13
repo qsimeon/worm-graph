@@ -394,6 +394,12 @@ else:
     ]
 
 
+# Utility function for creating a numpy array with half precision
+def halfnparray(*args, **kwargs):
+    kwargs.setdefault("dtype", np.half)
+    return np.array(*args, **kwargs)
+
+
 # Method for globally setting all random seeds
 def init_random_seeds(seed=0):
     """

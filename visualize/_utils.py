@@ -1026,7 +1026,7 @@ def experiment_parameter(exp_dir, key):
             os.path.join(exp_dir, "dataset", "train_dataset_info.csv"),
             converters={"neurons": ast.literal_eval},
         )
-        value = (df["train_time_steps"] / df["num_neurons"]).median()
+        value = (df["train_time_steps"] / df["num_neurons"]).mean()
         title = "Average amount of training data per neuron"
         xaxis = "Num. time steps per neuron"
 
@@ -1317,9 +1317,9 @@ def plot_experiment_summaries(exp_log_dir, exp_key, exp_plot_dir=None):
 
             # Store all summary statistics to be plotted
             train_losses.append(df["train_loss"].min())
-            train_baselines.append(df["train_baseline"].median())
+            train_baselines.append(df["train_baseline"].mean())
             val_losses.append(df["val_loss"].min())
-            val_baselines.append(df["val_baseline"].median())
+            val_baselines.append(df["val_baseline"].mean())
             computation_times.append(df["computation_time"].tolist())
             computation_flops.append(best_model["computation_flops"])
 
