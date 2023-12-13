@@ -195,6 +195,11 @@ def train_model(
                     loss_fn=criterion, X=y_base, Y=Y_val, masks=masks_val
                 )
 
+                # DEBUG
+                # # Runs the forward pass with autocasting
+                # with torch.autocast(device_type=DEVICE.type, dtype=torch.float16):
+                # DEBUG
+
                 # Models operate sequence-to-sequence.
                 y_pred = model(X_val, masks_val)
                 val_loss = compute_loss_vectorized(

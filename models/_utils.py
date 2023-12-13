@@ -406,7 +406,7 @@ class Model(torch.nn.Module):
     def get_l1_reg_param(self):
         return self.l1_reg_param
 
-    @autocast()
+    @torch.autocast(device_type=DEVICE.type, dtype=torch.float16)
     def forward(self, input: torch.Tensor, mask: torch.Tensor):
         """
         Forward method for simple linear regression model.
@@ -438,7 +438,7 @@ class Model(torch.nn.Module):
         # perform a linear readout to get the output
         readout = self.linear(hidden_out)
         output = readout
-        return output.float()  # casting to float fixed autocast problem
+        return output  # .float()  # casting to float fixed autocast problem
 
     def loss_fn(self):
         """
