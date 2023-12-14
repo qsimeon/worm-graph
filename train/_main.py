@@ -174,8 +174,8 @@ def train_model(
         computation_time.append(end_time - start_time)
 
         # Store metrics
-        train_epoch_loss.append(train_running_loss / len(trainloader))
         train_epoch_baseline.append(train_running_base_loss / len(trainloader))
+        train_epoch_loss.append(train_running_loss / len(trainloader))
 
         # Reset running losses
         train_running_base_loss = 0

@@ -291,7 +291,7 @@ class InnerHiddenModel(torch.nn.Module):
 # # # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
 
 # # # Model super class: Common interface all model architectures # # # #
-# Provides the input-output backbone and allows changeable mode "cores" #
+# Provides the input-output backbone and allows changeable inner "cores". #
 # # # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
 
 
@@ -300,7 +300,7 @@ class Model(torch.nn.Module):
     Super class for all models.
 
     For all our models:
-        1. The output will be the same shape as the input.
+        1. The output `readout` will be the same shape as the input.
         2. A method called `loss_fn` that specifies the specific
             loss function to be used by the model. The default
             loss function we use is `torch.nn.MSELoss()`.
@@ -422,17 +422,14 @@ class Model(torch.nn.Module):
         mask : torch.Tensor
             Mask on the neurons with shape (batch, neurons)
         """
-
         # initialize hidden state
         self.hidden = self.init_hidden(input.shape)
         # set hidden state of internal model
         self.inner_hidden_model.set_hidden(self.hidden)
         # recast the mask to the input type and shape
         mask = mask.unsqueeze(1).expand_as(input)
-        # initialize output tensor with input tensor
-        output = self.identity(input * mask)
         # multiply input by the mask
-        input = output * mask
+        input = self.identity(input * mask)
         # transform the input
         input_hidden_out = self.input_hidden(input)
         # concatenate into a single latent
@@ -441,8 +438,7 @@ class Model(torch.nn.Module):
         hidden_out = self.inner_hidden_model(latent_out)
         # perform a linear readout to get the output
         readout = self.linear(hidden_out)
-        output = readout
-        return output
+        return readout
 
     def loss_fn(self):
         """
@@ -469,8 +465,8 @@ class Model(torch.nn.Module):
 
         def loss(prediction, target, **kwargs):
             """
-            Calculate loss with FFT regularization and
-            L1 regularization on all model weights.
+            Calculate loss with added FFT and L1 regularization
+            on the trainable model parameters.
             Arguments:
                 prediction: (batch_size, seq_len, input_size)
                 target: (batch_size, seq_len, input_size)
@@ -539,41 +535,43 @@ class Model(torch.nn.Module):
         if autoregressive:
             input = input[
                 :, :context_window, :
-            ]  # shape (batch_size, context_window, 302)
+            ]  # shape (batch_size, context_window, neurons)
 
         # Otherwise defualts to ground-truth feeding
         generated_values = []
         with torch.no_grad():
+            ### DEBUG ###
             # Create a normalizer for the input
-            normalizer = torch.nn.LayerNorm(
-                context_window, elementwise_affine=False
-            )  # DEBUG
+            normalizer = torch.nn.LayerNorm(context_window, elementwise_affine=False)
+            ### DEBUG ###
 
             # Loop through time
             for t in range(nb_ts_to_generate):
                 # Get the last context_window values of the input tensor
                 x = input[
                     :, t : context_window + t, :
-                ]  # shape (batch_size, context_window, 302)
+                ]  # shape (batch_size, context_window, neurons)
 
-                # Normalize the input along the context window
+                ### DEBUG ###
+                # Normalize the input along the temporal dimension
                 x = normalizer(
                     x.view(
                         -1,
                         self.input_size,
                         context_window,
                     )
-                ).view(
-                    -1, context_window, self.input_size
-                )  # DEBUG
+                ).view(-1, context_window, self.input_size)
+                ### DEBUG ###
 
                 # Get predictions
-                predictions = self(x, mask)  # shape (batch_size, context_window, 302)
+                predictions = self(
+                    x, mask
+                )  # shape (batch_size, context_window, neurons)
 
                 # Get last predicted value
                 last_time_step = predictions[:, -1, :].unsqueeze(
                     0
-                )  # shape (batch_size, 1, 302)
+                )  # shape (batch_size, 1, neurons)
 
                 # Append the prediction to the generated_values list and input tensor
                 generated_values.append(last_time_step)
@@ -584,7 +582,7 @@ class Model(torch.nn.Module):
         # Stack the generated values to a tensor
         generated_tensor = torch.cat(
             generated_values, dim=1
-        )  # shape (batch_size, nb_ts_to_generate, 302)
+        )  # shape (batch_size, nb_ts_to_generate, neurons)
 
         return generated_tensor
 
@@ -596,8 +594,8 @@ class Model(torch.nn.Module):
         pass
 
 
-# # # Models subclasses: Indidividually differentiated model architectures # # # #
-# Use the same model backbone provided by Model but with a distinct core or inner hidden model #
+# # # Models subclasses: Individually differentiated model architectures # # # #
+# Use the same model backbone provided by Model but with a distinct core or inner hidden model. #
 # # # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
 
 

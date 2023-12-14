@@ -1,7 +1,7 @@
 # Choose the worms that you want to predict
 predict:
   # This directory is overwritten when using the pipeline with the train submodule.
-  # If using the submodule alone, this directory is the path to the log folder you want to (re)analyze.
+  # If using the submodule alone, this directory is the path to the log folder you want to (re)make predictions on.
   predict_this_log_dir: null # options: null, logs/hydra/<YYYY_MM_DD_HH_MM_SS>
   # null = don't predict on this dataset
   # all = predict on all the worms in the dataset
