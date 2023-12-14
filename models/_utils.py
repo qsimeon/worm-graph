@@ -578,9 +578,53 @@ class Model(torch.nn.Module):
 # # # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
 
 
+class NaivePredictor(Model):
+    """
+    A parameter-less model that simply copies the input as its output.
+    Serves as our baseline model. Memory-less and feature-less.
+    NOTE: This model will throw an error if you try to train it.
+    """
+
+    def __init__(
+        self,
+        input_size: int,
+        hidden_size: Union[int, None] = None,
+        loss: Union[Callable, None] = None,
+        fft_reg_param=0.0,
+        l1_reg_param=0.0,
+    ):
+        super(NaivePredictor, self).__init__(
+            input_size,
+            None,  # hidden_size
+            loss,
+            fft_reg_param,
+            l1_reg_param,
+        )
+
+        # Input to hidden transformation
+        self.input_hidden = torch.nn.Identity()
+
+        # Hidden to hidden transformation
+        self.hidden_hidden = torch.nn.Identity()
+        # Instantiate internal hidden model
+        self.inner_hidden_model = InnerHiddenModel(self.hidden_hidden, self.hidden)
+
+        ### DEBUG ###
+        # Override the linear readout
+        self.linear = torch.nn.Identity()
+
+        ### DEBUG ###
+        # Create a dud parameter to avoid errors
+        self._ = torch.nn.Parameter(torch.tensor(0.0))
+
+    def init_hidden(self, input_shape=None):
+        return None
+
+
 class LinearRegression(Model):
     """
-    A simple linear regression model to use as a baseline.
+    A simple linear regression model.
+    Memory-less but can learn linear feature regression.
     """
 
     def __init__(
@@ -600,11 +644,7 @@ class LinearRegression(Model):
         )
 
         # Input to hidden transformation
-        self.input_hidden = torch.nn.Sequential(
-            torch.nn.Identity(),
-            # NOTE: YES use LayerNorm here!
-            torch.nn.LayerNorm(self.hidden_size),
-        )
+        self.input_hidden = torch.nn.Identity()
 
         # Hidden to hidden transformation
         self.hidden_hidden = torch.nn.Identity()
@@ -617,11 +657,13 @@ class LinearRegression(Model):
 
 class FeatureFFNN(Model):
     """
-    A simple nonlinear regression model to use as a baseline.
-    FFNN stands for FeedForward Neural Network. Unlike the LSTM
-    and Transformer models, this model has no temporal memory
-    and can only learn a fixed nonlinear feature regression
-    function that gets apploed at each time step independently.
+    A simple nonlinear regression model.
+    FFNN stands for FeedForward Neural Network.
+    Unlike the LSTM and Transformer models, this
+    model has no temporal memory and can only learn
+    a fixed nonlinear feature regression function that
+    it applies at every time step independently.
+    Memory-less but can learn nonlinear feature regression.
     """
 
     def __init__(
@@ -652,8 +694,10 @@ class FeatureFFNN(Model):
         self.input_hidden = torch.nn.Sequential(
             self.embedding,
             torch.nn.ReLU(),
-            # NOTE: YES use LayerNorm here!
-            torch.nn.LayerNorm(self.hidden_size),
+            ### DEBUG ###
+            # # NOTE: YES use LayerNorm here!
+            # torch.nn.LayerNorm(self.hidden_size), 
+            ### DEBUG ###
         )
 
         # Hidden to hidden transformation: FeedForward layer

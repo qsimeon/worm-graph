@@ -84,6 +84,8 @@ def get_model(model_config: DictConfig, verbose=True) -> torch.nn.Module:
             model = LiquidCfC(**args)
         elif model_config.type == "FeatureFFNN":
             model = FeatureFFNN(**args)
+        elif model_config.type == "NaivePredictor":
+            model = NaivePredictor(**args)
         elif model_config.type == "LinearRegression":
             model = LinearRegression(**args)
         else:  # default to "LinearRegression" model
