@@ -41,11 +41,11 @@ def plot_figures(
                 neurons_to_plot=visualize_config.predict.neurons_to_plot,
                 worms_to_plot=visualize_config.predict.worms_to_plot,
             )
-            plot_pca_trajectory(
-                log_dir=log_dir,
-                worms_to_plot=visualize_config.predict.worms_to_plot,
-                plot_type="3D",
-            )
+            # plot_pca_trajectory(
+            #     log_dir=log_dir,
+            #     worms_to_plot=visualize_config.predict.worms_to_plot,
+            #     plot_type="3D",
+            # ) # DEBUG
             plot_pca_trajectory(
                 log_dir=log_dir,
                 worms_to_plot=visualize_config.predict.worms_to_plot,

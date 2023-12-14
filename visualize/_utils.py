@@ -605,16 +605,20 @@ def plot_pca_trajectory(log_dir, worms_to_plot=None, plot_type="3D"):
                 )
                 gt_gen_data = gt_gen_data[neurons]  # Filter only named neurons
 
-                # Combine and Standardize the data
-                all_data = pd.concat([ar_gen_data, ground_truth_data, gt_gen_data])
-                scaler = StandardScaler()
-                print(f"DEBUG Starting standard scaler")  # DEBUG
-                logger.info(f"DEBUG Starting standard scaler")  # DEBUG
-                standardized_data = scaler.fit_transform(all_data)
-                print(f"DEBUG Finished standard scaler")  # DEBUG
-                logger.info(f"DEBUG Finished standard scaler")  # DEBUG
-
                 try:
+                    # Concantentate and standardize the data
+                    all_data = pd.concat([ar_gen_data, ground_truth_data, gt_gen_data])
+                    scaler = StandardScaler()
+                    print(
+                        f"DEBUG Starting standard scaler\nall_data.shape: {all_data.shape}"
+                    )  # DEBUG
+                    logger.info(
+                        f"DEBUG Starting standard scaler.\nall_data.shape: {all_data.shape}"
+                    )  # DEBUG
+                    standardized_data = scaler.fit_transform(all_data)
+                    print(f"DEBUG Finished standard scaler")  # DEBUG
+                    logger.info(f"DEBUG Finished standard scaler")  # DEBUG
+
                     # Apply PCA
                     if plot_type == "2D":
                         pca = PCA(n_components=2)

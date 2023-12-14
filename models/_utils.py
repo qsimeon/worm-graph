@@ -370,6 +370,10 @@ class Model(torch.nn.Module):
         self.inner_hidden_model = InnerHiddenModel(self.hidden_hidden, self.hidden)
         # Linear readout
         self.linear = torch.nn.Linear(self.hidden_size, self.output_size)
+        ### DEBUG ###
+        # Optional layer normalization
+        self.layer_norm = torch.nn.LayerNorm(self.hidden_size, elementwise_affine=True)
+        ### DEBUG ###
         # Initialize weights
         self._init_weights()
 
@@ -528,21 +532,32 @@ class Model(torch.nn.Module):
             Generated data with shape (nb_ts_to_generate, neurons)
         """
 
-        self.eval()  # set model to evaluation mode
+        # Set model to evaluation mode
+        self.eval()
 
+        # Generate values autoregressively
         if autoregressive:
-            # Generate values autoregressively
             input = input[
                 :, :context_window, :
             ]  # shape (batch_size, context_window, 302)
 
+        # Otherwise defualts to ground-truth feeding
         generated_values = []
         with torch.no_grad():
+            # Create a normalizer for the input
+            normalizer = torch.nn.LayerNorm(
+                (context_window, self.input_size), elementwise_affine=False
+            )
+            
+            # Loop through time
             for t in range(nb_ts_to_generate):
                 # Get the last context_window values of the input tensor
                 x = input[
                     :, t : context_window + t, :
                 ]  # shape (batch_size, context_window, 302)
+
+                # Normalize the input
+                x = normalizer(x)
 
                 # Get predictions
                 predictions = self(x, mask)  # shape (batch_size, context_window, 302)
@@ -695,10 +710,6 @@ class FeatureFFNN(Model):
             self.embedding,
             torch.nn.ReLU(),
             # NOTE: Do NOT use LayerNorm here!
-            ### DEBUG ###
-            # # NOTE: YES use LayerNorm here!
-            # torch.nn.LayerNorm(self.hidden_size),
-            ### DEBUG ###
         )
 
         # Hidden to hidden transformation: FeedForward layer
@@ -815,7 +826,7 @@ class NetworkCTRNN(Model):
             torch.nn.Linear(self.input_size, self.hidden_size),
             torch.nn.ReLU(),
             # NOTE: YES use LayerNorm here!
-            torch.nn.LayerNorm(self.hidden_size),
+            self.layer_norm,
         )
 
         # Hidden to hidden transformation: Continuous time RNN (CTRNN) layer
@@ -864,7 +875,7 @@ class LiquidCfC(Model):
             torch.nn.Linear(self.input_size, self.hidden_size),
             torch.nn.ReLU(),
             # NOTE: YES use LayerNorm here!
-            torch.nn.LayerNorm(self.hidden_size),
+            self.layer_norm,
         )
 
         # Hidden to hidden transformation: Closed-form continuous-time (CfC) layer
@@ -932,7 +943,7 @@ class NetworkLSTM(Model):
             torch.nn.Linear(self.input_size, self.hidden_size),
             torch.nn.ReLU(),
             # NOTE: YES use LayerNorm here!
-            torch.nn.LayerNorm(self.hidden_size),
+            self.layer_norm,
         )
 
         # Hidden to hidden transformation: Long-short term memory (LSTM) layer
