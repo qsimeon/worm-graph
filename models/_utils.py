@@ -694,9 +694,10 @@ class FeatureFFNN(Model):
         self.input_hidden = torch.nn.Sequential(
             self.embedding,
             torch.nn.ReLU(),
+            # NOTE: Do NOT use LayerNorm here!
             ### DEBUG ###
             # # NOTE: YES use LayerNorm here!
-            # torch.nn.LayerNorm(self.hidden_size), 
+            # torch.nn.LayerNorm(self.hidden_size),
             ### DEBUG ###
         )
 

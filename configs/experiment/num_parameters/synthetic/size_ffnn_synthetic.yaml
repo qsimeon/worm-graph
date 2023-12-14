@@ -14,7 +14,7 @@ hydra:
   mode: MULTIRUN
   sweeper:
     params:
-      submodule.model.hidden_size: 232 #range(8,769,16)
+      submodule.model.hidden_size: range(8,769,16)
       experiment.seed: 3
       submodule.dataset.use_these_datasets.path: /om2/user/qsimeon/worm-graph/data/validation_RandWalk0000
       submodule.dataset.experimental_datasets: choice({RandWalk0000:all})
