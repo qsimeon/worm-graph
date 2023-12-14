@@ -546,9 +546,9 @@ class Model(torch.nn.Module):
         with torch.no_grad():
             # Create a normalizer for the input
             normalizer = torch.nn.LayerNorm(
-                (context_window, self.input_size), elementwise_affine=False
-            )
-            
+                context_window, elementwise_affine=False
+            )  # DEBUG
+
             # Loop through time
             for t in range(nb_ts_to_generate):
                 # Get the last context_window values of the input tensor
@@ -556,8 +556,16 @@ class Model(torch.nn.Module):
                     :, t : context_window + t, :
                 ]  # shape (batch_size, context_window, 302)
 
-                # Normalize the input
-                x = normalizer(x)
+                # Normalize the input along the context window
+                x = normalizer(
+                    x.view(
+                        -1,
+                        self.input_size,
+                        context_window,
+                    )
+                ).view(
+                    -1, context_window, self.input_size
+                )  # DEBUG
 
                 # Get predictions
                 predictions = self(x, mask)  # shape (batch_size, context_window, 302)

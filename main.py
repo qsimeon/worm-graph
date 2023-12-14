@@ -49,9 +49,9 @@ def pipeline(cfg: DictConfig) -> None:
         train_dataset, val_dataset = get_datasets(
             cfg.submodule.dataset, save=cfg.submodule.dataset.save_datasets
         )
-        # Update visualize and analysis submodule to plot current run
+        # Update visualize submodule to plot current run
         if "visualize" in cfg.submodule:
-            cfg.submodule.visualize.plot_figures_from_this_log_dir = log_dir
+            cfg.submodule.visualize.plot_this_log_dir = log_dir
 
     if "model" in cfg.submodule:
         model = get_model(cfg.submodule.model)
@@ -68,7 +68,7 @@ def pipeline(cfg: DictConfig) -> None:
         if "analysis" in cfg.submodule:
             cfg.submodule.analysis.analyse_this_log_dir = log_dir
         if "visualize" in cfg.submodule:
-            cfg.submodule.visualize.plot_figures_from_this_log_dir = log_dir
+            cfg.submodule.visualize.plot_this_log_dir = log_dir
 
     if "predict" in cfg.submodule:
         make_predictions(
@@ -79,7 +79,7 @@ def pipeline(cfg: DictConfig) -> None:
         if "analysis" in cfg.submodule:
             cfg.submodule.analysis.analyse_this_log_dir = log_dir
         if "visualize" in cfg.submodule:
-            cfg.submodule.visualize.plot_figures_from_this_log_dir = log_dir
+            cfg.submodule.visualize.plot_this_log_dir = log_dir
 
     # Save pipeline info
     OmegaConf.save(cfg, os.path.join(log_dir, "pipeline_info.yaml"))

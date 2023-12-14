@@ -12,7 +12,7 @@ def plot_figures(
     a model on a worm neural activity dataset. Save figures to the directory `log_dir`.
     """
 
-    log_dir = visualize_config.plot_figures_from_this_log_dir
+    log_dir = visualize_config.plot_this_log_dir
 
     assert (
         log_dir is not None
@@ -63,7 +63,7 @@ def plot_experiment(visualize_config: DictConfig, exp_config: DictConfig) -> Non
     """
 
     try:
-        log_dir = visualize_config.plot_figures_from_this_log_dir
+        log_dir = visualize_config.plot_this_log_dir
 
         assert (
             log_dir is not None
