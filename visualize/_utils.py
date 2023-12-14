@@ -608,7 +608,11 @@ def plot_pca_trajectory(log_dir, worms_to_plot=None, plot_type="3D"):
                 # Combine and Standardize the data
                 all_data = pd.concat([ar_gen_data, ground_truth_data, gt_gen_data])
                 scaler = StandardScaler()
+                print(f"DEBUG Starting standard scaler")  # DEBUG
+                logger.info(f"DEBUG Starting standard scaler")  # DEBUG
                 standardized_data = scaler.fit_transform(all_data)
+                print(f"DEBUG Finished standard scaler")  # DEBUG
+                logger.info(f"DEBUG Finished standard scaler")  # DEBUG
 
                 try:
                     # Apply PCA
@@ -616,7 +620,11 @@ def plot_pca_trajectory(log_dir, worms_to_plot=None, plot_type="3D"):
                         pca = PCA(n_components=2)
                     else:
                         pca = PCA(n_components=3)
+                    print(f"DEBUG Starting PCA")  # DEBUG
+                    logger.info(f"DEBUG Starting PCA")  # DEBUG
                     reduced_data = pca.fit_transform(standardized_data)
+                    print(f"DEBUG Finished PCA")  # DEBUG
+                    logger.info(f"DEBUG Finished PCA")  # DEBUG
 
                     # Plot
                     if plot_type == "2D":
