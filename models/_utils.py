@@ -541,7 +541,7 @@ class Model(torch.nn.Module):
             normalizer = torch.nn.LayerNorm(context_window, elementwise_affine=False)
             ### DEBUG ###
 
-        # Otherwise defualts to ground-truth feeding
+        # Otherwise defaults to ground-truth feeding
         generated_values = []
         with torch.no_grad():
             # Loop through time
@@ -550,9 +550,8 @@ class Model(torch.nn.Module):
                 x = input[
                     :, t : context_window + t, :
                 ]  # shape (batch_size, context_window, neurons)
-
                 ### DEBUG ###
-                if autoregressive:
+                if autoregressive and t > 0:
                     # Normalize the input along the temporal dimension
                     x = normalizer(
                         x.view(
