@@ -540,28 +540,12 @@ class Model(torch.nn.Module):
         # Otherwise defualts to ground-truth feeding
         generated_values = []
         with torch.no_grad():
-            # ### DEBUG ###
-            # # Create a normalizer for the input
-            # normalizer = torch.nn.LayerNorm(context_window, elementwise_affine=False)
-            # ### DEBUG ###
-
             # Loop through time
             for t in range(nb_ts_to_generate):
                 # Get the last context_window values of the input tensor
                 x = input[
                     :, t : context_window + t, :
                 ]  # shape (batch_size, context_window, neurons)
-
-                # ### DEBUG ###
-                # # Normalize the input along the temporal dimension
-                # x = normalizer(
-                #     x.view(
-                #         -1,
-                #         self.input_size,
-                #         context_window,
-                #     )
-                # ).view(-1, context_window, self.input_size)
-                # ### DEBUG ###
 
                 # Get predictions
                 predictions = self(
