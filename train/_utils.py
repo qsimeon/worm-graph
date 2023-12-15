@@ -87,7 +87,6 @@ def compute_loss_vectorized(loss_fn, X, Y, mask):
     expanded_mask = mask.unsqueeze(1).expand_as(
         X
     )  # the mask is a feature mask; temporally invariant, feature equivariant
-    logger.info(f"DEBUG Expanded mask shape: {expanded_mask.shape}")  # DEBUG
 
     # Mask the invalid positions in X and Y
     masked_X = X * expanded_mask.float()

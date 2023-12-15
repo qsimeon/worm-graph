@@ -609,26 +609,14 @@ def plot_pca_trajectory(log_dir, worms_to_plot=None, plot_type="3D"):
                     # Concantentate and standardize the data
                     all_data = pd.concat([ar_gen_data, ground_truth_data, gt_gen_data])
                     scaler = StandardScaler()
-                    print(
-                        f"DEBUG Starting standard scaler\nall_data.shape: {all_data.shape}"
-                    )  # DEBUG
-                    logger.info(
-                        f"DEBUG Starting standard scaler.\nall_data.shape: {all_data.shape}"
-                    )  # DEBUG
                     standardized_data = scaler.fit_transform(all_data)
-                    print(f"DEBUG Finished standard scaler")  # DEBUG
-                    logger.info(f"DEBUG Finished standard scaler")  # DEBUG
 
                     # Apply PCA
                     if plot_type == "2D":
                         pca = PCA(n_components=2)
                     else:
                         pca = PCA(n_components=3)
-                    print(f"DEBUG Starting PCA")  # DEBUG
-                    logger.info(f"DEBUG Starting PCA")  # DEBUG
                     reduced_data = pca.fit_transform(standardized_data)
-                    print(f"DEBUG Finished PCA")  # DEBUG
-                    logger.info(f"DEBUG Finished PCA")  # DEBUG
 
                     # Plot
                     if plot_type == "2D":
