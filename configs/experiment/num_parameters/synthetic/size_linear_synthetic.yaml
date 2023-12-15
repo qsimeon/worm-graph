@@ -14,11 +14,11 @@ hydra:
   mode: MULTIRUN
   sweeper:
     params:
-      experiment.seed: 0 
-      submodule.dataset.use_these_datasets.path: /om2/user/qsimeon/worm-graph/data/validation_Sines0000
-      submodule.dataset.experimental_datasets: choice({Sines0000:all})
-      submodule.predict.experimental_datasets: choice({Sines0000:[worm0, worm1]})
-      submodule.analysis.validation.experimental_datasets: choice({Sines0000:all})
+      experiment.seed: 3
+      submodule.dataset.use_these_datasets.path: /om2/user/qsimeon/worm-graph/data/validation_RandWalk0000
+      submodule.dataset.experimental_datasets: choice({RandWalk0000:all})
+      submodule.predict.experimental_datasets: choice({RandWalk0000:worm0})
+      submodule.analysis.validation.experimental_datasets: choice({RandWalk0000:all})
       # ###############################################################################################
       ### SINES ###
       # experiment.seed: 0 
