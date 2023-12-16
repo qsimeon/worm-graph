@@ -14,6 +14,7 @@ hydra:
   mode: MULTIRUN
   sweeper:
     params:
+      # experiment.seed: choice(0,1) # repeat each experiment twice
       submodule.model.hidden_size: choice(8,10,12,16,20,26,33,42,54,68,87,110,140,178,227,288,366,465,590,750,953,1210,1537,1952,2479,3149,3999,5079,6450,8192)
       experiment.seed: 0
       submodule.predict.experimental_datasets: choice({Kato2015:worm0,Nichols2017:worm0,Skora2018:worm0,Kaplan2020:worm0,Yemini2021:worm0,Uzel2022:worm0,Flavell2023:worm1,Leifer2023:worm0})

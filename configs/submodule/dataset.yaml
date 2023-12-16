@@ -34,7 +34,7 @@ dataset:
     Flavell2023: all
     Leifer2023: all
   
-  # If null, use all the worms in the dataset. Otherwise, if <int> use that number of worms (randomly picked) from the dataset.
+  # If null, use all the named neurons from each worm. Otherwise, if <int> use that number of named neurons (randomly picked) from the each worm.
   num_named_neurons: null # number of neurons to train the model with (positive integer or null)
   # Set to the same value as submodule.predict.context_window
   seq_len: 100 # length of the sampled neural activity sequences
@@ -43,6 +43,6 @@ dataset:
   reverse: false # whether to sample sequences in reverse order
   use_residual: false # whether to use the residual (i.e first difference) of the neural activity
   smooth_data: true # whether to use the smoothed the neural activity
-  train_split_first: false # whether to use the first (true) or second (false) half of neural activity as the train half 
+  train_split_first: true # whether to use the first (true) or second (false) half of neural activity as the train half 
   train_split_ratio: 0.5 # the ratio of the neural data to assign to the train split  <int> in (0, 1)
   

@@ -95,7 +95,7 @@ submodule:
     reverse: false
     use_residual: false
     smooth_data: true
-    train_split_first: false
+    train_split_first: true
     train_split_ratio: 0.5
 
   # Build model from scratch

@@ -296,7 +296,7 @@ class NeuralActivityDataset(torch.utils.data.Dataset):
 
         # update the unique_time_steps set
         for _, _, _, metadata in data_samples:
-            time_steps = metadata["time_vec"].numpy()  
+            time_steps = metadata["time_vec"].numpy()
             self.unique_time_steps.update(time_steps)
 
         return data_samples
@@ -443,8 +443,8 @@ def filter_loaded_combined_dataset(combined_dataset, num_worms, num_named_neuron
         Multi-worm dataset to filter the worms from.
     num_worms : int or None
         Number of worms to keep. If None keep all.
-    num_named_neurons : int
-        Number of named neurons to keep.
+    num_named_neurons : int or None
+        Number of named neurons to keep. If None keep all.
 
     Returns
     -------
@@ -501,6 +501,15 @@ def filter_loaded_combined_dataset(combined_dataset, num_worms, num_named_neuron
 
 
 def find_reliable_neurons(multi_worm_dataset):
+    """
+    Finds the neurons that are present in all worms in the multi-worm dataset.
+
+    Args:
+        multi_worm_dataset (list): A list of worm datasets.
+
+    Returns:
+        list: A sorted list of neurons present in all worms.
+    """
     intersection = set()
     for i, worm in enumerate(multi_worm_dataset):
         single_worm_dataset = pick_worm(multi_worm_dataset, worm)
@@ -1031,11 +1040,17 @@ def split_combined_dataset(
             isinstance(seq_len, int) and 0 < seq_len < split_idx
         ), "seq_len must be an integer > 0 and < floor(train_split_ratio * len(data))"
 
-        # Split the data and the time vector into two halves
+        # Split the data and the time vector into two sections
         data_splits = np.array_split(data, indices_or_sections=[split_idx], axis=0)
         time_vec_splits = np.array_split(
             time_vec, indices_or_sections=[split_idx], axis=0
         )
+        logger.info(
+            f"DEBUG data_splits: {type(data_splits), len(data_splits), type(data_splits[0]), len(data_splits[0])}"
+        )  # DEBUG
+        logger.info(
+            f"DEBUG time_vec_splits: {type(time_vec_splits), len(time_vec_splits), type(time_vec_splits[0]), len(time_vec_splits[0])}"
+        )  # DEBUG
 
         # Separate the splits into training and validation sets
         if train_split_first:
@@ -1055,10 +1070,25 @@ def split_combined_dataset(
         train_samples_per_split = distribute_samples(
             train_data_splits, num_train_samples
         )
+        logger.info(
+            f"DEBUG train_samples_per_split: {train_samples_per_split}\tnum_train_samples: {num_train_samples}"
+        )  # DEBUG
         val_samples_per_split = distribute_samples(val_data_splits, num_val_samples)
+        logger.info(
+            f"DEBUG val_samples_per_split: {val_samples_per_split}\tnum_val_samples: {num_val_samples}"
+        )  # DEBUG
 
         # Number of unique time steps across all samples for each worm and each split
         train_split_time_steps, val_split_time_steps = 0, 0
+
+        ### DEBUG ###
+        train_packet = list(
+            zip(train_data_splits, train_time_vec_splits, train_samples_per_split)
+        )  # DEBUG
+        logger.info(
+            f"train_packet: {type(train_packet), len(train_packet), type(train_packet[0]), len(train_packet[0])}"
+        )  # DEBUG
+        ### DEBUG ###
 
         # Create a dataset for each split
         for train_split, train_time_split, num_samples_split in zip(
