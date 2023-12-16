@@ -296,7 +296,7 @@ class NeuralActivityDataset(torch.utils.data.Dataset):
 
         # update the unique_time_steps set
         for _, _, _, metadata in data_samples:
-            time_steps = metadata["time_vec"].numpy()  # assuming it's a torch tensor
+            time_steps = metadata["time_vec"].numpy()  
             self.unique_time_steps.update(time_steps)
 
         return data_samples

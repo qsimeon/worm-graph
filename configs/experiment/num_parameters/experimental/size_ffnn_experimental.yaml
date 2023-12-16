@@ -14,14 +14,10 @@ hydra:
   mode: MULTIRUN
   sweeper:
     params:
-      experiment.seed: 0 # assign each repetition of the experiment a distinct random seed
-      submodule.model.hidden_size: range(2368,7169,512)
-      ### Different ranges of hidden_size ###
-      # seed 0: range(2368,7169,512) # only done for FeatureFFNN model
-      # seed 1: range(1024,2881,128)
-      # seed 2: range(128,1153,64)  
-      # seed 3: range(16,289,16)
-      # seed 4: range(8,65,4)
+      submodule.model.hidden_size: choice(8,10,12,16,20,26,33,42,54,68,87,110,140,178,227,288,366,465,590,750,953,1210,1537,1952,2479,3149,3999,5079,6450,8192)
+      experiment.seed: 0 
+      submodule.predict.experimental_datasets: choice({Kato2015:worm0,Nichols2017:worm0,Skora2018:worm0,Kaplan2020:worm0,Yemini2021:worm0,Uzel2022:worm0,Flavell2023:worm1,Leifer2023:worm0})
+      submodule.analysis.validation.experimental_datasets: choice({Kato2015:all,Nichols2017:all,Skora2018:all,Kaplan2020:all,Yemini2021:all,Uzel2022:all,Flavell2023:all,Leifer2023:all})
 
 submodule:
   
@@ -52,22 +48,27 @@ submodule:
     reverse: false
     use_residual: false
     smooth_data: true
+    train_split_first: false
+    train_split_ratio: 0.5
 
   # Build model from scratch
   model:
     type: FeatureFFNN
+    # This gets overwritten by the sweeper
+    hidden_size: null
 
   # Choose the worms that you want to predict
   predict:
     experimental_datasets:
-      Kato2015: worm0
-      Nichols2017: worm0
-      Skora2018: worm0
-      Kaplan2020: worm0
-      Yemini2021: worm0
-      Uzel2022: worm0
-      Flavell2023: worm1 # something is wrong with worm0 in Flavell2023
-      Leifer2023: worm0
+      # This gets overwritten by the sweeper
+      Kato2015: null
+      Nichols2017: null
+      Skora2018: null
+      Kaplan2020: null
+      Yemini2021: null
+      Uzel2022: null
+      Flavell2023: null # something is wrong with worm0 in Flavell2023
+      Leifer2023: null
     # Number of time steps to generate
     nb_ts_to_generate: null
     # Set to the same value as submodule.dataset.seq_len
@@ -77,15 +78,16 @@ submodule:
     analyse_this_log_dir: null
     # Validate final model using all worms from each experimental datasets
     validation:
+      # This gets overwritten by the sweeper
       experimental_datasets:
-        Kato2015: all
-        Nichols2017: all
-        Skora2018: all
-        Kaplan2020: all
-        Yemini2021: all
-        Uzel2022: all
-        Flavell2023: all
-        Leifer2023: all
+        Kato2015: null
+        Nichols2017: null
+        Skora2018: null
+        Kaplan2020: null
+        Yemini2021: null
+        Uzel2022: null
+        Flavell2023: null
+        Leifer2023: null
 
 experiment:
   key: num_parameters
