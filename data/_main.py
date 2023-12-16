@@ -116,7 +116,7 @@ def get_datasets(dataset_config: DictConfig, save=True):
                 converters={"neurons": ast.literal_eval},
             )
 
-        # If both datasets exist, save and return them. Else, create them using the experimental datasets
+        # If both datasets exist, save and return them.
         if train_dataset_exists and val_dataset_exists:
             # There's no need to save the datasets again, just their information (for visualization submodule use)
             dataset_info_train.to_csv(
@@ -130,7 +130,7 @@ def get_datasets(dataset_config: DictConfig, save=True):
                 header=True,
             )
             return train_dataset, val_dataset
-
+        # Else, create them using the experimental datasets
         else:
             # Logging info
             if not train_dataset_exists:
