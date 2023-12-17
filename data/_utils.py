@@ -1045,12 +1045,15 @@ def split_combined_dataset(
         time_vec_splits = np.array_split(
             time_vec, indices_or_sections=[split_idx], axis=0
         )
-        logger.info(
-            f"DEBUG data_splits: {type(data_splits), len(data_splits), type(data_splits[0]), len(data_splits[0])}"
-        )  # DEBUG
-        logger.info(
-            f"DEBUG time_vec_splits: {type(time_vec_splits), len(time_vec_splits), type(time_vec_splits[0]), len(time_vec_splits[0])}"
-        )  # DEBUG
+
+        # ### DEBUG ###
+        # logger.info(
+        #     f"DEBUG data_splits: {type(data_splits), len(data_splits), type(data_splits[0]), len(data_splits[0])}"
+        # )  # DEBUG
+        # logger.info(
+        #     f"DEBUG time_vec_splits: {type(time_vec_splits), len(time_vec_splits), type(time_vec_splits[0]), len(time_vec_splits[0])}"
+        # )  # DEBUG
+        # ### DEBUG ###
 
         # Separate the splits into training and validation sets
         if train_split_first:
@@ -1070,25 +1073,28 @@ def split_combined_dataset(
         train_samples_per_split = distribute_samples(
             train_data_splits, num_train_samples
         )
-        logger.info(
-            f"DEBUG train_samples_per_split: {train_samples_per_split}\tnum_train_samples: {num_train_samples}"
-        )  # DEBUG
         val_samples_per_split = distribute_samples(val_data_splits, num_val_samples)
-        logger.info(
-            f"DEBUG val_samples_per_split: {val_samples_per_split}\tnum_val_samples: {num_val_samples}"
-        )  # DEBUG
+
+        ### DEBUG ###
+        # logger.info(
+        #     f"DEBUG train_samples_per_split: {train_samples_per_split}\tnum_train_samples: {num_train_samples}"
+        # )  # DEBUG
+        # logger.info(
+        #     f"DEBUG val_samples_per_split: {val_samples_per_split}\tnum_val_samples: {num_val_samples}"
+        # )  # DEBUG
+        ### DEBUG ###
 
         # Number of unique time steps across all samples for each worm and each split
         train_split_time_steps, val_split_time_steps = 0, 0
 
-        ### DEBUG ###
-        train_packet = list(
-            zip(train_data_splits, train_time_vec_splits, train_samples_per_split)
-        )  # DEBUG
-        logger.info(
-            f"train_packet: {type(train_packet), len(train_packet), type(train_packet[0]), len(train_packet[0])}"
-        )  # DEBUG
-        ### DEBUG ###
+        # ### DEBUG ###
+        # train_packet = list(
+        #     zip(train_data_splits, train_time_vec_splits, train_samples_per_split)
+        # )  # DEBUG
+        # logger.info(
+        #     f"train_packet: {type(train_packet), len(train_packet), type(train_packet[0]), len(train_packet[0])}"
+        # )  # DEBUG
+        # ### DEBUG ###
 
         # Create a dataset for each split
         for train_split, train_time_split, num_samples_split in zip(
