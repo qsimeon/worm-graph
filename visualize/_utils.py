@@ -949,6 +949,7 @@ def experiment_parameter(exp_dir, key):
     key (str): The name of the experiment parameter to retrieve.
         Options for the different experiment parameters (key) are:
         - experiment_seed: The random seed used for the experiment
+        - dataset: The name(s) of the dataset(s) used for training
         - num_worms: The number of worms in the trainining set
         - num_time_steps: The total number of train time steps
         - num_named_neurons: The number of distinct named neurons recorded across all worms
@@ -958,7 +959,6 @@ def experiment_parameter(exp_dir, key):
         - batch_size: The batch size used for training
         - seq_len: The sequence length used for training
         - learn_rate: The learning rate used for training
-        - dataset: The name(s) of the dataset(s) used for training
         - train_split_first: Whether training set from first half neural activity
         - model: The type of neural net model used for training
         - optimizer: The type of optimizer used for training
@@ -976,14 +976,27 @@ def experiment_parameter(exp_dir, key):
     title = "Experiment"
     xaxis = "Experiment run"
 
-    if key == "experiment_seed" or key == "exp_seed" or key == "seed":
+    if key in {"experiment_seed", "exp_seed", "seed"}:
         # The random seed used for the experiment
         pipeline_info = OmegaConf.load(os.path.join(exp_dir, "pipeline_info.yaml"))
         value = pipeline_info.experiment.seed
         title = "Experiment random seed"
         xaxis = "Seed"
 
-    if key == "num_worms" or key == "num_train_worms":
+    if key in {
+        "dataset",
+        "dataset_name",
+        "train_dataset",
+        "train_dataset_name",
+        "worm_dataset",
+    }:
+        # The name(s) of the dataset(s) used for training
+        pipeline_info = OmegaConf.load(os.path.join(exp_dir, "pipeline_info.yaml"))
+        value = "_".join(sorted(pipeline_info.submodule.dataset.experimental_datasets))
+        title = "Dataset(s) used for training"
+        xaxis = "Dataset name(s)"
+
+    if key in {"num_worms", "num_train_worms"}:
         # The number of worms in the training set
         df = pd.read_csv(
             os.path.join(exp_dir, "dataset", "train_dataset_info.csv"),
@@ -993,7 +1006,7 @@ def experiment_parameter(exp_dir, key):
         title = "Number of worms in training set"
         xaxis = "Num. worms"
 
-    if key == "num_time_steps":
+    if key in {"num_time_steps", "num_train_timesteps"}:
         # Total number of train time steps in the dataset
         df = pd.read_csv(
             os.path.join(exp_dir, "dataset", "train_dataset_info.csv"),
@@ -1003,7 +1016,7 @@ def experiment_parameter(exp_dir, key):
         title = "Total amount of training data"
         xaxis = "Num. time steps"
 
-    if key == "num_neurons" or key == "num_named_neurons":
+    if key in {"num_neurons", "num_named_neurons"}:
         # Number of named neurons used for training
         pipeline_info = OmegaConf.load(os.path.join(exp_dir, "pipeline_info.yaml"))
         df = pd.read_csv(
@@ -1039,7 +1052,7 @@ def experiment_parameter(exp_dir, key):
         title = "Train split sample from first half"
         xaxis = "Train split first"
 
-    if key == "num_train_samples" or key == "num_samples":
+    if key in {"num_train_samples", "num_samples"}:
         # The number of training sequences sampled per worm
         pipeline_info = OmegaConf.load(os.path.join(exp_dir, "pipeline_info.yaml"))
         value = pipeline_info.submodule.dataset.num_train_samples
@@ -1067,35 +1080,28 @@ def experiment_parameter(exp_dir, key):
         title = "Sequence length"
         xaxis = "Sequence length"
 
-    if key == "lr" or key == "learn_rate" or key == "learning_rate":
+    if key in {"lr", "learn_rate", "learning_rate"}:
         # The learning rate used for training the model
         pipeline_info = OmegaConf.load(os.path.join(exp_dir, "pipeline_info.yaml"))
         value = pipeline_info.submodule.train.lr  # Learning rate used for training
         title = "Learning rate"
         xaxis = "Learning rate"
 
-    if key == "dataset" or key == "dataset_name" or key == "worm_dataset":
-        # The name(s) of the dataset(s) used for training
-        pipeline_info = OmegaConf.load(os.path.join(exp_dir, "pipeline_info.yaml"))
-        value = "_".join(sorted(pipeline_info.submodule.dataset.experimental_datasets))
-        title = "Dataset(s) used for training"
-        xaxis = "Dataset name(s)"
-
-    if key == "model" or key == "model_type":
+    if key in {"model", "model_type"}:
         # The type of neural network model used
         pipeline_info = OmegaConf.load(os.path.join(exp_dir, "pipeline_info.yaml"))
         value = pipeline_info.submodule.model.type
         title = "Model"
         xaxis = "Model type"
 
-    if key == "optimizer" or key == "optimizer_type":
+    if key in {"optimizer", "optimizer_type"}:
         # The type of optimizer used for training the model
         pipeline_info = OmegaConf.load(os.path.join(exp_dir, "pipeline_info.yaml"))
         value = pipeline_info.submodule.train.optimizer
         title = "Optimizer"
         xaxis = "Optimizer type"
 
-    if key == "loss" or key == "loss_type":
+    if key in {"loss", "loss_type"}:
         # The type of loss function used for training
         pipeline_info = OmegaConf.load(os.path.join(exp_dir, "pipeline_info.yaml"))
         value = pipeline_info.submodule.model.loss
@@ -1109,15 +1115,15 @@ def experiment_parameter(exp_dir, key):
         try:
             value = pipeline_info.submodule.preprocess.resample_dt
         except Exception as e:
-            logger.info(f"Resample time step not found in pipeline_info.yaml.")
-            logger.error(f"The error that occurred: {e}")
-            logger.error(traceback.format_exc())  # This will print the full traceback
-            value = 0.0
+            logger.info(
+                f"Resample time step not found in pipeline_info.yaml.\nThe error that occurred: {e}\n{traceback.format_exc()}"
+            )
+            value = np.nan
         ### DEBUG ###
         title = "Resampled time step"
         xaxis = "Seconds (s)"
 
-    if key == "time_last_epoch" or key == "computation_time":
+    if key in {"time_last_epoch", "computation_time"}:
         # The computation time in seconds for the last epoch
         pipeline_info = OmegaConf.load(os.path.join(exp_dir, "pipeline_info.yaml"))
         chkpt_path = os.path.join(exp_dir, "train", "checkpoints", f"model_best.pt")
@@ -1126,7 +1132,7 @@ def experiment_parameter(exp_dir, key):
         title = "Computation time of last epoch"
         xaxis = "Time (s)"
 
-    if key == "computation_flops" or key == "flops":
+    if key in {"computation_flops", "flops"}:
         # The number of floating point operations (FLOPs) for the model
         pipeline_info = OmegaConf.load(os.path.join(exp_dir, "pipeline_info.yaml"))
         chkpt_path = os.path.join(exp_dir, "train", "checkpoints", f"model_best.pt")
@@ -1135,7 +1141,7 @@ def experiment_parameter(exp_dir, key):
         title = "Computation floating point operations"
         xaxis = "FLOPs"
 
-    if key == "num_parameters" or key == "num_params" or key == "num_trainable_params":
+    if key in {"num_parameters", "num_params", "num_trainable_params"}:
         # The total number of trainable parameters in the model
         pipeline_info = OmegaConf.load(os.path.join(exp_dir, "pipeline_info.yaml"))
         chkpt_path = os.path.join(exp_dir, "train", "checkpoints", f"model_best.pt")

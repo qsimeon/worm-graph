@@ -106,7 +106,7 @@ def train_model(
     # Computation metrics
     learning_rate = []
     computation_time = []
-    computation_flops = np.NaN
+    computation_flops = np.nan
 
     # Start training
     logger.info("Starting training loop...")
@@ -299,7 +299,7 @@ def train_model(
 
     # Metric for optuna (lowest validation loss)
     metric = min(val_epoch_loss)
-    if metric == np.NaN or metric is None:
+    if metric == np.nan or metric is None:
         metric = float("inf")
 
     return model, metric
