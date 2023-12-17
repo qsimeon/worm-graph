@@ -963,6 +963,7 @@ def experiment_parameter(exp_dir, key):
         - model: The type of neural net model used for training
         - optimizer: The type of optimizer used for training
         - loss: The type of loss function used for training
+        - resample_dt: The time step (in seconds) the data was resampled at
         - time_last_epoch: The computation time in seconds for the last epoch
         - computation_flops: The number of floating point operations (FLOPs)
         - num_parameters: The total number of trainable parameters in the model
@@ -1100,6 +1101,21 @@ def experiment_parameter(exp_dir, key):
         value = pipeline_info.submodule.model.loss
         title = "Loss function"
         xaxis = "Loss function type"
+
+    if key == "resample_dt":
+        # The time step (in seconds) the data was resampled at
+        pipeline_info = OmegaConf.load(os.path.join(exp_dir, "pipeline_info.yaml"))
+        ### DEBUG ###
+        try:
+            value = pipeline_info.submodule.preprocess.resample_dt
+        except Exception as e:
+            logger.info(f"Resample time step not found in pipeline_info.yaml.")
+            logger.error(f"The error that occurred: {e}")
+            logger.error(traceback.format_exc())  # This will print the full traceback
+            value = 0.0
+        ### DEBUG ###
+        title = "Resampled time step"
+        xaxis = "Seconds (s)"
 
     if key == "time_last_epoch" or key == "computation_time":
         # The computation time in seconds for the last epoch
