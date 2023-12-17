@@ -15,7 +15,6 @@ hydra:
   sweeper:
     params:
       experiment.seed: 0
-      submodule.dataset.train_split_first: choice(false,true)
       submodule.model.hidden_size: choice(8,10,12,16,20,26,33,42,54,68,87,110,140,178,227,288,366,465,590,750,953,1210,1537,1952,2479,3149,3999,5079,6450,8192)
       submodule.predict.experimental_datasets: choice({Kato2015:worm0,Nichols2017:worm0,Skora2018:worm0,Kaplan2020:worm0,Yemini2021:worm0,Uzel2022:worm0,Flavell2023:worm1,Leifer2023:worm0})
       submodule.analysis.validation.experimental_datasets: choice({Kato2015:all,Nichols2017:all,Skora2018:all,Kaplan2020:all,Yemini2021:all,Uzel2022:all,Flavell2023:all,Leifer2023:all})
@@ -49,8 +48,7 @@ submodule:
     reverse: false
     use_residual: false
     smooth_data: true
-    # This gets overwritten by the sweeper
-    train_split_first: null
+    train_split_first: true
     train_split_ratio: 0.5
 
   # Build model from scratch

@@ -49,7 +49,7 @@ submodule:
     use_residual: false
     smooth_data: true
     # This gets overwritten by the sweeper
-    train_split_first: null
+    train_split_first: true
     train_split_ratio: 0.5
 
   # Build model from scratch

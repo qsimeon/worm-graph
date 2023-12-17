@@ -958,7 +958,8 @@ def experiment_parameter(exp_dir, key):
         - batch_size: The batch size used for training
         - seq_len: The sequence length used for training
         - learn_rate: The learning rate used for training
-        - dataset: The name of the dataset used for training (TODO)
+        - dataset: The name(s) of the dataset(s) used for training
+        - train_split_first: Whether training set from first half neural activity
         - model: The type of neural net model used for training
         - optimizer: The type of optimizer used for training
         - loss: The type of loss function used for training
@@ -1030,6 +1031,13 @@ def experiment_parameter(exp_dir, key):
         title = "Average amount of training data per neuron"
         xaxis = "Num. time steps per neuron"
 
+    if key == "train_split_first":
+        # Whether the training set was sampled from the first half of the neural data
+        pipeline_info = OmegaConf.load(os.path.join(exp_dir, "pipeline_info.yaml"))
+        value = pipeline_info.submodule.dataset.train_split_first
+        title = "Train split sample from first half"
+        xaxis = "Train split first"
+
     if key == "num_train_samples" or key == "num_samples":
         # The number of training sequences sampled per worm
         pipeline_info = OmegaConf.load(os.path.join(exp_dir, "pipeline_info.yaml"))
@@ -1066,8 +1074,11 @@ def experiment_parameter(exp_dir, key):
         xaxis = "Learning rate"
 
     if key == "dataset" or key == "dataset_name" or key == "worm_dataset":
-        # The name of the single dataset used for training
-        pass
+        # The name(s) of the dataset(s) used for training
+        pipeline_info = OmegaConf.load(os.path.join(exp_dir, "pipeline_info.yaml"))
+        value = "_".join(sorted(pipeline_info.submodule.dataset.experimental_datasets))
+        title = "Dataset(s) used for training"
+        xaxis = "Dataset name(s)"
 
     if key == "model" or key == "model_type":
         # The type of neural network model used
