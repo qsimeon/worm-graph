@@ -1031,7 +1031,11 @@ def split_combined_dataset(
         original_wormID = single_worm_dataset["original_worm"]
 
         # The index where to split the data
-        split_idx = int(train_split_ratio * len(data))
+        split_idx = (
+            int(train_split_ratio * len(data))
+            if train_split_first
+            else int((1 - train_split_ratio) * len(data))
+        )
 
         # Verifications
         assert (
