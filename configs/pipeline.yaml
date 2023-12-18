@@ -47,16 +47,16 @@ hydra:
     submitit_folder: ${hydra.sweep.dir}/.submitit/%j
     timeout_min: 1440  # Job timeout in minutes
     cpus_per_task: 1  # Number of CPU cores per task
-    gpus_per_node: 1  # Number of GPUs per node
+    gpus_per_node: null  # Number of GPUs per node (NOTE: Don't use with gres.)
     tasks_per_node: 1  # Number of tasks to run on each node
-    mem_gb: 32  # Memory required per node in GB
+    mem_gb: 40  # Memory required per node in GB
     nodes: 1  # Number of nodes to use
-    partition: normal  #yanglab # Partition to submit to
+    partition: yanglab  #normal # Partition to submit to
     qos: null  # Quality of Service level
     comment: null  # Comment to pass to the job
-    constraint: null  # Constraint specification
-    exclude: dgx001, dgx002, node060, node066  # Hosts to exclude
-    gres: gpu:1  # Generic resources to request
+    constraint: high-capacity  # Constraint specification
+    exclude: dgx001, dgx002, node031, node034, node055  # Hosts to exclude
+    gres: gpu:a100:1  # Generic resources to request
     cpus_per_gpu: null  # Number of CPUs per GPU
     gpus_per_task: null  # Number of GPUs per task
     mem_per_gpu: null  # Memory per GPU
@@ -72,7 +72,7 @@ hydra:
 # ============================ Pipeline Config ============================
 
 experiment:
-  key: pipeline # what parameter are you experimenting with
+  key: pipeline # What parameter are you experimenting with
   seed: null # If null, a random seed is generated for each run.
   mode: MULTIRUN
 

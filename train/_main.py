@@ -159,7 +159,7 @@ def train_model(
                 scaler.step(optimizer)
                 # Update the grad scaler
                 scaler.update()
-            # Calculate FLOPs only at first epoch and first batch
+            # Calculate FLOP only at first epoch and first batch
             elif batch_idx == 0:
                 computation_flops = FlopCountAnalysis(
                     model, (X_train, mask_train)
@@ -238,7 +238,7 @@ def train_model(
                     "computation_flops": computation_flops,
                     "time_last_epoch": computation_time[-1],
                     "current_lr": learning_rate[-1],
-                },  # add FLOPs info to checkpoint
+                },  # add FLOP info to checkpoint
             )
 
         # Early stopping
@@ -275,10 +275,10 @@ def train_model(
             "computation_flops": computation_flops,
             "time_last_epoch": computation_time[-1],
             "current_lr": learning_rate[-1],
-        },  # add FLOPs info to checkpoint
+        },  # add FLOP info to checkpoint
     )
     logger.info(
-        f"FLOPs: {computation_flops}, \t Time (s) last epoch: {computation_time[-1]}, \t Parameter counts (total, trainable): {print_parameters(model, verbose=False)}"
+        f"FLOP: {computation_flops}, \t Time (s) last epoch: {computation_time[-1]}, \t Parameter counts (total, trainable): {print_parameters(model, verbose=False)}"
     )
 
     # Save training and evaluation metrics into a csv file

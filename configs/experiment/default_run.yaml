@@ -8,6 +8,7 @@ hydra:
   mode: RUN
 
 experiment:
-  key: default_run # what parameter are you experimenting with
+  key: null # what parameter are you experimenting with
+  name: default_run # name of the experiment
   mode: RUN
-  seed: 42
+  seed: null # options: null (random seed), <int>

@@ -19,6 +19,6 @@ hydra:
     temp_folder: null  # Folder to use for temporary storage.
     max_nbytes: null  # Threshold for automatic memmapping of large arrays to disk.
     mmap_mode: 'r'  # Memmapping mode for numpy arrays passed to workers.
-    # Add the new parameters for the wrapper script and the Python executable path
-    wrapper_script: /path/to/my_wrapper_script.sh
-    python_executable: /path/to/my_python_executable
+    # # Add the new parameters for the wrapper script and the Python executable path
+    # wrapper_script: /path/to/my_wrapper_script.sh
+    # python_executable: /path/to/my_python_executable

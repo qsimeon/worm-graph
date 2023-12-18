@@ -249,7 +249,7 @@ class NeuralActivityDataset(torch.utils.data.Dataset):
             self.data[start + 1 : end + 1, :].detach().clone()
         )  # note that X and Y overlap everywhere except the last time step
         # Calculate the (average) residual (i.e. the forward first derivative)
-        Res = (Y - X) / avg_dt
+        Res = (Y - X).detach() / avg_dt
         # Store some metadata
         metadata = dict(
             wormID=self.wormID,

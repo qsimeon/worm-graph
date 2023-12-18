@@ -3,6 +3,9 @@ visualize:
   # If using the submodule alone, this directory is the path to the log folder you want to (re)make figures in.
   plot_this_log_dir: null # options: null, logs/hydra/<FolderName> 
   
+  # null = plot all the worms/neurons in the dataset
+  # <list> = plot the worms/neurons named in the list
+  # <int> = plot this number of (randomly picked) worms/neurons
   predict:
     # if null, plot all the worms in the dataset. Otherwise, if <list> plot only the worms in that list, or if <int> plot the number of (randomly picked) worms indicated
     worms_to_plot: null # number of worms to plot

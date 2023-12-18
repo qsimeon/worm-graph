@@ -965,7 +965,7 @@ def experiment_parameter(exp_dir, key):
         - loss: The type of loss function used for training
         - resample_dt: The time step (in seconds) the data was resampled at
         - time_last_epoch: The computation time in seconds for the last epoch
-        - computation_flops: The number of floating point operations (FLOPs)
+        - computation_flops: The number of floating point operations (FLOP)
         - num_parameters: The total number of trainable parameters in the model
 
     Returns:
@@ -1133,13 +1133,13 @@ def experiment_parameter(exp_dir, key):
         xaxis = "Time (s)"
 
     if key in {"computation_flops", "flops"}:
-        # The number of floating point operations (FLOPs) for the model
+        # The number of floating point operations (FLOP) for the model
         pipeline_info = OmegaConf.load(os.path.join(exp_dir, "pipeline_info.yaml"))
         chkpt_path = os.path.join(exp_dir, "train", "checkpoints", f"model_best.pt")
         model_chkpt = torch.load(chkpt_path, map_location=torch.device(DEVICE))
         value = model_chkpt["computation_flops"]
         title = "Computation floating point operations"
-        xaxis = "FLOPs"
+        xaxis = "FLOP"
 
     if key in {"num_parameters", "num_params", "num_trainable_params"}:
         # The total number of trainable parameters in the model
@@ -1165,6 +1165,10 @@ def plot_experiment_losses(exp_log_dir, exp_key, exp_plot_dir=None):
     Returns:
     - None
     """
+
+    # Create figure
+    fig, ax = plt.subplots(1, 2, figsize=(10, 8))
+    sns.set_style("whitegrid")
 
     # Store parameters, epochs and losses for plotting
     parameters = []
@@ -1200,6 +1204,11 @@ def plot_experiment_losses(exp_log_dir, exp_key, exp_plot_dir=None):
             exp_param, exp_title, exp_xaxis = experiment_parameter(exp_dir, key=exp_key)
             parameters.append(exp_param)
 
+            # Simply return if dealing with string parameters
+            if isinstance(exp_param, str):
+                return fig, ax
+            # TODO: Find a way to plot something with string parameters
+
         # Skip otherwise
         else:
             continue
@@ -1212,11 +1221,6 @@ def plot_experiment_losses(exp_log_dir, exp_key, exp_plot_dir=None):
     train_baselines = [train_baselines[i] for i in sorted_indices]
     val_losses = [val_losses[i] for i in sorted_indices]
     val_baselines = [val_baselines[i] for i in sorted_indices]
-
-    # Plot all trials/repetitions of the experiment
-    # Create figure
-    fig, ax = plt.subplots(1, 2, figsize=(10, 8))
-    sns.set_style("whitegrid")
 
     # Normalize the exp_param values for colormap
     norm = Normalize(vmin=min(parameters), vmax=max(parameters))
@@ -1414,13 +1418,13 @@ def plot_experiment_summaries(exp_log_dir, exp_key, exp_plot_dir=None):
     axes[2].set_xlabel(exp_xaxis)
     axes[2].set_ylabel("Time (seconds)")
 
-    # FLOPs bar plot
-    axes[3].bar(param_range, computation_flops, color="green", label="FLOPs")
+    # FLOP bar plot
+    axes[3].bar(param_range, computation_flops, color="green", label="FLOP")
     axes[3].set_xticks(param_range)
     axes[3].set_xticklabels(parameters, rotation=90, ha="right", fontsize=6)
-    axes[3].set_title("Model FLOPs")
+    axes[3].set_title("Floating Point Operations (FLOP)")
     axes[3].set_xlabel(exp_xaxis)
-    axes[3].set_ylabel("FLOPs")
+    axes[3].set_ylabel("FLOP")
     axes[3].set_yscale("log")
 
     # Set summary figure title
@@ -1529,6 +1533,12 @@ def plot_experiment_loss_per_dataset(
     It collects information from experiment log directories and loads the losses per dataset.
     It then plots the loss vs. experiment parameter for each dataset.
     """
+
+    # Create figure
+    fig, ax = plt.subplots(figsize=(15, 7))
+    sns.set_style("whitegrid")
+    sns.set_palette("tab10")
+
     # =============== Collect information ===============
     # Create an empty DataFrame to store the losses
     losses = pd.DataFrame(
@@ -1544,8 +1554,13 @@ def plot_experiment_loss_per_dataset(
         # Get experiment directory
         exp_dir = os.path.join(exp_log_dir, file)
 
-        # Experiment parameters
+        # Get parameter values
         exp_param, exp_title, exp_xaxis = experiment_parameter(exp_dir, key=exp_key)
+
+        # Simply return if dealing with string parameters
+        if isinstance(exp_param, str):
+            return fig, ax
+        # TODO: Find a way to plot something with string parameters
 
         # Load losses per dataset
         tmp_df = pd.read_csv(
@@ -1586,11 +1601,6 @@ def plot_experiment_loss_per_dataset(
     num_rows = int(np.ceil(num_datasets / 2))
 
     # =============== Start plotting ===============
-
-    # Plot loss vs. exp_param (comparison)
-    fig, ax = plt.subplots(figsize=(15, 7))
-    sns.set_style("whitegrid")
-    sns.set_palette("tab10")
 
     # Plot loss vs. exp_param for all datasets
     palette = sns.color_palette("tab10", len(losses.index.unique(level="dataset")))
