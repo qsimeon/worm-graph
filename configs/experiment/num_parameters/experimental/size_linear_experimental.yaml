@@ -15,16 +15,16 @@ hydra:
   sweeper:
     params:
       experiment.seed: 0
-      submodule.dataset.train_split_first: choice(false,true)
+      submodule.dataset.experimental_datasets: choice({Kato2015:all,Nichols2017:all,Skora2018:all,Kaplan2020:all,Yemini2021:all,Uzel2022:all,Flavell2023:all,Leifer2023:all})
       submodule.predict.experimental_datasets: choice({Kato2015:worm0,Nichols2017:worm0,Skora2018:worm0,Kaplan2020:worm0,Yemini2021:worm0,Uzel2022:worm0,Flavell2023:worm1,Leifer2023:worm0})
       submodule.analysis.validation.experimental_datasets: choice({Kato2015:all,Nichols2017:all,Skora2018:all,Kaplan2020:all,Yemini2021:all,Uzel2022:all,Flavell2023:all,Leifer2023:all})
 
 submodule:
   
   dataset:
-    # Set path to a directory with a fixed train and validation set
+    # Set path to a directory with a fixed validation set
     use_these_datasets:
-      path: /om2/user/qsimeon/worm-graph/data/combined_AllExperimental
+      path: /om2/user/qsimeon/worm-graph/data/validation_AllExperimental
       num_worms: null
 
     save_datasets: false

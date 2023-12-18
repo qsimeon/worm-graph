@@ -59,7 +59,7 @@ hydra:
 submodule:
   
   dataset:
-    # Set path to a directory with a fixed train and validation set
+    # Set path to a directory with a fixed validation set
     use_these_datasets:
       # This gets overwritten by the sweeper
       path: null
