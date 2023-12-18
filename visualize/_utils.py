@@ -1002,7 +1002,7 @@ def experiment_parameter(exp_dir, key):
             os.path.join(exp_dir, "dataset", "train_dataset_info.csv"),
             converters={"neurons": ast.literal_eval},
         )
-        value = df["combined_dataset_index"].nunique()
+        value = df.shape[0]
         title = "Number of worms in training set"
         xaxis = "Num. worms"
 
