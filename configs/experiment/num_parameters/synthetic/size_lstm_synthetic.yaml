@@ -21,8 +21,9 @@ hydra:
       submodule.predict.experimental_datasets: choice({Sines0000:[worm0, worm1]})
       submodule.analysis.validation.experimental_datasets: choice({Sines0000:all})
       # ###############################################################################################
-      ### SINES ###
+      # ### SINES ###
       # experiment.seed: 0 
+      # submodule.model.hidden_size: choice(8,10,12,16,20,26,33,42,54,68,87,110,140,178,227,288,366,465,590,750,953,1210,1537,1952,2479,3149,3999,5079,6450,8192)
       # submodule.dataset.use_these_datasets.path: /om2/user/qsimeon/worm-graph/data/validation_Sines0000
       # submodule.dataset.experimental_datasets: choice({Sines0000:all})
       # submodule.predict.experimental_datasets: choice({Sines0000:[worm0, worm1]})
@@ -30,6 +31,7 @@ hydra:
       # ###############################################################################################
       ### LORENZ ###
       # experiment.seed: 1 
+      # submodule.model.hidden_size: choice(8,10,12,16,20,26,33,42,54,68,87,110,140,178,227,288,366,465,590,750,953,1210,1537,1952,2479,3149,3999,5079,6450,8192)
       # submodule.dataset.use_these_datasets.path: /om2/user/qsimeon/worm-graph/data/validation_Lorenz0000
       # submodule.dataset.experimental_datasets: choice({Lorenz0000:all})
       # submodule.predict.experimental_datasets: choice({Lorenz0000:worm0})
@@ -37,6 +39,7 @@ hydra:
       # ###############################################################################################
       ### WHITE NOISE ###
       # experiment.seed: 2 
+      # submodule.model.hidden_size: choice(8,10,12,16,20,26,33,42,54,68,87,110,140,178,227,288,366,465,590,750,953,1210,1537,1952,2479,3149,3999,5079,6450,8192)
       # submodule.dataset.use_these_datasets.path: /om2/user/qsimeon/worm-graph/data/validation_WhiteNoise0000
       # submodule.dataset.experimental_datasets: choice({WhiteNoise0000:all})
       # submodule.predict.experimental_datasets: choice({WhiteNoise0000:worm0})
@@ -44,6 +47,7 @@ hydra:
       # ###############################################################################################
       ### RAND WALK ###
       # experiment.seed: 3
+      # submodule.model.hidden_size: choice(8,10,12,16,20,26,33,42,54,68,87,110,140,178,227,288,366,465,590,750,953,1210,1537,1952,2479,3149,3999,5079,6450,8192)
       # submodule.dataset.use_these_datasets.path: /om2/user/qsimeon/worm-graph/data/validation_RandWalk0000
       # submodule.dataset.experimental_datasets: choice({RandWalk0000:all})
       # submodule.predict.experimental_datasets: choice({RandWalk0000:worm0})
@@ -51,6 +55,7 @@ hydra:
       # ###############################################################################################
       ### VAN DER POL ###
       # experiment.seed: 4
+      # submodule.model.hidden_size: choice(8,10,12,16,20,26,33,42,54,68,87,110,140,178,227,288,366,465,590,750,953,1210,1537,1952,2479,3149,3999,5079,6450,8192)
       # submodule.dataset.use_these_datasets.path: /om2/user/qsimeon/worm-graph/data/validation_VanDerPol0000
       # submodule.dataset.experimental_datasets: choice({VanDerPol0000:all})
       # submodule.predict.experimental_datasets: choice({VanDerPol0000:worm0})
