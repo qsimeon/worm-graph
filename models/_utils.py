@@ -138,8 +138,16 @@ class PositionalEncoding(torch.nn.Module):
         Args:
             x: Tensor, shape (batch_size, seq_len, embedding_dim)
         """
-        x = x * math.sqrt(self.d_model)  # DEBUG: is this important?
-        x = x + self.pe[:, : x.size(1), :]  # add positional encoding to input
+        ### DEBUG ###
+        try:
+            x = x * math.sqrt(self.d_model)  # DEBUG: is this important?
+            x = x + self.pe[:, : x.size(1), :]  # add positional encoding to input
+        except Exception as e:
+            logger.info(
+                f"DEBUG (x, d_model, pe): {x.shape, self.d_model, self.pe.shape}"
+            )
+            logger.error(f"The error that occurred: {e}")
+        ### DEBUG ###
         return self.dropout(x)
 
 
