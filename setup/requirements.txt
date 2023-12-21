@@ -1,4 +1,5 @@
 black[jupyter] # uses pip
+datasets # uses pip
 dtaidistance
 fvcore # uses pip
 h5py
@@ -27,7 +28,9 @@ scipy
 seaborn
 spectrum
 statsmodels
+tokenizers # uses pip
 tqdm
+transformers # uses pip
 typing
 typing_extensions
 pyyaml
