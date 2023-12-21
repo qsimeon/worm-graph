@@ -109,21 +109,26 @@ def print_parameters(model, verbose=False):
 
 class PositionalEncoding(torch.nn.Module):
     """
-    Sinuosoidal positional encoding from Attention is All You Need paper.
+    Sinuosoidal positional encoding from Attention is All You Need paper,
+    with the minor modification that we use the first dimension as the batch
+    dimension (i.e. batch_first=True).
     """
 
     def __init__(
         self,
-        n_embd: int,
+        d_model: int,
         max_len: int = 1000,
         dropout: float = 0.1,
     ):
         super().__init__()
+        self.d_model = d_model
         self.max_len = max_len
         self.dropout = torch.nn.Dropout(p=dropout)
         position = torch.arange(max_len).unsqueeze(1)
-        div_term = torch.exp(torch.arange(0, n_embd, 2) * (-math.log(10000.0) / n_embd))
-        pe = torch.zeros(1, max_len, n_embd)  # we use batch_first=True
+        div_term = torch.exp(
+            torch.arange(0, d_model, 2) * (-math.log(10000.0) / d_model)
+        )
+        pe = torch.zeros(1, max_len, d_model)  # we use batch_first=True
         pe[0, :, 0::2] = torch.sin(position * div_term)
         pe[0, :, 1::2] = torch.cos(position * div_term)
         self.register_buffer("pe", pe)
@@ -133,12 +138,14 @@ class PositionalEncoding(torch.nn.Module):
         Args:
             x: Tensor, shape (batch_size, seq_len, embedding_dim)
         """
+        x = x * math.sqrt(self.d_model)  # DEBUG: is this important?
         x = x + self.pe[:, : x.size(1), :]  # add positional encoding to input
         return self.dropout(x)
 
 
 class CausalTransformer(torch.nn.Module):
     """
+    We use a single Transformer Encoder layer as the hidden-hidden model.
     Sets `is_causal=True` in forward method of TransformerEncoderLayer.
     """
 
@@ -765,11 +772,11 @@ class NeuralTransformer(Model):
         logger.info(f"Num. attn. heads {self.n_head}")
         self.dropout = 0.1  # dropout ratedropout=self.dropout,
 
-        # Positional encoding
-        self.positional_encoding = PositionalEncoding(
-            self.input_size,
-            dropout=self.dropout,
-        )
+        # # Positional encoding
+        # self.positional_encoding = PositionalEncoding(
+        #     self.input_size, # if positional_encoding before embedding
+        #     dropout=self.dropout,
+        # )
 
         # Embedding
         self.embedding = torch.nn.Linear(
@@ -777,11 +784,18 @@ class NeuralTransformer(Model):
             self.hidden_size,
         )  # combine input and mask
 
+        # Positional encoding
+        self.positional_encoding = PositionalEncoding(
+            self.hidden_size,  # if positional_encoding after embedding
+            dropout=self.dropout,
+        )
+
         # Input to hidden transformation
         self.input_hidden = torch.nn.Sequential(
-            # NOTE: Positional encoding before embedding improved performance.
-            self.positional_encoding,
+            # # NOTE: Positional encoding before embedding improved performance.
+            # self.positional_encoding,
             self.embedding,
+            self.positional_encoding,  # DEBUG: Is positional_encoding after better?
             torch.nn.ReLU(),
             # NOTE: Do NOT use LayerNorm here!
         )
