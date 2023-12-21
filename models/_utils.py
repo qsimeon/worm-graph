@@ -128,7 +128,7 @@ class PositionalEncoding(torch.nn.Module):
         div_term = torch.exp(
             torch.arange(0, d_model, 2) * (-math.log(10000.0) / d_model)
         )
-        pe = torch.zeros(1, max_len, d_model)  # we use batch_first=True
+        pe = torch.zeros(1, max_len, d_model)  # batch_first=True
         pe[0, :, 0::2] = torch.sin(position * div_term)
         pe[0, :, 1::2] = torch.cos(position * div_term)
         self.register_buffer("pe", pe)
@@ -797,10 +797,10 @@ class NeuralTransformer(Model):
             self.embedding,
             self.positional_encoding,  # DEBUG: Is positional_encoding after better?
             torch.nn.ReLU(),
-            # NOTE: Do NOT use LayerNorm here!
+            # NOTE: Do NOT use LayerNorm here! (it's already in the TransformerEncoderLayer)
         )
 
-        # Hidden to hidden transformation: Transformer Encoder layer
+        # Hidden to hidden transformation: TransformerEncoderLayer
         self.hidden_hidden = CausalTransformer(
             d_model=self.hidden_size,
             nhead=self.n_head,
