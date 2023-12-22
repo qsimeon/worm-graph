@@ -40,7 +40,7 @@ class MASELoss(torch.nn.Module):
             mean_naive_error = torch.tensor(1.0)
         else:  # if sequence
             naive_forecast_errors = torch.abs(target[:, 1:, :] - target[:, :-1, :])
-            mean_naive_error = 1e-8 + torch.mean(
+            mean_naive_error = 1e-16 + torch.mean(
                 naive_forecast_errors, dim=1, keepdim=True
             )  # Average over seq_len
 
@@ -138,16 +138,8 @@ class PositionalEncoding(torch.nn.Module):
         Args:
             x: Tensor, shape (batch_size, seq_len, embedding_dim)
         """
-        ### DEBUG ###
-        try:
-            x = x * math.sqrt(self.d_model)  # DEBUG: is this important?
-            x = x + self.pe[:, : x.size(1), :]  # add positional encoding to input
-        except Exception as e:
-            logger.info(
-                f"DEBUG (x, d_model, pe): {x.shape, self.d_model, self.pe.shape}"
-            )
-            logger.error(f"The error that occurred: {e}")
-        ### DEBUG ###
+        x = x * math.sqrt(self.d_model)  # DEBUG: is this important?
+        x = x + self.pe[:, : x.size(1), :]  # add positional encoding to input
         return self.dropout(x)
 
 
@@ -765,6 +757,9 @@ class NeuralTransformer(Model):
         expansion recoding - which acts as an embedding but is really
         just a linear projection.
         """
+        # NOTE: Transformer only works with even `d_model`
+        hidden_size = hidden_size if hidden_size % 2 == 0 else hidden_size + 1
+        logger.info(f"Changed hidden_size from {hidden_size-1} to {hidden_size}.")
         super(NeuralTransformer, self).__init__(
             input_size,
             hidden_size,
@@ -777,14 +772,8 @@ class NeuralTransformer(Model):
         self.n_head = find_largest_divisor(
             hidden_size
         )  # number of attention heads (NOTE: must be divisor of `hidden_size`)
-        logger.info(f"Num. attn. heads {self.n_head}")
+        logger.info(f"Number of attention heads: {self.n_head}.")
         self.dropout = 0.1  # dropout ratedropout=self.dropout,
-
-        # # Positional encoding
-        # self.positional_encoding = PositionalEncoding(
-        #     self.input_size, # if positional_encoding before embedding
-        #     dropout=self.dropout,
-        # )
 
         # Embedding
         self.embedding = torch.nn.Linear(
@@ -800,7 +789,6 @@ class NeuralTransformer(Model):
 
         # Input to hidden transformation
         self.input_hidden = torch.nn.Sequential(
-            # # NOTE: Positional encoding before embedding improved performance.
             # self.positional_encoding,
             self.embedding,
             self.positional_encoding,  # DEBUG: Is positional_encoding after better?
