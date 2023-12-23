@@ -81,6 +81,7 @@ submodule:
       WhiteNoise0000: null
       RandWalk0000: null
       VanDerPol0000: null
+      Shakespeare0000: null
 
     num_named_neurons: null
     num_train_samples: 64
@@ -107,6 +108,7 @@ submodule:
       WhiteNoise0000: null
       RandWalk0000: null
       VanDerPol0000: null
+      Shakespeare0000: null
     # Number of time steps to generate
     nb_ts_to_generate: null
     # Set to the same value as submodule.dataset.seq_len
@@ -122,6 +124,7 @@ submodule:
         WhiteNoise0000: null
         RandWalk0000: null
         VanDerPol0000: null
+        Shakespeare0000: null
 
 experiment:
   key: num_parameters
