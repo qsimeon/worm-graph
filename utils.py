@@ -74,6 +74,7 @@ SYNTHETIC_DATASETS = (
         "WhiteNoise0000",
         "RandWalk0000",
         "VanDerPol0000",
+        "Shakespeare0000",
     }
 )
 

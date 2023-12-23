@@ -14,11 +14,11 @@ hydra:
   mode: MULTIRUN
   sweeper:
     params:
-      experiment.seed: 0 
+      experiment.seed: 5
       submodule.model.hidden_size: choice(8,10,12,16,20,26,34,42,54,68,88,110,140,178,228,288,366,466,590,750,954,1210,1538,1952,2480,3150,4000,5080,6450,8192)
-      submodule.dataset.experimental_datasets: choice({Sines0000:all})
-      submodule.predict.experimental_datasets: choice({Sines0000:[worm0, worm1]})
-      submodule.analysis.validation.experimental_datasets: choice({Sines0000:all})
+      submodule.dataset.experimental_datasets: choice({Shakespeare0000:all})
+      submodule.predict.experimental_datasets: choice({Shakespeare0000:worm0})
+      submodule.analysis.validation.experimental_datasets: choice({Shakespeare0000:all})
       # ###############################################################################################
       # ### SINES ###
       # experiment.seed: 0 
@@ -55,6 +55,13 @@ hydra:
       # submodule.predict.experimental_datasets: choice({VanDerPol0000:worm0})
       # submodule.analysis.validation.experimental_datasets: choice({VanDerPol0000:all})
       # ###############################################################################################
+      ### SHAKESPEARE ###
+      # experiment.seed: 5
+      # submodule.model.hidden_size: choice(8,10,12,16,20,26,34,42,54,68,88,110,140,178,228,288,366,466,590,750,954,1210,1538,1952,2480,3150,4000,5080,6450,8192)
+      # submodule.dataset.experimental_datasets: choice({Shakespeare0000:all})
+      # submodule.predict.experimental_datasets: choice({Shakespeare0000:worm0})
+      # submodule.analysis.validation.experimental_datasets: choice({Shakespeare0000:all})
+      # ###############################################################################################
 
 submodule:
   
@@ -74,6 +81,7 @@ submodule:
       WhiteNoise0000: null
       RandWalk0000: null
       VanDerPol0000: null
+      Shakespeare0000: null
 
     num_named_neurons: null
     num_train_samples: 64
@@ -100,6 +108,7 @@ submodule:
       WhiteNoise0000: null
       RandWalk0000: null
       VanDerPol0000: null
+      Shakespeare0000: null
     # Number of time steps to generate
     nb_ts_to_generate: null
     # Set to the same value as submodule.dataset.seq_len
@@ -115,6 +124,7 @@ submodule:
         WhiteNoise0000: null
         RandWalk0000: null
         VanDerPol0000: null
+        Shakespeare0000: null
 
 experiment:
   key: num_parameters
