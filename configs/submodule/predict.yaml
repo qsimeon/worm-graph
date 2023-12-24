@@ -14,6 +14,7 @@ predict:
     # WhiteNoise0000: worm0
     # RandWalk0000: worm0
     # VanDerPol0000: worm0
+    # Shakespeare0000: worm0
     Kato2015: worm0
     Nichols2017: worm0
     Skora2018: worm0

@@ -15,6 +15,7 @@ analysis:
       # WhiteNoise0000: 10
       # RandWalk0000: 10
       # VanDerPol0000: 10
+      # Shakespeare0000: 10
       Kato2015: 10
       Nichols2017: 10
       Skora2018: 10
