@@ -576,31 +576,16 @@ class Model(torch.nn.Module):
             input = input[
                 :, :context_window, :
             ]  # shape (batch_size, context_window, neurons)
-            # ### DEBUG ###
-            # # Create a normalizer for the input
-            # normalizer = torch.nn.LayerNorm(context_window, elementwise_affine=False)
-            # ### DEBUG ###
 
         # Otherwise defaults to ground-truth feeding
         generated_values = []
-        # with torch.no_grad(): # DEBUG
+
         # Loop through time
         for t in range(num_new_timesteps):
             # Get the last context_window values of the input tensor
             x = input[
                 :, t : context_window + t, :
             ]  # shape (batch_size, context_window, neurons)
-            # ### DEBUG ###
-            # if autoregressive and t > 0:
-            #     # Normalize the input along the temporal dimension
-            #     x = normalizer(
-            #         x.view(
-            #             -1,
-            #             self.input_size,
-            #             context_window,
-            #         )
-            #     ).view(-1, context_window, self.input_size)
-            # ### DEBUG ###
 
             # Get predictions
             predictions = self(x, mask)  # shape (batch_size, context_window, neurons)
@@ -622,6 +607,56 @@ class Model(torch.nn.Module):
         )  # shape (batch_size, num_new_timesteps, neurons)
 
         return generated_tensor
+
+    @torch.no_grad()
+    def transformer_generate(
+        self,
+        idx: torch.LongTensor,
+        max_new_tokens: int,
+        mask: torch.Tensor,
+        embedding: torch.nn.Module,
+        temperature=1.0,
+        top_k=None,
+    ):
+        """
+        Special generate method for the Transformer model.
+        Take a conditioning sequence of indices idx (LongTensor of shape (b,t)) and complete
+        the sequence max_new_tokens times, feeding the predictions back into the model each time.
+        Since we trained the model to directly predict the next token we take the index as the argmin
+        over the distance between the output and the embedding table.
+        """
+        MAX_TOKEN_LEN = 100  # DEBUG: set equal to seq_len for now
+
+        # Set model to evaluation mode
+        self.eval()
+
+        # Place embedding table on the same device as idx
+        embedding = embedding.to(idx.device)
+
+        # Loop through time
+        for _ in range(max_new_tokens):
+            # if the sequence context is growing too long we must crop it at block_size
+            idx_cond = idx if idx.size(1) <= MAX_TOKEN_LEN else idx[:, -MAX_TOKEN_LEN:]
+            # get appropriate input for the model based on idx
+            input = embedding(idx_cond)  # shape (batch_size, seq_len, neurons)
+            mask = mask.to(input.device)
+            # forward the model to get the output
+            outputs = self(input, mask)
+            # we only care about the last time step
+            outputs = outputs[:, -1, :]
+            # print(
+            #     f"outputs.shape: {outputs.shape}\nembedding.weight: {embedding.weight.shape}"
+            # ) # DEBUG
+            # Compute the Euclidean distances between output and embedding table
+            distances = torch.norm(outputs - embedding.weight, dim=1)
+            # print(f"distances: {distances.shape}")  # DEBUG
+            # Find the index of the minimizer
+            idx_next = torch.argmin(distances).view(1, 1)
+            # print(f"idx: {idx.shape}\nidx_next: {idx_next.shape}") # DEBUG
+            # append sampled index to the running sequence and continue
+            idx = torch.cat((idx, idx_next), dim=1)
+
+        return idx
 
     def sample(self, num_new_timesteps: int):
         """
@@ -789,8 +824,14 @@ class NeuralTransformer(Model):
         just a linear projection.
         """
         # NOTE: Transformer only works with even `d_model`
-        hidden_size = hidden_size if hidden_size % 2 == 0 else hidden_size + 1
-        logger.info(f"Changed hidden_size from {hidden_size-1} to {hidden_size}.")
+        if hidden_size % 2 != 0:
+            logger.info(f"Changing hidden_size from {hidden_size} to {hidden_size+1}.")
+            hidden_size = hidden_size + 1
+        else:
+            logger.info(f"Using hidden_size: {hidden_size}.")
+            hidden_size = hidden_size
+
+        # Initialize super class
         super(NeuralTransformer, self).__init__(
             input_size,
             hidden_size,
@@ -820,7 +861,6 @@ class NeuralTransformer(Model):
 
         # Input to hidden transformation
         self.input_hidden = torch.nn.Sequential(
-            # self.positional_encoding,
             self.embedding,
             self.positional_encoding,  # DEBUG: Is positional_encoding after better?
             torch.nn.ReLU(),
@@ -840,52 +880,6 @@ class NeuralTransformer(Model):
 
     def init_hidden(self, input_shape=None):
         return None
-
-    @torch.no_grad()
-    def transformer_generate(
-        self,
-        idx: torch.LongTensor,
-        max_new_tokens: int,
-        mask: torch.Tensor,
-        embedding: torch.nn.Module,
-        temperature=1.0,
-        top_k=None,
-    ):
-        """
-        Special generate method for the Transformer model.
-        Take a conditioning sequence of indices idx (LongTensor of shape (b,t)) and complete
-        the sequence max_new_tokens times, feeding the predictions back into the model each time.
-        Most likely you'll want to make sure to be in model.eval() mode of operation for this.
-        """
-        # Set model to evaluation mode
-        self.eval()
-
-        # Place embedding table on the same device as idx
-        embedding = embedding.to(idx.device)
-
-        # Loop through time
-        for _ in range(max_new_tokens):
-            # if the sequence context is growing too long we must crop it at block_size
-            idx_cond = idx if idx.size(1) <= MAX_TOKEN_LEN else idx[:, -MAX_TOKEN_LEN:]
-            # get appropriate input for the model based on idx
-            input = embedding(idx_cond)  # shape (batch_size, seq_len, neurons)
-            mask = mask.to(input.device)
-            # forward the model to get the logits for the index in the sequence
-            logits = self(input, mask)
-            # pluck the logits at the final step and scale by desired temperature
-            logits = logits[:, -1, :] / temperature
-            # optionally crop the logits to only the top k options
-            if top_k is not None:
-                v, _ = torch.topk(logits, min(top_k, logits.size(-1)))
-                logits[logits < v[:, [-1]]] = -float("Inf")
-            # apply softmax to convert logits to (normalized) probabilities
-            probs = torch.nn.functional.softmax(logits, dim=-1)
-            # sample from the distribution
-            idx_next = torch.multinomial(probs, num_samples=1)
-            # append sampled index to the running sequence and continue
-            idx = torch.cat((idx, idx_next), dim=1)
-
-        return idx
 
 
 class NetworkCTRNN(Model):
