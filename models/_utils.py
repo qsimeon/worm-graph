@@ -842,7 +842,7 @@ class NeuralTransformer(Model):
         return None
 
     @torch.no_grad()
-    def generate(
+    def transformer_generate(
         self,
         idx: torch.LongTensor,
         max_new_tokens: int,
