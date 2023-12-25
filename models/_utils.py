@@ -169,6 +169,7 @@ class PositionalEncoding(torch.nn.Module):
         Args:
             x: Tensor, shape (batch_size, seq_len, embedding_dim)
         """
+        # in original transformer model the embedding is multiplied by sqrt(d_model)
         x = x * math.sqrt(self.d_model)  # DEBUG: is this important?
         x = x + self.pe[:, : x.size(1), :]  # add positional encoding to input
         return self.dropout(x)
@@ -379,7 +380,6 @@ class Model(torch.nn.Module):
             self.loss = MASELoss
         else:
             self.loss = torch.nn.MSELoss
-
         # Name of original loss function
         self.loss_name = self.loss.__name__[:-4]
         # Setup
@@ -408,10 +408,8 @@ class Model(torch.nn.Module):
         self.inner_hidden_model = InnerHiddenModel(self.hidden_hidden, self.hidden)
         # Linear readout
         self.linear = torch.nn.Linear(self.hidden_size, self.output_size)
-        ### DEBUG ###
         # Optional layer normalization
         self.layer_norm = torch.nn.LayerNorm(self.hidden_size, elementwise_affine=True)
-        ### DEBUG ###
         # Initialize weights
         self._init_weights()
 
@@ -424,7 +422,7 @@ class Model(torch.nn.Module):
         # Initialize the readout bias
         torch.nn.init.zeros_(self.linear.bias)
         # Initialize the readout weights
-        # torch.nn.init.zeros_(self.linear.weight)
+        # torch.nn.init.zeros_(self.linear.weight) # Zero Initialization
         torch.nn.init.xavier_uniform_(self.linear.weight)  # Xavier Initialization
         # torch.nn.init.kaiming_uniform_(self.linear.weight, nonlinearity='relu') # He Initialization
         return None
