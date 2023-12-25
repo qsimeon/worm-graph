@@ -608,56 +608,6 @@ class Model(torch.nn.Module):
 
         return generated_tensor
 
-    @torch.no_grad()
-    def transformer_generate(
-        self,
-        idx: torch.LongTensor,
-        max_new_tokens: int,
-        mask: torch.Tensor,
-        embedding: torch.nn.Module,
-        temperature=1.0,
-        top_k=None,
-    ):
-        """
-        Special generate method for the Transformer model.
-        Take a conditioning sequence of indices idx (LongTensor of shape (b,t)) and complete
-        the sequence max_new_tokens times, feeding the predictions back into the model each time.
-        Since we trained the model to directly predict the next token we take the index as the argmin
-        over the distance between the output and the embedding table.
-        """
-        MAX_TOKEN_LEN = 100  # DEBUG: set equal to seq_len for now
-
-        # Set model to evaluation mode
-        self.eval()
-
-        # Place embedding table on the same device as idx
-        embedding = embedding.to(idx.device)
-
-        # Loop through time
-        for _ in range(max_new_tokens):
-            # if the sequence context is growing too long we must crop it at block_size
-            idx_cond = idx if idx.size(1) <= MAX_TOKEN_LEN else idx[:, -MAX_TOKEN_LEN:]
-            # get appropriate input for the model based on idx
-            input = embedding(idx_cond)  # shape (batch_size, seq_len, neurons)
-            mask = mask.to(input.device)
-            # forward the model to get the output
-            outputs = self(input, mask)
-            # we only care about the last time step
-            outputs = outputs[:, -1, :]
-            # print(
-            #     f"outputs.shape: {outputs.shape}\nembedding.weight: {embedding.weight.shape}"
-            # ) # DEBUG
-            # Compute the Euclidean distances between output and embedding table
-            distances = torch.norm(outputs - embedding.weight, dim=1)
-            # print(f"distances: {distances.shape}")  # DEBUG
-            # Find the index of the minimizer
-            idx_next = torch.argmin(distances).view(1, 1)
-            # print(f"idx: {idx.shape}\nidx_next: {idx_next.shape}") # DEBUG
-            # append sampled index to the running sequence and continue
-            idx = torch.cat((idx, idx_next), dim=1)
-
-        return idx
-
     def sample(self, num_new_timesteps: int):
         """
         Sample spontaneous neural activity from the model.
