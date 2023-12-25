@@ -1132,7 +1132,7 @@ def experiment_parameter(exp_dir, key):
         # The computation time in seconds for the last epoch
         pipeline_info = OmegaConf.load(os.path.join(exp_dir, "pipeline_info.yaml"))
         chkpt_path = os.path.join(exp_dir, "train", "checkpoints", f"model_best.pt")
-        model_chkpt = torch.load(chkpt_path, map_location=torch.device(DEVICE))
+        model_chkpt = torch.load(chkpt_path, map_location=DEVICE)
         value = model_chkpt["time_last_epoch"]  # TODO: Fix! should be `time_last_epoch`
         title = "Computation time of last epoch"
         xaxis = "Time (s)"
@@ -1141,7 +1141,7 @@ def experiment_parameter(exp_dir, key):
         # The number of floating point operations (FLOP) for the model
         pipeline_info = OmegaConf.load(os.path.join(exp_dir, "pipeline_info.yaml"))
         chkpt_path = os.path.join(exp_dir, "train", "checkpoints", f"model_best.pt")
-        model_chkpt = torch.load(chkpt_path, map_location=torch.device(DEVICE))
+        model_chkpt = torch.load(chkpt_path, map_location=DEVICE)
         value = model_chkpt["computation_flops"]
         title = "Computation floating point operations"
         xaxis = "FLOP"
@@ -1150,7 +1150,7 @@ def experiment_parameter(exp_dir, key):
         # The total number of trainable parameters in the model
         pipeline_info = OmegaConf.load(os.path.join(exp_dir, "pipeline_info.yaml"))
         chkpt_path = os.path.join(exp_dir, "train", "checkpoints", f"model_best.pt")
-        model_chkpt = torch.load(chkpt_path, map_location=torch.device(DEVICE))
+        model_chkpt = torch.load(chkpt_path, map_location=DEVICE)
         value = model_chkpt["num_trainable_params"]
         title = "Number of trainable parameters"
         xaxis = "Num. trainable parameters"
@@ -1355,7 +1355,7 @@ def plot_experiment_summaries(exp_log_dir, exp_key, exp_plot_dir=None):
             df = pd.read_csv(metrics_csv)
 
             # Model achieving minimum validation loss
-            best_model = torch.load(best_model_ckpt, map_location=torch.device(DEVICE))
+            best_model = torch.load(best_model_ckpt, map_location=DEVICE)
 
             # Store all summary statistics to be plotted
             train_losses.append(df["train_loss"].min())

@@ -77,6 +77,37 @@ def find_largest_divisor(hidden_size):
     return 1
 
 
+def load_model_from_checkpoint(checkpoint_path):
+    """
+    Load a model from a checkpoint file.
+
+    Args:
+        checkpoint_path (str): The path to the checkpoint file.
+
+    Returns:
+        model: The loaded model.
+    """
+    if not os.path.isabs(checkpoint_path):
+        checkpoint_path = os.path.join(ROOT_DIR, checkpoint_path)
+    checkpoint = torch.load(checkpoint_path, map_location=DEVICE)
+    model_name = checkpoint["model_name"]
+    input_size = checkpoint["input_size"]
+    hidden_size = checkpoint["hidden_size"]
+    loss_name = checkpoint["loss_name"]
+    fft_reg_param = checkpoint["fft_reg_param"]
+    l1_reg_param = checkpoint["l1_reg_param"]
+    model_state_dict = checkpoint["model_state_dict"]
+    model = eval(model_name)(
+        input_size,
+        hidden_size,
+        loss=loss_name,
+        fft_reg_param=fft_reg_param,
+        l1_reg_param=l1_reg_param,
+    ).to(DEVICE)
+    model.load_state_dict(model_state_dict)
+    return model
+
+
 def print_parameters(model, verbose=False):
     table = PrettyTable(["Module", "Parameters", "Trainable"])
 
@@ -507,11 +538,12 @@ class Model(torch.nn.Module):
 
         return loss
 
+    @torch.no_grad()
     def generate(
         self,
         input: torch.Tensor,
         mask: torch.Tensor,
-        nb_ts_to_generate: int,
+        num_new_timesteps: int,
         context_window: int,
         autoregressive: bool = True,
     ):
@@ -524,7 +556,7 @@ class Model(torch.nn.Module):
             Input data with shape (batch_size, seq_len, neurons)
         mask : torch.Tensor
             Mask on the neurons with shape (batch_size, neurons)
-        nb_ts_to_generate : int
+        num_new_timesteps : int
             Number of time steps to generate
         context_window : int
             Number of time steps to use as context
@@ -532,8 +564,9 @@ class Model(torch.nn.Module):
         Returns
         -------
         generated_tensor : torch.Tensor
-            Generated data with shape (nb_ts_to_generate, neurons)
+            Generated data with shape (num_new_timesteps, neurons)
         """
+        # TODO: Need to fix this.
 
         # Set model to evaluation mode
         self.eval()
@@ -543,56 +576,54 @@ class Model(torch.nn.Module):
             input = input[
                 :, :context_window, :
             ]  # shape (batch_size, context_window, neurons)
-            ### DEBUG ###
-            # Create a normalizer for the input
-            normalizer = torch.nn.LayerNorm(context_window, elementwise_affine=False)
-            ### DEBUG ###
+            # ### DEBUG ###
+            # # Create a normalizer for the input
+            # normalizer = torch.nn.LayerNorm(context_window, elementwise_affine=False)
+            # ### DEBUG ###
 
         # Otherwise defaults to ground-truth feeding
         generated_values = []
-        with torch.no_grad():
-            # Loop through time
-            for t in range(nb_ts_to_generate):
-                # Get the last context_window values of the input tensor
-                x = input[
-                    :, t : context_window + t, :
-                ]  # shape (batch_size, context_window, neurons)
-                ### DEBUG ###
-                if autoregressive and t > 0:
-                    # Normalize the input along the temporal dimension
-                    x = normalizer(
-                        x.view(
-                            -1,
-                            self.input_size,
-                            context_window,
-                        )
-                    ).view(-1, context_window, self.input_size)
-                ### DEBUG ###
+        # with torch.no_grad(): # DEBUG
+        # Loop through time
+        for t in range(num_new_timesteps):
+            # Get the last context_window values of the input tensor
+            x = input[
+                :, t : context_window + t, :
+            ]  # shape (batch_size, context_window, neurons)
+            # ### DEBUG ###
+            # if autoregressive and t > 0:
+            #     # Normalize the input along the temporal dimension
+            #     x = normalizer(
+            #         x.view(
+            #             -1,
+            #             self.input_size,
+            #             context_window,
+            #         )
+            #     ).view(-1, context_window, self.input_size)
+            # ### DEBUG ###
 
-                # Get predictions
-                predictions = self(
-                    x, mask
-                )  # shape (batch_size, context_window, neurons)
+            # Get predictions
+            predictions = self(x, mask)  # shape (batch_size, context_window, neurons)
 
-                # Get last predicted value
-                last_time_step = predictions[:, -1, :].unsqueeze(
-                    0
-                )  # shape (batch_size, 1, neurons)
+            # Get last predicted value
+            last_time_step = predictions[:, -1, :].unsqueeze(
+                0
+            )  # shape (batch_size, 1, neurons)
 
-                # Append the prediction to the generated_values list and input tensor
-                generated_values.append(last_time_step)
-                input = torch.cat(
-                    (input, last_time_step), dim=1
-                )  # add the prediction to the input tensor
+            # Append the prediction to the generated_values list and input tensor
+            generated_values.append(last_time_step)
+            input = torch.cat(
+                (input, last_time_step), dim=1
+            )  # add the prediction to the input tensor
 
         # Stack the generated values to a tensor
         generated_tensor = torch.cat(
             generated_values, dim=1
-        )  # shape (batch_size, nb_ts_to_generate, neurons)
+        )  # shape (batch_size, num_new_timesteps, neurons)
 
         return generated_tensor
 
-    def sample(self, nb_ts_to_sample: int):
+    def sample(self, num_new_timesteps: int):
         """
         Sample spontaneous neural activity from the model.
         TODO: Figure out how to use diffusion models to do this.
@@ -811,17 +842,36 @@ class NeuralTransformer(Model):
         return None
 
     @torch.no_grad()
-    def generate(self, idx, max_new_tokens, temperature=1.0, top_k=None):
+    def generate(
+        self,
+        idx: torch.LongTensor,
+        max_new_tokens: int,
+        mask: torch.Tensor,
+        embedding: torch.nn.Module,
+        temperature=1.0,
+        top_k=None,
+    ):
         """
+        Special generate method for the Transformer model.
         Take a conditioning sequence of indices idx (LongTensor of shape (b,t)) and complete
         the sequence max_new_tokens times, feeding the predictions back into the model each time.
         Most likely you'll want to make sure to be in model.eval() mode of operation for this.
         """
+        # Set model to evaluation mode
+        self.eval()
+
+        # Place embedding table on the same device as idx
+        embedding = embedding.to(idx.device)
+
+        # Loop through time
         for _ in range(max_new_tokens):
             # if the sequence context is growing too long we must crop it at block_size
             idx_cond = idx if idx.size(1) <= MAX_TOKEN_LEN else idx[:, -MAX_TOKEN_LEN:]
+            # get appropriate input for the model based on idx
+            input = embedding(idx_cond)  # shape (batch_size, seq_len, neurons)
+            mask = mask.to(input.device)
             # forward the model to get the logits for the index in the sequence
-            logits, _ = self(idx_cond)
+            logits = self(input, mask)
             # pluck the logits at the final step and scale by desired temperature
             logits = logits[:, -1, :] / temperature
             # optionally crop the logits to only the top k options

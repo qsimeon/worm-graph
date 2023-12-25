@@ -110,7 +110,7 @@ submodule:
       VanDerPol0000: null
       Shakespeare0000: null
     # Number of time steps to generate
-    nb_ts_to_generate: null
+    num_new_timesteps: null
     # Set to the same value as submodule.dataset.seq_len
     context_window: 100 
 

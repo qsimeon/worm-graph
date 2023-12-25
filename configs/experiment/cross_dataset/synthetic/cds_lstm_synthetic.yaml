@@ -67,7 +67,7 @@ submodule:
       RandWalk0000: worm0
       VanDerPol0000: worm0
     # Number of time steps to generate
-    nb_ts_to_generate: null
+    num_new_timesteps: null
     context_window: 100
 
   analysis:

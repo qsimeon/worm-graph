@@ -71,7 +71,7 @@ submodule:
       Flavell2023: null # something is wrong with worm0 in Flavell2023
       Leifer2023: null
     # Number of time steps to generate
-    nb_ts_to_generate: null
+    num_new_timesteps: null
     # Set to the same value as submodule.dataset.seq_len
     context_window: 100
 

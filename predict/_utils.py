@@ -81,14 +81,13 @@ def model_predict(
         # Get the train split (first half of neural activity)
         train_data_splits = data_splits[::2]
         train_time_vec_splits = time_vec_splits[::2]
-        # nb_ts_to_generate=train_data_splits[0].shape[0] - context_window
-        nb_ts_to_generate = 2 * context_window
+        num_new_timesteps = 2 * context_window
         # Predictions (GT and AR) using the first TRAIN split
         gt_generated_activity_train = (
             model.generate(
                 input=train_data_splits[0].unsqueeze(0).to(DEVICE),
                 mask=neurons_mask.unsqueeze(0).to(DEVICE),
-                nb_ts_to_generate=nb_ts_to_generate,
+                num_new_timesteps=num_new_timesteps,
                 context_window=context_window,
                 autoregressive=False,
             )
@@ -101,7 +100,7 @@ def model_predict(
             model.generate(
                 input=train_data_splits[0].unsqueeze(0).to(DEVICE),
                 mask=neurons_mask.unsqueeze(0).to(DEVICE),
-                nb_ts_to_generate=nb_ts_to_generate,
+                num_new_timesteps=num_new_timesteps,
                 context_window=context_window,
                 autoregressive=True,
             )
@@ -122,7 +121,7 @@ def model_predict(
         result_df = prediction_dataframe_parser(
             x=train_data_splits[0],
             context_window=context_window,
-            nb_ts_to_generate=nb_ts_to_generate,
+            num_new_timesteps=num_new_timesteps,
             gt_generated_activity=gt_generated_activity_train,
             auto_reg_generated_activity=auto_reg_generated_activity_train,
         )
@@ -151,14 +150,13 @@ def model_predict(
         # Get the validation split (second half of neural activity)
         val_data_splits = data_splits[1::2]
         val_time_vec_splits = time_vec_splits[1::2]
-        # nb_ts_to_generate=val_data_splits[0].shape[0] - context_window
-        nb_ts_to_generate = 2 * context_window
+        num_new_timesteps = 2 * context_window
         # Predictions (GT and AR) using the first VALIDATION split
         gt_generated_activity_val = (
             model.generate(
                 input=val_data_splits[0].unsqueeze(0).to(DEVICE),
                 mask=neurons_mask.unsqueeze(0).to(DEVICE),
-                nb_ts_to_generate=nb_ts_to_generate,
+                num_new_timesteps=num_new_timesteps,
                 context_window=context_window,
                 autoregressive=False,
             )
@@ -171,7 +169,7 @@ def model_predict(
             model.generate(
                 input=val_data_splits[0].unsqueeze(0).to(DEVICE),
                 mask=neurons_mask.unsqueeze(0).to(DEVICE),
-                nb_ts_to_generate=nb_ts_to_generate,
+                num_new_timesteps=num_new_timesteps,
                 context_window=context_window,
                 autoregressive=True,
             )
@@ -192,7 +190,7 @@ def model_predict(
         result_df = prediction_dataframe_parser(
             x=val_data_splits[0],
             context_window=context_window,
-            nb_ts_to_generate=nb_ts_to_generate,
+            num_new_timesteps=num_new_timesteps,
             gt_generated_activity=gt_generated_activity_val,
             auto_reg_generated_activity=auto_reg_generated_activity_val,
         )
@@ -221,7 +219,7 @@ def model_predict(
 def prediction_dataframe_parser(
     x,
     context_window,
-    nb_ts_to_generate,
+    num_new_timesteps,
     gt_generated_activity,
     auto_reg_generated_activity,
 ):
@@ -229,7 +227,7 @@ def prediction_dataframe_parser(
         x[: context_window + 1, :].detach().cpu().numpy()
     )  # +1 for plot continuity
     ground_truth_activity = (
-        x[context_window : context_window + nb_ts_to_generate, :].detach().cpu().numpy()
+        x[context_window : context_window + num_new_timesteps, :].detach().cpu().numpy()
     )
 
     # Convert each tensor into a DataFrame and add type level
