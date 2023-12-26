@@ -2,3 +2,4 @@
 data/processed/** filter=lfs diff=lfs merge=lfs -text
 data/processed/connectome/graph_tensors.pt filter=lfs diff=lfs merge=lfs -text
 data/worm_data_short.csv filter=lfs diff=lfs merge=lfs -text
+models/shakespeare_transformer.pt filter=lfs diff=lfs merge=lfs -text
