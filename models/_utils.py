@@ -829,6 +829,9 @@ class NeuralTransformer(Model):
     def init_hidden(self, input_shape=None):
         return None
 
+    def loss_fn(self):
+        return torch.nn.CrossEntropyLoss()
+
 
 class NetworkCTRNN(Model):
     """
