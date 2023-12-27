@@ -449,7 +449,7 @@ class Model(torch.nn.Module):
     @torch.autocast(device_type=DEVICE.type, dtype=torch.half)
     def forward(self, input: torch.Tensor, mask: torch.Tensor):
         """
-        Forward method for simple linear regression model.
+        Common forward method for all models.
 
         Parameters
         ----------
@@ -466,10 +466,8 @@ class Model(torch.nn.Module):
         mask = mask.unsqueeze(1).expand_as(input)
         # multiply input by the mask
         input = self.identity(input * mask)
-        # transform the input
-        input_hidden_out = self.input_hidden(input)
-        # concatenate into a single latent
-        latent_out = input_hidden_out
+        # transform the input into a latent
+        latent_out = self.input_hidden(input)
         # transform the latent
         hidden_out = self.inner_hidden_model(latent_out)
         # perform a linear readout to get the output
@@ -795,11 +793,15 @@ class NeuralTransformer(Model):
         logger.info(f"Number of attention heads: {self.n_head}.")
         self.dropout = 0.1  # dropout ratedropout=self.dropout,
 
-        # Embedding
-        self.embedding = torch.nn.Linear(
-            self.input_size,
-            self.hidden_size,
-        )  # combine input and mask
+        ## >>> DEBUG: modifications for new token mode >>> ###
+        self.n_token = 1024  # number of tokens used to approximate the rich neural data
+        self.output_size = self.n_token
+        self.rand_proj = torch.randn(
+            self.n_token, self.input_size, requires_grad=False
+        )  # random projection matrix
+        self.embedding = torch.nn.Embedding(
+            self.n_token, self.hidden_size
+        )  # lookup table
 
         # Positional encoding
         self.positional_encoding = PositionalEncoding(
@@ -809,11 +811,34 @@ class NeuralTransformer(Model):
 
         # Input to hidden transformation
         self.input_hidden = torch.nn.Sequential(
-            self.embedding,
-            self.positional_encoding,  # DEBUG: Is positional_encoding after better?
-            torch.nn.ReLU(),
-            # NOTE: Do NOT use LayerNorm here! (it's already in the TransformerEncoderLayer)
+            self.positional_encoding,
         )
+
+        # Linear readout
+        self.linear = torch.nn.Linear(self.hidden_size, self.n_token)
+        ### <<< DEBUG: modifications for new token mode <<< ###
+
+        ############################################################
+        # # Embedding
+        # self.embedding = torch.nn.Linear(
+        #     self.input_size,
+        #     self.hidden_size,
+        # )  # combine input and mask
+
+        # # Positional encoding
+        # self.positional_encoding = PositionalEncoding(
+        #     self.hidden_size,  # if positional_encoding after embedding
+        #     dropout=self.dropout,
+        # )
+
+        # # Input to hidden transformation
+        # self.input_hidden = torch.nn.Sequential(
+        #     self.embedding,
+        #     self.positional_encoding,  # DEBUG: Is positional_encoding after better?
+        #     torch.nn.ReLU(),
+        #     # NOTE: Do NOT use LayerNorm here! (it's already in the TransformerEncoderLayer)
+        # )
+        ############################################################
 
         # Hidden to hidden transformation: TransformerEncoderLayer
         self.hidden_hidden = CausalTransformer(
@@ -829,8 +854,101 @@ class NeuralTransformer(Model):
     def init_hidden(self, input_shape=None):
         return None
 
+    ### >>> DEBUG: method needed for new token mode >>> ###
+    def tokenize_neural_data(self, neural_sequence: torch.Tensor):
+        """
+        Convert the high-dimensional sequence of neural states to a 1-D sequence of tokens.
+        Args:
+            neural_sequence: tensor of shape (batch_size, seq_len, input_size)
+        Output:
+            token_sequence: tensor of shape (batch_size, seq_len)
+        """
+        # Step 1: Calculate the distances
+        # Reshape input_sequence and self.matrix for broadcasting
+        # New shapes: input_sequence: (1, seq_len, 1, feature_dim), self.matrix: (1, 1, num_embeddings, feature_dim)
+        neural_sequence_expanded = neural_sequence.unsqueeze(2)
+        matrix_expanded = self.rand_proj.unsqueeze(0).unsqueeze(0)
+        # Step 2: Broadcasting and computing the Euclidean distance
+        distances = torch.norm(neural_sequence_expanded - matrix_expanded, dim=3)
+        # Step 3: Finding the minimum indices along the num_embeddings dimension
+        # distances shape: (1, seq_len, num_embeddings)
+        token_sequence = torch.LongTensor(
+            distances.argmin(dim=2)
+        )  # should be a batch of token sequences
+        print(
+            f"tokenized \token_sequence.shape: {token_sequence.shape}", end="\n\n"
+        )  # DEBUG
+        # Return the tokenized sequence
+        return token_sequence
+
+    ### <<< DEBUG: method needed for new token mode <<< ###
+
+    ### >>> DEBUG: modified forward method for new token mode >>> ###
+    @torch.autocast(device_type=DEVICE.type, dtype=torch.half)
+    def forward(self, input: torch.Tensor, mask: torch.Tensor):
+        # initialize hidden state
+        self.hidden = self.init_hidden(input.shape)
+        # set hidden state of internal model
+        self.inner_hidden_model.set_hidden(self.hidden)
+        # recast the mask to the input type and shape
+        mask = mask.unsqueeze(1).expand_as(input)
+        # multiply input by the mask
+        input = self.identity(input * mask)
+
+        ### >>> DEBUG: additional steps for new token mode >>> ###
+        print(f"neural \tinput.shape: {input.shape}", end="\n\n")  # DEBUG
+        # Convert the high-dimensional sequence of neural states to a 1-D sequence of tokens
+        input = self.tokenize_neural_data(input)
+        print(f"tokenized \tinput.shape: {input.shape}", end="\n\n")  # DEBUG
+        # Embed the tokens using the embedding lookup table
+        input = self.embedding(input)
+        print(f"embedded \tinput.shape: {input.shape}", end="\n\n")  # DEBUG
+        ### <<< DEBUG: additional steps for new token mode <<<  ###
+
+        # transform the input into a latent
+        latent_out = self.input_hidden(input)
+        print(
+            f"pos.encoded \tlatent_out.shape: {latent_out.shape}",
+            end="\n\n",
+        )  # DEBUG
+
+        # transform the latent
+        hidden_out = self.inner_hidden_model(latent_out)
+        print(
+            f"transformer output \thidden_out.shape: {hidden_out.shape}", end="\n\n"
+        )  # DEBUG
+
+        # perform a linear readout to get the output logits
+        output = self.linear(hidden_out)
+        print("output logits \toutput.shape: {output.shape}", end="\n\n")
+        return output
+
+    ### <<< DEBUG: modified forward method for new token mode <<< ###
+
+    ### >>> DEBUG: different loss function needed for new token mode >>> ###
     def loss_fn(self):
-        return torch.nn.CrossEntropyLoss()
+        def loss(outputs, targets, **kwargs):
+            print(
+                f"neural targets \ttargets.shape: {targets.shape}", end="\n\n"
+            )  # DEBUG
+            # convert target to indices
+            targets = self.tokenize_neural_data(targets)
+            print(
+                f"tokenized targets \ttargets.shape: {targets.shape}", end="\n\n"
+            )  # DEBUG
+
+            print("outputs \toutputs.shape: {output.shape}", end="\n\n")  # DEBUG
+            # flatten outputs
+            outputs = outputs.view(-1, self.n_token)
+            print("flat outputs \toutputs.shape: {output.shape}", end="\n\n")  # DEBUG
+            return torch.nn.CrossEntropyLoss(reduction="mean", **kwargs)(
+                outputs,
+                targets,
+            )
+
+        return loss
+
+    ### <<< DEBUG: different loss function needed for new token mode <<< ###
 
 
 class NetworkCTRNN(Model):
