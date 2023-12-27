@@ -462,7 +462,7 @@ class Model(torch.nn.Module):
         self.hidden = self.init_hidden(input.shape)
         # set hidden state of internal model
         self.inner_hidden_model.set_hidden(self.hidden)
-        # recast the mask to the input type and shape
+        # recast the mask to the input shape
         mask = mask.unsqueeze(1).expand_as(input)
         # multiply input by the mask
         input = self.identity(input * mask)
@@ -819,6 +819,7 @@ class NeuralTransformer(Model):
         ### <<< DEBUG: modifications for new token mode <<< ###
 
         ############################################################
+        #### ORIGINAL CODE ####
         # # Embedding
         # self.embedding = torch.nn.Linear(
         #     self.input_size,
@@ -838,6 +839,7 @@ class NeuralTransformer(Model):
         #     torch.nn.ReLU(),
         #     # NOTE: Do NOT use LayerNorm here! (it's already in the TransformerEncoderLayer)
         # )
+        #### ORIGINAL CODE ####
         ############################################################
 
         # Hidden to hidden transformation: TransformerEncoderLayer
@@ -876,7 +878,7 @@ class NeuralTransformer(Model):
             distances.argmin(dim=2)
         )  # should be a batch of token sequences
         print(
-            f"tokenized \token_sequence.shape: {token_sequence.shape}", end="\n\n"
+            f"tokenized \ttoken_sequence.shape: {token_sequence.shape}", end="\n\n"
         )  # DEBUG
         # Return the tokenized sequence
         return token_sequence
@@ -890,7 +892,7 @@ class NeuralTransformer(Model):
         self.hidden = self.init_hidden(input.shape)
         # set hidden state of internal model
         self.inner_hidden_model.set_hidden(self.hidden)
-        # recast the mask to the input type and shape
+        # recast the mask to the input shape
         mask = mask.unsqueeze(1).expand_as(input)
         # multiply input by the mask
         input = self.identity(input * mask)
@@ -918,9 +920,9 @@ class NeuralTransformer(Model):
             f"transformer output \thidden_out.shape: {hidden_out.shape}", end="\n\n"
         )  # DEBUG
 
-        # perform a linear readout to get the output logits
+        # perform a linear readout to get the output
         output = self.linear(hidden_out)
-        print("output logits \toutput.shape: {output.shape}", end="\n\n")
+        print("output logits \toutput.shape: {output.shape}", end="\n\n")  # DEBUG
         return output
 
     ### <<< DEBUG: modified forward method for new token mode <<< ###
