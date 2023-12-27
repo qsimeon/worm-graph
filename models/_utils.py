@@ -796,8 +796,8 @@ class NeuralTransformer(Model):
         ## >>> DEBUG: modifications for new token mode >>> ###
         self.n_token = 1024  # number of tokens used to approximate the rich neural data
         self.output_size = self.n_token
-        self.rand_proj = torch.randn(
-            self.n_token, self.input_size, requires_grad=False
+        self.rand_proj = torch.nn.Parameter(
+            torch.randn(self.n_token, self.input_size), requires_grad=False
         )  # random projection matrix
         self.embedding = torch.nn.Embedding(
             self.n_token, self.hidden_size
@@ -806,6 +806,7 @@ class NeuralTransformer(Model):
         # Positional encoding
         self.positional_encoding = PositionalEncoding(
             self.hidden_size,  # if positional_encoding after embedding
+            max_len=MAX_TOKEN_LEN,
             dropout=self.dropout,
         )
 
@@ -857,6 +858,7 @@ class NeuralTransformer(Model):
         return None
 
     ### >>> DEBUG: method needed for new token mode >>> ###
+    @torch.autocast(device_type=DEVICE.type, dtype=torch.half)
     def tokenize_neural_data(self, neural_sequence: torch.Tensor):
         """
         Convert the high-dimensional sequence of neural states to a 1-D sequence of tokens.
@@ -869,16 +871,30 @@ class NeuralTransformer(Model):
         # Reshape input_sequence and self.matrix for broadcasting
         # New shapes: input_sequence: (1, seq_len, 1, feature_dim), self.matrix: (1, 1, num_embeddings, feature_dim)
         neural_sequence_expanded = neural_sequence.unsqueeze(2)
-        matrix_expanded = self.rand_proj.unsqueeze(0).unsqueeze(0)
+        print(
+            f"neural_sequence_expanded: {neural_sequence_expanded.shape, neural_sequence_expanded.dtype, neural_sequence_expanded.device}",
+            end="\n\n",
+        )  # DEBUG
+        matrix_expanded = self.rand_proj.data.unsqueeze(0).unsqueeze(0)
+        print(
+            f"matrix_expanded: {matrix_expanded.shape, matrix_expanded.dtype, matrix_expanded.device}",
+            end="\n\n",
+        )  # DEBUG
         # Step 2: Broadcasting and computing the Euclidean distance
-        distances = torch.norm(neural_sequence_expanded - matrix_expanded, dim=3)
+        global distances
+        distances = torch.linalg.vector_norm(
+            neural_sequence_expanded - matrix_expanded, dim=3
+        )
+        print(
+            f"distances: {distances.shape, distances.dtype, distances.device}",
+            end="\n\n",
+        )  # DEBUG
         # Step 3: Finding the minimum indices along the num_embeddings dimension
         # distances shape: (1, seq_len, num_embeddings)
-        token_sequence = torch.LongTensor(
-            distances.argmin(dim=2)
-        )  # should be a batch of token sequences
+        token_sequence = distances.argmin(dim=2)  # should be a batch of token sequences
         print(
-            f"tokenized \ttoken_sequence.shape: {token_sequence.shape}", end="\n\n"
+            f"tokenized \ttoken_sequence: {token_sequence.shape, token_sequence.dtype, token_sequence.device}",
+            end="\n\n",
         )  # DEBUG
         # Return the tokenized sequence
         return token_sequence
