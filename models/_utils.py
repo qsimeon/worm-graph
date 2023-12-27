@@ -946,23 +946,37 @@ class NeuralTransformer(Model):
     ### >>> DEBUG: different loss function needed for new token mode >>> ###
     def loss_fn(self):
         def loss(outputs, targets, **kwargs):
+            """
+            Args:
+                outputs: tensor w/ shape ``[batch_size, seq_len, n_token]``
+                targets: tensor w/ shape ``[batch_size, seq_len, input_size]``
+            """
             print(
-                f"neural targets \ttargets.shape: {targets.shape}", end="\n\n"
+                f"neural targets \ttargets.shape: {targets.shape, targets.dtype, targets.device}",
+                end="\n\n",
             )  # DEBUG
             # convert target to indices
             targets = self.tokenize_neural_data(targets)
             print(
-                f"tokenized targets \ttargets.shape: {targets.shape}", end="\n\n"
+                f"tokenized targets \ttargets.shape: {targets.shape, targets.dtype, targets.device}",
+                end="\n\n",
             )  # DEBUG
 
-            print("outputs \toutputs.shape: {output.shape}", end="\n\n")  # DEBUG
+            print(
+                f"outputs \toutputs.shape: {outputs.shape, outputs.dtype, outputs.device}",
+                end="\n\n",
+            )  # DEBUG
             # flatten outputs
             outputs = outputs.view(-1, self.n_token)
-            print("flat outputs \toutputs.shape: {output.shape}", end="\n\n")  # DEBUG
-            return torch.nn.CrossEntropyLoss(reduction="mean", **kwargs)(
-                outputs,
-                targets,
+            print(
+                f"flat outputs \toutputs.shape: {outputs.shape, outputs.dtype, outputs.device}",
+                end="\n\n",
+            )  # DEBUG
+            # calculate cross entropy loss
+            ce_loss = torch.nn.CrossEntropyLoss(reduction="mean", **kwargs)(
+                outputs, targets
             )
+            return ce_loss
 
         return loss
 
