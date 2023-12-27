@@ -938,7 +938,7 @@ class NeuralTransformer(Model):
 
         # perform a linear readout to get the output
         output = self.linear(hidden_out)
-        print("output logits \toutput.shape: {output.shape}", end="\n\n")  # DEBUG
+        print(f"output logits \toutput.shape: {output.shape}", end="\n\n")  # DEBUG
         return output
 
     ### <<< DEBUG: modified forward method for new token mode <<< ###
