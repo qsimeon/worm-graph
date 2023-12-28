@@ -148,7 +148,7 @@ class PositionalEncoding(torch.nn.Module):
     def __init__(
         self,
         d_model: int,
-        max_len: int = 1000,
+        max_len: int = MAX_TOKEN_LEN,
         dropout: float = 0.1,
     ):
         super().__init__()
@@ -797,8 +797,8 @@ class NeuralTransformer(Model):
         self.n_token = 1024  # number of tokens used to approximate the rich neural data
         self.output_size = self.n_token
         self.rand_proj = torch.nn.Parameter(
-            torch.randn(self.n_token, self.input_size), requires_grad=False
-        )  # random projection matrix
+            torch.randn(self.n_token, self.input_size), requires_grad=True
+        )  # FIXED random projection matrix (NOT learned)
         self.embedding = torch.nn.Embedding(
             self.n_token, self.hidden_size
         )  # lookup table
@@ -806,13 +806,14 @@ class NeuralTransformer(Model):
         # Positional encoding
         self.positional_encoding = PositionalEncoding(
             self.hidden_size,  # if positional_encoding after embedding
-            max_len=MAX_TOKEN_LEN,
             dropout=self.dropout,
         )
 
         # Input to hidden transformation
         self.input_hidden = torch.nn.Sequential(
+            self.embedding,
             self.positional_encoding,
+            torch.nn.ReLU(),
         )
 
         # Linear readout
@@ -858,7 +859,6 @@ class NeuralTransformer(Model):
         return None
 
     ### >>> DEBUG: method needed for new token mode >>> ###
-    @torch.autocast(device_type=DEVICE.type, dtype=torch.half)
     def tokenize_neural_data(self, neural_sequence: torch.Tensor):
         """
         Convert the high-dimensional sequence of neural states to a 1-D sequence of tokens.
@@ -871,31 +871,30 @@ class NeuralTransformer(Model):
         # Reshape input_sequence and self.matrix for broadcasting
         # New shapes: input_sequence: (1, seq_len, 1, feature_dim), self.matrix: (1, 1, num_embeddings, feature_dim)
         neural_sequence_expanded = neural_sequence.unsqueeze(2)
-        print(
-            f"neural_sequence_expanded: {neural_sequence_expanded.shape, neural_sequence_expanded.dtype, neural_sequence_expanded.device}",
-            end="\n\n",
-        )  # DEBUG
+        # print(
+        #     f"neural_sequence_expanded: {neural_sequence_expanded.shape, neural_sequence_expanded.dtype, neural_sequence_expanded.device}",
+        #     end="\n\n",
+        # )  # DEBUG
         matrix_expanded = self.rand_proj.data.unsqueeze(0).unsqueeze(0)
-        print(
-            f"matrix_expanded: {matrix_expanded.shape, matrix_expanded.dtype, matrix_expanded.device}",
-            end="\n\n",
-        )  # DEBUG
+        # print(
+        #     f"matrix_expanded: {matrix_expanded.shape, matrix_expanded.dtype, matrix_expanded.device}",
+        #     end="\n\n",
+        # )  # DEBUG
         # Step 2: Broadcasting and computing the Euclidean distance
-        global distances
         distances = torch.linalg.vector_norm(
             neural_sequence_expanded - matrix_expanded, dim=3
         )
-        print(
-            f"distances: {distances.shape, distances.dtype, distances.device}",
-            end="\n\n",
-        )  # DEBUG
+        # print(
+        #     f"distances: {distances.shape, distances.dtype, distances.device}",
+        #     end="\n\n",
+        # )  # DEBUG
         # Step 3: Finding the minimum indices along the num_embeddings dimension
         # distances shape: (1, seq_len, num_embeddings)
         token_sequence = distances.argmin(dim=2)  # should be a batch of token sequences
-        print(
-            f"tokenized \ttoken_sequence: {token_sequence.shape, token_sequence.dtype, token_sequence.device}",
-            end="\n\n",
-        )  # DEBUG
+        # print(
+        #     f"tokenized \ttoken_sequence: {token_sequence.shape, token_sequence.dtype, token_sequence.device}",
+        #     end="\n\n",
+        # )  # DEBUG
         # Return the tokenized sequence
         return token_sequence
 
@@ -914,31 +913,32 @@ class NeuralTransformer(Model):
         input = self.identity(input * mask)
 
         ### >>> DEBUG: additional steps for new token mode >>> ###
-        print(f"neural \tinput.shape: {input.shape}", end="\n\n")  # DEBUG
+        # print(f"neural \tinput.shape: {input.shape}", end="\n\n")  # DEBUG
         # Convert the high-dimensional sequence of neural states to a 1-D sequence of tokens
         input = self.tokenize_neural_data(input)
-        print(f"tokenized \tinput.shape: {input.shape}", end="\n\n")  # DEBUG
-        # Embed the tokens using the embedding lookup table
-        input = self.embedding(input)
-        print(f"embedded \tinput.shape: {input.shape}", end="\n\n")  # DEBUG
+        # print(f"tokenized \tinput.shape: {input.shape}", end="\n\n")  # DEBUG
+        # Embed the tokens and then transform to a latent
+        latent_out = self.input_hidden(input)
+        # print(f"embedded \tinput.shape: {input.shape}", end="\n\n")  # DEBUG
         ### <<< DEBUG: additional steps for new token mode <<<  ###
 
-        # transform the input into a latent
-        latent_out = self.input_hidden(input)
-        print(
-            f"pos.encoded \tlatent_out.shape: {latent_out.shape}",
-            end="\n\n",
-        )  # DEBUG
+        # # transform the input into a latent
+        # latent_out = self.input_hidden(input)
+        # print(
+        #     f"pos.encoded \tlatent_out.shape: {latent_out.shape}",
+        #     end="\n\n",
+        # )  # DEBUG
 
         # transform the latent
         hidden_out = self.inner_hidden_model(latent_out)
-        print(
-            f"transformer output \thidden_out.shape: {hidden_out.shape}", end="\n\n"
-        )  # DEBUG
+        # print(
+        #     f"transformer output \thidden_out.shape: {hidden_out.shape}", end="\n\n"
+        # )  # DEBUG
 
         # perform a linear readout to get the output
         output = self.linear(hidden_out)
-        print(f"output logits \toutput.shape: {output.shape}", end="\n\n")  # DEBUG
+        # print(f"output logits \toutput.shape: {output.shape}", end="\n\n")  # DEBUG
+
         return output
 
     ### <<< DEBUG: modified forward method for new token mode <<< ###
@@ -951,36 +951,94 @@ class NeuralTransformer(Model):
                 outputs: tensor w/ shape ``[batch_size, seq_len, n_token]``
                 targets: tensor w/ shape ``[batch_size, seq_len, input_size]``
             """
-            print(
-                f"neural targets \ttargets.shape: {targets.shape, targets.dtype, targets.device}",
-                end="\n\n",
-            )  # DEBUG
+            # print(
+            #     f"neural targets \ttargets.shape: {targets.shape, targets.dtype, targets.device}",
+            #     end="\n\n",
+            # )  # DEBUG
             # convert target to indices
             targets = self.tokenize_neural_data(targets)
-            print(
-                f"tokenized targets \ttargets.shape: {targets.shape, targets.dtype, targets.device}",
-                end="\n\n",
-            )  # DEBUG
+            # print(
+            #     f"tokenized targets \ttargets.shape: {targets.shape, targets.dtype, targets.device}",
+            #     end="\n\n",
+            # )  # DEBUG
+            targets = targets.view(-1)
+            # print(
+            #     f"flat targets \ttargets.shape: {targets.shape, targets.dtype, targets.device}",
+            #     end="\n\n",
+            # )  # DEBUG
 
-            print(
-                f"outputs \toutputs.shape: {outputs.shape, outputs.dtype, outputs.device}",
-                end="\n\n",
-            )  # DEBUG
+            # print(
+            #     f"outputs \toutputs.shape: {outputs.shape, outputs.dtype, outputs.device}",
+            #     end="\n\n",
+            # )  # DEBUG
             # flatten outputs
             outputs = outputs.view(-1, self.n_token)
-            print(
-                f"flat outputs \toutputs.shape: {outputs.shape, outputs.dtype, outputs.device}",
-                end="\n\n",
-            )  # DEBUG
+            # print(
+            #     f"flat outputs \toutputs.shape: {outputs.shape, outputs.dtype, outputs.device}",
+            #     end="\n\n",
+            # )  # DEBUG
             # calculate cross entropy loss
             ce_loss = torch.nn.CrossEntropyLoss(reduction="mean", **kwargs)(
                 outputs, targets
             )
+
             return ce_loss
 
         return loss
 
     ### <<< DEBUG: different loss function needed for new token mode <<< ###
+
+    ### >>> DEBUG: different generate method needed for new token mode >>> ###
+    @torch.no_grad()
+    def transformer_generate(
+        self,
+        input: torch.Tensor,
+        mask: torch.Tensor,
+        max_new_tokens: int,
+        temperature=1.0,
+        top_k=None,
+    ):
+        """
+        Special generate method for the Transformer model.
+        Take a conditioning sequence of neural data input (Tensor of shape (b,l,t)) and
+        completes the sequence max_new_tokens times, feeding the predictions back into the model each time.
+        We trained the model to take neural data as input but output the next token as output. Therefore, we
+        must convert the output token back to neural data. We do this by finding the closest neural data point
+        to the output token in the embedding space.
+        """
+        # Set model to evaluation mode
+        self.eval()
+
+        # Loop through time
+        for _ in range(max_new_tokens):
+            # if the sequence context is growing too long we must crop it at MAX_TOKEN_LEN
+            input_cond = (
+                input if input.size(1) <= MAX_TOKEN_LEN else input[:, -MAX_TOKEN_LEN:]
+            )
+            # forward the model to get the output
+            output = self(input_cond, mask)
+            # print(f"output: {output.shape}")  # DEBUG
+            # pluck the logits at the final step and scale by desired temperature
+            logits = output[:, -1, :] / temperature
+            print(f"logits: {logits.shape}")  # DEBUG
+            # optionally crop the logits to only the top k options
+            if top_k is not None:
+                v, _ = torch.topk(logits, min(top_k, logits.size(-1)))
+                logits[logits < v[:, [-1]]] = -float("Inf")
+            # apply softmax to convert logits to (normalized) probabilities
+            probs = torch.nn.functional.softmax(logits, dim=-1)
+            # sample from the distribution to get the next token
+            token_next = torch.multinomial(probs, num_samples=1).view(1, 1)
+            print(f"token_next: {token_next.item()}")  # DEBUG
+            # convert the token back to neural data
+            input_next = self.rand_proj.data[token_next].view(1, 1, -1)
+            # print(f"input_next: {input_next.shape}")  # DEBUG
+            # append sampled data to the running sequence and continue
+            input = torch.cat((input, input_next), dim=1)
+
+        return input
+
+    ### <<< DEBUG: different generate method needed for new token mode <<< ###
 
 
 class NetworkCTRNN(Model):
