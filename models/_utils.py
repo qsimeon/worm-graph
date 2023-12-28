@@ -148,7 +148,7 @@ class PositionalEncoding(torch.nn.Module):
     def __init__(
         self,
         d_model: int,
-        max_len: int = MAX_TOKEN_LEN,
+        max_len: int = BLOCK_SIZE,
         dropout: float = 0.1,
     ):
         super().__init__()
@@ -794,14 +794,13 @@ class NeuralTransformer(Model):
         self.dropout = 0.1  # dropout ratedropout=self.dropout,
 
         ## >>> DEBUG: modifications for new token mode >>> ###
-        self.n_token = 1024  # number of tokens used to approximate the rich neural data
+        self.n_token = 2048  # number of tokens used to approximate the rich neural data
         self.output_size = self.n_token
-        self.rand_proj = torch.nn.Parameter(
-            torch.randn(self.n_token, self.input_size), requires_grad=True
-        )  # FIXED random projection matrix (NOT learned)
-        self.embedding = torch.nn.Embedding(
-            self.n_token, self.hidden_size
-        )  # lookup table
+        # self.rand_proj = torch.nn.Parameter(
+        #     torch.randn(self.n_token, self.input_size), requires_grad=True
+        # )  # FIXED random projection matrix (NOT learned)
+        self.input_embedding = torch.nn.Embedding(self.n_token, self.input_size)
+        self.latent_embedding = torch.nn.Embedding(self.n_token, self.hidden_size)
 
         # Positional encoding
         self.positional_encoding = PositionalEncoding(
@@ -811,7 +810,7 @@ class NeuralTransformer(Model):
 
         # Input to hidden transformation
         self.input_hidden = torch.nn.Sequential(
-            self.embedding,
+            self.latent_embedding,
             self.positional_encoding,
             torch.nn.ReLU(),
         )
@@ -875,7 +874,7 @@ class NeuralTransformer(Model):
         #     f"neural_sequence_expanded: {neural_sequence_expanded.shape, neural_sequence_expanded.dtype, neural_sequence_expanded.device}",
         #     end="\n\n",
         # )  # DEBUG
-        matrix_expanded = self.rand_proj.data.unsqueeze(0).unsqueeze(0)
+        matrix_expanded = self.input_embedding.weight.unsqueeze(0).unsqueeze(0)
         # print(
         #     f"matrix_expanded: {matrix_expanded.shape, matrix_expanded.dtype, matrix_expanded.device}",
         #     end="\n\n",
@@ -951,32 +950,10 @@ class NeuralTransformer(Model):
                 outputs: tensor w/ shape ``[batch_size, seq_len, n_token]``
                 targets: tensor w/ shape ``[batch_size, seq_len, input_size]``
             """
-            # print(
-            #     f"neural targets \ttargets.shape: {targets.shape, targets.dtype, targets.device}",
-            #     end="\n\n",
-            # )  # DEBUG
             # convert target to indices
-            targets = self.tokenize_neural_data(targets)
-            # print(
-            #     f"tokenized targets \ttargets.shape: {targets.shape, targets.dtype, targets.device}",
-            #     end="\n\n",
-            # )  # DEBUG
-            targets = targets.view(-1)
-            # print(
-            #     f"flat targets \ttargets.shape: {targets.shape, targets.dtype, targets.device}",
-            #     end="\n\n",
-            # )  # DEBUG
-
-            # print(
-            #     f"outputs \toutputs.shape: {outputs.shape, outputs.dtype, outputs.device}",
-            #     end="\n\n",
-            # )  # DEBUG
+            targets = self.tokenize_neural_data(targets).view(-1)
             # flatten outputs
             outputs = outputs.view(-1, self.n_token)
-            # print(
-            #     f"flat outputs \toutputs.shape: {outputs.shape, outputs.dtype, outputs.device}",
-            #     end="\n\n",
-            # )  # DEBUG
             # calculate cross entropy loss
             ce_loss = torch.nn.CrossEntropyLoss(reduction="mean", **kwargs)(
                 outputs, targets
@@ -1011,16 +988,14 @@ class NeuralTransformer(Model):
 
         # Loop through time
         for _ in range(max_new_tokens):
-            # if the sequence context is growing too long we must crop it at MAX_TOKEN_LEN
+            # if the sequence context is growing too long we must crop it at BLOCK_SIZE
             input_cond = (
-                input if input.size(1) <= MAX_TOKEN_LEN else input[:, -MAX_TOKEN_LEN:]
+                input if input.size(1) <= BLOCK_SIZE else input[:, -BLOCK_SIZE:]
             )
             # forward the model to get the output
             output = self(input_cond, mask)
-            # print(f"output: {output.shape}")  # DEBUG
             # pluck the logits at the final step and scale by desired temperature
             logits = output[:, -1, :] / temperature
-            print(f"logits: {logits.shape}")  # DEBUG
             # optionally crop the logits to only the top k options
             if top_k is not None:
                 v, _ = torch.topk(logits, min(top_k, logits.size(-1)))
@@ -1028,11 +1003,9 @@ class NeuralTransformer(Model):
             # apply softmax to convert logits to (normalized) probabilities
             probs = torch.nn.functional.softmax(logits, dim=-1)
             # sample from the distribution to get the next token
-            token_next = torch.multinomial(probs, num_samples=1).view(1, 1)
-            print(f"token_next: {token_next.item()}")  # DEBUG
+            token_next = torch.multinomial(probs, num_samples=1)
             # convert the token back to neural data
-            input_next = self.rand_proj.data[token_next].view(1, 1, -1)
-            # print(f"input_next: {input_next.shape}")  # DEBUG
+            input_next = self.input_embedding(token_next)
             # append sampled data to the running sequence and continue
             input = torch.cat((input, input_next), dim=1)
 
