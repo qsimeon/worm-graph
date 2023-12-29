@@ -870,30 +870,14 @@ class NeuralTransformer(Model):
         # Reshape input_sequence and self.matrix for broadcasting
         # New shapes: input_sequence: (1, seq_len, 1, feature_dim), self.matrix: (1, 1, num_embeddings, feature_dim)
         neural_sequence_expanded = neural_sequence.unsqueeze(2)
-        # print(
-        #     f"neural_sequence_expanded: {neural_sequence_expanded.shape, neural_sequence_expanded.dtype, neural_sequence_expanded.device}",
-        #     end="\n\n",
-        # )  # DEBUG
         matrix_expanded = self.input_embedding.weight.unsqueeze(0).unsqueeze(0)
-        # print(
-        #     f"matrix_expanded: {matrix_expanded.shape, matrix_expanded.dtype, matrix_expanded.device}",
-        #     end="\n\n",
-        # )  # DEBUG
         # Step 2: Broadcasting and computing the Euclidean distance
         distances = torch.linalg.vector_norm(
             neural_sequence_expanded - matrix_expanded, dim=3
         )
-        # print(
-        #     f"distances: {distances.shape, distances.dtype, distances.device}",
-        #     end="\n\n",
-        # )  # DEBUG
         # Step 3: Finding the minimum indices along the num_embeddings dimension
         # distances shape: (1, seq_len, num_embeddings)
         token_sequence = distances.argmin(dim=2)  # should be a batch of token sequences
-        # print(
-        #     f"tokenized \ttoken_sequence: {token_sequence.shape, token_sequence.dtype, token_sequence.device}",
-        #     end="\n\n",
-        # )  # DEBUG
         # Return the tokenized sequence
         return token_sequence
 
@@ -912,37 +896,38 @@ class NeuralTransformer(Model):
         input = self.identity(input * mask)
 
         ### >>> DEBUG: additional steps for new token mode >>> ###
-        # print(f"neural \tinput.shape: {input.shape}", end="\n\n")  # DEBUG
         # Convert the high-dimensional sequence of neural states to a 1-D sequence of tokens
-        input = self.tokenize_neural_data(input)
-        # print(f"tokenized \tinput.shape: {input.shape}", end="\n\n")  # DEBUG
+        input_tokens = self.tokenize_neural_data(input)
+        self.aux_loss(input, input_tokens, mask)  # DEBUG: calculate aux_loss
         # Embed the tokens and then transform to a latent
-        latent_out = self.input_hidden(input)
-        # print(f"embedded \tinput.shape: {input.shape}", end="\n\n")  # DEBUG
+        latent_out = self.input_hidden(input_tokens)
         ### <<< DEBUG: additional steps for new token mode <<<  ###
 
+        #### ORIGINAL CODE ####
         # # transform the input into a latent
         # latent_out = self.input_hidden(input)
-        # print(
-        #     f"pos.encoded \tlatent_out.shape: {latent_out.shape}",
-        #     end="\n\n",
-        # )  # DEBUG
+        #### ORIGINAL CODE ####
 
         # transform the latent
         hidden_out = self.inner_hidden_model(latent_out)
-        # print(
-        #     f"transformer output \thidden_out.shape: {hidden_out.shape}", end="\n\n"
-        # )  # DEBUG
-
         # perform a linear readout to get the output
         output = self.linear(hidden_out)
-        # print(f"output logits \toutput.shape: {output.shape}", end="\n\n")  # DEBUG
-
+        # return output
         return output
 
     ### <<< DEBUG: modified forward method for new token mode <<< ###
 
     ### >>> DEBUG: different loss function needed for new token mode >>> ###
+    def aux_loss(self, neural_input, input_tokens, neural_mask, **kwargs):
+        """
+        We want to force the input embeddings to be close to the neural data.
+        """
+        input_embeds = self.input_embedding(input_tokens)
+        self.mse_loss = torch.nn.L1Loss(reduction="mean", **kwargs)(
+            input_embeds[neural_mask], neural_input[neural_mask]
+        )
+        return self.mse_loss
+
     def loss_fn(self):
         def loss(outputs, targets, **kwargs):
             """
@@ -958,8 +943,8 @@ class NeuralTransformer(Model):
             ce_loss = torch.nn.CrossEntropyLoss(reduction="mean", **kwargs)(
                 outputs, targets
             )
-
-            return ce_loss
+            # return loss
+            return ce_loss + self.mse_loss
 
         return loss
 
