@@ -898,7 +898,6 @@ class NeuralTransformer(Model):
         ### >>> DEBUG: additional steps for new token mode >>> ###
         # Convert the high-dimensional sequence of neural states to a 1-D sequence of tokens
         input_tokens = self.tokenize_neural_data(input)
-        self.aux_loss(input, input_tokens, mask)  # DEBUG: calculate aux_loss
         # Embed the tokens and then transform to a latent
         latent_out = self.input_hidden(input_tokens)
         ### <<< DEBUG: additional steps for new token mode <<<  ###
@@ -918,16 +917,6 @@ class NeuralTransformer(Model):
     ### <<< DEBUG: modified forward method for new token mode <<< ###
 
     ### >>> DEBUG: different loss function needed for new token mode >>> ###
-    def aux_loss(self, neural_input, input_tokens, neural_mask, **kwargs):
-        """
-        We want to force the input embeddings to be close to the neural data.
-        """
-        input_embeds = self.input_embedding(input_tokens)
-        self.mse_loss = torch.nn.L1Loss(reduction="mean", **kwargs)(
-            input_embeds[neural_mask], neural_input[neural_mask]
-        )
-        return self.mse_loss
-
     def loss_fn(self):
         def loss(outputs, targets, **kwargs):
             """
@@ -944,7 +933,7 @@ class NeuralTransformer(Model):
                 outputs, targets
             )
             # return loss
-            return ce_loss + self.mse_loss
+            return ce_loss
 
         return loss
 
