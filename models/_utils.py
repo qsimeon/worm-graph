@@ -471,8 +471,9 @@ class Model(torch.nn.Module):
         # transform the latent
         hidden_out = self.inner_hidden_model(latent_out)
         # perform a linear readout to get the output
-        readout = self.linear(hidden_out)
-        return readout
+        output = self.linear(hidden_out)
+        # return output
+        return output
 
     def loss_fn(self):
         """
@@ -627,7 +628,7 @@ class NaivePredictor(Model):
     def __init__(
         self,
         input_size: int,
-        hidden_size: Union[int, None] = None,
+        hidden_size: Union[int, None] = None,  # unused in this model
         loss: Union[Callable, None] = None,
         fft_reg_param=0.0,
         l1_reg_param=0.0,
@@ -648,12 +649,10 @@ class NaivePredictor(Model):
         # Instantiate internal hidden model
         self.inner_hidden_model = InnerHiddenModel(self.hidden_hidden, self.hidden)
 
-        ### DEBUG ###
         # Override the linear readout
         self.linear = torch.nn.Identity()
 
-        ### DEBUG ###
-        # Create a dud parameter to avoid errors
+        # Create a dud parameter to avoid errors with the optimizer
         self._ = torch.nn.Parameter(torch.tensor(0.0))
 
     def init_hidden(self, input_shape=None):
@@ -669,7 +668,7 @@ class LinearRegression(Model):
     def __init__(
         self,
         input_size: int,
-        hidden_size: Union[int, None] = None,
+        hidden_size: Union[int, None] = None,  # unused in this model
         loss: Union[Callable, None] = None,
         fft_reg_param=0.0,
         l1_reg_param=0.0,
@@ -791,15 +790,18 @@ class NeuralTransformer(Model):
             hidden_size
         )  # number of attention heads (NOTE: must be divisor of `hidden_size`)
         logger.info(f"Number of attention heads: {self.n_head}.")
-        self.dropout = 0.1  # dropout ratedropout=self.dropout,
+        self.dropout = 0.1  # dropout rate
 
         ## >>> DEBUG: modifications for new token mode >>> ###
-        # TODO: make self.n_token a hyperparmater in main utils.py call NUM_TOKENS
+        # TODO: make self.n_token a hyperparmater in main utils.py called NUM_TOKENS
         self.n_token = 2048  # number of tokens used to approximate the rich neural data
         self.output_size = self.n_token
         self.random_projection = torch.nn.Parameter(
             torch.randn(self.n_token, self.input_size), requires_grad=False
         )  # FIXED random projection matrix (NOT learned)
+        self.token_neural_map = dict(
+            (idx, torch.zeros(self.input_size)) for idx in range(self.n_token)
+        )  # a mapping of tokens to neural vector means
         self.embedding = torch.nn.Embedding(self.n_token, self.hidden_size)
 
         # Positional encoding
@@ -812,7 +814,7 @@ class NeuralTransformer(Model):
         self.input_hidden = torch.nn.Sequential(
             self.embedding,
             self.positional_encoding,
-            # torch.nn.ReLU(),
+            # torch.nn.ReLU(), # DEBUG: Is the RELU here needed?
         )
 
         # Linear readout
@@ -886,13 +888,14 @@ class NeuralTransformer(Model):
             ), "`token_matrix` must have shape (num_tokens, input_size)"
         # Step 1: Calculate the distances
         # Reshape input_sequence and self.matrix for broadcasting
-        # New shapes: input_sequence: (1, seq_len, 1, feature_dim), self.random_projection: (1, 1, num_tokens, feature_dim)
+        # New shapes: input_sequence: (batch_size, seq_len, 1, feature_dim), self.random_projection: (batch_size, 1, num_tokens, feature_dim)
         if token_matrix is None:
             token_matrix = self.random_projection
         feature_mask = feature_mask.unsqueeze(1).unsqueeze(1)
         neural_sequence_expanded = neural_sequence.unsqueeze(2)
         token_matrix_expanded = token_matrix.unsqueeze(0).unsqueeze(0)
         # Step 2: Broadcasting and computing the Euclidean distance at masked postions
+        # distances shape: (batch_size, seq_len, num_embeddings)
         diff = neural_sequence_expanded - token_matrix_expanded
         if feature_mask.sum().item() == self.input_size:  # all True mask
             distances = torch.linalg.vector_norm(diff, dim=3)
@@ -901,7 +904,7 @@ class NeuralTransformer(Model):
                 diff[feature_mask.expand_as(diff)].view_as(diff), dim=3
             )
         # Step 3: Finding the minimum indices along the num_embeddings dimension
-        # distances shape: (1, seq_len, num_embeddings)
+        # token_sequence shape: (batch_size, seq_len)
         token_sequence = distances.argmin(dim=2)  # should be a batch of token sequences
         # Return the tokenized sequence
         return token_sequence
@@ -925,9 +928,16 @@ class NeuralTransformer(Model):
 
         ### >>> DEBUG: additional steps for new token mode >>> ###
         # Convert the high-dimensional input sequence into a 1-D sequence of tokens
-        input = self.tokenize_neural_data(neural_sequence=input, feature_mask=mask)
+        input_tokens = self.tokenize_neural_data(
+            neural_sequence=input, feature_mask=mask
+        )
+        # Update the mapping of tokens to neural vector means
+        for token in torch.unique(input_tokens.cpu()).tolist():
+            self.token_neural_map[token] = 0.25 * self.token_neural_map[
+                token
+            ] + 0.75 * input.cpu()[input_tokens.cpu() == token].mean(dim=0)
         # Embed the tokens and then transform to a latent
-        latent_out = self.input_hidden(input)
+        latent_out = self.input_hidden(input_tokens)
         ### <<< DEBUG: additional steps for new token mode <<<  ###
 
         #### ORIGINAL CODE ####
@@ -938,9 +948,9 @@ class NeuralTransformer(Model):
         # transform the latent
         hidden_out = self.inner_hidden_model(latent_out)
         # perform a linear readout to get the output
-        output = self.linear(hidden_out)
+        output_logits = self.linear(hidden_out)
         # return output
-        return output
+        return output_logits
 
     ### <<< DEBUG: modified forward method for new token mode <<< ###
 
@@ -976,7 +986,7 @@ class NeuralTransformer(Model):
 
     ### >>> DEBUG: different generate method needed for new token mode >>> ###
     @torch.no_grad()
-    def transformer_generate(
+    def generate(
         self,
         input: torch.Tensor,
         mask: torch.Tensor,
@@ -1013,16 +1023,112 @@ class NeuralTransformer(Model):
             probs = torch.nn.functional.softmax(logits, dim=-1)
             # sample from the distribution to get the next token
             token_next = torch.multinomial(probs, num_samples=1)
+            print(f"token_next: {token_next, token_next.shape}", end="\n\n")  # DEBUG
             # convert the token back to neural data
-            input_next = self.random_projection[
-                token_next
-            ]  # TODO: but this is just something random! we need a function from token vector to neural data
+            print(
+                f"self.random_projection[token_next]: {self.random_projection[token_next].shape, self.random_projection[token_next].device}",
+                end="\n\n",
+            )  # DEBUG
+            input_next = self.token_neural_map[token_next.item()]
+            print(
+                f"input_next (before): {input_next.shape, input_next.device}", end="\n\n"
+            )  # DEBUG
+            input_next = input_next.unsqueeze(0).to(input.device)
+            print(
+                f"input_next (after): {input_next.shape, input_next.device}", end="\n\n"
+            )  # DEBUG
             # append sampled data to the running sequence and continue
             input = torch.cat((input, input_next), dim=1)
 
         return input
 
     ### <<< DEBUG: different generate method needed for new token mode <<< ###
+
+
+####################################################################################################################
+# #### ORIGINAL NEURALTRANSFORMER CODE ####
+# class NeuralTransformer(Model):
+#     """
+#     Transformer model for neural activity data.
+#     """
+
+#     def __init__(
+#         self,
+#         input_size: int,
+#         hidden_size: Union[int, None] = None,
+#         loss: Union[Callable, None] = None,
+#         fft_reg_param: float = 0.0,
+#         l1_reg_param: float = 0.0,
+#     ):
+#         """
+#         Neural activity data is continuous valued and thus
+#         can naturally be treated as if it were already emebedded.
+#         However, to maintain notational similarity with the original
+#         Transformer architecture, we use a linear layer to perform
+#         expansion recoding - which acts as an embedding but is really
+#         just a linear projection.
+#         """
+#         # NOTE: Transformer only works with even `d_model`
+#         if hidden_size % 2 != 0:
+#             logger.info(f"Changing hidden_size from {hidden_size} to {hidden_size+1}.")
+#             hidden_size = hidden_size + 1
+#         else:
+#             logger.info(f"Using hidden_size: {hidden_size}.")
+#             hidden_size = hidden_size
+
+#         # Initialize super class
+#         super(NeuralTransformer, self).__init__(
+#             input_size,
+#             hidden_size,
+#             loss,
+#             fft_reg_param,
+#             l1_reg_param,
+#         )
+
+#         # Special transformer parameters
+#         self.n_head = find_largest_divisor(
+#             hidden_size
+#         )  # number of attention heads (NOTE: must be divisor of `hidden_size`)
+#         logger.info(f"Number of attention heads: {self.n_head}.")
+#         self.dropout = 0.1  # dropout rate,
+
+#         # Embedding
+#         self.embedding = torch.nn.Linear(
+#             self.input_size,
+#             self.hidden_size,
+#         )  # combine input and mask
+
+#         # Positional encoding
+#         self.positional_encoding = PositionalEncoding(
+#             self.hidden_size,  # if positional_encoding after embedding
+#             dropout=self.dropout,
+#         )
+
+#         # Input to hidden transformation
+#         self.input_hidden = torch.nn.Sequential(
+#             self.embedding,
+#             self.positional_encoding,  # DEBUG: Is positional_encoding after better?
+#             torch.nn.ReLU(),  # DEBUG: Is the ReLU here needed?
+#             # NOTE: Do NOT use LayerNorm here! (it's already in the TransformerEncoderLayer)
+#         )
+
+#         # Hidden to hidden transformation: TransformerEncoderLayer
+#         self.hidden_hidden = CausalTransformer(
+#             d_model=self.hidden_size,
+#             nhead=self.n_head,
+#             dim_feedforward=self.hidden_size,
+#             dropout=self.dropout,
+#         )
+
+#         # Instantiate internal hidden model
+#         self.inner_hidden_model = InnerHiddenModel(self.hidden_hidden, self.hidden)
+
+#     def init_hidden(self, input_shape=None):
+#         return None
+
+
+# #### ORIGINAL NEURALTRANSFORMER CODE ####
+####################################################################################################################
 
 
 class NetworkCTRNN(Model):
