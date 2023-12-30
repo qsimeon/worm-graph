@@ -794,13 +794,13 @@ class NeuralTransformer(Model):
         self.dropout = 0.1  # dropout ratedropout=self.dropout,
 
         ## >>> DEBUG: modifications for new token mode >>> ###
+        # TODO: make self.n_token a hyperparmater in main utils.py call NUM_TOKENS
         self.n_token = 2048  # number of tokens used to approximate the rich neural data
         self.output_size = self.n_token
-        # self.rand_proj = torch.nn.Parameter(
-        #     torch.randn(self.n_token, self.input_size), requires_grad=True
-        # )  # FIXED random projection matrix (NOT learned)
-        self.input_embedding = torch.nn.Embedding(self.n_token, self.input_size)
-        self.latent_embedding = torch.nn.Embedding(self.n_token, self.hidden_size)
+        self.random_projection = torch.nn.Parameter(
+            torch.randn(self.n_token, self.input_size), requires_grad=False
+        )  # FIXED random projection matrix (NOT learned)
+        self.embedding = torch.nn.Embedding(self.n_token, self.hidden_size)
 
         # Positional encoding
         self.positional_encoding = PositionalEncoding(
@@ -810,9 +810,9 @@ class NeuralTransformer(Model):
 
         # Input to hidden transformation
         self.input_hidden = torch.nn.Sequential(
-            self.latent_embedding,
+            self.embedding,
             self.positional_encoding,
-            torch.nn.ReLU(),
+            # torch.nn.ReLU(),
         )
 
         # Linear readout
@@ -858,22 +858,44 @@ class NeuralTransformer(Model):
         return None
 
     ### >>> DEBUG: method needed for new token mode >>> ###
-    def tokenize_neural_data(self, neural_sequence: torch.Tensor):
+    def tokenize_neural_data(
+        self,
+        neural_sequence: torch.Tensor,
+        feature_mask: torch.Tensor,
+        token_matrix: torch.Tensor = None,
+    ):
         """
         Convert the high-dimensional sequence of neural states to a 1-D sequence of tokens.
         Args:
             neural_sequence: tensor of shape (batch_size, seq_len, input_size)
+            feature_mask: tensor of shape (batch_size, input_size)
+            token_matrix: tensor of shape (num_tokens, input_size)
         Output:
             token_sequence: tensor of shape (batch_size, seq_len)
         """
+        # Step 0: Ensure inputs are the correct shapes
+        assert (
+            neural_sequence.ndim == 3 and neural_sequence.shape[-1] == self.input_size
+        ), "`neural_sequence` must have shape (batch_size, seq_len, input_size)"
+        assert (
+            feature_mask.ndim == 2 and feature_mask.shape[-1] == self.input_size
+        ), "`feature_mask` must have shape (batch_size, input_size)"
+        if token_matrix is not None:
+            assert (
+                token_matrix.ndim == 2 and token_matrix.shape[-1] == self.input_size
+            ), "`token_matrix` must have shape (num_tokens, input_size)"
         # Step 1: Calculate the distances
         # Reshape input_sequence and self.matrix for broadcasting
-        # New shapes: input_sequence: (1, seq_len, 1, feature_dim), self.matrix: (1, 1, num_embeddings, feature_dim)
+        # New shapes: input_sequence: (1, seq_len, 1, feature_dim), self.random_projection: (1, 1, num_tokens, feature_dim)
+        if token_matrix is None:
+            token_matrix = self.random_projection
+        feature_mask = feature_mask.unsqueeze(1).unsqueeze(1)
         neural_sequence_expanded = neural_sequence.unsqueeze(2)
-        matrix_expanded = self.input_embedding.weight.unsqueeze(0).unsqueeze(0)
-        # Step 2: Broadcasting and computing the Euclidean distance
+        token_matrix_expanded = token_matrix.unsqueeze(0).unsqueeze(0)
+        # Step 2: Broadcasting and computing the Euclidean distance at masked postions
+        diff = neural_sequence_expanded - token_matrix_expanded
         distances = torch.linalg.vector_norm(
-            neural_sequence_expanded - matrix_expanded, dim=3
+            diff[feature_mask.expand_as(diff)].view_as(diff), dim=3
         )
         # Step 3: Finding the minimum indices along the num_embeddings dimension
         # distances shape: (1, seq_len, num_embeddings)
@@ -890,14 +912,19 @@ class NeuralTransformer(Model):
         self.hidden = self.init_hidden(input.shape)
         # set hidden state of internal model
         self.inner_hidden_model.set_hidden(self.hidden)
-        # recast the mask to the input shape
-        mask = mask.unsqueeze(1).expand_as(input)
-        # multiply input by the mask
-        input = self.identity(input * mask)
+
+        # #### >>> ORIGINAL CODE >>> ####
+        # # recast the mask to the input shape
+        # mask = mask.unsqueeze(1).expand_as(input)
+        # # multiply input by the mask
+        # input = self.identity(input * mask)
+        # #### >>> ORIGINAL CODE >>> ####
 
         ### >>> DEBUG: additional steps for new token mode >>> ###
-        # Convert the high-dimensional sequence of neural states to a 1-D sequence of tokens
-        input_tokens = self.tokenize_neural_data(input)
+        # Convert the high-dimensional input sequence into a 1-D sequence of tokens
+        input_tokens = self.tokenize_neural_data(
+            neural_sequence=input, feature_mask=mask
+        )
         # Embed the tokens and then transform to a latent
         latent_out = self.input_hidden(input_tokens)
         ### <<< DEBUG: additional steps for new token mode <<<  ###
@@ -918,14 +945,21 @@ class NeuralTransformer(Model):
 
     ### >>> DEBUG: different loss function needed for new token mode >>> ###
     def loss_fn(self):
-        def loss(outputs, targets, **kwargs):
+        def loss(outputs, targets, masks=None, **kwargs):
             """
             Args:
                 outputs: tensor w/ shape ``[batch_size, seq_len, n_token]``
                 targets: tensor w/ shape ``[batch_size, seq_len, input_size]``
+                masks: tensor w/ shape ``[batch_size, input_size]``
             """
+            if masks is None:
+                masks = torch.ones(
+                    targets.shape[0], targets.shape[-1], dtype=torch.bool
+                ).to(targets.device)
             # convert target to indices
-            targets = self.tokenize_neural_data(targets).view(-1)
+            targets = self.tokenize_neural_data(
+                neural_sequence=targets, feature_mask=masks
+            ).view(-1)
             # flatten outputs
             outputs = outputs.view(-1, self.n_token)
             # calculate cross entropy loss
@@ -979,7 +1013,7 @@ class NeuralTransformer(Model):
             # sample from the distribution to get the next token
             token_next = torch.multinomial(probs, num_samples=1)
             # convert the token back to neural data
-            input_next = self.input_embedding(token_next)
+            input_next = self.random_projection[token_next]
             # append sampled data to the running sequence and continue
             input = torch.cat((input, input_next), dim=1)
 
