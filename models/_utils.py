@@ -894,9 +894,12 @@ class NeuralTransformer(Model):
         token_matrix_expanded = token_matrix.unsqueeze(0).unsqueeze(0)
         # Step 2: Broadcasting and computing the Euclidean distance at masked postions
         diff = neural_sequence_expanded - token_matrix_expanded
-        distances = torch.linalg.vector_norm(
-            diff[feature_mask.expand_as(diff)].view_as(diff), dim=3
-        )
+        if feature_mask.sum().item() == self.input_size:  # all True mask
+            distances = torch.linalg.vector_norm(diff, dim=3)
+        else:  # only True at masked positions
+            distances = torch.linalg.vector_norm(
+                diff[feature_mask.expand_as(diff)].view_as(diff), dim=3
+            )
         # Step 3: Finding the minimum indices along the num_embeddings dimension
         # distances shape: (1, seq_len, num_embeddings)
         token_sequence = distances.argmin(dim=2)  # should be a batch of token sequences
@@ -922,11 +925,9 @@ class NeuralTransformer(Model):
 
         ### >>> DEBUG: additional steps for new token mode >>> ###
         # Convert the high-dimensional input sequence into a 1-D sequence of tokens
-        input_tokens = self.tokenize_neural_data(
-            neural_sequence=input, feature_mask=mask
-        )
+        input = self.tokenize_neural_data(neural_sequence=input, feature_mask=mask)
         # Embed the tokens and then transform to a latent
-        latent_out = self.input_hidden(input_tokens)
+        latent_out = self.input_hidden(input)
         ### <<< DEBUG: additional steps for new token mode <<<  ###
 
         #### ORIGINAL CODE ####
@@ -945,26 +946,26 @@ class NeuralTransformer(Model):
 
     ### >>> DEBUG: different loss function needed for new token mode >>> ###
     def loss_fn(self):
-        def loss(outputs, targets, masks=None, **kwargs):
+        def loss(output, target, mask=None, **kwargs):
             """
             Args:
-                outputs: tensor w/ shape ``[batch_size, seq_len, n_token]``
-                targets: tensor w/ shape ``[batch_size, seq_len, input_size]``
-                masks: tensor w/ shape ``[batch_size, input_size]``
+                output: tensor w/ shape ``[batch_size, seq_len, n_token]``
+                target: tensor w/ shape ``[batch_size, seq_len, input_size]``
+                mask: tensor w/ shape ``[batch_size, input_size]``
             """
-            if masks is None:
-                masks = torch.ones(
-                    targets.shape[0], targets.shape[-1], dtype=torch.bool
-                ).to(targets.device)
+            if mask is None:
+                mask = torch.ones(
+                    target.shape[0], target.shape[-1], dtype=torch.bool
+                ).to(target.device)
             # convert target to indices
-            targets = self.tokenize_neural_data(
-                neural_sequence=targets, feature_mask=masks
+            target = self.tokenize_neural_data(
+                neural_sequence=target, feature_mask=mask
             ).view(-1)
             # flatten outputs
-            outputs = outputs.view(-1, self.n_token)
+            output = output.view(-1, self.n_token)
             # calculate cross entropy loss
             ce_loss = torch.nn.CrossEntropyLoss(reduction="mean", **kwargs)(
-                outputs, targets
+                output, target
             )
             # return loss
             return ce_loss
@@ -1013,7 +1014,9 @@ class NeuralTransformer(Model):
             # sample from the distribution to get the next token
             token_next = torch.multinomial(probs, num_samples=1)
             # convert the token back to neural data
-            input_next = self.random_projection[token_next]
+            input_next = self.random_projection[
+                token_next
+            ]  # TODO: but this is just something random! we need a function from token vector to neural data
             # append sampled data to the running sequence and continue
             input = torch.cat((input, input_next), dim=1)
 
