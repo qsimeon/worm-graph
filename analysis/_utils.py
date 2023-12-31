@@ -348,15 +348,17 @@ def loss_per_dataset(
                 # Baseline model is the naive predictor: predict that the value at
                 # next time step is the same as the current value.
                 y_base = X
-                baseline = compute_loss_vectorized(
-                    loss_fn=criterion, X=y_base, Y=Y, mask=mask
-                )
+                # baseline = compute_loss_vectorized(
+                #     loss_fn=criterion, X=y_base, Y=Y, mask=mask
+                # ) # DEBUG
+                baseline = criterion(output=y_base, target=Y, mask=mask)
 
                 # All models operate sequence-to-sequence
                 y_pred = model(X, mask)
-                loss = compute_loss_vectorized(
-                    loss_fn=criterion, X=y_pred, Y=Y, mask=mask
-                )
+                # loss = compute_loss_vectorized(
+                #     loss_fn=criterion, X=y_pred, Y=Y, mask=mask
+                # ) # DEBUG
+                loss = criterion(output=y_pred, target=Y, mask=mask)
 
                 # Update running losses
                 running_base_loss += baseline.item()

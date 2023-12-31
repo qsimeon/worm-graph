@@ -136,9 +136,10 @@ def train_model(
 
             # Baseline model/naive predictor: predict that the next time step is the same as the current one.
             y_base = X_train
-            train_baseline = compute_loss_vectorized(
-                loss_fn=criterion, X=y_base, Y=Y_train, mask=mask_train
-            )
+            # train_baseline = compute_loss_vectorized(
+            #     loss_fn=criterion, X=y_base, Y=Y_train, mask=mask_train
+            # ) # DEBUG
+            train_baseline = criterion(output=y_base, target=Y_train, mask=mask_train)
 
             # Reset / zero-out  gradients
             optimizer.zero_grad()
@@ -147,9 +148,10 @@ def train_model(
             with torch.autocast(device_type=DEVICE.type, dtype=torch.half):
                 # Models operate sequence-to-sequence.
                 y_pred = model(X_train, mask_train)
-                train_loss = compute_loss_vectorized(
-                    loss_fn=criterion, X=y_pred, Y=Y_train, mask=mask_train
-                )
+                # train_loss = compute_loss_vectorized(
+                #     loss_fn=criterion, X=y_pred, Y=Y_train, mask=mask_train
+                # ) # DEBUG
+                train_loss = criterion(output=y_pred, target=Y_train, mask=mask_train)
 
             # Backpropagation. NOTE: Backward passes under autocast are not recommended.
             if epoch > 0:  # skip first epoch to get tabula rasa loss
@@ -197,17 +199,19 @@ def train_model(
                 # This is the simplest model we can think of: predict that the next time step is the same as the current one
                 # is better than predict any other random number.
                 y_base = X_val
-                val_baseline = compute_loss_vectorized(
-                    loss_fn=criterion, X=y_base, Y=Y_val, mask=mask_val
-                )
+                # val_baseline = compute_loss_vectorized(
+                #     loss_fn=criterion, X=y_base, Y=Y_val, mask=mask_val
+                # ) # DEBUG
+                val_baseline = criterion(output=y_base, target=Y_val, mask=mask_val)
 
                 # Run the forward pass with autocasting
                 with torch.autocast(device_type=DEVICE.type, dtype=torch.half):
                     # Models operate sequence-to-sequence.
                     y_pred = model(X_val, mask_val)
-                    val_loss = compute_loss_vectorized(
-                        loss_fn=criterion, X=y_pred, Y=Y_val, mask=mask_val
-                    )
+                    # val_loss = compute_loss_vectorized(
+                    #     loss_fn=criterion, X=y_pred, Y=Y_val, mask=mask_val
+                    # ) # DEBUG
+                    val_loss = criterion(output=y_pred, target=Y_val, mask=mask_val)
 
                 # Update running losses
                 val_running_base_loss += val_baseline.item()

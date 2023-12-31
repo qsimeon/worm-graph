@@ -15,6 +15,7 @@ from visualize._utils import plot_heat_map
 from omegaconf import OmegaConf, DictConfig
 from scipy.spatial.distance import squareform
 from typing import Dict, Union, Tuple, Literal
-from train._utils import compute_loss_vectorized
+
+# from train._utils import compute_loss_vectorized
 from scipy.cluster.hierarchy import dendrogram, linkage, fcluster
 from data._utils import create_combined_dataset, split_combined_dataset
