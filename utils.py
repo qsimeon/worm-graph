@@ -24,6 +24,8 @@ NUM_NEURONS = 302  # number of neurons in the model organism
 
 BLOCK_SIZE = 5000  # maximum attention block size for Transformer models
 
+NUM_TOKENS = 16384  # number of tokens in the neural vocabulary
+
 RAW_DATA_URL = "https://www.dropbox.com/s/45yqpvtsncx4095/raw_data.zip?dl=1"
 
 RAW_ZIP = "raw_data.zip"

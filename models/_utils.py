@@ -793,18 +793,17 @@ class NeuralTransformer(Model):
         self.dropout = 0.1  # dropout rate
 
         ## >>> DEBUG: modifications for new token mode >>> ###
-        # TODO: make self.n_token a hyperparmater in main utils.py called NUM_TOKENS
-        self.n_token = (
-            16384  # number of tokens used to approximate the rich neural data
-        )
+        self.n_token = NUM_TOKENS  # number of tokens to approximate continuous values
         self.output_size = self.n_token
         self.random_projection = torch.nn.Parameter(
             torch.randn(self.n_token, self.input_size), requires_grad=False
-        )  # FIXED random projection matrix (NOT learned)
+        )  # fixed random projection matrix (not learned, not updated)
         self.token_neural_map = torch.nn.Parameter(
             torch.zeros(self.n_token, self.input_size), requires_grad=False
-        )  # a mapping of tokens to neural vector means
-        self.embedding = torch.nn.Embedding(self.n_token, self.hidden_size)
+        )  # a mapping of tokens to neural vector means (not learned but is updated)
+        self.embedding = torch.nn.Embedding(
+            self.n_token, self.hidden_size
+        )  # transformer lookup table (learned)
 
         # Positional encoding
         self.positional_encoding = PositionalEncoding(
@@ -822,30 +821,6 @@ class NeuralTransformer(Model):
         # Linear readout
         self.linear = torch.nn.Linear(self.hidden_size, self.n_token)
         ### <<< DEBUG: modifications for new token mode <<< ###
-
-        ############################################################
-        #### ORIGINAL CODE ####
-        # # Embedding
-        # self.embedding = torch.nn.Linear(
-        #     self.input_size,
-        #     self.hidden_size,
-        # )  # combine input and mask
-
-        # # Positional encoding
-        # self.positional_encoding = PositionalEncoding(
-        #     self.hidden_size,  # if positional_encoding after embedding
-        #     dropout=self.dropout,
-        # )
-
-        # # Input to hidden transformation
-        # self.input_hidden = torch.nn.Sequential(
-        #     self.embedding,
-        #     self.positional_encoding,  # DEBUG: Is positional_encoding after better?
-        #     torch.nn.ReLU(),
-        #     # NOTE: Do NOT use LayerNorm here! (it's already in the TransformerEncoderLayer)
-        # )
-        #### ORIGINAL CODE ####
-        ############################################################
 
         # Hidden to hidden transformation: TransformerEncoderLayer
         self.hidden_hidden = CausalTransformer(
@@ -920,13 +895,6 @@ class NeuralTransformer(Model):
         self.hidden = self.init_hidden(input.shape)
         # set hidden state of internal model
         self.inner_hidden_model.set_hidden(self.hidden)
-
-        # #### >>> ORIGINAL CODE >>> ####
-        # # recast the mask to the input shape
-        # mask = mask.unsqueeze(1).expand_as(input)
-        # # multiply input by the mask
-        # input = self.identity(input * mask)
-        # #### >>> ORIGINAL CODE >>> ####
 
         ### >>> DEBUG: additional steps for new token mode >>> ###
         # Convert the high-dimensional input sequence into a 1-D sequence of tokens
