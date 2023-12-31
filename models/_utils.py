@@ -594,8 +594,6 @@ class Model(torch.nn.Module):
                 output: (batch_size, seq_len, input_size)
                 target: (batch_size, seq_len, input_size)
                 mask: (batch_size, input_size)
-            TODO: Modify to use mask and essentially just have this do what
-                compute_loss_vectorized does.
             """
             # Expand feature mask along temporal dimension
             expanded_mask = mask.unsqueeze(1).expand_as(
@@ -609,8 +607,7 @@ class Model(torch.nn.Module):
                 masked_output, masked_target
             )
             # Normalize the loss by the total number of data points
-            logger.info(f"DEBUG norm_factor: {norm_factor.shape, norm_factor.size()}") # DEBUG
-            norm_factor = masked_loss[expanded_mask].shape[0] # TODO: change to .size()
+            norm_factor = masked_loss[expanded_mask].size(dim=0)
             # Calculate next time step prediction loss before adding regularization
             original_loss = masked_loss[expanded_mask].sum() / norm_factor
             # L1 regularization term
@@ -1173,86 +1170,86 @@ class FeatureFFNN(Model):
 
 
 ####################################################################################################################
-# #### ORIGINAL NEURALTRANSFORMER CODE ####
-# class NeuralTransformer(Model):
-#     """
-#     Transformer model for neural activity data.
-#     """
+#### ORIGINAL NEURALTRANSFORMER CODE ####
+class NeuralTransformer(Model):
+    """
+    Transformer model for neural activity data.
+    """
 
-#     def __init__(
-#         self,
-#         input_size: int,
-#         hidden_size: Union[int, None] = None,
-#         loss: Union[Callable, None] = None,
-#         l1_reg_param: float = 0.0,
-#     ):
-#         """
-#         Neural activity data is continuous valued and thus
-#         can naturally be treated as if it were already emebedded.
-#         However, to maintain notational similarity with the original
-#         Transformer architecture, we use a linear layer to perform
-#         expansion recoding - which acts as an embedding but is really
-#         just a linear projection.
-#         """
-#         # NOTE: Transformer only works with even `d_model`
-#         if hidden_size % 2 != 0:
-#             logger.info(f"Changing hidden_size from {hidden_size} to {hidden_size+1}.")
-#             hidden_size = hidden_size + 1
-#         else:
-#             logger.info(f"Using hidden_size: {hidden_size}.")
-#             hidden_size = hidden_size
+    def __init__(
+        self,
+        input_size: int,
+        hidden_size: Union[int, None] = None,
+        loss: Union[Callable, None] = None,
+        l1_reg_param: float = 0.0,
+    ):
+        """
+        Neural activity data is continuous valued and thus
+        can naturally be treated as if it were already emebedded.
+        However, to maintain notational similarity with the original
+        Transformer architecture, we use a linear layer to perform
+        expansion recoding - which acts as an embedding but is really
+        just a linear projection.
+        """
+        # NOTE: Transformer only works with even `d_model`
+        if hidden_size % 2 != 0:
+            logger.info(f"Changing hidden_size from {hidden_size} to {hidden_size+1}.")
+            hidden_size = hidden_size + 1
+        else:
+            logger.info(f"Using hidden_size: {hidden_size}.")
+            hidden_size = hidden_size
 
-#         # Initialize super class
-#         super(NeuralTransformer, self).__init__(
-#             input_size,
-#             hidden_size,
-#             loss,
-#             l1_reg_param,
-#         )
+        # Initialize super class
+        super(NeuralTransformer, self).__init__(
+            input_size,
+            hidden_size,
+            loss,
+            l1_reg_param,
+        )
 
-#         # Special transformer parameters
-#         self.n_head = find_largest_divisor(
-#             hidden_size
-#         )  # number of attention heads (NOTE: must be divisor of `hidden_size`)
-#         logger.info(f"Number of attention heads: {self.n_head}.")
-#         self.dropout = 0.1  # dropout rate,
+        # Special transformer parameters
+        self.n_head = find_largest_divisor(
+            hidden_size
+        )  # number of attention heads (NOTE: must be divisor of `hidden_size`)
+        logger.info(f"Number of attention heads: {self.n_head}.")
+        self.dropout = 0.1  # dropout rate,
 
-#         # Embedding
-#         self.embedding = torch.nn.Linear(
-#             self.input_size,
-#             self.hidden_size,
-#         )  # combine input and mask
+        # Embedding
+        self.embedding = torch.nn.Linear(
+            self.input_size,
+            self.hidden_size,
+        )  # combine input and mask
 
-#         # Positional encoding
-#         self.positional_encoding = PositionalEncoding(
-#             self.hidden_size,  # if positional_encoding after embedding
-#             dropout=self.dropout,
-#         )
+        # Positional encoding
+        self.positional_encoding = PositionalEncoding(
+            self.hidden_size,  # if positional_encoding after embedding
+            dropout=self.dropout,
+        )
 
-#         # Input to hidden transformation
-#         self.input_hidden = torch.nn.Sequential(
-#             self.embedding,
-#             self.positional_encoding,  # DEBUG: Is positional_encoding after better?
-#             # torch.nn.ReLU(),  # DEBUG: Is the ReLU here needed?
-#             # NOTE: Do NOT use LayerNorm here! (it's already in the TransformerEncoderLayer)
-#         )
+        # Input to hidden transformation
+        self.input_hidden = torch.nn.Sequential(
+            self.embedding,
+            self.positional_encoding,  # DEBUG: Is positional_encoding after better?
+            # torch.nn.ReLU(),  # DEBUG: Is the ReLU here needed?
+            # NOTE: Do NOT use LayerNorm here! (it's already in the TransformerEncoderLayer)
+        )
 
-#         # Hidden to hidden transformation: TransformerEncoderLayer
-#         self.hidden_hidden = CausalTransformer(
-#             d_model=self.hidden_size,
-#             nhead=self.n_head,
-#             dim_feedforward=self.hidden_size,
-#             dropout=self.dropout,
-#         )
+        # Hidden to hidden transformation: TransformerEncoderLayer
+        self.hidden_hidden = CausalTransformer(
+            d_model=self.hidden_size,
+            nhead=self.n_head,
+            dim_feedforward=self.hidden_size,
+            dropout=self.dropout,
+        )
 
-#         # Instantiate internal hidden model
-#         self.inner_hidden_model = InnerHiddenModel(self.hidden_hidden, self.hidden)
+        # Instantiate internal hidden model
+        self.inner_hidden_model = InnerHiddenModel(self.hidden_hidden, self.hidden)
 
-#     def init_hidden(self, input_shape=None):
-#         return None
+    def init_hidden(self, input_shape=None):
+        return None
 
 
-# #### ORIGINAL NEURALTRANSFORMER CODE ####
+#### ORIGINAL NEURALTRANSFORMER CODE ####
 ####################################################################################################################
 
 
