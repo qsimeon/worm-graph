@@ -56,7 +56,6 @@ def save_model(model, path, other_info=dict()):
         "input_size": model.get_input_size(),
         "hidden_size": model.get_hidden_size(),
         "loss_name": model.get_loss_name(),
-        "fft_reg_param": model.get_fft_reg_param(),
         "l1_reg_param": model.get_l1_reg_param(),
     }
     save_info = {**base_info, **other_info}

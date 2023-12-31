@@ -43,14 +43,12 @@ def get_model(model_config: DictConfig, verbose=True) -> torch.nn.Module:
         input_size = checkpoint["input_size"]
         hidden_size = checkpoint["hidden_size"]
         loss_name = checkpoint["loss_name"]
-        fft_reg_param = checkpoint["fft_reg_param"]
         l1_reg_param = checkpoint["l1_reg_param"]
         model_state_dict = checkpoint["model_state_dict"]
         model = eval(model_name)(
             input_size,
             hidden_size,
             loss=loss_name,
-            fft_reg_param=fft_reg_param,
             l1_reg_param=l1_reg_param,
         )
         model.load_state_dict(model_state_dict)
@@ -71,7 +69,6 @@ def get_model(model_config: DictConfig, verbose=True) -> torch.nn.Module:
             input_size=model_config.input_size,
             hidden_size=model_config.hidden_size,
             loss=model_config.loss,
-            fft_reg_param=model_config.fft_reg_param,
             l1_reg_param=model_config.l1_reg_param,
         )
         if model_config.type == "NeuralTransformer":

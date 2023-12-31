@@ -94,14 +94,12 @@ def load_model_from_checkpoint(checkpoint_path):
     input_size = checkpoint["input_size"]
     hidden_size = checkpoint["hidden_size"]
     loss_name = checkpoint["loss_name"]
-    fft_reg_param = checkpoint["fft_reg_param"]
     l1_reg_param = checkpoint["l1_reg_param"]
     model_state_dict = checkpoint["model_state_dict"]
     model = eval(model_name)(
         input_size,
         hidden_size,
         loss=loss_name,
-        fft_reg_param=fft_reg_param,
         l1_reg_param=l1_reg_param,
     ).to(DEVICE)
     model.load_state_dict(model_state_dict)
@@ -356,16 +354,13 @@ class Model(torch.nn.Module):
         input_size: int,
         hidden_size: Union[int, None],
         loss: Union[Callable, None] = None,
-        fft_reg_param: float = 0.0,
         l1_reg_param: float = 0.0,
+        v2: bool = False,
     ):
         """
         Defines attributes common to all models.
         """
         super(Model, self).__init__()
-        assert (
-            isinstance(fft_reg_param, float) and 0.0 <= fft_reg_param <= 1.0
-        ), "The regularization parameter `fft_reg_param` must be a float between 0.0 and 1.0."
         assert (
             isinstance(l1_reg_param, float) and 0.0 <= l1_reg_param <= 1.0
         ), "The regularization parameter `l1_reg_param` must be a float between 0.0 and 1.0."
@@ -386,7 +381,6 @@ class Model(torch.nn.Module):
         self.input_size = input_size  # Number of neurons (302)
         self.output_size = input_size  # Number of neurons (302)
         self.hidden_size = hidden_size if hidden_size is not None else input_size
-        self.fft_reg_param = fft_reg_param
         self.l1_reg_param = l1_reg_param
         # Initialize hidden state
         self._init_hidden()
@@ -412,6 +406,30 @@ class Model(torch.nn.Module):
         self.layer_norm = torch.nn.LayerNorm(self.hidden_size, elementwise_affine=True)
         # Initialize weights
         self._init_weights()
+
+        ## >>> DEBUG: modifications for new token mode >>> ###
+        if v2:
+            # New attributes and parameters for this version
+            self.n_token = (
+                NUM_TOKENS  # number of tokens to approximate continuous values
+            )
+            self.output_size = self.n_token  # modify output size to be number of tokens
+            self.random_projection = torch.nn.Parameter(
+                torch.randn(self.n_token, self.input_size), requires_grad=False
+            )  # fixed random projection matrix (not learned, not updated)
+            self.token_neural_map = torch.nn.Parameter(
+                torch.zeros(self.n_token, self.input_size), requires_grad=False
+            )  # a mapping of tokens to neural vector means (not learned but is updated)
+            self.embedding = torch.nn.Embedding(
+                self.n_token, self.hidden_size
+            )  # transformer lookup table (learned)
+            # Adjust linear readout to output token logits
+            self.linear = torch.nn.Linear(self.hidden_size, self.n_token)
+            # Alias methods to new versions
+            self.forward = self.forward_v2
+            self.loss_fn = self.loss_fn_v2
+            self.generate = self.generate_v2
+        ### <<< DEBUG: modifications for new token mode <<< ###
 
     # Initialization functions for setting hidden states and weights.
     def _init_hidden(self):
@@ -440,11 +458,58 @@ class Model(torch.nn.Module):
     def get_loss_name(self):
         return self.loss_name
 
-    def get_fft_reg_param(self):
-        return self.fft_reg_param
-
     def get_l1_reg_param(self):
         return self.l1_reg_param
+
+    def tokenize_neural_data(
+        self,
+        neural_sequence: torch.Tensor,
+        feature_mask: torch.Tensor,
+        token_matrix: torch.Tensor = None,
+    ):
+        """
+        Convert the high-dimensional sequence of neural states to a 1-D sequence of tokens.
+        Args:
+            neural_sequence: tensor of shape (batch_size, seq_len, input_size)
+            feature_mask: tensor of shape (batch_size, input_size)
+            token_matrix: tensor of shape (num_tokens, input_size)
+        Output:
+            token_sequence: tensor of shape (batch_size, seq_len)
+        """
+        # Step 0: Ensure inputs are the correct shapes
+        assert (
+            neural_sequence.ndim == 3 and neural_sequence.shape[-1] == self.input_size
+        ), "`neural_sequence` must have shape (batch_size, seq_len, input_size)"
+        assert (
+            feature_mask.ndim == 2 and feature_mask.shape[-1] == self.input_size
+        ), "`feature_mask` must have shape (batch_size, input_size)"
+        if token_matrix is not None:
+            assert (
+                token_matrix.ndim == 2 and token_matrix.shape[-1] == self.input_size
+            ), "`token_matrix` must have shape (num_tokens, input_size)"
+        # Step 1: Calculate the distances
+        # Reshape input_sequence and self.matrix for broadcasting
+        # New shapes: input_sequence: (batch_size, seq_len, 1, feature_dim),
+        #             self.random_projection: (batch_size, 1, num_tokens, feature_dim)
+        if token_matrix is None:
+            token_matrix = self.random_projection.to(neural_sequence.device)
+        feature_mask = feature_mask.unsqueeze(1).unsqueeze(1)
+        neural_sequence_expanded = neural_sequence.unsqueeze(2)
+        token_matrix_expanded = token_matrix.unsqueeze(0).unsqueeze(0)
+        # Step 2: Broadcasting and computing the Euclidean distance at masked postions
+        # distances shape: (batch_size, seq_len, num_embeddings)
+        diff = neural_sequence_expanded - token_matrix_expanded
+        if feature_mask.sum().item() == self.input_size:  # all True mask
+            distances = torch.linalg.vector_norm(diff, dim=3)
+        else:  # only True at masked positions
+            distances = torch.linalg.vector_norm(
+                diff[feature_mask.expand_as(diff)].view_as(diff), dim=3
+            )
+        # Step 3: Finding the minimum indices along the num_embeddings dimension
+        # token_sequence shape: (batch_size, seq_len)
+        token_sequence = distances.argmin(dim=2)  # should be a batch of token sequences
+        # Return the tokenized sequence
+        return token_sequence
 
     @torch.autocast(device_type=DEVICE.type, dtype=torch.half)
     def forward(self, input: torch.Tensor, mask: torch.Tensor):
@@ -475,27 +540,48 @@ class Model(torch.nn.Module):
         # return output
         return output
 
+    ### >>> DEBUG: modified forward method for new token mode >>> ###
+    @torch.autocast(device_type=DEVICE.type, dtype=torch.half)
+    def forward_v2(self, input: torch.Tensor, mask: torch.Tensor):
+        """
+        Special forward method for the newer version (v2) of the models based on first tokenizing
+        the neural data before doing sequence modeling to mimic the workflow used in Transformers.
+        """
+        # initialize hidden state
+        self.hidden = self.init_hidden(input.shape)
+        # set hidden state of internal model
+        self.inner_hidden_model.set_hidden(self.hidden)
+        ### >>> DEBUG: additional steps for new token mode >>> ###
+        # Convert the high-dimensional input sequence into a 1-D sequence of tokens
+        input_tokens = self.tokenize_neural_data(
+            neural_sequence=input, feature_mask=mask
+        )
+        # Update the mapping of tokens to neural vector means
+        for token in torch.unique(input_tokens).tolist():
+            self.token_neural_map[token] = 0.5 * self.token_neural_map[
+                token
+            ] + 0.5 * input[input_tokens == token].mean(dim=0)
+        # Embed the tokens and then transform to a latent
+        latent_out = self.input_hidden(input_tokens)
+        ### <<< DEBUG: additional steps for new token mode <<<  ###
+        # transform the latent
+        hidden_out = self.inner_hidden_model(latent_out)
+        # perform a linear readout to get the output
+        output_logits = self.linear(hidden_out)
+        # return output
+        return output_logits
+
+    ### <<< DEBUG: modified forward method for new token mode <<< ###
+
     def loss_fn(self):
         """
         The loss function to be used by all the models.
 
-        This custom loss function combines a primary loss function with
-        two additional regularization terms:
-
-        1. Fast Fourier Transform (FFT) matching: This regularization term encourages the frequency
-        distribution of the model's sequence output to match that of the target sequence. We can think
-        of this as performing a frequency distribution matching (FDM) operation on the model's output.
-        It may help the model to learn the inherent frequencies in the target data and thus produce
-        output sequences that are more similar to the target in the frequency domain.
-
-        2. L1 regularization on all model weights: This regularization term encourages the model to use
-        fewer parameters, effectively making the model more sparse. This can help to prevent
-        overfitting, make the model more interpretable, and improve generalization by encouraging the
-        model to use only the most important features. The L1 penalty is the sum of the absolute
-        values of the weights.
-
-        Both regularization terms are controlled by their respective regularization parameters:
-        `fft_reg_param` and `l1_reg_param`.
+        This custom loss function combines a primary loss function with an additional L1 regularization
+        on all model weights. This regularization term encourages the model to use fewer non-zero parameters,
+        effectively making the model more sparse. This can help to prevent overfitting, make the model more
+        interpretable, and improve generalization by encouraging the model to use only the most important
+        features. The L1 penalty is the sum of the absolute values of the weights.
         """
 
         def loss(prediction, target, **kwargs):
@@ -511,14 +597,6 @@ class Model(torch.nn.Module):
                 prediction,
                 target,
             )
-            # FFT regularization term
-            fft_loss = 0.0
-            if self.fft_reg_param > 0.0:
-                # calculate FFT and take the real part
-                input_fft = torch.fft.rfft(prediction, dim=-2).real
-                target_fft = torch.fft.rfft(target, dim=-2).real
-                # calculate average difference between real parts of FFTs
-                fft_loss += torch.abs(input_fft - target_fft).mean()
             # L1 regularization term
             l1_loss = 0.0
             if self.l1_reg_param > 0.0:
@@ -526,11 +604,8 @@ class Model(torch.nn.Module):
                 for param in self.parameters():
                     l1_loss += torch.abs(param).mean()
             # combine original loss with regularization terms
-            regularized_loss = (
-                original_loss
-                + self.fft_reg_param * fft_loss
-                + self.l1_reg_param * l1_loss
-            ) / (1.0 + self.fft_reg_param + self.l1_reg_param)
+            regularized_loss = original_loss + self.l1_reg_param * l1_loss
+            # return the regularized loss
             return regularized_loss
 
         return loss
@@ -541,7 +616,7 @@ class Model(torch.nn.Module):
         input: torch.Tensor,
         mask: torch.Tensor,
         num_new_timesteps: int,
-        context_window: int,
+        context_window: int = BLOCK_SIZE,
         autoregressive: bool = True,
     ):
         """
@@ -605,6 +680,60 @@ class Model(torch.nn.Module):
 
         return generated_tensor
 
+    ### >>> DEBUG: different generate method needed for new token mode >>> ###
+    @torch.no_grad()
+    def generate_v2(
+        self,
+        input: torch.Tensor,
+        mask: torch.Tensor,
+        max_new_tokens: int,
+        temperature=1.0,
+        top_k=None,
+    ):
+        """
+        Special generate method for the newer version (v2) of the models based on how generation is done in Transformers.
+        Take a conditioning sequence of neural data input with shape (batch_size, seq_len, input_size) and
+        completes the sequence max_new_tokens times, feeding the predictions back into the model each time.
+        In the v2 version, models take neural data as input, internally tokenize them and outputs the next token as output.
+        Therefore, we must convert the output token back to neural data. We do this by finding sampling from the distribution of
+        neural vectors that correspond to the token. We then append the sampled neural vector to the running sequence and continue.
+        """
+        # Set model to evaluation mode
+        self.eval()
+
+        # Loop through time
+        for _ in range(max_new_tokens):
+            # if the sequence context is growing too long we must crop it at BLOCK_SIZE
+            input_cond = (
+                input if input.size(1) <= BLOCK_SIZE else input[:, -BLOCK_SIZE:]
+            )
+            # forward the model to get the output
+            output = self(input_cond, mask)
+            # pluck the logits at the final step and scale by desired temperature
+            logits = output[:, -1, :] / temperature
+            # optionally crop the logits to only the top k options
+            if top_k is not None:
+                v, _ = torch.topk(logits, min(top_k, logits.size(-1)))
+                logits[logits < v[:, [-1]]] = -float("Inf")
+            # apply softmax to convert logits to (normalized) probabilities
+            probs = torch.nn.functional.softmax(logits, dim=-1)
+            # sample from the distribution to get the next token
+            token_next = torch.multinomial(probs, num_samples=1)
+            # convert the token back to neural data
+            sample_mu = self.token_neural_map[token_next.item()].expand(
+                input.size(0), 1, self.input_size
+            )  # the sample mean
+            # sample a neural vector from the multivariate normal distribution
+            input_next = torch.normal(mean=sample_mu, std=0.5).to(
+                input.device
+            )  # use variance < 1.0
+            # append sampled data to the running sequence and continue
+            input = torch.cat((input, input_next), dim=1)
+
+        return input
+
+    ### <<< DEBUG: different generate method needed for new token mode <<< ###
+
     def sample(self, num_new_timesteps: int):
         """
         Sample spontaneous neural activity from the model.
@@ -630,14 +759,12 @@ class NaivePredictor(Model):
         input_size: int,
         hidden_size: Union[int, None] = None,  # unused in this model
         loss: Union[Callable, None] = None,
-        fft_reg_param=0.0,
         l1_reg_param=0.0,
     ):
         super(NaivePredictor, self).__init__(
             input_size,
             None,  # hidden_size
             loss,
-            fft_reg_param,
             l1_reg_param,
         )
 
@@ -670,14 +797,12 @@ class LinearRegression(Model):
         input_size: int,
         hidden_size: Union[int, None] = None,  # unused in this model
         loss: Union[Callable, None] = None,
-        fft_reg_param=0.0,
         l1_reg_param=0.0,
     ):
         super(LinearRegression, self).__init__(
             input_size,
             None,  # hidden_size
             loss,
-            fft_reg_param,
             l1_reg_param,
         )
 
@@ -709,14 +834,12 @@ class FeatureFFNN(Model):
         input_size: int,
         hidden_size: Union[int, None] = None,
         loss: Union[Callable, None] = None,
-        fft_reg_param: float = 0.0,
         l1_reg_param: float = 0.0,
     ):
         super(FeatureFFNN, self).__init__(
             input_size,
             hidden_size,
             loss,
-            fft_reg_param,
             l1_reg_param,
         )
         # Special parameters for this model
@@ -757,7 +880,6 @@ class NeuralTransformer(Model):
         input_size: int,
         hidden_size: Union[int, None] = None,
         loss: Union[Callable, None] = None,
-        fft_reg_param: float = 0.0,
         l1_reg_param: float = 0.0,
     ):
         """
@@ -781,7 +903,6 @@ class NeuralTransformer(Model):
             input_size,
             hidden_size,
             loss,
-            fft_reg_param,
             l1_reg_param,
         )
 
@@ -815,7 +936,7 @@ class NeuralTransformer(Model):
         self.input_hidden = torch.nn.Sequential(
             self.embedding,
             self.positional_encoding,
-            # torch.nn.ReLU(), # DEBUG: Is the RELU here needed?
+            torch.nn.ReLU(),  # DEBUG: Is the RELU here needed?
         )
 
         # Linear readout
@@ -865,7 +986,8 @@ class NeuralTransformer(Model):
             ), "`token_matrix` must have shape (num_tokens, input_size)"
         # Step 1: Calculate the distances
         # Reshape input_sequence and self.matrix for broadcasting
-        # New shapes: input_sequence: (batch_size, seq_len, 1, feature_dim), self.random_projection: (batch_size, 1, num_tokens, feature_dim)
+        # New shapes: input_sequence: (batch_size, seq_len, 1, feature_dim),
+        #             self.random_projection: (batch_size, 1, num_tokens, feature_dim)
         if token_matrix is None:
             token_matrix = self.random_projection.to(neural_sequence.device)
         feature_mask = feature_mask.unsqueeze(1).unsqueeze(1)
@@ -909,11 +1031,6 @@ class NeuralTransformer(Model):
         # Embed the tokens and then transform to a latent
         latent_out = self.input_hidden(input_tokens)
         ### <<< DEBUG: additional steps for new token mode <<<  ###
-
-        #### ORIGINAL CODE ####
-        # # transform the input into a latent
-        # latent_out = self.input_hidden(input)
-        #### ORIGINAL CODE ####
 
         # transform the latent
         hidden_out = self.inner_hidden_model(latent_out)
@@ -1021,7 +1138,6 @@ class NeuralTransformer(Model):
 #         input_size: int,
 #         hidden_size: Union[int, None] = None,
 #         loss: Union[Callable, None] = None,
-#         fft_reg_param: float = 0.0,
 #         l1_reg_param: float = 0.0,
 #     ):
 #         """
@@ -1045,7 +1161,6 @@ class NeuralTransformer(Model):
 #             input_size,
 #             hidden_size,
 #             loss,
-#             fft_reg_param,
 #             l1_reg_param,
 #         )
 
@@ -1072,7 +1187,7 @@ class NeuralTransformer(Model):
 #         self.input_hidden = torch.nn.Sequential(
 #             self.embedding,
 #             self.positional_encoding,  # DEBUG: Is positional_encoding after better?
-#             torch.nn.ReLU(),  # DEBUG: Is the ReLU here needed?
+#             # torch.nn.ReLU(),  # DEBUG: Is the ReLU here needed?
 #             # NOTE: Do NOT use LayerNorm here! (it's already in the TransformerEncoderLayer)
 #         )
 
@@ -1106,7 +1221,6 @@ class NetworkCTRNN(Model):
         input_size: int,
         hidden_size: Union[int, None] = None,
         loss: Union[Callable, None] = None,
-        fft_reg_param: float = 0.0,
         l1_reg_param: float = 0.0,
     ):
         """
@@ -1116,7 +1230,6 @@ class NetworkCTRNN(Model):
             input_size,
             hidden_size,
             loss,
-            fft_reg_param,
             l1_reg_param,
         )
 
@@ -1154,7 +1267,6 @@ class LiquidCfC(Model):
         input_size: int,
         hidden_size: Union[int, None] = None,
         loss: Union[Callable, None] = None,
-        fft_reg_param: float = 0.0,
         l1_reg_param: float = 0.0,
     ):
         """
@@ -1165,7 +1277,6 @@ class LiquidCfC(Model):
             input_size,
             hidden_size,
             loss,
-            fft_reg_param,
             l1_reg_param,
         )
 
@@ -1223,7 +1334,6 @@ class NetworkLSTM(Model):
         input_size: int,
         hidden_size: Union[int, None] = None,
         loss: Union[Callable, None] = None,
-        fft_reg_param: float = 0.0,
         l1_reg_param: float = 0.0,
     ):
         """
@@ -1233,7 +1343,6 @@ class NetworkLSTM(Model):
             input_size,
             hidden_size,
             loss,
-            fft_reg_param,
             l1_reg_param,
         )
 
