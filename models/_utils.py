@@ -794,13 +794,15 @@ class NeuralTransformer(Model):
 
         ## >>> DEBUG: modifications for new token mode >>> ###
         # TODO: make self.n_token a hyperparmater in main utils.py called NUM_TOKENS
-        self.n_token = 2048  # number of tokens used to approximate the rich neural data
+        self.n_token = (
+            16384  # number of tokens used to approximate the rich neural data
+        )
         self.output_size = self.n_token
         self.random_projection = torch.nn.Parameter(
             torch.randn(self.n_token, self.input_size), requires_grad=False
         )  # FIXED random projection matrix (NOT learned)
-        self.token_neural_map = dict(
-            (idx, torch.zeros(self.input_size)) for idx in range(self.n_token)
+        self.token_neural_map = torch.nn.Parameter(
+            torch.zeros(self.n_token, self.input_size), requires_grad=False
         )  # a mapping of tokens to neural vector means
         self.embedding = torch.nn.Embedding(self.n_token, self.hidden_size)
 
@@ -890,7 +892,7 @@ class NeuralTransformer(Model):
         # Reshape input_sequence and self.matrix for broadcasting
         # New shapes: input_sequence: (batch_size, seq_len, 1, feature_dim), self.random_projection: (batch_size, 1, num_tokens, feature_dim)
         if token_matrix is None:
-            token_matrix = self.random_projection
+            token_matrix = self.random_projection.to(neural_sequence.device)
         feature_mask = feature_mask.unsqueeze(1).unsqueeze(1)
         neural_sequence_expanded = neural_sequence.unsqueeze(2)
         token_matrix_expanded = token_matrix.unsqueeze(0).unsqueeze(0)
@@ -932,10 +934,10 @@ class NeuralTransformer(Model):
             neural_sequence=input, feature_mask=mask
         )
         # Update the mapping of tokens to neural vector means
-        for token in torch.unique(input_tokens.cpu()).tolist():
-            self.token_neural_map[token] = 0.25 * self.token_neural_map[
+        for token in torch.unique(input_tokens).tolist():
+            self.token_neural_map[token] = 0.5 * self.token_neural_map[
                 token
-            ] + 0.75 * input.cpu()[input_tokens.cpu() == token].mean(dim=0)
+            ] + 0.5 * input[input_tokens == token].mean(dim=0)
         # Embed the tokens and then transform to a latent
         latent_out = self.input_hidden(input_tokens)
         ### <<< DEBUG: additional steps for new token mode <<<  ###
@@ -1023,20 +1025,14 @@ class NeuralTransformer(Model):
             probs = torch.nn.functional.softmax(logits, dim=-1)
             # sample from the distribution to get the next token
             token_next = torch.multinomial(probs, num_samples=1)
-            print(f"token_next: {token_next, token_next.shape}", end="\n\n")  # DEBUG
             # convert the token back to neural data
-            print(
-                f"self.random_projection[token_next]: {self.random_projection[token_next].shape, self.random_projection[token_next].device}",
-                end="\n\n",
-            )  # DEBUG
-            input_next = self.token_neural_map[token_next.item()]
-            print(
-                f"input_next (before): {input_next.shape, input_next.device}", end="\n\n"
-            )  # DEBUG
-            input_next = input_next.unsqueeze(0).to(input.device)
-            print(
-                f"input_next (after): {input_next.shape, input_next.device}", end="\n\n"
-            )  # DEBUG
+            sample_mu = self.token_neural_map[token_next.item()].expand(
+                input.size(0), 1, self.input_size
+            )  # the sample mean
+            # sample a neural vector from the multivariate normal distribution
+            input_next = torch.normal(mean=sample_mu, std=0.5).to(
+                input.device
+            )  # use variance < 1.0
             # append sampled data to the running sequence and continue
             input = torch.cat((input, input_next), dim=1)
 
