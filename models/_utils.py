@@ -400,6 +400,11 @@ class Model(torch.nn.Module):
         )
         # Instantiate internal hidden model - placeholder
         self.inner_hidden_model = InnerHiddenModel(self.hidden_hidden, self.hidden)
+        # Embedding layer
+        self.embedding = torch.nn.Linear(
+            self.input_size,
+            self.hidden_size,
+        )
         # Linear readout
         self.linear = torch.nn.Linear(self.hidden_size, self.output_size)
         # Optional layer normalization
@@ -408,7 +413,8 @@ class Model(torch.nn.Module):
         self._init_weights()
 
         ## >>> DEBUG: modifications for new token mode >>> ###
-        if v2:
+        self.v2 = v2
+        if self.v2:
             # New attributes and parameters for this version
             self.n_token = (
                 NUM_TOKENS  # number of tokens to approximate continuous values
@@ -420,13 +426,18 @@ class Model(torch.nn.Module):
             self.token_neural_map = torch.nn.Parameter(
                 torch.zeros(self.n_token, self.input_size), requires_grad=False
             )  # a mapping of tokens to neural vector means (not learned but is updated)
+
+            # Modify embedding layer to be a lookup table
             self.embedding = torch.nn.Embedding(
                 self.n_token, self.hidden_size
-            )  # transformer lookup table (learned)
+            )  # embedding lookup table (learned)
+
             # Adjust linear readout to output token logits
             self.linear = torch.nn.Linear(self.hidden_size, self.n_token)
+
             # Re-initialize weights
             self._init_weights()
+
             # Alias methods to new versions
             self.forward = self.forward_v2
             self.loss_fn = self.loss_fn_v2
@@ -558,6 +569,10 @@ class Model(torch.nn.Module):
         mask : torch.Tensor
             Mask on the neurons with shape (batch, neurons)
         """
+        # Route to the appropriate forward method
+        if self.v2:
+            return self.forward_v2(input, mask)
+
         # Initialize hidden state
         self.hidden = self.init_hidden(input.shape)
 
@@ -589,20 +604,24 @@ class Model(torch.nn.Module):
         Special forward method for the newer version (v2) of the models based on first tokenizing
         the neural data before doing sequence modeling to mimic the workflow used in Transformers.
         """
-        # initialize hidden state
+        # Initialize hidden state
         self.hidden = self.init_hidden(input.shape)
-        # set hidden state of internal model
+
+        # Set hidden state of internal model
         self.inner_hidden_model.set_hidden(self.hidden)
+
         ### >>> DEBUG: additional steps for new token mode >>> ###
         # Convert the high-dimensional input sequence into a 1-D sequence of tokens
         input_tokens = self.tokenize_neural_data(
             neural_sequence=input, feature_mask=mask
         )
+
         # Update the mapping of tokens to neural vector means
         for token in torch.unique(input_tokens).tolist():
             self.token_neural_map[token] = 0.5 * self.token_neural_map[
                 token
             ] + 0.5 * input[input_tokens == token].mean(dim=0)
+
         # Embed the tokens and then transform to a latent
         latent_out = self.input_hidden(input_tokens)
         ### <<< DEBUG: additional steps for new token mode <<<  ###
@@ -628,6 +647,9 @@ class Model(torch.nn.Module):
         interpretable, and improve generalization by encouraging the model to use only the most important
         features. The L1 penalty is the sum of the absolute values of the weights.
         """
+        # Route to the appropriate loss_fn method
+        if self.v2:
+            return self.loss_fn_v2()
 
         def loss(output, target, mask=None, **kwargs):
             """
@@ -681,6 +703,11 @@ class Model(torch.nn.Module):
 
     ### >>> DEBUG: different loss function needed for new token mode >>> ###
     def loss_fn_v2(self):
+        """
+        Special loss function for the newer version (v2) of the models based
+        on how loss is calculated in Transformers.
+        """
+
         def loss(output, target, mask=None, **kwargs):
             """
             Args:
@@ -694,13 +721,13 @@ class Model(torch.nn.Module):
                     target.shape[0], target.shape[-1], dtype=torch.bool
                 ).to(target.device)
 
-            # Convert target to indices
+            # Flatten output logits along batch x time dimensions
+            output = output.view(-1, self.n_token)
+
+            # Convert target from neural vector sequence to token sequence then flatten
             target = self.tokenize_neural_data(
                 neural_sequence=target, feature_mask=mask
             ).view(-1)
-
-            # Flatten outputs
-            output = output.view(-1, self.n_token)
 
             # Calculate cross entropy loss
             ce_loss = torch.nn.CrossEntropyLoss(reduction="mean", **kwargs)(
@@ -744,7 +771,9 @@ class Model(torch.nn.Module):
         generated_tensor : torch.Tensor
             Generated data with shape (num_new_timesteps, neurons)
         """
-        # TODO: Need to fix this.
+        # Route to the appropriate generate method
+        if self.v2:
+            return self.generate_v2()
 
         # Set model to evaluation mode
         self.eval()
@@ -987,12 +1016,6 @@ class FeatureFFNN(Model):
         )
         # Special parameters for this model
         self.dropout = 0.1  # dropout rate
-
-        # Embedding
-        self.embedding = torch.nn.Linear(
-            self.input_size,
-            self.hidden_size,
-        )  # combine input and mask
 
         # Input to hidden transformation
         self.input_hidden = torch.nn.Sequential(
@@ -1313,12 +1336,6 @@ class NeuralTransformer(Model):
         )  # number of attention heads (NOTE: must be divisor of `hidden_size`)
         logger.info(f"Number of attention heads: {self.n_head}.")
         self.dropout = 0.1  # dropout rate,
-
-        # Embedding
-        self.embedding = torch.nn.Linear(
-            self.input_size,
-            self.hidden_size,
-        )  # combine input and mask
 
         # Positional encoding
         self.positional_encoding = PositionalEncoding(
