@@ -837,9 +837,11 @@ def plot_pca_trajectory(log_dir, worms_to_plot=None, plot_type="3D"):
                         f"PCA plot failed for {plot_type} in {type_ds} dataset (check if num_named_neurons >= 3)"
                     )
                     logger.error(f"The error that occurred: {e}")
-                    logger.error(
-                        traceback.format_exc()
-                    )  # This will print the full traceback
+                    # # This will print the full traceback
+                    # logger.error(traceback.format_exc()) 
+                    # Logging just the exception type and message
+                    err_msg = f"{e.__class__.__name__}: {e}"
+                    logger.error(err_msg)
                     pass
 
 
@@ -1692,7 +1694,11 @@ def plot_experiment_loss_per_dataset(
                 )
             )
             logger.error(f"The error that occurred: {e}")
-            logger.error(traceback.format_exc())  # This will print the full traceback
+            # # This will print the full traceback
+            # logger.error(traceback.format_exc())  
+            # Logging just the exception type and message
+            err_msg = f"{e.__class__.__name__}: {e}"
+            logger.error(err_msg)
             pass
 
     # Set axis labels and title

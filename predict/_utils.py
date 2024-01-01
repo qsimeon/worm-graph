@@ -88,8 +88,8 @@ def model_predict(
                 input=train_data_splits[0].unsqueeze(0).to(DEVICE),
                 mask=neurons_mask.unsqueeze(0).to(DEVICE),
                 num_new_timesteps=num_new_timesteps,
-                context_window=context_window,
                 autoregressive=False,
+                context_window=context_window,
             )
             .squeeze(0)
             .detach()
@@ -101,8 +101,8 @@ def model_predict(
                 input=train_data_splits[0].unsqueeze(0).to(DEVICE),
                 mask=neurons_mask.unsqueeze(0).to(DEVICE),
                 num_new_timesteps=num_new_timesteps,
-                context_window=context_window,
                 autoregressive=True,
+                context_window=context_window,
             )
             .squeeze(0)
             .detach()
@@ -157,8 +157,8 @@ def model_predict(
                 input=val_data_splits[0].unsqueeze(0).to(DEVICE),
                 mask=neurons_mask.unsqueeze(0).to(DEVICE),
                 num_new_timesteps=num_new_timesteps,
-                context_window=context_window,
                 autoregressive=False,
+                context_window=context_window,
             )
             .squeeze(0)
             .detach()
@@ -170,8 +170,8 @@ def model_predict(
                 input=val_data_splits[0].unsqueeze(0).to(DEVICE),
                 mask=neurons_mask.unsqueeze(0).to(DEVICE),
                 num_new_timesteps=num_new_timesteps,
-                context_window=context_window,
                 autoregressive=True,
+                context_window=context_window,
             )
             .squeeze(0)
             .detach()

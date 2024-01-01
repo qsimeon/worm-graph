@@ -355,7 +355,7 @@ class Model(torch.nn.Module):
         hidden_size: Union[int, None],
         loss: Union[Callable, None] = None,
         l1_reg_param: float = 0.0,
-        v2: bool = False,
+        v2: bool = True,
     ):
         """
         Defines attributes common to all models.
@@ -463,6 +463,31 @@ class Model(torch.nn.Module):
     def get_l1_reg_param(self):
         return self.l1_reg_param
 
+    def calculate_distances(self, neural_sequence, token_matrix, feature_mask=None):
+        batch_size, seq_len, input_size = neural_sequence.shape
+        num_tokens = token_matrix.shape[0]
+        distances = torch.empty(
+            (batch_size, seq_len, num_tokens), device=neural_sequence.device
+        )
+
+        if feature_mask is None:
+            feature_mask = torch.ones(
+                (batch_size, input_size),
+                dtype=torch.bool,
+                device=neural_sequence.device,
+            )
+
+        for b in range(batch_size):
+            for s in range(seq_len):
+                logger.info(f"HERE! {s}")
+                for t in range(num_tokens):
+                    distances[b, s, t] = torch.linalg.vector_norm(
+                        neural_sequence[b, s][feature_mask[b]]
+                        - token_matrix[t][feature_mask[b]]
+                    )
+
+        return distances
+
     def tokenize_neural_data(
         self,
         neural_sequence: torch.Tensor,
@@ -485,29 +510,41 @@ class Model(torch.nn.Module):
         assert (
             feature_mask.ndim == 2 and feature_mask.shape[-1] == self.input_size
         ), "`feature_mask` must have shape (batch_size, input_size)"
-        if token_matrix is not None:
-            assert (
-                token_matrix.ndim == 2 and token_matrix.shape[-1] == self.input_size
-            ), "`token_matrix` must have shape (num_tokens, input_size)"
-        # Step 1: Calculate the distances
+        if token_matrix is None:
+            token_matrix = self.random_projection.to(neural_sequence.device)
+        assert (
+            token_matrix.ndim == 2 and token_matrix.shape[-1] == self.input_size
+        ), "`token_matrix` must have shape (num_tokens, input_size)"
+
         # Reshape input_sequence and self.matrix for broadcasting
         # New shapes: input_sequence: (batch_size, seq_len, 1, feature_dim),
         #             self.random_projection: (batch_size, 1, num_tokens, feature_dim)
-        if token_matrix is None:
-            token_matrix = self.random_projection.to(neural_sequence.device)
-        feature_mask = feature_mask.unsqueeze(1).unsqueeze(1)
-        neural_sequence_expanded = neural_sequence.unsqueeze(2)
-        token_matrix_expanded = token_matrix.unsqueeze(0).unsqueeze(0)
-        # Step 2: Broadcasting and computing the Euclidean distance at masked postions
-        # distances shape: (batch_size, seq_len, num_embeddings)
-        diff = neural_sequence_expanded - token_matrix_expanded
-        if feature_mask.sum().item() == self.input_size:  # all True mask
-            distances = torch.linalg.vector_norm(diff, dim=3)
-        else:  # only True at masked positions
-            distances = torch.linalg.vector_norm(
-                diff[feature_mask.expand_as(diff)].view_as(diff), dim=3
-            )
-        # Step 3: Finding the minimum indices along the num_embeddings dimension
+        # feature_mask = feature_mask.unsqueeze(1).unsqueeze(1)
+        # neural_sequence_expanded = neural_sequence.unsqueeze(2)
+        # token_matrix_expanded = token_matrix.unsqueeze(0).unsqueeze(0)
+
+        # logger.info(
+        #     f"DEBUG neural_sequence_expanded: {neural_sequence_expanded.shape, neural_sequence_expanded.device}\n"
+        # )
+        # logger.info(
+        #     f"DEBUG token_matrix_expanded: {token_matrix_expanded.shape, token_matrix_expanded.device}\n"
+        # )
+        # diff = neural_sequence_expanded - token_matrix_expanded
+        # Use the function in your tokenize_neural_data method
+        distances = self.calculate_distances(
+            neural_sequence,
+            token_matrix,
+            feature_mask,
+        )  # (batch_size, seq_len, num_tokens)
+        logger.info(f"distances: {distances.shape, distances.device}")
+
+        # if feature_mask.sum().item() == self.input_size:  # all True mask
+        #     distances = torch.linalg.vector_norm(diff, dim=3)
+        # else:  # only True at masked positions
+        #     distances = torch.linalg.vector_norm(
+        #         diff[feature_mask.expand_as(diff)].view_as(diff), dim=3
+        #     )
+        # Step 3: Finding the minimum indices along the num_tokens dimension
         # token_sequence shape: (batch_size, seq_len)
         token_sequence = distances.argmin(dim=2)  # should be a batch of token sequences
         # Return the tokenized sequence
@@ -595,29 +632,42 @@ class Model(torch.nn.Module):
                 target: (batch_size, seq_len, input_size)
                 mask: (batch_size, input_size)
             """
+            # Default mask to all True if not provided
+            if mask is None:
+                mask = torch.ones(
+                    target.shape[0], target.shape[-1], dtype=torch.bool
+                ).to(target.device)
+
             # Expand feature mask along temporal dimension
             expanded_mask = mask.unsqueeze(1).expand_as(
                 output
             )  # temporally invariant & feature equivariant
+
             # Mask the invalid positions in `output` and `target`
             masked_output = output * expanded_mask.float()
             masked_target = target * expanded_mask.float()
-            # Compute the loss without reduction (.e. reduction='none' in `loss_fn`)
+
+            # Compute the loss without reduction
             masked_loss = self.loss(reduction="none", **kwargs)(
                 masked_output, masked_target
             )
+
             # Normalize the loss by the total number of data points
             norm_factor = masked_loss[expanded_mask].size(dim=0)
+
             # Calculate next time step prediction loss before adding regularization
             original_loss = masked_loss[expanded_mask].sum() / norm_factor
+
             # L1 regularization term
             l1_loss = 0.0
             if self.l1_reg_param > 0.0:
                 # calculate L1 regularization term for all weights
                 for param in self.parameters():
                     l1_loss += torch.abs(param).mean()
-            # Combine original loss with regularization terms
+
+            # Add the L1 penality to the original loss
             regularized_loss = original_loss + self.l1_reg_param * l1_loss
+
             # Return the regularized loss
             return regularized_loss
 
@@ -632,21 +682,26 @@ class Model(torch.nn.Module):
                 target: tensor w/ shape ``[batch_size, seq_len, input_size]``
                 mask: tensor w/ shape ``[batch_size, input_size]``
             """
+            # Default mask to all True if not provided
             if mask is None:
                 mask = torch.ones(
                     target.shape[0], target.shape[-1], dtype=torch.bool
                 ).to(target.device)
-            # convert target to indices
+
+            # Convert target to indices
             target = self.tokenize_neural_data(
                 neural_sequence=target, feature_mask=mask
             ).view(-1)
-            # flatten outputs
+
+            # Flatten outputs
             output = output.view(-1, self.n_token)
-            # calculate cross entropy loss
+
+            # Calculate cross entropy loss
             ce_loss = torch.nn.CrossEntropyLoss(reduction="mean", **kwargs)(
                 output, target
             )
-            # return loss
+
+            # Return loss
             return ce_loss
 
         return loss
@@ -659,8 +714,8 @@ class Model(torch.nn.Module):
         input: torch.Tensor,
         mask: torch.Tensor,
         num_new_timesteps: int,
-        context_window: int = BLOCK_SIZE,
         autoregressive: bool = True,
+        context_window: int = BLOCK_SIZE,
     ):
         """
         Generate future neural activity from the model.
@@ -673,6 +728,8 @@ class Model(torch.nn.Module):
             Mask on the neurons with shape (batch_size, neurons)
         num_new_timesteps : int
             Number of time steps to generate
+        autoregressive : bool
+            Whether to generate values autoregressively or not
         context_window : int
             Number of time steps to use as context
 
@@ -691,29 +748,33 @@ class Model(torch.nn.Module):
             input = input[
                 :, :context_window, :
             ]  # shape (batch_size, context_window, neurons)
-
         # Otherwise defaults to ground-truth feeding
+        else:
+            pass
+
+        # Initialize the list of generated values
         generated_values = []
 
         # Loop through time
         for t in range(num_new_timesteps):
             # Get the last context_window values of the input tensor
-            x = input[
+            input_cond = input[
                 :, t : context_window + t, :
             ]  # shape (batch_size, context_window, neurons)
 
             # Get predictions
-            predictions = self(x, mask)  # shape (batch_size, context_window, neurons)
+            predictions = self(
+                input_cond, mask
+            )  # shape (batch_size, context_window, neurons)
 
             # Get last predicted value
-            last_time_step = predictions[:, -1, :].unsqueeze(
-                0
-            )  # shape (batch_size, 1, neurons)
+            input_next = predictions[:, [-1], :]  # shape (batch_size, 1, neurons)
+            # input_next = predictions[:, -1, :].unsqueeze(0) # shape (batch_size, 1, neurons) # DEBUG
 
             # Append the prediction to the generated_values list and input tensor
-            generated_values.append(last_time_step)
+            generated_values.append(input_next)
             input = torch.cat(
-                (input, last_time_step), dim=1
+                (input, input_next), dim=1
             )  # add the prediction to the input tensor
 
         # Stack the generated values to a tensor
@@ -721,6 +782,7 @@ class Model(torch.nn.Module):
             generated_values, dim=1
         )  # shape (batch_size, num_new_timesteps, neurons)
 
+        # Only return the newly generated values
         return generated_tensor
 
     ### >>> DEBUG: different generate method needed for new token mode >>> ###
@@ -729,14 +791,16 @@ class Model(torch.nn.Module):
         self,
         input: torch.Tensor,
         mask: torch.Tensor,
-        max_new_tokens: int,
+        num_new_timesteps: int,
+        autoregressive: bool = True,
+        context_window: int = BLOCK_SIZE,
         temperature=1.0,
         top_k=None,
     ):
         """
         Special generate method for the newer version (v2) of the models based on how generation is done in Transformers.
         Take a conditioning sequence of neural data input with shape (batch_size, seq_len, input_size) and
-        completes the sequence max_new_tokens times, feeding the predictions back into the model each time.
+        completes the sequence num_new_timesteps times, feeding the predictions back into the model each time.
         In the v2 version, models take neural data as input, internally tokenize them and outputs the next token as output.
         Therefore, we must convert the output token back to neural data. We do this by finding sampling from the distribution of
         neural vectors that correspond to the token. We then append the sampled neural vector to the running sequence and continue.
@@ -744,36 +808,66 @@ class Model(torch.nn.Module):
         # Set model to evaluation mode
         self.eval()
 
+        # If generating values autoregressively
+        if autoregressive:
+            input = input[
+                :, :context_window, :
+            ]  # shape (batch_size, context_window, neurons)
+        # Otherwise defaults to ground-truth feeding
+        else:
+            pass
+
+        # Initialize the list of generated values
+        generated_values = []
+
         # Loop through time
-        for _ in range(max_new_tokens):
-            # if the sequence context is growing too long we must crop it at BLOCK_SIZE
-            input_cond = (
-                input if input.size(1) <= BLOCK_SIZE else input[:, -BLOCK_SIZE:]
-            )
-            # forward the model to get the output
+        for t in range(num_new_timesteps):
+            # If the sequence context is growing too long we must crop it
+            input_cond = input[:, t : context_window + t, :]
+            # input_cond = input if input.size(1) <= context_window else input[:, -context_window:] # DEBUG
+
+            # Forward the model to get the output
             output = self(input_cond, mask)
-            # pluck the logits at the final step and scale by desired temperature
+
+            # Pluck the logits at the final step and scale by desired temperature
             logits = output[:, -1, :] / temperature
-            # optionally crop the logits to only the top k options
+
+            # Optionally crop the logits to only the top k options
             if top_k is not None:
                 v, _ = torch.topk(logits, min(top_k, logits.size(-1)))
                 logits[logits < v[:, [-1]]] = -float("Inf")
-            # apply softmax to convert logits to (normalized) probabilities
+
+            # Apply softmax to convert logits to (normalized) probabilities
             probs = torch.nn.functional.softmax(logits, dim=-1)
-            # sample from the distribution to get the next token
+
+            # Sample from the distribution to get the next token
             token_next = torch.multinomial(probs, num_samples=1)
-            # convert the token back to neural data
+
+            # Convert the token back to a neural vector
             sample_mu = self.token_neural_map[token_next.item()].expand(
                 input.size(0), 1, self.input_size
             )  # the sample mean
-            # sample a neural vector from the multivariate normal distribution
+
+            # Sample a neural vector from the multivariate normal distribution
             input_next = torch.normal(mean=sample_mu, std=0.5).to(
                 input.device
             )  # use variance < 1.0
-            # append sampled data to the running sequence and continue
+
+            # Append the prediction to the generated_values list
+            generated_values.append(input_next)
+
+            # Append sampled data to the running sequence and continue
             input = torch.cat((input, input_next), dim=1)
 
-        return input
+        # return input # DEBUG
+
+        # Stack the generated values to a tensor
+        generated_tensor = torch.cat(
+            generated_values, dim=1
+        )  # shape (batch_size, num_new_timesteps, neurons)
+
+        # Only return the newly generated values
+        return generated_tensor
 
     ### <<< DEBUG: different generate method needed for new token mode <<< ###
 

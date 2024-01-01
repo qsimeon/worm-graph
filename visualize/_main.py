@@ -129,7 +129,11 @@ def plot_experiment(visualize_config: DictConfig, exp_config: DictConfig) -> Non
     except Exception as e:
         logger.info(f"Not all experiments are finished. Skipping for now.")
         logger.error(f"The error that occurred: {e}")
-        logger.error(traceback.format_exc())  # This will print the full traceback
+        # # This will print the full traceback
+        # logger.error(traceback.format_exc())
+        # Logging just the exception type and message
+        err_msg = f"{e.__class__.__name__}: {e}"
+        logger.error(err_msg)
         return None
 
 
