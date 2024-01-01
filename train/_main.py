@@ -69,11 +69,11 @@ def train_model(
     save_freq = train_config.save_freq
 
     # Initialize optimizer, learning rate scheduler and gradient scaler
+    # TODO: Try different learning rate schedulers
     optim_name = "torch.optim." + train_config.optimizer
     lr = train_config.lr  # constant/starting learning rate
     optimizer = eval(optim_name + "(model.parameters(), lr=" + str(lr) + ")")
     scheduler = lr_scheduler.ReduceLROnPlateau(optimizer, mode="min")
-    # # TODO: Try different learning rate schedulers
     # scheduler = lr_scheduler.CyclicLR(base_lr=0.1 * lr, max_lr=10 * lr)
     # scheduler = lr_scheduler.StepLR(optimizer, step_size=50, gamma=0.1)
     scaler = GradScaler()
@@ -315,7 +315,7 @@ if __name__ == "__main__":
     dataset_config = OmegaConf.load("configs/submodule/dataset.yaml")
     print(OmegaConf.to_yaml(dataset_config), end="\n\n")
 
-    # Create new to log directory
+    # Create new log directory
     timestamp = datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
     log_dir = os.path.join("logs/hydra", timestamp)
     os.makedirs(log_dir, exist_ok=True)

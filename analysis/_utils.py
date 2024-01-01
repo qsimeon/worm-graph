@@ -348,7 +348,11 @@ def loss_per_dataset(
                 # Baseline model is the naive predictor: predict that the value at
                 # next time step is the same as the current value.
                 y_base = X
-                baseline = criterion(output=y_base, target=Y, mask=mask)
+                baseline = (
+                    torch.tensor(0.0)
+                    if model.v2
+                    else criterion(output=y_base, target=Y, mask=mask)
+                )
 
                 # All models operate sequence-to-sequence
                 y_pred = model(X, mask)

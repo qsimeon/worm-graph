@@ -503,17 +503,44 @@ class Model(torch.nn.Module):
             (batch_size, seq_len, num_tokens), device=neural_sequence.device
         )
 
-        # Compute distance for each batch
+        # Compute distances by looping over each batch
+        # NOTE: We NEED to do this because each batch item may use a different feature mask
+        # start_time = time.time()
         for b in range(batch_size):
             V = feature_mask[b]  # (input_size,)
             S = neural_sequence[b].unsqueeze(1)  # (seq_len, 1, input_size)
             M = token_matrix.unsqueeze(0)  # (1, num_tokens, input_size)
             D = S - M  # (seq_len, num_tokens, input_size)
             dist = torch.linalg.vector_norm(
-                D[V.expand_as(D)].view(*D.shape[0:2], -1), dim=-1
+                D[V.expand_as(D)].view(seq_len, num_tokens, -1), dim=-1
             )  # (seq_len, num_tokens)
             distances[b] = dist
 
+         
+        # #### >>>> DEBUG: Compute distances using broadcasted tensor computation >>>> ####
+        # start_time = time.time()
+        # V = feature_mask.unsqueeze(1).unsqueeze(1)  # (batch_size, 1, 1, input_size)
+        # logger.info(f"DEBUG V (feature_mask): {V.shape}")
+        # S = neural_sequence.unsqueeze(2)  # (batch_size, seq_len, 1, input_size)
+        # M = token_matrix.unsqueeze(0).unsqueeze(0)  # (1, 1, num_tokens, input_size)
+        # D = S - M  # (batch_size, seq_len, num_tokens, input_size)
+        # logger.info(f"DEBUG D (differences): {D.shape}")
+        # logger.info(f"DEBUG (batch_size, seq_len, num_tokens, input_size): {batch_size, seq_len, num_tokens, input_size}")
+        # dist = torch.linalg.vector_norm(
+        #     D[V.tile(dims=(1, seq_len, num_tokens, 1))].view(
+        #         batch_size, seq_len, num_tokens, -1
+        #     ),
+        #     dim=-1,
+        # )  # (batch_size, seq_len, num_tokens)
+        # distances[:, :, :] = dist
+        # end_time = time.time()
+        # elapsed_time = end_time - start_time
+        # logging.info(
+        #     f"DEBUG `calculate_distances` time: {elapsed_time} seconds"
+        # )  # DEBUG
+        # #### <<<< DEBUG: Compute distances using broadcasted tensor computation <<<< ####
+
+        # Return the distances matrix
         return distances
 
     def tokenize_neural_data(
@@ -601,8 +628,9 @@ class Model(torch.nn.Module):
     @torch.autocast(device_type=DEVICE.type, dtype=torch.half)
     def forward_v2(self, input: torch.Tensor, mask: torch.Tensor):
         """
-        Special forward method for the newer version (v2) of the models based on first tokenizing
-        the neural data before doing sequence modeling to mimic the workflow used in Transformers.
+        Special forward method for the newer version (v2) of the models
+        based on first tokenizing the high-dimensional neural data before
+        doing sequence modeling to mimic the approach used in Transformers.
         """
         # Initialize hidden state
         self.hidden = self.init_hidden(input.shape)
@@ -1311,8 +1339,8 @@ class NeuralTransformer(Model):
         can naturally be treated as if it were already emebedded.
         However, to maintain notational similarity with the original
         Transformer architecture, we use a linear layer to perform
-        expansion recoding - which acts as an embedding but is really
-        just a linear projection.
+        expansion recoding. This replaces the embedding layer in the
+        traditional Transformer but all it is really just a linear projection.
         """
         # NOTE: Transformer only works with even `d_model`
         if hidden_size % 2 != 0:

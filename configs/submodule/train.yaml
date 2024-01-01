@@ -4,7 +4,7 @@ train:
   lr: 0.001
   epochs: 10 #1000
   save_freq: 500
-  batch_size: 128
+  batch_size: 32 #128
   shuffle: true
 
   early_stopping:
