@@ -464,11 +464,21 @@ class Model(torch.nn.Module):
         return self.l1_reg_param
 
     def calculate_distances(self, neural_sequence, token_matrix, feature_mask=None):
+        """
+        Helper method to calculate Euclidean distances between neural sequence vectors and token matrix vectors.
+
+        Args:
+            neural_sequence (torch.Tensor): Shape (batch_size, seq_len, input_size).
+            token_matrix (torch.Tensor): Shape (num_tokens, input_size).
+            feature_mask (torch.Tensor, optional): Shape (batch_size, input_size). If None, all features are considered.
+
+        Returns:
+            torch.Tensor: Distances for each batch. Shape (batch_size, seq_len, num_tokens).
+
+        The function computes distances considering only the selected features by the mask for each batch.
+        """
         batch_size, seq_len, input_size = neural_sequence.shape
         num_tokens = token_matrix.shape[0]
-        distances = torch.empty(
-            (batch_size, seq_len, num_tokens), device=neural_sequence.device
-        )
 
         if feature_mask is None:
             feature_mask = torch.ones(
@@ -477,14 +487,21 @@ class Model(torch.nn.Module):
                 device=neural_sequence.device,
             )
 
+        # Initialize distances tensor
+        distances = torch.empty(
+            (batch_size, seq_len, num_tokens), device=neural_sequence.device
+        )
+
+        # Compute distance for each batch
         for b in range(batch_size):
-            for s in range(seq_len):
-                logger.info(f"HERE! {s}")
-                for t in range(num_tokens):
-                    distances[b, s, t] = torch.linalg.vector_norm(
-                        neural_sequence[b, s][feature_mask[b]]
-                        - token_matrix[t][feature_mask[b]]
-                    )
+            V = feature_mask[b]  # (input_size,)
+            S = neural_sequence[b].unsqueeze(1)  # (seq_len, 1, input_size)
+            M = token_matrix.unsqueeze(0)  # (1, num_tokens, input_size)
+            D = S - M  # (seq_len, num_tokens, input_size)
+            dist = torch.linalg.vector_norm(
+                D[V.expand_as(D)].view(*D.shape[0:2], -1), dim=-1
+            )  # (seq_len, num_tokens)
+            distances[b] = dist
 
         return distances
 
@@ -503,7 +520,7 @@ class Model(torch.nn.Module):
         Output:
             token_sequence: tensor of shape (batch_size, seq_len)
         """
-        # Step 0: Ensure inputs are the correct shapes
+        # Ensure inputs are the correct shapes
         assert (
             neural_sequence.ndim == 3 and neural_sequence.shape[-1] == self.input_size
         ), "`neural_sequence` must have shape (batch_size, seq_len, input_size)"
@@ -516,37 +533,16 @@ class Model(torch.nn.Module):
             token_matrix.ndim == 2 and token_matrix.shape[-1] == self.input_size
         ), "`token_matrix` must have shape (num_tokens, input_size)"
 
-        # Reshape input_sequence and self.matrix for broadcasting
-        # New shapes: input_sequence: (batch_size, seq_len, 1, feature_dim),
-        #             self.random_projection: (batch_size, 1, num_tokens, feature_dim)
-        # feature_mask = feature_mask.unsqueeze(1).unsqueeze(1)
-        # neural_sequence_expanded = neural_sequence.unsqueeze(2)
-        # token_matrix_expanded = token_matrix.unsqueeze(0).unsqueeze(0)
-
-        # logger.info(
-        #     f"DEBUG neural_sequence_expanded: {neural_sequence_expanded.shape, neural_sequence_expanded.device}\n"
-        # )
-        # logger.info(
-        #     f"DEBUG token_matrix_expanded: {token_matrix_expanded.shape, token_matrix_expanded.device}\n"
-        # )
-        # diff = neural_sequence_expanded - token_matrix_expanded
-        # Use the function in your tokenize_neural_data method
+        # Use the `calculate_distance` method
         distances = self.calculate_distances(
             neural_sequence,
             token_matrix,
             feature_mask,
         )  # (batch_size, seq_len, num_tokens)
-        logger.info(f"distances: {distances.shape, distances.device}")
 
-        # if feature_mask.sum().item() == self.input_size:  # all True mask
-        #     distances = torch.linalg.vector_norm(diff, dim=3)
-        # else:  # only True at masked positions
-        #     distances = torch.linalg.vector_norm(
-        #         diff[feature_mask.expand_as(diff)].view_as(diff), dim=3
-        #     )
-        # Step 3: Finding the minimum indices along the num_tokens dimension
-        # token_sequence shape: (batch_size, seq_len)
-        token_sequence = distances.argmin(dim=2)  # should be a batch of token sequences
+        # Find the minimum indices along the num_tokens dimension
+        token_sequence = distances.argmin(dim=-1)  # (batch_size, seq_len)
+
         # Return the tokenized sequence
         return token_sequence
 
@@ -562,21 +558,28 @@ class Model(torch.nn.Module):
         mask : torch.Tensor
             Mask on the neurons with shape (batch, neurons)
         """
-        # initialize hidden state
+        # Initialize hidden state
         self.hidden = self.init_hidden(input.shape)
-        # set hidden state of internal model
+
+        # Set hidden state of internal model
         self.inner_hidden_model.set_hidden(self.hidden)
-        # recast the mask to the input shape
+
+        # Recast the mask to the input shape
         mask = mask.unsqueeze(1).expand_as(input)
-        # multiply input by the mask
+
+        # Multiply input by the mask
         input = self.identity(input * mask)
-        # transform the input into a latent
+
+        # Transform the input into a latent
         latent_out = self.input_hidden(input)
-        # transform the latent
+
+        # Transform the latent
         hidden_out = self.inner_hidden_model(latent_out)
-        # perform a linear readout to get the output
+
+        # Perform a linear readout to get the output
         output = self.linear(hidden_out)
-        # return output
+
+        # Return output
         return output
 
     ### >>> DEBUG: modified forward method for new token mode >>> ###
@@ -603,11 +606,14 @@ class Model(torch.nn.Module):
         # Embed the tokens and then transform to a latent
         latent_out = self.input_hidden(input_tokens)
         ### <<< DEBUG: additional steps for new token mode <<<  ###
-        # transform the latent
+
+        # Transform the latent
         hidden_out = self.inner_hidden_model(latent_out)
-        # perform a linear readout to get the output
+
+        # Perform a linear readout to get the output
         output_logits = self.linear(hidden_out)
-        # return output
+
+        # Return output
         return output_logits
 
     ### <<< DEBUG: modified forward method for new token mode <<< ###
