@@ -562,6 +562,7 @@ class Model(torch.nn.Module):
         bin_edges = torch.tensor(
             norm.ppf(torch.linspace(0, 1, num_tokens)), device=neural_sequence.device
         )
+
         # Helper function for mapping values to tokens
         def func(value):
             bool_arr = (value > bin_edges[:-1]) * (value <= bin_edges[1:]).to(int)
@@ -572,13 +573,24 @@ class Model(torch.nn.Module):
         vec_func = torch.vmap(func)
         mat_func = torch.vmap(vec_func, in_dims=1, out_dims=1)
         tns_func = torch.vmap(mat_func, in_dims=2, out_dims=2)
+        logger.info(
+            f"DEBUG neural_sequence: {neural_sequence.shape, neural_sequence.dtype}\n{neural_sequence[-1]}"
+        )  # DEBUG
         # Apply the tensor function to our neural sequence data with shape (batch_size, seq_len, input_size)
         token_tensor = tns_func(neural_sequence)  # (batch_size, seq_len, input_size)
-        print(f"token_tensor: {token_tensor.shape, token_tensor.dtype}", end="\n\n")
+        logger.info(
+            f"DEBUG token_tensor: {token_tensor.shape, token_tensor.dtype}\n{token_tensor[-1]}"
+        )  # DEBUG
         # Now multiply by the feature mask so that tokens for missing features are 0
+        logger.info(
+            f"DEBUG feature_mask: {feature_mask.shape, feature_mask.dtype, feature_mask[-1].sum()}\n{feature_mask[-1]}"
+        )  # DEBUG
         token_tensor = token_tensor * feature_mask.unsqueeze(1).expand_as(
             token_tensor
         ).to(token_tensor.dtype)
+        logger.info(
+            f"DEBUG token_tensor: {token_tensor.shape, token_tensor.dtype}\n{token_tensor[-1]}"
+        )  # DEBUG
         # Return the tokenized data tensor with shape (batch_size, seq_len, input_size)
         return token_tensor
 
@@ -620,7 +632,6 @@ class Model(torch.nn.Module):
         num_tokens = token_matrix.shape[0]
 
         # Use the `calculate_distance` method
-        # start_time = time.time()  # DEBUG
         distances = self.calculate_distances(
             neural_sequence,
             token_matrix,
@@ -629,27 +640,6 @@ class Model(torch.nn.Module):
 
         # Find the minimum indices along the num_tokens dimension
         token_sequence = distances.argmin(dim=-1)  # (batch_size, seq_len)
-        # end_time = time.time()  # DEBUG
-        # logger.info(f"(1) time: {end_time - start_time} seconds")  # DEBUG
-        # logger.info(f"(1) token_sequence: {token_sequence.shape}")  # DEBUG
-
-        # # #### >>>> DEBUG: Tokenize using using broadcasted tensor computation >>>> ####
-        # start_time = time.time()  # DEBUG
-        # V = feature_mask.unsqueeze(1).unsqueeze(1)  # (batch_size, 1, 1, input_size)
-        # S = neural_sequence.unsqueeze(2)  # (batch_size, seq_len, 1, input_size)
-        # M = token_matrix.unsqueeze(0).unsqueeze(0)  # (1, 1, num_tokens, input_size)
-        # D = S - M  # (batch_size, seq_len, num_tokens, input_size)
-        # # NOTE: Subverts calculation of distance matrix
-        # token_sequence = (
-        #     D[V.expand_as(D)]  # DEBUG: Error dues to tensors with more than INT_MAX elements
-        #     # D[V.tile(dims=(1, seq_len, num_tokens, 1))]
-        #     .view(batch_size, seq_len, -1).argmin(dim=-1)
-        # )  # (batch_size, seq_len)
-        # token_sequence = num_tokens - (token_sequence % num_tokens)
-        # end_time = time.time()  # DEBUG
-        # logger.info(f"(2) time: {end_time - start_time} seconds")  # DEBUG
-        # logger.info(f"(2) token_sequence: {token_sequence.shape}")  # DEBUG
-        # # #### DEBUG: <<<< Tokenize using broadcasted tensor computation <<<< ####
 
         # Return the tokenized sequence
         return token_sequence
@@ -708,11 +698,15 @@ class Model(torch.nn.Module):
         # Set hidden state of internal model
         self.inner_hidden_model.set_hidden(self.hidden)
 
-        ### >>> DEBUG: additional steps for new token mode >>> ###
         # Convert the high-dimensional input sequence into a 1-D sequence of tokens
         input_tokens = self.tokenize_neural_data(
             neural_sequence=input, feature_mask=mask
         )
+
+        input_tokens = self.tokenize_neural_data_hD(
+            neural_sequence=input, feature_mask=mask
+        )  # DEBUG
+        exit(0)
 
         # Update the mapping of tokens to neural vector means
         for token in torch.unique(input_tokens).tolist():
@@ -722,7 +716,6 @@ class Model(torch.nn.Module):
 
         # Embed the tokens and then transform to a latent
         latent_out = self.input_hidden(input_tokens)
-        ### <<< DEBUG: additional steps for new token mode <<<  ###
 
         # Transform the latent
         hidden_out = self.inner_hidden_model(latent_out)
