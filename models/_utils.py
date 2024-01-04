@@ -431,6 +431,8 @@ class Model(torch.nn.Module):
             self.embedding = torch.nn.Embedding(
                 self.n_token, self.hidden_size
             )  # embedding lookup table (learned)
+            # # TODO: If using high-dimensional tokens, we will need an embedding for each feature dimension
+            # self.embedding = torch.nn.ModuleList([torch.nn.Embedding(self.n_token+1, self.hidden_size) for _ in range(self.input_size)])
 
             # Adjust linear readout to output token logits
             self.linear = torch.nn.Linear(self.hidden_size, self.n_token)
@@ -555,9 +557,30 @@ class Model(torch.nn.Module):
         assert feature_mask.sum().item() > 0, "`feature_mask` cannot be all False."
         assert num_tokens > input_size, "`num_tokens` must be greater than `input_size`"
 
-        # Initialize the token sequence
+        # Create bins of eaul sized probability mass over the continuos support of the standard Gaussian
+        # NOTE: We use the standard Gaussian because we assume the data is standardized
+        bin_edges = torch.tensor(
+            norm.ppf(torch.linspace(0, 1, num_tokens)), device=neural_sequence.device
+        )
+        # Helper function for mapping values to tokens
+        def func(value):
+            bool_arr = (value > bin_edges[:-1]) * (value <= bin_edges[1:]).to(int)
+            return (
+                torch.argwhere(bool_arr).squeeze() + 1
+            )  # NOTE: +1 because we will use the 0th token for missing values
 
-        return None
+        vec_func = torch.vmap(func)
+        mat_func = torch.vmap(vec_func, in_dims=1, out_dims=1)
+        tns_func = torch.vmap(mat_func, in_dims=2, out_dims=2)
+        # Apply the tensor function to our neural sequence data with shape (batch_size, seq_len, input_size)
+        token_tensor = tns_func(neural_sequence)  # (batch_size, seq_len, input_size)
+        print(f"token_tensor: {token_tensor.shape, token_tensor.dtype}", end="\n\n")
+        # Now multiply by the feature mask so that tokens for missing features are 0
+        token_tensor = token_tensor * feature_mask.unsqueeze(1).expand_as(
+            token_tensor
+        ).to(token_tensor.dtype)
+        # Return the tokenized data tensor with shape (batch_size, seq_len, input_size)
+        return token_tensor
 
     def tokenize_neural_data(
         self,

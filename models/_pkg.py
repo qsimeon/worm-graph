@@ -1,11 +1,11 @@
 # All imports for models module
 import os
 import math
-import time
 import torch
 import logging
 
 from ncps.torch import CfC
+from scipy.stats import norm
 from typing import Callable, Union
 from prettytable import PrettyTable
 from omegaconf import DictConfig, OmegaConf
