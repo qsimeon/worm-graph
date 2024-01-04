@@ -428,11 +428,20 @@ class Model(torch.nn.Module):
             )  # a mapping of tokens to neural vector means (not learned but is updated)
 
             # Modify embedding layer to be a lookup table
-            self.embedding = torch.nn.Embedding(
-                self.n_token, self.hidden_size
-            )  # embedding lookup table (learned)
-            # # TODO: If using high-dimensional tokens, we will need an embedding for each feature dimension
-            # self.embedding = torch.nn.ModuleList([torch.nn.Embedding(self.n_token+1, self.hidden_size) for _ in range(self.input_size)])
+            # self.embedding = torch.nn.Embedding(
+            #     self.n_token, self.hidden_size
+            # )  # embedding lookup table (learned)
+
+            ### DEBUG ###
+            # If using high-dimensional tokens, we will need an embedding for each feature dimension
+            # TODO: Convert the self.embedding ModuleList into a callabel torch.nn.Module that does the summing in its forward method
+            self.embedding = torch.nn.ModuleList(
+                [
+                    torch.nn.Embedding(self.n_token + 1, self.hidden_size)
+                    for _ in range(self.input_size)
+                ]
+            )
+            ### DEBUG ###
 
             # Adjust linear readout to output token logits
             self.linear = torch.nn.Linear(self.hidden_size, self.n_token)
@@ -558,7 +567,7 @@ class Model(torch.nn.Module):
         assert num_tokens > input_size, "`num_tokens` must be greater than `input_size`"
 
         # Create bins of eaul sized probability mass over the continuos support of the standard Gaussian
-        # NOTE: We use the standard Gaussian because we assume the data is standardized
+        # NOTE: We use the standard Gaussian because the data is standardized
         bin_edges = torch.tensor(
             norm.ppf(torch.linspace(0, 1, num_tokens)), device=neural_sequence.device
         )
@@ -570,27 +579,19 @@ class Model(torch.nn.Module):
                 torch.argwhere(bool_arr).squeeze() + 1
             )  # NOTE: +1 because we will use the 0th token for missing values
 
+        # Vectorize the function so it works with batched tensors
         vec_func = torch.vmap(func)
         mat_func = torch.vmap(vec_func, in_dims=1, out_dims=1)
         tns_func = torch.vmap(mat_func, in_dims=2, out_dims=2)
-        logger.info(
-            f"DEBUG neural_sequence: {neural_sequence.shape, neural_sequence.dtype}\n{neural_sequence[-1]}"
-        )  # DEBUG
+
         # Apply the tensor function to our neural sequence data with shape (batch_size, seq_len, input_size)
         token_tensor = tns_func(neural_sequence)  # (batch_size, seq_len, input_size)
-        logger.info(
-            f"DEBUG token_tensor: {token_tensor.shape, token_tensor.dtype}\n{token_tensor[-1]}"
-        )  # DEBUG
+
         # Now multiply by the feature mask so that tokens for missing features are 0
-        logger.info(
-            f"DEBUG feature_mask: {feature_mask.shape, feature_mask.dtype, feature_mask[-1].sum()}\n{feature_mask[-1]}"
-        )  # DEBUG
         token_tensor = token_tensor * feature_mask.unsqueeze(1).expand_as(
             token_tensor
         ).to(token_tensor.dtype)
-        logger.info(
-            f"DEBUG token_tensor: {token_tensor.shape, token_tensor.dtype}\n{token_tensor[-1]}"
-        )  # DEBUG
+
         # Return the tokenized data tensor with shape (batch_size, seq_len, input_size)
         return token_tensor
 
@@ -699,23 +700,38 @@ class Model(torch.nn.Module):
         self.inner_hidden_model.set_hidden(self.hidden)
 
         # Convert the high-dimensional input sequence into a 1-D sequence of tokens
-        input_tokens = self.tokenize_neural_data(
-            neural_sequence=input, feature_mask=mask
-        )
+        # input_tokens = self.tokenize_neural_data(
+        #     neural_sequence=input, feature_mask=mask
+        # )
 
+        ### DEBUG ###
         input_tokens = self.tokenize_neural_data_hD(
             neural_sequence=input, feature_mask=mask
-        )  # DEBUG
-        exit(0)
+        )
+        ### DEBUG ###
 
-        # Update the mapping of tokens to neural vector means
-        for token in torch.unique(input_tokens).tolist():
-            self.token_neural_map[token] = 0.5 * self.token_neural_map[
-                token
-            ] + 0.5 * input[input_tokens == token].mean(dim=0)
+        # # Update the mapping of tokens to neural vector means
+        # for token in torch.unique(input_tokens).tolist():
+        #     self.token_neural_map[token] = 0.5 * self.token_neural_map[
+        #         token
+        #     ] + 0.5 * input[input_tokens == token].mean(dim=0)
 
         # Embed the tokens and then transform to a latent
-        latent_out = self.input_hidden(input_tokens)
+        # latent_out = self.input_hidden(input_tokens)
+
+        ### DEBUG ###
+        # Embed each feature and then sum them together to get the final embedding
+        # TODO: Convert the self.embedding ModuleList into a callabel torch.nn.Module that does the summing in its forward method
+        latent_out = 0
+        for _ in range(self.input_size):
+            logger.info(
+                f"\n{self.embedding[_].weight.shape}\n{input_tokens[:, :, _].shape}\n{self.embedding[_](input_tokens[:, :, _]).shape}"
+            )  # DEBUG
+            latent_out += self.embedding[_](
+                input_tokens[:, :, _]
+            )  # (batch_size, seq_len, hidden_size)
+        exit(0)
+        ### DEBUG ###
 
         # Transform the latent
         hidden_out = self.inner_hidden_model(latent_out)

@@ -89,7 +89,7 @@ def train_model(
         train_dataset, batch_size=batch_size, shuffle=shuffle, num_workers=0
     )
     valloader = torch.utils.data.DataLoader(
-        val_dataset, batch_size=batch_size, shuffle=False, num_workers=0
+        val_dataset, batch_size=batch_size, shuffle=shuffle, num_workers=0
     )
 
     # Loss metrics
