@@ -328,7 +328,7 @@ def loss_per_dataset(
 
         num_worms.append(len(combined_dataset))
 
-        # TODO: Make batch_size configurable parameters
+        # TODO: Make this analysis `batch_size` a configurable parameter
         batch_size = 32  # DEBUG
         dataloader = torch.utils.data.DataLoader(
             select_dataset,
