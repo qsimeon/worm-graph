@@ -141,14 +141,14 @@ class MultiChannelReadout(torch.nn.Module):
     A module for readout logits for each input channel.
     """
 
-    def __init__(self, num_channels, hidden_size, output_size):
+    def __init__(self, num_channels, in_features, out_features):
         super().__init__()
         self.num_channels = num_channels
-        self.hidden_size = hidden_size
-        self.output_size = output_size
+        self.in_features = in_features
+        self.out_features = out_features
         self.readouts = torch.nn.ModuleList(
             [
-                torch.nn.Linear(self.hidden_size, self.output_size)
+                torch.nn.Linear(self.in_features, self.out_features)
                 for _ in range(self.num_channels)
             ]
         )
@@ -156,14 +156,23 @@ class MultiChannelReadout(torch.nn.Module):
     def forward(self, x):
         """
         Args:
-            x: Tensor, shape (batch_size, seq_len, hidden_size)
+            x: Tensor, shape (batch_size, seq_len, in_features)
         Output:
-            output: Tensor, shape (batch_size, seq_len, output_size)
+            output: Tensor, shape (batch_size, seq_len, out_features, num_channels)
         """
-        output = []
+        batch_size, seq_len, in_features = x.shape
+        assert (
+            in_features == self.in_features
+        ), "Input dimension does not match expected `in_features`."
+        output = torch.empty(
+            batch_size, seq_len, self.out_features, self.num_channels
+        ).to(x.device)
         for _ in range(self.num_channels):
-            output.append(self.readouts[_](x[:, :, _]))
-        return torch.hstack(output)
+            output[:, :, :, _] = self.readouts[_](x)
+        logger.info(
+            f"DEBUG MultiChannelReadout.forward \n\t output: \t {output.shape, output.dtype}\n\n"
+        )  # DEBUG
+        return output  # (batch_size, seq_len, out_features, num_channels)
 
 
 class MultiChannelEmbedding(torch.nn.Module):
@@ -210,25 +219,10 @@ class MultiChannelEmbedding(torch.nn.Module):
         output = embedded.view(
             batch_size, seq_len, num_channels, self.embedding_dim
         ).sum(dim=2)
-        logger.info(f"FINISHED MultiChannelEmbedding.forward\n\n")  # DEBUG
+        logger.info(
+            f"DEBUG MultiChannelEmbedding.forward \n\t output: \t {output.shape, output.dtype}\n\n"
+        )  # DEBUG
         return output
-
-    # @torch.autocast(device_type=DEVICE.type, dtype=torch.long)
-    # def forward(self, x):
-    #     """
-    #     Args:
-    #         x: Tensor, shape (batch_size, seq_len, num_channels)
-    #     Output:
-    #         output: Tensor, shape (batch_size, seq_len, embedding_dim)
-    #     """
-    #     # Embed each feature and then sum them together to get the final embedding
-    #     output = 0
-    #     for _ in range(self.num_channels):
-    #         output += self.embeddings[_](
-    #             x[:, :, _]
-    #         )  # (batch_size, seq_len, hidden_size)
-    #     logger.info(f"FINISHED MultiChannelEmbedding.forward\n\n")  # DEBUG
-    #     return output
 
 
 class PositionalEncoding(torch.nn.Module):
@@ -520,16 +514,17 @@ class Model(torch.nn.Module):
                 torch.randn(self.n_token, self.input_size), requires_grad=False
             )  # fixed random projection matrix (not learned, not updated)
 
+            # # Mapping of tokens to neural vectors
             # self.token_neural_map = torch.nn.Parameter(
             #     torch.zeros(self.n_token, self.input_size), requires_grad=False
-            # )  # mapping of tokens to neural vectors (not learned but is updated)
+            # ) # not learned but is updated
             ### >>> DEBUG: multi-dimensional tokenization and embedding >>> ###
             self.token_neural_map = torch.nn.Parameter(
                 torch.zeros(self.n_token, 1), requires_grad=False
-            )  # mapping of tokens to neural values (not learned but is updated)
+            )  # not learned but is updated
             ### <<< DEBUG: multi-dimensional tokenization and embedding <<< ###
 
-            # Modify embedding layer to be a lookup table
+            # # Modify embedding layer to be a lookup table
             # self.embedding = torch.nn.Embedding(
             #     num_embeddings=self.n_token, embedding_dim=self.hidden_size
             # )  # embedding lookup table (learned)
@@ -541,11 +536,18 @@ class Model(torch.nn.Module):
             )  # embedding lookup table (learned)
             ### <<< DEBUG: multi-dimensional tokenization and embedding <<< ###
 
-            # Adjust linear readout to output token logits
-            self.linear = torch.nn.Linear(self.hidden_size, self.n_token)
+            # # Adjust linear readout to output token logits
+            # self.linear = torch.nn.Linear(self.hidden_size, self.n_token)
+            ### >>> DEBUG: multi-dimensional tokenization and embedding >>> ###
+            self.linear = MultiChannelReadout(
+                num_channels=self.input_size,
+                in_features=self.hidden_size,
+                out_features=self.n_token,
+            )
+            ### <<< DEBUG: multi-dimensional tokenization and embedding <<< ###
 
-            # Re-initialize weights
-            self._init_weights()
+            # # Re-initialize weights
+            # self._init_weights()
 
             # Alias methods to new versions
             self.forward = self.forward_v2
@@ -583,6 +585,7 @@ class Model(torch.nn.Module):
     def get_l1_reg_param(self):
         return self.l1_reg_param
 
+    @torch.autocast(device_type=DEVICE.type, dtype=torch.half)
     def calculate_distances(self, neural_sequence, token_matrix, feature_mask=None):
         """
         Helper method to calculate Euclidean distances between neural sequence vectors and token matrix vectors.
@@ -630,6 +633,7 @@ class Model(torch.nn.Module):
         # Return the distances matrix
         return distances
 
+    @torch.autocast(device_type=DEVICE.type, dtype=torch.half)
     def tokenize_neural_data(
         self,
         neural_sequence: torch.Tensor,
@@ -683,16 +687,14 @@ class Model(torch.nn.Module):
         # Update the mapping of tokens to neural vectors
         # NOTE: The `token_neural_map` is used purely for generation
         for token in torch.unique(token_sequence).tolist():
-            self.token_neural_map[token] = 0.8 * self.token_neural_map[
+            self.token_neural_map[token] = 0.5 * self.token_neural_map[
                 token
-            ] + 0.2 * neural_sequence[token_sequence == token].mean(dim=0)
-        logger.info(
-            f"self.token_neural_map[token]:\t{self.token_neural_map[token].shape, self.token_neural_map[token].dtype}\n{self.token_neural_map[token]}\n\n"
-        )  # DEBUG
+            ] + 0.5 * neural_sequence[token_sequence == token].mean(dim=0)
 
-        # Return the tokenized sequence with shape (batch_size, seq_len)
-        return token_sequence
+        # Return the tokenized sequence
+        return token_sequence  # (batch_size, seq_len)
 
+    @torch.autocast(device_type=DEVICE.type, dtype=torch.half)
     def tokenize_neural_data_multi_channel(
         self,
         neural_sequence: torch.Tensor,
@@ -743,7 +745,7 @@ class Model(torch.nn.Module):
         bool_arr = (
             neural_sequence.unsqueeze(-1) > bin_edges_expanded[:, :, :, :-1]
         ) * (neural_sequence.unsqueeze(-1) <= bin_edges_expanded[:, :, :, 1:])
-        token_tensor = bool_arr.to(torch.int64).argmax(dim=-1)
+        token_tensor = bool_arr.to(torch.long).argmax(dim=-1)
 
         # Apply the feature mask
         token_tensor *= feature_mask.unsqueeze(1).expand_as(token_tensor)
@@ -755,15 +757,12 @@ class Model(torch.nn.Module):
         # NOTE: The `token_neural_map` is used purely for generation
         for token in torch.unique(token_tensor).tolist():
             self.token_neural_map[token] = (
-                0.8 * self.token_neural_map[token]
-                + 0.2 * neural_sequence[token_tensor == token].mean()
+                0.5 * self.token_neural_map[token]
+                + 0.5 * neural_sequence[token_tensor == token].mean()
             )
-        logger.info(
-            f"self.token_neural_map[token]:\t{self.token_neural_map[token].shape, self.token_neural_map[token].dtype}\n{self.token_neural_map[token]}\n\n"
-        )  # DEBUG
 
-        # Return the tokenized data tensor with shape (batch_size, seq_len, input_size)
-        return token_tensor
+        # Return the tokenized data tensor
+        return token_tensor  # (batch_size, seq_len, input_size)
 
     @torch.autocast(device_type=DEVICE.type, dtype=torch.half)
     def forward(self, input: torch.Tensor, mask: torch.Tensor):
@@ -787,11 +786,8 @@ class Model(torch.nn.Module):
         # Set hidden state of internal model
         self.inner_hidden_model.set_hidden(self.hidden)
 
-        # Recast the mask to the input shape
-        mask = mask.unsqueeze(1).expand_as(input)
-
-        # Multiply input by the mask
-        input_activity = self.identity(input * mask)
+        # Multiply input by the mask (expanded to match input shape)
+        input_activity = self.identity(input * mask.unsqueeze(1).expand_as(input))
 
         # Transform the input into a latent
         latent_out = self.input_hidden(input_activity)
@@ -824,25 +820,32 @@ class Model(torch.nn.Module):
         #     neural_sequence=input, feature_mask=mask
         # ) # (batch_size, seq_len)
 
-        # Convert the multi-dimensional input seqeunce into a multi-dimensional sequence of tokens
+        # # Convert the multi-dimensional input seqeunce into a multi-dimensional sequence of tokens
         ### >>> DEBUG: multi-dimensional tokenization and embedding >>> ###
         input_tokens = self.tokenize_neural_data_multi_channel(
             neural_sequence=input, feature_mask=mask
         )  # (batch_size, seq_len, input_size)
+        logger.info(
+            f"\nDEBUG forward_v2 \n\t input_tokens: \t {input_tokens.shape, input_tokens.dtype}\n"
+        )  # DEBUG
         ### <<< DEBUG: multi-dimensional tokenization and embedding <<< ###
 
         # Embed the tokens and then transform to a latent
         latent_out = self.input_hidden(input_tokens)
-        logger.info(f"latent_out: \t {latent_out.shape, latent_out.dtype}\n\n")  # DEBUG
+        logger.info(
+            f"\nDEBUG forward_v2 \n\t latent_out: \t {latent_out.shape, latent_out.dtype}\n"
+        )  # DEBUG
 
         # Transform the latent
         hidden_out = self.inner_hidden_model(latent_out)
-        logger.info(f"hidden_out: \t {hidden_out.shape, hidden_out.dtype}\n\n")  # DEBUG
+        logger.info(
+            f"\nDEBUG forward_v2 \n\t hidden_out: \t {hidden_out.shape, hidden_out.dtype}\n"
+        )  # DEBUG
 
         # Perform a linear readout to get the output
         output_logits = self.linear(hidden_out)
         logger.info(
-            f"output_logits: \t {output_logits.shape, output_logits.dtype}\n\n"
+            f"\nDEBUG forward_v2 \n\t output_logits: \t {output_logits.shape, output_logits.dtype}\n"
         )  # DEBUG
 
         # Return output
@@ -850,6 +853,7 @@ class Model(torch.nn.Module):
 
     ### <<< DEBUG: modified forward method for new token mode <<< ###
 
+    @torch.autocast(device_type=DEVICE.type, dtype=torch.half)
     def loss_fn(self):
         """
         The loss function to be used by all the models.
@@ -915,6 +919,7 @@ class Model(torch.nn.Module):
         return loss
 
     ### >>> DEBUG: different loss function needed for new token mode >>> ###
+    @torch.autocast(device_type=DEVICE.type, dtype=torch.half)
     def loss_fn_v2(self):
         """
         Special loss function for the newer version (v2) of the models based
@@ -934,13 +939,34 @@ class Model(torch.nn.Module):
                     target.shape[0], target.shape[-1], dtype=torch.bool
                 ).to(target.device)
 
-            # Flatten output logits along batch x time dimensions
-            output = output.view(-1, self.n_token)
+            # # Flatten output logits along batch x time dimensions
+            # output = output.view(
+            #     -1, self.n_token
+            # )  # (batch_size, seq_len, n_token) -> (batch_size * seq_len, n_token)
+            ### >>> DEBUG: multi-dimensional tokenization and embedding >>> ###
+            output = output.view(
+                -1, self.n_token, self.input_size
+            )  # (batch_size, seq_len, n_token, input_size) -> (batch_size * seq_len, n_token, input_size)
+            logger.info(
+                f"\nDEBUG loss_fn_v2 \n\t output: \t {output.shape, output.dtype}\n\n"
+            )  # DEBUG
+            ### <<< DEBUG: multi-dimensional tokenization and embedding <<< ###
 
-            # Convert target from neural vector sequence to token sequence then flatten
-            target = self.tokenize_neural_data(
+            # # Convert target from neural vector sequence to token sequence then flatten
+            # target = self.tokenize_neural_data(
+            #     neural_sequence=target, feature_mask=mask
+            # ).view(-1) # (batch_size, seq_len) -> (batch_size * seq_len)
+            ### >>> DEBUG: multi-dimensional tokenization and embedding >>> ###
+            target = self.tokenize_neural_data_multi_channel(
                 neural_sequence=target, feature_mask=mask
-            ).view(-1)
+            ).view(
+                -1, self.input_size
+            )  # (batch_size, seq_len, input_size) -> (batch_size * seq_len, input_size)
+            logger.info(
+                f"\nDEBUG loss_fn_v2 \n\t target: \t {target.shape, target.dtype}\n\n"
+            )  # DEBUG
+            ### <<< DEBUG: multi-dimensional tokenization and embedding <<< ###
+            # exit(0)  # DEBUG: Errors with cuda reduction something after this point
 
             # Calculate cross entropy loss
             ce_loss = torch.nn.CrossEntropyLoss(reduction="mean", **kwargs)(
