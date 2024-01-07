@@ -504,24 +504,28 @@ class Model(torch.nn.Module):
 
         ## >>> DEBUG: modifications for new token mode >>> ###
         self.v2 = v2
+        # New attributes and parameters for version 2
         if self.v2:
-            # New attributes and parameters for this version
-            self.n_token = (
-                NUM_TOKENS  # number of tokens to approximate continuous values
-            )
-            self.output_size = self.n_token  # modify output size to be number of tokens
-            self.random_projection = torch.nn.Parameter(
-                torch.randn(self.n_token, self.input_size), requires_grad=False
-            )  # fixed random projection matrix (not learned, not updated)
+            # Number of tokens to approximate continuous values
+            self.n_token = NUM_TOKENS 
 
-            # # Mapping of tokens to neural vectors
-            # self.token_neural_map = torch.nn.Parameter(
-            #     torch.zeros(self.n_token, self.input_size), requires_grad=False
-            # ) # not learned but is updated
+            # Modify output size to be number of tokens
+            self.output_size = self.n_token  
+
+            # Fixed random projection matrix as embedding codebook/lookup table
+            random_projection = torch.randn(self.n_token, self.input_size)
+            self.register_buffer("random_projection", random_projection)
+
+            # Create bin edges for tokenizing standardized continuous-valued data
+            bin_edges = torch.tensor(norm.ppf(torch.linspace(0, 1, self.n_token-1))) # reserve 0-index for unmasked values
+            self.register_buffer("bin_edges", bin_edges)
+
+            # # Mapping of tokens to neural activity 
+            # token_neural_map = torch.zeros(self.n_token, self.input_size)
+            # self.register_buffer("token_neural_map", token_neural_map) # not learned but is updated
             ### >>> DEBUG: multi-dimensional tokenization and embedding >>> ###
-            self.token_neural_map = torch.nn.Parameter(
-                torch.zeros(self.n_token, 1), requires_grad=False
-            )  # not learned but is updated
+            token_neural_map = torch.zeros(self.n_token, 1)
+            self.register_buffer("token_neural_map", token_neural_map) # not learned but is updated
             ### <<< DEBUG: multi-dimensional tokenization and embedding <<< ###
 
             # # Modify embedding layer to be a lookup table
@@ -546,8 +550,8 @@ class Model(torch.nn.Module):
             )
             ### <<< DEBUG: multi-dimensional tokenization and embedding <<< ###
 
-            # # Re-initialize weights
-            # self._init_weights()
+            # Re-initialize weights
+            self._init_weights()
 
             # Alias methods to new versions
             self.forward = self.forward_v2
@@ -561,12 +565,18 @@ class Model(torch.nn.Module):
         return None
 
     def _init_weights(self):
-        # Initialize the readout bias
-        torch.nn.init.zeros_(self.linear.bias)
-        # Initialize the readout weights
-        # torch.nn.init.zeros_(self.linear.weight) # Zero Initialization
-        torch.nn.init.xavier_uniform_(self.linear.weight)  # Xavier Initialization
-        # torch.nn.init.kaiming_uniform_(self.linear.weight, nonlinearity='relu') # He Initialization
+        if isinstance(self.linear, MultiChannelReadout):
+            
+            for linear in self.linear.readouts:
+                # Initialize the readout biases
+                torch.nn.init.zeros_(linear.bias)
+                # Initialize the readout weights
+                torch.nn.init.xavier_uniform_(linear.weight)   
+        else:
+            # Initialize the readout bias
+            torch.nn.init.zeros_(self.linear.bias)
+            # Initialize the readout weights
+            torch.nn.init.xavier_uniform_(self.linear.weight)  
         return None
 
     def init_hidden(self, input_shape=None):
@@ -588,7 +598,7 @@ class Model(torch.nn.Module):
     @torch.autocast(device_type=DEVICE.type, dtype=torch.half)
     def calculate_distances(self, neural_sequence, token_matrix, feature_mask=None):
         """
-        Helper method to calculate Euclidean distances between neural sequence vectors and token matrix vectors.
+        Efficiently calculates Euclidean distances between neural sequence vectors and token matrix vectors.
 
         Args:
             neural_sequence (torch.Tensor): Shape (batch_size, seq_len, input_size).
@@ -597,41 +607,26 @@ class Model(torch.nn.Module):
 
         Returns:
             torch.Tensor: Distances for each batch. Shape (batch_size, seq_len, num_tokens).
-
-        The function computes distances considering only the selected features by the mask for each batch.
         """
         batch_size, seq_len, input_size = neural_sequence.shape
         num_tokens = token_matrix.shape[0]
 
         if feature_mask is None:
-            feature_mask = torch.ones(
-                (batch_size, input_size),
-                dtype=torch.bool,
-                device=neural_sequence.device,
-            )
+            feature_mask = torch.ones((batch_size, input_size), dtype=torch.bool, device=neural_sequence.device)
 
-        # Initialize distances tensor
-        distances = torch.empty(
-            (batch_size, seq_len, num_tokens), device=neural_sequence.device
-        )
+        # Applying the feature mask to both the neural sequence and token matrix
+        masked_neural_sequence = neural_sequence * feature_mask.unsqueeze(1)
+        masked_token_matrix = token_matrix * feature_mask
 
-        # Compute distances by looping over each batch
-        # NOTE: We NEED to do this because each batch item may use a different feature mask
-        # start_time = time.time()
-        for b in range(batch_size):
-            V = feature_mask[b]  # (input_size,)
-            assert V.sum().item() > 0, "Feature mask cannot be all False."
-            S = neural_sequence[b].unsqueeze(1)  # (seq_len, 1, input_size)
-            M = token_matrix.unsqueeze(0)  # (1, num_tokens, input_size)
-            D = S - M  # (seq_len, num_tokens, input_size)
-            dist = torch.linalg.vector_norm(
-                D[V.expand_as(D)].view(seq_len, num_tokens, -1),
-                dim=-1,
-            )  # (seq_len, num_tokens)
-            distances[b] = dist
+        # Expand dimensions for broadcasting
+        masked_neural_sequence_expanded = masked_neural_sequence.unsqueeze(2)  # Shape: (batch_size, seq_len, 1, input_size)
+        masked_token_matrix_expanded = masked_token_matrix.unsqueeze(0).unsqueeze(0)  # Shape: (1, 1, num_tokens, input_size)
 
-        # Return the distances matrix
-        return distances
+        # Efficient distance calculation using broadcasting
+        distances = torch.sum((masked_neural_sequence_expanded - masked_token_matrix_expanded) ** 2, dim=-1)
+
+        return distances  # Shape: (batch_size, seq_len, num_tokens)
+
 
     @torch.autocast(device_type=DEVICE.type, dtype=torch.half)
     def tokenize_neural_data(
@@ -699,7 +694,6 @@ class Model(torch.nn.Module):
         self,
         neural_sequence: torch.Tensor,
         feature_mask: Union[None, torch.Tensor] = None,
-        num_tokens: int = NUM_TOKENS,
     ):
         """
         An alternative method for tokenizing the neural data that
@@ -707,7 +701,6 @@ class Model(torch.nn.Module):
         Args:
             neural_sequence: tensor of shape (batch_size, seq_len, input_size)
             feature_mask: tensor of shape (batch_size, input_size)
-            num_tokens: int > input_size
         Output:
             token_sequence: tensor of shape (batch_size, seq_len, input_size)
         """
@@ -727,16 +720,9 @@ class Model(torch.nn.Module):
             feature_mask.ndim == 2 and feature_mask.shape[-1] == self.input_size
         ), "`feature_mask` must have shape (batch_size, input_size)"
         assert feature_mask.sum().item() > 0, "`feature_mask` cannot be all False."
-        assert num_tokens > input_size, "`num_tokens` must be greater than `input_size`"
-
-        # Create bin edges
-        bin_edges = torch.tensor(
-            norm.ppf(torch.linspace(0, 1, num_tokens + 1)),
-            device=neural_sequence.device,
-        )
 
         # Expand bin_edges for broadcasting
-        bin_edges_expanded = bin_edges.unsqueeze(0).unsqueeze(0).unsqueeze(0)
+        bin_edges_expanded = self.bin_edges.unsqueeze(0).unsqueeze(0).unsqueeze(0)
 
         # Initialize the output tensor
         token_tensor = torch.zeros_like(neural_sequence, dtype=torch.long)
@@ -745,7 +731,7 @@ class Model(torch.nn.Module):
         bool_arr = (
             neural_sequence.unsqueeze(-1) > bin_edges_expanded[:, :, :, :-1]
         ) * (neural_sequence.unsqueeze(-1) <= bin_edges_expanded[:, :, :, 1:])
-        token_tensor = bool_arr.to(torch.long).argmax(dim=-1)
+        token_tensor = bool_arr.to(torch.long).argmax(dim=-1) + 1 # reserve 0-index for unmasked values
 
         # Apply the feature mask
         token_tensor *= feature_mask.unsqueeze(1).expand_as(token_tensor)
@@ -755,6 +741,7 @@ class Model(torch.nn.Module):
 
         # Update the mapping of tokens to neural values
         # NOTE: The `token_neural_map` is used purely for generation
+        logger.info(f"\nDEBUG tokenize_neural_data_multi_channel \n\t tokens (min, max, n_token): \t {torch.unique(token_tensor).min(), torch.unique(token_tensor).max(), self.n_token}\n")
         for token in torch.unique(token_tensor).tolist():
             self.token_neural_map[token] = (
                 0.5 * self.token_neural_map[token]
@@ -966,7 +953,6 @@ class Model(torch.nn.Module):
                 f"\nDEBUG loss_fn_v2 \n\t target: \t {target.shape, target.dtype}\n\n"
             )  # DEBUG
             ### <<< DEBUG: multi-dimensional tokenization and embedding <<< ###
-            # exit(0)  # DEBUG: Errors with cuda reduction something after this point
 
             # Calculate cross entropy loss
             ce_loss = torch.nn.CrossEntropyLoss(reduction="mean", **kwargs)(
