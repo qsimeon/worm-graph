@@ -10,7 +10,8 @@ def model_predict(
     experimental_datasets: dict,
     context_window: int,
 ):
-    """Make predictions on a dataset with a trained model.
+    """
+    Make predictions on a dataset with a trained model.
 
     Saves in log/predict a .csv with the Calcium neural activity predictions.
 
