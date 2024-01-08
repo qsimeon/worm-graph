@@ -26,20 +26,20 @@ dataset:
     # RandWalk0000: all
     # VanDerPol0000: all
     # Shakespeare0000: all
-    Kato2015: all
-    Nichols2017: all
-    Skora2018: all
-    Kaplan2020: all
-    Yemini2021: all
+    # Kato2015: all
+    # Nichols2017: all
+    # Skora2018: all
+    # Kaplan2020: all
+    # Yemini2021: all
     Uzel2022: all
-    Flavell2023: all
-    Leifer2023: all
+    # Flavell2023: all
+    # Leifer2023: all
   
   # If null, use all the named neurons from each worm. Otherwise, if <int> use that number of named neurons (randomly picked) from the each worm.
   num_named_neurons: null # number of neurons to train the model with (positive integer or null)
   # Set to the same value as submodule.predict.context_window
   seq_len: 100 # length of the sampled neural activity sequences
-  num_train_samples: 64 # number of length seq_len samples to draw from the training set per worm
+  num_train_samples: 32 # number of length seq_len samples to draw from the training set per worm
   num_val_samples: 32 # number of length seq_len samples to draw from the validation set per worm
   reverse: false # whether to sample sequences in reverse order
   use_residual: false # whether to use the residual (i.e first difference) of the neural activity
