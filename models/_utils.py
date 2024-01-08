@@ -160,9 +160,6 @@ class MultiChannelReadout(torch.nn.Module):
         Output:
             output: Tensor, shape (batch_size, seq_len, num_channels, out_features)
         """
-        # logger.info(
-        #     f"DEBUG MultiChannelReadout.forward \n\t input: \t {x.shape, x.dtype}\n\n"
-        # )  # DEBUG
         batch_size, seq_len, in_features = x.shape
         assert (
             in_features == self.in_features
@@ -172,9 +169,6 @@ class MultiChannelReadout(torch.nn.Module):
         ).to(x.device)
         for _ in range(self.num_channels):
             output[:, :, _, :] = self.readouts[_](x)
-        # logger.info(
-        #     f"DEBUG MultiChannelReadout.forward \n\t output: \t {output.shape, output.dtype}\n\n"
-        # )  # DEBUG
         return output  # (batch_size, seq_len, num_channels, out_features)
 
 
@@ -208,9 +202,7 @@ class MultiChannelEmbedding(torch.nn.Module):
         Output:
             output: Tensor, shape (batch_size, seq_len, embedding_dim)
         """
-        # logger.info(
-        #     f"DEBUG MultiChannelEmbedding.forward \n\t input: \t {x.shape, x.dtype}\n\n"
-        # )  # DEBUG
+        # Get the input shape
         batch_size, seq_len, num_channels = x.shape
         # Reshape x to a 2D tensor for embedding lookup
         x_reshaped = x.view(-1, num_channels)  # (batch_size * seq_len, num_channels)
@@ -221,10 +213,10 @@ class MultiChannelEmbedding(torch.nn.Module):
         # Reshape back to the original batch_size and seq_len, sum across channels
         output = embedded.view(
             batch_size, seq_len, num_channels, self.embedding_dim
-        ).sum(dim=2)
-        # logger.info(
-        #     f"DEBUG MultiChannelEmbedding.forward \n\t output: \t {output.shape, output.dtype}\n\n"
-        # )  # DEBUG
+        ).sum(
+            dim=2
+        )  # (batch_size, seq_len, embedding_dim)
+        # Return the embedding output
         return output
 
 
@@ -445,7 +437,7 @@ class Model(torch.nn.Module):
         hidden_size: Union[int, None],
         loss: Union[Callable, None] = None,
         l1_reg_param: float = 0.0,
-        v2: bool = False,
+        v2: bool = True,
         multi_channel: bool = True,
     ):
         """
@@ -513,14 +505,15 @@ class Model(torch.nn.Module):
             self.n_token = NUM_TOKENS
             # Modify output size to be number of tokens
             self.output_size = self.n_token
-            # Fixed random projection matrix as embedding codebook/lookup table
-            random_projection = torch.randn(self.n_token, self.input_size)
-            self.register_buffer("random_projection", random_projection)
+            # Initialize a random normal matrix to use as the embedding codebook/lookup table
+            self.codebook = torch.nn.Parameter(
+                torch.randn(self.n_token, self.input_size)
+            )
+            # self.register_buffer("codebook", codebook)
             # Create bin edges for tokenizing standardized continuous-valued data
-            # NOTE: n_token bin_edges means there are n_token-1 bins for masked values
-            bin_edges = torch.tensor(
-                norm.ppf(torch.linspace(0, 1, self.n_token))
-            )  # the 0-indexed bin is reserved for unmasked values
+            # NOTE: n_token bin_edges means there are n_token-1 bins for masked values; 
+            # NOTE: The 0-indexed bin will be used for unmasked values.
+            bin_edges = torch.tensor(norm.ppf(torch.linspace(0, 1, self.n_token)))
             self.register_buffer("bin_edges", bin_edges)
             # Mapping of tokens to neural activity
             if self.multi_channel:
@@ -610,7 +603,10 @@ class Model(torch.nn.Module):
         """
         # Get input shapes
         batch_size, seq_len, input_size = neural_sequence.shape
-        num_tokens = token_matrix.shape[0]
+        num_tokens, _ = token_matrix.shape
+        assert (
+            input_size == _
+        ), "Expected `token_matrix` to have same input size as `neural_sequence`."
         # Set feature_mask to all True if it is None
         if feature_mask is None:
             feature_mask = torch.ones(
@@ -619,18 +615,23 @@ class Model(torch.nn.Module):
                 device=neural_sequence.device,
             )
         # Applying the feature mask to both the neural sequence and token matrix
-        masked_neural_sequence = neural_sequence * feature_mask.unsqueeze(1)
-        masked_token_matrix = token_matrix * feature_mask
+        masked_neural_sequence = neural_sequence * feature_mask.unsqueeze(
+            1
+        )  # (batch_size, seq_len, input_size) * (batch_size, 1, input_size) -> (batch_size, seq_len, input_size)
+        masked_token_matrix = token_matrix.unsqueeze(0) * feature_mask.unsqueeze(
+            1
+        )  # (1, num_tokens, input_size) * (batch_size, 1, input_size) -> (batch_size, num_tokens, input_size)
         # Expand dimensions for broadcasting
         masked_neural_sequence_expanded = masked_neural_sequence.unsqueeze(
             2
-        )  # Shape: (batch_size, seq_len, 1, input_size)
-        masked_token_matrix_expanded = masked_token_matrix.unsqueeze(0).unsqueeze(
-            0
-        )  # Shape: (1, 1, num_tokens, input_size)
+        )  # (batch_size, seq_len, 1, input_size)
+        masked_token_matrix_expanded = masked_token_matrix.unsqueeze(
+            1
+        )  # (batch_size, 1, num_tokens, input_size)
         # Efficient distance calculation using broadcasting
         distances = torch.sum(
-            (masked_neural_sequence_expanded - masked_token_matrix_expanded) ** 2,
+            (masked_neural_sequence_expanded - masked_token_matrix_expanded)
+            ** 2,  # (batch_size, seq_len, 1, input_size) - (batch_size, 1, num_tokens, input_size) -> (batch_size, seq_len, num_tokens, input_size)
             dim=-1,
         )  # (batch_size, seq_len, num_tokens)
         # Return distance matrix
@@ -669,7 +670,7 @@ class Model(torch.nn.Module):
         ), "`feature_mask` must have shape (batch_size, input_size)"
         assert feature_mask.sum().item() > 0, "`feature_mask` cannot be all False."
         if token_matrix is None:
-            token_matrix = self.random_projection.to(neural_sequence.device)
+            token_matrix = self.codebook.to(neural_sequence.device)
         assert (
             token_matrix.ndim == 2 and token_matrix.shape[-1] == self.input_size
         ), "`token_matrix` must have shape (num_tokens, input_size)"
@@ -707,6 +708,7 @@ class Model(torch.nn.Module):
             feature_mask: tensor of shape (batch_size, input_size)
         Output:
             token_sequence: tensor of shape (batch_size, seq_len, input_size)
+        TODO: This function is too slow and runs out of memory even if small batch_size.
         """
         # Check input sizes
         batch_size, seq_len, input_size = neural_sequence.shape
@@ -726,29 +728,32 @@ class Model(torch.nn.Module):
         ), "`feature_mask` must have shape (batch_size, input_size)"
         assert feature_mask.sum().item() > 0, "`feature_mask` cannot be all False."
         # Expand bin_edges for broadcasting
+        # TODO: a very large tensor is created here which may be causing CUDA out of memory later.
+        # Is this necessary? Is there a more efficient way to do this?
         bin_edges_expanded = self.bin_edges.unsqueeze(0).unsqueeze(0).unsqueeze(0)
-        # Initialize the output tensor
-        token_tensor = torch.zeros_like(neural_sequence, dtype=torch.long)
         # Apply binning using broadcasting
         bool_arr = (
             neural_sequence.unsqueeze(-1) > bin_edges_expanded[:, :, :, :-1]
         ) * (neural_sequence.unsqueeze(-1) <= bin_edges_expanded[:, :, :, 1:])
         token_tensor = (
-            bool_arr.to(torch.long).argmax(dim=-1) + 1
+            bool_arr.to(torch.long).argmax(dim=-1)
+            + 1  # TODO: this part is memory inefficient and runs out of CUDA memory.
         )  # reserve 0-index for unmasked values
         # Apply the feature mask
         token_tensor *= feature_mask.unsqueeze(1).expand_as(token_tensor)
         # Ensure the data type is long tensor
-        token_tensor = token_tensor.to(torch.long)
+        token_tensor = token_tensor.to(torch.long)  # (batch_size, seq_len, input_size)
         # Update the mapping of tokens to neural values
         # NOTE: The `token_neural_map` is used purely for generation
-        for token in torch.unique(token_tensor).tolist():
+        for token in torch.unique(
+            token_tensor
+        ).tolist():  # TODO: this part is too slow.
             self.token_neural_map[token] = (
                 0.5 * self.token_neural_map[token]
                 + 0.5 * neural_sequence[token_tensor == token].mean()
             )
         # Return the tokenized data tensor
-        return token_tensor  # (batch_size, seq_len, input_size)
+        return token_tensor
 
     @torch.autocast(device_type=DEVICE.type, dtype=torch.half)
     def forward(self, input: torch.Tensor, mask: torch.Tensor):
@@ -804,9 +809,6 @@ class Model(torch.nn.Module):
             input_tokens = self.tokenize_neural_data(
                 neural_sequence=input_activity, feature_mask=mask
             )  # (batch_size, seq_len)
-        # logger.info(
-        #     f"\nDEBUG forward_v2 \n\t input_tokens: \t {input_tokens.shape, input_tokens.dtype}\n"
-        # )  # DEBUG
         # Embed the tokens and then transform to a latent
         latent_out = self.input_hidden(
             input_tokens
@@ -858,24 +860,25 @@ class Model(torch.nn.Module):
             # Mask the invalid positions in `output` and `target`
             masked_output = output * expanded_mask.float()
             masked_target = target * expanded_mask.float()
-            # Compute the loss without reduction
-            masked_loss = self.loss(reduction="none", **kwargs)(
+            # Compute the reconstruction loss without reduction
+            masked_recon_loss = self.loss(reduction="none", **kwargs)(
                 masked_output, masked_target
             )
             # Normalize the loss by the total number of data points
-            norm_factor = masked_loss[expanded_mask].size(dim=0)
-            # Calculate next time step prediction loss before adding regularization
-            original_loss = masked_loss[expanded_mask].sum() / norm_factor
+            norm_factor = masked_recon_loss[expanded_mask].size(dim=0)
+            # Calculate next time step prediction loss w/out regularization
+            recon_loss = masked_recon_loss[expanded_mask].sum() / norm_factor
             # L1 regularization term
             l1_loss = 0.0
             if self.l1_reg_param > 0.0:
-                # calculate L1 regularization term for all weights
+                # Calculate L1 regularization term for all weights
                 for param in self.parameters():
                     l1_loss += torch.abs(param).mean()
             # Add the L1 penality to the original loss
-            regularized_loss = original_loss + self.l1_reg_param * l1_loss
+            reg_loss = self.l1_reg_param * l1_loss
+            total_loss = recon_loss + reg_loss
             # Return the regularized loss
-            return regularized_loss
+            return total_loss
 
         return loss
 
@@ -908,10 +911,17 @@ class Model(torch.nn.Module):
                 output = output.contiguous().view(
                     -1, self.n_token
                 )  # (batch_size, seq_len, n_token) -> (batch_size * seq_len, n_token)
-            # logger.info(
-            #     f"\nDEBUG loss_fn_v2 CrossEntropyLoss \n\t input: \t {output.shape, output.dtype}\n\n"
-            # )  # DEBUG
-            # Convert target from neural vector sequence to token sequence then flatten
+            # VQ loss: The L2 error between the embedding space and the encoder outputs.
+            vq_loss = self.calculate_distances(
+                target.detach(), self.codebook, mask.detach()
+            ).mean()
+            # Commitment loss: The L2 error between the encoder outputs and the embedding space.
+            beta = 0.1
+            commitment_loss = (
+                beta
+                * self.calculate_distances(target, self.codebook.detach(), mask).mean()
+            )
+            # Convert target from neural vector sequence to token sequence
             if self.multi_channel:
                 target = self.tokenize_neural_data_multi_channel(
                     neural_sequence=target, feature_mask=mask
@@ -926,15 +936,14 @@ class Model(torch.nn.Module):
                 target = target.contiguous().view(
                     -1
                 )  # (batch_size, seq_len) -> (batch_size * seq_len)
-            # logger.info(
-            #     f"\nDEBUG loss_fn_v2 \n\t CrossEntropyLoss target: (shape, dtype, min, max, n_token): \t {target.shape, target.dtype, target.min().item(), target.max().item(), self.n_token}\n"
-            # )  # DEBUG
-            # Calculate cross entropy loss
+            # Calculate cross entropy loss from predicted token logits and target tokens
             ce_loss = torch.nn.CrossEntropyLoss(reduction="mean", **kwargs)(
                 output, target
             )
+            # Calculate the total loss including the VQ-VAE parts
+            total_loss = ce_loss + vq_loss + commitment_loss
             # Return loss
-            return ce_loss
+            return total_loss
 
         return loss
 
@@ -984,7 +993,7 @@ class Model(torch.nn.Module):
         if autoregressive:
             input = input[
                 :, :context_window, :
-            ]  # shape (batch_size, context_window, neurons)
+            ]  # (batch_size, context_window, neurons)
         # Otherwise defaults to ground-truth feeding
         else:
             input_cond = input  # Use the entire input as context
@@ -995,13 +1004,22 @@ class Model(torch.nn.Module):
             # Get the last context_window values of the input tensor
             input_cond = input[
                 :, t : context_window + t, :
-            ]  # shape (batch_size, context_window, neurons)
+            ]  # (batch_size, context_window, neurons)
             # Forward the model to get the predictions
             predictions = self(
                 input_cond, mask
-            )  # shape (batch_size, context_window, neurons)
+            )  # (batch_size, context_window, neurons)
             # Get the last predicted value
-            input_next = predictions[:, [-1], :]  # shape (batch_size, 1, neurons)
+            input_next = predictions[:, [-1], :]  # (batch_size, 1, neurons)
+            # Normalize the predicted value (prevents exploding values)
+            mean = input_cond.mean(dim=1, keepdim=True)
+            std = input_cond.std(dim=1, keepdim=True)
+            input_next = torch.nan_to_num(
+                (input_next - mean) / std,
+                nan=0.0,
+                posinf=0.0,
+                neginf=0.0,
+            )  # (batch_size, 1, neurons)
             # Append the prediction to the generated_values list and input tensor
             generated_values.append(input_next)
             input = torch.cat(
@@ -1024,7 +1042,7 @@ class Model(torch.nn.Module):
         autoregressive: bool = True,
         context_window: int = BLOCK_SIZE,
         temperature=1.0,
-        top_k: Union[int, None] = 1,
+        top_k: Union[int, None] = None,
     ):
         """
         Special generate method for the newer version (v2) of the models based on how generation is done in Transformers.
@@ -1057,7 +1075,6 @@ class Model(torch.nn.Module):
                 logits = (
                     output[:, -1, :, :] / temperature
                 )  # (batch_size, input_size, n_token)
-                # logger.info(f"\nDEBUG generate_v2 \n\t logits: \t {logits.shape, logits.dtype}\n") # DEBUG
                 # Sample a token for each channel
                 token_next = torch.zeros(
                     (input.size(0), self.input_size), dtype=torch.long
@@ -1072,7 +1089,6 @@ class Model(torch.nn.Module):
                             channel_logits, min(top_k, channel_logits.size(-1))
                         )
                         channel_logits[channel_logits < v[:, [-1]]] = -float("Inf")
-                    # logger.info(f"\nDEBUG generate_v2 \n\t channel_logits: {channel_logits.shape, channel_logits.dtype}\n") # DEBUG
                     # Apply softmax and sample from the distribution
                     probs = torch.nn.functional.softmax(
                         channel_logits, dim=-1
@@ -1080,7 +1096,6 @@ class Model(torch.nn.Module):
                     token_next[:, channel] = torch.multinomial(
                         probs, num_samples=1
                     )  # (batch_size, 1)
-                    # logger.info(f"\nDEBUG generate_v2 \n\t token_next[:, channel]: {token_next[:, channel].shape, token_next[:, channel].dtype}\n") # DEBUG
             else:
                 # Pluck the logits at the final step and scale by desired temperature
                 logits = output[:, -1, :] / temperature  # (batch_size, n_token)
@@ -1100,7 +1115,6 @@ class Model(torch.nn.Module):
                 .contiguous()
                 .view(input.size(0), 1, self.input_size)
             )  # (batch_size, 1, input_size)
-            # logger.info(f"\nDEBUG generate_v2 \n\t input_next: \t {input_next.shape, input_next.dtype}\n") # DEBUG
             # Append the prediction to the generated_values list
             generated_values.append(input_next)
             # Append sampled data to the running sequence and continue
