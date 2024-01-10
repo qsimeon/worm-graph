@@ -509,20 +509,20 @@ class Model(torch.nn.Module):
             self.codebook = torch.nn.Parameter(
                 torch.randn(self.n_token, self.input_size)
             )
-            # self.register_buffer("codebook", codebook)
-            # Create bin edges for tokenizing standardized continuous-valued data
-            # NOTE: n_token bin_edges means there are n_token-1 bins for masked values; 
-            # NOTE: The 0-indexed bin will be used for unmasked values.
+            # Create bin edges for tokenizing normalized continuous-valued data
+            # NOTE: n_token bin_edges means there are n_token-1 bins for masked values; the 0-indexed bin will be used for unmasked values.
             bin_edges = torch.tensor(norm.ppf(torch.linspace(0, 1, self.n_token)))
             self.register_buffer("bin_edges", bin_edges)
             # Mapping of tokens to neural activity
             if self.multi_channel:
-                token_neural_map = torch.zeros(self.n_token, 1)
+                token_neural_map = torch.zeros(self.n_token, 1)  # maps tokens to values
                 self.register_buffer(
                     "token_neural_map", token_neural_map
                 )  # not learned but is updated
             else:
-                token_neural_map = torch.zeros(self.n_token, self.input_size)
+                token_neural_map = torch.zeros(
+                    self.n_token, self.input_size
+                )  # maps tokens to vectors
                 self.register_buffer(
                     "token_neural_map", token_neural_map
                 )  # not learned but is updated
@@ -674,7 +674,6 @@ class Model(torch.nn.Module):
         assert (
             token_matrix.ndim == 2 and token_matrix.shape[-1] == self.input_size
         ), "`token_matrix` must have shape (num_tokens, input_size)"
-        num_tokens = token_matrix.shape[0]
         # Use the `calculate_distance` method
         distances = self.calculate_distances(
             neural_sequence,
@@ -682,77 +681,92 @@ class Model(torch.nn.Module):
             feature_mask,
         )  # (batch_size, seq_len, num_tokens)
         # Find the minimum indices along the num_tokens dimension
-        token_sequence = distances.argmin(dim=-1)  # (batch_size, seq_len)
-        # Ensure the data type is long tensor
-        token_sequence = token_sequence.to(torch.long)
-        # Update the mapping of tokens to neural vectors
-        # NOTE: The `token_neural_map` is used purely for generation
-        for token in torch.unique(token_sequence).tolist():
-            self.token_neural_map[token] = 0.5 * self.token_neural_map[
-                token
-            ] + 0.5 * neural_sequence[token_sequence == token].mean(dim=0)
+        token_sequence = distances.argmin(dim=-1).to(
+            torch.long
+        )  # (batch_size, seq_len)
+        # Flatten token_sequence for scatter operations
+        token_sequence_flat = token_sequence.view(
+            -1
+        )  # Flattening for batched operation
+        # Flatten neural_sequence for scatter operations
+        neural_flat = neural_sequence.view(
+            -1, self.input_size
+        )  # Flattening to match token_sequence_flat
+        # Prepare tensors to accumulate sums and counts for each token
+        token_sums = torch.zeros(
+            self.n_token,
+            self.input_size,
+            device=neural_sequence.device,
+            dtype=neural_sequence.dtype,
+        )
+        token_counts = torch.zeros(
+            self.n_token, device=neural_sequence.device, dtype=neural_sequence.dtype
+        )
+        # Accumulate sums of neural activities for each token
+        token_sums.index_add_(0, token_sequence_flat, neural_flat)
+        # Count occurrences of each token
+        token_counts.index_add_(
+            0,
+            token_sequence_flat,
+            torch.ones_like(token_sequence_flat, dtype=token_counts.dtype),
+        )
+        # Compute means for each token, avoiding division by zero by ensuring counts are at least 1
+        token_means = token_sums / token_counts.unsqueeze(-1).clamp(min=1)
+        # Apply exponential moving average to update token_neural_map
+        decay = 0.5  # Decay factor for EMA
+        self.token_neural_map *= decay  # Scale existing values by decay factor
+        self.token_neural_map += (
+            1 - decay
+        ) * token_means  # Update with scaled new means
         # Return the tokenized sequence
-        return token_sequence  # (batch_size, seq_len)
+        return token_sequence
 
     @torch.autocast(device_type=DEVICE.type, dtype=torch.half)
-    def tokenize_neural_data_multi_channel(
-        self,
-        neural_sequence: torch.Tensor,
-        feature_mask: Union[None, torch.Tensor] = None,
-    ):
+    def tokenize_neural_data_multi_channel(self, neural_sequence, feature_mask=None):
         """
-        An alternative method for tokenizing the neural data that
-        tokenizes each feature dimension independently.
-        Args:
-            neural_sequence: tensor of shape (batch_size, seq_len, input_size)
-            feature_mask: tensor of shape (batch_size, input_size)
-        Output:
-            token_sequence: tensor of shape (batch_size, seq_len, input_size)
-        TODO: This function is too slow and runs out of memory even if small batch_size.
+        Tokenize each channel of the neural sequence into discrete tokens and update the token_neural_map.
         """
-        # Check input sizes
+        # Ensure inputs are the correct shapes
         batch_size, seq_len, input_size = neural_sequence.shape
         assert (
-            neural_sequence.ndim == 3 and neural_sequence.shape[-1] == self.input_size
-        ), "`neural_sequence` must have shape (batch_size, seq_len, input_size)"
-        batch_size, seq_len, input_size = neural_sequence.shape
-        # Set feature_mask to all True if it is None
+            neural_sequence.ndim == 3 and input_size == self.input_size
+        ), "`neural_sequence` shape mismatch."
+
+        # Use existing feature_mask or create a default one
         if feature_mask is None:
             feature_mask = torch.ones(
                 (batch_size, input_size),
                 dtype=torch.bool,
                 device=neural_sequence.device,
             )
-        assert (
-            feature_mask.ndim == 2 and feature_mask.shape[-1] == self.input_size
-        ), "`feature_mask` must have shape (batch_size, input_size)"
-        assert feature_mask.sum().item() > 0, "`feature_mask` cannot be all False."
-        # Expand bin_edges for broadcasting
-        # TODO: a very large tensor is created here which may be causing CUDA out of memory later.
-        # Is this necessary? Is there a more efficient way to do this?
-        bin_edges_expanded = self.bin_edges.unsqueeze(0).unsqueeze(0).unsqueeze(0)
-        # Apply binning using broadcasting
-        bool_arr = (
-            neural_sequence.unsqueeze(-1) > bin_edges_expanded[:, :, :, :-1]
-        ) * (neural_sequence.unsqueeze(-1) <= bin_edges_expanded[:, :, :, 1:])
-        token_tensor = (
-            bool_arr.to(torch.long).argmax(dim=-1)
-            + 1  # TODO: this part is memory inefficient and runs out of CUDA memory.
-        )  # reserve 0-index for unmasked values
-        # Apply the feature mask
-        token_tensor *= feature_mask.unsqueeze(1).expand_as(token_tensor)
-        # Ensure the data type is long tensor
-        token_tensor = token_tensor.to(torch.long)  # (batch_size, seq_len, input_size)
-        # Update the mapping of tokens to neural values
-        # NOTE: The `token_neural_map` is used purely for generation
-        for token in torch.unique(
-            token_tensor
-        ).tolist():  # TODO: this part is too slow.
-            self.token_neural_map[token] = (
-                0.5 * self.token_neural_map[token]
-                + 0.5 * neural_sequence[token_tensor == token].mean()
-            )
-        # Return the tokenized data tensor
+
+        # Initialize the token sequence tensor
+        token_tensor = torch.zeros_like(neural_sequence, dtype=torch.long)
+
+        # Tokenize each channel
+        for channel in range(input_size):
+            for i in range(1, len(self.bin_edges)):
+                lower_bound = self.bin_edges[i - 1]
+                upper_bound = self.bin_edges[i]
+                mask = (neural_sequence[:, :, channel] > lower_bound) & (
+                    neural_sequence[:, :, channel] <= upper_bound
+                )
+                token_tensor[:, :, channel][mask] = i
+
+        # Apply feature_mask to token_tensor, ensuring correct broadcasting
+        token_tensor *= feature_mask.unsqueeze(1).expand_as(token_tensor).to(torch.long)
+
+        # Update token_neural_map
+        for token in range(self.n_token):
+            mask = (token_tensor == token).unsqueeze(
+                -1
+            )  # Add a dimension for broadcasting
+            token_counts = mask.sum(dim=(0, 1)).float()  # Counts per channel
+            token_sums = (neural_sequence * mask).sum(dim=(0, 1))  # Sums per channel
+            token_means = token_sums / token_counts.clamp(min=1)  # Averages per channel
+            self.token_neural_map[token] = token_means
+
+        # Return the tokenized sequence
         return token_tensor
 
     @torch.autocast(device_type=DEVICE.type, dtype=torch.half)
@@ -1078,7 +1092,9 @@ class Model(torch.nn.Module):
                 # Sample a token for each channel
                 token_next = torch.zeros(
                     (input.size(0), self.input_size), dtype=torch.long
-                ).to(input.device)
+                ).to(
+                    input.device
+                )  # (batch_size, input_size)
                 # Predict the next token for each channel
                 for channel in range(self.input_size):
                     # Logits for the current channel
@@ -1111,7 +1127,9 @@ class Model(torch.nn.Module):
                 token_next = torch.multinomial(probs, num_samples=1)  # (batch_size, 1)
             # Convert tokens to neural data using token_neural_map
             input_next = (
-                self.token_neural_map[token_next]
+                self.token_neural_map[
+                    token_next
+                ]  # token_next is shaped (batch_size, input_size) OR (batch_size, 1)
                 .contiguous()
                 .view(input.size(0), 1, self.input_size)
             )  # (batch_size, 1, input_size)
@@ -1122,7 +1140,7 @@ class Model(torch.nn.Module):
         # Stack the generated values into a tensor
         generated_tensor = torch.cat(
             generated_values, dim=1
-        )  # shape (batch_size, num_new_timesteps, input_size)
+        )  # (batch_size, num_new_timesteps, input_size)
         # Only return the newly generated values
         return generated_tensor
 
