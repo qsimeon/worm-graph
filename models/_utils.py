@@ -438,7 +438,7 @@ class Model(torch.nn.Module):
         loss: Union[Callable, None] = None,
         l1_reg_param: float = 0.0,
         v2: bool = True,
-        multi_channel: bool = True,
+        multi_channel: bool = False,
     ):
         """
         Defines attributes common to all models.
@@ -588,7 +588,6 @@ class Model(torch.nn.Module):
     def get_l1_reg_param(self):
         return self.l1_reg_param
 
-    @torch.autocast(device_type=DEVICE.type, dtype=torch.half)
     def calculate_distances(self, neural_sequence, token_matrix, feature_mask=None):
         """
         Efficiently calculates Euclidean distances between neural sequence vectors and token matrix vectors.
@@ -629,6 +628,7 @@ class Model(torch.nn.Module):
             1
         )  # (batch_size, 1, num_tokens, input_size)
         # Efficient distance calculation using broadcasting
+        torch.cuda.empty_cache()
         distances = torch.sum(
             (masked_neural_sequence_expanded - masked_token_matrix_expanded)
             ** 2,  # (batch_size, seq_len, 1, input_size) - (batch_size, 1, num_tokens, input_size) -> (batch_size, seq_len, num_tokens, input_size)
@@ -721,10 +721,25 @@ class Model(torch.nn.Module):
         # Return the tokenized sequence
         return token_sequence
 
+    def bin_tensor(self, nt):
+        """
+        Args:
+            nt: neural tensor (batch_size, seq_len, input_size)
+        Output:
+            tt: token tensor (batch_size, seq_len, input_size)
+        """
+        b1 = nt.unsqueeze(-1) > self.bin_edges[:-1]
+        b2 = nt.unsqueeze(-1) <= self.bin_edges[1:]
+        bool_arr = b1 * b2
+        torch.cuda.empty_cache()
+        tt = bool_arr.to(torch.long).argmax(dim=-1) + 1
+        return tt
+
     @torch.autocast(device_type=DEVICE.type, dtype=torch.half)
     def tokenize_neural_data_multi_channel(self, neural_sequence, feature_mask=None):
         """
         Tokenize each channel of the neural sequence into discrete tokens and update the token_neural_map.
+        NOTE: Need to reduce batch_size when using this method because of memory constraints.
         """
         # Ensure inputs are the correct shapes
         batch_size, seq_len, input_size = neural_sequence.shape
@@ -740,31 +755,40 @@ class Model(torch.nn.Module):
                 device=neural_sequence.device,
             )
 
-        # Initialize the token sequence tensor
-        token_tensor = torch.zeros_like(neural_sequence, dtype=torch.long)
+        # Get the initial token_tensor before applying the mask
+        token_tensor = self.bin_tensor(neural_sequence)
 
-        # Tokenize each channel
-        for channel in range(input_size):
-            for i in range(1, len(self.bin_edges)):
-                lower_bound = self.bin_edges[i - 1]
-                upper_bound = self.bin_edges[i]
-                mask = (neural_sequence[:, :, channel] > lower_bound) & (
-                    neural_sequence[:, :, channel] <= upper_bound
-                )
-                token_tensor[:, :, channel][mask] = i
+        # Apply feature_mask to token_tensor assigning 0-th index token to unmasked values
+        token_tensor *= feature_mask.unsqueeze(1)
 
-        # Apply feature_mask to token_tensor, ensuring correct broadcasting
-        token_tensor *= feature_mask.unsqueeze(1).expand_as(token_tensor).to(torch.long)
+        # Initialize tensors to accumulate token sums and counts for each channel
+        token_sums = torch.zeros(self.n_token, dtype=torch.long)
+        token_counts = torch.zeros(self.n_token, dtype=torch.long)
 
         # Update token_neural_map
         for token in range(self.n_token):
-            mask = (token_tensor == token).unsqueeze(
-                -1
-            )  # Add a dimension for broadcasting
-            token_counts = mask.sum(dim=(0, 1)).float()  # Counts per channel
-            token_sums = (neural_sequence * mask).sum(dim=(0, 1))  # Sums per channel
-            token_means = token_sums / token_counts.clamp(min=1)  # Averages per channel
-            self.token_neural_map[token] = token_means
+            mask = token_tensor == token  # Create a mask for the current token
+            token_counts[token] = mask.sum()  # Sum up the counts for this token
+            token_sums[token] = (
+                mask * neural_sequence
+            ).sum()  # Sum up the masked neural values for this token
+
+        # Calculate the new averages for each token
+        new_token_means = token_sums / token_counts.clamp(
+            min=1
+        )  # Avoid division by zero
+        new_token_means = new_token_means.unsqueeze(
+            1
+        )  # Add a dimension for broadcasting
+        new_token_means = new_token_means.to(
+            self.token_neural_map.device
+        )  # Move to same device
+
+        # Apply exponential moving average to update token_neural_map
+        decay = 0.5  # Decay factor for EMA
+        self.token_neural_map = (
+            self.token_neural_map * decay + (1 - decay) * new_token_means
+        )
 
         # Return the tokenized sequence
         return token_tensor
