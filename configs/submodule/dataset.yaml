@@ -39,8 +39,8 @@ dataset:
   num_named_neurons: null # number of neurons to train the model with (positive integer or null)
   # Set to the same value as submodule.predict.context_window
   seq_len: 100 # length of the sampled neural activity sequences
-  num_train_samples: 32 # number of length seq_len samples to draw from the training set per worm
-  num_val_samples: 32 # number of length seq_len samples to draw from the validation set per worm
+  num_train_samples: 8 # number of length seq_len samples to draw from the training set per worm
+  num_val_samples: 8 # number of length seq_len samples to draw from the validation set per worm
   reverse: false # whether to sample sequences in reverse order
   use_residual: false # whether to use the residual (i.e first difference) of the neural activity
   smooth_data: true # whether to use the smoothed the neural activity
