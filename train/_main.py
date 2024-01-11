@@ -137,8 +137,8 @@ def train_model(
             # Baseline model/naive predictor: predict that the next time step is the same as the current one.
             y_base = X_train
             train_baseline = (
-                torch.tensor(0.0)  # TODO: find correct baseline to use for v2
-                if model.v2
+                torch.tensor(0.0)  # TODO: find correct baseline to use for version 2
+                if model.version_2
                 else criterion(output=y_base, target=Y_train, mask=mask_train)
             )
 
@@ -198,8 +198,10 @@ def train_model(
                 # is better than predict any other random number.
                 y_base = X_val
                 val_baseline = (
-                    torch.tensor(0.0)  # TODO: find correct baseline to use for v2
-                    if model.v2
+                    torch.tensor(
+                        0.0
+                    )  # TODO: find correct baseline to use for version 2
+                    if model.version_2
                     else criterion(output=y_base, target=Y_val, mask=mask_val)
                 )
 

@@ -438,8 +438,8 @@ class Model(torch.nn.Module):
         loss: Union[Callable, None] = None,
         l1_reg_param: float = 0.0,
         # New hyperparameters for version 2
-        v2: bool = True,
-        multi_channel: bool = True,
+        version_2: bool = VERSION_2,
+        multi_channel: bool = MULTI_CHANNEL,
     ):
         """
         Defines attributes common to all models.
@@ -496,12 +496,12 @@ class Model(torch.nn.Module):
         # Initialize weights
         self._init_weights()
         # Version 2 tokenizes neural data either as a 1-D or multi-D sequence
-        self.v2 = v2
+        self.version_2 = version_2
         self.multi_channel = (
-            multi_channel and v2
+            multi_channel and version_2
         )  # multi-channel only applies to version 2
         # New attributes and parameters for version 2 with/without multi-channel tokenization
-        if self.v2:
+        if self.version_2:
             # Number of tokens to approximate continuous values
             self.n_token = NUM_TOKENS
             # Modify output size to be number of tokens
@@ -814,7 +814,7 @@ class Model(torch.nn.Module):
             Mask on the neurons with shape (batch, neurons)
         """
         # Route to the appropriate forward method
-        if self.v2:
+        if self.version_2:
             return self.forward_v2(input, mask)
         # Initialize hidden state
         self.hidden = self.init_hidden(input.shape)
@@ -834,7 +834,7 @@ class Model(torch.nn.Module):
     @torch.autocast(device_type=DEVICE.type, dtype=torch.half)
     def forward_v2(self, input: torch.Tensor, mask: torch.Tensor):
         """
-        Special forward method for the newer version (v2) of the models
+        Special forward method for the newer version (version_2) of the models
         based on first tokenizing the high-dimensional neural data before
         doing sequence modeling to mimic the approach used in Transformers.
         """
@@ -882,7 +882,7 @@ class Model(torch.nn.Module):
         features. The L1 penalty is the sum of the absolute values of the weights.
         """
         # Route to the appropriate loss_fn method
-        if self.v2:
+        if self.version_2:
             return self.loss_fn_v2()
 
         def loss(output, target, mask=None, **kwargs):
@@ -932,7 +932,7 @@ class Model(torch.nn.Module):
     @torch.autocast(device_type=DEVICE.type, dtype=torch.half)
     def loss_fn_v2(self):
         """
-        Special loss function for the newer version (v2) of the models based
+        Special loss function for the newer version (version_2) of the models based
         on how loss is calculated in Transformers which operate on tokenized data.
         """
 
@@ -1038,7 +1038,7 @@ class Model(torch.nn.Module):
         TODO: Need to normalize adaptively to avoid generations that blow up.
         """
         # Route to the appropriate generate method
-        if self.v2:
+        if self.version_2:
             return self.generate_v2()
         # Set model to evaluation mode
         self.eval()
@@ -1098,8 +1098,8 @@ class Model(torch.nn.Module):
         top_k: Union[int, None] = None,
     ):
         """
-        Special generate method for the newer version (v2) of the models based on how generation is done in Transformers.
-        In the newer version (v2), models take neural data as input and output token logits. Therefore, we must convert the logits
+        Special generate method for the newer version (version_2) of the models based on how generation is done in Transformers.
+        In the newer version (version_2), models take neural data as input and output token logits. Therefore, we must convert the logits
         back to neural data to be fed back into the model. We sampling from the distribution over the predicted next token, retrieving
         the neaural data value(s) corresponding to that token, then appending that to the running neural seqeunce sequence before continuing.
         """

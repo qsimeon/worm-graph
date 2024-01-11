@@ -350,7 +350,7 @@ def loss_per_dataset(
                 y_base = X
                 baseline = (
                     torch.tensor(0.0)
-                    if model.v2
+                    if model.version_2
                     else criterion(output=y_base, target=Y, mask=mask)
                 )
 
