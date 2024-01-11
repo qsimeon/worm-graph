@@ -62,8 +62,7 @@ def pipeline(cfg: DictConfig) -> None:
             model=model,
             train_dataset=train_dataset,
             val_dataset=val_dataset,
-            verbose=True,  # DEBUG
-            # verbose=True if cfg.experiment.mode == "MULTIRUN" else False,
+            verbose=True,
         )
         # Update visualize and analysis submodule to plot current run
         if "analysis" in cfg.submodule:

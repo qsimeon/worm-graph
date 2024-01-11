@@ -437,8 +437,9 @@ class Model(torch.nn.Module):
         hidden_size: Union[int, None],
         loss: Union[Callable, None] = None,
         l1_reg_param: float = 0.0,
+        # New hyperparameters for version 2
         v2: bool = True,
-        multi_channel: bool = False,
+        multi_channel: bool = True,
     ):
         """
         Defines attributes common to all models.
@@ -499,7 +500,7 @@ class Model(torch.nn.Module):
         self.multi_channel = (
             multi_channel and v2
         )  # multi-channel only applies to version 2
-        # New attributes and parameters for version 2 with/without multi-channel tokens
+        # New attributes and parameters for version 2 with/without multi-channel tokenization
         if self.v2:
             # Number of tokens to approximate continuous values
             self.n_token = NUM_TOKENS
@@ -629,7 +630,7 @@ class Model(torch.nn.Module):
         )  # (batch_size, 1, num_tokens, input_size)
         # Efficient distance calculation using broadcasting
         torch.cuda.empty_cache()
-        distances = torch.sum(
+        distances = torch.mean(
             (masked_neural_sequence_expanded - masked_token_matrix_expanded)
             ** 2,  # (batch_size, seq_len, 1, input_size) - (batch_size, 1, num_tokens, input_size) -> (batch_size, seq_len, num_tokens, input_size)
             dim=-1,
@@ -646,6 +647,13 @@ class Model(torch.nn.Module):
     ):
         """
         Convert the high-dimensional sequence of neural states to a 1-D sequence of tokens.
+        The approach used is similar to that of VQ-VAEs where the neural data is treated as the
+        encoder output, the decoder input is the nearest-neighbor codebook vector, and the tokens
+        are the indices of those vectors in the codebok. The decoder is treated as rest of the
+        model after the tokenization step. The dimensionality of the embedding space is the same
+        as the dimensionality of the neural data (i.e. `input_size` or `num_channels`).
+
+
         Args:
             neural_sequence: tensor of shape (batch_size, seq_len, input_size)
             feature_mask: tensor of shape (batch_size, input_size)
@@ -657,7 +665,7 @@ class Model(torch.nn.Module):
         assert (
             neural_sequence.ndim == 3 and neural_sequence.shape[-1] == self.input_size
         ), "`neural_sequence` must have shape (batch_size, seq_len, input_size)"
-        batch_size, seq_len, input_size = neural_sequence.shape
+        batch_size, _, input_size = neural_sequence.shape
         # Set feature_mask to all True if it is None
         if feature_mask is None:
             feature_mask = torch.ones(
@@ -950,11 +958,16 @@ class Model(torch.nn.Module):
                     -1, self.n_token
                 )  # (batch_size, seq_len, n_token) -> (batch_size * seq_len, n_token)
             # VQ loss: The L2 error between the embedding space and the encoder outputs.
+            # NOTE: We treat the neural data itself as the encoder output.
             vq_loss = self.calculate_distances(
                 target.detach(), self.codebook, mask.detach()
             ).mean()
             # Commitment loss: The L2 error between the encoder outputs and the embedding space.
-            beta = 0.1
+            # TODO: Make beta a hyperparameter (start by making it an attribute of self in Model __init__)
+            # NOTE: From the original VQ-VAE paper: "We found the resulting algorithm to be quite robust to β, "
+            # "as the results did not vary for values of β ranging from 0.1 to 2.0. We use β = 0.25 in all our "
+            # "experiments, although in general this would depend on the scale of reconstruction loss."
+            beta = 0.25
             commitment_loss = (
                 beta
                 * self.calculate_distances(target, self.codebook.detach(), mask).mean()
@@ -975,6 +988,8 @@ class Model(torch.nn.Module):
                     -1
                 )  # (batch_size, seq_len) -> (batch_size * seq_len)
             # Calculate cross entropy loss from predicted token logits and target tokens
+            # NOTE: The `ce_loss` serves as the reconstruction loss since the model outputs
+            # logits instead of neural data in this version.
             ce_loss = torch.nn.CrossEntropyLoss(reduction="mean", **kwargs)(
                 output, target
             )

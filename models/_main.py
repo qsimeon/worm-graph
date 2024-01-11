@@ -70,6 +70,8 @@ def get_model(model_config: DictConfig, verbose=True) -> torch.nn.Module:
             hidden_size=model_config.hidden_size,
             loss=model_config.loss,
             l1_reg_param=model_config.l1_reg_param,
+            v2=model_config.v2,
+            multi_channel=model_config.multi_channel,
         )
         if model_config.type == "NeuralTransformer":
             model = NeuralTransformer(**args)
