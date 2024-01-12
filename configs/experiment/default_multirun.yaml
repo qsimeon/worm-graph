@@ -10,7 +10,7 @@ hydra:
   sweeper:
       params:
         experiment.seed: range(1) # assign each repetition of the experiment a different seed
-        submodule.model.type: LinearRegression, FeatureFFNN #, NetworkLSTM, NetworkCTRNN, NeuralTransformer # LiquidCfC
+        submodule.model.type: LinearRegression, FeatureFFNN #, NetworkLSTM, NetworkCTRNN, PureAttention, NeuralTransformer # LiquidCfC
 
 # The submodule parameters set below will be used only if RUN mode is used. 
 # Otherwise, it uses the default parameters imported from the other config files in the submodule directory.

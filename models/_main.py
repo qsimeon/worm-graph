@@ -19,6 +19,7 @@ def get_model(model_config: DictConfig, verbose=True) -> torch.nn.Module:
 
     Calls
     -----
+    PureAttention : class in models/_utils.py
     NeuralTransformer : class in models/_utils.py
     NetworkLSTM : class in models/_utils.py
     NetworkCTRNN : class in models/_utils.py
@@ -54,23 +55,21 @@ def get_model(model_config: DictConfig, verbose=True) -> torch.nn.Module:
         model.load_state_dict(model_state_dict)
         if verbose:
             logger.info(
-                "Loading model from checkpoint: {}".format(
-                    model_config.use_this_pretrained_model
-                )
+                "Loading model from checkpoint: {}".format(model_config.use_this_pretrained_model)
             )
             logger.info(f"Hidden size: {hidden_size}")
 
     # Otherwise, instantiate a new model
     else:
-        assert "type" in model_config, ValueError(
-            "No model type or checkpoint path specified."
-        )
+        assert "type" in model_config, ValueError("No model type or checkpoint path specified.")
         args = dict(
             input_size=model_config.input_size,
             hidden_size=model_config.hidden_size,
             loss=model_config.loss,
             l1_reg_param=model_config.l1_reg_param,
         )
+        if model_config.type == "PureAttention":
+            model = PureAttention(**args)
         if model_config.type == "NeuralTransformer":
             model = NeuralTransformer(**args)
         elif model_config.type == "NetworkLSTM":

@@ -43,6 +43,9 @@ The available model implementations (i.e. subclasses of `Model`) are:
 
 - `FeatureFFNN`: This model is a simple nonlinear regression model with an embedding layer and feedforward blocks.
 
+- `PureAttention`: This model implements self-attention. It is essentially a single layer of multi-head attention
+without any of the extra stuff from the full transformer model.
+
 - `NeuralTransformer`: This model is a transformer for neural activity data. It includes a positional encoding layer, an embedding layer, and transformer blocks. This model does not use LayerNorm in its input to hidden and hidden to hidden transformations.
 
 - `NetworkCTRNN`: This model is a representation of the _C. elegans_ nervous system using a continuous-time RNN backbone. It uses a LayerNorm in its input to hidden transformation.

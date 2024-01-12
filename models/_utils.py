@@ -1379,7 +1379,7 @@ class NeuralTransformer(Model):
     """
     Transformer model for neural activity data.
     Neural activity data is continuous valued and thus
-    can naturally be treated as if it were already emebedded.
+    can naturally be treated as if it were already embedded.
     However, to maintain notational similarity with the original
     Transformer architecture, we use a linear layer to perform
     expansion recoding. This replaces the embedding layer in the
