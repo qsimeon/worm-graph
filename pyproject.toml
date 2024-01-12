@@ -1,2 +1,4 @@
 [tool.pytest.ini_options]
 filterwarnings = ["ignore::DeprecationWarning"]
+[tool.black]
+line-length = 100

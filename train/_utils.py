@@ -5,7 +5,12 @@ logger = logging.getLogger(__name__)
 
 
 class EarlyStopping:
-    # https://github.com/jeffheaton/t81_558_deep_learning/blob/pytorch/t81_558_class_03_4_early_stop.ipynb
+    """
+    Early stopping to stop the training when the loss does not improve after
+    certain epochs. Code adapted from:
+    https://github.com/jeffheaton/t81_558_deep_learning/blob/pytorch/t81_558_class_03_4_early_stop.ipynb
+    """
+
     def __init__(self, patience=5, min_delta=0):
         self.patience = patience
         self.min_delta = min_delta

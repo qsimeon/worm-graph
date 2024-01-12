@@ -32,9 +32,7 @@ class MASELoss(torch.nn.Module):
             torch.Tensor: The MASE loss.
         """
         # Ensure the target and predictions have the same shape
-        assert (
-            y_pred.shape == target.shape
-        ), "y_pred and target must have the same shape"
+        assert y_pred.shape == target.shape, "y_pred and target must have the same shape"
         # Calculate the Mean Absolute Error of the one-step naive forecast
         if target.ndim == 2:  # if 1-timestep
             mean_naive_error = torch.tensor(1.0)
@@ -147,10 +145,7 @@ class MultiChannelReadout(torch.nn.Module):
         self.in_features = in_features
         self.out_features = out_features
         self.readouts = torch.nn.ModuleList(
-            [
-                torch.nn.Linear(self.in_features, self.out_features)
-                for _ in range(self.num_channels)
-            ]
+            [torch.nn.Linear(self.in_features, self.out_features) for _ in range(self.num_channels)]
         )
 
     def forward(self, x):
@@ -164,9 +159,7 @@ class MultiChannelReadout(torch.nn.Module):
         assert (
             in_features == self.in_features
         ), "Input dimension does not match expected `in_features`."
-        output = torch.empty(
-            batch_size, seq_len, self.num_channels, self.out_features
-        ).to(x.device)
+        output = torch.empty(batch_size, seq_len, self.num_channels, self.out_features).to(x.device)
         for _ in range(self.num_channels):
             output[:, :, _, :] = self.readouts[_](x)
         return output  # (batch_size, seq_len, num_channels, out_features)
@@ -183,9 +176,7 @@ class MultiChannelEmbedding(torch.nn.Module):
     def __init__(self, num_channels, num_embeddings, embedding_dim):
         super().__init__()
         self.num_channels = num_channels
-        self.num_embeddings = (
-            num_embeddings + 1
-        )  # 0-th index token used for unmasked values
+        self.num_embeddings = num_embeddings + 1  # 0-th index token used for unmasked values
         self.embedding_dim = embedding_dim
         self.embeddings = torch.nn.ModuleList(
             [
@@ -211,9 +202,7 @@ class MultiChannelEmbedding(torch.nn.Module):
             [self.embeddings[i](x_reshaped[:, i]) for i in range(num_channels)], dim=-1
         )
         # Reshape back to the original batch_size and seq_len, sum across channels
-        output = embedded.view(
-            batch_size, seq_len, num_channels, self.embedding_dim
-        ).sum(
+        output = embedded.view(batch_size, seq_len, num_channels, self.embedding_dim).sum(
             dim=2
         )  # (batch_size, seq_len, embedding_dim)
         # Return the embedding output
@@ -238,9 +227,7 @@ class PositionalEncoding(torch.nn.Module):
         self.max_len = max_len
         self.dropout = torch.nn.Dropout(p=dropout)
         position = torch.arange(max_len).unsqueeze(1)
-        div_term = torch.exp(
-            torch.arange(0, d_model, 2) * (-math.log(10000.0) / d_model)
-        )
+        div_term = torch.exp(torch.arange(0, d_model, 2) * (-math.log(10000.0) / d_model))
         pe = torch.zeros(1, max_len, d_model)  # batch_first=True
         pe[0, :, 0::2] = torch.sin(position * div_term)
         pe[0, :, 1::2] = torch.cos(position * div_term)
@@ -251,9 +238,7 @@ class PositionalEncoding(torch.nn.Module):
         Args:
             x: Tensor, shape (batch_size, seq_len, embedding_dim)
         """
-        x = x * math.sqrt(
-            self.d_model
-        )  # normalization used in the original transformer paper
+        x = x * math.sqrt(self.d_model)  # normalization used in the original transformer paper
         x = x + self.pe[:, : x.size(1), :]  # add positional encoding to input
         return self.dropout(x)
 
@@ -309,6 +294,52 @@ class FeedForward(torch.nn.Module):
         return x
 
 
+class SelfAttention(torch.nn.Module):
+    """A single self-attention layer.
+
+    Parameters:
+        embed_dim: embedding dimension
+        num_heads: number of attention heads
+        dropout: probability of dropping a neuron
+
+    Inputs:
+        input: tensor of shape (batch, seq_len, embed_dim)
+
+    """
+
+    def __init__(self, embed_dim, num_heads, dropout):
+        super().__init__()
+        self.attn = torch.nn.MultiheadAttention(embed_dim, num_heads, dropout, batch_first=True)
+        # NOTE: Maintain a running average of attention weights across heads purely for interpretability analysis
+        self.attn_weights = 0  # exponential moving average (EMA) of attention weights
+        self.decay = 0.5  # decay factor for EMA
+
+    def forward(self, src):
+        """
+        NOTE: Because we use batch_first=True, src must have shape (batch, seq_len, embed_dim).
+        """
+        # Create a causal attention mask
+        causal_mask = torch.nn.Transformer.generate_square_subsequent_mask(
+            src.size(1),
+            device=src.device,
+        )
+        # Apply self-attention
+        attn_output, attn_output_weights = self.attn(
+            key=src,
+            query=src,
+            value=src,
+            attn_mask=causal_mask,
+            is_causal=True,
+            need_weights=True,
+            average_attn_weights=True,
+        )
+        # Update the EMA of attention weights averaged across heads
+        self.attn_weights *= self.decay  # scale existing values by decay factor
+        self.attn_weights += (1 - self.decay) * attn_output_weights  # update with scaled new means
+        # Return attention output w/ shape (batch, seq_len, embed_dim)
+        return attn_output
+
+
 class CTRNN(torch.nn.Module):
     """Continuous-time RNN.
 
@@ -330,9 +361,7 @@ class CTRNN(torch.nn.Module):
         super().__init__()
         self.input_size = input_size
         self.hidden_size = hidden_size
-        self.register_parameter(
-            name="alpha", param=torch.nn.Parameter(torch.ones(1, hidden_size))
-        )
+        self.register_parameter(name="alpha", param=torch.nn.Parameter(torch.ones(1, hidden_size)))
         self.input2h = torch.nn.Linear(input_size, hidden_size)
         self.h2h = torch.nn.Linear(hidden_size, hidden_size)
 
@@ -437,7 +466,7 @@ class Model(torch.nn.Module):
         hidden_size: Union[int, None],
         loss: Union[Callable, None] = None,
         l1_reg_param: float = 0.0,
-        # New hyperparameters for version 2
+        # Hyperparameters for version 2
         version_2: bool = VERSION_2,
         multi_channel: bool = MULTI_CHANNEL,
     ):
@@ -464,6 +493,7 @@ class Model(torch.nn.Module):
         # Setup
         self.input_size = input_size  # Number of neurons (302)
         self.output_size = input_size  # Number of neurons (302)
+        # NOTE: The output_size is same as the input_size. By default the model is a self-supervised autoencoder.
         self.hidden_size = hidden_size if hidden_size is not None else input_size
         self.l1_reg_param = l1_reg_param
         # Initialize hidden state
@@ -497,9 +527,7 @@ class Model(torch.nn.Module):
         self._init_weights()
         # Version 2 tokenizes neural data either as a 1-D or multi-D sequence
         self.version_2 = version_2
-        self.multi_channel = (
-            multi_channel and version_2
-        )  # multi-channel only applies to version 2
+        self.multi_channel = multi_channel and version_2  # multi-channel only applies to version 2
         # New attributes and parameters for version 2 with/without multi-channel tokenization
         if self.version_2:
             # Number of tokens to approximate continuous values
@@ -507,9 +535,7 @@ class Model(torch.nn.Module):
             # Modify output size to be number of tokens
             self.output_size = self.n_token
             # Initialize a random normal matrix to use as the embedding codebook/lookup table
-            self.codebook = torch.nn.Parameter(
-                torch.randn(self.n_token, self.input_size)
-            )
+            self.codebook = torch.nn.Parameter(torch.randn(self.n_token, self.input_size))
             # Create bin edges for tokenizing normalized continuous-valued data
             # NOTE: n_token bin_edges means there are n_token-1 bins for masked values; the 0-indexed bin will be used for unmasked values.
             bin_edges = torch.tensor(norm.ppf(torch.linspace(0, 1, self.n_token)))
@@ -574,6 +600,9 @@ class Model(torch.nn.Module):
         return None
 
     def init_hidden(self, input_shape=None):
+        """
+        Enforce the all models have a `init_hidden` method which initilaizes the hidden state of the "core".
+        """
         raise NotImplementedError()
 
     # Getter functions for returning all attributes needed to reinstantiate a similar model
@@ -661,6 +690,9 @@ class Model(torch.nn.Module):
         Output:
             token_sequence: tensor of shape (batch_size, seq_len)
         """
+        # Route to the appropriate tokenization method
+        if self.multi_channel:
+            return self.tokenize_neural_data_multi_channel(neural_sequence, feature_mask)
         # Ensure inputs are the correct shapes
         assert (
             neural_sequence.ndim == 3 and neural_sequence.shape[-1] == self.input_size
@@ -689,13 +721,9 @@ class Model(torch.nn.Module):
             feature_mask,
         )  # (batch_size, seq_len, num_tokens)
         # Find the minimum indices along the num_tokens dimension
-        token_sequence = distances.argmin(dim=-1).to(
-            torch.long
-        )  # (batch_size, seq_len)
+        token_sequence = distances.argmin(dim=-1).to(torch.long)  # (batch_size, seq_len)
         # Flatten token_sequence for scatter operations
-        token_sequence_flat = token_sequence.view(
-            -1
-        )  # Flattening for batched operation
+        token_sequence_flat = token_sequence.view(-1)  # Flattening for batched operation
         # Flatten neural_sequence for scatter operations
         neural_flat = neural_sequence.view(
             -1, self.input_size
@@ -721,11 +749,9 @@ class Model(torch.nn.Module):
         # Compute means for each token, avoiding division by zero by ensuring counts are at least 1
         token_means = token_sums / token_counts.unsqueeze(-1).clamp(min=1)
         # Apply exponential moving average to update token_neural_map
-        decay = 0.5  # Decay factor for EMA
-        self.token_neural_map *= decay  # Scale existing values by decay factor
-        self.token_neural_map += (
-            1 - decay
-        ) * token_means  # Update with scaled new means
+        decay = 0.5  # decay factor for EMA
+        self.token_neural_map *= decay  # scale existing values by decay factor
+        self.token_neural_map = (1 - decay) * token_means  # update with scaled new means
         # Return the tokenized sequence
         return token_sequence
 
@@ -748,6 +774,7 @@ class Model(torch.nn.Module):
         """
         Tokenize each channel of the neural sequence into discrete tokens and update the token_neural_map.
         NOTE: Need to reduce batch_size when using this method because of memory constraints.
+        TODO: Find a way to make this faster why because it s way to slow currently.
         """
         # Ensure inputs are the correct shapes
         batch_size, seq_len, input_size = neural_sequence.shape
@@ -782,21 +809,13 @@ class Model(torch.nn.Module):
             ).sum()  # Sum up the masked neural values for this token
 
         # Calculate the new averages for each token
-        new_token_means = token_sums / token_counts.clamp(
-            min=1
-        )  # Avoid division by zero
-        new_token_means = new_token_means.unsqueeze(
-            1
-        )  # Add a dimension for broadcasting
-        new_token_means = new_token_means.to(
-            self.token_neural_map.device
-        )  # Move to same device
+        new_token_means = token_sums / token_counts.clamp(min=1)  # Avoid division by zero
+        new_token_means = new_token_means.unsqueeze(1)  # Add a dimension for broadcasting
+        new_token_means = new_token_means.to(self.token_neural_map.device)  # Move to same device
 
         # Apply exponential moving average to update token_neural_map
         decay = 0.5  # Decay factor for EMA
-        self.token_neural_map = (
-            self.token_neural_map * decay + (1 - decay) * new_token_means
-        )
+        self.token_neural_map = self.token_neural_map * decay + (1 - decay) * new_token_means
 
         # Return the tokenized sequence
         return token_tensor
@@ -856,13 +875,9 @@ class Model(torch.nn.Module):
                 neural_sequence=input_activity, feature_mask=mask
             )  # (batch_size, seq_len)
         # Embed the tokens and then transform to a latent
-        latent_out = self.input_hidden(
-            input_tokens
-        )  # (batch_size, seq_len, hidden_size)
+        latent_out = self.input_hidden(input_tokens)  # (batch_size, seq_len, hidden_size)
         # Transform the latent
-        hidden_out = self.inner_hidden_model(
-            latent_out
-        )  # (batch_size, seq_len, hidden_size)
+        hidden_out = self.inner_hidden_model(latent_out)  # (batch_size, seq_len, hidden_size)
         # Perform a linear readout to get the output
         output_logits = self.linear(
             hidden_out
@@ -873,13 +888,13 @@ class Model(torch.nn.Module):
     @torch.autocast(device_type=DEVICE.type, dtype=torch.half)
     def loss_fn(self):
         """
-        The loss function to be used by all the models.
-
-        This custom loss function combines a primary loss function with an additional L1 regularization
-        on all model weights. This regularization term encourages the model to use fewer non-zero parameters,
-        effectively making the model more sparse. This can help to prevent overfitting, make the model more
-        interpretable, and improve generalization by encouraging the model to use only the most important
-        features. The L1 penalty is the sum of the absolute values of the weights.
+        The loss function to be used by all the models (default versions).
+        This custom loss function combines a primary loss function with an additional
+        L1 regularization on all model weights. This regularization term encourages the
+        model to use fewer non-zero parameters, effectively making the model more sparse.
+        This can help to prevent overfitting, make the model more interpretable, and improve
+        generalization by encouraging the model to use only the most important features. The
+        L1 penalty is the sum of the absolute values of the weights.
         """
         # Route to the appropriate loss_fn method
         if self.version_2:
@@ -896,9 +911,9 @@ class Model(torch.nn.Module):
             """
             # Default mask to all True if not provided
             if mask is None:
-                mask = torch.ones(
-                    target.shape[0], target.shape[-1], dtype=torch.bool
-                ).to(target.device)
+                mask = torch.ones(target.shape[0], target.shape[-1], dtype=torch.bool).to(
+                    target.device
+                )
             # Expand feature mask along temporal dimension
             expanded_mask = mask.unsqueeze(1).expand_as(
                 output
@@ -907,9 +922,7 @@ class Model(torch.nn.Module):
             masked_output = output * expanded_mask.float()
             masked_target = target * expanded_mask.float()
             # Compute the reconstruction loss without reduction
-            masked_recon_loss = self.loss(reduction="none", **kwargs)(
-                masked_output, masked_target
-            )
+            masked_recon_loss = self.loss(reduction="none", **kwargs)(masked_output, masked_target)
             # Normalize the loss by the total number of data points
             norm_factor = masked_recon_loss[expanded_mask].size(dim=0)
             # Calculate next time step prediction loss w/out regularization
@@ -945,9 +958,9 @@ class Model(torch.nn.Module):
             """
             # Default mask to all True if not provided
             if mask is None:
-                mask = torch.ones(
-                    target.shape[0], target.shape[-1], dtype=torch.bool
-                ).to(target.device)
+                mask = torch.ones(target.shape[0], target.shape[-1], dtype=torch.bool).to(
+                    target.device
+                )
             # Flatten output logits along batch x time (x channels)
             if self.multi_channel:
                 output = output.view(
@@ -959,9 +972,7 @@ class Model(torch.nn.Module):
                 )  # (batch_size, seq_len, n_token) -> (batch_size * seq_len, n_token)
             # VQ loss: The L2 error between the embedding space and the encoder outputs.
             # NOTE: We treat the neural data itself as the encoder output.
-            vq_loss = self.calculate_distances(
-                target.detach(), self.codebook, mask.detach()
-            ).mean()
+            vq_loss = self.calculate_distances(target.detach(), self.codebook, mask.detach()).mean()
             # Commitment loss: The L2 error between the encoder outputs and the embedding space.
             # TODO: Make beta a hyperparameter (start by making it an attribute of self in Model __init__)
             # NOTE: From the original VQ-VAE paper: "We found the resulting algorithm to be quite robust to β, "
@@ -969,8 +980,7 @@ class Model(torch.nn.Module):
             # "experiments, although in general this would depend on the scale of reconstruction loss."
             beta = 0.25
             commitment_loss = (
-                beta
-                * self.calculate_distances(target, self.codebook.detach(), mask).mean()
+                beta * self.calculate_distances(target, self.codebook.detach(), mask).mean()
             )
             # Convert target from neural vector sequence to token sequence
             if self.multi_channel:
@@ -981,18 +991,14 @@ class Model(torch.nn.Module):
                     -1
                 )  # (batch_size, seq_len, input_size) -> (batch_size * seq_len * input_size)
             else:
-                target = self.tokenize_neural_data(
-                    neural_sequence=target, feature_mask=mask
-                )
+                target = self.tokenize_neural_data(neural_sequence=target, feature_mask=mask)
                 target = target.contiguous().view(
                     -1
                 )  # (batch_size, seq_len) -> (batch_size * seq_len)
             # Calculate cross entropy loss from predicted token logits and target tokens
             # NOTE: The `ce_loss` serves as the reconstruction loss since the model outputs
             # logits instead of neural data in this version.
-            ce_loss = torch.nn.CrossEntropyLoss(reduction="mean", **kwargs)(
-                output, target
-            )
+            ce_loss = torch.nn.CrossEntropyLoss(reduction="mean", **kwargs)(output, target)
             # Calculate the total loss including the VQ-VAE parts
             total_loss = ce_loss + vq_loss + commitment_loss
             # Return loss
@@ -1012,10 +1018,11 @@ class Model(torch.nn.Module):
         context_window: int = BLOCK_SIZE,
     ):
         """
-        Generate future neural activity from the model. Take a conditioning sequence of neural data input
-        with shape (batch_size, seq_len, input_size) and completes the sequence num_new_timesteps times.
-        In autoregressive mode, predictions are fed back into the model after each generation step. Otherwise
-        the ground-truth data is fed back to the model after each generation step.
+        Generate future neural activity from the model. Take a conditioning sequence of
+        neural data input with shape (batch_size, seq_len, input_size) and completes the
+        sequence num_new_timesteps times. In autoregressive mode, predictions are fed back
+        into the model after each generation step. Otherwise the ground-truth data is fed
+        back to the model after each generation step.
 
         Parameters
         ----------
@@ -1044,9 +1051,7 @@ class Model(torch.nn.Module):
         self.eval()
         # If generating values autoregressively
         if autoregressive:
-            input = input[
-                :, :context_window, :
-            ]  # (batch_size, context_window, neurons)
+            input = input[:, :context_window, :]  # (batch_size, context_window, neurons)
         # Otherwise defaults to ground-truth feeding
         else:
             input_cond = input  # Use the entire input as context
@@ -1059,9 +1064,7 @@ class Model(torch.nn.Module):
                 :, t : context_window + t, :
             ]  # (batch_size, context_window, neurons)
             # Forward the model to get the predictions
-            predictions = self(
-                input_cond, mask
-            )  # (batch_size, context_window, neurons)
+            predictions = self(input_cond, mask)  # (batch_size, context_window, neurons)
             # Get the last predicted value
             input_next = predictions[:, [-1], :]  # (batch_size, 1, neurons)
             # Normalize the predicted value (prevents exploding values)
@@ -1075,9 +1078,7 @@ class Model(torch.nn.Module):
             )  # (batch_size, 1, neurons)
             # Append the prediction to the generated_values list and input tensor
             generated_values.append(input_next)
-            input = torch.cat(
-                (input, input_next), dim=1
-            )  # add the prediction to the input tensor
+            input = torch.cat((input, input_next), dim=1)  # add the prediction to the input tensor
         # Stack the generated values to a tensor
         generated_tensor = torch.cat(
             generated_values, dim=1
@@ -1098,18 +1099,18 @@ class Model(torch.nn.Module):
         top_k: Union[int, None] = None,
     ):
         """
-        Special generate method for the newer version (version_2) of the models based on how generation is done in Transformers.
-        In the newer version (version_2), models take neural data as input and output token logits. Therefore, we must convert the logits
-        back to neural data to be fed back into the model. We sampling from the distribution over the predicted next token, retrieving
-        the neaural data value(s) corresponding to that token, then appending that to the running neural seqeunce sequence before continuing.
+        Special generate method for the newer version (version_2) of the models based on how
+        generation is done in Transformers. In the newer version (version_2), models take neural
+        data as input and output token logits. Therefore, we must convert the logits back to neural
+        data to be fed back into the model. We sampling from the distribution over the predicted next
+        token, retrieving the neaural data value(s) corresponding to that token, then appending that
+        to the running neural seqeunce sequence before continuing.
         """
         # Set model to evaluation mode
         self.eval()
         # If generating values autoregressively
         if autoregressive:
-            input = input[
-                :, :context_window, :
-            ]  # shape (batch_size, context_window, neurons)
+            input = input[:, :context_window, :]  # shape (batch_size, context_window, neurons)
         # Otherwise defaults to ground-truth feeding
         else:
             input = input  # Use the entire input as context
@@ -1125,13 +1126,9 @@ class Model(torch.nn.Module):
             )  # (batch_size, seq_len, input_size, n_token) OR (batch_size, seq_len, n_token)
             if self.multi_channel:
                 # Pluck the logits at the final step and scale by desired temperature
-                logits = (
-                    output[:, -1, :, :] / temperature
-                )  # (batch_size, input_size, n_token)
+                logits = output[:, -1, :, :] / temperature  # (batch_size, input_size, n_token)
                 # Sample a token for each channel
-                token_next = torch.zeros(
-                    (input.size(0), self.input_size), dtype=torch.long
-                ).to(
+                token_next = torch.zeros((input.size(0), self.input_size), dtype=torch.long).to(
                     input.device
                 )  # (batch_size, input_size)
                 # Predict the next token for each channel
@@ -1140,9 +1137,7 @@ class Model(torch.nn.Module):
                     channel_logits = logits[:, channel, :]  # (batch_size, n_token)
                     # Optionally crop the logits to only the top k options
                     if top_k is not None:
-                        v, _ = torch.topk(
-                            channel_logits, min(top_k, channel_logits.size(-1))
-                        )
+                        v, _ = torch.topk(channel_logits, min(top_k, channel_logits.size(-1)))
                         channel_logits[channel_logits < v[:, [-1]]] = -float("Inf")
                     # Apply softmax and sample from the distribution
                     probs = torch.nn.functional.softmax(
@@ -1159,9 +1154,7 @@ class Model(torch.nn.Module):
                     v, _ = torch.topk(logits, min(top_k, logits.size(-1)))
                     logits[logits < v[:, [-1]]] = -float("Inf")
                 # Apply softmax to convert logits to (normalized) probabilities
-                probs = torch.nn.functional.softmax(
-                    logits, dim=-1
-                )  # (batch_size, n_token)
+                probs = torch.nn.functional.softmax(logits, dim=-1)  # (batch_size, n_token)
                 # Sample from the distribution to get the next token
                 token_next = torch.multinomial(probs, num_samples=1)  # (batch_size, 1)
             # Convert tokens to neural data using token_neural_map
@@ -1202,7 +1195,8 @@ class NaivePredictor(Model):
     """
     A parameter-less model that simply copies the input as its output.
     Serves as our baseline model. Memory-less and feature-less.
-    NOTE: This model will throw an error if you try to train it.
+    NOTE: This model will throw an error if you try to train it because
+    it has no trainable parameters that are use in the computation graph.
     """
 
     def __init__(
@@ -1211,12 +1205,15 @@ class NaivePredictor(Model):
         hidden_size: Union[int, None] = None,  # unused in this model
         loss: Union[Callable, None] = None,
         l1_reg_param=0.0,
+        **kwargs,
     ):
+        # Initialize super class
         super(NaivePredictor, self).__init__(
             input_size,
             None,  # hidden_size
             loss,
             l1_reg_param,
+            **kwargs,
         )
 
         # Input to hidden transformation
@@ -1249,12 +1246,15 @@ class LinearRegression(Model):
         hidden_size: Union[int, None] = None,  # unused in this model
         loss: Union[Callable, None] = None,
         l1_reg_param=0.0,
+        **kwargs,
     ):
+        # Initialize super class
         super(LinearRegression, self).__init__(
             input_size,
             None,  # hidden_size
             loss,
             l1_reg_param,
+            **kwargs,
         )
 
         # Input to hidden transformation
@@ -1286,7 +1286,9 @@ class FeatureFFNN(Model):
         hidden_size: Union[int, None] = None,
         loss: Union[Callable, None] = None,
         l1_reg_param: float = 0.0,
+        **kwargs,
     ):
+        # Initialize super class
         super(FeatureFFNN, self).__init__(
             input_size,
             hidden_size,
@@ -1315,9 +1317,12 @@ class FeatureFFNN(Model):
         return None
 
 
-class NeuralTransformer(Model):
+class PureAttention(Model):
     """
-    Transformer model for neural activity data.
+    TODO
+    A model that used just the multi-head attention mechanism of the Transformer encoder
+    as its internal "core. This is in contrast to NeuralTransformer which uses a complete
+    TransformerEncoderLayer as its "core" or inner hidden model.
     """
 
     def __init__(
@@ -1326,15 +1331,69 @@ class NeuralTransformer(Model):
         hidden_size: Union[int, None] = None,
         loss: Union[Callable, None] = None,
         l1_reg_param: float = 0.0,
+        **kwargs,
     ):
-        """
-        Neural activity data is continuous valued and thus
-        can naturally be treated as if it were already emebedded.
-        However, to maintain notational similarity with the original
-        Transformer architecture, we use a linear layer to perform
-        expansion recoding. This replaces the embedding layer in the
-        traditional Transformer but all it is really just a linear projection.
-        """
+        # NOTE: Attention only works with even `embed_dim`
+        if hidden_size % 2 != 0:
+            logger.info(f"Changing hidden_size from {hidden_size} to {hidden_size+1}.")
+            hidden_size = hidden_size + 1
+        else:
+            logger.info(f"Using hidden_size: {hidden_size}.")
+            hidden_size = hidden_size
+
+        # Initialize super class
+        super(PureAttention, self).__init__(
+            input_size,
+            hidden_size,
+            loss,
+            l1_reg_param,
+            **kwargs,
+        )
+
+        # Special attention parameters
+        self.n_head = find_largest_divisor(
+            hidden_size
+        )  # number of attention heads (NOTE: must be divisor of `hidden_size`)
+        logger.info(f"Number of attention heads: {self.n_head}.")
+        self.dropout = 0.1  # dropout rate
+
+        # Input to hidden transformation
+        self.input_hidden = torch.nn.Sequential(
+            torch.nn.Linear(self.input_size, self.hidden_size),
+            torch.nn.ReLU(),
+            # NOTE: YES use LayerNorm here!
+            self.layer_norm,
+        )
+
+        # Hidden to hidden transformation: Multihead Attention layer
+        self.hidden_hidden = SelfAttention(self.hidden_size, self.n_head, self.dropout)
+
+        # Instantiate internal hidden model
+        self.inner_hidden_model = InnerHiddenModel(self.hidden_hidden, self.hidden)
+
+    def init_hidden(self, input_shape=None):
+        return None
+
+
+class NeuralTransformer(Model):
+    """
+    Transformer model for neural activity data.
+    Neural activity data is continuous valued and thus
+    can naturally be treated as if it were already emebedded.
+    However, to maintain notational similarity with the original
+    Transformer architecture, we use a linear layer to perform
+    expansion recoding. This replaces the embedding layer in the
+    traditional Transformer but it is really just a linear projection.
+    """
+
+    def __init__(
+        self,
+        input_size: int,
+        hidden_size: Union[int, None] = None,
+        loss: Union[Callable, None] = None,
+        l1_reg_param: float = 0.0,
+        **kwargs,
+    ):
         # NOTE: Transformer only works with even `d_model`
         if hidden_size % 2 != 0:
             logger.info(f"Changing hidden_size from {hidden_size} to {hidden_size+1}.")
@@ -1349,14 +1408,15 @@ class NeuralTransformer(Model):
             hidden_size,
             loss,
             l1_reg_param,
+            **kwargs,
         )
 
-        # Special transformer parameters
+        # Special attention parameters
         self.n_head = find_largest_divisor(
             hidden_size
         )  # number of attention heads (NOTE: must be divisor of `hidden_size`)
         logger.info(f"Number of attention heads: {self.n_head}.")
-        self.dropout = 0.1  # dropout rate,
+        self.dropout = 0.1  # dropout rate
 
         # Positional encoding
         self.positional_encoding = PositionalEncoding(
@@ -1399,15 +1459,15 @@ class NetworkCTRNN(Model):
         hidden_size: Union[int, None] = None,
         loss: Union[Callable, None] = None,
         l1_reg_param: float = 0.0,
+        **kwargs,
     ):
-        """
-        The output size will be the same as the input size.
-        """
+        # Initialize super class
         super(NetworkCTRNN, self).__init__(
             input_size,
             hidden_size,
             loss,
             l1_reg_param,
+            **kwargs,
         )
 
         # Input to hidden transformation
@@ -1421,7 +1481,7 @@ class NetworkCTRNN(Model):
         # Hidden to hidden transformation: Continuous time RNN (CTRNN) layer
         self.hidden_hidden = CTRNN(
             input_size=self.hidden_size,
-            hidden_size=self.hidden_size,  # combine input and mask
+            hidden_size=self.hidden_size,
         )
         # Instantiate internal hidden model
         self.inner_hidden_model = InnerHiddenModel(self.hidden_hidden, self.hidden)
@@ -1436,7 +1496,8 @@ class NetworkCTRNN(Model):
 class LiquidCfC(Model):
     """
     Neural Circuit Policy (NCP) Closed-form continuous time (CfC) model.
-    TODO: Cite Nature Machine Intelligence 2022 paper by Ramin Hasani, Daniela Rus et al.
+    Hasani, R., Lechner, M., Amini, A. et al. Closed-form continuous-time neural networks.
+    Nat Mach Intell 4, 992–1003 (2022). https://doi.org/10.1038/s42256-022-00556-7.
     """
 
     def __init__(
@@ -1445,16 +1506,15 @@ class LiquidCfC(Model):
         hidden_size: Union[int, None] = None,
         loss: Union[Callable, None] = None,
         l1_reg_param: float = 0.0,
+        **kwargs,
     ):
-        """
-        The output size will be the same as the input size.
-        """
-
+        # Initialize super class
         super(LiquidCfC, self).__init__(
             input_size,
             hidden_size,
             loss,
             l1_reg_param,
+            **kwargs,
         )
 
         # Input to hidden transformation
@@ -1467,7 +1527,7 @@ class LiquidCfC(Model):
 
         # Hidden to hidden transformation: Closed-form continuous-time (CfC) layer
         self.hidden_hidden = CfC(
-            input_size=self.hidden_size,  # combine input and mask
+            input_size=self.hidden_size,
             units=self.hidden_size,
             activation="relu",
         )
@@ -1512,15 +1572,14 @@ class NetworkLSTM(Model):
         hidden_size: Union[int, None] = None,
         loss: Union[Callable, None] = None,
         l1_reg_param: float = 0.0,
+        **kwargs,
     ):
-        """
-        The output size will be the same as the input size.
-        """
         super(NetworkLSTM, self).__init__(
             input_size,
             hidden_size,
             loss,
             l1_reg_param,
+            **kwargs,
         )
 
         # Input to hidden transformation
@@ -1533,7 +1592,7 @@ class NetworkLSTM(Model):
 
         # Hidden to hidden transformation: Long-short term memory (LSTM) layer
         self.hidden_hidden = torch.nn.LSTM(
-            input_size=self.hidden_size,  # combine input and mask
+            input_size=self.hidden_size,
             hidden_size=self.hidden_size,
             bias=True,
             batch_first=True,

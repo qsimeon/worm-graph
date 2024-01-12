@@ -127,9 +127,7 @@ def train_model(
         # Measure the time for an epoch
         start_time = time.perf_counter()
 
-        for batch_idx, (X_train, Y_train, mask_train, metadata_train) in enumerate(
-            trainloader
-        ):
+        for batch_idx, (X_train, Y_train, mask_train, _) in enumerate(trainloader):
             X_train = X_train.to(DEVICE)
             Y_train = Y_train.to(DEVICE)
             mask_train = mask_train.to(DEVICE)
@@ -186,9 +184,7 @@ def train_model(
         model.eval()
 
         with torch.no_grad():
-            for batch_idx, (X_val, Y_val, mask_val, metadata_val) in enumerate(
-                valloader
-            ):
+            for batch_idx, (X_val, Y_val, mask_val, _) in enumerate(valloader):
                 X_val = X_val.to(DEVICE)
                 Y_val = Y_val.to(DEVICE)
                 mask_val = mask_val.to(DEVICE)
@@ -338,4 +334,4 @@ if __name__ == "__main__":
         train_dataset=train_dataset,
         val_dataset=val_dataset,
     )
-    print("Final metric:", metric)
+    print(f"Final metric: \t {metric}\n")
