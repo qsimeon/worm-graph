@@ -209,6 +209,15 @@ class MultiChannelEmbedding(torch.nn.Module):
         return output
 
 
+class ToFloat32(torch.nn.Module):
+    """
+    A custom layer for type conversion.
+    """
+
+    def forward(self, x):
+        return x.type(torch.float32)
+
+
 class PositionalEncoding(torch.nn.Module):
     """
     Sinuosoidal positional encoding from Attention is All You Need paper,
@@ -659,11 +668,32 @@ class Model(torch.nn.Module):
         )  # (batch_size, 1, num_tokens, input_size)
         # Efficient distance calculation using broadcasting
         torch.cuda.empty_cache()
-        distances = torch.mean(
-            (masked_neural_sequence_expanded - masked_token_matrix_expanded)
-            ** 2,  # (batch_size, seq_len, 1, input_size) - (batch_size, 1, num_tokens, input_size) -> (batch_size, seq_len, num_tokens, input_size)
-            dim=-1,
-        )  # (batch_size, seq_len, num_tokens)
+
+        ### >>> DEBUG: More efficient distance calculation? >>> ###
+        flatten = masked_neural_sequence.view(
+            -1, input_size
+        )  # (batch_size, seq_len, input_size) -> (batch_size * seq_len, input_size)
+        matrix = masked_token_matrix.view(
+            input_size, -1
+        )  # (batch_size, num_tokens, input_size) -> (input_size, batch_size * num_tokens)
+        distances = (
+            flatten.pow(2).sum(dim=1, keepdim=True)  # (batch_size * seq_len, 1)
+            - 2 * flatten @ matrix  # (batch_size * seq_len, batch_size * num_tokens)
+            + matrix.pow(2).sum(0, keepdim=True)  # (1, batch_size * num_tokens)
+        )  # (batch_size * seq_len, batch_size * num_tokens)
+        distances = distances.view(
+            batch_size, seq_len, -1
+        )  # (batch_size, seq_len, batch_size * num_tokens)
+        ### <<< DEBUG: More efficient distance calculation? <<< ###
+
+        # ### >>> DEBUG: Original implementation >>> ###
+        # distances = torch.mean(
+        #     (masked_neural_sequence_expanded - masked_token_matrix_expanded)
+        #     ** 2,  # (batch_size, seq_len, 1, input_size) - (batch_size, 1, num_tokens, input_size) -> (batch_size, seq_len, num_tokens, input_size)
+        #     dim=-1,
+        # )  # (batch_size, seq_len, num_tokens)
+        # ### <<< DEBUG: Original implementation <<< ###
+
         # Return distance matrix
         return distances
 
@@ -682,7 +712,6 @@ class Model(torch.nn.Module):
         model after the tokenization step. The dimensionality of the embedding space is the same
         as the dimensionality of the neural data (i.e. `input_size` or `num_channels`).
 
-
         Args:
             neural_sequence: tensor of shape (batch_size, seq_len, input_size)
             feature_mask: tensor of shape (batch_size, input_size)
@@ -697,7 +726,7 @@ class Model(torch.nn.Module):
         assert (
             neural_sequence.ndim == 3 and neural_sequence.shape[-1] == self.input_size
         ), "`neural_sequence` must have shape (batch_size, seq_len, input_size)"
-        batch_size, _, input_size = neural_sequence.shape
+        batch_size, seq_len, input_size = neural_sequence.shape
         # Set feature_mask to all True if it is None
         if feature_mask is None:
             feature_mask = torch.ones(
@@ -721,13 +750,19 @@ class Model(torch.nn.Module):
             feature_mask,
         )  # (batch_size, seq_len, num_tokens)
         # Find the minimum indices along the num_tokens dimension
-        token_sequence = distances.argmin(dim=-1).to(torch.long)  # (batch_size, seq_len)
+        _, token_sequence = (-distances).max(
+            dim=-1
+        )  # OR token_sequence = distances.argmin(dim=-1).to(torch.long)  # (batch_size, seq_len)
+        logger.info(
+            f"\nDEBUG [tokenize_neural_data] \t token_sequence: \t {token_sequence.shape, token_sequence.min().item(), token_sequence.max().item()}\n"
+        )
+
         # Flatten token_sequence for scatter operations
-        token_sequence_flat = token_sequence.view(-1)  # Flattening for batched operation
+        token_sequence_flat = token_sequence.view(-1)  # (batch_size * seq_len, )
         # Flatten neural_sequence for scatter operations
         neural_flat = neural_sequence.view(
             -1, self.input_size
-        )  # Flattening to match token_sequence_flat
+        )  # (batch_size * seq_len, input_size)
         # Prepare tensors to accumulate sums and counts for each token
         token_sums = torch.zeros(
             self.n_token,
@@ -746,12 +781,14 @@ class Model(torch.nn.Module):
             token_sequence_flat,
             torch.ones_like(token_sequence_flat, dtype=token_counts.dtype),
         )
-        # Compute means for each token, avoiding division by zero by ensuring counts are at least 1
-        token_means = token_sums / token_counts.unsqueeze(-1).clamp(min=1)
+        # Calculate the new averages for each token
+        new_token_means = token_sums / token_counts.unsqueeze(-1).clamp(
+            min=1
+        )  # avoid division by 0 by ensuring counts are at least 1
+        new_token_means = new_token_means.to(self.token_neural_map.device)  # move to same device
         # Apply exponential moving average to update token_neural_map
         decay = 0.5  # decay factor for EMA
-        self.token_neural_map *= decay  # scale existing values by decay factor
-        self.token_neural_map = (1 - decay) * token_means  # update with scaled new means
+        self.token_neural_map = self.token_neural_map * decay + (1 - decay) * new_token_means
         # Return the tokenized sequence
         return token_sequence
 
@@ -781,7 +818,6 @@ class Model(torch.nn.Module):
         assert (
             neural_sequence.ndim == 3 and input_size == self.input_size
         ), "`neural_sequence` shape mismatch."
-
         # Use existing feature_mask or create a default one
         if feature_mask is None:
             feature_mask = torch.ones(
@@ -789,34 +825,29 @@ class Model(torch.nn.Module):
                 dtype=torch.bool,
                 device=neural_sequence.device,
             )
-
         # Get the initial token_tensor before applying the mask
         token_tensor = self.bin_tensor(neural_sequence)
-
         # Apply feature_mask to token_tensor assigning 0-th index token to unmasked values
         token_tensor *= feature_mask.unsqueeze(1)
-
         # Initialize tensors to accumulate token sums and counts for each channel
         token_sums = torch.zeros(self.n_token, dtype=torch.long)
         token_counts = torch.zeros(self.n_token, dtype=torch.long)
-
         # Update token_neural_map
         for token in range(self.n_token):
-            mask = token_tensor == token  # Create a mask for the current token
-            token_counts[token] = mask.sum()  # Sum up the counts for this token
+            mask = token_tensor == token  # create a mask for the current token
+            token_counts[token] = mask.sum()  # sum up the counts for this token
             token_sums[token] = (
                 mask * neural_sequence
-            ).sum()  # Sum up the masked neural values for this token
-
+            ).sum()  # sum up the masked neural values for this token
         # Calculate the new averages for each token
-        new_token_means = token_sums / token_counts.clamp(min=1)  # Avoid division by zero
-        new_token_means = new_token_means.unsqueeze(1)  # Add a dimension for broadcasting
-        new_token_means = new_token_means.to(self.token_neural_map.device)  # Move to same device
-
+        new_token_means = token_sums / token_counts.clamp(
+            min=1
+        )  # avoid division by 0 by ensuring counts are at least 1
+        new_token_means = new_token_means.unsqueeze(1)  # add a dimension for broadcasting
+        new_token_means = new_token_means.to(self.token_neural_map.device)  # move to same device
         # Apply exponential moving average to update token_neural_map
-        decay = 0.5  # Decay factor for EMA
+        decay = 0.5  # decay factor for EMA
         self.token_neural_map = self.token_neural_map * decay + (1 - decay) * new_token_means
-
         # Return the tokenized sequence
         return token_tensor
 
@@ -875,7 +906,6 @@ class Model(torch.nn.Module):
                 neural_sequence=input_activity, feature_mask=mask
             )  # (batch_size, seq_len)
         # Embed the tokens and then transform to a latent
-        # TODO: Error raised if input_tokens is type Long since input_hidden model uses type Half Weights
         latent_out = self.input_hidden(input_tokens)  # (batch_size, seq_len, hidden_size)
         # Transform the latent
         hidden_out = self.inner_hidden_model(latent_out)  # (batch_size, seq_len, hidden_size)
@@ -937,7 +967,7 @@ class Model(torch.nn.Module):
             # Add the L1 penality to the original loss
             reg_loss = self.l1_reg_param * l1_loss
             total_loss = recon_loss + reg_loss
-            # Return the regularized loss
+            # Return loss
             return total_loss
 
         return loss
@@ -948,6 +978,7 @@ class Model(torch.nn.Module):
         """
         Special loss function for the newer version (version_2) of the models based
         on how loss is calculated in Transformers which operate on tokenized data.
+        We additionally train the codebook used for tokenization by adding a VQ-VAE loss.
         """
 
         def loss(output, target, mask=None, **kwargs):
@@ -971,18 +1002,21 @@ class Model(torch.nn.Module):
                 output = output.contiguous().view(
                     -1, self.n_token
                 )  # (batch_size, seq_len, n_token) -> (batch_size * seq_len, n_token)
+
+            vq_loss = 0.0
+            commitment_loss = 0.0
+            ### >>> DEBUG: Vector Quantization (VQ) VAE loss for training the codebook >>> ###
             # VQ loss: The L2 error between the embedding space and the encoder outputs.
             # NOTE: We treat the neural data itself as the encoder output.
             vq_loss = self.calculate_distances(target.detach(), self.codebook, mask.detach()).mean()
             # Commitment loss: The L2 error between the encoder outputs and the embedding space.
-            # TODO: Make beta a hyperparameter (start by making it an attribute of self in Model __init__)
-            # NOTE: From the original VQ-VAE paper: "We found the resulting algorithm to be quite robust to β, "
-            # "as the results did not vary for values of β ranging from 0.1 to 2.0. We use β = 0.25 in all our "
-            # "experiments, although in general this would depend on the scale of reconstruction loss."
+            # NOTE: We use β = 0.25 to scale the commitment loss, following the original VQ-VAE paper.
             beta = 0.25
             commitment_loss = (
                 beta * self.calculate_distances(target, self.codebook.detach(), mask).mean()
             )
+            ### <<< DEBUG: Vector Quantization (VQ) VAE loss for training the codebook <<< ###
+
             # Convert target from neural vector sequence to token sequence
             if self.multi_channel:
                 target = self.tokenize_neural_data_multi_channel(
@@ -996,9 +1030,9 @@ class Model(torch.nn.Module):
                 target = target.contiguous().view(
                     -1
                 )  # (batch_size, seq_len) -> (batch_size * seq_len)
-            # Calculate cross entropy loss from predicted token logits and target tokens
-            # NOTE: The `ce_loss` serves as the reconstruction loss since the model outputs
-            # logits instead of neural data in this version.
+            # Calculate cross entropy loss from predicted token logits and target tokens.
+            # NOTE: Since in this version our models output token logits instead of neural data,
+            # the `ce_loss` is the reconstruction loss when considering this version as a VQ-VAE.
             ce_loss = torch.nn.CrossEntropyLoss(reduction="mean", **kwargs)(output, target)
             # Calculate the total loss including the VQ-VAE parts
             total_loss = ce_loss + vq_loss + commitment_loss
@@ -1190,8 +1224,10 @@ class NaivePredictor(Model):
     """
     A parameter-less model that simply copies the input as its output.
     Serves as our baseline model. Memory-less and feature-less.
-    NOTE: This model will throw an error if you try to train it because
+    NOTE:
+    (1) This model will throw an error if you try to train it because
     it has no trainable parameters and thus has no gradient function.
+    (2) This model does is not defined to work with version_2.
     """
 
     def __init__(
@@ -1202,6 +1238,14 @@ class NaivePredictor(Model):
         l1_reg_param=0.0,
         **kwargs,
     ):
+        # NaivePredictor does not work with version_2
+        if kwargs.get("version_2", True):
+            logger.info(
+                f"NaivePredictor does not work with version_2 "
+                "because it does not output token logits. "
+                "Switching to version_1."
+            )
+        kwargs["version_2"] = False
         # Initialize super class
         super(NaivePredictor, self).__init__(
             input_size,
@@ -1210,18 +1254,14 @@ class NaivePredictor(Model):
             l1_reg_param,
             **kwargs,
         )
-
         # Input to hidden transformation
         self.input_hidden = torch.nn.Identity()
-
         # Hidden to hidden transformation
         self.hidden_hidden = torch.nn.Identity()
         # Instantiate internal hidden model (i.e. the "core")
         self.inner_hidden_model = InnerHiddenModel(self.hidden_hidden, self.hidden)
-
         # Override the linear readout
         self.linear = torch.nn.Identity()
-
         # Create a dud parameter to avoid errors with the optimizer
         self._ = torch.nn.Parameter(torch.tensor(0.0))
 
@@ -1251,10 +1291,11 @@ class LinearRegression(Model):
             l1_reg_param,
             **kwargs,
         )
-
         # Input to hidden transformation
-        self.input_hidden = torch.nn.Identity()
-
+        self.input_hidden = torch.nn.Sequential(
+            self.embedding,
+            # NOTE: Don't use ReLU because that would be nonlinear model.
+        )
         # Hidden to hidden transformation
         self.hidden_hidden = torch.nn.Identity()
         # Instantiate internal hidden model (i.e. the "core")
@@ -1292,14 +1333,12 @@ class FeatureFFNN(Model):
         )
         # Special parameters for this model
         self.dropout = 0.1  # dropout rate
-
         # Input to hidden transformation
         self.input_hidden = torch.nn.Sequential(
             self.embedding,
             torch.nn.ReLU(),
             # NOTE: Do NOT use LayerNorm here!
         )
-
         # Hidden to hidden transformation: FeedForward layer
         self.hidden_hidden = FeedForward(
             n_embd=self.hidden_size,
@@ -1335,7 +1374,6 @@ class PureAttention(Model):
         else:
             logger.info(f"Using hidden_size: {hidden_size}.")
             hidden_size = hidden_size
-
         # Initialize super class
         super(PureAttention, self).__init__(
             input_size,
@@ -1344,25 +1382,29 @@ class PureAttention(Model):
             l1_reg_param,
             **kwargs,
         )
-
         # Special attention parameters
         self.n_head = find_largest_divisor(
             hidden_size
         )  # number of attention heads (NOTE: must be divisor of `hidden_size`)
         logger.info(f"Number of attention heads: {self.n_head}.")
         self.dropout = 0.1  # dropout rate
-
+        # Positional encoding
+        self.positional_encoding = PositionalEncoding(
+            self.hidden_size,  # if positional_encoding after embedding
+            dropout=self.dropout,
+        )
         # Input to hidden transformation
         self.input_hidden = torch.nn.Sequential(
-            torch.nn.Linear(self.input_size, self.hidden_size),
-            torch.nn.ReLU(),
+            self.embedding,
+            self.positional_encoding,
+            # # TODO: Should we exclude the ReLU here for the attention model?
+            # torch.nn.ReLU(),
             # NOTE: YES use LayerNorm here!
             self.layer_norm,
+            # TODO: Figure out if we should use LayerNorm here or not.
         )
-
         # Hidden to hidden transformation: Multihead Attention layer
         self.hidden_hidden = SelfAttention(self.hidden_size, self.n_head, self.dropout)
-
         # Instantiate internal hidden model (i.e. the "core")
         self.inner_hidden_model = InnerHiddenModel(self.hidden_hidden, self.hidden)
 
@@ -1405,28 +1447,25 @@ class NeuralTransformer(Model):
             l1_reg_param,
             **kwargs,
         )
-
         # Special attention parameters
         self.n_head = find_largest_divisor(
             hidden_size
         )  # number of attention heads (NOTE: must be divisor of `hidden_size`)
         logger.info(f"Number of attention heads: {self.n_head}.")
         self.dropout = 0.1  # dropout rate
-
         # Positional encoding
         self.positional_encoding = PositionalEncoding(
             self.hidden_size,  # if positional_encoding after embedding
             dropout=self.dropout,
         )
-
         # Input to hidden transformation
         self.input_hidden = torch.nn.Sequential(
             self.embedding,
             self.positional_encoding,
-            torch.nn.ReLU(),  # TODO: Should we exclude the ReLU here for the transformer model?
+            # # TODO: Should we exclude the ReLU here for the transformer model?
+            # torch.nn.ReLU(),
             # NOTE: Do NOT use LayerNorm here! (it's already in the TransformerEncoderLayer)
         )
-
         # Hidden to hidden transformation: TransformerEncoderLayer
         self.hidden_hidden = CausalTransformer(
             d_model=self.hidden_size,
@@ -1434,7 +1473,6 @@ class NeuralTransformer(Model):
             dim_feedforward=self.hidden_size,
             dropout=self.dropout,
         )
-
         # Instantiate internal hidden model (i.e. the "core")
         self.inner_hidden_model = InnerHiddenModel(self.hidden_hidden, self.hidden)
 
@@ -1464,15 +1502,13 @@ class NetworkCTRNN(Model):
             l1_reg_param,
             **kwargs,
         )
-
         # Input to hidden transformation
         self.input_hidden = torch.nn.Sequential(
-            torch.nn.Linear(self.input_size, self.hidden_size),
+            self.embedding,
             torch.nn.ReLU(),
             # NOTE: YES use LayerNorm here!
             self.layer_norm,
         )
-
         # Hidden to hidden transformation: Continuous time RNN (CTRNN) layer
         self.hidden_hidden = CTRNN(
             input_size=self.hidden_size,
@@ -1511,25 +1547,21 @@ class LiquidCfC(Model):
             l1_reg_param,
             **kwargs,
         )
-
         # Input to hidden transformation
         self.input_hidden = torch.nn.Sequential(
-            torch.nn.Linear(self.input_size, self.hidden_size),
+            self.embedding,
             torch.nn.ReLU(),
             # NOTE: YES use LayerNorm here!
             self.layer_norm,
         )
-
         # Hidden to hidden transformation: Closed-form continuous-time (CfC) layer
         self.hidden_hidden = CfC(
             input_size=self.hidden_size,
             units=self.hidden_size,
             activation="relu",
         )
-
         # Instantiate internal hidden model (i.e. the "core")
         self.inner_hidden_model = InnerHiddenModel(self.hidden_hidden, self.hidden)
-
         # Initialize RNN weights
         self.init_weights()
 
@@ -1569,6 +1601,7 @@ class NetworkLSTM(Model):
         l1_reg_param: float = 0.0,
         **kwargs,
     ):
+        # Initialize super class
         super(NetworkLSTM, self).__init__(
             input_size,
             hidden_size,
@@ -1576,15 +1609,13 @@ class NetworkLSTM(Model):
             l1_reg_param,
             **kwargs,
         )
-
         # Input to hidden transformation
         self.input_hidden = torch.nn.Sequential(
-            torch.nn.Linear(self.input_size, self.hidden_size),
+            self.embedding,
             torch.nn.ReLU(),
             # NOTE: YES use LayerNorm here!
             self.layer_norm,
         )
-
         # Hidden to hidden transformation: Long-short term memory (LSTM) layer
         self.hidden_hidden = torch.nn.LSTM(
             input_size=self.hidden_size,
@@ -1592,10 +1623,8 @@ class NetworkLSTM(Model):
             bias=True,
             batch_first=True,
         )
-
         # Instantiate internal hidden model (i.e. the "core")
         self.inner_hidden_model = InnerHiddenModel(self.hidden_hidden, self.hidden)
-
         # Initialize LSTM weights
         self.init_weights()
 

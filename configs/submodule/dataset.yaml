@@ -26,11 +26,11 @@ dataset:
     # RandWalk0000: all
     # VanDerPol0000: all
     # Shakespeare0000: all
-    # Kato2015: all
-    # Nichols2017: all
-    # Skora2018: all
-    # Kaplan2020: all
-    # Yemini2021: all
+    Kato2015: all
+    Nichols2017: all
+    Skora2018: all
+    Kaplan2020: all
+    Yemini2021: all
     Uzel2022: all
     # Flavell2023: all
     # Leifer2023: all

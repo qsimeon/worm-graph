@@ -7,7 +7,7 @@ import pandas as pd
 import torch.multiprocessing
 
 # Ignore all warnings
-warnings.filterwarnings(action="ignore")  # , category=RuntimeWarning)
+warnings.filterwarnings(action="ignore")
 
 # Set the start method for multiprocessing
 torch.multiprocessing.set_start_method("spawn", force=True)
