@@ -1067,15 +1067,9 @@ class Model(torch.nn.Module):
             predictions = self(input_cond, mask)  # (batch_size, context_window, neurons)
             # Get the last predicted value
             input_next = predictions[:, [-1], :]  # (batch_size, 1, neurons)
-            # Normalize the predicted value (prevents exploding values)
-            mean = input_cond.mean(dim=1, keepdim=True)
-            std = input_cond.std(dim=1, keepdim=True)
-            input_next = torch.nan_to_num(
-                (input_next - mean) / std,
-                nan=0.0,
-                posinf=0.0,
-                neginf=0.0,
-            )  # (batch_size, 1, neurons)
+            # TODO: Make adaptive normalization a function of the model itself.
+            # DEBUG: This is just a patch fix to prevent exploding values
+            input_next = torch.clamp(input_next, min=input_cond.min(), max=input_cond.max())
             # Append the prediction to the generated_values list and input tensor
             generated_values.append(input_next)
             input = torch.cat((input, input_next), dim=1)  # add the prediction to the input tensor
@@ -1196,7 +1190,7 @@ class NaivePredictor(Model):
     A parameter-less model that simply copies the input as its output.
     Serves as our baseline model. Memory-less and feature-less.
     NOTE: This model will throw an error if you try to train it because
-    it has no trainable parameters that are use in the computation graph.
+    it has no trainable parameters and thus has no gradient function.
     """
 
     def __init__(

@@ -151,17 +151,17 @@ def train_model(
 
             # Backpropagation. NOTE: Backward passes under autocast are not recommended.
             if epoch > 0:  # skip first epoch to get tabula rasa loss
-                # Backward pass
-                scaler.scale(train_loss).backward()
-                # Update model weights
-                scaler.step(optimizer)
-                # Update the grad scaler
-                scaler.update()
+                # Check if the computed loss requires gradient
+                if train_loss.requires_grad:
+                    # Backward pass
+                    scaler.scale(train_loss).backward()
+                    # Update model weights
+                    scaler.step(optimizer)
+                    # Update the grad scaler
+                    scaler.update()
             # Calculate FLOP only at first epoch and first batch
             elif batch_idx == 0:
-                computation_flops = FlopCountAnalysis(
-                    model, (X_train, mask_train)
-                ).total()
+                computation_flops = FlopCountAnalysis(model, (X_train, mask_train)).total()
 
             # Update running losses
             train_running_base_loss += train_baseline.item()
@@ -194,9 +194,7 @@ def train_model(
                 # is better than predict any other random number.
                 y_base = X_val
                 val_baseline = (
-                    torch.tensor(
-                        0.0
-                    )  # TODO: find correct baseline to use for version 2
+                    torch.tensor(0.0)  # TODO: find correct baseline to use for version 2
                     if model.version_2
                     else criterion(output=y_base, target=Y_val, mask=mask_val)
                 )
@@ -221,17 +219,13 @@ def train_model(
 
         # Step the scheduler
         scheduler.step(val_epoch_loss[-1])
-        learning_rate.append(
-            optimizer.param_groups[0]["lr"]
-        )  # store current learning rate
+        learning_rate.append(optimizer.param_groups[0]["lr"])  # store current learning rate
 
         # Save model checkpoint
         if epoch % save_freq == 0:
             save_model(
                 model,
-                os.path.join(
-                    log_dir, "train", "checkpoints", "model_epoch_" + str(epoch) + ".pt"
-                ),
+                os.path.join(log_dir, "train", "checkpoints", "model_epoch_" + str(epoch) + ".pt"),
                 other_info={
                     "computation_flops": computation_flops,
                     "time_last_epoch": computation_time[-1],
@@ -259,9 +253,7 @@ def train_model(
 
         # Update progress bar
         pbar.set_description(f"Epoch {epoch}/{epochs}")
-        pbar.set_postfix(
-            {"Train loss": train_epoch_loss[-1], "Val. loss": val_epoch_loss[-1]}
-        )
+        pbar.set_postfix({"Train loss": train_epoch_loss[-1], "Val. loss": val_epoch_loss[-1]})
 
     # Restore best model and save it with additional info
     logger.info("Training loop is over. Loading best model.")
@@ -291,9 +283,7 @@ def train_model(
             "val_baseline": val_epoch_baseline,
         }
     )
-    train_metrics.to_csv(
-        os.path.join(log_dir, "train", "train_metrics.csv"), index=False
-    )
+    train_metrics.to_csv(os.path.join(log_dir, "train", "train_metrics.csv"), index=False)
 
     # Metric for optuna (lowest validation loss)
     metric = min(val_epoch_loss)

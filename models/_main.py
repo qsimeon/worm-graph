@@ -25,6 +25,7 @@ def get_model(model_config: DictConfig, verbose=True) -> torch.nn.Module:
     NetworkCTRNN : class in models/_utils.py
     LiquidCfC : class in models/_utils.py
     FeatureFFNN : class in models/_utils.py
+    NaivePredictor : class in models/_utils.py
     LinearRegression: class in models/_utils.py
         If no model type is specified, LinearRegression is used by default.
 

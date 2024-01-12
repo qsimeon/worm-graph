@@ -26,7 +26,7 @@ BLOCK_SIZE = 5000  # maximum attention block size for Transformer models
 
 NUM_TOKENS = 4096  # number of tokens in the neural vocabulary
 
-VERSION_2 = True  # whether to use version 2 of the model
+VERSION_2 = False  # whether to use version 2 of the model
 
 MULTI_CHANNEL = False  # hyperparameter in version 2 to use multi-channel tokenization
 
