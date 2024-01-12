@@ -512,7 +512,7 @@ class Model(torch.nn.Module):
             if hidden_size is not None
             else torch.nn.Identity()
         )
-        # Instantiate internal hidden model - placeholder
+        # Instantiate internal hidden model (i.e. the "core") - placeholder
         self.inner_hidden_model = InnerHiddenModel(self.hidden_hidden, self.hidden)
         # Embedding layer
         self.embedding = torch.nn.Linear(
@@ -875,6 +875,7 @@ class Model(torch.nn.Module):
                 neural_sequence=input_activity, feature_mask=mask
             )  # (batch_size, seq_len)
         # Embed the tokens and then transform to a latent
+        # TODO: Error raised if input_tokens is type Long since input_hidden model uses type Half Weights
         latent_out = self.input_hidden(input_tokens)  # (batch_size, seq_len, hidden_size)
         # Transform the latent
         hidden_out = self.inner_hidden_model(latent_out)  # (batch_size, seq_len, hidden_size)
@@ -1215,7 +1216,7 @@ class NaivePredictor(Model):
 
         # Hidden to hidden transformation
         self.hidden_hidden = torch.nn.Identity()
-        # Instantiate internal hidden model
+        # Instantiate internal hidden model (i.e. the "core")
         self.inner_hidden_model = InnerHiddenModel(self.hidden_hidden, self.hidden)
 
         # Override the linear readout
@@ -1256,7 +1257,7 @@ class LinearRegression(Model):
 
         # Hidden to hidden transformation
         self.hidden_hidden = torch.nn.Identity()
-        # Instantiate internal hidden model
+        # Instantiate internal hidden model (i.e. the "core")
         self.inner_hidden_model = InnerHiddenModel(self.hidden_hidden, self.hidden)
 
     def init_hidden(self, input_shape=None):
@@ -1304,7 +1305,7 @@ class FeatureFFNN(Model):
             n_embd=self.hidden_size,
             dropout=self.dropout,
         )
-        # Instantiate internal hidden model
+        # Instantiate internal hidden model (i.e. the "core")
         self.inner_hidden_model = InnerHiddenModel(self.hidden_hidden, self.hidden)
 
     def init_hidden(self, input_shape=None):
@@ -1362,7 +1363,7 @@ class PureAttention(Model):
         # Hidden to hidden transformation: Multihead Attention layer
         self.hidden_hidden = SelfAttention(self.hidden_size, self.n_head, self.dropout)
 
-        # Instantiate internal hidden model
+        # Instantiate internal hidden model (i.e. the "core")
         self.inner_hidden_model = InnerHiddenModel(self.hidden_hidden, self.hidden)
 
     def init_hidden(self, input_shape=None):
@@ -1422,7 +1423,7 @@ class NeuralTransformer(Model):
         self.input_hidden = torch.nn.Sequential(
             self.embedding,
             self.positional_encoding,
-            # torch.nn.ReLU(),  # Should we exclude the ReLU here for the transformer model?
+            torch.nn.ReLU(),  # TODO: Should we exclude the ReLU here for the transformer model?
             # NOTE: Do NOT use LayerNorm here! (it's already in the TransformerEncoderLayer)
         )
 
@@ -1434,7 +1435,7 @@ class NeuralTransformer(Model):
             dropout=self.dropout,
         )
 
-        # Instantiate internal hidden model
+        # Instantiate internal hidden model (i.e. the "core")
         self.inner_hidden_model = InnerHiddenModel(self.hidden_hidden, self.hidden)
 
     def init_hidden(self, input_shape=None):
@@ -1477,7 +1478,7 @@ class NetworkCTRNN(Model):
             input_size=self.hidden_size,
             hidden_size=self.hidden_size,
         )
-        # Instantiate internal hidden model
+        # Instantiate internal hidden model (i.e. the "core")
         self.inner_hidden_model = InnerHiddenModel(self.hidden_hidden, self.hidden)
 
     def init_hidden(self, input_shape):
@@ -1526,7 +1527,7 @@ class LiquidCfC(Model):
             activation="relu",
         )
 
-        # Instantiate internal hidden model
+        # Instantiate internal hidden model (i.e. the "core")
         self.inner_hidden_model = InnerHiddenModel(self.hidden_hidden, self.hidden)
 
         # Initialize RNN weights
@@ -1592,7 +1593,7 @@ class NetworkLSTM(Model):
             batch_first=True,
         )
 
-        # Instantiate internal hidden model
+        # Instantiate internal hidden model (i.e. the "core")
         self.inner_hidden_model = InnerHiddenModel(self.hidden_hidden, self.hidden)
 
         # Initialize LSTM weights
