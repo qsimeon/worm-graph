@@ -679,25 +679,6 @@ class Model(torch.nn.Module):
         distances = distances.view(batch_size, seq_len, -1)  # (batch_size, seq_len, num_tokens)
         ## <<< FAST but INCORRECT New Implementation <<< ###
 
-        # ### >>> SLOW and CORRECT Original Implementation >>> ###
-        # # Applying the feature mask to the token matrix
-        # masked_token_matrix = token_matrix.unsqueeze(0) * feature_mask.unsqueeze(
-        #     1
-        # )  # (1, num_tokens, input_size) * (batch_size, 1, input_size) -> (batch_size, num_tokens, input_size)
-        # # Expand dimensions for broadcasting
-        # masked_neural_sequence_expanded = masked_neural_sequence.unsqueeze(
-        #     2
-        # )  # (batch_size, seq_len, 1, input_size)
-        # masked_token_matrix_expanded = masked_token_matrix.unsqueeze(
-        #     1
-        # )  # (batch_size, 1, num_tokens, input_size)
-        # distances = torch.mean(
-        #     (masked_neural_sequence_expanded - masked_token_matrix_expanded)
-        #     ** 2,  # (batch_size, seq_len, 1, input_size) - (batch_size, 1, num_tokens, input_size) -> (batch_size, seq_len, num_tokens, input_size)
-        #     dim=-1,
-        # )  # (batch_size, seq_len, num_tokens)
-        # ### <<< SLOW and CORRECT Original Implementation <<< ###
-
         # Return distance matrix
         return distances
 
@@ -793,32 +774,6 @@ class Model(torch.nn.Module):
         )  # avoid division by 0 by ensuring counts are at least 1
         new_token_means = new_token_means.to(self.token_neural_map.device)  # move to same device
         ## <<< FASTER less interpretable version using torch scatter operations <<< ###
-
-        # ### >>> SLOWER more interpretable version using for loop >>> ###
-        # # Accumulate sums of neural activities for each token
-        # for token in range(self.n_token):
-        #     mask = token_sequence_flat == token  # create a mask for the current token
-        #     token_counts[token] = mask.sum()  # sum up the counts for this token
-        #     token_sums[token] = (mask.unsqueeze(-1) * neural_flat).sum(
-        #         dim=0, keepdim=True
-        #     )  # sum up the masked neural values for this token
-        # # Calculate the new averages for each token
-        # new_token_means = token_sums / token_counts.unsqueeze(-1).clamp(
-        #     min=1
-        # )  # avoid division by 0 by ensuring counts are at least 1
-        # new_token_means = new_token_means.to(self.token_neural_map.device)  # move to same device
-        # ### <<< SLOWER more interpretable version using for loop <<< ###
-
-        # ####################### DEBUG #######################
-        # _ = torch.randint(0, self.n_token, (1,)) * 0
-        # logger.info(f"\n\t token, token_sequence_flat[:5]: \t {_.item(), token_sequence_flat[:5]}")
-        # logger.info(
-        #     f"\n\t token, mask.sum(): \t {_.item(), (token_sequence_flat == _.item()).sum().item()}"
-        # )
-        # logger.info(
-        #     f"\n\t token, new_token_means[token][:5]: \t {_.item(), new_token_means[_.item()][:5]}\n"
-        # )
-        # ####################### DEBUG #######################
 
         # Apply exponential moving average to update token_neural_map
         decay = 0.5  # decay factor for EMA
