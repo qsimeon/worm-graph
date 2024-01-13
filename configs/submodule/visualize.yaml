@@ -8,6 +8,6 @@ visualize:
   # <int> = plot this number of (randomly picked) worms/neurons
   predict:
     # if null, plot all the worms in the dataset. Otherwise, if <list> plot only the worms in that list, or if <int> plot the number of (randomly picked) worms indicated
-    worms_to_plot: null # number of worms to plot
+    worms_to_plot: null # worms to plot
     # if null, plot all the neurons in the dataset. Otherwise, if <list> plot only the neurons in this list, or if <int> plot the number of (randomly chosen) neurons indicated
-    neurons_to_plot: 3 # number of neurons to plot
+    neurons_to_plot: 1 # neurons to plot per worm

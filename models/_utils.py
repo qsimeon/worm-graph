@@ -215,7 +215,7 @@ class ToFloat32(torch.nn.Module):
     """
 
     def forward(self, x):
-        return x.type(torch.float32)
+        return x.to(torch.float32)
 
 
 class PositionalEncoding(torch.nn.Module):
@@ -478,6 +478,7 @@ class Model(torch.nn.Module):
         # Hyperparameters for version 2
         version_2: bool = VERSION_2,
         multi_channel: bool = MULTI_CHANNEL,
+        vq_vae: bool = VQ_VAE,
     ):
         """
         Defines attributes common to all models.
@@ -536,7 +537,12 @@ class Model(torch.nn.Module):
         self._init_weights()
         # Version 2 tokenizes neural data either as a 1-D or multi-D sequence
         self.version_2 = version_2
-        self.multi_channel = multi_channel and version_2  # multi-channel only applies to version 2
+        self.multi_channel = (
+            multi_channel and self.version_2
+        )  # multi-channel only applies to version 2
+        self.vq_vae = (
+            vq_vae and not self.multi_channel
+        )  # VQ-VAE only applies to version 2 without multi-channel
         # New attributes and parameters for version 2 with/without multi-channel tokenization
         if self.version_2:
             # Number of tokens to approximate continuous values
@@ -627,6 +633,7 @@ class Model(torch.nn.Module):
     def get_l1_reg_param(self):
         return self.l1_reg_param
 
+    @torch.autocast(device_type=DEVICE.type, dtype=torch.half)
     def calculate_distances(self, neural_sequence, token_matrix, feature_mask=None):
         """
         Efficiently calculates Euclidean distances between neural sequence vectors and token matrix vectors.
@@ -639,11 +646,11 @@ class Model(torch.nn.Module):
         Returns:
             torch.Tensor: Distances for each batch. Shape (batch_size, seq_len, num_tokens).
         """
+        torch.cuda.empty_cache()
         # Get input shapes
         batch_size, seq_len, input_size = neural_sequence.shape
-        num_tokens, _ = token_matrix.shape
         assert (
-            input_size == _
+            input_size == token_matrix.shape[-1]
         ), "Expected `token_matrix` to have same input size as `neural_sequence`."
         # Set feature_mask to all True if it is None
         if feature_mask is None:
@@ -652,41 +659,36 @@ class Model(torch.nn.Module):
                 dtype=torch.bool,
                 device=neural_sequence.device,
             )
-        # Applying the feature mask to both the neural sequence and token matrix
+        # Applying the feature mask to the neural sequence
         masked_neural_sequence = neural_sequence * feature_mask.unsqueeze(
             1
         )  # (batch_size, seq_len, input_size) * (batch_size, 1, input_size) -> (batch_size, seq_len, input_size)
-        masked_token_matrix = token_matrix.unsqueeze(0) * feature_mask.unsqueeze(
-            1
-        )  # (1, num_tokens, input_size) * (batch_size, 1, input_size) -> (batch_size, num_tokens, input_size)
-        # Expand dimensions for broadcasting
-        masked_neural_sequence_expanded = masked_neural_sequence.unsqueeze(
-            2
-        )  # (batch_size, seq_len, 1, input_size)
-        masked_token_matrix_expanded = masked_token_matrix.unsqueeze(
-            1
-        )  # (batch_size, 1, num_tokens, input_size)
-        # Efficient distance calculation using broadcasting
-        torch.cuda.empty_cache()
-
-        ### >>> DEBUG: More efficient distance calculation? >>> ###
+        # Fast and memory efficient distance calculation
         flatten = masked_neural_sequence.view(
             -1, input_size
         )  # (batch_size, seq_len, input_size) -> (batch_size * seq_len, input_size)
-        matrix = masked_token_matrix.view(
+        matrix = token_matrix.view(
             input_size, -1
-        )  # (batch_size, num_tokens, input_size) -> (input_size, batch_size * num_tokens)
+        )  # (num_tokens, input_size) -> (input_size, num_tokens)
         distances = (
             flatten.pow(2).sum(dim=1, keepdim=True)  # (batch_size * seq_len, 1)
-            - 2 * flatten @ matrix  # (batch_size * seq_len, batch_size * num_tokens)
-            + matrix.pow(2).sum(0, keepdim=True)  # (1, batch_size * num_tokens)
-        )  # (batch_size * seq_len, batch_size * num_tokens)
-        distances = distances.view(
-            batch_size, seq_len, -1
-        )  # (batch_size, seq_len, batch_size * num_tokens)
-        ### <<< DEBUG: More efficient distance calculation? <<< ###
+            - 2 * flatten @ matrix  # (batch_size * seq_len, num_tokens)
+            + matrix.pow(2).sum(0, keepdim=True)  # (1, num_tokens)
+        )  # (batch_size * seq_len, num_tokens)
+        distances = distances.view(batch_size, seq_len, -1)  # (batch_size, seq_len, num_tokens)
 
         # ### >>> DEBUG: Original implementation >>> ###
+        # # Applying the feature mask to the token matrix
+        # masked_token_matrix = token_matrix.unsqueeze(0) * feature_mask.unsqueeze(
+        #     1
+        # )  # (1, num_tokens, input_size) * (batch_size, 1, input_size) -> (batch_size, num_tokens, input_size)
+        # # Expand dimensions for broadcasting
+        # masked_neural_sequence_expanded = masked_neural_sequence.unsqueeze(
+        #     2
+        # )  # (batch_size, seq_len, 1, input_size)
+        # masked_token_matrix_expanded = masked_token_matrix.unsqueeze(
+        #     1
+        # )  # (batch_size, 1, num_tokens, input_size)
         # distances = torch.mean(
         #     (masked_neural_sequence_expanded - masked_token_matrix_expanded)
         #     ** 2,  # (batch_size, seq_len, 1, input_size) - (batch_size, 1, num_tokens, input_size) -> (batch_size, seq_len, num_tokens, input_size)
@@ -719,6 +721,7 @@ class Model(torch.nn.Module):
         Output:
             token_sequence: tensor of shape (batch_size, seq_len)
         """
+        torch.cuda.empty_cache()
         # Route to the appropriate tokenization method
         if self.multi_channel:
             return self.tokenize_neural_data_multi_channel(neural_sequence, feature_mask)
@@ -726,7 +729,7 @@ class Model(torch.nn.Module):
         assert (
             neural_sequence.ndim == 3 and neural_sequence.shape[-1] == self.input_size
         ), "`neural_sequence` must have shape (batch_size, seq_len, input_size)"
-        batch_size, seq_len, input_size = neural_sequence.shape
+        batch_size, _, input_size = neural_sequence.shape
         # Set feature_mask to all True if it is None
         if feature_mask is None:
             feature_mask = torch.ones(
@@ -743,20 +746,20 @@ class Model(torch.nn.Module):
         assert (
             token_matrix.ndim == 2 and token_matrix.shape[-1] == self.input_size
         ), "`token_matrix` must have shape (num_tokens, input_size)"
-        # Use the `calculate_distance` method
+
+        # PART 1: Tokenize the neural data
+        # Calculate distances between neural data and embedding vectors
         distances = self.calculate_distances(
             neural_sequence,
             token_matrix,
             feature_mask,
         )  # (batch_size, seq_len, num_tokens)
-        # Find the minimum indices along the num_tokens dimension
-        _, token_sequence = (-distances).max(
-            dim=-1
-        )  # OR token_sequence = distances.argmin(dim=-1).to(torch.long)  # (batch_size, seq_len)
-        logger.info(
-            f"\nDEBUG [tokenize_neural_data] \t token_sequence: \t {token_sequence.shape, token_sequence.min().item(), token_sequence.max().item()}\n"
-        )
+        # Find the minimum indices along the tokens dimension
+        token_sequence = distances.argmin(dim=-1)  # (batch_size, seq_len)
+        token_sequence = token_sequence % self.n_token
 
+        # PART 2: Update `self.token_neural_map`
+        # TODO: This token means calculation may be incorrect (DEBUG)
         # Flatten token_sequence for scatter operations
         token_sequence_flat = token_sequence.view(-1)  # (batch_size * seq_len, )
         # Flatten neural_sequence for scatter operations
@@ -773,6 +776,8 @@ class Model(torch.nn.Module):
         token_counts = torch.zeros(
             self.n_token, device=neural_sequence.device, dtype=neural_sequence.dtype
         )
+
+        ## >>> FASTER less interpretable version using torch scatter operations >>> ###
         # Accumulate sums of neural activities for each token
         token_sums.index_add_(0, token_sequence_flat, neural_flat)
         # Count occurrences of each token
@@ -786,12 +791,41 @@ class Model(torch.nn.Module):
             min=1
         )  # avoid division by 0 by ensuring counts are at least 1
         new_token_means = new_token_means.to(self.token_neural_map.device)  # move to same device
+        ## <<< FASTER less interpretable version using torch scatter operations <<< ###
+
+        # ### >>> SLOWER more interpretable version using for loop >>> ###
+        # # Accumulate sums of neural activities for each token
+        # for token in range(self.n_token):
+        #     mask = token_sequence_flat == token  # create a mask for the current token
+        #     token_counts[token] = mask.sum()  # sum up the counts for this token
+        #     token_sums[token] = (mask.unsqueeze(-1) * neural_flat).sum(
+        #         dim=0, keepdim=True
+        #     )  # sum up the masked neural values for this token
+        # # Calculate the new averages for each token
+        # new_token_means = token_sums / token_counts.unsqueeze(-1).clamp(
+        #     min=1
+        # )  # avoid division by 0 by ensuring counts are at least 1
+        # new_token_means = new_token_means.to(self.token_neural_map.device)  # move to same device
+        # ### <<< SLOWER more interpretable version using for loop <<< ###
+
+        ####################### DEBUG #######################
+        _ = torch.randint(0, self.n_token, (1,))
+        logger.info(f"\n(token, token_sequence_flat[:5]): \t {_.item(), token_sequence_flat[:5]}")
+        logger.info(
+            f"\n(token, mask.sum()): \t {_.item(), (token_sequence_flat == _.item()).sum()}"
+        )
+        logger.info(
+            f"\n(token, new_token_means[token][:5]): \t {_.item(), new_token_means[_.item()][:5]}\n"
+        )
+        ####################### DEBUG #######################
+
         # Apply exponential moving average to update token_neural_map
         decay = 0.5  # decay factor for EMA
         self.token_neural_map = self.token_neural_map * decay + (1 - decay) * new_token_means
         # Return the tokenized sequence
         return token_sequence
 
+    @torch.autocast(device_type=DEVICE.type, dtype=torch.long)
     def bin_tensor(self, nt):
         """
         Args:
@@ -799,22 +833,23 @@ class Model(torch.nn.Module):
         Output:
             tt: token tensor (batch_size, seq_len, input_size)
         """
+        torch.cuda.empty_cache()
         b1 = nt.unsqueeze(-1) > self.bin_edges[:-1]
         b2 = nt.unsqueeze(-1) <= self.bin_edges[1:]
-        bool_arr = b1 * b2
-        torch.cuda.empty_cache()
-        tt = bool_arr.to(torch.long).argmax(dim=-1) + 1
+        bool_arr = (b1 * b2).to(torch.long)
+        tt = bool_arr.argmax(dim=-1) + 1
         return tt
 
     @torch.autocast(device_type=DEVICE.type, dtype=torch.half)
     def tokenize_neural_data_multi_channel(self, neural_sequence, feature_mask=None):
         """
         Tokenize each channel of the neural sequence into discrete tokens and update the token_neural_map.
-        NOTE: Need to reduce batch_size when using this method because of memory constraints.
-        TODO: Find a way to make this faster why because it s way to slow currently.
+        NOTE: Need to reduce `batch_size` when using this method because of memory constraints.
+        TODO: Find a way to make this faster why because it is extremely slow currently.
         """
+        torch.cuda.empty_cache()
         # Ensure inputs are the correct shapes
-        batch_size, seq_len, input_size = neural_sequence.shape
+        batch_size, _, input_size = neural_sequence.shape
         assert (
             neural_sequence.ndim == 3 and input_size == self.input_size
         ), "`neural_sequence` shape mismatch."
@@ -825,14 +860,18 @@ class Model(torch.nn.Module):
                 dtype=torch.bool,
                 device=neural_sequence.device,
             )
+
+        # PART 1: Tokenize the neural data
         # Get the initial token_tensor before applying the mask
         token_tensor = self.bin_tensor(neural_sequence)
+        token_tensor = token_tensor % self.n_token
         # Apply feature_mask to token_tensor assigning 0-th index token to unmasked values
         token_tensor *= feature_mask.unsqueeze(1)
+
+        # PART 2: Update `self.token_neural_map`
         # Initialize tensors to accumulate token sums and counts for each channel
         token_sums = torch.zeros(self.n_token, dtype=torch.long)
         token_counts = torch.zeros(self.n_token, dtype=torch.long)
-        # Update token_neural_map
         for token in range(self.n_token):
             mask = token_tensor == token  # create a mask for the current token
             token_counts[token] = mask.sum()  # sum up the counts for this token
@@ -1003,19 +1042,23 @@ class Model(torch.nn.Module):
                     -1, self.n_token
                 )  # (batch_size, seq_len, n_token) -> (batch_size * seq_len, n_token)
 
-            vq_loss = 0.0
-            commitment_loss = 0.0
-            ### >>> DEBUG: Vector Quantization (VQ) VAE loss for training the codebook >>> ###
-            # VQ loss: The L2 error between the embedding space and the encoder outputs.
-            # NOTE: We treat the neural data itself as the encoder output.
-            vq_loss = self.calculate_distances(target.detach(), self.codebook, mask.detach()).mean()
-            # Commitment loss: The L2 error between the encoder outputs and the embedding space.
-            # NOTE: We use β = 0.25 to scale the commitment loss, following the original VQ-VAE paper.
-            beta = 0.25
-            commitment_loss = (
-                beta * self.calculate_distances(target, self.codebook.detach(), mask).mean()
-            )
-            ### <<< DEBUG: Vector Quantization (VQ) VAE loss for training the codebook <<< ###
+            # Add the loss objective of VQ-VAEs to train the codebook used for tokenization
+            if self.vq_vae:
+                # VQ loss: The L2 error between the embedding space and the encoder outputs.
+                # NOTE: We treat the neural data itself as the encoder output.
+                vq_loss = self.calculate_distances(
+                    target.detach(), self.codebook, mask.detach()
+                ).mean()
+                # Commitment loss: The L2 error between the encoder outputs and the embedding space.
+                # NOTE: We use β = 0.25 to scale the commitment loss, following the original VQ-VAE paper.
+                beta = 0.25
+                commitment_loss = (
+                    beta * self.calculate_distances(target, self.codebook.detach(), mask).mean()
+                )
+            # Otherwise the codebook is not trained and remains a random matrix
+            else:
+                vq_loss = 0.0
+                commitment_loss = 0.0
 
             # Convert target from neural vector sequence to token sequence
             if self.multi_channel:

@@ -30,6 +30,8 @@ VERSION_2 = True  # whether to use version 2 of the model
 
 MULTI_CHANNEL = False  # hyperparameter in version 2 to use multi-channel tokenization
 
+VQ_VAE = False  # whether to use VQ-VAE to train a codebook for the tokenizer in version 2
+
 RAW_DATA_URL = "https://www.dropbox.com/s/45yqpvtsncx4095/raw_data.zip?dl=1"
 
 RAW_ZIP = "raw_data.zip"
