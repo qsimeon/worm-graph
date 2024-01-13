@@ -809,16 +809,16 @@ class Model(torch.nn.Module):
         # new_token_means = new_token_means.to(self.token_neural_map.device)  # move to same device
         # ### <<< SLOWER more interpretable version using for loop <<< ###
 
-        ####################### DEBUG #######################
-        _ = torch.randint(0, self.n_token, (1,)) * 0
-        logger.info(f"\n\t token, token_sequence_flat[:5]: \t {_.item(), token_sequence_flat[:5]}")
-        logger.info(
-            f"\n\t token, mask.sum(): \t {_.item(), (token_sequence_flat == _.item()).sum().item()}"
-        )
-        logger.info(
-            f"\n\t token, new_token_means[token][:5]: \t {_.item(), new_token_means[_.item()][:5]}\n"
-        )
-        ####################### DEBUG #######################
+        # ####################### DEBUG #######################
+        # _ = torch.randint(0, self.n_token, (1,)) * 0
+        # logger.info(f"\n\t token, token_sequence_flat[:5]: \t {_.item(), token_sequence_flat[:5]}")
+        # logger.info(
+        #     f"\n\t token, mask.sum(): \t {_.item(), (token_sequence_flat == _.item()).sum().item()}"
+        # )
+        # logger.info(
+        #     f"\n\t token, new_token_means[token][:5]: \t {_.item(), new_token_means[_.item()][:5]}\n"
+        # )
+        # ####################### DEBUG #######################
 
         # Apply exponential moving average to update token_neural_map
         decay = 0.5  # decay factor for EMA
