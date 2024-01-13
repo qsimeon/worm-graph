@@ -665,40 +665,38 @@ class Model(torch.nn.Module):
             1
         )  # (batch_size, seq_len, input_size) * (batch_size, 1, input_size) -> (batch_size, seq_len, input_size)
 
-        ### >>> FAST but INCORRECT New Implementation >>> ###
-        # # Fast and memory efficient distance calculation
-        # flatten = masked_neural_sequence.view(
-        #     -1, input_size
-        # )  # (batch_size, seq_len, input_size) -> (batch_size * seq_len, input_size)
-        # matrix = token_matrix.view(
-        #     input_size, -1
-        # )  # (num_tokens, input_size) -> (input_size, num_tokens)
-        # distances = (
-        #     flatten.pow(2).sum(dim=1, keepdim=True)  # (batch_size * seq_len, 1)
-        #     - 2 * flatten @ matrix  # (batch_size * seq_len, num_tokens)
-        #     + matrix.pow(2).sum(0, keepdim=True)  # (1, num_tokens)
-        # )  # (batch_size * seq_len, num_tokens)
-        # distances = distances.view(batch_size, seq_len, -1)  # (batch_size, seq_len, num_tokens)
-        ### <<< FAST but INCORRECT New Implementation <<< ###
+        ## >>> FAST but INCORRECT New Implementation >>> ###
+        # Fast and memory efficient distance calculation
+        flatten = masked_neural_sequence.view(
+            -1, input_size
+        )  # (batch_size, seq_len, input_size) -> (batch_size * seq_len, input_size)
+        matrix = token_matrix.t()  # (num_tokens, input_size) -> (input_size, num_tokens)
+        distances = (
+            flatten.pow(2).sum(dim=1, keepdim=True)  # (batch_size * seq_len, 1)
+            - 2 * flatten @ matrix  # (batch_size * seq_len, num_tokens)
+            + matrix.pow(2).sum(0, keepdim=True)  # (1, num_tokens)
+        )  # (batch_size * seq_len, num_tokens)
+        distances = distances.view(batch_size, seq_len, -1)  # (batch_size, seq_len, num_tokens)
+        ## <<< FAST but INCORRECT New Implementation <<< ###
 
-        ### >>> SLOW, CORRECT, ORIGINAL Implementation >>> ###
-        # Applying the feature mask to the token matrix
-        masked_token_matrix = token_matrix.unsqueeze(0) * feature_mask.unsqueeze(
-            1
-        )  # (1, num_tokens, input_size) * (batch_size, 1, input_size) -> (batch_size, num_tokens, input_size)
-        # Expand dimensions for broadcasting
-        masked_neural_sequence_expanded = masked_neural_sequence.unsqueeze(
-            2
-        )  # (batch_size, seq_len, 1, input_size)
-        masked_token_matrix_expanded = masked_token_matrix.unsqueeze(
-            1
-        )  # (batch_size, 1, num_tokens, input_size)
-        distances = torch.mean(
-            (masked_neural_sequence_expanded - masked_token_matrix_expanded)
-            ** 2,  # (batch_size, seq_len, 1, input_size) - (batch_size, 1, num_tokens, input_size) -> (batch_size, seq_len, num_tokens, input_size)
-            dim=-1,
-        )  # (batch_size, seq_len, num_tokens)
-        ### <<< SLOW and CORRECT Original Implementation <<< ###
+        # ### >>> SLOW and CORRECT Original Implementation >>> ###
+        # # Applying the feature mask to the token matrix
+        # masked_token_matrix = token_matrix.unsqueeze(0) * feature_mask.unsqueeze(
+        #     1
+        # )  # (1, num_tokens, input_size) * (batch_size, 1, input_size) -> (batch_size, num_tokens, input_size)
+        # # Expand dimensions for broadcasting
+        # masked_neural_sequence_expanded = masked_neural_sequence.unsqueeze(
+        #     2
+        # )  # (batch_size, seq_len, 1, input_size)
+        # masked_token_matrix_expanded = masked_token_matrix.unsqueeze(
+        #     1
+        # )  # (batch_size, 1, num_tokens, input_size)
+        # distances = torch.mean(
+        #     (masked_neural_sequence_expanded - masked_token_matrix_expanded)
+        #     ** 2,  # (batch_size, seq_len, 1, input_size) - (batch_size, 1, num_tokens, input_size) -> (batch_size, seq_len, num_tokens, input_size)
+        #     dim=-1,
+        # )  # (batch_size, seq_len, num_tokens)
+        # ### <<< SLOW and CORRECT Original Implementation <<< ###
 
         # Return distance matrix
         return distances
@@ -760,7 +758,6 @@ class Model(torch.nn.Module):
         )  # (batch_size, seq_len, num_tokens)
         # Find the minimum indices along the tokens dimension
         token_sequence = distances.argmin(dim=-1)  # (batch_size, seq_len)
-        token_sequence = token_sequence % self.n_token
 
         # PART 2: Update `self.token_neural_map`
         # TODO: This token means calculation may be incorrect (DEBUG)
@@ -813,10 +810,10 @@ class Model(torch.nn.Module):
         # ### <<< SLOWER more interpretable version using for loop <<< ###
 
         ####################### DEBUG #######################
-        _ = torch.randint(0, self.n_token, (1,))
+        _ = torch.randint(0, self.n_token, (1,)) * 0
         logger.info(f"\n\t token, token_sequence_flat[:5]: \t {_.item(), token_sequence_flat[:5]}")
         logger.info(
-            f"\n\t token, mask.sum(): \t {_.item(), (token_sequence_flat == _.item()).sum()}"
+            f"\n\t token, mask.sum(): \t {_.item(), (token_sequence_flat == _.item()).sum().item()}"
         )
         logger.info(
             f"\n\t token, new_token_means[token][:5]: \t {_.item(), new_token_means[_.item()][:5]}\n"
@@ -868,11 +865,11 @@ class Model(torch.nn.Module):
         # PART 1: Tokenize the neural data
         # Get the initial token_tensor before applying the mask
         token_tensor = self.bin_tensor(neural_sequence)
-        token_tensor = token_tensor % self.n_token
         # Apply feature_mask to token_tensor assigning 0-th index token to unmasked values
         token_tensor *= feature_mask.unsqueeze(1)
 
         # PART 2: Update `self.token_neural_map`
+        # TODO: This for loop makes things unbearably slow. Find a way to vectorize this.
         # Initialize tensors to accumulate token sums and counts for each channel
         token_sums = torch.zeros(self.n_token, dtype=torch.long)
         token_counts = torch.zeros(self.n_token, dtype=torch.long)
