@@ -449,8 +449,8 @@ class InnerHiddenModel(torch.nn.Module):
 
 # # # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
 
-# # # Model super class: Common interface all model architectures # # # #
-# Provides the input-output backbone and allows changeable inner "cores". #
+# # # Model super class: Common interface for all model architectures # # # #
+# Provides the input-output backbone and allows changeable inner modules a.k.a "cores". #
 # # # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
 
 
@@ -479,6 +479,7 @@ class Model(torch.nn.Module):
         l1_reg_param: float = 0.0,
         # Hyperparameters for version 2
         version_2: bool = VERSION_2,
+        num_tokens: int = NUM_TOKENS,
         multi_channel: bool = MULTI_CHANNEL,
         vq_vae: bool = VQ_VAE,
     ):
@@ -525,8 +526,11 @@ class Model(torch.nn.Module):
             else torch.nn.Identity()
         )
         # Instantiate internal hidden model (i.e. the "core") - placeholder
-        self.inner_hidden_model = InnerHiddenModel(self.hidden_hidden, self.hidden)
-        # Embedding layer
+        self.inner_hidden_model = InnerHiddenModel(
+            hidden_hidden_model=self.hidden_hidden,
+            hidden_state=self.hidden,
+        )
+        # Embedding layer - placeholder
         self.embedding = torch.nn.Linear(
             self.input_size,
             self.hidden_size,
@@ -535,10 +539,9 @@ class Model(torch.nn.Module):
         self.linear = torch.nn.Linear(self.hidden_size, self.output_size)
         # Optional layer normalization
         self.layer_norm = torch.nn.LayerNorm(self.hidden_size, elementwise_affine=True)
-        # Initialize weights
-        self._init_weights()
         # Version 2 tokenizes neural data either as a 1-D or multi-D sequence
         self.version_2 = version_2
+        self.num_tokens = num_tokens
         self.multi_channel = (
             multi_channel and self.version_2
         )  # multi-channel only applies to version 2
@@ -548,49 +551,53 @@ class Model(torch.nn.Module):
         # New attributes and parameters for version 2 with/without multi-channel tokenization
         if self.version_2:
             # Number of tokens to approximate continuous values
-            self.n_token = NUM_TOKENS
+            self.num_tokens = num_tokens
             # Modify output size to be number of tokens
-            self.output_size = self.n_token
+            self.output_size = self.num_tokens
             # Initialize a random normal matrix to use as the embedding codebook/lookup table
-            self.codebook = torch.nn.Parameter(torch.randn(self.n_token, self.input_size))
+            self.codebook = torch.nn.Parameter(torch.randn(self.num_tokens, self.input_size))
             # Create bin edges for tokenizing normalized continuous-valued data
-            # NOTE: n_token bin_edges means there are n_token-1 bins for masked values; the 0-indexed bin will be used for unmasked values.
-            bin_edges = torch.tensor(norm.ppf(torch.linspace(0, 1, self.n_token)))
+            # NOTE: num_tokens bin_edges means there are num_tokens-1 bins for masked values;
+            # the 0-indexed bin will be used for unmasked values.
+            bin_edges = torch.tensor(norm.ppf(torch.linspace(0, 1, self.num_tokens)))
             self.register_buffer("bin_edges", bin_edges)
             # Mapping of tokens to neural activity
             if self.multi_channel:
-                token_neural_map = torch.zeros(self.n_token, 1)  # maps tokens to values
+                token_neural_map = torch.zeros(self.num_tokens, 1)  # maps tokens to values
                 self.register_buffer(
                     "token_neural_map", token_neural_map
                 )  # not learned but is updated
             else:
                 token_neural_map = torch.zeros(
-                    self.n_token, self.input_size
+                    self.num_tokens, self.input_size
                 )  # maps tokens to vectors
                 self.register_buffer(
                     "token_neural_map", token_neural_map
                 )  # not learned but is updated
+                ### DEBUG ###
+                self.tokens_experience = set()  # set of tokens that have been experienced
+                ### DEBUG ###
             # Modify embedding layer to be a lookup table
             if self.multi_channel:
                 self.embedding = MultiChannelEmbedding(
                     num_channels=self.input_size,
-                    num_embeddings=self.n_token,
+                    num_embeddings=self.num_tokens,
                     embedding_dim=self.hidden_size,
                 )  # embedding lookup table (learned)
             else:
                 self.embedding = torch.nn.Embedding(
-                    num_embeddings=self.n_token, embedding_dim=self.hidden_size
+                    num_embeddings=self.num_tokens, embedding_dim=self.hidden_size
                 )  # embedding lookup table (learned)
             # Adjust linear readout to output token logits
             if self.multi_channel:
                 self.linear = MultiChannelReadout(
                     num_channels=self.input_size,
                     in_features=self.hidden_size,
-                    out_features=self.n_token,
+                    out_features=self.num_tokens,
                 )
             else:
-                self.linear = torch.nn.Linear(self.hidden_size, self.n_token)
-            # Re-initialize weights
+                self.linear = torch.nn.Linear(self.hidden_size, self.num_tokens)
+            # Initialize weights
             self._init_weights()
             # Alias methods to new versions
             self.forward = self.forward_v2
@@ -603,17 +610,22 @@ class Model(torch.nn.Module):
         return None
 
     def _init_weights(self):
-        if isinstance(self.linear, MultiChannelReadout):
+        if self.multi_channel:
             for linear in self.linear.readouts:
                 # Initialize the readout biases
                 torch.nn.init.zeros_(linear.bias)
                 # Initialize the readout weights
                 torch.nn.init.xavier_uniform_(linear.weight)
+            for embedding in self.embedding.embeddings:
+                # Initialize the embedding weights
+                torch.nn.init.normal_(embedding.weight)
         else:
             # Initialize the readout bias
             torch.nn.init.zeros_(self.linear.bias)
             # Initialize the readout weights
             torch.nn.init.xavier_uniform_(self.linear.weight)
+            # Initialize the embedding weights
+            torch.nn.init.normal_(self.embedding.weight)
         return None
 
     def init_hidden(self, input_shape=None):
@@ -762,22 +774,29 @@ class Model(torch.nn.Module):
         token_sequence = distances.argmin(dim=-1)  # (batch_size, seq_len)
 
         # PART 2: Update `self.token_neural_map`
+        if not torch.is_grad_enabled():
+            return token_sequence
         # TODO: This token means calculation may be incorrect (DEBUG)
         # Flatten token_sequence for scatter operations
         token_sequence_flat = token_sequence.view(-1)  # (batch_size * seq_len, )
+        ### DEBUG ###
+        self.tokens_experience = self.tokens_experience.union(
+            token_sequence_flat.detach().unique().tolist()
+        )
+        ### DEBUG ###
         # Flatten neural_sequence for scatter operations
         neural_flat = neural_sequence.view(
             -1, self.input_size
         )  # (batch_size * seq_len, input_size)
         # Prepare tensors to accumulate sums and counts for each token
         token_sums = torch.zeros(
-            self.n_token,
+            self.num_tokens,
             self.input_size,
             device=neural_sequence.device,
             dtype=neural_sequence.dtype,
         )
         token_counts = torch.zeros(
-            self.n_token, device=neural_sequence.device, dtype=neural_sequence.dtype
+            self.num_tokens, device=neural_sequence.device, dtype=neural_sequence.dtype
         )
 
         ## >>> FASTER less interpretable version using torch scatter operations >>> ###
@@ -798,7 +817,7 @@ class Model(torch.nn.Module):
 
         # ### >>> SLOWER more interpretable version using for loop >>> ###
         # # Accumulate sums of neural activities for each token
-        # for token in range(self.n_token):
+        # for token in range(self.num_tokens):
         #     mask = token_sequence_flat == token  # create a mask for the current token
         #     token_counts[token] = mask.sum()  # sum up the counts for this token
         #     token_sums[token] = (mask.unsqueeze(-1) * neural_flat).sum(
@@ -833,7 +852,11 @@ class Model(torch.nn.Module):
         return tt
 
     @torch.autocast(device_type=DEVICE.type, dtype=torch.half)
-    def tokenize_neural_data_multi_channel(self, neural_sequence, feature_mask=None):
+    def tokenize_neural_data_multi_channel(
+        self,
+        neural_sequence: torch.Tensor,
+        feature_mask: Union[None, torch.Tensor] = None,
+    ):
         """
         Tokenize each channel of the neural sequence into discrete tokens and update the token_neural_map.
         NOTE: Need to reduce `batch_size` when using this method because of memory constraints.
@@ -860,11 +883,13 @@ class Model(torch.nn.Module):
         token_tensor *= feature_mask.unsqueeze(1)
 
         # PART 2: Update `self.token_neural_map`
+        if not torch.is_grad_enabled():
+            return token_tensor
         # TODO: This for loop makes things unbearably slow. Find a way to vectorize this.
         # Initialize tensors to accumulate token sums and counts for each channel
-        token_sums = torch.zeros(self.n_token, dtype=torch.long)
-        token_counts = torch.zeros(self.n_token, dtype=torch.long)
-        for token in range(self.n_token):
+        token_sums = torch.zeros(self.num_tokens, dtype=torch.long)
+        token_counts = torch.zeros(self.num_tokens, dtype=torch.long)
+        for token in range(self.num_tokens):
             mask = token_tensor == token  # create a mask for the current token
             token_counts[token] = mask.sum()  # sum up the counts for this token
             token_sums[token] = (
@@ -929,12 +954,14 @@ class Model(torch.nn.Module):
         if self.multi_channel:
             # Convert the neural sequence into a multi-D token sequence
             input_tokens = self.tokenize_neural_data_multi_channel(
-                neural_sequence=input_activity, feature_mask=mask
+                neural_sequence=input_activity,
+                feature_mask=mask,
             )  # (batch_size, seq_len, input_size)
         else:
             # Convert the neural sequence into a 1-D token sequence
             input_tokens = self.tokenize_neural_data(
-                neural_sequence=input_activity, feature_mask=mask
+                neural_sequence=input_activity,
+                feature_mask=mask,
             )  # (batch_size, seq_len)
         # Embed the tokens and then transform to a latent
         latent_out = self.input_hidden(input_tokens)  # (batch_size, seq_len, hidden_size)
@@ -943,7 +970,7 @@ class Model(torch.nn.Module):
         # Perform a linear readout to get the output
         output_logits = self.linear(
             hidden_out
-        )  # (batch_size, seq_len, input_size, n_token) OR (batch_size, seq_len, n_token)
+        )  # (batch_size, seq_len, input_size, num_tokens) OR (batch_size, seq_len, num_tokens)
         # Return output token logits
         return output_logits
 
@@ -1015,7 +1042,7 @@ class Model(torch.nn.Module):
         def loss(output, target, mask=None, **kwargs):
             """
             Args:
-                output: tensor w/ shape ``[batch_size, seq_len, n_token]``
+                output: tensor w/ shape ``[batch_size, seq_len, num_tokens]``
                 target: tensor w/ shape ``[batch_size, seq_len, input_size]``
                 mask: tensor w/ shape ``[batch_size, input_size]``
             """
@@ -1027,12 +1054,12 @@ class Model(torch.nn.Module):
             # Flatten output logits along batch x time (x channels)
             if self.multi_channel:
                 output = output.view(
-                    -1, self.n_token
-                )  # (batch_size, seq_len, input_size, n_token) -> (batch_size * seq_len * input_size, n_token)
+                    -1, self.num_tokens
+                )  # (batch_size, seq_len, input_size, num_tokens) -> (batch_size * seq_len * input_size, num_tokens)
             else:
                 output = output.contiguous().view(
-                    -1, self.n_token
-                )  # (batch_size, seq_len, n_token) -> (batch_size * seq_len, n_token)
+                    -1, self.num_tokens
+                )  # (batch_size, seq_len, num_tokens) -> (batch_size * seq_len, num_tokens)
 
             # Add the loss objective of VQ-VAEs to train the codebook used for tokenization
             if self.vq_vae:
@@ -1055,13 +1082,17 @@ class Model(torch.nn.Module):
             # Convert target from neural vector sequence to token sequence
             if self.multi_channel:
                 target = self.tokenize_neural_data_multi_channel(
-                    neural_sequence=target, feature_mask=mask
+                    neural_sequence=target,
+                    feature_mask=mask,
                 )  # (batch_size, seq_len, input_size)
                 target = target.contiguous().view(
                     -1
                 )  # (batch_size, seq_len, input_size) -> (batch_size * seq_len * input_size)
             else:
-                target = self.tokenize_neural_data(neural_sequence=target, feature_mask=mask)
+                target = self.tokenize_neural_data(
+                    neural_sequence=target,
+                    feature_mask=mask,
+                )
                 target = target.contiguous().view(
                     -1
                 )  # (batch_size, seq_len) -> (batch_size * seq_len)
@@ -1116,7 +1147,7 @@ class Model(torch.nn.Module):
         """
         # Route to the appropriate generate method
         if self.version_2:
-            return self.generate_v2()
+            return self.generate_v2(input, mask, num_new_timesteps, autoregressive, context_window)
         # Set model to evaluation mode
         self.eval()
         # If generating values autoregressively
@@ -1187,10 +1218,10 @@ class Model(torch.nn.Module):
             # Forward the model to get the output
             output = self(
                 input_cond, mask
-            )  # (batch_size, seq_len, input_size, n_token) OR (batch_size, seq_len, n_token)
+            )  # (batch_size, seq_len, input_size, num_tokens) OR (batch_size, seq_len, num_tokens)
             if self.multi_channel:
                 # Pluck the logits at the final step and scale by desired temperature
-                logits = output[:, -1, :, :] / temperature  # (batch_size, input_size, n_token)
+                logits = output[:, -1, :, :] / temperature  # (batch_size, input_size, num_tokens)
                 # Sample a token for each channel
                 token_next = torch.zeros((input.size(0), self.input_size), dtype=torch.long).to(
                     input.device
@@ -1198,7 +1229,7 @@ class Model(torch.nn.Module):
                 # Predict the next token for each channel
                 for channel in range(self.input_size):
                     # Logits for the current channel
-                    channel_logits = logits[:, channel, :]  # (batch_size, n_token)
+                    channel_logits = logits[:, channel, :]  # (batch_size, num_tokens)
                     # Optionally crop the logits to only the top k options
                     if top_k is not None:
                         v, _ = torch.topk(channel_logits, min(top_k, channel_logits.size(-1)))
@@ -1206,19 +1237,19 @@ class Model(torch.nn.Module):
                     # Apply softmax and sample from the distribution
                     probs = torch.nn.functional.softmax(
                         channel_logits, dim=-1
-                    )  # (batch_size, n_token)
+                    )  # (batch_size, num_tokens)
                     token_next[:, channel] = torch.multinomial(
                         probs, num_samples=1
                     )  # (batch_size, 1)
             else:
                 # Pluck the logits at the final step and scale by desired temperature
-                logits = output[:, -1, :] / temperature  # (batch_size, n_token)
+                logits = output[:, -1, :] / temperature  # (batch_size, num_tokens)
                 # Optionally crop the logits to only the top k options
                 if top_k is not None:
                     v, _ = torch.topk(logits, min(top_k, logits.size(-1)))
                     logits[logits < v[:, [-1]]] = -float("Inf")
                 # Apply softmax to convert logits to (normalized) probabilities
-                probs = torch.nn.functional.softmax(logits, dim=-1)  # (batch_size, n_token)
+                probs = torch.nn.functional.softmax(logits, dim=-1)  # (batch_size, num_tokens)
                 # Sample from the distribution to get the next token
                 token_next = torch.multinomial(probs, num_samples=1)  # (batch_size, 1)
             # Convert tokens to neural data using token_neural_map
@@ -1294,7 +1325,10 @@ class NaivePredictor(Model):
         # Hidden to hidden transformation
         self.hidden_hidden = torch.nn.Identity()
         # Instantiate internal hidden model (i.e. the "core")
-        self.inner_hidden_model = InnerHiddenModel(self.hidden_hidden, self.hidden)
+        self.inner_hidden_model = InnerHiddenModel(
+            hidden_hidden_model=self.hidden_hidden,
+            hidden_state=self.hidden,
+        )
         # Override the linear readout
         self.linear = torch.nn.Identity()
         # Create a dud parameter to avoid errors with the optimizer
@@ -1306,8 +1340,7 @@ class NaivePredictor(Model):
 
 class LinearRegression(Model):
     """
-    A simple linear regression model.
-    Memory-less but can learn linear feature regression.
+    A simple linear regression model. Memory-less but can learn linear feature regression.
     """
 
     def __init__(
@@ -1334,7 +1367,10 @@ class LinearRegression(Model):
         # Hidden to hidden transformation
         self.hidden_hidden = torch.nn.Identity()
         # Instantiate internal hidden model (i.e. the "core")
-        self.inner_hidden_model = InnerHiddenModel(self.hidden_hidden, self.hidden)
+        self.inner_hidden_model = InnerHiddenModel(
+            hidden_hidden_model=self.hidden_hidden,
+            hidden_state=self.hidden,
+        )
 
     def init_hidden(self, input_shape=None):
         return None
@@ -1380,7 +1416,10 @@ class FeatureFFNN(Model):
             dropout=self.dropout,
         )
         # Instantiate internal hidden model (i.e. the "core")
-        self.inner_hidden_model = InnerHiddenModel(self.hidden_hidden, self.hidden)
+        self.inner_hidden_model = InnerHiddenModel(
+            hidden_hidden_model=self.hidden_hidden,
+            hidden_state=self.hidden,
+        )
 
     def init_hidden(self, input_shape=None):
         return None
@@ -1418,14 +1457,14 @@ class PureAttention(Model):
             **kwargs,
         )
         # Special attention parameters
-        self.n_head = find_largest_divisor(
+        self.num_heads = find_largest_divisor(
             hidden_size
         )  # number of attention heads (NOTE: must be divisor of `hidden_size`)
-        logger.info(f"Number of attention heads: {self.n_head}.")
+        logger.info(f"Number of attention heads: {self.num_heads}.")
         self.dropout = 0.1  # dropout rate
-        # Positional encoding
+        # Positional encoding (NOTE: must be after embedding)
         self.positional_encoding = PositionalEncoding(
-            self.hidden_size,  # if positional_encoding after embedding
+            d_model=self.hidden_size,
             dropout=self.dropout,
         )
         # Input to hidden transformation
@@ -1439,9 +1478,16 @@ class PureAttention(Model):
             # TODO: Figure out if we should use LayerNorm here or not.
         )
         # Hidden to hidden transformation: Multihead Attention layer
-        self.hidden_hidden = SelfAttention(self.hidden_size, self.n_head, self.dropout)
+        self.hidden_hidden = SelfAttention(
+            embed_dim=self.hidden_size,
+            num_heads=self.num_heads,
+            dropout=self.dropout,
+        )
         # Instantiate internal hidden model (i.e. the "core")
-        self.inner_hidden_model = InnerHiddenModel(self.hidden_hidden, self.hidden)
+        self.inner_hidden_model = InnerHiddenModel(
+            hidden_hidden_model=self.hidden_hidden,
+            hidden_state=self.hidden,
+        )
 
     def init_hidden(self, input_shape=None):
         return None
@@ -1483,14 +1529,14 @@ class NeuralTransformer(Model):
             **kwargs,
         )
         # Special attention parameters
-        self.n_head = find_largest_divisor(
+        self.num_heads = find_largest_divisor(
             hidden_size
         )  # number of attention heads (NOTE: must be divisor of `hidden_size`)
-        logger.info(f"Number of attention heads: {self.n_head}.")
+        logger.info(f"Number of attention heads: {self.num_heads}.")
         self.dropout = 0.1  # dropout rate
-        # Positional encoding
+        # Positional encoding (NOTE: must be after embedding)
         self.positional_encoding = PositionalEncoding(
-            self.hidden_size,  # if positional_encoding after embedding
+            d_model=self.hidden_size,
             dropout=self.dropout,
         )
         # Input to hidden transformation
@@ -1504,12 +1550,15 @@ class NeuralTransformer(Model):
         # Hidden to hidden transformation: TransformerEncoderLayer
         self.hidden_hidden = CausalTransformer(
             d_model=self.hidden_size,
-            nhead=self.n_head,
+            nhead=self.num_heads,
             dim_feedforward=self.hidden_size,
             dropout=self.dropout,
         )
         # Instantiate internal hidden model (i.e. the "core")
-        self.inner_hidden_model = InnerHiddenModel(self.hidden_hidden, self.hidden)
+        self.inner_hidden_model = InnerHiddenModel(
+            hidden_hidden_model=self.hidden_hidden,
+            hidden_state=self.hidden,
+        )
 
     def init_hidden(self, input_shape=None):
         return None
@@ -1550,7 +1599,10 @@ class NetworkCTRNN(Model):
             hidden_size=self.hidden_size,
         )
         # Instantiate internal hidden model (i.e. the "core")
-        self.inner_hidden_model = InnerHiddenModel(self.hidden_hidden, self.hidden)
+        self.inner_hidden_model = InnerHiddenModel(
+            hidden_hidden_model=self.hidden_hidden,
+            hidden_state=self.hidden,
+        )
 
     def init_hidden(self, input_shape):
         device = next(self.parameters()).device
@@ -1596,7 +1648,10 @@ class LiquidCfC(Model):
             activation="relu",
         )
         # Instantiate internal hidden model (i.e. the "core")
-        self.inner_hidden_model = InnerHiddenModel(self.hidden_hidden, self.hidden)
+        self.inner_hidden_model = InnerHiddenModel(
+            hidden_hidden_model=self.hidden_hidden,
+            hidden_state=self.hidden,
+        )
         # Initialize RNN weights
         self.init_weights()
 
@@ -1659,7 +1714,10 @@ class NetworkLSTM(Model):
             batch_first=True,
         )
         # Instantiate internal hidden model (i.e. the "core")
-        self.inner_hidden_model = InnerHiddenModel(self.hidden_hidden, self.hidden)
+        self.inner_hidden_model = InnerHiddenModel(
+            hidden_hidden_model=self.hidden_hidden,
+            hidden_state=self.hidden,
+        )
         # Initialize LSTM weights
         self.init_weights()
 

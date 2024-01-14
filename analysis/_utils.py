@@ -56,9 +56,7 @@ def hierarchical_clustering_algorithm(
 
     elif distance == "cosine":
         R = X.T @ X  # Distance matrix: far <- [0, 1] -> close
-        norms = np.linalg.norm(X, axis=0).reshape(-1, 1) @ np.linalg.norm(
-            X, axis=0
-        ).reshape(1, -1)
+        norms = np.linalg.norm(X, axis=0).reshape(-1, 1) @ np.linalg.norm(X, axis=0).reshape(1, -1)
         R = (R / norms).detach().numpy()  # cosine similarity
         R = (R + R.T) / 2  # Make it symmetric (just in case) -> numerical error
         D = 1 - R  # Distance matrix: close <- [0, 1] -> far
@@ -106,9 +104,7 @@ def hierarchical_clustering_algorithm(
     sorted_R = R[:, np.argsort(computed_cluster_labels)]  # sort columns
     sorted_R = sorted_R[np.argsort(computed_cluster_labels), :]  # sort rows
     sorted_neuron_labels = original_neuron_labels[np.argsort(computed_cluster_labels)]
-    sorted_computed_cluster_labels = computed_cluster_labels[
-        np.argsort(computed_cluster_labels)
-    ]
+    sorted_computed_cluster_labels = computed_cluster_labels[np.argsort(computed_cluster_labels)]
 
     if save_fig:
         plot_heat_map(

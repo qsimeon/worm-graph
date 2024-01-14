@@ -140,7 +140,7 @@ def train_model(
                 else criterion(output=y_base, target=Y_train, mask=mask_train)
             )
 
-            # Reset / zero-out  gradients
+            # Reset / zero-out gradients
             optimizer.zero_grad()
 
             # Runs the forward pass with autocasting
