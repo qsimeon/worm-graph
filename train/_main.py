@@ -223,7 +223,7 @@ def train_model(
 
         # Save model checkpoint
         if epoch % save_freq == 0:
-            save_model(
+            save_model_checkpoint(
                 model,
                 os.path.join(log_dir, "train", "checkpoints", "model_epoch_" + str(epoch) + ".pt"),
                 other_info={
@@ -258,7 +258,7 @@ def train_model(
     # Restore best model and save it with additional info
     logger.info("Training loop is over. Loading best model.")
     model.load_state_dict(es.best_model.state_dict())
-    save_model(
+    save_model_checkpoint(
         model,
         os.path.join(log_dir, "train", "checkpoints", "model_best.pt"),
         other_info={

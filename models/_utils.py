@@ -75,9 +75,11 @@ def find_largest_divisor(hidden_size):
     return 1
 
 
-def load_model_from_checkpoint(checkpoint_path):
+def load_model_checkpoint(checkpoint_path):
     """
-    Load a model from a checkpoint file.
+    Load a model from a checkpoint file. The checkpoint should
+    contain all the neccesary information to reinstantiate the model
+    using its constructor.
 
     Args:
         checkpoint_path (str): The path to the checkpoint file.
@@ -679,6 +681,25 @@ class Model(torch.nn.Module):
         distances = distances.view(batch_size, seq_len, -1)  # (batch_size, seq_len, num_tokens)
         ## <<< FAST but INCORRECT New Implementation <<< ###
 
+        # ### >>> SLOW and CORRECT Original Implementation >>> ###
+        # # Applying the feature mask to the token matrix
+        # masked_token_matrix = token_matrix.unsqueeze(0) * feature_mask.unsqueeze(
+        #     1
+        # )  # (1, num_tokens, input_size) * (batch_size, 1, input_size) -> (batch_size, num_tokens, input_size)
+        # # Expand dimensions for broadcasting
+        # masked_neural_sequence_expanded = masked_neural_sequence.unsqueeze(
+        #     2
+        # )  # (batch_size, seq_len, 1, input_size)
+        # masked_token_matrix_expanded = masked_token_matrix.unsqueeze(
+        #     1
+        # )  # (batch_size, 1, num_tokens, input_size)
+        # distances = torch.mean(
+        #     (masked_neural_sequence_expanded - masked_token_matrix_expanded)
+        #     ** 2,  # (batch_size, seq_len, 1, input_size) - (batch_size, 1, num_tokens, input_size) -> (batch_size, seq_len, num_tokens, input_size)
+        #     dim=-1,
+        # )  # (batch_size, seq_len, num_tokens)
+        # ### <<< SLOW and CORRECT Original Implementation <<< ###
+
         # Return distance matrix
         return distances
 
@@ -774,6 +795,21 @@ class Model(torch.nn.Module):
         )  # avoid division by 0 by ensuring counts are at least 1
         new_token_means = new_token_means.to(self.token_neural_map.device)  # move to same device
         ## <<< FASTER less interpretable version using torch scatter operations <<< ###
+
+        # ### >>> SLOWER more interpretable version using for loop >>> ###
+        # # Accumulate sums of neural activities for each token
+        # for token in range(self.n_token):
+        #     mask = token_sequence_flat == token  # create a mask for the current token
+        #     token_counts[token] = mask.sum()  # sum up the counts for this token
+        #     token_sums[token] = (mask.unsqueeze(-1) * neural_flat).sum(
+        #         dim=0, keepdim=True
+        #     )  # sum up the masked neural values for this token
+        # # Calculate the new averages for each token
+        # new_token_means = token_sums / token_counts.unsqueeze(-1).clamp(
+        #     min=1
+        # )  # avoid division by 0 by ensuring counts are at least 1
+        # new_token_means = new_token_means.to(self.token_neural_map.device)  # move to same device
+        # ### <<< SLOWER more interpretable version using for loop <<< ###
 
         # Apply exponential moving average to update token_neural_map
         decay = 0.5  # decay factor for EMA
@@ -1129,19 +1165,19 @@ class Model(torch.nn.Module):
         """
         Special generate method for the newer version (version_2) of the models based on how
         generation is done in Transformers. In the newer version (version_2), models take neural
-        data as input and output token logits. Therefore, we must convert the logits back to neural
-        data to be fed back into the model. We sampling from the distribution over the predicted next
-        token, retrieving the neaural data value(s) corresponding to that token, then appending that
-        to the running neural seqeunce sequence before continuing.
+        data as input and outputs token logits. Therefore, we must convert the token logits back to
+        neural data to be fed back into the model. We sample from the distribution over the predicted
+        next token, retrieve the mean neural data value(s) corresponding to that token, append
+        the neural data value(s) to the running neural data sequence, then repeat this process.
         """
         # Set model to evaluation mode
         self.eval()
         # If generating values autoregressively
         if autoregressive:
-            input = input[:, :context_window, :]  # shape (batch_size, context_window, neurons)
+            input = input[:, :context_window, :]  # use a context window
         # Otherwise defaults to ground-truth feeding
         else:
-            input = input  # Use the entire input as context
+            input = input  # use the entire input as context
         # Initialize the list of generated values
         generated_values = []
         # Loop through time

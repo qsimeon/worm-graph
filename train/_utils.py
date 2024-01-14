@@ -40,13 +40,14 @@ class EarlyStopping:
         return False
 
 
-def save_model(model, path, other_info=dict()):
+def save_model_checkpoint(model, checkpoint_path, other_info=dict()):
     """
-    Saves a PyTorch model to disk.
+    Saves a PyTorch model to disk. Saves everything needed to load the
+    model again using the function `models._utils.load_model_checkpoint`.
 
     Args:
         model (nn.Module): The PyTorch model to save.
-        path (str): The path to save the model to.
+        checkpoint_path (str): The path to save the model to.
         other_info (dict, optional): Any additional information to save with the model. Defaults to an empty dictionary.
     """
     num_trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
@@ -64,4 +65,4 @@ def save_model(model, path, other_info=dict()):
         "l1_reg_param": model.get_l1_reg_param(),
     }
     save_info = {**base_info, **other_info}
-    torch.save(save_info, path)
+    torch.save(save_info, checkpoint_path)
