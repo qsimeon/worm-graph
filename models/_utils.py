@@ -780,9 +780,7 @@ class Model(torch.nn.Module):
         # Flatten token_sequence for scatter operations
         token_sequence_flat = token_sequence.view(-1)  # (batch_size * seq_len, )
         ### DEBUG ###
-        self.tokens_experience = self.tokens_experience.union(
-            token_sequence_flat.detach().unique().tolist()
-        )
+        self.tokens_experience.update(set(token_sequence_flat.detach().unique().tolist()))
         ### DEBUG ###
         # Flatten neural_sequence for scatter operations
         neural_flat = neural_sequence.view(
@@ -1070,7 +1068,8 @@ class Model(torch.nn.Module):
                 ).mean()
                 # Commitment loss: The L2 error between the encoder outputs and the embedding space.
                 # NOTE: We use β = 0.25 to scale the commitment loss, following the original VQ-VAE paper.
-                beta = 0.25
+                # beta = 0.25
+                beta = 0.001 # DEBUG
                 commitment_loss = (
                     beta * self.calculate_distances(target, self.codebook.detach(), mask).mean()
                 )
