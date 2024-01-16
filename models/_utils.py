@@ -833,10 +833,14 @@ class Model(torch.nn.Module):
         print(
             f"token_sequence_flat (len, min, max) : \t {len(token_sequence_flat), token_sequence_flat.min().item(), token_sequence_flat.max().item()}\n"
         )
-        _ = set(token_sequence_flat.detach().tolist())  # DEBUG
-        print(f"unique tokens this batch (count) : \t {len(_)}\n")
+
+        _ = set(token_sequence_flat.detach().unique().tolist())  # DEBUG
         self.tokens_experience.update(_)  # DEBUG
+
+        print(f"unique tokens this batch (count) : \t {len(_)}\n")
+
         __ = set(tuple(row.detach().tolist()) for row in neural_flat)  # DEBUG
+
         print(
             f"unique neural vectors this batch (count, dimension) : \t {len(__), len(__.copy().pop())}\n"
         )
@@ -845,6 +849,7 @@ class Model(torch.nn.Module):
 
         test_token = token_sequence_flat[0].item()  # DEBUG
         _ = torch.argwhere(token_sequence_flat == test_token)  # DEBUG
+
         print(f"test_token = \t {test_token}\n")
         print(f"occurrences of test_token = \t {len(_), _.detach().tolist()}\n")
         print(f"test_token in tokens_experience? : \t {test_token in self.tokens_experience}\n")
