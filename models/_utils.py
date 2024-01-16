@@ -776,26 +776,16 @@ class Model(torch.nn.Module):
         )  # (batch_size, seq_len, num_tokens)
         # Find the minimum indices along the tokens dimension
         token_sequence = distances.argmin(dim=-1)  # (batch_size, seq_len)
+
         # PART 2: Update `self.token_neural_map`
         if not torch.is_grad_enabled():
             return token_sequence
-        # TODO: This token means calculation may be incorrect (DEBUG)
         # Flatten token_sequence for scatter operations
-        # token_sequence_flat = token_sequence.contiguous().view(-1)  # (batch_size * seq_len, )
+        token_sequence_flat = token_sequence.contiguous().view(-1)  # (batch_size * seq_len, )
         # Flatten neural_sequence for scatter operations
-        # neural_flat = neural_sequence.contiguous().view(
-        #     -1, self.input_size
-        # )  # (batch_size * seq_len, input_size)
-
-        ### DEBUG ###
-        token_sequence_flat = (
-            token_sequence.contiguous().detach().cpu().view(-1)
-        )  # (batch_size * seq_len, )
-        neural_flat = (
-            neural_sequence.contiguous().detach().cpu().view(-1, self.input_size)
+        neural_flat = neural_sequence.contiguous().view(
+            -1, self.input_size
         )  # (batch_size * seq_len, input_size)
-        ### DEBUG ###
-
         # Prepare tensors to accumulate sums and counts for each token
         token_sums = torch.zeros(
             self.num_tokens,
@@ -807,7 +797,7 @@ class Model(torch.nn.Module):
             self.num_tokens, device=neural_flat.device, dtype=neural_flat.dtype
         )
 
-        ## >>> FASTER less interpretable version using torch index operations >>> ###
+        ## >>> FASTER, NON-DETERMINISTIC, & LESS INTERPRETABLE version using torch index operations >>> ###
         # Accumulate sums of neural activities for each token
         # NOTE: The i-th row of neural_flat is added to the token_sequence_flat[i]-th row of token_sums;
         # the i-th row of neural_flat is a vector of shape (input_size,) and token_sequence_flat[i] is some token;
@@ -829,51 +819,39 @@ class Model(torch.nn.Module):
         new_token_means = new_token_means.to(self.token_neural_map.device)  # move to same device
         ## <<< FASTER less interpretable version using torch scatter operations <<< ###
 
-        ### DEBUG ###
-        print(
-            f"token_sequence_flat (len, min, max) : \t {len(token_sequence_flat), token_sequence_flat.min().item(), token_sequence_flat.max().item()}\n"
-        )
-
-        _ = set(token_sequence_flat.detach().unique().tolist())  # DEBUG
-        self.tokens_experience.update(_)  # DEBUG
-
-        print(f"unique tokens this batch (count) : \t {len(_)}\n")
-
-        __ = set(tuple(row.detach().tolist()) for row in neural_flat)  # DEBUG
-
-        print(
-            f"unique neural vectors this batch (count, dimension) : \t {len(__), len(__.copy().pop())}\n"
-        )
-        print(f"num. vectors mapped to same token = \t {len(__) - len(_)}\n")
-        print(f"total unique tokens experienced so far : \t {len(self.tokens_experience)}\n")
-
-        test_token = token_sequence_flat[0].item()  # DEBUG
-        _ = torch.argwhere(token_sequence_flat == test_token)  # DEBUG
-
-        print(f"test_token = \t {test_token}\n")
-        print(f"occurrences of test_token = \t {len(_), _.detach().tolist()}\n")
-        print(f"test_token in tokens_experience? : \t {test_token in self.tokens_experience}\n")
-        # exit()
-        ### DEBUG ###
-
-        # ### >>> SLOWER more interpretable version using for loop >>> ###
+        # ### >>> SLOWER, DETERMINISTIC, & MORE INTERPRETABLE version using for loop >>> ###
         # # Accumulate sums of neural activities for each token
         # for token in range(self.num_tokens):
         #     mask = token_sequence_flat == token  # create a mask for the current token
         #     token_counts[token] = mask.sum()  # sum up the counts for this token
-        #     token_sums[token] = (mask.unsqueeze(-1) * neural_flat).sum(
-        #         dim=0, keepdim=True
+        #     token_sums[token] = neural_flat[mask].sum(
+        #         dim=0
         #     )  # sum up the masked neural values for this token
         # # Calculate the new averages for each token
-        # new_token_means = token_sums / token_counts.unsqueeze(-1).clamp(
-        #     min=1
+        # new_token_means = token_sums / token_counts.clamp(min=1).unsqueeze(
+        #     -1
         # )  # avoid division by 0 by ensuring counts are at least 1
         # new_token_means = new_token_means.to(self.token_neural_map.device)  # move to same device
         # ### <<< SLOWER more interpretable version using for loop <<< ###
 
+        # Update the set of tokens experienced so far
+        unique_tokens_this_batch = set(token_sequence_flat.detach().unique().tolist())
+        self.tokens_experience.update(unique_tokens_this_batch)
         # Apply exponential moving average to update token_neural_map
         decay = 0.25  # decay factor for EMA
         self.token_neural_map = self.token_neural_map * decay + (1 - decay) * new_token_means
+
+        ### DEBUG ###
+        print(
+            f"unique tokens experienced so far : {len(self.tokens_experience)} \t {sorted(self.tokens_experience)}\n"
+        )
+        non_zero_rows = torch.any(self.token_neural_map != 0, dim=1)
+        non_zero_indices = torch.nonzero(non_zero_rows).squeeze().tolist()
+        print(
+            f"non-zero vectors in token_neural_map : {len(non_zero_indices)} \t {sorted(non_zero_indices)}\n"
+        )
+        ### DEBUG ###
+
         # Return the tokenized sequence
         return token_sequence
 
@@ -943,7 +921,7 @@ class Model(torch.nn.Module):
         new_token_means = new_token_means.unsqueeze(1)  # add a dimension for broadcasting
         new_token_means = new_token_means.to(self.token_neural_map.device)  # move to same device
         # Apply exponential moving average to update token_neural_map
-        decay = 0.5  # decay factor for EMA
+        decay = 0.25  # decay factor for EMA
         self.token_neural_map = self.token_neural_map * decay + (1 - decay) * new_token_means
         # Return the tokenized sequence
         return token_tensor
