@@ -776,26 +776,35 @@ class Model(torch.nn.Module):
         )  # (batch_size, seq_len, num_tokens)
         # Find the minimum indices along the tokens dimension
         token_sequence = distances.argmin(dim=-1)  # (batch_size, seq_len)
-
         # PART 2: Update `self.token_neural_map`
         if not torch.is_grad_enabled():
             return token_sequence
         # TODO: This token means calculation may be incorrect (DEBUG)
         # Flatten token_sequence for scatter operations
-        token_sequence_flat = token_sequence.contiguous().view(-1)  # (batch_size * seq_len, )
+        # token_sequence_flat = token_sequence.contiguous().view(-1)  # (batch_size * seq_len, )
         # Flatten neural_sequence for scatter operations
-        neural_flat = neural_sequence.contiguous().view(
-            -1, self.input_size
+        # neural_flat = neural_sequence.contiguous().view(
+        #     -1, self.input_size
+        # )  # (batch_size * seq_len, input_size)
+
+        ### DEBUG ###
+        token_sequence_flat = (
+            token_sequence.contiguous().detach().cpu().view(-1)
+        )  # (batch_size * seq_len, )
+        neural_flat = (
+            neural_sequence.contiguous().detach().cpu().view(-1, self.input_size)
         )  # (batch_size * seq_len, input_size)
+        ### DEBUG ###
+
         # Prepare tensors to accumulate sums and counts for each token
         token_sums = torch.zeros(
             self.num_tokens,
             self.input_size,
-            device=neural_sequence.device,
-            dtype=neural_sequence.dtype,
+            device=neural_flat.device,
+            dtype=neural_flat.dtype,
         )
         token_counts = torch.zeros(
-            self.num_tokens, device=neural_sequence.device, dtype=neural_sequence.dtype
+            self.num_tokens, device=neural_flat.device, dtype=neural_flat.dtype
         )
 
         ## >>> FASTER less interpretable version using torch index operations >>> ###
@@ -822,24 +831,23 @@ class Model(torch.nn.Module):
 
         ### DEBUG ###
         print(
-            f"token_sequence_flat (len, min, max): \t {len(token_sequence_flat), token_sequence_flat.min().item(), token_sequence_flat.max().item()}\n"
+            f"token_sequence_flat (len, min, max) : \t {len(token_sequence_flat), token_sequence_flat.min().item(), token_sequence_flat.max().item()}\n"
         )
         _ = set(token_sequence_flat.detach().tolist())  # DEBUG
-        print(f"unique tokens this batch (count): \t {len(_)}\n")
+        print(f"unique tokens this batch (count) : \t {len(_)}\n")
         self.tokens_experience.update(_)  # DEBUG
         __ = set(tuple(row.detach().tolist()) for row in neural_flat)  # DEBUG
         print(
-            f"unique neural vectors this batch (count, dimension): \t {len(__), len(__.copy().pop())}\n"
+            f"unique neural vectors this batch (count, dimension) : \t {len(__), len(__.copy().pop())}\n"
         )
         print(f"num. vectors mapped to same token = \t {len(__) - len(_)}\n")
-        print(f"total unique tokens experienced so far: \t {len(self.tokens_experience)}\n")
+        print(f"total unique tokens experienced so far : \t {len(self.tokens_experience)}\n")
 
         test_token = token_sequence_flat[0].item()  # DEBUG
         _ = torch.argwhere(token_sequence_flat == test_token)  # DEBUG
         print(f"test_token = \t {test_token}\n")
         print(f"occurrences of test_token = \t {len(_), _.detach().tolist()}\n")
         print(f"test_token in tokens_experience? : \t {test_token in self.tokens_experience}\n")
-        # print(f"neural vector mapped to test_token: \t {new_token_means[test_token]}\n")
         # exit()
         ### DEBUG ###
 
