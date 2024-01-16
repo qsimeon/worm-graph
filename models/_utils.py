@@ -198,14 +198,16 @@ class MultiChannelEmbedding(torch.nn.Module):
         # Get the input shape
         batch_size, seq_len, num_channels = x.shape
         # Reshape x to a 2D tensor for embedding lookup
-        x_reshaped = x.view(-1, num_channels)  # (batch_size * seq_len, num_channels)
+        x_reshaped = x.contiguous().view(-1, num_channels)  # (batch_size * seq_len, num_channels)
         # Perform embedding lookup for each channel and concatenate
         embedded = torch.cat(
             [self.embeddings[i](x_reshaped[:, i]) for i in range(num_channels)], dim=-1
         )
         # Reshape back to the original batch_size and seq_len, sum across channels
-        output = embedded.view(batch_size, seq_len, num_channels, self.embedding_dim).sum(
-            dim=2
+        output = (
+            embedded.contiguous()
+            .view(batch_size, seq_len, num_channels, self.embedding_dim)
+            .sum(dim=2)
         )  # (batch_size, seq_len, embedding_dim)
         # Return the embedding output
         return output
@@ -679,38 +681,40 @@ class Model(torch.nn.Module):
             1
         )  # (batch_size, seq_len, input_size) * (batch_size, 1, input_size) -> (batch_size, seq_len, input_size)
 
-        # ## >>> FAST but INCORRECT New Implementation >>> ###
-        # # Fast and memory efficient distance calculation
-        # flatten = masked_neural_sequence.view(
-        #     -1, input_size
-        # )  # (batch_size, seq_len, input_size) -> (batch_size * seq_len, input_size)
-        # matrix = token_matrix.t()  # (num_tokens, input_size) -> (input_size, num_tokens)
-        # distances = (
-        #     flatten.pow(2).sum(dim=1, keepdim=True)  # (batch_size * seq_len, 1)
-        #     - 2 * flatten @ matrix  # (batch_size * seq_len, num_tokens)
-        #     + matrix.pow(2).sum(0, keepdim=True)  # (1, num_tokens)
-        # )  # (batch_size * seq_len, num_tokens)
-        # distances = distances.view(batch_size, seq_len, -1)  # (batch_size, seq_len, num_tokens)
-        # ## <<< FAST but INCORRECT New Implementation <<< ###
-
-        ### >>> SLOW and CORRECT Original Implementation >>> ###
-        # Applying the feature mask to the token matrix
-        masked_token_matrix = token_matrix.unsqueeze(0) * feature_mask.unsqueeze(
-            1
-        )  # (1, num_tokens, input_size) * (batch_size, 1, input_size) -> (batch_size, num_tokens, input_size)
-        # Expand dimensions for broadcasting
-        masked_neural_sequence_expanded = masked_neural_sequence.unsqueeze(
-            2
-        )  # (batch_size, seq_len, 1, input_size)
-        masked_token_matrix_expanded = masked_token_matrix.unsqueeze(
-            1
-        )  # (batch_size, 1, num_tokens, input_size)
-        distances = torch.mean(
-            (masked_neural_sequence_expanded - masked_token_matrix_expanded)
-            ** 2,  # (batch_size, seq_len, 1, input_size) - (batch_size, 1, num_tokens, input_size) -> (batch_size, seq_len, num_tokens, input_size)
-            dim=-1,
+        ## >>> FAST but INCORRECT New Implementation >>> ###
+        # Fast and memory efficient distance calculation
+        flatten = masked_neural_sequence.contiguous().view(
+            -1, input_size
+        )  # (batch_size, seq_len, input_size) -> (batch_size * seq_len, input_size)
+        matrix = token_matrix.t()  # (num_tokens, input_size) -> (input_size, num_tokens)
+        distances = (
+            flatten.pow(2).sum(dim=1, keepdim=True)  # (batch_size * seq_len, 1)
+            - 2 * flatten @ matrix  # (batch_size * seq_len, num_tokens)
+            + matrix.pow(2).sum(0, keepdim=True)  # (1, num_tokens)
+        )  # (batch_size * seq_len, num_tokens)
+        distances = distances.contiguous().view(
+            batch_size, seq_len, -1
         )  # (batch_size, seq_len, num_tokens)
-        ### <<< SLOW and CORRECT Original Implementation <<< ###
+        ## <<< FAST but INCORRECT New Implementation <<< ###
+
+        # ### >>> SLOW and CORRECT Original Implementation >>> ###
+        # # Applying the feature mask to the token matrix
+        # masked_token_matrix = token_matrix.unsqueeze(0) * feature_mask.unsqueeze(
+        #     1
+        # )  # (1, num_tokens, input_size) * (batch_size, 1, input_size) -> (batch_size, num_tokens, input_size)
+        # # Expand dimensions for broadcasting
+        # masked_neural_sequence_expanded = masked_neural_sequence.unsqueeze(
+        #     2
+        # )  # (batch_size, seq_len, 1, input_size)
+        # masked_token_matrix_expanded = masked_token_matrix.unsqueeze(
+        #     1
+        # )  # (batch_size, 1, num_tokens, input_size)
+        # distances = torch.mean(
+        #     (masked_neural_sequence_expanded - masked_token_matrix_expanded)
+        #     ** 2,  # (batch_size, seq_len, 1, input_size) - (batch_size, 1, num_tokens, input_size) -> (batch_size, seq_len, num_tokens, input_size)
+        #     dim=-1,
+        # )  # (batch_size, seq_len, num_tokens)
+        # ### <<< SLOW and CORRECT Original Implementation <<< ###
 
         # Return distance matrix
         return distances
@@ -778,12 +782,9 @@ class Model(torch.nn.Module):
             return token_sequence
         # TODO: This token means calculation may be incorrect (DEBUG)
         # Flatten token_sequence for scatter operations
-        token_sequence_flat = token_sequence.view(-1)  # (batch_size * seq_len, )
-        ### DEBUG ###
-        self.tokens_experience.update(set(token_sequence_flat.detach().unique().tolist()))
-        ### DEBUG ###
+        token_sequence_flat = token_sequence.contiguous().view(-1)  # (batch_size * seq_len, )
         # Flatten neural_sequence for scatter operations
-        neural_flat = neural_sequence.view(
+        neural_flat = neural_sequence.contiguous().view(
             -1, self.input_size
         )  # (batch_size * seq_len, input_size)
         # Prepare tensors to accumulate sums and counts for each token
@@ -797,21 +798,50 @@ class Model(torch.nn.Module):
             self.num_tokens, device=neural_sequence.device, dtype=neural_sequence.dtype
         )
 
-        ## >>> FASTER less interpretable version using torch scatter operations >>> ###
+        ## >>> FASTER less interpretable version using torch index operations >>> ###
         # Accumulate sums of neural activities for each token
-        token_sums.index_add_(0, token_sequence_flat, neural_flat)
+        # NOTE: The i-th row of neural_flat is added to the token_sequence_flat[i]-th row of token_sums;
+        # the i-th row of neural_flat is a vector of shape (input_size,) and token_sequence_flat[i] is some token;
+        # token_sums has as many rows as there are unique tokens.
+        token_sums.index_add_(0, index=token_sequence_flat, source=neural_flat)
         # Count occurrences of each token
+        # NOTE: The i-th row of source is added to the token_sequence_flat[i]-th row of token_counts;
+        # the i-th row of source is a 1 and the token_sequence_flat[i] is some token;
+        # token_counts has as many rows as there are unique tokens.
         token_counts.index_add_(
             0,
-            token_sequence_flat,
-            torch.ones_like(token_sequence_flat, dtype=token_counts.dtype),
+            index=token_sequence_flat,
+            source=torch.ones_like(token_sequence_flat, dtype=token_counts.dtype),
         )
         # Calculate the new averages for each token
-        new_token_means = token_sums / token_counts.unsqueeze(-1).clamp(
-            min=1
+        new_token_means = token_sums / token_counts.clamp(min=1).unsqueeze(
+            -1
         )  # avoid division by 0 by ensuring counts are at least 1
         new_token_means = new_token_means.to(self.token_neural_map.device)  # move to same device
         ## <<< FASTER less interpretable version using torch scatter operations <<< ###
+
+        ### DEBUG ###
+        print(
+            f"token_sequence_flat (len, min, max): \t {len(token_sequence_flat), token_sequence_flat.min().item(), token_sequence_flat.max().item()}\n"
+        )
+        _ = set(token_sequence_flat.detach().tolist())  # DEBUG
+        print(f"unique tokens this batch (count): \t {len(_)}\n")
+        self.tokens_experience.update(_)  # DEBUG
+        __ = set(tuple(row.detach().tolist()) for row in neural_flat)  # DEBUG
+        print(
+            f"unique neural vectors this batch (count, dimension): \t {len(__), len(__.copy().pop())}\n"
+        )
+        print(f"num. vectors mapped to same token = \t {len(__) - len(_)}\n")
+        print(f"total unique tokens experienced so far: \t {len(self.tokens_experience)}\n")
+
+        test_token = token_sequence_flat[0].item()  # DEBUG
+        _ = torch.argwhere(token_sequence_flat == test_token)  # DEBUG
+        print(f"test_token = \t {test_token}\n")
+        print(f"occurrences of test_token = \t {len(_), _.detach().tolist()}\n")
+        print(f"test_token in tokens_experience? : \t {test_token in self.tokens_experience}\n")
+        # print(f"neural vector mapped to test_token: \t {new_token_means[test_token]}\n")
+        # exit()
+        ### DEBUG ###
 
         # ### >>> SLOWER more interpretable version using for loop >>> ###
         # # Accumulate sums of neural activities for each token
@@ -829,7 +859,7 @@ class Model(torch.nn.Module):
         # ### <<< SLOWER more interpretable version using for loop <<< ###
 
         # Apply exponential moving average to update token_neural_map
-        decay = 0.5  # decay factor for EMA
+        decay = 0.25  # decay factor for EMA
         self.token_neural_map = self.token_neural_map * decay + (1 - decay) * new_token_means
         # Return the tokenized sequence
         return token_sequence
@@ -1051,7 +1081,7 @@ class Model(torch.nn.Module):
                 )
             # Flatten output logits along batch x time (x channels)
             if self.multi_channel:
-                output = output.view(
+                output = output.contiguous().view(
                     -1, self.num_tokens
                 )  # (batch_size, seq_len, input_size, num_tokens) -> (batch_size * seq_len * input_size, num_tokens)
             else:
@@ -1069,7 +1099,7 @@ class Model(torch.nn.Module):
                 # Commitment loss: The L2 error between the encoder outputs and the embedding space.
                 # NOTE: We use β = 0.25 to scale the commitment loss, following the original VQ-VAE paper.
                 # beta = 0.25
-                beta = 0.001 # DEBUG
+                beta = 0.001  # DEBUG
                 commitment_loss = (
                     beta * self.calculate_distances(target, self.codebook.detach(), mask).mean()
                 )
