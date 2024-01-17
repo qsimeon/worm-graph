@@ -327,7 +327,7 @@ class SelfAttention(torch.nn.Module):
         self.attn = torch.nn.MultiheadAttention(embed_dim, num_heads, dropout, batch_first=True)
         # NOTE: Maintain a running average of attention weights across heads purely for interpretability analysis
         self.attn_weights = 0  # exponential moving average (EMA) of attention weights
-        self.decay = 0.1  # decay factor for EMA
+        self.decay = 0.5  # decay factor for EMA
 
     def forward(self, src):
         """
@@ -578,7 +578,6 @@ class Model(torch.nn.Module):
                 self.register_buffer(
                     "token_neural_map", token_neural_map
                 )  # not learned but is updated
-                self.tokens_experience = set()  # tokens experienced; updated every batch
             # Modify embedding layer to be a lookup table
             if self.multi_channel:
                 self.embedding = MultiChannelEmbedding(
@@ -837,12 +836,17 @@ class Model(torch.nn.Module):
         # new_token_means = new_token_means.to(self.token_neural_map.device)  # move to same device
         # ### <<< SLOWER, DETERMINISTIC, & MORE INTERPRETABLE version using for loop <<< ###
 
-        # Update the set of tokens experienced so far
-        unique_tokens_this_batch = set(token_sequence_flat.detach().unique().tolist())
-        self.tokens_experience = self.tokens_experience.union(unique_tokens_this_batch)
         # Apply exponential moving average to update token_neural_map
-        decay = 0.1  # decay factor for EMA
-        self.token_neural_map = self.token_neural_map * decay + (1 - decay) * new_token_means
+        # NOTE: We only update positions in self.token_neural_map that corresponds to tokens observed in this batch.
+        observed_tokens = token_sequence_flat.unique()
+        decay = 0.5  # decay factor for EMA
+        self.token_neural_map[observed_tokens] = (
+            decay * self.token_neural_map[observed_tokens]
+            + (1 - decay) * new_token_means[observed_tokens]
+        )
+        # self.token_neural_map.scatter_add_(
+        #     0, index=observed_tokens, source=new_token_means, alpha=(1 - decay)
+        # ) # DEBUG
 
         # Return the tokenized sequence
         return token_sequence
@@ -913,9 +917,8 @@ class Model(torch.nn.Module):
         new_token_means = new_token_means.unsqueeze(1)  # add a dimension for broadcasting
         new_token_means = new_token_means.to(self.token_neural_map.device)  # move to same device
         # Apply exponential moving average to update token_neural_map
-        decay = 0.1  # decay factor for EMA
+        decay = 0.5  # decay factor for EMA
         self.token_neural_map = self.token_neural_map * decay + (1 - decay) * new_token_means
- 
         # Return the tokenized sequence
         return token_tensor
 
