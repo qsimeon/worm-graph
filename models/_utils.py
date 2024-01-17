@@ -762,10 +762,12 @@ class Model(torch.nn.Module):
         ), "`feature_mask` must have shape (batch_size, input_size)"
         assert feature_mask.sum().item() > 0, "`feature_mask` cannot be all False."
         if token_matrix is None:
-            token_matrix = self.codebook.to(neural_sequence.device)
+            token_matrix = self.codebook
         assert (
             token_matrix.ndim == 2 and token_matrix.shape[-1] == self.input_size
         ), "`token_matrix` must have shape (num_tokens, input_size)"
+        # Move token_matrix to same device as neural_sequence
+        token_matrix = token_matrix.to(neural_sequence.device)
 
         # PART 1: Tokenize the neural data
         # Calculate distances between neural data and embedding vectors
@@ -978,7 +980,6 @@ class Model(torch.nn.Module):
         input_activity = self.identity(
             input * mask.unsqueeze(1).expand_as(input)
         )  # (batch_size, seq_len, input_size)
-        assert torch.allclose(input, input_activity, "Maks all true so this should be true.") # DEBUG
         # Tokenize the high-dimensional neural data sequence
         if self.multi_channel:
             # Convert the neural sequence into a multi-D token sequence
@@ -1184,12 +1185,14 @@ class Model(torch.nn.Module):
             return self.generate_v2(input, mask, num_new_timesteps, autoregressive, context_window)
         # Set model to evaluation mode
         self.eval()
+        # Get input shapes
+        batch_size, _, input_size = input.shape
         # If generating values autoregressively
         if autoregressive:
-            input = input[:, :context_window, :]  # (batch_size, context_window, neurons)
+            input = input[:, -context_window:, :]  # (batch_size, context_window, neurons)
         # Otherwise defaults to ground-truth feeding
         else:
-            input_cond = input  # Use the entire input as context
+            input = input  # Use the entire input as context
         # Initialize the list of generated values
         generated_values = []
         # Loop through time
@@ -1199,7 +1202,8 @@ class Model(torch.nn.Module):
                 :, t : context_window + t, :
             ]  # (batch_size, context_window, neurons)
             # Forward the model to get the predictions
-            predictions = self(input_cond, mask)  # (batch_size, context_window, neurons)
+            with torch.no_grad():
+                predictions = self(input_cond, mask)  # (batch_size, context_window, neurons)
             # Get the last predicted value
             input_next = predictions[:, [-1], :]  # (batch_size, 1, neurons)
             # TODO: Make adaptive normalization a function of the model itself.
@@ -1237,9 +1241,11 @@ class Model(torch.nn.Module):
         """
         # Set model to evaluation mode
         self.eval()
+        # Get input shapes
+        batch_size, _, input_size = input.shape
         # If generating values autoregressively
         if autoregressive:
-            input = input[:, :context_window, :]  # use a context window
+            input = input[:, -context_window:, :]  # use a context window
         # Otherwise defaults to ground-truth feeding
         else:
             input = input  # use the entire input as context
@@ -1250,14 +1256,15 @@ class Model(torch.nn.Module):
             # If the sequence context is growing too long we must crop it
             input_cond = input[:, t : context_window + t, :]
             # Forward the model to get the output
-            output = self(
-                input_cond, mask
-            )  # (batch_size, seq_len, input_size, num_tokens) OR (batch_size, seq_len, num_tokens)
+            with torch.no_grad():
+                output = self(
+                    input_cond, mask
+                )  # (batch_size, seq_len, input_size, num_tokens) OR (batch_size, seq_len, num_tokens)
             if self.multi_channel:
                 # Pluck the logits at the final step and scale by desired temperature
                 logits = output[:, -1, :, :] / temperature  # (batch_size, input_size, num_tokens)
                 # Sample a token for each channel
-                token_next = torch.zeros((input.size(0), self.input_size), dtype=torch.long).to(
+                token_next = torch.zeros((batch_size, input_size), dtype=torch.long).to(
                     input.device
                 )  # (batch_size, input_size)
                 # Predict the next token for each channel
@@ -1292,7 +1299,7 @@ class Model(torch.nn.Module):
                     token_next
                 ]  # token_next is shaped (batch_size, input_size) OR (batch_size, 1)
                 .contiguous()
-                .view(input.size(0), 1, self.input_size)
+                .view(batch_size, 1, input_size)
             )  # (batch_size, 1, input_size)
             # Append the prediction to the generated_values list
             generated_values.append(input_next)
