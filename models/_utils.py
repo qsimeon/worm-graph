@@ -578,9 +578,7 @@ class Model(torch.nn.Module):
                 self.register_buffer(
                     "token_neural_map", token_neural_map
                 )  # not learned but is updated
-                self.tokens_experience = (
-                    set()
-                )  # set of tokens that have been experienced; updated every batch
+                self.tokens_experience = set()  # tokens experienced; updated every batch
             # Modify embedding layer to be a lookup table
             if self.multi_channel:
                 self.embedding = MultiChannelEmbedding(
@@ -841,7 +839,7 @@ class Model(torch.nn.Module):
 
         # Update the set of tokens experienced so far
         unique_tokens_this_batch = set(token_sequence_flat.detach().unique().tolist())
-        self.tokens_experience.update(unique_tokens_this_batch)
+        self.tokens_experience = self.tokens_experience.union(unique_tokens_this_batch)
         # Apply exponential moving average to update token_neural_map
         decay = 0.25  # decay factor for EMA
         self.token_neural_map = self.token_neural_map * decay + (1 - decay) * new_token_means
