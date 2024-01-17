@@ -1202,8 +1202,7 @@ class Model(torch.nn.Module):
                 :, t : context_window + t, :
             ]  # (batch_size, context_window, neurons)
             # Forward the model to get the predictions
-            with torch.no_grad():
-                predictions = self(input_cond, mask)  # (batch_size, context_window, neurons)
+            predictions = self(input_cond, mask)  # (batch_size, context_window, neurons)
             # Get the last predicted value
             input_next = predictions[:, [-1], :]  # (batch_size, 1, neurons)
             # TODO: Make adaptive normalization a function of the model itself.
@@ -1256,10 +1255,9 @@ class Model(torch.nn.Module):
             # If the sequence context is growing too long we must crop it
             input_cond = input[:, t : context_window + t, :]
             # Forward the model to get the output
-            with torch.no_grad():
-                output = self(
-                    input_cond, mask
-                )  # (batch_size, seq_len, input_size, num_tokens) OR (batch_size, seq_len, num_tokens)
+            output = self(
+                input_cond, mask
+            )  # (batch_size, seq_len, input_size, num_tokens) OR (batch_size, seq_len, num_tokens)
             if self.multi_channel:
                 # Pluck the logits at the final step and scale by desired temperature
                 logits = output[:, -1, :, :] / temperature  # (batch_size, input_size, num_tokens)
