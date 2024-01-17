@@ -264,7 +264,9 @@ class CausalTransformer(torch.nn.Module):
 
     def __init__(self, d_model, nhead, dim_feedforward, dropout):
         super().__init__()
-        self.transformer = torch.nn.TransformerEncoderLayer(
+        self.num_layers = 1  # single layer
+        self.is_causal = True  # causal attention
+        self.encoder_layer = torch.nn.TransformerEncoderLayer(
             d_model,
             nhead,
             dim_feedforward,
@@ -273,14 +275,14 @@ class CausalTransformer(torch.nn.Module):
             batch_first=True,
             norm_first=True,
         )
-        self.is_causal = True
+        self.transformer_encoder = torch.nn.TransformerEncoder(self.encoder_layer, self.num_layers)
 
     def forward(self, src):
         causal_mask = torch.nn.Transformer.generate_square_subsequent_mask(
             src.size(1),
             device=src.device,
         )
-        out = self.transformer(src, src_mask=causal_mask, is_causal=self.is_causal)
+        out = self.transformer_encoder(src, mask=causal_mask, is_causal=self.is_causal)
         return out
 
 
@@ -576,9 +578,9 @@ class Model(torch.nn.Module):
                 self.register_buffer(
                     "token_neural_map", token_neural_map
                 )  # not learned but is updated
-                ### DEBUG ###
-                self.tokens_experience = set()  # set of tokens that have been experienced
-                ### DEBUG ###
+                self.tokens_experience = (
+                    set()
+                )  # set of tokens that have been experienced; updated every batch
             # Modify embedding layer to be a lookup table
             if self.multi_channel:
                 self.embedding = MultiChannelEmbedding(
@@ -662,7 +664,6 @@ class Model(torch.nn.Module):
         Returns:
             torch.Tensor: Distances for each batch. Shape (batch_size, seq_len, num_tokens).
         """
-        torch.cuda.empty_cache()
         # Get input shapes
         batch_size, seq_len, input_size = neural_sequence.shape
         assert (
@@ -681,7 +682,7 @@ class Model(torch.nn.Module):
             1
         )  # (batch_size, seq_len, input_size) * (batch_size, 1, input_size) -> (batch_size, seq_len, input_size)
 
-        ## >>> FAST but INCORRECT New Implementation >>> ###
+        ### >>> FAST but INCORRECT, NEW Implementation >>> ###
         # Fast and memory efficient distance calculation
         flatten = masked_neural_sequence.contiguous().view(
             -1, input_size
@@ -695,9 +696,9 @@ class Model(torch.nn.Module):
         distances = distances.contiguous().view(
             batch_size, seq_len, -1
         )  # (batch_size, seq_len, num_tokens)
-        ## <<< FAST but INCORRECT New Implementation <<< ###
+        ### <<< FAST but INCORRECT, NEW Implementation <<< ###
 
-        # ### >>> SLOW and CORRECT Original Implementation >>> ###
+        # ### >>> SLOW and CORRECT, ORIGINAL Implementation >>> ###
         # # Applying the feature mask to the token matrix
         # masked_token_matrix = token_matrix.unsqueeze(0) * feature_mask.unsqueeze(
         #     1
@@ -714,7 +715,7 @@ class Model(torch.nn.Module):
         #     ** 2,  # (batch_size, seq_len, 1, input_size) - (batch_size, 1, num_tokens, input_size) -> (batch_size, seq_len, num_tokens, input_size)
         #     dim=-1,
         # )  # (batch_size, seq_len, num_tokens)
-        # ### <<< SLOW and CORRECT Original Implementation <<< ###
+        # ### <<< SLOW and CORRECT, ORIGINAL Implementation <<< ###
 
         # Return distance matrix
         return distances
@@ -741,7 +742,6 @@ class Model(torch.nn.Module):
         Output:
             token_sequence: tensor of shape (batch_size, seq_len)
         """
-        torch.cuda.empty_cache()
         # Route to the appropriate tokenization method
         if self.multi_channel:
             return self.tokenize_neural_data_multi_channel(neural_sequence, feature_mask)
@@ -776,13 +776,16 @@ class Model(torch.nn.Module):
         )  # (batch_size, seq_len, num_tokens)
         # Find the minimum indices along the tokens dimension
         token_sequence = distances.argmin(dim=-1)  # (batch_size, seq_len)
+        # Skip updating the token_neural_map if we are in eval mode
+        if not torch.is_grad_enabled():  # if eval mode, not updating token_neural_map
+            return token_sequence
+        else:
+            pass  # otherwise model is still training, so update token_neural_map
 
         # PART 2: Update `self.token_neural_map`
-        if not torch.is_grad_enabled():
-            return token_sequence
-        # Flatten token_sequence for scatter operations
+        # Flatten token_sequence
         token_sequence_flat = token_sequence.contiguous().view(-1)  # (batch_size * seq_len, )
-        # Flatten neural_sequence for scatter operations
+        # Flatten neural_sequence
         neural_flat = neural_sequence.contiguous().view(
             -1, self.input_size
         )  # (batch_size * seq_len, input_size)
@@ -797,7 +800,7 @@ class Model(torch.nn.Module):
             self.num_tokens, device=neural_flat.device, dtype=neural_flat.dtype
         )
 
-        ## >>> FASTER, NON-DETERMINISTIC, & LESS INTERPRETABLE version using torch index operations >>> ###
+        ### >>> FASTER, NON-DETERMINISTIC, & LESS INTERPRETABLE version using torch index operations >>> ###
         # Accumulate sums of neural activities for each token
         # NOTE: The i-th row of neural_flat is added to the token_sequence_flat[i]-th row of token_sums;
         # the i-th row of neural_flat is a vector of shape (input_size,) and token_sequence_flat[i] is some token;
@@ -817,7 +820,7 @@ class Model(torch.nn.Module):
             -1
         )  # avoid division by 0 by ensuring counts are at least 1
         new_token_means = new_token_means.to(self.token_neural_map.device)  # move to same device
-        ## <<< FASTER less interpretable version using torch scatter operations <<< ###
+        ### <<< FASTER, NON-DETERMINISTIC, & LESS INTERPRETABLE version using torch scatter operations <<< ###
 
         # ### >>> SLOWER, DETERMINISTIC, & MORE INTERPRETABLE version using for loop >>> ###
         # # Accumulate sums of neural activities for each token
@@ -832,7 +835,7 @@ class Model(torch.nn.Module):
         #     -1
         # )  # avoid division by 0 by ensuring counts are at least 1
         # new_token_means = new_token_means.to(self.token_neural_map.device)  # move to same device
-        # ### <<< SLOWER more interpretable version using for loop <<< ###
+        # ### <<< SLOWER, DETERMINISTIC, & MORE INTERPRETABLE version using for loop <<< ###
 
         # Update the set of tokens experienced so far
         unique_tokens_this_batch = set(token_sequence_flat.detach().unique().tolist())
@@ -841,16 +844,18 @@ class Model(torch.nn.Module):
         decay = 0.25  # decay factor for EMA
         self.token_neural_map = self.token_neural_map * decay + (1 - decay) * new_token_means
 
-        ### DEBUG ###
-        print(
-            f"unique tokens experienced so far : {len(self.tokens_experience)} \t {sorted(self.tokens_experience)}\n"
-        )
-        non_zero_rows = torch.any(self.token_neural_map != 0, dim=1)
-        non_zero_indices = torch.nonzero(non_zero_rows).squeeze().tolist()
-        print(
-            f"non-zero vectors in token_neural_map : {len(non_zero_indices)} \t {sorted(non_zero_indices)}\n"
-        )
-        ### DEBUG ###
+        # ### DEBUG ###
+        # non_zero_rows = torch.any(self.token_neural_map != 0, dim=1)
+        # non_zero_indices = torch.nonzero(non_zero_rows).squeeze().tolist()
+        # A = set(non_zero_indices)
+        # B = set(self.tokens_experience)
+        # if len(B - A) > 0:
+        #     print(f"(A) non-zero mapped tokens in token_neural_map : {len(A)} \t {sorted(A)}\n")
+        #     print(f"(B) unique tokens experienced so far : {len(B)} \t {sorted(B)}\n")
+        #     print(f"tokens in B but not in A : {(B - A)}\n")
+        #     t = (B - A).pop()
+        #     print(f"self.token_neural_map[{t}]: {self.token_neural_map[t]}\n")
+        # ### DEBUG ###
 
         # Return the tokenized sequence
         return token_sequence
@@ -863,7 +868,6 @@ class Model(torch.nn.Module):
         Output:
             tt: token tensor (batch_size, seq_len, input_size)
         """
-        torch.cuda.empty_cache()
         b1 = nt.unsqueeze(-1) > self.bin_edges[:-1]
         b2 = nt.unsqueeze(-1) <= self.bin_edges[1:]
         bool_arr = (b1 * b2).to(torch.long)
@@ -881,7 +885,6 @@ class Model(torch.nn.Module):
         NOTE: Need to reduce `batch_size` when using this method because of memory constraints.
         TODO: Find a way to make this faster why because it is extremely slow currently.
         """
-        torch.cuda.empty_cache()
         # Ensure inputs are the correct shapes
         batch_size, _, input_size = neural_sequence.shape
         assert (
@@ -902,8 +905,10 @@ class Model(torch.nn.Module):
         token_tensor *= feature_mask.unsqueeze(1)
 
         # PART 2: Update `self.token_neural_map`
-        if not torch.is_grad_enabled():
+        if not torch.is_grad_enabled():  # if eval mode, not updating token_neural_map
             return token_tensor
+        else:
+            pass  # otherwise model is still training, so update token_neural_map
         # TODO: This for loop makes things unbearably slow. Find a way to vectorize this.
         # Initialize tensors to accumulate token sums and counts for each channel
         token_sums = torch.zeros(self.num_tokens, dtype=torch.long)
@@ -946,11 +951,13 @@ class Model(torch.nn.Module):
         # Set hidden state of internal model
         self.inner_hidden_model.set_hidden(self.hidden)
         # Multiply input by the mask (expanded to match input shape)
-        input_activity = self.identity(input * mask.unsqueeze(1).expand_as(input))
+        input_activity = self.identity(
+            input * mask.unsqueeze(1).expand_as(input)
+        )  # (batch_size, seq_len, input_size)
         # Transform the input into a latent
-        latent_out = self.input_hidden(input_activity)
+        latent_out = self.input_hidden(input_activity)  # (batch_size, seq_len, hidden_size)
         # Transform the latent
-        hidden_out = self.inner_hidden_model(latent_out)
+        hidden_out = self.inner_hidden_model(latent_out)  # (batch_size, seq_len, hidden_size)
         # Perform a linear readout to get the output
         output = self.linear(hidden_out)  # (batch_size, seq_len, input_size)
         # Return output neural data
@@ -968,7 +975,9 @@ class Model(torch.nn.Module):
         # Set hidden state of internal model
         self.inner_hidden_model.set_hidden(self.hidden)
         # Multiply input by the mask (expanded to match input shape)
-        input_activity = self.identity(input * mask.unsqueeze(1).expand_as(input))
+        input_activity = self.identity(
+            input * mask.unsqueeze(1).expand_as(input)
+        )  # (batch_size, seq_len, input_size)
         # Tokenize the high-dimensional neural data sequence
         if self.multi_channel:
             # Convert the neural sequence into a multi-D token sequence
@@ -1070,7 +1079,7 @@ class Model(torch.nn.Module):
                 mask = torch.ones(target.shape[0], target.shape[-1], dtype=torch.bool).to(
                     target.device
                 )
-            # Flatten output logits along batch x time (x channels)
+            # Flatten output logits along batch x time (x channels) dimensions
             if self.multi_channel:
                 output = output.contiguous().view(
                     -1, self.num_tokens
@@ -1101,21 +1110,25 @@ class Model(torch.nn.Module):
 
             # Convert target from neural vector sequence to token sequence
             if self.multi_channel:
-                target = self.tokenize_neural_data_multi_channel(
-                    neural_sequence=target,
-                    feature_mask=mask,
-                )  # (batch_size, seq_len, input_size)
-                target = target.contiguous().view(
-                    -1
-                )  # (batch_size, seq_len, input_size) -> (batch_size * seq_len * input_size)
+                # NOTE: The no_grad context is needed to prevent updates to model params based on target data
+                with torch.no_grad():
+                    target = self.tokenize_neural_data_multi_channel(
+                        neural_sequence=target,
+                        feature_mask=mask,
+                    )  # (batch_size, seq_len, input_size)
+                    target = target.contiguous().view(
+                        -1
+                    )  # (batch_size, seq_len, input_size) -> (batch_size * seq_len * input_size)
             else:
-                target = self.tokenize_neural_data(
-                    neural_sequence=target,
-                    feature_mask=mask,
-                )
-                target = target.contiguous().view(
-                    -1
-                )  # (batch_size, seq_len) -> (batch_size * seq_len)
+                # NOTE: The no_grad context is needed to prevent updates to model params based on target data
+                with torch.no_grad():
+                    target = self.tokenize_neural_data(
+                        neural_sequence=target,
+                        feature_mask=mask,
+                    )
+                    target = target.contiguous().view(
+                        -1
+                    )  # (batch_size, seq_len) -> (batch_size * seq_len)
             # Calculate cross entropy loss from predicted token logits and target tokens.
             # NOTE: Since in this version our models output token logits instead of neural data,
             # the `ce_loss` is the reconstruction loss when considering this version as a VQ-VAE.
@@ -1552,6 +1565,7 @@ class NeuralTransformer(Model):
         self.num_heads = find_largest_divisor(
             hidden_size
         )  # number of attention heads (NOTE: must be divisor of `hidden_size`)
+        self.num_heads = 2  # DEBUG
         logger.info(f"Number of attention heads: {self.num_heads}.")
         self.dropout = 0.1  # dropout rate
         # Positional encoding (NOTE: must be after embedding)
