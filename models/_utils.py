@@ -978,6 +978,7 @@ class Model(torch.nn.Module):
         input_activity = self.identity(
             input * mask.unsqueeze(1).expand_as(input)
         )  # (batch_size, seq_len, input_size)
+        assert torch.allclose(input, input_activity, "Maks all true so this should be true.") # DEBUG
         # Tokenize the high-dimensional neural data sequence
         if self.multi_channel:
             # Convert the neural sequence into a multi-D token sequence
