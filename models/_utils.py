@@ -327,7 +327,7 @@ class SelfAttention(torch.nn.Module):
         self.attn = torch.nn.MultiheadAttention(embed_dim, num_heads, dropout, batch_first=True)
         # NOTE: Maintain a running average of attention weights across heads purely for interpretability analysis
         self.attn_weights = 0  # exponential moving average (EMA) of attention weights
-        self.decay = 0.5  # decay factor for EMA
+        self.decay = 0.1  # decay factor for EMA
 
     def forward(self, src):
         """
@@ -841,21 +841,8 @@ class Model(torch.nn.Module):
         unique_tokens_this_batch = set(token_sequence_flat.detach().unique().tolist())
         self.tokens_experience = self.tokens_experience.union(unique_tokens_this_batch)
         # Apply exponential moving average to update token_neural_map
-        decay = 0.25  # decay factor for EMA
+        decay = 0.1  # decay factor for EMA
         self.token_neural_map = self.token_neural_map * decay + (1 - decay) * new_token_means
-
-        # ### DEBUG ###
-        # non_zero_rows = torch.any(self.token_neural_map != 0, dim=1)
-        # non_zero_indices = torch.nonzero(non_zero_rows).squeeze().tolist()
-        # A = set(non_zero_indices)
-        # B = set(self.tokens_experience)
-        # if len(B - A) > 0:
-        #     print(f"(A) non-zero mapped tokens in token_neural_map : {len(A)} \t {sorted(A)}\n")
-        #     print(f"(B) unique tokens experienced so far : {len(B)} \t {sorted(B)}\n")
-        #     print(f"tokens in B but not in A : {(B - A)}\n")
-        #     t = (B - A).pop()
-        #     print(f"self.token_neural_map[{t}]: {self.token_neural_map[t]}\n")
-        # ### DEBUG ###
 
         # Return the tokenized sequence
         return token_sequence
@@ -926,8 +913,9 @@ class Model(torch.nn.Module):
         new_token_means = new_token_means.unsqueeze(1)  # add a dimension for broadcasting
         new_token_means = new_token_means.to(self.token_neural_map.device)  # move to same device
         # Apply exponential moving average to update token_neural_map
-        decay = 0.25  # decay factor for EMA
+        decay = 0.1  # decay factor for EMA
         self.token_neural_map = self.token_neural_map * decay + (1 - decay) * new_token_means
+ 
         # Return the tokenized sequence
         return token_tensor
 
