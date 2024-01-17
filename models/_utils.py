@@ -1082,22 +1082,21 @@ class Model(torch.nn.Module):
 
             # Add the loss objective of VQ-VAEs to train the codebook used for tokenization
             if self.vq_vae:
-                # VQ loss: The L2 error between the embedding space and the encoder outputs.
-                # NOTE: We treat the neural data itself as the encoder output.
-                vq_loss = self.calculate_distances(
-                    target.detach(), self.codebook, mask.detach()
-                ).mean()
                 # Commitment loss: The L2 error between the encoder outputs and the embedding space.
                 # NOTE: We use β = 0.25 to scale the commitment loss, following the original VQ-VAE paper.
-                # beta = 0.25
-                beta = 0.001  # DEBUG
+                beta = 0.25
                 commitment_loss = (
                     beta * self.calculate_distances(target, self.codebook.detach(), mask).mean()
                 )
+                # VQ loss: The L2 error between the embedding space and the encoder outputs.
+                # NOTE: We treat the neural data itself as the encoder output.
+                vq_loss = (1 - beta) * self.calculate_distances(
+                    target.detach(), self.codebook, mask.detach()
+                ).mean()
             # Otherwise the codebook is not trained and remains a random matrix
             else:
-                vq_loss = 0.0
-                commitment_loss = 0.0
+                vq_loss = torch.tensor(0.0)
+                commitment_loss = torch.tensor(0.0)
 
             # Convert target from neural vector sequence to token sequence
             if self.multi_channel:
