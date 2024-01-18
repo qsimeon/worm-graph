@@ -956,16 +956,22 @@ class Model(torch.nn.Module):
             )  # (batch_size, seq_len, num_tokens) -> (batch_size * seq_len, num_tokens)
 
             # Add the loss objective of VQ-VAEs to train the codebook used for tokenization
+            # TODO: Find a way to "push" the self.codebook to serve the role of self.token_neural_map.
             if self.vq_vae:
-                # Commitment loss: The L2 error between the encoder outputs and the embedding space.
+                # Commitment loss: A measure to encourage the encoder output to stay close to the embedding space;
+                # and to prevent it from fluctuating too frequently from one code vector to another.
                 # NOTE: We use β = 0.25 to scale the commitment loss, following the original VQ-VAE paper.
-                beta = 0.25
+                # beta = 0.25 # DEBUG
+                beta = 0.5
                 commitment_loss = (
                     beta * self.calculate_distances(target, self.codebook.detach(), mask).mean()
                 )
                 # VQ loss: The L2 error between the embedding space and the encoder outputs.
                 # NOTE: We treat the neural data itself as the encoder output.
-                vq_loss = (1 - beta) * self.calculate_distances(
+                # vq_loss = (1 - beta) * self.calculate_distances(
+                #     target.detach(), self.codebook, mask.detach()
+                # ).mean() # DEBUG
+                vq_loss = self.calculate_distances(
                     target.detach(), self.codebook, mask.detach()
                 ).mean()
             # Otherwise the codebook is not trained and remains a random matrix
@@ -982,8 +988,8 @@ class Model(torch.nn.Module):
                 )
                 target = target.view(-1)  # (batch_size, seq_len) -> (batch_size * seq_len)
             # Calculate cross entropy loss from predicted token logits and target tokens.
-            # NOTE: Since in this version our models output token logits instead of neural data,
-            # the `ce_loss` is the reconstruction loss when considering this version as a VQ-VAE.
+            # NOTE: Since in this version our models output token logits instead of neural data, the `ce_loss`
+            # is sort already reconstruction loss when considering version 2 the model as a VQ-VAE.
             ce_loss = torch.nn.CrossEntropyLoss(reduction="mean", **kwargs)(output, target)
             # Calculate the total loss including the VQ-VAE parts
             total_loss = ce_loss + vq_loss + commitment_loss
