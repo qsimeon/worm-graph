@@ -138,7 +138,7 @@ def print_parameters(model, verbose=False):
 
 class MultiChannelReadout(torch.nn.Module):
     """
-    A module for readout logits for each input channel.
+    A module for obtaining a readout function for each channel in a multi-dimensional input.
     """
 
     def __init__(self, num_channels, in_features, out_features):
@@ -169,10 +169,7 @@ class MultiChannelReadout(torch.nn.Module):
 
 class MultiChannelEmbedding(torch.nn.Module):
     """
-    A module for obtaining an embedding for each channel/dimension of a
-    high-dimensional input tensor w/ shape (batch_size, seq_len, input_size).
-    Why? Because if using high-dimensional tokens, we will need an embedding
-    for each feature dimension.
+    A module for obtaining an embedding table for each channel of a multi-dimensional token.
     """
 
     def __init__(self, num_channels, num_embeddings, embedding_dim):
@@ -322,8 +319,14 @@ class SelfAttention(torch.nn.Module):
 
     def __init__(self, embed_dim, num_heads, dropout):
         super().__init__()
-        self.attn = torch.nn.MultiheadAttention(embed_dim, num_heads, dropout, batch_first=True)
-        # NOTE: Maintain a running average of attention weights across heads purely for interpretability analysis
+        self.attn = torch.nn.MultiheadAttention(
+            embed_dim,
+            num_heads,
+            dropout,
+            batch_first=True,
+        )
+        # NOTE: Maintain a running average of attention weights across heads purely
+        # for interpretability analysis.
         self.attn_weights = 0  # exponential moving average (EMA) of attention weights
         self.decay = 0.5  # decay factor for EMA
 
@@ -403,8 +406,8 @@ class CTRNN(torch.nn.Module):
 
     def forward(self, input, hidden=None):
         """
-        Propagate input through the network.
-        NOTE: Because we use batch_first=True, input has shape (batch, seq_len, input_size).
+        Propagate input through the network. NOTE: Because we use
+        batch_first=True, input has shape (batch, seq_len, input_size).
         """
         # If hidden activity is not provided, initialize it
         if hidden is None:
@@ -470,7 +473,7 @@ class Model(torch.nn.Module):
         4. The core of all models is called `self.hidden_hidden` and it is
             comprised of a single hidden layer of an architecture of choice.
         7. Getter methods for the input size and hidden size called
-            `get_input_size`, and `get_hidden_size`, respectively.
+        `get_input_size`, `get_hidden_size`, `get_loss_name`, and `get_l1_reg_param`.
     """
 
     def __init__(
@@ -482,7 +485,6 @@ class Model(torch.nn.Module):
         # Hyperparameters for version 2
         version_2: bool = VERSION_2,
         num_tokens: int = NUM_TOKENS,
-        multi_channel: bool = MULTI_CHANNEL,
         vq_vae: bool = VQ_VAE,
     ):
         """
@@ -541,16 +543,11 @@ class Model(torch.nn.Module):
         self.linear = torch.nn.Linear(self.hidden_size, self.output_size)
         # Optional layer normalization
         self.layer_norm = torch.nn.LayerNorm(self.hidden_size, elementwise_affine=True)
-        # Version 2 tokenizes neural data either as a 1-D or multi-D sequence
+        # Version 2 tokenizes neural data either as a 1-D sequence
         self.version_2 = version_2
         self.num_tokens = num_tokens
-        self.multi_channel = (
-            multi_channel and self.version_2
-        )  # multi-channel only applies to version 2
-        self.vq_vae = (
-            vq_vae and not self.multi_channel
-        )  # VQ-VAE only applies to version 2 without multi-channel
-        # New attributes and parameters for version 2 with/without multi-channel tokenization
+        self.vq_vae = vq_vae and self.version_2  # VQ-VAE only applies to version 2
+        # New attributes and parameters for version 2 with tokenization
         if self.version_2:
             # Number of tokens to approximate continuous values
             self.num_tokens = num_tokens
@@ -564,38 +561,16 @@ class Model(torch.nn.Module):
             bin_edges = torch.tensor(norm.ppf(torch.linspace(0, 1, self.num_tokens)))
             self.register_buffer("bin_edges", bin_edges)
             # Mapping of tokens to neural activity
-            if self.multi_channel:
-                token_neural_map = torch.zeros(self.num_tokens, 1)  # maps tokens to values
-                self.register_buffer(
-                    "token_neural_map", token_neural_map
-                )  # not learned but is updated
-            else:
-                token_neural_map = torch.zeros(
-                    self.num_tokens, self.input_size
-                )  # maps tokens to vectors
-                self.register_buffer(
-                    "token_neural_map", token_neural_map
-                )  # not learned but is updated
+            token_neural_map = torch.zeros(
+                self.num_tokens, self.input_size
+            )  # maps tokens to vectors
+            self.register_buffer("token_neural_map", token_neural_map)  # not learned but is updated
             # Modify embedding layer to be a lookup table
-            if self.multi_channel:
-                self.embedding = MultiChannelEmbedding(
-                    num_channels=self.input_size,
-                    num_embeddings=self.num_tokens,
-                    embedding_dim=self.hidden_size,
-                )  # embedding lookup table (learned)
-            else:
-                self.embedding = torch.nn.Embedding(
-                    num_embeddings=self.num_tokens, embedding_dim=self.hidden_size
-                )  # embedding lookup table (learned)
+            self.embedding = torch.nn.Embedding(
+                num_embeddings=self.num_tokens, embedding_dim=self.hidden_size
+            )  # embedding lookup table (learned)
             # Adjust linear readout to output token logits
-            if self.multi_channel:
-                self.linear = MultiChannelReadout(
-                    num_channels=self.input_size,
-                    in_features=self.hidden_size,
-                    out_features=self.num_tokens,
-                )
-            else:
-                self.linear = torch.nn.Linear(self.hidden_size, self.num_tokens)
+            self.linear = torch.nn.Linear(self.hidden_size, self.num_tokens)
             # Initialize weights
             self._init_weights()
             # Alias methods to new versions
@@ -609,22 +584,12 @@ class Model(torch.nn.Module):
         return None
 
     def _init_weights(self):
-        if self.multi_channel:
-            for linear in self.linear.readouts:
-                # Initialize the readout biases
-                torch.nn.init.zeros_(linear.bias)
-                # Initialize the readout weights
-                torch.nn.init.xavier_uniform_(linear.weight)
-            for embedding in self.embedding.embeddings:
-                # Initialize the embedding weights
-                torch.nn.init.normal_(embedding.weight)
-        else:
-            # Initialize the readout bias
-            torch.nn.init.zeros_(self.linear.bias)
-            # Initialize the readout weights
-            torch.nn.init.xavier_uniform_(self.linear.weight)
-            # Initialize the embedding weights
-            torch.nn.init.normal_(self.embedding.weight)
+        # Initialize the readout bias
+        torch.nn.init.zeros_(self.linear.bias)
+        # Initialize the readout weights
+        torch.nn.init.xavier_uniform_(self.linear.weight)
+        # Initialize the embedding weights
+        torch.nn.init.normal_(self.embedding.weight)
         return None
 
     def init_hidden(self, input_shape=None):
@@ -671,7 +636,6 @@ class Model(torch.nn.Module):
                 dtype=torch.bool,
                 device=neural_sequence.device,
             )
-
         # Applying the feature mask to the neural sequence
         masked_neural_sequence = neural_sequence * feature_mask.unsqueeze(
             1
@@ -737,10 +701,7 @@ class Model(torch.nn.Module):
         Output:
             token_sequence: tensor of shape (batch_size, seq_len)
         """
-        # Route to the appropriate tokenization method
-        if self.multi_channel:
-            return self.tokenize_neural_data_multi_channel(neural_sequence, feature_mask)
-        # Ensure inputs are the correct shapes
+        # Ensure the neural_sequence has the correct shapes
         assert (
             neural_sequence.ndim == 3
         ), "`neural_sequence` must have shape (batch_size, seq_len, input_size)"
@@ -763,7 +724,7 @@ class Model(torch.nn.Module):
         ), "`token_matrix` must have shape (num_tokens, input_size)"
         # Move token_matrix to same device as neural_sequence
         token_matrix = token_matrix.to(neural_sequence.device)
-        # Get token_matrix shapes
+        # Get shapes from the token_matrix
         # NOTE: We could use the attributes self.num_tokens and self.input_size of the model;
         # but using this approach allows us to use this method as a standalone function.
         num_tokens, _ = token_matrix.shape
@@ -799,7 +760,6 @@ class Model(torch.nn.Module):
             token_matrix.shape[0], device=neural_flat.device, dtype=neural_flat.dtype
         )
 
-        ### >>> FASTER, NON-DETERMINISTIC, & LESS INTERPRETABLE version using torch index operations >>> ###
         # Accumulate sums of neural activities for each token
         # NOTE: The i-th row of neural_flat is added to the token_sequence_flat[i]-th row of token_sums;
         # the i-th row of neural_flat is a vector of shape (input_size,) and token_sequence_flat[i] is some token;
@@ -819,25 +779,9 @@ class Model(torch.nn.Module):
             -1
         )  # avoid division by 0 by ensuring counts are at least 1
         new_token_means = new_token_means.to(self.token_neural_map.device)  # move to same device
-        ### <<< FASTER, NON-DETERMINISTIC, & LESS INTERPRETABLE version using torch scatter operations <<< ###
-
-        # ### >>> SLOWER, DETERMINISTIC, & MORE INTERPRETABLE version using for loop >>> ###
-        # # Accumulate sums of neural activities for each token
-        # for token in range(num_tokens):
-        #     mask = token_sequence_flat == token  # create a mask for the current token
-        #     token_counts[token] = mask.sum()  # sum up the counts for this token
-        #     token_sums[token] = neural_flat[mask].sum(
-        #         dim=0
-        #     )  # sum up the masked neural values for this token
-        # # Calculate the new averages for each token
-        # new_token_means = token_sums / token_counts.clamp(min=1).unsqueeze(
-        #     -1
-        # )  # avoid division by 0 by ensuring counts are at least 1
-        # new_token_means = new_token_means.to(self.token_neural_map.device)  # move to same device
-        # ### <<< SLOWER, DETERMINISTIC, & MORE INTERPRETABLE version using for loop <<< ###
 
         # Apply exponential moving average to update token_neural_map
-        # NOTE: We only update positions in self.token_neural_map that correspond to tokens observed in this batch.
+        # NOTE: Only update positions in self.token_neural_map that correspond to tokens observed in the current batch.
         observed_tokens = token_sequence_flat.unique()
         decay = 0.5  # decay factor for EMA
         self.token_neural_map[observed_tokens] = (
@@ -851,73 +795,20 @@ class Model(torch.nn.Module):
     @torch.autocast(device_type=DEVICE.type, dtype=torch.long)
     def bin_tensor(self, nt):
         """
+        Converts a neural tensor of continuous values from a standard normal
+        distribution into a tensor of discrete values by indexing them into
+        bins defined by self.bin_edges.
+
         Args:
             nt: neural tensor (batch_size, seq_len, input_size)
         Output:
-            tt: token tensor (batch_size, seq_len, input_size)
+            it: index tensor (batch_size, seq_len, input_size)
         """
         b1 = nt.unsqueeze(-1) > self.bin_edges[:-1]
         b2 = nt.unsqueeze(-1) <= self.bin_edges[1:]
         bool_arr = (b1 * b2).to(torch.long)
-        tt = bool_arr.argmax(dim=-1) + 1
-        return tt
-
-    @torch.autocast(device_type=DEVICE.type, dtype=torch.half)
-    def tokenize_neural_data_multi_channel(
-        self,
-        neural_sequence: torch.Tensor,
-        feature_mask: Union[None, torch.Tensor] = None,
-    ):
-        """
-        Tokenize each channel of the neural sequence into discrete tokens and update the token_neural_map.
-        NOTE: Need to reduce `batch_size` when using this method because of memory constraints.
-        TODO: Find a way to make this faster why because it is extremely slow currently.
-        """
-        # Ensure inputs are the correct shapes
-        batch_size, _, input_size = neural_sequence.shape
-        assert (
-            neural_sequence.ndim == 3 and input_size == self.input_size
-        ), "`neural_sequence` must have shape (batch_size, seq_len, input_size)"
-        # Use existing feature_mask or create a default one
-        if feature_mask is None:
-            feature_mask = torch.ones(
-                (batch_size, input_size),
-                dtype=torch.bool,
-                device=neural_sequence.device,
-            )
-
-        # PART 1: Tokenize the neural data
-        # Get the initial token_tensor before applying the mask
-        token_tensor = self.bin_tensor(neural_sequence)
-        # Apply feature_mask to token_tensor assigning 0-th index token to unmasked values
-        token_tensor *= feature_mask.unsqueeze(1)
-
-        # PART 2: Update `self.token_neural_map`
-        if not torch.is_grad_enabled():  # if eval mode, not updating token_neural_map
-            return token_tensor
-        else:
-            pass  # otherwise model is still training, so update token_neural_map
-        # TODO: This for loop makes things unbearably slow. Find a way to vectorize this.
-        # Initialize tensors to accumulate token sums and counts for each channel
-        token_sums = torch.zeros(self.num_tokens, dtype=torch.long)
-        token_counts = torch.zeros(self.num_tokens, dtype=torch.long)
-        for token in range(self.num_tokens):
-            mask = token_tensor == token  # create a mask for the current token
-            token_counts[token] = mask.sum()  # sum up the counts for this token
-            token_sums[token] = (
-                mask * neural_sequence
-            ).sum()  # sum up the masked neural values for this token
-        # Calculate the new averages for each token
-        new_token_means = token_sums / token_counts.clamp(
-            min=1
-        )  # avoid division by 0 by ensuring counts are at least 1
-        new_token_means = new_token_means.unsqueeze(1)  # add a dimension for broadcasting
-        new_token_means = new_token_means.to(self.token_neural_map.device)  # move to same device
-        # Apply exponential moving average to update token_neural_map
-        decay = 0.5  # decay factor for EMA
-        self.token_neural_map = self.token_neural_map * decay + (1 - decay) * new_token_means
-        # Return the tokenized sequence
-        return token_tensor
+        it = bool_arr.argmax(dim=-1) + 1
+        return it
 
     @torch.autocast(device_type=DEVICE.type, dtype=torch.half)
     def forward(self, input: torch.Tensor, mask: torch.Tensor):
@@ -966,19 +857,11 @@ class Model(torch.nn.Module):
         input_activity = self.identity(
             input * mask.unsqueeze(1).expand_as(input)
         )  # (batch_size, seq_len, input_size)
-        # Tokenize the high-dimensional neural data sequence
-        if self.multi_channel:
-            # Convert the neural sequence into a multi-D token sequence
-            input_tokens = self.tokenize_neural_data_multi_channel(
-                neural_sequence=input_activity,
-                feature_mask=mask,
-            )  # (batch_size, seq_len, input_size)
-        else:
-            # Convert the neural sequence into a 1-D token sequence
-            input_tokens = self.tokenize_neural_data(
-                neural_sequence=input_activity,
-                feature_mask=mask,
-            )  # (batch_size, seq_len)
+        # Convert the high-D neural sequence into a 1-D token sequence
+        input_tokens = self.tokenize_neural_data(
+            neural_sequence=input_activity,
+            feature_mask=mask,
+        )  # (batch_size, seq_len)
         # Embed the tokens and then transform to a latent
         latent_out = self.input_hidden(input_tokens)  # (batch_size, seq_len, hidden_size)
         # Transform the latent
@@ -1067,15 +950,10 @@ class Model(torch.nn.Module):
                 mask = torch.ones(target.shape[0], target.shape[-1], dtype=torch.bool).to(
                     target.device
                 )
-            # Flatten output logits along batch x time (x channels) dimensions
-            if self.multi_channel:
-                output = output.view(
-                    -1, self.num_tokens
-                )  # (batch_size, seq_len, input_size, num_tokens) -> (batch_size * seq_len * input_size, num_tokens)
-            else:
-                output = output.view(
-                    -1, self.num_tokens
-                )  # (batch_size, seq_len, num_tokens) -> (batch_size * seq_len, num_tokens)
+            # Flatten output logits along batch x time dimensions
+            output = output.view(
+                -1, self.num_tokens
+            )  # (batch_size, seq_len, num_tokens) -> (batch_size * seq_len, num_tokens)
 
             # Add the loss objective of VQ-VAEs to train the codebook used for tokenization
             if self.vq_vae:
@@ -1096,24 +974,13 @@ class Model(torch.nn.Module):
                 commitment_loss = torch.tensor(0.0)
 
             # Convert target from neural vector sequence to token sequence
-            if self.multi_channel:
-                # NOTE: The no_grad context is needed to prevent updates to model params based on target data
-                with torch.no_grad():
-                    target = self.tokenize_neural_data_multi_channel(
-                        neural_sequence=target,
-                        feature_mask=mask,
-                    )  # (batch_size, seq_len, input_size)
-                    target = target.view(
-                        -1
-                    )  # (batch_size, seq_len, input_size) -> (batch_size * seq_len * input_size)
-            else:
-                # NOTE: The no_grad context is needed to prevent updates to model params based on target data
-                with torch.no_grad():
-                    target = self.tokenize_neural_data(
-                        neural_sequence=target,
-                        feature_mask=mask,
-                    )
-                    target = target.view(-1)  # (batch_size, seq_len) -> (batch_size * seq_len)
+            # NOTE: The no_grad context is needed to prevent updates to model params based on target data
+            with torch.no_grad():
+                target = self.tokenize_neural_data(
+                    neural_sequence=target,
+                    feature_mask=mask,
+                )
+                target = target.view(-1)  # (batch_size, seq_len) -> (batch_size * seq_len)
             # Calculate cross entropy loss from predicted token logits and target tokens.
             # NOTE: Since in this version our models output token logits instead of neural data,
             # the `ce_loss` is the reconstruction loss when considering this version as a VQ-VAE.
@@ -1236,39 +1103,16 @@ class Model(torch.nn.Module):
             output = self(
                 input_cond, mask
             )  # (batch_size, seq_len, input_size, num_tokens) OR (batch_size, seq_len, num_tokens)
-            if self.multi_channel:
-                # Pluck the logits at the final step and scale by desired temperature
-                logits = output[:, -1, :, :] / temperature  # (batch_size, input_size, num_tokens)
-                # Sample a token for each channel
-                token_next = torch.zeros((batch_size, input_size), dtype=torch.long).to(
-                    input.device
-                )  # (batch_size, input_size)
-                # Predict the next token for each channel
-                for channel in range(input_size):
-                    # Logits for the current channel
-                    channel_logits = logits[:, channel, :]  # (batch_size, num_tokens)
-                    # Optionally crop the logits to only the top k options
-                    if top_k is not None:
-                        v, _ = torch.topk(channel_logits, min(top_k, channel_logits.size(-1)))
-                        channel_logits[channel_logits < v[:, [-1]]] = -float("Inf")
-                    # Apply softmax and sample from the distribution
-                    probs = torch.nn.functional.softmax(
-                        channel_logits, dim=-1
-                    )  # (batch_size, num_tokens)
-                    token_next[:, channel] = torch.multinomial(
-                        probs, num_samples=1
-                    )  # (batch_size, 1)
-            else:
-                # Pluck the logits at the final step and scale by desired temperature
-                logits = output[:, -1, :] / temperature  # (batch_size, num_tokens)
-                # Optionally crop the logits to only the top k options
-                if top_k is not None:
-                    v, _ = torch.topk(logits, min(top_k, logits.size(-1)))
-                    logits[logits < v[:, [-1]]] = -float("Inf")
-                # Apply softmax to convert logits to (normalized) probabilities
-                probs = torch.nn.functional.softmax(logits, dim=-1)  # (batch_size, num_tokens)
-                # Sample from the distribution to get the next token
-                token_next = torch.multinomial(probs, num_samples=1)  # (batch_size, 1)
+            # Pluck the logits at the final step and scale by desired temperature
+            logits = output[:, -1, :] / temperature  # (batch_size, num_tokens)
+            # Optionally crop the logits to only the top k options
+            if top_k is not None:
+                v, _ = torch.topk(logits, min(top_k, logits.size(-1)))
+                logits[logits < v[:, [-1]]] = -float("Inf")
+            # Apply softmax to convert logits to (normalized) probabilities
+            probs = torch.nn.functional.softmax(logits, dim=-1)  # (batch_size, num_tokens)
+            # Sample from the distribution to get the next token
+            token_next = torch.multinomial(probs, num_samples=1)  # (batch_size, 1)
             # Convert tokens to neural data using token_neural_map
             input_next = self.token_neural_map[
                 token_next
@@ -1545,7 +1389,6 @@ class NeuralTransformer(Model):
         self.num_heads = find_largest_divisor(
             hidden_size
         )  # number of attention heads (NOTE: must be divisor of `hidden_size`)
-        self.num_heads = 2  # DEBUG
         logger.info(f"Number of attention heads: {self.num_heads}.")
         self.dropout = 0.1  # dropout rate
         # Positional encoding (NOTE: must be after embedding)
