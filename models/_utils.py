@@ -554,15 +554,25 @@ class Model(torch.nn.Module):
             # Modify output size to be number of tokens
             self.output_size = self.num_tokens
             # Initialize a random normal matrix to use as the embedding codebook/lookup table
+            ### DEBUG ###
             self.codebook = torch.nn.Parameter(torch.randn(self.num_tokens, self.input_size))
+            # codebook = torch.randn(self.num_tokens, self.input_size) # maps tokens to vectors
+            # self.register_buffer("codebook", token_neural_map)  # not learned but updated using EMA
+            ### DEBUG ###
             # Create bin edges for tokenizing normalized continuous-valued data
             # NOTE: num_tokens bin_edges means there are num_tokens-1 bins for masked values;
             # the 0-indexed bin will be used for unmasked values.
             bin_edges = torch.tensor(norm.ppf(torch.linspace(0, 1, self.num_tokens)))
             self.register_buffer("bin_edges", bin_edges)
             # Mapping of tokens to neural activity
-            token_neural_map = self.codebook.data  # maps tokens to vectors
-            self.register_buffer("token_neural_map", token_neural_map)  # not learned but is updated
+            ### DEBUG ###
+            token_neural_map = torch.zeros(
+                self.num_tokens, self.input_size
+            )  # maps tokens to vectors
+            self.register_buffer(
+                "token_neural_map", token_neural_map
+            )  # not learned but updated using EMA
+            ### DEBUG ###
             # Modify embedding layer to be a lookup table
             self.embedding = torch.nn.Embedding(
                 num_embeddings=self.num_tokens, embedding_dim=self.hidden_size
@@ -974,11 +984,13 @@ class Model(torch.nn.Module):
                 commitment_loss = torch.tensor(0.0)
 
             # Convert target from neural vector sequence to token sequence
-            target = self.tokenize_neural_data(
-                neural_sequence=target,
-                feature_mask=mask,
-            )
-            target = target.view(-1)  # (batch_size, seq_len) -> (batch_size * seq_len)
+            # NOTE: The context manager prevents self.token_neural_map from being updated based on targets.
+            with torch.no_grad():
+                target = self.tokenize_neural_data(
+                    neural_sequence=target,
+                    feature_mask=mask,
+                )
+                target = target.view(-1)  # (batch_size, seq_len) -> (batch_size * seq_len)
             # Calculate cross entropy loss from predicted token logits and target tokens.
             # NOTE: Since in this version our models output token logits instead of neural data, the `ce_loss`
             # is sort already reconstruction loss when considering version 2 the model as a VQ-VAE.
