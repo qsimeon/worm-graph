@@ -679,7 +679,7 @@ class Model(torch.nn.Module):
             1
         )  # (batch_size, seq_len, input_size) * (batch_size, 1, input_size) -> (batch_size, seq_len, input_size)
 
-        ### >>> FAST but INCORRECT, NEW Implementation >>> ###
+        ### >>> FAST but potentially INCORRECT, NEW Implementation >>> ###
         # Fast and memory efficient distance calculation
         flatten = masked_neural_sequence.contiguous().view(
             -1, input_size
@@ -693,7 +693,7 @@ class Model(torch.nn.Module):
         distances = distances.contiguous().view(
             batch_size, seq_len, -1
         )  # (batch_size, seq_len, num_tokens)
-        ### <<< FAST but INCORRECT, NEW Implementation <<< ###
+        ### <<< FAST but potentially INCORRECT, NEW Implementation <<< ###
 
         # ### >>> SLOW and CORRECT, ORIGINAL Implementation >>> ###
         # # Applying the feature mask to the token matrix
@@ -837,16 +837,13 @@ class Model(torch.nn.Module):
         # ### <<< SLOWER, DETERMINISTIC, & MORE INTERPRETABLE version using for loop <<< ###
 
         # Apply exponential moving average to update token_neural_map
-        # NOTE: We only update positions in self.token_neural_map that corresponds to tokens observed in this batch.
+        # NOTE: We only update positions in self.token_neural_map that correspond to tokens observed in this batch.
         observed_tokens = token_sequence_flat.unique()
         decay = 0.5  # decay factor for EMA
         self.token_neural_map[observed_tokens] = (
             decay * self.token_neural_map[observed_tokens]
             + (1 - decay) * new_token_means[observed_tokens]
         )
-        # self.token_neural_map.scatter_add_(
-        #     0, index=observed_tokens, source=new_token_means, alpha=(1 - decay)
-        # ) # DEBUG
 
         # Return the tokenized sequence
         return token_sequence
@@ -1181,8 +1178,6 @@ class Model(torch.nn.Module):
         # Otherwise defaults to ground-truth feeding
         else:
             input = input  # Use the entire input as context
-        # Initialize the list of generated values
-        generated_values = []
         # Loop through time
         for t in range(num_new_timesteps):
             # Get the last context_window values of the input tensor
@@ -1196,15 +1191,14 @@ class Model(torch.nn.Module):
             # TODO: Make adaptive normalization a function of the model itself.
             # DEBUG: This is just a patch fix to prevent exploding values
             input_next = torch.clamp(input_next, min=input_cond.min(), max=input_cond.max())
-            # Append the prediction to the generated_values list and input tensor
-            generated_values.append(input_next)
-            input = torch.cat((input, input_next), dim=1)  # add the prediction to the input tensor
-        # Stack the generated values to a tensor
-        generated_tensor = torch.cat(
-            generated_values, dim=1
-        )  # shape (batch_size, num_new_timesteps, neurons)
-        # Only return the newly generated values
-        return generated_tensor
+            # Append the prediction to the the running sequence and continue
+            input = torch.cat((input, input_next), dim=1) 
+        # Get only the newly generated time steps
+        generated_values = (
+            input[:, -num_new_timesteps:, :].detach().clone()
+        )  # (batch_size, num_new_timesteps, input_size)
+        # Return the generations
+        return generated_values
 
     ### >>> DEBUG: different generate method needed for new token mode >>> ###
     @torch.no_grad()
@@ -1236,8 +1230,6 @@ class Model(torch.nn.Module):
         # Otherwise defaults to ground-truth feeding
         else:
             input = input  # use the entire input as context
-        # Initialize the list of generated values
-        generated_values = []
         # Loop through time
         for t in range(num_new_timesteps):
             # If the sequence context is growing too long we must crop it
@@ -1287,16 +1279,14 @@ class Model(torch.nn.Module):
                 .contiguous()
                 .view(batch_size, 1, input_size)
             )  # (batch_size, 1, input_size)
-            # Append the prediction to the generated_values list
-            generated_values.append(input_next)
             # Append sampled data to the running sequence and continue
             input = torch.cat((input, input_next), dim=1)
-        # Stack the generated values into a tensor
-        generated_tensor = torch.cat(
-            generated_values, dim=1
+        # Get only the newly generated time steps
+        generated_values = (
+            input[:, -num_new_timesteps:, :].detach().clone()
         )  # (batch_size, num_new_timesteps, input_size)
-        # Only return the newly generated values
-        return generated_tensor
+        # Return the generations
+        return generated_values
 
     ### <<< DEBUG: different generate method needed for new token mode <<< ###
 
