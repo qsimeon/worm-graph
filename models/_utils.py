@@ -561,9 +561,7 @@ class Model(torch.nn.Module):
             bin_edges = torch.tensor(norm.ppf(torch.linspace(0, 1, self.num_tokens)))
             self.register_buffer("bin_edges", bin_edges)
             # Mapping of tokens to neural activity
-            token_neural_map = torch.zeros(
-                self.num_tokens, self.input_size
-            )  # maps tokens to vectors
+            token_neural_map = self.codebook.data  # maps tokens to vectors
             self.register_buffer("token_neural_map", token_neural_map)  # not learned but is updated
             # Modify embedding layer to be a lookup table
             self.embedding = torch.nn.Embedding(
