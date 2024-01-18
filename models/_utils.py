@@ -641,40 +641,40 @@ class Model(torch.nn.Module):
             1
         )  # (batch_size, seq_len, input_size) * (batch_size, 1, input_size) -> (batch_size, seq_len, input_size)
 
-        ### >>> FAST but potentially INCORRECT, NEW Implementation >>> ###
-        # NOTE: What makes this implemenation potentially incorrect is that it does not apply the mask to the token_matrix;
-        # therefore, the distance between each neural vector and codebook vector is not being computed only at masked positions.
-        # Fast and memory efficient distance calculation
-        flatten = masked_neural_sequence.view(
-            -1, input_size
-        )  # (batch_size, seq_len, input_size) -> (batch_size * seq_len, input_size)
-        matrix = token_matrix.t()  # (num_tokens, input_size) -> (input_size, num_tokens)
-        distances = (
-            flatten.pow(2).sum(dim=1, keepdim=True)  # (batch_size * seq_len, 1)
-            - 2 * flatten @ matrix  # (batch_size * seq_len, num_tokens)
-            + matrix.pow(2).sum(0, keepdim=True)  # (1, num_tokens)
-        )  # (batch_size * seq_len, num_tokens)
-        distances = distances.view(batch_size, seq_len, -1)  # (batch_size, seq_len, num_tokens)
-        ### <<< FAST but potentially INCORRECT, NEW Implementation <<< ###
+        # ### >>> FAST but potentially INCORRECT, NEW Implementation >>> ###
+        # # NOTE: What makes this implemenation potentially incorrect is that it does not apply the mask to the token_matrix;
+        # # therefore, the distance between each neural vector and codebook vector is not being computed only at masked positions.
+        # # Fast and memory efficient distance calculation
+        # flatten = masked_neural_sequence.view(
+        #     -1, input_size
+        # )  # (batch_size, seq_len, input_size) -> (batch_size * seq_len, input_size)
+        # matrix = token_matrix.t()  # (num_tokens, input_size) -> (input_size, num_tokens)
+        # distances = (
+        #     flatten.pow(2).sum(dim=1, keepdim=True)  # (batch_size * seq_len, 1)
+        #     - 2 * flatten @ matrix  # (batch_size * seq_len, num_tokens)
+        #     + matrix.pow(2).sum(0, keepdim=True)  # (1, num_tokens)
+        # )  # (batch_size * seq_len, num_tokens)
+        # distances = distances.view(batch_size, seq_len, -1)  # (batch_size, seq_len, num_tokens)
+        # ### <<< FAST but potentially INCORRECT, NEW Implementation <<< ###
 
-        # ### >>> SLOW and CORRECT, ORIGINAL Implementation >>> ###
-        # # Applying the feature mask to the token matrix
-        # masked_token_matrix = token_matrix.unsqueeze(0) * feature_mask.unsqueeze(
-        #     1
-        # )  # (1, num_tokens, input_size) * (batch_size, 1, input_size) -> (batch_size, num_tokens, input_size)
-        # # Expand dimensions for broadcasting
-        # masked_neural_sequence_expanded = masked_neural_sequence.unsqueeze(
-        #     2
-        # )  # (batch_size, seq_len, 1, input_size)
-        # masked_token_matrix_expanded = masked_token_matrix.unsqueeze(
-        #     1
-        # )  # (batch_size, 1, num_tokens, input_size)
-        # distances = torch.mean(
-        #     (masked_neural_sequence_expanded - masked_token_matrix_expanded)
-        #     ** 2,  # (batch_size, seq_len, 1, input_size) - (batch_size, 1, num_tokens, input_size) -> (batch_size, seq_len, num_tokens, input_size)
-        #     dim=-1,
-        # )  # (batch_size, seq_len, num_tokens)
-        # ### <<< SLOW and CORRECT, ORIGINAL Implementation <<< ###
+        ### >>> SLOW and CORRECT, ORIGINAL Implementation >>> ###
+        # Applying the feature mask to the token matrix
+        masked_token_matrix = token_matrix.unsqueeze(0) * feature_mask.unsqueeze(
+            1
+        )  # (1, num_tokens, input_size) * (batch_size, 1, input_size) -> (batch_size, num_tokens, input_size)
+        # Expand dimensions for broadcasting
+        masked_neural_sequence_expanded = masked_neural_sequence.unsqueeze(
+            2
+        )  # (batch_size, seq_len, 1, input_size)
+        masked_token_matrix_expanded = masked_token_matrix.unsqueeze(
+            1
+        )  # (batch_size, 1, num_tokens, input_size)
+        distances = torch.mean(
+            (masked_neural_sequence_expanded - masked_token_matrix_expanded)
+            ** 2,  # (batch_size, seq_len, 1, input_size) - (batch_size, 1, num_tokens, input_size) -> (batch_size, seq_len, num_tokens, input_size)
+            dim=-1,
+        )  # (batch_size, seq_len, num_tokens)
+        ### <<< SLOW and CORRECT, ORIGINAL Implementation <<< ###
 
         # Return distance matrix
         return distances
@@ -961,32 +961,26 @@ class Model(torch.nn.Module):
                 # Commitment loss: A measure to encourage the encoder output to stay close to the embedding space;
                 # and to prevent it from fluctuating too frequently from one code vector to another.
                 # NOTE: We use β = 0.25 to scale the commitment loss, following the original VQ-VAE paper.
-                # beta = 0.25 # DEBUG
-                beta = 0.5
+                beta = 0.25
                 commitment_loss = (
                     beta * self.calculate_distances(target, self.codebook.detach(), mask).mean()
                 )
                 # VQ loss: The L2 error between the embedding space and the encoder outputs.
                 # NOTE: We treat the neural data itself as the encoder output.
-                # vq_loss = (1 - beta) * self.calculate_distances(
-                #     target.detach(), self.codebook, mask.detach()
-                # ).mean() # DEBUG
-                vq_loss = self.calculate_distances(
+                vq_loss = (1 - beta) * self.calculate_distances(
                     target.detach(), self.codebook, mask.detach()
-                ).mean()
+                ).mean()  # DEBUG
             # Otherwise the codebook is not trained and remains a random matrix
             else:
                 vq_loss = torch.tensor(0.0)
                 commitment_loss = torch.tensor(0.0)
 
             # Convert target from neural vector sequence to token sequence
-            # NOTE: The no_grad context is needed to prevent updates to model params based on target data
-            with torch.no_grad():
-                target = self.tokenize_neural_data(
-                    neural_sequence=target,
-                    feature_mask=mask,
-                )
-                target = target.view(-1)  # (batch_size, seq_len) -> (batch_size * seq_len)
+            target = self.tokenize_neural_data(
+                neural_sequence=target,
+                feature_mask=mask,
+            )
+            target = target.view(-1)  # (batch_size, seq_len) -> (batch_size * seq_len)
             # Calculate cross entropy loss from predicted token logits and target tokens.
             # NOTE: Since in this version our models output token logits instead of neural data, the `ce_loss`
             # is sort already reconstruction loss when considering version 2 the model as a VQ-VAE.
