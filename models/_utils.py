@@ -198,16 +198,14 @@ class MultiChannelEmbedding(torch.nn.Module):
         # Get the input shape
         batch_size, seq_len, num_channels = x.shape
         # Reshape x to a 2D tensor for embedding lookup
-        x_reshaped = x.contiguous().view(-1, num_channels)  # (batch_size * seq_len, num_channels)
+        x_reshaped = x.view(-1, num_channels)  # (batch_size * seq_len, num_channels)
         # Perform embedding lookup for each channel and concatenate
         embedded = torch.cat(
             [self.embeddings[i](x_reshaped[:, i]) for i in range(num_channels)], dim=-1
         )
         # Reshape back to the original batch_size and seq_len, sum across channels
-        output = (
-            embedded.contiguous()
-            .view(batch_size, seq_len, num_channels, self.embedding_dim)
-            .sum(dim=2)
+        output = embedded.view(batch_size, seq_len, num_channels, self.embedding_dim).sum(
+            dim=2
         )  # (batch_size, seq_len, embedding_dim)
         # Return the embedding output
         return output
@@ -680,8 +678,10 @@ class Model(torch.nn.Module):
         )  # (batch_size, seq_len, input_size) * (batch_size, 1, input_size) -> (batch_size, seq_len, input_size)
 
         ### >>> FAST but potentially INCORRECT, NEW Implementation >>> ###
+        # NOTE: What makes this implemenation potentially incorrect is that it does not apply the mask to the token_matrix;
+        # therefore, the distance between each neural vector and codebook vector is not being computed only at masked positions.
         # Fast and memory efficient distance calculation
-        flatten = masked_neural_sequence.contiguous().view(
+        flatten = masked_neural_sequence.view(
             -1, input_size
         )  # (batch_size, seq_len, input_size) -> (batch_size * seq_len, input_size)
         matrix = token_matrix.t()  # (num_tokens, input_size) -> (input_size, num_tokens)
@@ -690,9 +690,7 @@ class Model(torch.nn.Module):
             - 2 * flatten @ matrix  # (batch_size * seq_len, num_tokens)
             + matrix.pow(2).sum(0, keepdim=True)  # (1, num_tokens)
         )  # (batch_size * seq_len, num_tokens)
-        distances = distances.contiguous().view(
-            batch_size, seq_len, -1
-        )  # (batch_size, seq_len, num_tokens)
+        distances = distances.view(batch_size, seq_len, -1)  # (batch_size, seq_len, num_tokens)
         ### <<< FAST but potentially INCORRECT, NEW Implementation <<< ###
 
         # ### >>> SLOW and CORRECT, ORIGINAL Implementation >>> ###
@@ -744,7 +742,7 @@ class Model(torch.nn.Module):
             return self.tokenize_neural_data_multi_channel(neural_sequence, feature_mask)
         # Ensure inputs are the correct shapes
         assert (
-            neural_sequence.ndim == 3 and neural_sequence.shape[-1] == self.input_size
+            neural_sequence.ndim == 3
         ), "`neural_sequence` must have shape (batch_size, seq_len, input_size)"
         batch_size, _, input_size = neural_sequence.shape
         # Set feature_mask to all True if it is None
@@ -755,16 +753,20 @@ class Model(torch.nn.Module):
                 device=neural_sequence.device,
             )
         assert (
-            feature_mask.ndim == 2 and feature_mask.shape[-1] == self.input_size
+            feature_mask.ndim == 2 and feature_mask.shape[-1] == input_size
         ), "`feature_mask` must have shape (batch_size, input_size)"
         assert feature_mask.sum().item() > 0, "`feature_mask` cannot be all False."
         if token_matrix is None:
             token_matrix = self.codebook
         assert (
-            token_matrix.ndim == 2 and token_matrix.shape[-1] == self.input_size
+            token_matrix.ndim == 2 and token_matrix.shape[-1] == input_size
         ), "`token_matrix` must have shape (num_tokens, input_size)"
         # Move token_matrix to same device as neural_sequence
         token_matrix = token_matrix.to(neural_sequence.device)
+        # Get token_matrix shapes
+        # NOTE: We could use the attributes self.num_tokens and self.input_size of the model;
+        # but using this approach allows us to use this method as a standalone function.
+        num_tokens, _ = token_matrix.shape
 
         # PART 1: Tokenize the neural data
         # Calculate distances between neural data and embedding vectors
@@ -783,20 +785,18 @@ class Model(torch.nn.Module):
 
         # PART 2: Update `self.token_neural_map`
         # Flatten token_sequence
-        token_sequence_flat = token_sequence.contiguous().view(-1)  # (batch_size * seq_len, )
+        token_sequence_flat = token_sequence.view(-1)  # (batch_size * seq_len, )
         # Flatten neural_sequence
-        neural_flat = neural_sequence.contiguous().view(
-            -1, self.input_size
-        )  # (batch_size * seq_len, input_size)
+        neural_flat = neural_sequence.view(-1, input_size)  # (batch_size * seq_len, input_size)
         # Prepare tensors to accumulate sums and counts for each token
         token_sums = torch.zeros(
-            self.num_tokens,
-            self.input_size,
+            num_tokens,
+            input_size,
             device=neural_flat.device,
             dtype=neural_flat.dtype,
         )
         token_counts = torch.zeros(
-            self.num_tokens, device=neural_flat.device, dtype=neural_flat.dtype
+            token_matrix.shape[0], device=neural_flat.device, dtype=neural_flat.dtype
         )
 
         ### >>> FASTER, NON-DETERMINISTIC, & LESS INTERPRETABLE version using torch index operations >>> ###
@@ -823,7 +823,7 @@ class Model(torch.nn.Module):
 
         # ### >>> SLOWER, DETERMINISTIC, & MORE INTERPRETABLE version using for loop >>> ###
         # # Accumulate sums of neural activities for each token
-        # for token in range(self.num_tokens):
+        # for token in range(num_tokens):
         #     mask = token_sequence_flat == token  # create a mask for the current token
         #     token_counts[token] = mask.sum()  # sum up the counts for this token
         #     token_sums[token] = neural_flat[mask].sum(
@@ -877,7 +877,7 @@ class Model(torch.nn.Module):
         batch_size, _, input_size = neural_sequence.shape
         assert (
             neural_sequence.ndim == 3 and input_size == self.input_size
-        ), "`neural_sequence` shape mismatch."
+        ), "`neural_sequence` must have shape (batch_size, seq_len, input_size)"
         # Use existing feature_mask or create a default one
         if feature_mask is None:
             feature_mask = torch.ones(
@@ -1069,11 +1069,11 @@ class Model(torch.nn.Module):
                 )
             # Flatten output logits along batch x time (x channels) dimensions
             if self.multi_channel:
-                output = output.contiguous().view(
+                output = output.view(
                     -1, self.num_tokens
                 )  # (batch_size, seq_len, input_size, num_tokens) -> (batch_size * seq_len * input_size, num_tokens)
             else:
-                output = output.contiguous().view(
+                output = output.view(
                     -1, self.num_tokens
                 )  # (batch_size, seq_len, num_tokens) -> (batch_size * seq_len, num_tokens)
 
@@ -1103,7 +1103,7 @@ class Model(torch.nn.Module):
                         neural_sequence=target,
                         feature_mask=mask,
                     )  # (batch_size, seq_len, input_size)
-                    target = target.contiguous().view(
+                    target = target.view(
                         -1
                     )  # (batch_size, seq_len, input_size) -> (batch_size * seq_len * input_size)
             else:
@@ -1113,9 +1113,7 @@ class Model(torch.nn.Module):
                         neural_sequence=target,
                         feature_mask=mask,
                     )
-                    target = target.contiguous().view(
-                        -1
-                    )  # (batch_size, seq_len) -> (batch_size * seq_len)
+                    target = target.view(-1)  # (batch_size, seq_len) -> (batch_size * seq_len)
             # Calculate cross entropy loss from predicted token logits and target tokens.
             # NOTE: Since in this version our models output token logits instead of neural data,
             # the `ce_loss` is the reconstruction loss when considering this version as a VQ-VAE.
@@ -1192,7 +1190,7 @@ class Model(torch.nn.Module):
             # DEBUG: This is just a patch fix to prevent exploding values
             input_next = torch.clamp(input_next, min=input_cond.min(), max=input_cond.max())
             # Append the prediction to the the running sequence and continue
-            input = torch.cat((input, input_next), dim=1) 
+            input = torch.cat((input, input_next), dim=1)
         # Get only the newly generated time steps
         generated_values = (
             input[:, -num_new_timesteps:, :].detach().clone()
@@ -1246,7 +1244,7 @@ class Model(torch.nn.Module):
                     input.device
                 )  # (batch_size, input_size)
                 # Predict the next token for each channel
-                for channel in range(self.input_size):
+                for channel in range(input_size):
                     # Logits for the current channel
                     channel_logits = logits[:, channel, :]  # (batch_size, num_tokens)
                     # Optionally crop the logits to only the top k options
@@ -1272,12 +1270,10 @@ class Model(torch.nn.Module):
                 # Sample from the distribution to get the next token
                 token_next = torch.multinomial(probs, num_samples=1)  # (batch_size, 1)
             # Convert tokens to neural data using token_neural_map
-            input_next = (
-                self.token_neural_map[
-                    token_next
-                ]  # token_next is shaped (batch_size, input_size) OR (batch_size, 1)
-                .contiguous()
-                .view(batch_size, 1, input_size)
+            input_next = self.token_neural_map[
+                token_next
+            ].view(  # token_next is shaped (batch_size, input_size) OR (batch_size, 1)
+                batch_size, 1, input_size
             )  # (batch_size, 1, input_size)
             # Append sampled data to the running sequence and continue
             input = torch.cat((input, input_next), dim=1)
