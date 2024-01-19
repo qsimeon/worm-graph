@@ -485,7 +485,6 @@ class Model(torch.nn.Module):
         # Hyperparameters for version 2
         version_2: bool = VERSION_2,
         num_tokens: int = NUM_TOKENS,
-        vq_vae: bool = VQ_VAE,
     ):
         """
         Defines attributes common to all models.
@@ -535,7 +534,7 @@ class Model(torch.nn.Module):
             hidden_state=self.hidden,
         )
         # Embedding layer - placeholder
-        self.embedding = torch.nn.Linear(
+        self.latent_embedding = torch.nn.Linear(
             self.input_size,
             self.hidden_size,
         )
@@ -546,35 +545,27 @@ class Model(torch.nn.Module):
         # Version 2 tokenizes neural data either as a 1-D sequence
         self.version_2 = version_2
         self.num_tokens = num_tokens
-        self.vq_vae = vq_vae and self.version_2  # VQ-VAE only applies to version 2
         # New attributes and parameters for version 2 with tokenization
         if self.version_2:
             # Number of tokens to approximate continuous values
             self.num_tokens = num_tokens
             # Modify output size to be number of tokens
             self.output_size = self.num_tokens
-            # Initialize a random normal matrix to use as the embedding codebook/lookup table
-            ### DEBUG ###
-            self.codebook = torch.nn.Parameter(torch.randn(self.num_tokens, self.input_size))
-            # codebook = torch.randn(self.num_tokens, self.input_size) # maps tokens to vectors
-            # self.register_buffer("codebook", token_neural_map)  # not learned but updated using EMA
-            ### DEBUG ###
-            # Create bin edges for tokenizing normalized continuous-valued data
+            # Initialize a random normal matrix as the neural embedding map from tokens to neural vectors
+            # NOTE: This is equivalent to the codebook in VQ-VAEs.
+            neural_embedding = torch.randn(
+                self.num_tokens, self.input_size
+            )  # maps tokens to vectors
+            self.register_buffer(
+                "neural_embedding", neural_embedding
+            )  # not learned but updated using EMA
+            # Create bin edges for tokenizing continuous-valued z-scored data
             # NOTE: num_tokens bin_edges means there are num_tokens-1 bins for masked values;
             # the 0-indexed bin will be used for unmasked values.
             bin_edges = torch.tensor(norm.ppf(torch.linspace(0, 1, self.num_tokens)))
             self.register_buffer("bin_edges", bin_edges)
-            # Mapping of tokens to neural activity
-            ### DEBUG ###
-            token_neural_map = torch.zeros(
-                self.num_tokens, self.input_size
-            )  # maps tokens to vectors
-            self.register_buffer(
-                "token_neural_map", token_neural_map
-            )  # not learned but updated using EMA
-            ### DEBUG ###
             # Modify embedding layer to be a lookup table
-            self.embedding = torch.nn.Embedding(
+            self.latent_embedding = torch.nn.Embedding(
                 num_embeddings=self.num_tokens, embedding_dim=self.hidden_size
             )  # embedding lookup table (learned)
             # Adjust linear readout to output token logits
@@ -597,7 +588,7 @@ class Model(torch.nn.Module):
         # Initialize the readout weights
         torch.nn.init.xavier_uniform_(self.linear.weight)
         # Initialize the embedding weights
-        torch.nn.init.normal_(self.embedding.weight)
+        torch.nn.init.normal_(self.latent_embedding.weight)
         return None
 
     def init_hidden(self, input_shape=None):
@@ -650,7 +641,7 @@ class Model(torch.nn.Module):
         )  # (batch_size, seq_len, input_size) * (batch_size, 1, input_size) -> (batch_size, seq_len, input_size)
 
         # ### >>> FAST but potentially INCORRECT, NEW Implementation >>> ###
-        # # NOTE: What makes this implemenation potentially incorrect is that it does not apply the mask to the token_matrix;
+        # # NOTE: What makes this implementation potentially incorrect is that it does not apply the mask to the token_matrix;
         # # therefore, the distance between each neural vector and codebook vector is not being computed only at masked positions.
         # # Fast and memory efficient distance calculation
         # flatten = masked_neural_sequence.view(
@@ -726,7 +717,7 @@ class Model(torch.nn.Module):
         ), "`feature_mask` must have shape (batch_size, input_size)"
         assert feature_mask.sum().item() > 0, "`feature_mask` cannot be all False."
         if token_matrix is None:
-            token_matrix = self.codebook
+            token_matrix = self.neural_embedding
         assert (
             token_matrix.ndim == 2 and token_matrix.shape[-1] == input_size
         ), "`token_matrix` must have shape (num_tokens, input_size)"
@@ -746,13 +737,13 @@ class Model(torch.nn.Module):
         )  # (batch_size, seq_len, num_tokens)
         # Find the minimum indices along the tokens dimension
         token_sequence = distances.argmin(dim=-1)  # (batch_size, seq_len)
-        # Skip updating the token_neural_map if we are in eval mode
-        if not torch.is_grad_enabled():  # if eval mode, not updating token_neural_map
+        # Skip updating the neural_embedding if we are in eval mode
+        if not torch.is_grad_enabled():  # if eval mode, not updating neural_embedding
             return token_sequence
         else:
-            pass  # otherwise model is still training, so update token_neural_map
+            pass  # otherwise model is still training, so update neural_embedding
 
-        # PART 2: Update `self.token_neural_map`
+        # PART 2: Update `self.neural_embedding`
         # Flatten token_sequence
         token_sequence_flat = token_sequence.view(-1)  # (batch_size * seq_len, )
         # Flatten neural_sequence
@@ -786,14 +777,14 @@ class Model(torch.nn.Module):
         new_token_means = token_sums / token_counts.clamp(min=1).unsqueeze(
             -1
         )  # avoid division by 0 by ensuring counts are at least 1
-        new_token_means = new_token_means.to(self.token_neural_map.device)  # move to same device
+        new_token_means = new_token_means.to(self.neural_embedding.device)  # move to same device
 
-        # Apply exponential moving average to update token_neural_map
-        # NOTE: Only update positions in self.token_neural_map that correspond to tokens observed in the current batch.
+        # Apply exponential moving average to update `self.neural_embedding`
+        # NOTE: Only update positions in self.neural_embedding that correspond to tokens observed in the current batch.
         observed_tokens = token_sequence_flat.unique()
         decay = 0.5  # decay factor for EMA
-        self.token_neural_map[observed_tokens] = (
-            decay * self.token_neural_map[observed_tokens]
+        self.neural_embedding[observed_tokens] = (
+            decay * self.neural_embedding[observed_tokens]
             + (1 - decay) * new_token_means[observed_tokens]
         )
 
@@ -943,7 +934,6 @@ class Model(torch.nn.Module):
         """
         Special loss function for the newer version (version_2) of the models based
         on how loss is calculated in Transformers which operate on tokenized data.
-        We additionally train the codebook used for tokenization by adding a VQ-VAE loss.
         """
 
         def loss(output, target, mask=None, **kwargs):
@@ -963,28 +953,8 @@ class Model(torch.nn.Module):
                 -1, self.num_tokens
             )  # (batch_size, seq_len, num_tokens) -> (batch_size * seq_len, num_tokens)
 
-            # Add the loss objective of VQ-VAEs to train the codebook used for tokenization
-            # TODO: Find a way to "push" the self.codebook to serve the role of self.token_neural_map.
-            if self.vq_vae:
-                # Commitment loss: A measure to encourage the encoder output to stay close to the embedding space;
-                # and to prevent it from fluctuating too frequently from one code vector to another.
-                # NOTE: We use β = 0.25 to scale the commitment loss, following the original VQ-VAE paper.
-                beta = 0.25
-                commitment_loss = (
-                    beta * self.calculate_distances(target, self.codebook.detach(), mask).mean()
-                )
-                # VQ loss: The L2 error between the embedding space and the encoder outputs.
-                # NOTE: We treat the neural data itself as the encoder output.
-                vq_loss = (1 - beta) * self.calculate_distances(
-                    target.detach(), self.codebook, mask.detach()
-                ).mean()  # DEBUG
-            # Otherwise the codebook is not trained and remains a random matrix
-            else:
-                vq_loss = torch.tensor(0.0)
-                commitment_loss = torch.tensor(0.0)
-
             # Convert target from neural vector sequence to token sequence
-            # NOTE: The context manager prevents self.token_neural_map from being updated based on targets.
+            # NOTE: The context manager prevents `self.neural_embedding` from being updated based on targets.
             with torch.no_grad():
                 target = self.tokenize_neural_data(
                     neural_sequence=target,
@@ -992,11 +962,9 @@ class Model(torch.nn.Module):
                 )
                 target = target.view(-1)  # (batch_size, seq_len) -> (batch_size * seq_len)
             # Calculate cross entropy loss from predicted token logits and target tokens.
-            # NOTE: Since in this version our models output token logits instead of neural data, the `ce_loss`
-            # is sort already reconstruction loss when considering version 2 the model as a VQ-VAE.
             ce_loss = torch.nn.CrossEntropyLoss(reduction="mean", **kwargs)(output, target)
-            # Calculate the total loss including the VQ-VAE parts
-            total_loss = ce_loss + vq_loss + commitment_loss
+            # Calculate the total loss
+            total_loss = ce_loss
             # Return loss
             return total_loss
 
@@ -1123,8 +1091,8 @@ class Model(torch.nn.Module):
             probs = torch.nn.functional.softmax(logits, dim=-1)  # (batch_size, num_tokens)
             # Sample from the distribution to get the next token
             token_next = torch.multinomial(probs, num_samples=1)  # (batch_size, 1)
-            # Convert tokens to neural data using token_neural_map
-            input_next = self.token_neural_map[
+            # Convert tokens to neural data using neural_embedding
+            input_next = self.neural_embedding[
                 token_next
             ].view(  # token_next is shaped (batch_size, input_size) OR (batch_size, 1)
                 batch_size, 1, input_size
@@ -1228,7 +1196,7 @@ class LinearRegression(Model):
         )
         # Input to hidden transformation
         self.input_hidden = torch.nn.Sequential(
-            self.embedding,
+            self.latent_embedding,
             # NOTE: Don't use ReLU because that would be nonlinear model.
         )
         # Hidden to hidden transformation
@@ -1273,7 +1241,7 @@ class FeatureFFNN(Model):
         self.dropout = 0.1  # dropout rate
         # Input to hidden transformation
         self.input_hidden = torch.nn.Sequential(
-            self.embedding,
+            self.latent_embedding,
             torch.nn.ReLU(),
             # NOTE: Do NOT use LayerNorm here!
         )
@@ -1336,7 +1304,7 @@ class PureAttention(Model):
         )
         # Input to hidden transformation
         self.input_hidden = torch.nn.Sequential(
-            self.embedding,
+            self.latent_embedding,
             self.positional_encoding,
             # # TODO: Should we exclude the ReLU here for the attention model?
             # torch.nn.ReLU(),
@@ -1408,7 +1376,7 @@ class NeuralTransformer(Model):
         )
         # Input to hidden transformation
         self.input_hidden = torch.nn.Sequential(
-            self.embedding,
+            self.latent_embedding,
             self.positional_encoding,
             # # TODO: Should we exclude the ReLU here for the transformer model?
             # torch.nn.ReLU(),
@@ -1455,7 +1423,7 @@ class NetworkCTRNN(Model):
         )
         # Input to hidden transformation
         self.input_hidden = torch.nn.Sequential(
-            self.embedding,
+            self.latent_embedding,
             torch.nn.ReLU(),
             # NOTE: YES use LayerNorm here!
             self.layer_norm,
@@ -1503,7 +1471,7 @@ class LiquidCfC(Model):
         )
         # Input to hidden transformation
         self.input_hidden = torch.nn.Sequential(
-            self.embedding,
+            self.latent_embedding,
             torch.nn.ReLU(),
             # NOTE: YES use LayerNorm here!
             self.layer_norm,
@@ -1568,7 +1536,7 @@ class NetworkLSTM(Model):
         )
         # Input to hidden transformation
         self.input_hidden = torch.nn.Sequential(
-            self.embedding,
+            self.latent_embedding,
             torch.nn.ReLU(),
             # NOTE: YES use LayerNorm here!
             self.layer_norm,

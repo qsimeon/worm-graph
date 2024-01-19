@@ -26,9 +26,7 @@ BLOCK_SIZE = 5000  # maximum attention block size for Transformer models
 
 VERSION_2 = True  # whether to use version 2 of the model (tokenizes neural data)
 
-VQ_VAE = False  # whether to use VQ-VAE to train a codebook for the tokenizer in version 2
-
-NUM_TOKENS = 2048  # number of tokens in the neural vocabulary
+NUM_TOKENS = 2048  # number of tokens in the neural vocabulary if using version 2
 
 RAW_DATA_URL = "https://www.dropbox.com/s/45yqpvtsncx4095/raw_data.zip?dl=1"
 
