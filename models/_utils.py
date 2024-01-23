@@ -509,7 +509,7 @@ class Model(torch.nn.Module):
         # Setup
         self.input_size = input_size  # Number of neurons (302)
         self.output_size = input_size  # Number of neurons (302)
-        # NOTE: The output_size is same as the input_size. By default the model is a self-supervised autoencoder.
+        # NOTE: The output_size is same as the input_size because the model is a self-supervised autoencoder.
         self.hidden_size = hidden_size if hidden_size is not None else input_size
         self.l1_reg_param = l1_reg_param
         # Initialize hidden state
@@ -551,14 +551,12 @@ class Model(torch.nn.Module):
             self.num_tokens = num_tokens
             # Modify output size to be number of tokens
             self.output_size = self.num_tokens
-            # Initialize a zeros matrix as the neural embedding map from tokens to neural vectors.
+            # Initialize the neural embedding map from tokens to neural vectors.
             # NOTE: This is equivalent to the codebook in VQ-VAEs.
-            neural_embedding = torch.zeros(  # torch.randn(
+            neural_embedding = torch.zeros(  # not learned but updated using EMA
                 self.num_tokens, self.input_size
             )  # maps tokens to vectors
-            self.register_buffer(
-                "neural_embedding", neural_embedding
-            )  # not learned but updated using EMA
+            self.register_buffer("neural_embedding", neural_embedding)
             # Create bin edges for tokenizing continuous-valued z-scored data
             # NOTE: num_tokens bin_edges means there are num_tokens-1 bins for masked values;
             # the 0-indexed bin will be used for unmasked values.
@@ -1282,10 +1280,9 @@ class PureAttention(Model):
             **kwargs,
         )
         # Special attention parameters
-        # self.num_heads = find_largest_divisor(
-        #     hidden_size
-        # )  # number of attention heads (NOTE: must be divisor of `hidden_size`)
-        self.num_heads = 2  # DEBUG
+        self.num_heads = find_largest_divisor(
+            hidden_size
+        )  # number of attention heads (NOTE: must be divisor of `hidden_size`)
         logger.info(f"Number of attention heads: {self.num_heads}.")
         self.dropout = 0.1  # dropout rate
         # Positional encoding (NOTE: must be after embedding)
@@ -1355,9 +1352,10 @@ class NeuralTransformer(Model):
             **kwargs,
         )
         # Special attention parameters
-        self.num_heads = find_largest_divisor(
-            hidden_size
-        )  # number of attention heads (NOTE: must be divisor of `hidden_size`)
+        # self.num_heads = find_largest_divisor(
+        #     hidden_size
+        # )  # number of attention heads (NOTE: must be divisor of `hidden_size`)
+        self.num_heads = 2  # DEBUG
         logger.info(f"Number of attention heads: {self.num_heads}.")
         self.dropout = 0.1  # dropout rate
         # Positional encoding (NOTE: must be after embedding)
