@@ -551,9 +551,9 @@ class Model(torch.nn.Module):
             self.num_tokens = num_tokens
             # Modify output size to be number of tokens
             self.output_size = self.num_tokens
-            # Initialize a random normal matrix as the neural embedding map from tokens to neural vectors
+            # Initialize a zeros matrix as the neural embedding map from tokens to neural vectors.
             # NOTE: This is equivalent to the codebook in VQ-VAEs.
-            neural_embedding = torch.randn(
+            neural_embedding = torch.zeros(  # torch.randn(
                 self.num_tokens, self.input_size
             )  # maps tokens to vectors
             self.register_buffer(
@@ -640,40 +640,40 @@ class Model(torch.nn.Module):
             1
         )  # (batch_size, seq_len, input_size) * (batch_size, 1, input_size) -> (batch_size, seq_len, input_size)
 
-        # ### >>> FAST but potentially INCORRECT, NEW Implementation >>> ###
-        # # NOTE: What makes this implementation potentially incorrect is that it does not apply the mask to the token_matrix;
-        # # therefore, the distance between each neural vector and codebook vector is not being computed only at masked positions.
-        # # Fast and memory efficient distance calculation
-        # flatten = masked_neural_sequence.view(
-        #     -1, input_size
-        # )  # (batch_size, seq_len, input_size) -> (batch_size * seq_len, input_size)
-        # matrix = token_matrix.t()  # (num_tokens, input_size) -> (input_size, num_tokens)
-        # distances = (
-        #     flatten.pow(2).sum(dim=1, keepdim=True)  # (batch_size * seq_len, 1)
-        #     - 2 * flatten @ matrix  # (batch_size * seq_len, num_tokens)
-        #     + matrix.pow(2).sum(0, keepdim=True)  # (1, num_tokens)
-        # )  # (batch_size * seq_len, num_tokens)
-        # distances = distances.view(batch_size, seq_len, -1)  # (batch_size, seq_len, num_tokens)
-        # ### <<< FAST but potentially INCORRECT, NEW Implementation <<< ###
+        ### >>> FAST but potentially INCORRECT, NEW Implementation >>> ###
+        # NOTE: What makes this implementation potentially incorrect is that it does not apply the mask to the token_matrix;
+        # therefore, the distance between each neural vector and codebook vector is not being computed only at masked positions.
+        # Fast and memory efficient distance calculation
+        flatten = masked_neural_sequence.view(
+            -1, input_size
+        )  # (batch_size, seq_len, input_size) -> (batch_size * seq_len, input_size)
+        matrix = token_matrix.t()  # (num_tokens, input_size) -> (input_size, num_tokens)
+        distances = (
+            flatten.pow(2).sum(dim=1, keepdim=True)  # (batch_size * seq_len, 1)
+            - 2 * flatten @ matrix  # (batch_size * seq_len, num_tokens)
+            + matrix.pow(2).sum(0, keepdim=True)  # (1, num_tokens)
+        )  # (batch_size * seq_len, num_tokens)
+        distances = distances.view(batch_size, seq_len, -1)  # (batch_size, seq_len, num_tokens)
+        ### <<< FAST but potentially INCORRECT, NEW Implementation <<< ###
 
-        ### >>> SLOW and CORRECT, ORIGINAL Implementation >>> ###
-        # Applying the feature mask to the token matrix
-        masked_token_matrix = token_matrix.unsqueeze(0) * feature_mask.unsqueeze(
-            1
-        )  # (1, num_tokens, input_size) * (batch_size, 1, input_size) -> (batch_size, num_tokens, input_size)
-        # Expand dimensions for broadcasting
-        masked_neural_sequence_expanded = masked_neural_sequence.unsqueeze(
-            2
-        )  # (batch_size, seq_len, 1, input_size)
-        masked_token_matrix_expanded = masked_token_matrix.unsqueeze(
-            1
-        )  # (batch_size, 1, num_tokens, input_size)
-        distances = torch.mean(
-            (masked_neural_sequence_expanded - masked_token_matrix_expanded)
-            ** 2,  # (batch_size, seq_len, 1, input_size) - (batch_size, 1, num_tokens, input_size) -> (batch_size, seq_len, num_tokens, input_size)
-            dim=-1,
-        )  # (batch_size, seq_len, num_tokens)
-        ### <<< SLOW and CORRECT, ORIGINAL Implementation <<< ###
+        # ### >>> SLOW and CORRECT, ORIGINAL Implementation >>> ###
+        # # Applying the feature mask to the token matrix
+        # masked_token_matrix = token_matrix.unsqueeze(0) * feature_mask.unsqueeze(
+        #     1
+        # )  # (1, num_tokens, input_size) * (batch_size, 1, input_size) -> (batch_size, num_tokens, input_size)
+        # # Expand dimensions for broadcasting
+        # masked_neural_sequence_expanded = masked_neural_sequence.unsqueeze(
+        #     2
+        # )  # (batch_size, seq_len, 1, input_size)
+        # masked_token_matrix_expanded = masked_token_matrix.unsqueeze(
+        #     1
+        # )  # (batch_size, 1, num_tokens, input_size)
+        # distances = torch.mean(
+        #     (masked_neural_sequence_expanded - masked_token_matrix_expanded)
+        #     ** 2,  # (batch_size, seq_len, 1, input_size) - (batch_size, 1, num_tokens, input_size) -> (batch_size, seq_len, num_tokens, input_size)
+        #     dim=-1,
+        # )  # (batch_size, seq_len, num_tokens)
+        # ### <<< SLOW and CORRECT, ORIGINAL Implementation <<< ###
 
         # Return distance matrix
         return distances
@@ -866,9 +866,7 @@ class Model(torch.nn.Module):
         # Transform the latent
         hidden_out = self.inner_hidden_model(latent_out)  # (batch_size, seq_len, hidden_size)
         # Perform a linear readout to get the output
-        output_logits = self.linear(
-            hidden_out
-        )  # (batch_size, seq_len, input_size, num_tokens) OR (batch_size, seq_len, num_tokens)
+        output_logits = self.linear(hidden_out)  # (batch_size, seq_len, num_tokens)
         # Return output token logits
         return output_logits
 
@@ -928,7 +926,7 @@ class Model(torch.nn.Module):
 
         return loss
 
-    ### >>> DEBUG: different loss function needed for new token mode >>> ###
+    ### >>> DEBUG: Different loss function needed for new token mode >>> ###
     @torch.autocast(device_type=DEVICE.type, dtype=torch.half)
     def loss_fn_v2(self):
         """
@@ -970,7 +968,7 @@ class Model(torch.nn.Module):
 
         return loss
 
-    ### <<< DEBUG: different loss function needed for new token mode <<< ###
+    ### <<< DEBUG: Different loss function needed for new token mode <<< ###
 
     @torch.no_grad()
     def generate(
@@ -1013,37 +1011,32 @@ class Model(torch.nn.Module):
             return self.generate_v2(input, mask, num_new_timesteps, autoregressive, context_window)
         # Set model to evaluation mode
         self.eval()
-        # Get input shapes
-        batch_size, _, input_size = input.shape
-        # If generating values autoregressively
-        if autoregressive:
-            input = input[:, -context_window:, :]  # (batch_size, context_window, neurons)
-        # Otherwise defaults to ground-truth feeding
-        else:
-            input = input  # Use the entire input as context
+        # Initialize the context sequence
+        input_cond = input  # (batch_size, seq_len, input_size)
         # Loop through time
         for t in range(num_new_timesteps):
-            # Get the last context_window values of the input tensor
-            input_cond = input[
-                :, t : context_window + t, :
-            ]  # (batch_size, context_window, neurons)
+            # If the sequence context is growing too long we must crop it
+            input_cond = input_cond[:, -context_window:, :]  # (batch_size, context_window, neurons)
             # Forward the model to get the predictions
             predictions = self(input_cond, mask)  # (batch_size, context_window, neurons)
             # Get the last predicted value
             input_next = predictions[:, [-1], :]  # (batch_size, 1, neurons)
-            # TODO: Make adaptive normalization a function of the model itself.
-            # DEBUG: This is just a patch fix to prevent exploding values
+            # TODO: Make adaptive normalization a function of the model itself;
+            # The current clamping is just a quick fix to prevent exploding values.
             input_next = torch.clamp(input_next, min=input_cond.min(), max=input_cond.max())
             # Append the prediction to the the running sequence and continue
-            input = torch.cat((input, input_next), dim=1)
+            if autoregressive:  # if generating values autoregressively
+                input_cond = torch.cat((input_cond, input_next), dim=1)
+            else:  # otherwise defaults to ground-truth feeding
+                input_cond = torch.cat((input, input_next), dim=1)
         # Get only the newly generated time steps
         generated_values = (
-            input[:, -num_new_timesteps:, :].detach().clone()
+            input_cond[:, -num_new_timesteps:, :].detach().clone()
         )  # (batch_size, num_new_timesteps, input_size)
         # Return the generations
         return generated_values
 
-    ### >>> DEBUG: different generate method needed for new token mode >>> ###
+    ### >>> DEBUG: Different generate method needed for new token mode >>> ###
     @torch.no_grad()
     def generate_v2(
         self,
@@ -1067,20 +1060,14 @@ class Model(torch.nn.Module):
         self.eval()
         # Get input shapes
         batch_size, _, input_size = input.shape
-        # If generating values autoregressively
-        if autoregressive:
-            input = input[:, -context_window:, :]  # use a context window
-        # Otherwise defaults to ground-truth feeding
-        else:
-            input = input  # use the entire input as context
+        # Initialize the context sequence
+        input_cond = input  # (batch_size, seq_len, input_size)
         # Loop through time
-        for t in range(num_new_timesteps):
+        for _ in range(num_new_timesteps):
             # If the sequence context is growing too long we must crop it
-            input_cond = input[:, t : context_window + t, :]
+            input_cond = input_cond[:, -context_window:, :]
             # Forward the model to get the output
-            output = self(
-                input_cond, mask
-            )  # (batch_size, seq_len, input_size, num_tokens) OR (batch_size, seq_len, num_tokens)
+            output = self(input_cond, mask)  # (batch_size, seq_len, num_tokens)
             # Pluck the logits at the final step and scale by desired temperature
             logits = output[:, -1, :] / temperature  # (batch_size, num_tokens)
             # Optionally crop the logits to only the top k options
@@ -1090,23 +1077,26 @@ class Model(torch.nn.Module):
             # Apply softmax to convert logits to (normalized) probabilities
             probs = torch.nn.functional.softmax(logits, dim=-1)  # (batch_size, num_tokens)
             # Sample from the distribution to get the next token
-            token_next = torch.multinomial(probs, num_samples=1)  # (batch_size, 1)
+            token_next = torch.multinomial(probs, num_samples=1).view(
+                batch_size, 1
+            )  # (batch_size, 1)
             # Convert tokens to neural data using neural_embedding
-            input_next = self.neural_embedding[
-                token_next
-            ].view(  # token_next is shaped (batch_size, input_size) OR (batch_size, 1)
+            input_next = self.neural_embedding[token_next].view(  # (batch_size, 1)
                 batch_size, 1, input_size
             )  # (batch_size, 1, input_size)
             # Append sampled data to the running sequence and continue
-            input = torch.cat((input, input_next), dim=1)
+            if autoregressive:  # if generating values autoregressively
+                input_cond = torch.cat((input_cond, input_next), dim=1)
+            else:  # otherwise defaults to ground-truth feeding
+                input_cond = torch.cat((input, input_next), dim=1)
         # Get only the newly generated time steps
         generated_values = (
-            input[:, -num_new_timesteps:, :].detach().clone()
+            input_cond[:, -num_new_timesteps:, :].detach().clone()
         )  # (batch_size, num_new_timesteps, input_size)
         # Return the generations
         return generated_values
 
-    ### <<< DEBUG: different generate method needed for new token mode <<< ###
+    ### <<< DEBUG: Different generate method needed for new token mode <<< ###
 
     def sample(self, num_new_timesteps: int):
         """
@@ -1292,9 +1282,10 @@ class PureAttention(Model):
             **kwargs,
         )
         # Special attention parameters
-        self.num_heads = find_largest_divisor(
-            hidden_size
-        )  # number of attention heads (NOTE: must be divisor of `hidden_size`)
+        # self.num_heads = find_largest_divisor(
+        #     hidden_size
+        # )  # number of attention heads (NOTE: must be divisor of `hidden_size`)
+        self.num_heads = 2  # DEBUG
         logger.info(f"Number of attention heads: {self.num_heads}.")
         self.dropout = 0.1  # dropout rate
         # Positional encoding (NOTE: must be after embedding)
