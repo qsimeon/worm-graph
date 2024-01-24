@@ -5,9 +5,7 @@ logger = logging.getLogger(__name__)
 logging.getLogger("matplotlib").setLevel(logging.WARNING)  # Suppress matplotlib logging
 
 
-def draw_connectome(
-    network, pos=None, labels=None, plt_title="C. elegans connectome network"
-):
+def draw_connectome(network, pos=None, labels=None, plt_title="C. elegans connectome network"):
     """
     Args:
       network: PyG Data object containing a C. elegans connectome graph.
@@ -127,9 +125,7 @@ def draw_connectome(
             alpha=0.5,
             markersize=10,
         ),
-        Line2D(
-            [0], [0], color="r", label="synapse", linewidth=2, alpha=0.5, markersize=10
-        ),
+        Line2D([0], [0], color="r", label="synapse", linewidth=2, alpha=0.5, markersize=10),
     ]
     plt.title(plt_title)
     plt.legend(handles=legend_elements, loc="upper right")
@@ -167,9 +163,7 @@ def plot_dataset_info(log_dir):
     )
     neurons_train = df_train["neurons"]
     # Flatten the list of lists into a single list of neurons
-    flattened_neurons_train = [
-        neuron for sublist in neurons_train for neuron in sublist
-    ]
+    flattened_neurons_train = [neuron for sublist in neurons_train for neuron in sublist]
     # Now use np.unique on this flattened list
     unique_neurons_train, neuron_counts_train = np.unique(
         flattened_neurons_train, return_counts=True
@@ -193,9 +187,7 @@ def plot_dataset_info(log_dir):
     # Flatten the list of lists into a single list of neurons
     flattened_neurons_val = [neuron for sublist in neurons_val for neuron in sublist]
     # Now use np.unique on this flattened list
-    unique_neurons_val, neuron_counts_val = np.unique(
-        flattened_neurons_val, return_counts=True
-    )
+    unique_neurons_val, neuron_counts_val = np.unique(flattened_neurons_val, return_counts=True)
     # Standard sorting
     standard_counts_val = np.zeros(302, dtype=int)
     neuron_idx_val = [neuron_idx_mapping[neuron] for neuron in unique_neurons_val]
@@ -219,10 +211,12 @@ def plot_dataset_info(log_dir):
     ax[0].set_title("Neuron count of Train Dataset", fontsize=14)
     ax[0].xaxis.set_major_locator(ticker.MultipleLocator(10))
     ax[0].xaxis.set_minor_locator(ticker.MultipleLocator(1))
-    metadata_train_text = "Datasets used: {}\nTotal number of worms: {}\nNumber of unique neurons: {}".format(
-        ", ".join(train_exp_datasets),
-        len(df_train),
-        len(unique_neurons_train),
+    metadata_train_text = (
+        "Datasets used: {}\nTotal number of worms: {}\nNumber of unique neurons: {}".format(
+            ", ".join(train_exp_datasets),
+            len(df_train),
+            len(unique_neurons_train),
+        )
     )
     ax[0].text(
         0.02,
@@ -231,9 +225,7 @@ def plot_dataset_info(log_dir):
         transform=ax[0].transAxes,
         fontsize=10,
         verticalalignment="top",
-        bbox=dict(
-            boxstyle="round, pad=1", facecolor="white", edgecolor="black", alpha=0.5
-        ),
+        bbox=dict(boxstyle="round, pad=1", facecolor="white", edgecolor="black", alpha=0.5),
     )
 
     # Validation dataset plot
@@ -244,10 +236,12 @@ def plot_dataset_info(log_dir):
     ax[1].set_title("Neuron count of Validation Dataset", fontsize=14)
     ax[1].xaxis.set_major_locator(ticker.MultipleLocator(10))
     ax[1].xaxis.set_minor_locator(ticker.MultipleLocator(1))
-    metadata_val_text = "Datasets used: {}\nTotal number of worms: {}\nNumber of unique neurons: {}".format(
-        ", ".join(val_exp_datasets),
-        len(df_val),
-        len(unique_neurons_val),
+    metadata_val_text = (
+        "Datasets used: {}\nTotal number of worms: {}\nNumber of unique neurons: {}".format(
+            ", ".join(val_exp_datasets),
+            len(df_val),
+            len(unique_neurons_val),
+        )
     )
     ax[1].text(
         0.02,
@@ -256,9 +250,7 @@ def plot_dataset_info(log_dir):
         transform=ax[1].transAxes,
         fontsize=10,
         verticalalignment="top",
-        bbox=dict(
-            boxstyle="round, pad=1", facecolor="white", edgecolor="black", alpha=0.5
-        ),
+        bbox=dict(boxstyle="round, pad=1", facecolor="white", edgecolor="black", alpha=0.5),
     )
 
     # Set y-axes to only use integer values
@@ -340,13 +332,9 @@ def plot_loss_curves(log_dir, info_to_display=None):
 
     # Do some repositioning
     x_position_percent = 0.075  # Adjust this value to set the desired position
-    x_position_box = (
-        ax.get_xlim()[0] + (ax.get_xlim()[1] - ax.get_xlim()[0]) * x_position_percent
-    )
+    x_position_box = ax.get_xlim()[0] + (ax.get_xlim()[1] - ax.get_xlim()[0]) * x_position_percent
     y_position_percent = 0.80  # Adjust this value to set the desired position
-    y_position_box = (
-        ax.get_ylim()[0] + (ax.get_ylim()[1] - ax.get_ylim()[0]) * y_position_percent
-    )
+    y_position_box = ax.get_ylim()[0] + (ax.get_ylim()[1] - ax.get_ylim()[0]) * y_position_percent
     if info_to_display is not None:
         plt.text(
             x_position_box,
@@ -369,9 +357,7 @@ def plot_predictions(log_dir, neurons_to_plot=None, worms_to_plot=None):
     for type_ds in os.listdir(os.path.join(log_dir, "prediction")):
         for ds_name in os.listdir(os.path.join(log_dir, "prediction", type_ds)):
             # Get the list of worms
-            worm_list = os.listdir(
-                os.path.join(log_dir, "prediction", type_ds, ds_name)
-            )
+            worm_list = os.listdir(os.path.join(log_dir, "prediction", type_ds, ds_name))
 
             # Treat worms_to_plot
             if isinstance(worms_to_plot, int):
@@ -414,42 +400,25 @@ def plot_predictions(log_dir, neurons_to_plot=None, worms_to_plot=None):
                     ).tolist()
                 elif isinstance(neurons_to_plot, list):
                     # Filter out neurons not listed
-                    neurons = [
-                        neuron for neuron in neurons_to_plot if neuron in neurons
-                    ]
+                    neurons = [neuron for neuron in neurons_to_plot if neuron in neurons]
                 elif isinstance(neurons_to_plot, str):
                     # Get only the requested neuron
-                    neurons = [
-                        neuron for neuron in neurons if neuron == neurons_to_plot
-                    ]
+                    neurons = [neuron for neuron in neurons if neuron == neurons_to_plot]
 
                 # Get the time vectors
-                data_window = len(
-                    pd.concat([df.loc["Context"], df.loc["Ground Truth"]], axis=0)
-                )
                 generate_window = len(
                     pd.concat([df.loc["Context"], df.loc["AR Generation"]], axis=0)
                 )
                 time_vector = np.arange(generate_window)
 
                 time_context = time_vector[: len(df.loc["Context"])]
-                time_ground_truth = time_vector[
-                    len(df.loc["Context"]) - 1 : data_window - 1
-                ]
-                # -1 for plot continuity
-                time_gt_generated = time_vector[len(df.loc["Context"]) - 1 : -1]
                 time_ar_generated = time_vector[len(df.loc["Context"]) - 1 : -1]
 
                 sns.set_style("whitegrid")
 
                 palette = sns.color_palette("tab10")
                 gt_color = palette[0]  # Blue
-                gt_generation_color = palette[
-                    1
-                ]  # orange (next time step prediction with gt)
-                ar_generation_color = palette[
-                    2
-                ]  # green (autoregressive next time step prediction)
+                ar_generation_color = palette[2]  # green (autoregressive next time step prediction)
 
                 # Metadata textbox
                 metadata_text = "Dataset: {}\nWorm ID: {}".format(ds_name, wormID)
@@ -463,19 +432,7 @@ def plot_predictions(log_dir, neurons_to_plot=None, worms_to_plot=None):
                         color=gt_color,
                         label="Ground truth",
                     )
-                    ax.plot(
-                        time_ground_truth,
-                        df.loc["Ground Truth", neuron],
-                        color=gt_color,
-                        alpha=0.9,
-                    )
 
-                    ax.plot(
-                        time_gt_generated,
-                        df.loc["GT Generation", neuron],
-                        color=gt_generation_color,
-                        label="'Ground truth feeding'",
-                    )
                     ax.plot(
                         time_ar_generated,
                         df.loc["AR Generation", neuron],
@@ -518,9 +475,7 @@ def plot_predictions(log_dir, neurons_to_plot=None, worms_to_plot=None):
 
                     # Make figure directory
                     os.makedirs(
-                        os.path.join(
-                            log_dir, "prediction", type_ds, ds_name, wormID, "neurons"
-                        ),
+                        os.path.join(log_dir, "prediction", type_ds, ds_name, wormID, "neurons"),
                         exist_ok=True,
                     )
 
@@ -544,9 +499,7 @@ def plot_pca_trajectory(log_dir, worms_to_plot=None, plot_type="3D"):
     for type_ds in os.listdir(os.path.join(log_dir, "prediction")):
         for ds_name in os.listdir(os.path.join(log_dir, "prediction", type_ds)):
             # Get the list of worms
-            worm_list = os.listdir(
-                os.path.join(log_dir, "prediction", type_ds, ds_name)
-            )
+            worm_list = os.listdir(os.path.join(log_dir, "prediction", type_ds, ds_name))
 
             # If worms_to_plot is an integer, randomly select that many worms
             if isinstance(worms_to_plot, int):
@@ -579,35 +532,20 @@ def plot_pca_trajectory(log_dir, worms_to_plot=None, plot_type="3D"):
                 sns.set_style("whitegrid")
                 palette = sns.color_palette("tab10")
                 gt_color = palette[0]  # Blue
-                gt_generation_color = palette[
-                    1
-                ]  # orange (next time step prediction with gt)
-                ar_generation_color = palette[
-                    2
-                ]  # green (autoregressive next time step prediction)
+                ar_generation_color = palette[2]  # green (autoregressive next time step prediction)
 
                 # Split data by Type
-                ar_gen_data = df[df["Type"] == "AR Generation"].drop(
-                    columns=["Type", "Unnamed: 1"]
-                )
+                ar_gen_data = df[df["Type"] == "AR Generation"].drop(columns=["Type", "Unnamed: 1"])
                 ar_gen_data = ar_gen_data[neurons]  # Filter only named neurons
 
                 ground_truth_data = df[df["Type"] == "Ground Truth"].drop(
                     columns=["Type", "Unnamed: 1"]
                 )
-                ground_truth_data = ground_truth_data[
-                    neurons
-                ]  # Filter only named neurons
-
-                # Extract GT Generation data
-                gt_gen_data = df[df["Type"] == "GT Generation"].drop(
-                    columns=["Type", "Unnamed: 1"]
-                )
-                gt_gen_data = gt_gen_data[neurons]  # Filter only named neurons
+                ground_truth_data = ground_truth_data[neurons]  # Filter only named neurons
 
                 try:
                     # Concantentate and standardize the data
-                    all_data = pd.concat([ar_gen_data, ground_truth_data, gt_gen_data])
+                    all_data = pd.concat([ar_gen_data, ground_truth_data])
                     scaler = StandardScaler()
                     standardized_data = scaler.fit_transform(all_data)
 
@@ -633,29 +571,15 @@ def plot_pca_trajectory(log_dir, worms_to_plot=None, plot_type="3D"):
                         )
                         plt.plot(
                             reduced_data[
-                                len(ar_gen_data) : len(ar_gen_data)
-                                + len(ground_truth_data),
+                                len(ar_gen_data) : len(ar_gen_data) + len(ground_truth_data),
                                 0,
                             ],
                             reduced_data[
-                                len(ar_gen_data) : len(ar_gen_data)
-                                + len(ground_truth_data),
+                                len(ar_gen_data) : len(ar_gen_data) + len(ground_truth_data),
                                 1,
                             ],
                             color=gt_color,
                             label="Ground Truth",
-                            linestyle="-",
-                            marker="o",
-                        )
-                        plt.plot(
-                            reduced_data[
-                                len(ar_gen_data) + len(ground_truth_data) :, 0
-                            ],
-                            reduced_data[
-                                len(ar_gen_data) + len(ground_truth_data) :, 1
-                            ],
-                            color=gt_generation_color,
-                            label="'Ground truth feeding'",
                             linestyle="-",
                             marker="o",
                         )
@@ -671,13 +595,6 @@ def plot_pca_trajectory(log_dir, worms_to_plot=None, plot_type="3D"):
                         plt.scatter(
                             reduced_data[len(ar_gen_data), 0],
                             reduced_data[len(ar_gen_data), 1],
-                            color="black",
-                            marker="*",
-                            s=50,
-                        )
-                        plt.scatter(
-                            reduced_data[len(ar_gen_data) + len(ground_truth_data), 0],
-                            reduced_data[len(ar_gen_data) + len(ground_truth_data), 1],
                             color="black",
                             marker="*",
                             s=50,
@@ -720,37 +637,19 @@ def plot_pca_trajectory(log_dir, worms_to_plot=None, plot_type="3D"):
                         )
                         ax.plot(
                             reduced_data[
-                                len(ar_gen_data) : len(ar_gen_data)
-                                + len(ground_truth_data),
+                                len(ar_gen_data) : len(ar_gen_data) + len(ground_truth_data),
                                 0,
                             ],
                             reduced_data[
-                                len(ar_gen_data) : len(ar_gen_data)
-                                + len(ground_truth_data),
+                                len(ar_gen_data) : len(ar_gen_data) + len(ground_truth_data),
                                 1,
                             ],
                             reduced_data[
-                                len(ar_gen_data) : len(ar_gen_data)
-                                + len(ground_truth_data),
+                                len(ar_gen_data) : len(ar_gen_data) + len(ground_truth_data),
                                 2,
                             ],
                             color=gt_color,
                             label="Ground Truth",
-                            linestyle="-",
-                            marker="o",
-                        )
-                        ax.plot(
-                            reduced_data[
-                                len(ar_gen_data) + len(ground_truth_data) :, 0
-                            ],
-                            reduced_data[
-                                len(ar_gen_data) + len(ground_truth_data) :, 1
-                            ],
-                            reduced_data[
-                                len(ar_gen_data) + len(ground_truth_data) :, 2
-                            ],
-                            color=gt_generation_color,
-                            label="'Ground truth feeding'",
                             linestyle="-",
                             marker="o",
                         )
@@ -768,14 +667,6 @@ def plot_pca_trajectory(log_dir, worms_to_plot=None, plot_type="3D"):
                             reduced_data[len(ar_gen_data), 0],
                             reduced_data[len(ar_gen_data), 1],
                             reduced_data[len(ar_gen_data), 2],
-                            color="black",
-                            marker="*",
-                            s=50,
-                        )
-                        ax.scatter(
-                            reduced_data[len(ar_gen_data) + len(ground_truth_data), 0],
-                            reduced_data[len(ar_gen_data) + len(ground_truth_data), 1],
-                            reduced_data[len(ar_gen_data) + len(ground_truth_data), 2],
                             color="black",
                             marker="*",
                             s=50,
@@ -811,9 +702,7 @@ def plot_pca_trajectory(log_dir, worms_to_plot=None, plot_type="3D"):
 
                     # Make figure directory
                     os.makedirs(
-                        os.path.join(
-                            log_dir, "prediction", type_ds, ds_name, wormID, "pca"
-                        ),
+                        os.path.join(log_dir, "prediction", type_ds, ds_name, wormID, "pca"),
                         exist_ok=True,
                     )
 
@@ -838,7 +727,7 @@ def plot_pca_trajectory(log_dir, worms_to_plot=None, plot_type="3D"):
                     )
                     logger.error(f"The error that occurred: {e}")
                     # # This will print the full traceback
-                    # logger.error(traceback.format_exc()) 
+                    # logger.error(traceback.format_exc())
                     # Logging just the exception type and message
                     err_msg = f"{e.__class__.__name__}: {e}"
                     logger.error(err_msg)
@@ -876,9 +765,7 @@ def plot_worm_data(worm_data, num_neurons=5, smooth=False):
 
     plt.xlabel("Time (seconds)")
     plt.ylabel("Calcium Activity")
-    plt.title(
-        f"Dataset: {dataset}, Worm: {worm}\nCalcium Traces of Random {num_neurons} Neurons"
-    )
+    plt.title(f"Dataset: {dataset}, Worm: {worm}\nCalcium Traces of Random {num_neurons} Neurons")
     plt.legend()
     plt.show()
 
@@ -1387,17 +1274,13 @@ def plot_experiment_summaries(exp_log_dir, exp_key, exp_plot_dir=None):
 
     # Plot figure summarizing various experiment metrics
     # Create figure
-    fig, axes = plt.subplots(
-        1, 4, figsize=(20, 5)
-    )  # Adjust the figsize to fit all subplots
+    fig, axes = plt.subplots(1, 4, figsize=(20, 5))  # Adjust the figsize to fit all subplots
     param_range = range(len(parameters))  # numeric range for plots
 
     # Validation loss bar plot
     axes[0].bar(param_range, val_losses, color="blue", label="Min Validation Loss")
     for baseline in val_baselines:
-        axes[0].axhline(
-            y=baseline, color="black", linestyle="--", label="Validation Baseline"
-        )
+        axes[0].axhline(y=baseline, color="black", linestyle="--", label="Validation Baseline")
     axes[0].set_xticks(param_range)
     axes[0].set_xticklabels(parameters, rotation=90, ha="right", fontsize=6)
     axes[0].set_title("Min Validation Loss")
@@ -1408,9 +1291,7 @@ def plot_experiment_summaries(exp_log_dir, exp_key, exp_plot_dir=None):
     # Training loss bar plot
     axes[1].bar(param_range, train_losses, color="orange", label="Min Training Loss")
     for baseline in train_baselines:
-        axes[1].axhline(
-            y=baseline, color="black", linestyle="--", label="Training Baseline"
-        )
+        axes[1].axhline(y=baseline, color="black", linestyle="--", label="Training Baseline")
     axes[1].set_xticks(param_range)
     axes[1].set_xticklabels(parameters, rotation=90, ha="right", fontsize=6)
     axes[1].set_title("Min Training Loss")
@@ -1451,9 +1332,7 @@ def plot_experiment_summaries(exp_log_dir, exp_key, exp_plot_dir=None):
 
 def plot_loss_per_dataset(log_dir, mode="validation"):
     # Load train/validation losses
-    losses = pd.read_csv(
-        os.path.join(log_dir, "analysis", f"{mode}_loss_per_dataset.csv")
-    )
+    losses = pd.read_csv(os.path.join(log_dir, "analysis", f"{mode}_loss_per_dataset.csv"))
     losses = losses.dropna().reset_index(drop=True)
 
     # Train dataset names
@@ -1493,9 +1372,7 @@ def plot_loss_per_dataset(log_dir, mode="validation"):
         alpha=0.4,
     )
 
-    ax.set_xticks(
-        index + bar_width / 2
-    )  # Set x-ticks to be in the middle of the grouped bars
+    ax.set_xticks(index + bar_width / 2)  # Set x-ticks to be in the middle of the grouped bars
     ax.set_xticklabels(losses["dataset"].values, rotation=0, ha="center")
     ax.set_ylabel("Loss")
     ax.set_yscale("log")  # Set y-axis to log-scale
@@ -1526,15 +1403,11 @@ def plot_loss_per_dataset(log_dir, mode="validation"):
     plt.tight_layout()
 
     # Save figure
-    plt.savefig(
-        os.path.join(log_dir, "analysis", f"{mode}_loss_per_dataset.png"), dpi=300
-    )
+    plt.savefig(os.path.join(log_dir, "analysis", f"{mode}_loss_per_dataset.png"), dpi=300)
     plt.close()
 
 
-def plot_experiment_loss_per_dataset(
-    exp_log_dir, exp_key, exp_plot_dir=None, mode="validation"
-):
+def plot_experiment_loss_per_dataset(exp_log_dir, exp_key, exp_plot_dir=None, mode="validation"):
     """
     This function plots the experiment loss per dataset.
     It collects information from experiment log directories and loads the losses per dataset.
@@ -1548,9 +1421,7 @@ def plot_experiment_loss_per_dataset(
 
     # =============== Collect information ===============
     # Create an empty DataFrame to store the losses
-    losses = pd.DataFrame(
-        columns=["dataset", f"{mode}_loss", f"{mode}_baseline", "exp_param"]
-    )
+    losses = pd.DataFrame(columns=["dataset", f"{mode}_loss", f"{mode}_baseline", "exp_param"])
 
     # Loop through all experiments
     for file in sorted(os.listdir(exp_log_dir), key=lambda x: x.strip("exp_")):
@@ -1570,9 +1441,7 @@ def plot_experiment_loss_per_dataset(
         # TODO: Find a way to plot something with string parameters
 
         # Load losses per dataset
-        tmp_df = pd.read_csv(
-            os.path.join(exp_dir, "analysis", f"{mode}_loss_per_dataset.csv")
-        )
+        tmp_df = pd.read_csv(os.path.join(exp_dir, "analysis", f"{mode}_loss_per_dataset.csv"))
 
         # Add experiment parameter to dataframe
         tmp_df["exp_param"] = exp_param
@@ -1588,9 +1457,9 @@ def plot_experiment_loss_per_dataset(
         tmp_df["train_dataset_names"] = ", ".join(train_dataset_names)
 
         # Name of the model
-        model_name = torch.load(
-            os.path.join(exp_dir, "train", "checkpoints", "model_best.pt")
-        )["model_name"]
+        model_name = torch.load(os.path.join(exp_dir, "train", "checkpoints", "model_best.pt"))[
+            "model_name"
+        ]
         tmp_df["model_name"] = model_name
 
         # Append to dataframe
@@ -1689,13 +1558,11 @@ def plot_experiment_loss_per_dataset(
             )
         except Exception as e:
             logger.info(
-                "Failed to fit linear regression (log-log scale) for dataset {}".format(
-                    dataset
-                )
+                "Failed to fit linear regression (log-log scale) for dataset {}".format(dataset)
             )
             logger.error(f"The error that occurred: {e}")
             # # This will print the full traceback
-            # logger.error(traceback.format_exc())  
+            # logger.error(traceback.format_exc())
             # Logging just the exception type and message
             err_msg = f"{e.__class__.__name__}: {e}"
             logger.error(err_msg)

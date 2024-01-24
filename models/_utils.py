@@ -974,15 +974,13 @@ class Model(torch.nn.Module):
         input: torch.Tensor,
         mask: torch.Tensor,
         num_new_timesteps: int,
-        autoregressive: bool = True,
         context_window: int = BLOCK_SIZE,
     ):
         """
         Generate future neural activity from the model. Take a conditioning sequence of
         neural data input with shape (batch_size, seq_len, input_size) and completes the
-        sequence num_new_timesteps times. In autoregressive mode, predictions are fed back
-        into the model after each generation step. Otherwise the ground-truth data is fed
-        back to the model after each generation step.
+        sequence num_new_timesteps times. Generations are made autoregressively where the 
+        predictions are fed back into the model after each generation step. 
 
         Parameters
         ----------
@@ -992,8 +990,6 @@ class Model(torch.nn.Module):
             Mask on the neurons with shape (batch_size, neurons)
         num_new_timesteps : int
             Number of time steps to generate
-        autoregressive : bool
-            Whether to generate values autoregressively or not
         context_window : int
             Number of time steps to use as context
 
@@ -1006,13 +1002,13 @@ class Model(torch.nn.Module):
         """
         # Route to the appropriate generate method
         if self.version_2:
-            return self.generate_v2(input, mask, num_new_timesteps, autoregressive, context_window)
+            return self.generate_v2(input, mask, num_new_timesteps, context_window)
         # Set model to evaluation mode
         self.eval()
         # Initialize the context sequence
         input_cond = input  # (batch_size, seq_len, input_size)
         # Loop through time
-        for t in range(num_new_timesteps):
+        for _ in range(num_new_timesteps):
             # If the sequence context is growing too long we must crop it
             input_cond = input_cond[:, -context_window:, :]  # (batch_size, context_window, neurons)
             # Forward the model to get the predictions
@@ -1023,10 +1019,7 @@ class Model(torch.nn.Module):
             # The current clamping is just a quick fix to prevent exploding values.
             input_next = torch.clamp(input_next, min=input_cond.min(), max=input_cond.max())
             # Append the prediction to the the running sequence and continue
-            if autoregressive:  # if generating values autoregressively
-                input_cond = torch.cat((input_cond, input_next), dim=1)
-            else:  # otherwise defaults to ground-truth feeding
-                input_cond = torch.cat((input, input_next), dim=1)
+            input_cond = torch.cat((input_cond, input_next), dim=1) # generating values autoregressively
         # Get only the newly generated time steps
         generated_values = (
             input_cond[:, -num_new_timesteps:, :].detach().clone()
@@ -1041,7 +1034,6 @@ class Model(torch.nn.Module):
         input: torch.Tensor,
         mask: torch.Tensor,
         num_new_timesteps: int,
-        autoregressive: bool = True,
         context_window: int = BLOCK_SIZE,
         temperature=1.0,
         top_k: Union[int, None] = None,
@@ -1083,10 +1075,7 @@ class Model(torch.nn.Module):
                 batch_size, 1, input_size
             )  # (batch_size, 1, input_size)
             # Append sampled data to the running sequence and continue
-            if autoregressive:  # if generating values autoregressively
-                input_cond = torch.cat((input_cond, input_next), dim=1)
-            else:  # otherwise defaults to ground-truth feeding
-                input_cond = torch.cat((input, input_next), dim=1)
+        input_cond = torch.cat((input_cond, input_next), dim=1)  # generating values autoregressively
         # Get only the newly generated time steps
         generated_values = (
             input_cond[:, -num_new_timesteps:, :].detach().clone()
@@ -1352,10 +1341,9 @@ class NeuralTransformer(Model):
             **kwargs,
         )
         # Special attention parameters
-        # self.num_heads = find_largest_divisor(
-        #     hidden_size
-        # )  # number of attention heads (NOTE: must be divisor of `hidden_size`)
-        self.num_heads = 2  # DEBUG
+        self.num_heads = find_largest_divisor(
+            hidden_size
+        )  # number of attention heads (NOTE: must be divisor of `hidden_size`)
         logger.info(f"Number of attention heads: {self.num_heads}.")
         self.dropout = 0.1  # dropout rate
         # Positional encoding (NOTE: must be after embedding)

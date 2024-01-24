@@ -81,17 +81,14 @@ def get_datasets(dataset_config: DictConfig, save=True):
                 "train_dataset_info.csv" in ds_files
             ), "train_dataset.pt exists but train_dataset_info.csv does not."
             logger.info(
-                "Loading provided train dataset from %s"
-                % dataset_config.use_these_datasets.path
+                "Loading provided train dataset from %s" % dataset_config.use_these_datasets.path
             )
             train_dataset_exists = True
             train_dataset = torch.load(
                 os.path.join(dataset_config.use_these_datasets.path, "train_dataset.pt")
             )
             dataset_info_train = pd.read_csv(
-                os.path.join(
-                    dataset_config.use_these_datasets.path, "train_dataset_info.csv"
-                ),
+                os.path.join(dataset_config.use_these_datasets.path, "train_dataset_info.csv"),
                 index_col=0,
                 converters={"neurons": ast.literal_eval},
             )
@@ -109,9 +106,7 @@ def get_datasets(dataset_config: DictConfig, save=True):
                 os.path.join(dataset_config.use_these_datasets.path, "val_dataset.pt")
             )
             dataset_info_val = pd.read_csv(
-                os.path.join(
-                    dataset_config.use_these_datasets.path, "val_dataset_info.csv"
-                ),
+                os.path.join(dataset_config.use_these_datasets.path, "val_dataset_info.csv"),
                 index_col=0,
                 converters={"neurons": ast.literal_eval},
             )
@@ -210,7 +205,7 @@ def get_datasets(dataset_config: DictConfig, save=True):
                         "combined_dataset_index",
                         "val_time_steps",
                         "num_val_samples",
-                        "train_seq_len",
+                        "val_seq_len",
                         "val_split_idx",
                         "smooth_data",
                         "use_residual",
@@ -243,12 +238,8 @@ def get_datasets(dataset_config: DictConfig, save=True):
             )
 
             if save:
-                torch.save(
-                    train_dataset, os.path.join(log_dir, "dataset", f"train_dataset.pt")
-                )
-                torch.save(
-                    val_dataset, os.path.join(log_dir, "dataset", f"val_dataset.pt")
-                )
+                torch.save(train_dataset, os.path.join(log_dir, "dataset", f"train_dataset.pt"))
+                torch.save(val_dataset, os.path.join(log_dir, "dataset", f"val_dataset.pt"))
 
             return train_dataset, val_dataset
 
@@ -328,13 +319,9 @@ def get_datasets(dataset_config: DictConfig, save=True):
             header=True,
         )
         if save:
-            torch.save(
-                train_dataset, os.path.join(log_dir, "dataset", f"train_dataset.pt")
-            )
+            torch.save(train_dataset, os.path.join(log_dir, "dataset", f"train_dataset.pt"))
             torch.save(val_dataset, os.path.join(log_dir, "dataset", f"val_dataset.pt"))
-            with open(
-                os.path.join(log_dir, "dataset", f"combined_dataset.pickle"), "wb"
-            ) as f:
+            with open(os.path.join(log_dir, "dataset", f"combined_dataset.pickle"), "wb") as f:
                 pickle.dump(combined_dataset, f)
 
         return train_dataset, val_dataset

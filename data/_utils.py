@@ -175,15 +175,13 @@ class NeuralActivityDataset(torch.utils.data.Dataset):
         assert data.ndim == 2, "Reshape the data tensor as (time, neurons)"
         assert isinstance(seq_len, int) and 0 < seq_len <= data.size(
             0
-        ), "Enter an integer sequence length such that 0 < `seq_len` <= `data.shape[0]`."
+        ), f"Enter an integer sequence length such that 0 < `seq_len` <= {data.size(0)}."
 
         # Create time vector if not provided
-        assert torch.is_tensor(
-            time_vec
-        ), "Recast the time vector as type `torch.tensor`."
+        assert torch.is_tensor(time_vec), "Recast the time vector as type `torch.tensor`."
         assert time_vec.squeeze().ndim == 1 and len(time_vec) == data.size(
             0
-        ), "Time vector must be the same length as `data.shape[0]`."
+        ), f"Time vector must be the same length as {data.size(0)}."
         self.time_vec = time_vec.squeeze()
 
         self.max_timesteps, self.num_neurons = data.shape
@@ -349,9 +347,7 @@ class CElegansConnectome(InMemoryDataset):
                 object and returns a boolean value, indicating whether the data object should
                 be included in the final dataset. (default: None)
         """
-        super(CElegansConnectome, self).__init__(
-            root, transform, pre_transform, pre_filter
-        )
+        super(CElegansConnectome, self).__init__(root, transform, pre_transform, pre_filter)
         self.data, self.slices = torch.load(self.processed_paths[-1])
 
     @property
@@ -383,9 +379,7 @@ class CElegansConnectome(InMemoryDataset):
         url = RAW_DATA_URL  # base url
         filename = os.path.join("raw_data.zip")
         folder = os.path.join(self.raw_dir)
-        download_url(
-            url=url, folder=os.getcwd(), filename=filename
-        )  # download zip file
+        download_url(url=url, folder=os.getcwd(), filename=filename)  # download zip file
         extract_zip(filename, folder=folder)  # unzip data into raw directory
         os.unlink(filename)  # remove zip file
 
@@ -399,9 +393,7 @@ class CElegansConnectome(InMemoryDataset):
         # create a simple dict for loading the connectome
         if not os.path.exists(data_path):  # fun fast preprocess
             subprocess.run("python -u ../preprocess/_main.py", text=True)
-        assert os.path.exists(
-            data_path
-        ), "Must first call `python -u preprocess/_main.py`"
+        assert os.path.exists(data_path), "Must first call `python -u preprocess/_main.py`"
         graph_tensors = torch.load(data_path)
         # make the graph
         connectome = Data(**graph_tensors)
@@ -636,12 +628,10 @@ def select_named_neurons(multi_worm_dataset, num_named_neurons):
 
             # Invert new mappings
             named_neuron_to_slot = {
-                named_neuron: slot
-                for slot, named_neuron in slot_to_named_neuron.items()
+                named_neuron: slot for slot, named_neuron in slot_to_named_neuron.items()
             }
             unknown_neuron_to_slot = {
-                unknown_neuron: slot
-                for slot, unknown_neuron in slot_to_unknown_neuron.items()
+                unknown_neuron: slot for slot, unknown_neuron in slot_to_unknown_neuron.items()
             }
 
             # Update the dataset
@@ -771,17 +761,12 @@ def create_combined_dataset(
         multi_worms_dataset = select_desired_worms(multi_worms_dataset, worms)
 
         # Select the `num_named_neurons` neurons and overwrite the masks
-        multi_worms_dataset = select_named_neurons(
-            multi_worms_dataset, num_named_neurons
-        )
+        multi_worms_dataset = select_named_neurons(multi_worms_dataset, num_named_neurons)
 
         # Add the worms from this dataset to the combined dataset
         for worm in multi_worms_dataset:
             if worm in combined_dataset:
-                worm_ = (
-                    max([int(key.split("worm")[-1]) for key in combined_dataset.keys()])
-                    + 1
-                )
+                worm_ = max([int(key.split("worm")[-1]) for key in combined_dataset.keys()]) + 1
                 worm_ = "worm" + str(worm_)
                 combined_dataset[worm_] = multi_worms_dataset[worm]
                 combined_dataset[worm_]["worm"] = worm_
@@ -851,9 +836,7 @@ def generate_subsets_of_size(
         # Create a subset dataset with the selected worm IDs
         if as_assignment:
             # count up the number of worms from each dataset
-            dataset_list = [
-                combined_dataset[worm_id]["dataset"] for worm_id in worm_subset
-            ]
+            dataset_list = [combined_dataset[worm_id]["dataset"] for worm_id in worm_subset]
             # create mapping of dataset name to number of worms
             subset_dataset = dict()
             for dataset in dataset_list:
@@ -863,9 +846,7 @@ def generate_subsets_of_size(
                     subset_dataset[dataset] += 1
         else:
             # create mapping of wormID to data
-            subset_dataset = {
-                worm_id: combined_dataset[worm_id] for worm_id in worm_subset
-            }
+            subset_dataset = {worm_id: combined_dataset[worm_id] for worm_id in worm_subset}
         # Add this subset dataset to the growing list of all subsets
         subset_datasets.append(subset_dataset)
         # Stop if we have generated `max_subsets` number of subsets
@@ -1036,26 +1017,13 @@ def split_combined_dataset(
             if train_split_first
             else int((1 - train_split_ratio) * len(data))
         )
-
-        # Verifications
         assert (
             isinstance(seq_len, int) and 0 < seq_len < split_idx
-        ), "seq_len must be an integer > 0 and < floor(train_split_ratio * len(data))"
+        ), f"seq_len must be an integer > 0 and < {np.floor(train_split_ratio * len(data))}"
 
         # Split the data and the time vector into two sections
         data_splits = np.array_split(data, indices_or_sections=[split_idx], axis=0)
-        time_vec_splits = np.array_split(
-            time_vec, indices_or_sections=[split_idx], axis=0
-        )
-
-        # ### DEBUG ###
-        # logger.info(
-        #     f"DEBUG data_splits: {type(data_splits), len(data_splits), type(data_splits[0]), len(data_splits[0])}"
-        # )  # DEBUG
-        # logger.info(
-        #     f"DEBUG time_vec_splits: {type(time_vec_splits), len(time_vec_splits), type(time_vec_splits[0]), len(time_vec_splits[0])}"
-        # )  # DEBUG
-        # ### DEBUG ###
+        time_vec_splits = np.array_split(time_vec, indices_or_sections=[split_idx], axis=0)
 
         # Separate the splits into training and validation sets
         if train_split_first:
@@ -1072,31 +1040,11 @@ def split_combined_dataset(
             )
 
         # Number of samples in each split
-        train_samples_per_split = distribute_samples(
-            train_data_splits, num_train_samples
-        )
+        train_samples_per_split = distribute_samples(train_data_splits, num_train_samples)
         val_samples_per_split = distribute_samples(val_data_splits, num_val_samples)
-
-        ### DEBUG ###
-        # logger.info(
-        #     f"DEBUG train_samples_per_split: {train_samples_per_split}\tnum_train_samples: {num_train_samples}"
-        # )  # DEBUG
-        # logger.info(
-        #     f"DEBUG val_samples_per_split: {val_samples_per_split}\tnum_val_samples: {num_val_samples}"
-        # )  # DEBUG
-        ### DEBUG ###
 
         # Number of unique time steps across all samples for each worm and each split
         train_split_time_steps, val_split_time_steps = 0, 0
-
-        # ### DEBUG ###
-        # train_packet = list(
-        #     zip(train_data_splits, train_time_vec_splits, train_samples_per_split)
-        # )  # DEBUG
-        # logger.info(
-        #     f"train_packet: {type(train_packet), len(train_packet), type(train_packet[0]), len(train_packet[0])}"
-        # )  # DEBUG
-        # ### DEBUG ###
 
         # Create a dataset for each split
         for train_split, train_time_split, num_samples_split in zip(
@@ -1191,9 +1139,7 @@ def graph_inject_data(single_worm_dataset, connectome_graph):
     assert max_timesteps == single_worm_dataset["max_timesteps"]
     assert num_neurons == single_worm_dataset["num_neurons"]
     print("How much real data do we have?", dataset.shape)  # (time, neurons)
-    print(
-        "Current data on connectome graph:", graph.x.cpu().numpy().shape
-    )  # (neurons, time)
+    print("Current data on connectome graph:", graph.x.cpu().numpy().shape)  # (neurons, time)
     # find the graph nodes matching the neurons in the dataset
     neuron_id = single_worm_dataset["neuron_id"]
     id_neuron = dict((v, k) for k, v in id_neuron.items())
@@ -1224,9 +1170,7 @@ def graph_inject_data(single_worm_dataset, connectome_graph):
     # extract out the subgraph
     subgraph = graph.subgraph(subgraph_mask)
     # reset neuron indices for labeling
-    subgraph.id_neuron = {
-        i: graph.id_neuron[k] for i, k in enumerate(subgraph.n_id.cpu().numpy())
-    }
+    subgraph.id_neuron = {i: graph.id_neuron[k] for i, k in enumerate(subgraph.n_id.cpu().numpy())}
     subgraph.pos = {i: graph.pos[k] for i, k in enumerate(subgraph.n_id.cpu().numpy())}
     # check out the new attributes
     print(

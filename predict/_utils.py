@@ -38,14 +38,10 @@ def model_predict(
     seq_len = int(train_dataset_info["train_seq_len"].values[0])
     use_residual = int(train_dataset_info["use_residual"].values[0])
     smooth_data = int(train_dataset_info["smooth_data"].values[0])
+    train_split_first = int(train_dataset_info["train_split_first"].values[0])
+    train_split_ratio = float(train_dataset_info["train_split_ratio"].values[0])
     key_data = "residual_calcium" if use_residual else "calcium_data"
     key_data = "smooth_" + key_data if smooth_data else key_data
-
-    assert (
-        context_window <= seq_len
-    ), "The context window must be smaller than the sequence length (model was trained with seq_len = {}).".format(
-        seq_len
-    )
 
     # Load dataset with
     combined_dataset, dataset_info = create_combined_dataset(
@@ -57,59 +53,52 @@ def model_predict(
     model = model.to(DEVICE)
 
     # Iterate over combined datasets (same process as in split_combined_dataset in data/_utils.py)
-    for wormID, single_worm_dataset in combined_dataset.items():
+    for _, single_worm_dataset in combined_dataset.items():
         # Extract relevant features from the dataset
         data = single_worm_dataset[key_data]
         neurons_mask = single_worm_dataset["named_neurons_mask"]
-        time_vec = single_worm_dataset["time_in_seconds"]
         worm_dataset = single_worm_dataset["dataset"]
         original_wormID = single_worm_dataset["original_worm"]
 
         # Query and save the named neurons to plot predictions afterwards
         neurons = dataset_info.query(
-            'dataset == "{}" and original_index == "{}"'.format(
-                worm_dataset, original_wormID
-            )
+            'dataset == "{}" and original_index == "{}"'.format(worm_dataset, original_wormID)
         )["neurons"].iloc[0]
         # Now create the DataFrame
         neuron_df = pd.DataFrame({"named_neurons": neurons})
 
-        # Split the data and the time vector into two halves
-        data_splits = np.array_split(data, 2)
-        time_vec_splits = np.array_split(time_vec, 2)
+        # The index where to split the data
+        split_idx = (
+            int(train_split_ratio * len(data))
+            if train_split_first
+            else int((1 - train_split_ratio) * len(data))
+        )
+        assert (
+            isinstance(seq_len, int) and 0 < seq_len < split_idx
+        ), f"seq_len must be an integer > 0 and < {np.floor(train_split_ratio * len(data))}"
 
-        ### TRAIN ###
-        # Get the train split (first half of neural activity)
-        train_data_splits = data_splits[::2]
-        train_time_vec_splits = time_vec_splits[::2]
-        num_new_timesteps = 2 * context_window
-        # Predictions (GT and AR) using the first TRAIN split
-        gt_generated_activity_train = (
-            model.generate(
-                input=train_data_splits[0].unsqueeze(0).to(DEVICE),
-                mask=neurons_mask.unsqueeze(0).to(DEVICE),
-                num_new_timesteps=num_new_timesteps,
-                autoregressive=False,
-                context_window=context_window,
-            )
-            .squeeze(0)
-            .detach()
-            .cpu()
-            .numpy()
-        )  # ground-truth feeding
+        # Split the data and the time vector into two sections
+        data_splits = np.array_split(data, indices_or_sections=[split_idx], axis=0)
+
+        # Separate the splits into training and validation sets
+        if train_split_first:
+            train_data_splits, val_data_splits = data_splits[::2], data_splits[1::2]
+        else:
+            train_data_splits, val_data_splits = data_splits[1::2], data_splits[::2]
+
+        # Predictions using the first train split
         auto_reg_generated_activity_train = (
             model.generate(
                 input=train_data_splits[0].unsqueeze(0).to(DEVICE),
                 mask=neurons_mask.unsqueeze(0).to(DEVICE),
-                num_new_timesteps=num_new_timesteps,
-                autoregressive=True,
+                num_new_timesteps=context_window,
                 context_window=context_window,
             )
             .squeeze(0)
             .detach()
             .cpu()
             .numpy()
-        )  # autorregressive generation
+        )  # autoregressive generation
         # Create directories for saving results
         os.makedirs(
             os.path.join(log_dir, "prediction", "train", worm_dataset), exist_ok=True
@@ -122,8 +111,7 @@ def model_predict(
         result_df = prediction_dataframe_parser(
             x=train_data_splits[0],
             context_window=context_window,
-            num_new_timesteps=num_new_timesteps,
-            gt_generated_activity=gt_generated_activity_train,
+            num_new_timesteps=context_window,
             auto_reg_generated_activity=auto_reg_generated_activity_train,
         )
         result_df.to_csv(
@@ -147,31 +135,12 @@ def model_predict(
             )
         )
 
-        ### VALIDATION ###
-        # Get the validation split (second half of neural activity)
-        val_data_splits = data_splits[1::2]
-        val_time_vec_splits = time_vec_splits[1::2]
-        num_new_timesteps = 2 * context_window
-        # Predictions (GT and AR) using the first VALIDATION split
-        gt_generated_activity_val = (
-            model.generate(
-                input=val_data_splits[0].unsqueeze(0).to(DEVICE),
-                mask=neurons_mask.unsqueeze(0).to(DEVICE),
-                num_new_timesteps=num_new_timesteps,
-                autoregressive=False,
-                context_window=context_window,
-            )
-            .squeeze(0)
-            .detach()
-            .cpu()
-            .numpy()
-        )  # ground-truth feeding
+        # Predictions using the first validation split
         auto_reg_generated_activity_val = (
             model.generate(
                 input=val_data_splits[0].unsqueeze(0).to(DEVICE),
                 mask=neurons_mask.unsqueeze(0).to(DEVICE),
-                num_new_timesteps=num_new_timesteps,
-                autoregressive=True,
+                num_new_timesteps=context_window,
                 context_window=context_window,
             )
             .squeeze(0)
@@ -191,8 +160,7 @@ def model_predict(
         result_df = prediction_dataframe_parser(
             x=val_data_splits[0],
             context_window=context_window,
-            num_new_timesteps=num_new_timesteps,
-            gt_generated_activity=gt_generated_activity_val,
+            num_new_timesteps=context_window,
             auto_reg_generated_activity=auto_reg_generated_activity_val,
         )
         result_df.to_csv(
@@ -221,12 +189,9 @@ def prediction_dataframe_parser(
     x,
     context_window,
     num_new_timesteps,
-    gt_generated_activity,
     auto_reg_generated_activity,
 ):
-    context_activity = (
-        x[: context_window + 1, :].detach().cpu().numpy()
-    )  # +1 for plot continuity
+    context_activity = x[: context_window + 1, :].detach().cpu().numpy()  # +1 for plot continuity
     ground_truth_activity = (
         x[context_window : context_window + num_new_timesteps, :].detach().cpu().numpy()
     )
@@ -240,18 +205,12 @@ def prediction_dataframe_parser(
     df_ground_truth["Type"] = "Ground Truth"
     df_ground_truth.set_index("Type", append=True, inplace=True)
 
-    df_gt_generated = pd.DataFrame(gt_generated_activity, columns=NEURONS_302)
-    df_gt_generated["Type"] = "GT Generation"
-    df_gt_generated.set_index("Type", append=True, inplace=True)
-
     df_ar_generated = pd.DataFrame(auto_reg_generated_activity, columns=NEURONS_302)
     df_ar_generated["Type"] = "AR Generation"
     df_ar_generated.set_index("Type", append=True, inplace=True)
 
     # Concatenate the DataFrames
-    result_df = pd.concat(
-        [df_context, df_ground_truth, df_gt_generated, df_ar_generated]
-    )
+    result_df = pd.concat([df_context, df_ground_truth, df_ar_generated])
     result_df = result_df.reorder_levels(["Type", None]).sort_index()
 
     return result_df

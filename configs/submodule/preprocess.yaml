@@ -6,7 +6,8 @@ preprocess:
   resample_dt: 1.0 # The time interval (in seconds) to resample the neural activity at; if null, no resampling is performed
   interpolate: linear # The method to use for interpolation; options: null, linear, quadratic, cubic
   smooth: 
-    method: ES # null: No smoothing, # GA: Gaussian kernel filter, # ES: Exponential kernel filter, # MA: Moving average filter
+    # NOTE: Smoothing is done using a causal filter. Smoothing is applied before resampling.
+    method: null # null: No smoothing, # GA: Gaussian kernel filter, # ES: Exponential kernel filter, # MA: Moving average filter
     # hyperparameters of the different smoothing methods
     alpha: 0.1 # ES; smaller alpha = smoother
     sigma: 5 # GA; larger sigma = smoother
