@@ -405,20 +405,19 @@ def plot_predictions(log_dir, neurons_to_plot=None, worms_to_plot=None):
                     # Get only the requested neuron
                     neurons = [neuron for neuron in neurons if neuron == neurons_to_plot]
 
-                # Get the time vectors
+                # Create a time steps vectors
                 generate_window = len(
                     pd.concat([df.loc["Context"], df.loc["AR Generation"]], axis=0)
                 )
-                time_vector = np.arange(generate_window)
+                time = np.arange(generate_window)
+                time_ar = time[len(df.loc["Context"]) :]
+                time_ctxt = time[: len(df.loc["Context"])]
 
-                time_context = time_vector[: len(df.loc["Context"])]
-                time_ar_generated = time_vector[len(df.loc["Context"]) - 1 : -1]
-
+                # Choose the color palette
                 sns.set_style("whitegrid")
-
                 palette = sns.color_palette("tab10")
-                gt_color = palette[0]  # Blue
-                ar_generation_color = palette[2]  # green (autoregressive next time step prediction)
+                gt_color = palette[0]  # blue
+                ar_generation_color = palette[2]  # green 
 
                 # Metadata textbox
                 metadata_text = "Dataset: {}\nWorm ID: {}".format(ds_name, wormID)
@@ -427,14 +426,14 @@ def plot_predictions(log_dir, neurons_to_plot=None, worms_to_plot=None):
                     fig, ax = plt.subplots(figsize=(10, 4))
 
                     ax.plot(
-                        time_context,
-                        df.loc["Context", neuron],
+                        time,
+                        df.loc["Ground Truth", neuron],
                         color=gt_color,
                         label="Ground truth",
                     )
 
                     ax.plot(
-                        time_ar_generated,
+                        time_ar,
                         df.loc["AR Generation", neuron],
                         alpha=0.5,
                         color=ar_generation_color,
@@ -443,8 +442,8 @@ def plot_predictions(log_dir, neurons_to_plot=None, worms_to_plot=None):
 
                     # Fill the context window
                     ax.axvspan(
-                        time_context[0],
-                        time_context[-1],
+                        time_ctxt[0],
+                        time_ctxt[-1],
                         alpha=0.1,
                         color=gt_color,
                         label="Initial context window",
@@ -495,7 +494,7 @@ def plot_predictions(log_dir, neurons_to_plot=None, worms_to_plot=None):
                     plt.close()
 
 
-def plot_pca_trajectory(log_dir, worms_to_plot=None, plot_type="3D"):
+def plot_pca_trajectory(log_dir, worms_to_plot=None):
     for type_ds in os.listdir(os.path.join(log_dir, "prediction")):
         for ds_name in os.listdir(os.path.join(log_dir, "prediction", type_ds)):
             # Get the list of worms
@@ -520,7 +519,6 @@ def plot_pca_trajectory(log_dir, worms_to_plot=None, plot_type="3D"):
                 neurons_url = os.path.join(
                     log_dir, "prediction", type_ds, ds_name, wormID, "named_neurons.csv"
                 )
-
                 df = pd.read_csv(url)
 
                 # Get the named neurons
@@ -536,168 +534,83 @@ def plot_pca_trajectory(log_dir, worms_to_plot=None, plot_type="3D"):
 
                 # Split data by Type
                 ar_gen_data = df[df["Type"] == "AR Generation"].drop(columns=["Type", "Unnamed: 1"])
-                ar_gen_data = ar_gen_data[neurons]  # Filter only named neurons
+                ar_gen_data = ar_gen_data[neurons]  # filter only named neurons
 
                 ground_truth_data = df[df["Type"] == "Ground Truth"].drop(
                     columns=["Type", "Unnamed: 1"]
                 )
-                ground_truth_data = ground_truth_data[neurons]  # Filter only named neurons
+                ground_truth_data = ground_truth_data[neurons]  # filter only named neurons
 
                 try:
-                    # Concantentate and standardize the data
-                    all_data = pd.concat([ar_gen_data, ground_truth_data])
-                    scaler = StandardScaler()
-                    standardized_data = scaler.fit_transform(all_data)
+                    # Fit PCA only on the ground-truth data
+                    pca = PCA(n_components=2)
+                    pca.fit(ground_truth_data)
 
-                    # Apply PCA
-                    if plot_type == "2D":
-                        pca = PCA(n_components=2)
-                    else:
-                        pca = PCA(n_components=3)
-                    reduced_data = pca.fit_transform(standardized_data)
+                    # Apply the fitted PCA to both the ground-truth and autoregressive data
+                    reduced_ground_truth_data = pca.transform(ground_truth_data)
+                    reduced_ar_gen_data = pca.transform(ar_gen_data)
 
-                    # Plot
-                    if plot_type == "2D":
-                        plt.figure(figsize=(8, 7))
+                    # Plot 2D PCA trajectories
+                    plt.figure(figsize=(8, 7))
 
-                        plt.plot(
-                            reduced_data[: len(ar_gen_data), 0],
-                            reduced_data[: len(ar_gen_data), 1],
-                            alpha=0.5,
-                            color=ar_generation_color,
-                            label="Autoregressive",
-                            linestyle="-",
-                            marker="o",
-                        )
-                        plt.plot(
-                            reduced_data[
-                                len(ar_gen_data) : len(ar_gen_data) + len(ground_truth_data),
-                                0,
-                            ],
-                            reduced_data[
-                                len(ar_gen_data) : len(ar_gen_data) + len(ground_truth_data),
-                                1,
-                            ],
-                            color=gt_color,
-                            label="Ground Truth",
-                            linestyle="-",
-                            marker="o",
-                        )
+                    plt.plot(
+                        reduced_ar_gen_data[:, 0],
+                        reduced_ar_gen_data[:, 1],
+                        alpha=0.5,
+                        color=ar_generation_color,
+                        label="Autoregressive",
+                        linestyle="-",
+                        marker="o",
+                    )
+                    plt.plot(
+                        reduced_ground_truth_data[:, 0],
+                        reduced_ground_truth_data[:, 1],
+                        color=gt_color,
+                        label="Ground Truth",
+                        linestyle="-",
+                        marker="o",
+                    )
 
-                        # Mark starting points with black stars
-                        plt.scatter(
-                            reduced_data[0, 0],
-                            reduced_data[0, 1],
-                            color="black",
-                            marker="*",
-                            s=50,
-                        )
-                        plt.scatter(
-                            reduced_data[len(ar_gen_data), 0],
-                            reduced_data[len(ar_gen_data), 1],
-                            color="black",
-                            marker="*",
-                            s=50,
-                        )
+                    # Mark start point with black star
+                    plt.scatter(
+                        reduced_ground_truth_data[0, 0],
+                        reduced_ground_truth_data[0, 1],
+                        color="black",
+                        marker="*",
+                        s=50,
+                    )
+                    # Mark end points with black triangle
+                    plt.scatter(
+                        reduced_ar_gen_data[-1, 0],
+                        reduced_ar_gen_data[-1, 1],
+                        color="black",
+                        marker="^",
+                        s=50,
+                    )
 
-                        plt.xlabel("Principal Component 1")
-                        plt.ylabel("Principal Component 2")
+                    plt.xlabel("Principal Component 1")
+                    plt.ylabel("Principal Component 2")
 
-                        # Text box with PCA explained variance
-                        textstr = "\n".join(
-                            (
-                                r"$PC_1=%.2f$" % (pca.explained_variance_ratio_[0],),
-                                r"$PC_2=%.2f$" % (pca.explained_variance_ratio_[1],),
-                            )
+                    # Text box with PCA explained variance
+                    textstr = "\n".join(
+                        (
+                            r"$PC_1=%.2f$" % (pca.explained_variance_ratio_[0],),
+                            r"$PC_2=%.2f$" % (pca.explained_variance_ratio_[1],),
                         )
-                        props = dict(boxstyle="round", facecolor="white", alpha=0.5)
-                        plt.text(
-                            0.05,
-                            0.95,
-                            textstr,
-                            transform=plt.gca().transAxes,
-                            fontsize=14,
-                            verticalalignment="top",
-                            bbox=props,
-                        )
-
-                    else:
-                        fig = plt.figure(figsize=(8, 7))
-                        ax = fig.add_subplot(111, projection="3d")
-
-                        ax.plot(
-                            reduced_data[: len(ar_gen_data), 0],
-                            reduced_data[: len(ar_gen_data), 1],
-                            reduced_data[: len(ar_gen_data), 2],
-                            alpha=0.5,
-                            color=ar_generation_color,
-                            label="Autoregressive",
-                            linestyle="-",
-                            marker="o",
-                        )
-                        ax.plot(
-                            reduced_data[
-                                len(ar_gen_data) : len(ar_gen_data) + len(ground_truth_data),
-                                0,
-                            ],
-                            reduced_data[
-                                len(ar_gen_data) : len(ar_gen_data) + len(ground_truth_data),
-                                1,
-                            ],
-                            reduced_data[
-                                len(ar_gen_data) : len(ar_gen_data) + len(ground_truth_data),
-                                2,
-                            ],
-                            color=gt_color,
-                            label="Ground Truth",
-                            linestyle="-",
-                            marker="o",
-                        )
-
-                        # Mark starting points with black stars
-                        ax.scatter(
-                            reduced_data[0, 0],
-                            reduced_data[0, 1],
-                            reduced_data[0, 2],
-                            color="black",
-                            marker="*",
-                            s=50,
-                        )
-                        ax.scatter(
-                            reduced_data[len(ar_gen_data), 0],
-                            reduced_data[len(ar_gen_data), 1],
-                            reduced_data[len(ar_gen_data), 2],
-                            color="black",
-                            marker="*",
-                            s=50,
-                        )
-
-                        ax.set_xlabel("Principal Component 1")
-                        ax.set_ylabel("Principal Component 2")
-                        ax.set_zlabel("Principal Component 3")
-
-                        # Text box with PCA explained variance
-                        textstr = "\n".join(
-                            (
-                                r"$PC_1=%.2f$" % (pca.explained_variance_ratio_[0],),
-                                r"$PC_2=%.2f$" % (pca.explained_variance_ratio_[1],),
-                                r"$PC_3=%.2f$" % (pca.explained_variance_ratio_[2],),
-                            )
-                        )
-                        props = dict(boxstyle="round", facecolor="white", alpha=0.5)
-                        ax.text(
-                            0.0,
-                            0.0,
-                            0.0,
-                            textstr,
-                            transform=ax.transAxes,
-                            fontsize=14,
-                            verticalalignment="bottom",
-                            bbox=props,
-                        )
+                    )
+                    props = dict(boxstyle="round", facecolor="white", alpha=0.5)
+                    plt.text(
+                        0.05,
+                        0.95,
+                        textstr,
+                        transform=plt.gca().transAxes,
+                        fontsize=14,
+                        verticalalignment="top",
+                        bbox=props,
+                    )
 
                     plt.legend()
-                    plt.title(f"PCA Trajectories of Predictions in {plot_type}")
+                    plt.title(f"PCA Trajectories of Predictions in 2D")
                     plt.tight_layout()
 
                     # Make figure directory
@@ -715,7 +628,7 @@ def plot_pca_trajectory(log_dir, worms_to_plot=None, plot_type="3D"):
                             ds_name,
                             wormID,
                             "pca",
-                            f"pca_{plot_type}.png",
+                            f"pca_2D.png",
                         ),
                         dpi=300,
                     )
@@ -723,13 +636,12 @@ def plot_pca_trajectory(log_dir, worms_to_plot=None, plot_type="3D"):
 
                 except Exception as e:
                     logger.info(
-                        f"PCA plot failed for {plot_type} in {type_ds} dataset (check if num_named_neurons >= 3)"
+                        f"PCA 2D plot failed for {type_ds} dataset (check if num_named_neurons >= 3)"
                     )
                     logger.error(f"The error that occurred: {e}")
-                    # # This will print the full traceback
-                    # logger.error(traceback.format_exc())
-                    # Logging just the exception type and message
-                    err_msg = f"{e.__class__.__name__}: {e}"
+                    err_msg = (
+                        f"{e.__class__.__name__}: {e}"  # logs just the exception type and message
+                    )
                     logger.error(err_msg)
                     pass
 

@@ -979,8 +979,8 @@ class Model(torch.nn.Module):
         """
         Generate future neural activity from the model. Take a conditioning sequence of
         neural data input with shape (batch_size, seq_len, input_size) and completes the
-        sequence num_new_timesteps times. Generations are made autoregressively where the 
-        predictions are fed back into the model after each generation step. 
+        sequence num_new_timesteps times. Generations are made autoregressively where the
+        predictions are fed back into the model after each generation step.
 
         Parameters
         ----------
@@ -1005,12 +1005,14 @@ class Model(torch.nn.Module):
             return self.generate_v2(input, mask, num_new_timesteps, context_window)
         # Set model to evaluation mode
         self.eval()
-        # Initialize the context sequence
-        input_cond = input  # (batch_size, seq_len, input_size)
+        # Detach and copy the input
+        input_copy = input.detach().clone()
         # Loop through time
         for _ in range(num_new_timesteps):
             # If the sequence context is growing too long we must crop it
-            input_cond = input_cond[:, -context_window:, :]  # (batch_size, context_window, neurons)
+            input_cond = input_copy[
+                :, -context_window:, :
+            ].detach()  # (batch_size, context_window, neurons)
             # Forward the model to get the predictions
             predictions = self(input_cond, mask)  # (batch_size, context_window, neurons)
             # Get the last predicted value
@@ -1019,11 +1021,13 @@ class Model(torch.nn.Module):
             # The current clamping is just a quick fix to prevent exploding values.
             input_next = torch.clamp(input_next, min=input_cond.min(), max=input_cond.max())
             # Append the prediction to the the running sequence and continue
-            input_cond = torch.cat((input_cond, input_next), dim=1) # generating values autoregressively
+            input_copy = torch.cat(
+                (input_copy, input_next), dim=1
+            )  # generating values autoregressively
         # Get only the newly generated time steps
-        generated_values = (
-            input_cond[:, -num_new_timesteps:, :].detach().clone()
-        )  # (batch_size, num_new_timesteps, input_size)
+        generated_values = input_copy[
+            :, -num_new_timesteps:, :
+        ].detach()  # (batch_size, num_new_timesteps, input_size)
         # Return the generations
         return generated_values
 
@@ -1048,16 +1052,18 @@ class Model(torch.nn.Module):
         """
         # Set model to evaluation mode
         self.eval()
+        # Detach and copy the input
+        input_copy = input.detach().clone()
         # Get input shapes
         batch_size, _, input_size = input.shape
-        # Initialize the context sequence
-        input_cond = input  # (batch_size, seq_len, input_size)
         # Loop through time
         for _ in range(num_new_timesteps):
             # If the sequence context is growing too long we must crop it
-            input_cond = input_cond[:, -context_window:, :]
+            input_cond = input_copy[
+                :, -context_window:, :
+            ]  # (batch_size, context_window, input_size)
             # Forward the model to get the output
-            output = self(input_cond, mask)  # (batch_size, seq_len, num_tokens)
+            output = self(input_cond, mask)  # (batch_size, context_window, num_tokens)
             # Pluck the logits at the final step and scale by desired temperature
             logits = output[:, -1, :] / temperature  # (batch_size, num_tokens)
             # Optionally crop the logits to only the top k options
@@ -1075,11 +1081,13 @@ class Model(torch.nn.Module):
                 batch_size, 1, input_size
             )  # (batch_size, 1, input_size)
             # Append sampled data to the running sequence and continue
-        input_cond = torch.cat((input_cond, input_next), dim=1)  # generating values autoregressively
+            input_copy = torch.cat(
+                (input_copy, input_next), dim=1
+            )  # generating values autoregressively
         # Get only the newly generated time steps
-        generated_values = (
-            input_cond[:, -num_new_timesteps:, :].detach().clone()
-        )  # (batch_size, num_new_timesteps, input_size)
+        generated_values = input_copy[
+            :, -num_new_timesteps:, :
+        ]  # (batch_size, num_new_timesteps, input_size)
         # Return the generations
         return generated_values
 

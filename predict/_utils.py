@@ -87,18 +87,17 @@ def model_predict(
             train_data_splits, val_data_splits = data_splits[1::2], data_splits[::2]
 
         # Predictions using the first train split
-        auto_reg_generated_activity_train = (
-            model.generate(
-                input=train_data_splits[0].unsqueeze(0).to(DEVICE),
-                mask=neurons_mask.unsqueeze(0).to(DEVICE),
-                num_new_timesteps=context_window,
-                context_window=context_window,
-            )
-            .squeeze(0)
-            .detach()
-            .cpu()
-            .numpy()
+        generated_activity_train = model.generate(  # seed with the first context_window time steps
+            # add batch dimesnions to input and mask
+            input=train_data_splits[0][:context_window].unsqueeze(0).to(DEVICE),
+            mask=neurons_mask.unsqueeze(0).to(DEVICE),
+            # generate as many time steps as the context_window
+            num_new_timesteps=context_window,
+            # context_window=context_window, # DEBUG
+        ).squeeze(
+            0
         )  # autoregressive generation
+
         # Create directories for saving results
         os.makedirs(
             os.path.join(log_dir, "prediction", "train", worm_dataset), exist_ok=True
@@ -110,9 +109,9 @@ def model_predict(
         # Save results in dataframes
         result_df = prediction_dataframe_parser(
             x=train_data_splits[0],
+            generated_activity=generated_activity_train,
             context_window=context_window,
             num_new_timesteps=context_window,
-            auto_reg_generated_activity=auto_reg_generated_activity_train,
         )
         result_df.to_csv(
             os.path.join(
@@ -136,18 +135,16 @@ def model_predict(
         )
 
         # Predictions using the first validation split
-        auto_reg_generated_activity_val = (
-            model.generate(
-                input=val_data_splits[0].unsqueeze(0).to(DEVICE),
-                mask=neurons_mask.unsqueeze(0).to(DEVICE),
-                num_new_timesteps=context_window,
-                context_window=context_window,
-            )
-            .squeeze(0)
-            .detach()
-            .cpu()
-            .numpy()
-        )  # autorregressive generation
+        generated_activity_val = model.generate(  # seed with the first context_window time steps
+            # add batch dimesnions to input and mask
+            input=val_data_splits[0][:context_window].unsqueeze(0).to(DEVICE),
+            mask=neurons_mask.unsqueeze(0).to(DEVICE),
+            # generate as many time steps as the context_window
+            num_new_timesteps=context_window,
+            # context_window=context_window, # DEBUG
+        ).squeeze(
+            0
+        )  # autoregressive generation
         # Save the results
         os.makedirs(
             os.path.join(log_dir, "prediction", "val", worm_dataset), exist_ok=True
@@ -159,9 +156,9 @@ def model_predict(
         # Save results in dataframes
         result_df = prediction_dataframe_parser(
             x=val_data_splits[0],
+            generated_activity=generated_activity_val,
             context_window=context_window,
             num_new_timesteps=context_window,
-            auto_reg_generated_activity=auto_reg_generated_activity_val,
         )
         result_df.to_csv(
             os.path.join(
@@ -187,14 +184,13 @@ def model_predict(
 
 def prediction_dataframe_parser(
     x,
+    generated_activity,
     context_window,
     num_new_timesteps,
-    auto_reg_generated_activity,
 ):
-    context_activity = x[: context_window + 1, :].detach().cpu().numpy()  # +1 for plot continuity
-    ground_truth_activity = (
-        x[context_window : context_window + num_new_timesteps, :].detach().cpu().numpy()
-    )
+    context_activity = x[:context_window].detach().cpu().numpy()
+    ground_truth_activity = x[: context_window + num_new_timesteps].detach().cpu().numpy()
+    generated_activity = generated_activity.detach().cpu().numpy()
 
     # Convert each tensor into a DataFrame and add type level
     df_context = pd.DataFrame(context_activity, columns=NEURONS_302)
@@ -205,7 +201,7 @@ def prediction_dataframe_parser(
     df_ground_truth["Type"] = "Ground Truth"
     df_ground_truth.set_index("Type", append=True, inplace=True)
 
-    df_ar_generated = pd.DataFrame(auto_reg_generated_activity, columns=NEURONS_302)
+    df_ar_generated = pd.DataFrame(generated_activity, columns=NEURONS_302)
     df_ar_generated["Type"] = "AR Generation"
     df_ar_generated.set_index("Type", append=True, inplace=True)
 

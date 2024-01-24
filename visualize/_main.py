@@ -41,15 +41,9 @@ def plot_figures(
                 neurons_to_plot=visualize_config.predict.neurons_to_plot,
                 worms_to_plot=visualize_config.predict.worms_to_plot,
             )
-            # plot_pca_trajectory(
-            #     log_dir=log_dir,
-            #     worms_to_plot=visualize_config.predict.worms_to_plot,
-            #     plot_type="3D",
-            # ) # DEBUG
             plot_pca_trajectory(
                 log_dir=log_dir,
                 worms_to_plot=visualize_config.predict.worms_to_plot,
-                plot_type="2D",
             )
 
         if submodule_dir == "analysis":
@@ -88,14 +82,10 @@ def plot_experiment(visualize_config: DictConfig, exp_config: DictConfig) -> Non
         os.makedirs(exp_plot_dir, exist_ok=True)
 
         # Get experiment key
-        pipeline_info_exp0 = OmegaConf.load(
-            os.path.join(exp_log_dir, "exp0", "pipeline_info.yaml")
-        )
+        pipeline_info_exp0 = OmegaConf.load(os.path.join(exp_log_dir, "exp0", "pipeline_info.yaml"))
         exp_key = pipeline_info_exp0.experiment.key
 
-        value, title, xaxis = experiment_parameter(
-            os.path.join(exp_log_dir, "exp0"), key=exp_key
-        )
+        value, title, xaxis = experiment_parameter(os.path.join(exp_log_dir, "exp0"), key=exp_key)
         if value is None:
             logger.info(
                 f"Experiment {exp_key} not found in {exp_log_dir}. Skipping experiment plots."
