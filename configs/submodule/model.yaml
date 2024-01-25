@@ -3,7 +3,7 @@ model:
   type: LinearRegression # options: NaivePredictor, LinearRegression, FeatureFFNN, NetworkLSTM, NetworkCTRNN, LiquidCfC, PureAttention, NeuralTransformer
   input_size: 302 # keep fixed at input_size = 302; it is the number of neurons in the adult C. elegans hermaphrodite 
   hidden_size: 256 # options: int > 0 (Note: not used by the LinearRegression model)
-  loss: MSE # options: MSE, MASE, Huber, L1, Poisson # TODO: Improve implementation of MASE.
+  loss: MSE # options: MSE, MASE, Huber, L1, Poisson # TODO: Improve and validate implementation of MASE.
   l1_reg_param: 0.0 # how much to regularize the loss by L1 norm of the model parameters; options: 0.0 <= float <= 1.0
   # version_2: true # whether to use version 2 of the models which tokenizes neural data; options: true, false # TODO
   use_this_pretrained_model: null # options: null, logs/hydra/<YYYY_MM_DD_HH_MM_SS>/train/checkpoints/<model.pt>

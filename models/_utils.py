@@ -14,6 +14,7 @@ class MASELoss(torch.nn.Module):
     Example usage:
     mase_loss = MASELoss(reduction='mean')
     loss = mase_loss(y_pred, target)
+    TODO: Improve and validate this implementation of the MASE loss.
     """
 
     def __init__(self, reduction="mean"):
