@@ -352,7 +352,9 @@ class SelfAttention(torch.nn.Module):
         )
         # Update the EMA of attention weights averaged across heads
         self.attn_weights *= self.decay  # scale existing values by decay factor
-        self.attn_weights += (1 - self.decay) * attn_output_weights  # update with scaled new means
+        self.attn_weights += (
+            1 - self.decay
+        ) * attn_output_weights.detach()  # update with scaled new means
         # Return attention output w/ shape (batch, seq_len, embed_dim)
         return attn_output
 

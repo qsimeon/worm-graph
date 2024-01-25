@@ -28,7 +28,7 @@ submodule:
   model:
     # Build model from scratch
     type: NetworkLSTM 
-    hidden_size: 232
+    hidden_size: 234
 
   train:
     # Train model
@@ -54,13 +54,13 @@ submodule:
       Leifer2023: null
 
     num_named_neurons: null
-    num_train_samples: 8
-    num_val_samples: 8
+    num_train_samples: 16
+    num_val_samples: 16
     # Set to the same value as submodule.predict.context_window
     seq_len: 100
     reverse: false
     use_residual: false
-    smooth_data: true
+    smooth_data: false
 
   predict:
     # Choose the worms that you want to predict
