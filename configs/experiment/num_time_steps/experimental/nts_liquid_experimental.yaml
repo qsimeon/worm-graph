@@ -30,8 +30,7 @@ submodule:
   model:
     # Build model from scratch
     type: LiquidCfC 
-    # NOTE: LiquidCfC is a shallow model (i.e. no hidden layers)
-    hidden_size: null
+    hidden_size: 422
 
   dataset:
     # Set path to a directory with a fixed validation set
