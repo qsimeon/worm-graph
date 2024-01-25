@@ -417,7 +417,7 @@ def plot_predictions(log_dir, neurons_to_plot=None, worms_to_plot=None):
                 sns.set_style("whitegrid")
                 palette = sns.color_palette("tab10")
                 gt_color = palette[0]  # blue
-                ar_generation_color = palette[2]  # green 
+                ar_generation_color = palette[2]  # green
 
                 # Metadata textbox
                 metadata_text = "Dataset: {}\nWorm ID: {}".format(ds_name, wormID)
@@ -425,15 +425,17 @@ def plot_predictions(log_dir, neurons_to_plot=None, worms_to_plot=None):
                 for neuron in neurons:
                     fig, ax = plt.subplots(figsize=(10, 4))
 
+                    _ = len(df.loc["Ground Truth", neuron])
                     ax.plot(
-                        time,
+                        time[:_],
                         df.loc["Ground Truth", neuron],
                         color=gt_color,
                         label="Ground truth",
                     )
 
+                    _ = len(df.loc["AR Generation", neuron])
                     ax.plot(
-                        time_ar,
+                        time_ar[:_],
                         df.loc["AR Generation", neuron],
                         alpha=0.5,
                         color=ar_generation_color,
@@ -653,8 +655,8 @@ def plot_worm_data(worm_data, num_neurons=5, smooth=False):
     :param worm_data: The data for a single worm.
     :param num_neurons: The number of neurons to plot.
     """
-
-    np.random.seed(42)  # random seed for reproducibility
+    # Set numpy random seed for function reproducibility
+    np.random.seed(42)
 
     worm = worm_data["worm"]
     dataset = worm_data["dataset"]
@@ -671,7 +673,7 @@ def plot_worm_data(worm_data, num_neurons=5, smooth=False):
     for neuron_idx in neuron_indices:
         neuron_name = slot_to_named_neuron.get(neuron_idx, None)
         if neuron_name is not None:
-            plt.plot(time_in_seconds, calcium_data[:, neuron_idx], label=neuron_name)
+            plt.plot(time_in_seconds, calcium_data[:, neuron_idx], alpha=0.7, label=neuron_name)
         else:
             ValueError("No neurons with data were selected.")
 
