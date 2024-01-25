@@ -151,7 +151,7 @@ def train_model(
 
             # Backpropagation. NOTE: Backward passes under autocast are not recommended.
             if epoch > 0:  # skip first epoch to get tabula rasa loss
-                # Check if the computed loss requires gradient
+                # Check if the computed loss requires gradient (e.g. the NaivePredictor model does not)
                 if train_loss.requires_grad:
                     # Backward pass
                     scaler.scale(train_loss).backward()

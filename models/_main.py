@@ -46,6 +46,7 @@ def get_model(model_config: DictConfig, verbose=True) -> torch.nn.Module:
         hidden_size = checkpoint["hidden_size"]
         loss_name = checkpoint["loss_name"]
         l1_reg_param = checkpoint["l1_reg_param"]
+        # version_2 = checkpoint["version_2"] # TODO
         model_state_dict = checkpoint["model_state_dict"]
         model = eval(model_name)(
             input_size,
@@ -68,6 +69,7 @@ def get_model(model_config: DictConfig, verbose=True) -> torch.nn.Module:
             hidden_size=model_config.hidden_size,
             loss=model_config.loss,
             l1_reg_param=model_config.l1_reg_param,
+            # version_2=model_config.version_2, # TODO
         )
         if model_config.type == "PureAttention":
             model = PureAttention(**args)
