@@ -1,7 +1,7 @@
 # @package _global_
-# File name: size_linear_experimental.yaml
+# File name: size_attention_experimental.yaml
 #   size = model size (key: num_parameters)
-#   linear = LinearRegression model
+#   attention = PureAttention model
 #   experimental = experimental datasets (Kato, Nichols, Skora, Uzel, Yemini, Kaplan, Flavell, Leifer)
 # We increase gradually the hidden size of the models as a way to increase the number of parameters.
 defaults:
@@ -15,7 +15,7 @@ hydra:
   sweeper:
     params:
       experiment.seed: 0
-      # NOTE: LinearRegression is a shallow model (i.e. no hidden layers)
+      submodule.model.hidden_size: choice(8,10,12,16,20,26,34,42,54,68,88,110,140,178,228,288,366,466,590,750,954,1210,1538,1952,2480,3150,4000,5080,6450,8192)
       submodule.dataset.experimental_datasets: choice({Kato2015:all,Nichols2017:all,Skora2018:all,Kaplan2020:all,Yemini2021:all,Uzel2022:all,Flavell2023:all,Leifer2023:all})
       submodule.predict.experimental_datasets: choice({Kato2015:worm0,Nichols2017:worm0,Skora2018:worm0,Kaplan2020:worm0,Yemini2021:worm0,Uzel2022:worm0,Flavell2023:worm1,Leifer2023:worm0})
       submodule.analysis.validation.experimental_datasets: choice({Kato2015:all,Nichols2017:all,Skora2018:all,Kaplan2020:all,Yemini2021:all,Uzel2022:all,Flavell2023:all,Leifer2023:all})
@@ -49,13 +49,12 @@ submodule:
     reverse: false
     use_residual: false
     smooth_data: false
-    # This gets overwritten by the sweeper
     train_split_first: true
     train_split_ratio: 0.5
 
   # Build model from scratch
   model:
-    type: LinearRegression
+    type: PureAttention
     # This gets overwritten by the sweeper
     hidden_size: null
 
@@ -93,5 +92,5 @@ submodule:
 
 experiment:
   key: num_parameters
-  name: size_linear_experimental
+  name: size_attention_experimental
   mode: MULTIRUN

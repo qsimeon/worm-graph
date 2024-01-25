@@ -1161,7 +1161,10 @@ class NaivePredictor(Model):
 
 class LinearRegression(Model):
     """
-    A simple linear regression model. Memory-less but can learn linear feature regression.
+    A simple linear regression model.
+    This model can only learn a fixed linear feature regression
+    function that it applies at every time step independently.
+    Memory-less but can learn linear feature regression.
     """
 
     def __init__(
