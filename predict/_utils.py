@@ -93,7 +93,7 @@ def model_predict(
             mask=neurons_mask.unsqueeze(0).to(DEVICE),
             # generate as many time steps as the context_window
             num_new_timesteps=context_window,
-            # context_window=context_window, # DEBUG
+            context_window=context_window,
         ).squeeze(
             0
         )  # autoregressive generation
@@ -141,7 +141,7 @@ def model_predict(
             mask=neurons_mask.unsqueeze(0).to(DEVICE),
             # generate as many time steps as the context_window
             num_new_timesteps=context_window,
-            # context_window=context_window, # DEBUG
+            context_window=context_window,
         ).squeeze(
             0
         )  # autoregressive generation

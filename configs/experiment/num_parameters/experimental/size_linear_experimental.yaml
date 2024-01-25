@@ -78,7 +78,7 @@ submodule:
 
   analysis:
     analyse_this_log_dir: null
-    # Validate final model using all worms from each experimental datasets
+    # Validate final model using worms from each experimental datasets
     validation:
       # This gets overwritten by the sweeper
       experimental_datasets:
