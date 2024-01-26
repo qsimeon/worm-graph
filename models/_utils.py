@@ -326,10 +326,12 @@ class SelfAttention(torch.nn.Module):
             dropout,
             batch_first=True,
         )
-        # # NOTE: Maintain a running average of attention weights across heads purely
-        # # for interpretability analysis.
-        # self.attn_weights = 0  # exponential moving average (EMA) of attention weights
+        # ### DEBUG ###
+        # # NOTE: Maintain exponential moving average (EMA) of attention weights averaged
+        # # across heads and batches; this is purely for interpretability analysis.
+        # self.attn_weights = 0  #
         # self.decay = 0.5  # decay factor for EMA
+        # ### DEBUG ###
 
     def forward(self, src):
         """
@@ -350,11 +352,13 @@ class SelfAttention(torch.nn.Module):
             need_weights=False,
             average_attn_weights=True,
         )
-        # # Update the EMA of attention weights averaged across heads
+        # ### DEBUG ###
+        # # Update the EMA of attention weights averaged across heads and batches
         # self.attn_weights *= self.decay  # scale existing values by decay factor
-        # self.attn_weights += (
-        #     1 - self.decay
-        # ) * attn_output_weights.detach()  # update with scaled new means
+        # self.attn_weights += (1 - self.decay) * attn_output_weights.detach().mean(
+        #     dim=0
+        # )  # update with scaled new means
+        # ### DEBUG ###
         # Return attention output w/ shape (batch, seq_len, embed_dim)
         return attn_output
 
