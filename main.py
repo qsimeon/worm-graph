@@ -8,9 +8,7 @@ def pipeline(cfg: DictConfig) -> None:
     log_dir = os.getcwd()
 
     # Configure logger
-    logging.basicConfig(
-        level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
-    )
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
     logger = logging.getLogger(__name__)
 
     # Verifications
@@ -90,15 +88,13 @@ def pipeline(cfg: DictConfig) -> None:
         analyse_run(
             analysis_config=cfg.submodule.analysis,
         )
+        logger.info("DEBUG Finished analysis.")
 
     if "visualize" in cfg.submodule:
         plot_figures(
             visualize_config=cfg.submodule.visualize,
         )
-
-        plot_experiment(
-            visualize_config=cfg.submodule.visualize, exp_config=cfg.experiment
-        )
+        plot_experiment(visualize_config=cfg.submodule.visualize, exp_config=cfg.experiment)
 
     # Clear GPU cache
     torch.cuda.empty_cache()

@@ -326,10 +326,10 @@ class SelfAttention(torch.nn.Module):
             dropout,
             batch_first=True,
         )
-        # NOTE: Maintain a running average of attention weights across heads purely
-        # for interpretability analysis.
-        self.attn_weights = 0  # exponential moving average (EMA) of attention weights
-        self.decay = 0.5  # decay factor for EMA
+        # # NOTE: Maintain a running average of attention weights across heads purely
+        # # for interpretability analysis.
+        # self.attn_weights = 0  # exponential moving average (EMA) of attention weights
+        # self.decay = 0.5  # decay factor for EMA
 
     def forward(self, src):
         """
@@ -347,14 +347,14 @@ class SelfAttention(torch.nn.Module):
             value=src,
             attn_mask=causal_mask,
             is_causal=True,
-            need_weights=True,
+            need_weights=False,
             average_attn_weights=True,
         )
-        # Update the EMA of attention weights averaged across heads
-        self.attn_weights *= self.decay  # scale existing values by decay factor
-        self.attn_weights += (
-            1 - self.decay
-        ) * attn_output_weights.detach()  # update with scaled new means
+        # # Update the EMA of attention weights averaged across heads
+        # self.attn_weights *= self.decay  # scale existing values by decay factor
+        # self.attn_weights += (
+        #     1 - self.decay
+        # ) * attn_output_weights.detach()  # update with scaled new means
         # Return attention output w/ shape (batch, seq_len, embed_dim)
         return attn_output
 
@@ -1274,6 +1274,7 @@ class PureAttention(Model):
         else:
             logger.info(f"Using hidden_size: {hidden_size}.")
             hidden_size = hidden_size
+
         # Initialize super class
         super(PureAttention, self).__init__(
             input_size,

@@ -73,7 +73,7 @@ def get_model(model_config: DictConfig, verbose=True) -> torch.nn.Module:
         )
         if model_config.type == "PureAttention":
             model = PureAttention(**args)
-        if model_config.type == "NeuralTransformer":
+        elif model_config.type == "NeuralTransformer":
             model = NeuralTransformer(**args)
         elif model_config.type == "NetworkLSTM":
             model = NetworkLSTM(**args)
@@ -89,6 +89,7 @@ def get_model(model_config: DictConfig, verbose=True) -> torch.nn.Module:
             model = LinearRegression(**args)
         else:  # default to "LinearRegression" model
             model = LinearRegression(**args)
+
         if verbose:
             logger.info("Initialized a new model: {}.".format(model_config.type))
             logger.info(f"Hidden size: {model_config.hidden_size}")

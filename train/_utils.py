@@ -50,7 +50,8 @@ def save_model_checkpoint(model, checkpoint_path, other_info=dict()):
         checkpoint_path (str): The path to save the model to.
         other_info (dict, optional): Any additional information to save with the model. Defaults to an empty dictionary.
     """
-    num_trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
+    # num_trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)  # DEBUG
+    _, num_trainable_params = print_parameters(model, verbose=False)
     base_info = {
         # State dictionaries
         "model_state_dict": model.state_dict(),
