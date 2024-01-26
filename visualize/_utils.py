@@ -941,7 +941,7 @@ def experiment_parameter(exp_dir, key):
         xaxis = "Time (s)"
 
     if key in {"computation_flops", "flops"}:
-        # The number of floating point operations (FLOP) per batch for the model
+        # The number of floating point operations (FLOP) for the model calculated in the first epoch 
         pipeline_info = OmegaConf.load(os.path.join(exp_dir, "pipeline_info.yaml"))
         chkpt_path = os.path.join(exp_dir, "train", "checkpoints", f"model_best.pt")
         model_chkpt = torch.load(chkpt_path, map_location=DEVICE)
@@ -1224,7 +1224,7 @@ def plot_experiment_summaries(exp_log_dir, exp_key, exp_plot_dir=None):
     axes[3].bar(param_range, computation_flops, color="green", label="FLOP")
     axes[3].set_xticks(param_range)
     axes[3].set_xticklabels(parameters, rotation=90, ha="right", fontsize=6)
-    axes[3].set_title("Floating Point Operations (FLOP) per Batch")
+    axes[3].set_title("Floating Point Operations (FLOP) per Sequence")
     axes[3].set_xlabel(exp_xaxis)
     axes[3].set_ylabel("FLOP")
     axes[3].set_yscale("log")

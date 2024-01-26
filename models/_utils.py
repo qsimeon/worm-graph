@@ -864,6 +864,7 @@ class Model(torch.nn.Module):
         # Convert the high-D neural sequence into a 1-D token sequence
         input_tokens = self.tokenize_neural_data(
             neural_sequence=input_activity,
+            # feature_mask=None,  # DEBUG
             feature_mask=mask,
         )  # (batch_size, seq_len)
         # Embed the tokens and then transform to a latent
@@ -955,12 +956,12 @@ class Model(torch.nn.Module):
             output = output.view(
                 -1, self.num_tokens
             )  # (batch_size, seq_len, num_tokens) -> (batch_size * seq_len, num_tokens)
-
-            # Convert target from neural vector sequence to token sequence
-            # NOTE: The context manager prevents `self.neural_embedding` from being updated based on targets.
+            # Convert target from neural vector sequence to token sequence.
+            # NOTE: torch.no_grad() prevents `self.neural_embedding` from being updated based on targets.
             with torch.no_grad():
                 target = self.tokenize_neural_data(
                     neural_sequence=target,
+                    # feature_mask=None,  # DEBUG
                     feature_mask=mask,
                 )
                 target = target.view(-1)  # (batch_size, seq_len) -> (batch_size * seq_len)

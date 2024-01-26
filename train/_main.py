@@ -69,13 +69,13 @@ def train_model(
     save_freq = train_config.save_freq
 
     # Initialize optimizer, learning rate scheduler and gradient scaler
-    # TODO: Try different learning rate schedulers
     optim_name = "torch.optim." + train_config.optimizer
-    lr = train_config.lr  # constant/starting learning rate
+    lr = 1e3 * train_config.lr if model.version_2 else train_config.lr  # starting learning rate
     optimizer = eval(optim_name + "(model.parameters(), lr=" + str(lr) + ")")
-    scheduler = lr_scheduler.ReduceLROnPlateau(optimizer, mode="min")
+    # TODO: Experiment with different learning rate schedulers.
+    # scheduler = lr_scheduler.ReduceLROnPlateau(optimizer, mode="min")
     # scheduler = lr_scheduler.CyclicLR(base_lr=0.1 * lr, max_lr=10 * lr)
-    # scheduler = lr_scheduler.StepLR(optimizer, step_size=50, gamma=0.1)
+    scheduler = lr_scheduler.StepLR(optimizer, step_size=int(epochs ** (1 / 3)), gamma=0.9)
     scaler = GradScaler()
 
     # Instantiate early stopping
@@ -106,7 +106,7 @@ def train_model(
     # Computation metrics
     learning_rate = []
     computation_time = []
-    computation_flops = np.nan
+    computation_flops = 0
 
     # Start training
     logger.info("Starting training loop...")
@@ -133,23 +133,25 @@ def train_model(
             mask_train = mask_train.to(DEVICE)
 
             # Baseline model/naive predictor: predict that the next time step is the same as the current one.
-            y_base = X_train
-            train_baseline = (
-                torch.tensor(0.0)  # TODO: find correct baseline to use for version 2
-                if model.version_2
-                else criterion(output=y_base, target=Y_train, mask=mask_train)
-            )
+            if model.version_2:
+                with torch.no_grad():
+                    Y_base = model(
+                        X_train, mask_train
+                    )  # logits ``[batch_size, seq_len, num_tokens]``
+                    train_baseline = criterion(output=Y_base, target=X_train, mask=mask_train)
+                    # train_baseline = torch.tensor(0.0)  # DEBUG
+            else:
+                Y_base = X_train  # neural activity ``[batch_size, seq_len, input_size]``
+                train_baseline = criterion(output=Y_base, target=Y_train, mask=mask_train)
 
             # Reset / zero-out gradients
             optimizer.zero_grad()
 
-            # Runs the forward pass with autocasting
-            with torch.autocast(device_type=DEVICE.type, dtype=torch.half):
-                # Models operate sequence-to-sequence.
-                y_pred = model(X_train, mask_train)
-                train_loss = criterion(output=y_pred, target=Y_train, mask=mask_train)
+            # Forward pass. Models are sequence-to-sequence.
+            y_pred = model(X_train, mask_train)
+            train_loss = criterion(output=y_pred, target=Y_train, mask=mask_train)
 
-            # Backpropagation. NOTE: Backward passes under autocast are not recommended.
+            # Backpropagation.
             if epoch > 0:  # skip first epoch to get tabula rasa loss
                 # Check if the computed loss requires gradient (e.g. the NaivePredictor model does not)
                 if train_loss.requires_grad:
@@ -159,11 +161,14 @@ def train_model(
                     scaler.step(optimizer)
                     # Update the grad scaler
                     scaler.update()
-            # Calculate FLOP only at first epoch and first batch
-            elif batch_idx == 0:
-                computation_flops = FlopCountAnalysis(model, (X_train, mask_train)).total()
 
-            # Update running losses
+            # Calculate total FLOP only at the first epoch and batch
+            elif batch_idx == 0:
+                computation_flops = (
+                    FlopCountAnalysis(model, (X_train, mask_train)).total() / X_train.shape[0]
+                )
+
+            # Update running metrics
             train_running_base_loss += train_baseline.item()
             train_running_loss += train_loss.item()
 
@@ -175,7 +180,7 @@ def train_model(
         train_epoch_baseline.append(train_running_base_loss / len(trainloader))
         train_epoch_loss.append(train_running_loss / len(trainloader))
 
-        # Reset running losses
+        # Reset metrics
         train_running_base_loss = 0
         train_running_loss = 0
 
@@ -189,21 +194,18 @@ def train_model(
                 Y_val = Y_val.to(DEVICE)
                 mask_val = mask_val.to(DEVICE)
 
-                # Baseline model: identity model - predict that the next time step is the same as the current one.
-                # This is the simplest model we can think of: predict that the next time step is the same as the current one
-                # is better than predict any other random number.
-                y_base = X_val
-                val_baseline = (
-                    torch.tensor(0.0)  # TODO: find correct baseline to use for version 2
-                    if model.version_2
-                    else criterion(output=y_base, target=Y_val, mask=mask_val)
-                )
+                # Baseline model/naive predictor: predict that the next time step is the same as the current one.
+                if model.version_2:
+                    Y_base = model(X_val, mask_val)  # logits ``[batch_size, seq_len, num_tokens]``
+                    val_baseline = criterion(output=Y_base, target=X_val, mask=mask_val)
+                    # val_baseline = torch.tensor(0.0) # DEBUG
+                else:
+                    Y_base = X_val  # neural activity ``[batch_size, seq_len, input_size]``
+                    val_baseline = criterion(output=Y_base, target=Y_val, mask=mask_val)
 
-                # Run the forward pass with autocasting
-                with torch.autocast(device_type=DEVICE.type, dtype=torch.half):
-                    # Models operate sequence-to-sequence.
-                    y_pred = model(X_val, mask_val)
-                    val_loss = criterion(output=y_pred, target=Y_val, mask=mask_val)
+                # Forward pass. Models are sequence-to-sequence.
+                y_pred = model(X_val, mask_val)
+                val_loss = criterion(output=y_pred, target=Y_val, mask=mask_val)
 
                 # Update running losses
                 val_running_base_loss += val_baseline.item()
@@ -219,7 +221,10 @@ def train_model(
 
         # Step the scheduler
         scheduler.step(val_epoch_loss[-1])
-        learning_rate.append(optimizer.param_groups[0]["lr"])  # store current learning rate
+
+        # Store current learning rate
+        # learning_rate.append(optimizer.param_groups[0]["lr"])
+        learning_rate.append(scheduler.get_last_lr()[0])  # DEBUG
 
         # Save model checkpoint
         if epoch % save_freq == 0:
@@ -241,14 +246,9 @@ def train_model(
         # Print training progress metrics if in verbose mode
         if verbose:
             logger.info(
-                "Epoch: {}/{} | Train loss: {:.4f} | Train time: {:.4f} | Val. loss: {:.4f} | Val. baseline: {:.4f}".format(
-                    epoch,
-                    epochs,
-                    train_epoch_loss[-1],
-                    computation_time[-1],
-                    val_epoch_loss[-1],
-                    val_epoch_baseline[-1],
-                )
+                f"Epoch: {epoch}/{epochs} | Learning rate: {learning_rate[-1]:.3f} |"
+                f"Train loss: {train_epoch_loss[-1]:.3f} | Train time (s): {computation_time[-1]:.3f} |"
+                f"Val. loss: {val_epoch_loss[-1]:.3f} | Val. baseline: {val_epoch_baseline[-1]:.3f} |"
             )
 
         # Update progress bar

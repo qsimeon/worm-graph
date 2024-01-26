@@ -93,7 +93,7 @@ def model_predict(
             mask=neurons_mask.unsqueeze(0).to(DEVICE),
             # generate as many time steps as the context_window
             num_new_timesteps=context_window,
-            context_window=context_window,
+            # context_window=context_window, # DEBUG
         ).squeeze(
             0
         )  # autoregressive generation
@@ -110,8 +110,8 @@ def model_predict(
         result_df = prediction_dataframe_parser(
             x=train_data_splits[0],
             generated_activity=generated_activity_train,
-            context_window=context_window,
             num_new_timesteps=context_window,
+            context_window=context_window,
         )
         result_df.to_csv(
             os.path.join(
@@ -141,7 +141,7 @@ def model_predict(
             mask=neurons_mask.unsqueeze(0).to(DEVICE),
             # generate as many time steps as the context_window
             num_new_timesteps=context_window,
-            context_window=context_window,
+            # context_window=context_window, # DEBUG
         ).squeeze(
             0
         )  # autoregressive generation
@@ -185,8 +185,8 @@ def model_predict(
 def prediction_dataframe_parser(
     x,
     generated_activity,
-    context_window,
     num_new_timesteps,
+    context_window,
 ):
     context_activity = x[:context_window].detach().cpu().numpy()
     ground_truth_activity = x[: context_window + num_new_timesteps].detach().cpu().numpy()

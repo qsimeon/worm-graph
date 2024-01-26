@@ -3,11 +3,11 @@ preprocess:
   zipfile: opensource_data.zip
   cleanup: true # Whether to delete the downloaded and unzipped opensource data folder
   dataset: all # [Kato2015, Nichols2017, Skora2018, Kaplan2020, Yemini2021, Uzel2022, Flavell2023, Leifer2023] # any dataset in utils.VALID_DATASETS
-  resample_dt: 1.0 # The time interval (in seconds) to resample the neural activity at; if null, no resampling is performed
+  resample_dt: 0.666 # The time interval (in seconds) to resample the neural activity at; if null, no resampling is performed
   interpolate: linear # The method to use for interpolation; options: null, linear, quadratic, cubic
   smooth: 
     # NOTE: Smoothing is done using a causal filter. Smoothing is applied before resampling.
-    method: null # null: No smoothing, # GA: Gaussian kernel filter, # ES: Exponential kernel filter, # MA: Moving average filter
+    method: ES # null: No smoothing, # GA: Gaussian kernel filter, # ES: Exponential kernel filter, # MA: Moving average filter
     # hyperparameters of the different smoothing methods
     alpha: 0.1 # ES; smaller alpha = smoother
     sigma: 5 # GA; larger sigma = smoother
