@@ -70,12 +70,12 @@ def train_model(
 
     # Initialize optimizer, learning rate scheduler and gradient scaler
     optim_name = "torch.optim." + train_config.optimizer
-    lr = 1e3 * train_config.lr if model.version_2 else train_config.lr  # starting learning rate
+    lr = 10 * train_config.lr if model.version_2 else train_config.lr  # starting learning rate
     optimizer = eval(optim_name + "(model.parameters(), lr=" + str(lr) + ")")
     # TODO: Experiment with different learning rate schedulers.
-    # scheduler = lr_scheduler.ReduceLROnPlateau(optimizer, mode="min")
+    scheduler = lr_scheduler.ReduceLROnPlateau(optimizer, mode="min")
     # scheduler = lr_scheduler.CyclicLR(base_lr=0.1 * lr, max_lr=10 * lr)
-    scheduler = lr_scheduler.StepLR(optimizer, step_size=int(epochs ** (1 / 3)), gamma=0.9)
+    # scheduler = lr_scheduler.StepLR(optimizer, step_size=int(epochs ** (1 / 3)), gamma=0.9)
     scaler = GradScaler()
 
     # Instantiate early stopping
@@ -134,12 +134,12 @@ def train_model(
 
             # Baseline model/naive predictor: predict that the next time step is the same as the current one.
             if model.version_2:
-                with torch.no_grad():
-                    Y_base = model(
-                        X_train, mask_train
-                    )  # logits ``[batch_size, seq_len, num_tokens]``
-                    train_baseline = criterion(output=Y_base, target=X_train, mask=mask_train)
-                    # train_baseline = torch.tensor(0.0)  # DEBUG
+                # with torch.no_grad():
+                #     Y_base = model(
+                #         X_train, mask_train
+                #     )  # logits ``[batch_size, seq_len, num_tokens]``
+                #     train_baseline = criterion(output=Y_base, target=X_train, mask=mask_train)
+                train_baseline = torch.tensor(0.0)  # DEBUG
             else:
                 Y_base = X_train  # neural activity ``[batch_size, seq_len, input_size]``
                 train_baseline = criterion(output=Y_base, target=Y_train, mask=mask_train)
@@ -196,9 +196,9 @@ def train_model(
 
                 # Baseline model/naive predictor: predict that the next time step is the same as the current one.
                 if model.version_2:
-                    Y_base = model(X_val, mask_val)  # logits ``[batch_size, seq_len, num_tokens]``
-                    val_baseline = criterion(output=Y_base, target=X_val, mask=mask_val)
-                    # val_baseline = torch.tensor(0.0) # DEBUG
+                    # Y_base = model(X_val, mask_val)  # logits ``[batch_size, seq_len, num_tokens]``
+                    # val_baseline = criterion(output=Y_base, target=X_val, mask=mask_val)
+                    val_baseline = torch.tensor(0.0)  # DEBUG
                 else:
                     Y_base = X_val  # neural activity ``[batch_size, seq_len, input_size]``
                     val_baseline = criterion(output=Y_base, target=Y_val, mask=mask_val)
@@ -223,8 +223,7 @@ def train_model(
         scheduler.step(val_epoch_loss[-1])
 
         # Store current learning rate
-        # learning_rate.append(optimizer.param_groups[0]["lr"])
-        learning_rate.append(scheduler.get_last_lr()[0])  # DEBUG
+        learning_rate.append(optimizer.param_groups[0]["lr"])
 
         # Save model checkpoint
         if epoch % save_freq == 0:
@@ -246,9 +245,9 @@ def train_model(
         # Print training progress metrics if in verbose mode
         if verbose:
             logger.info(
-                f"Epoch: {epoch}/{epochs} | Learning rate: {learning_rate[-1]:.3f} |"
-                f"Train loss: {train_epoch_loss[-1]:.3f} | Train time (s): {computation_time[-1]:.3f} |"
-                f"Val. loss: {val_epoch_loss[-1]:.3f} | Val. baseline: {val_epoch_baseline[-1]:.3f} |"
+                f"Epoch: {epoch}/{epochs} | Learning rate: {learning_rate[-1]:.5f} | "
+                f"Train loss: {train_epoch_loss[-1]:.3f} | Train time (s): {computation_time[-1]:.3f} | "
+                f"Val. loss: {val_epoch_loss[-1]:.3f} | Val. baseline: {val_epoch_baseline[-1]:.3f} | "
             )
 
         # Update progress bar

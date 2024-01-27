@@ -9,6 +9,6 @@ preprocess:
     # NOTE: Smoothing is done using a causal filter. Smoothing is applied before resampling.
     method: ES # null: No smoothing, # GA: Gaussian kernel filter, # ES: Exponential kernel filter, # MA: Moving average filter
     # hyperparameters of the different smoothing methods
-    alpha: 0.1 # ES; smaller alpha = smoother
+    alpha: 0.5 # ES; smaller alpha = smoother
     sigma: 5 # GA; larger sigma = smoother
-    window_size: 21 # MA; larger window_size = smoother
+    window_size: 15 # MA; larger window_size = smoother

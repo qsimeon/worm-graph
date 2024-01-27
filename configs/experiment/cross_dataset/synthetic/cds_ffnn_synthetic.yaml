@@ -56,7 +56,7 @@ submodule:
     seq_len: 100
     reverse: false
     use_residual: false
-    smooth_data: true
+    smooth_data: false
 
   predict:
     # Choose the worms that you want to predict

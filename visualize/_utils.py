@@ -567,6 +567,7 @@ def plot_pca_trajectory(log_dir, worms_to_plot=None):
                     plt.plot(
                         reduced_ground_truth_data[:, 0],
                         reduced_ground_truth_data[:, 1],
+                        alpha=0.5,
                         color=gt_color,
                         label="Ground Truth",
                         linestyle="-",
@@ -941,7 +942,7 @@ def experiment_parameter(exp_dir, key):
         xaxis = "Time (s)"
 
     if key in {"computation_flops", "flops"}:
-        # The number of floating point operations (FLOP) for the model calculated in the first epoch 
+        # The number of floating point operations (FLOP) for the model calculated in the first epoch
         pipeline_info = OmegaConf.load(os.path.join(exp_dir, "pipeline_info.yaml"))
         chkpt_path = os.path.join(exp_dir, "train", "checkpoints", f"model_best.pt")
         model_chkpt = torch.load(chkpt_path, map_location=DEVICE)
