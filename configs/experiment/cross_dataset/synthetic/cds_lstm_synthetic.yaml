@@ -68,7 +68,7 @@ submodule:
       VanDerPol0000: worm0
     # Number of time steps to generate
     num_new_timesteps: null
-    context_window: 100
+    context_window: 180
 
   analysis:
     analyse_this_log_dir: null

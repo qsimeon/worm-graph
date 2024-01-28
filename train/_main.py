@@ -70,7 +70,7 @@ def train_model(
 
     # Initialize optimizer, learning rate scheduler and gradient scaler
     optim_name = "torch.optim." + train_config.optimizer
-    lr = 1e3 * train_config.lr if model.version_2 else train_config.lr  # starting learning rate
+    lr = 1e2 * train_config.lr if model.version_2 else train_config.lr  # starting learning rate
     optimizer = eval(optim_name + "(model.parameters(), lr=" + str(lr) + ")")
     # TODO: Experiment with different learning rate schedulers.
     scheduler = lr_scheduler.ReduceLROnPlateau(optimizer, mode="min")

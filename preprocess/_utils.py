@@ -797,13 +797,99 @@ def extract_zip(path: str, folder: str, log: bool = True, delete_zip: bool = Tru
         os.unlink(path)
 
 
+class CausalNormalizer:
+    """
+    A transformer for causal normalization of time series data.
+    This normalizer computes the mean and standard deviation up to each time point t,
+    ensuring that the normalization at each time point is based solely on past
+    and present data, maintaining the causal nature of the time series.
+    """
+
+    def __init__(self):
+        self.cumulative_mean_ = None
+        self.cumulative_std_ = None
+
+    def fit(self, X, y=None):
+        """
+        Compute the cumulative mean and standard deviation of the dataset X.
+
+        Parameters
+        ----------
+        X : array-like of shape (n_samples, n_features)
+            The input data.
+
+        y : Ignored
+            Not used, present here for API consistency by convention.
+
+        Returns
+        -------
+        self : object
+            Returns the instance itself.
+        """
+        T, D = X.shape
+        cumulative_sum = np.cumsum(X, axis=0)
+        cumulative_squares_sum = np.cumsum(X**2, axis=0)
+        count = np.arange(1, T + 1).reshape(-1, 1)
+
+        self.cumulative_mean_ = cumulative_sum / count
+        cumulative_variance = (
+            cumulative_squares_sum
+            - 2 * self.cumulative_mean_ * cumulative_sum
+            + count * self.cumulative_mean_**2
+        ) / count
+        self.cumulative_std_ = np.sqrt(cumulative_variance)
+
+        # Avoid division by zero
+        self.cumulative_std_[self.cumulative_std_ == 0] = 1
+
+        return self
+
+    def transform(self, X):
+        """
+        Perform causal normalization on the dataset X using the previously computed
+        cumulative mean and standard deviation.
+
+        Parameters
+        ----------
+        X : array-like of shape (n_samples, n_features)
+            The input data.
+
+        Returns
+        -------
+        X_transformed : array-like of shape (n_samples, n_features)
+            The transformed data.
+        """
+        if self.cumulative_mean_ is None or self.cumulative_std_ is None:
+            raise RuntimeError("The transformer has not been fitted yet.")
+
+        X_transformed = (X - self.cumulative_mean_) / self.cumulative_std_
+        return X_transformed
+
+    def fit_transform(self, X, y=None):
+        """
+        Fit to data, then transform it.
+
+        Parameters
+        ----------
+        X : array-like of shape (n_samples, n_features)
+            The input data to fit and transform.
+
+        y : Ignored
+            Not used, present here for API consistency by convention.
+
+        Returns
+        -------
+        X_transformed : array-like of shape (n_samples, n_features)
+            The transformed data.
+        """
+        return self.fit(X).transform(X)
+
+
 def pickle_neural_data(
     url,
     zipfile,
     dataset="all",
-    # TODO: Implement a causal version of StandardScaler.
-    # TODO: Try different transforms from sklearn such as QuantileTransformer, etc.
-    transform=StandardScaler(),  # PowerTransformer()
+    transform=StandardScaler(),  # PowerTransformer() # CausalNormalizer()
     smooth_method="ma",
     interpolate_method="linear",
     resample_dt=None,
@@ -963,7 +1049,8 @@ class BasePreprocessor:
     def __init__(
         self,
         dataset_name,
-        transform=StandardScaler(),
+        # TODO: Try different transforms from sklearn such as QuantileTransformer, etc. as well as our own custom CausalNormalizer.
+        transform=StandardScaler(),  # PowerTransformer() # CausalNormalizer()
         smooth_method="MA",
         interpolate_method="linear",
         resample_dt=0.1,
