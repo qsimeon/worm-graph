@@ -15,54 +15,54 @@ hydra:
   sweeper:
     params:
       experiment.seed: 5
-      submodule.model.hidden_size: choice(8,10,12,16,20,26,34,42,54,68,88,110,140,178,228,288,366,466,590,750,954,1210,1538,1952,2480,3150,4000,5080,6450,8192)
+      submodule.model.hidden_size: choice(8,10,12,16,20,26,34,42,54,68,88,110,140,178,228,288,366,466,590,750,954,1210,1538,1952,2480,3150,4000)
       submodule.dataset.experimental_datasets: choice({Shakespeare0000:all})
       submodule.predict.experimental_datasets: choice({Shakespeare0000:worm0})
       submodule.analysis.validation.experimental_datasets: choice({Shakespeare0000:all})
       # ###############################################################################################
       # ### SINES ###
       # experiment.seed: 0 
-      # submodule.model.hidden_size: choice(8,10,12,16,20,26,34,42,54,68,88,110,140,178,228,288,366,466,590,750,954,1210,1538,1952,2480,3150,4000,5080,6450,8192)
+      # submodule.model.hidden_size: choice(8,10,12,16,20,26,34,42,54,68,88,110,140,178,228,288,366,466,590,750,954,1210,1538,1952,2480,3150,4000)
       # submodule.dataset.experimental_datasets: choice({Sines0000:all})
       # submodule.predict.experimental_datasets: choice({Sines0000:[worm0, worm1]})
       # submodule.analysis.validation.experimental_datasets: choice({Sines0000:all})
       # ###############################################################################################
       ### LORENZ ###
       # experiment.seed: 1 
-      # submodule.model.hidden_size: choice(8,10,12,16,20,26,34,42,54,68,88,110,140,178,228,288,366,466,590,750,954,1210,1538,1952,2480,3150,4000,5080,6450,8192)
+      # submodule.model.hidden_size: choice(8,10,12,16,20,26,34,42,54,68,88,110,140,178,228,288,366,466,590,750,954,1210,1538,1952,2480,3150,4000)
       # submodule.dataset.experimental_datasets: choice({Lorenz0000:all})
       # submodule.predict.experimental_datasets: choice({Lorenz0000:worm0})
       # submodule.analysis.validation.experimental_datasets: choice({Lorenz0000:all})
       # ###############################################################################################
       ### WHITE NOISE ###
       # experiment.seed: 2 
-      # submodule.model.hidden_size: choice(8,10,12,16,20,26,34,42,54,68,88,110,140,178,228,288,366,466,590,750,954,1210,1538,1952,2480,3150,4000,5080,6450,8192)
+      # submodule.model.hidden_size: choice(8,10,12,16,20,26,34,42,54,68,88,110,140,178,228,288,366,466,590,750,954,1210,1538,1952,2480,3150,4000)
       # submodule.dataset.experimental_datasets: choice({WhiteNoise0000:all})
       # submodule.predict.experimental_datasets: choice({WhiteNoise0000:worm0})
       # submodule.analysis.validation.experimental_datasets: choice({WhiteNoise0000:all})
       # ###############################################################################################
       ### RAND WALK ###
       # experiment.seed: 3
-      # submodule.model.hidden_size: choice(8,10,12,16,20,26,34,42,54,68,88,110,140,178,228,288,366,466,590,750,954,1210,1538,1952,2480,3150,4000,5080,6450,8192)
+      # submodule.model.hidden_size: choice(8,10,12,16,20,26,34,42,54,68,88,110,140,178,228,288,366,466,590,750,954,1210,1538,1952,2480,3150,4000)
       # submodule.dataset.experimental_datasets: choice({RandWalk0000:all})
       # submodule.predict.experimental_datasets: choice({RandWalk0000:worm0})
       # submodule.analysis.validation.experimental_datasets: choice({RandWalk0000:all})
       # ###############################################################################################
       ### VAN DER POL ###
       # experiment.seed: 4
-      # submodule.model.hidden_size: choice(8,10,12,16,20,26,34,42,54,68,88,110,140,178,228,288,366,466,590,750,954,1210,1538,1952,2480,3150,4000,5080,6450,8192)
+      # submodule.model.hidden_size: choice(8,10,12,16,20,26,34,42,54,68,88,110,140,178,228,288,366,466,590,750,954,1210,1538,1952,2480,3150,4000)
       # submodule.dataset.experimental_datasets: choice({VanDerPol0000:all})
       # submodule.predict.experimental_datasets: choice({VanDerPol0000:worm0})
       # submodule.analysis.validation.experimental_datasets: choice({VanDerPol0000:all})
       # ###############################################################################################
       ### SHAKESPEARE ###
       # experiment.seed: 5
-      # submodule.model.hidden_size: choice(8,10,12,16,20,26,34,42,54,68,88,110,140,178,228,288,366,466,590,750,954,1210,1538,1952,2480,3150,4000,5080,6450,8192)
+      # submodule.model.hidden_size: choice(8,10,12,16,20,26,34,42,54,68,88,110,140,178,228,288,366,466,590,750,954,1210,1538,1952,2480,3150,4000)
       # submodule.dataset.experimental_datasets: choice({Shakespeare0000:all})
       # submodule.predict.experimental_datasets: choice({Shakespeare0000:worm0})
       # submodule.analysis.validation.experimental_datasets: choice({Shakespeare0000:all})
       # ###############################################################################################
-      
+
 submodule:
   
   dataset:
@@ -84,8 +84,8 @@ submodule:
       Shakespeare0000: null
 
     num_named_neurons: null
-    num_train_samples: 8
-    num_val_samples: 8
+    num_train_samples: 32
+    num_val_samples: 32
     # Set to the same value as submodule.predict.context_window
     seq_len: 180
     reverse: false
@@ -116,6 +116,7 @@ submodule:
 
   analysis:
     analyse_this_log_dir: null
+    # Validate final model using worms only from the current synthetic dataset
     validation:
       # This gets overwritten by the sweeper
       experimental_datasets:

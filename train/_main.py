@@ -70,7 +70,7 @@ def train_model(
 
     # Initialize optimizer, learning rate scheduler and gradient scaler
     optim_name = "torch.optim." + train_config.optimizer
-    lr = 1e2 * train_config.lr if model.version_2 else train_config.lr  # starting learning rate
+    lr = 10 * train_config.lr if model.version_2 else train_config.lr  # starting learning rate
     optimizer = eval(optim_name + "(model.parameters(), lr=" + str(lr) + ")")
     # TODO: Experiment with different learning rate schedulers.
     scheduler = lr_scheduler.ReduceLROnPlateau(optimizer, mode="min")
@@ -134,7 +134,7 @@ def train_model(
 
             # Baseline model/naive predictor: predict that the next time step is the same as the current one.
             if model.version_2:
-                train_baseline = torch.tensor(0.0)  # DEBUG
+                train_baseline = torch.tensor(0.0)
             else:
                 Y_base = X_train  # neural activity ``[batch_size, seq_len, input_size]``
                 train_baseline = criterion(output=Y_base, target=Y_train, mask=mask_train)
@@ -159,9 +159,9 @@ def train_model(
 
             # Calculate total FLOP only at the first epoch and batch
             elif batch_idx == 0:
-                computation_flops = (
-                    FlopCountAnalysis(model, (X_train, mask_train)).total() / X_train.shape[0]
-                )
+                computation_flops = FlopCountAnalysis(model, (X_train, mask_train)).total() / (
+                    X_train.shape[0] * X_train.shape[1]
+                ) # FLOP per time step
 
             # Update running metrics
             train_running_base_loss += train_baseline.item()
@@ -191,7 +191,7 @@ def train_model(
 
                 # Baseline model/naive predictor: predict that the next time step is the same as the current one.
                 if model.version_2:
-                    val_baseline = torch.tensor(0.0)  # DEBUG
+                    val_baseline = torch.tensor(0.0)
                 else:
                     Y_base = X_val  # neural activity ``[batch_size, seq_len, input_size]``
                     val_baseline = criterion(output=Y_base, target=Y_val, mask=mask_val)

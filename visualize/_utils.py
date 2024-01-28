@@ -1225,7 +1225,7 @@ def plot_experiment_summaries(exp_log_dir, exp_key, exp_plot_dir=None):
     axes[3].bar(param_range, computation_flops, color="green", label="FLOP")
     axes[3].set_xticks(param_range)
     axes[3].set_xticklabels(parameters, rotation=90, ha="right", fontsize=6)
-    axes[3].set_title("Floating Point Operations (FLOP) per Sequence")
+    axes[3].set_title("Floating Point Operations (FLOP) per Timestep")
     axes[3].set_xlabel(exp_xaxis)
     axes[3].set_ylabel("FLOP")
     axes[3].set_yscale("log")

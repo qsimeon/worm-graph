@@ -9,7 +9,7 @@ hydra:
   mode: MULTIRUN
   sweeper:
       params:
-        experiment.seed: range(1) # assign each repetition of the experiment a different seed
+        experiment.seed: range(1) # assign each repetition of the experiment a distinct random seed
         submodule.model.type: NaivePredictor, LinearRegression, FeatureFFNN, NetworkLSTM, NetworkCTRNN, LiquidCfC, PureAttention, NeuralTransformer
 
 # The submodule parameters set below will be used only if RUN mode is used. 
@@ -30,18 +30,18 @@ submodule:
       WhiteNoise0000: null
       RandWalk0000: null
       VanDerPol0000: null
-      Kato2015: null
-      Nichols2017: null
-      Skora2018: null
-      Kaplan2020: null
-      Yemini2021: null
-      Uzel2022: null
-      Flavell2023: null
+      Kato2015: all
+      Nichols2017: all
+      Skora2018: all
+      Kaplan2020: all
+      Yemini2021: all
+      Uzel2022: all
+      Flavell2023: all
       Leifer2023: all
 
     num_named_neurons: null
-    num_train_samples: 8
-    num_val_samples: 8
+    num_train_samples: 32
+    num_val_samples: 32
     # Set to the same value as submodule.predict.context_window
     seq_len: 180
     reverse: false
@@ -79,13 +79,14 @@ submodule:
       WhiteNoise0000: null
       RandWalk0000: null
       VanDerPol0000: null
-      Kato2015: null
-      Nichols2017: null
-      Skora2018: null
-      Kaplan2020: null
-      Yemini2021: null
-      Uzel2022: null
-      Flavell2023: null
+      Shakespeare0000: null
+      Kato2015: worm0
+      Nichols2017: worm0
+      Skora2018: worm0
+      Kaplan2020: worm0
+      Yemini2021: worm0
+      Uzel2022: worm0
+      Flavell2023: worm1 # something is wrong with worm0 in Flavell2023
       Leifer2023: worm0
     # Number of time steps to generate 
     # null = generate all remaining time steps (max_timesteps - context_window)
@@ -108,20 +109,20 @@ submodule:
         WhiteNoise0000: null
         RandWalk0000: null
         VanDerPol0000: null
-        Kato2015: null
-        Nichols2017: null
-        Skora2018: null
-        Kaplan2020: null
-        Yemini2021: null
-        Uzel2022: null
-        Flavell2023: null
-        Leifer2023: all
+        Kato2015: 1
+        Nichols2017: 1
+        Skora2018: 1
+        Kaplan2020: 1
+        Yemini2021: 1
+        Uzel2022: 1
+        Flavell2023: 1
+        Leifer2023: 1
 
   visualize:
     plot_this_log_dir: null
     predict:
       worms_to_plot: null
-      neurons_to_plot: 3
+      neurons_to_plot: 1
 
 experiment:
   # What parameter you are experimenting with (key)

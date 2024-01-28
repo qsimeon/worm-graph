@@ -39,13 +39,15 @@ class MASELoss(torch.nn.Module):
             mean_naive_error = torch.tensor(1.0)
         else:  # if sequence
             naive_forecast_errors = torch.abs(target[:, 1:, :] - target[:, :-1, :])
-            mean_naive_error = 1e-16 + torch.mean(
+            mean_naive_error = torch.mean(
                 naive_forecast_errors, dim=1, keepdim=True
-            )  # Average over seq_len
+            )  # average over seq_len
 
         # Calculate the Mean Absolute Error of the predictions
         prediction_errors = torch.abs(y_pred - target).expand_as(target)
-        mase_errors = prediction_errors / mean_naive_error
+        mase_errors = prediction_errors / mean_naive_error.clamp(
+            min=1e-6
+        )  # avoid division by 0 by ensuring error are at least 1e-8
 
         # Apply reduction
         if self.reduction == "none":
@@ -861,7 +863,6 @@ class Model(torch.nn.Module):
         # Convert the high-D neural sequence into a 1-D token sequence
         input_tokens = self.tokenize_neural_data(
             neural_sequence=input_activity,
-            # feature_mask=None,  # DEBUG
             feature_mask=mask,
         )  # (batch_size, seq_len)
         # Embed the tokens and then transform to a latent
@@ -890,8 +891,9 @@ class Model(torch.nn.Module):
 
         def loss(output, target, mask=None, **kwargs):
             """
-            Calculate loss with added FFT and L1 regularization
+            Calculate loss with added L1 regularization
             on the trainable model parameters.
+
             Arguments:
                 output: (batch_size, seq_len, input_size)
                 target: (batch_size, seq_len, input_size)
@@ -958,7 +960,6 @@ class Model(torch.nn.Module):
             with torch.no_grad():
                 target = self.tokenize_neural_data(
                     neural_sequence=target,
-                    # feature_mask=None,  # DEBUG
                     feature_mask=mask,
                 )
                 target = target.view(-1)  # (batch_size, seq_len) -> (batch_size * seq_len)

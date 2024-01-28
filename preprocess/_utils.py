@@ -143,8 +143,8 @@ def preprocess_connectome(raw_dir, raw_files):
     num_node_features = 1024
 
     # Generate random data
-    # TODO: inject real data istead!
-    x = torch.rand(
+    # TODO: Inject real data instead!
+    x = torch.randn(
         num_nodes, num_node_features, dtype=torch.float
     )  # [num_nodes, num_node_features]
 
@@ -297,8 +297,9 @@ def moving_average_smooth(x, t, window_size):
     return x_smooth
 
 
-# We define causal version of the above Gaussian (GA) and Moveing Average (MA)
-# smoothing methods and alias the original functions to these.
+# NOTE: We define causal versions of the above Gaussian (GA) 
+# and Moving Average (MA) smoothing methods and alias the original 
+# functions to these new ones.
 def causal_gaussian_kernel_smooth(x, t, sigma):
     """
     Causal Gaussian smoothing for a multidimensional time series.

@@ -60,7 +60,7 @@ def pipeline(cfg: DictConfig) -> None:
             model=model,
             train_dataset=train_dataset,
             val_dataset=val_dataset,
-            verbose=True,
+            verbose=False,
         )
         # Update visualize and analysis submodule to plot current run
         if "analysis" in cfg.submodule:
