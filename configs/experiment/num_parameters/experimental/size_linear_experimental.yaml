@@ -48,7 +48,7 @@ submodule:
     seq_len: 180
     reverse: false
     use_residual: false
-    smooth_data: false
+    smooth_data: true
     # This gets overwritten by the sweeper
     train_split_first: true
     train_split_ratio: 0.5

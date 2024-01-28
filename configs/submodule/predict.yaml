@@ -9,7 +9,7 @@ predict:
   # <str> = predict the worm with this particular wormID 
   # <list> = predict the worms with wormIDs in the list
   experimental_datasets:
-    # Sines0000: [worm0, worm1] # test to check if distinct neuron signatures preserved across worms
+    # Sines0000: [worm0, worm1] # test to check if distinct neuron signatures is preserved across worms
     # Lorenz0000: worm0
     # WhiteNoise0000: worm0
     # RandWalk0000: worm0

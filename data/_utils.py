@@ -638,17 +638,18 @@ def select_desired_worms(multi_worm_dataset, worms):
     # worms can be str, list or int
     if isinstance(worms, str):
         # User requested one specific worm
-        logger.info("\tUsing {} from {}".format(worms, dataset_name))
+        logger.info(f"Using {worms} from {dataset_name}.")
         wormIDs_to_keep = [worms]
     elif isinstance(worms, int):
         # User requested a specific number of worms (random pick)
         if worms > len(multi_worm_dataset):
             logger.info(
-                f"Requested number of worms was more than the number of worms in {dataset_name}. Defaulting to using all {len(multi_worm_dataset)} worms in {dataset_name}."
+                f"Requested number of worms was more than the number of worms in {dataset_name}. "
+                f"Defaulting to using all {len(multi_worm_dataset)} worms in {dataset_name}."
             )
             worms = len(multi_worm_dataset)
         wormIDs_to_keep = np.random.choice(wormIDs, size=worms, replace=False)
-        logger.info("\tUsing {} worms from {} (random pick)".format(worms, dataset_name))
+        logger.info(f"Using {worms} worms from {dataset_name} (random pick).")
     elif isinstance(worms, list):
         # User requested specific worms
         if len(worms) > len(multi_worm_dataset):
@@ -657,7 +658,7 @@ def select_desired_worms(multi_worm_dataset, worms):
             )
             worms = list(multi_worm_dataset.keys())
         wormIDs_to_keep = worms
-        logger.info("\tUsing {} from {}".format(wormIDs_to_keep, dataset_name))
+        logger.info(f"Using {wormIDs_to_keep} from {dataset_name}.")
     else:
         raise Exception("Invalid type for `worms` argument.")
 

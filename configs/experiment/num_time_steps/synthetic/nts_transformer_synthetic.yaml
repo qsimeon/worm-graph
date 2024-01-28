@@ -77,7 +77,7 @@ submodule:
     seq_len: 180
     reverse: false
     use_residual: false
-    smooth_data: false
+    smooth_data: true
 
   predict:
     # This gets overwritten by the sweeper

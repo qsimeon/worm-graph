@@ -46,7 +46,7 @@ submodule:
     seq_len: 180
     reverse: false
     use_residual: false
-    smooth_data: false
+    smooth_data: true
     train_split_first: true
     train_split_ratio: 0.5
 
@@ -62,7 +62,7 @@ submodule:
   train:
     optimizer: AdamW
     lr: 0.001
-    epochs: 1000 
+    epochs: 500 
     save_freq: 500
     batch_size: 128
     shuffle: true
