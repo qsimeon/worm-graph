@@ -86,7 +86,7 @@ submodule:
     num_train_samples: 8
     num_val_samples: 8
     # Set to the same value as submodule.predict.context_window
-    seq_len: 100
+    seq_len: 180
     reverse: false
     use_residual: false
     smooth_data: false

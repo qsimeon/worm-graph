@@ -53,7 +53,7 @@ submodule:
     num_named_neurons: null
     num_train_samples: 8
     num_val_samples: 8
-    seq_len: 100
+    seq_len: 180
     reverse: false
     use_residual: false
     smooth_data: false

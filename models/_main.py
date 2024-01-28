@@ -95,6 +95,7 @@ def get_model(model_config: DictConfig, verbose=True) -> torch.nn.Module:
             logger.info(f"Hidden size: {model_config.hidden_size}")
 
     return model
+    # return model.to(torch.float32) # DEBUG
 
 
 if __name__ == "__main__":
