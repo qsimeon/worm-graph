@@ -136,38 +136,7 @@ class NeuralActivityDataset(torch.utils.data.Dataset):
         reverse: bool = False,
         use_residual: bool = False,
     ) -> None:
-        """
-        Initializes a new instance of the NeuralActivityDataset.
-
-        Parameters
-        ----------
-        data : torch.Tensor
-            Data with shape (max_timesteps, num_neurons).
-        time_vec : torch.Tensor
-            A vector of the time (in seconds) corresponding to the time
-            axis (axis=0) of the `data` tensor.
-        neurons_mask : torch.Tensor
-            Index of neuron(s) to return data for. Returns data for all
-            neurons if None.
-        wormID : str
-            ID of the worm.
-        worm_dataset : str
-            Name of the worm dataset.
-        seq_len : int, default=1
-            Sequences of length `seq_len` are generated until the dataset
-            size is achieved.
-        num_samples : int, default=10
-            Total number of (input, target) data pairs to generate.
-            0 < num_samples <= max_timesteps
-        reverse : bool, default=False
-            Whether to sample sequences backward from end of the data.
-        use_residual : bool, default=False
-            Whether to use residual connections in the model.
-
-        Returns
-        -------
-        None
-        """
+        """Initializes a new instance of the NeuralActivityDataset."""
         super().__init__()
 
         # Check the inputs
@@ -175,7 +144,7 @@ class NeuralActivityDataset(torch.utils.data.Dataset):
         assert data.ndim == 2, "Reshape the data tensor as (time, neurons)"
         assert isinstance(seq_len, int) and 0 < seq_len <= data.size(
             0
-        ), f"Enter an integer sequence length such that 0 < `seq_len` <= {data.size(0)}."
+        ), f"Enter a different integer for `seq_len` (currently {seq_len}): 0 < seq_len <= {data.size(0)}."
 
         # Create time vector if not provided
         assert torch.is_tensor(time_vec), "Recast the time vector as type `torch.tensor`."
@@ -751,7 +720,7 @@ def create_combined_dataset(
     for dataset_name, worms in experimental_datasets.items():
         # Skip if no worms requested for this dataset
         if worms is None or worms == 0:
-            logger.info("Skipping worms from {} dataset".format(dataset_name))
+            logger.info(f"Skipping all worms from {dataset_name} dataset.")
             continue
 
         # Create a multi-worm dataset
@@ -795,7 +764,7 @@ def create_combined_dataset(
         dataset_info["original_median_dt"].append(data["original_median_dt"])
         dataset_info["original_index"].append(data["original_worm"])
         dataset_info["combined_dataset_index"].append(worm)
-        worm_neurons = [neuron for slot, neuron in data["slot_to_named_neuron"].items()]
+        worm_neurons = [neuron for _, neuron in data["slot_to_named_neuron"].items()]
         dataset_info["neurons"].append(worm_neurons)
         dataset_info["num_neurons"].append(len(worm_neurons))
 
@@ -968,6 +937,8 @@ def split_combined_dataset(
     dataset_info_split : pd.DataFrame
         Dataframe with the number of unique time steps for each worm and each split.
     """
+    # Perform some argument checks
+    assert isinstance(seq_len, int) and seq_len > 0, f"`seq_len` must be an integer > 0."
 
     # Choose whether to use calcium or residual data
     if use_residual:
@@ -978,8 +949,6 @@ def split_combined_dataset(
     # Choose whether to use original or smoothed data
     if smooth_data:
         key_data = "smooth_" + key_data
-    else:
-        key_data = key_data
 
     # Store the training and validation datasets
     train_dataset = []
@@ -1013,19 +982,21 @@ def split_combined_dataset(
 
         # The index where to split the data
         split_idx = (
-            int(train_split_ratio * len(data))
+            math.ceil(train_split_ratio * len(data))
             if train_split_first
-            else int((1 - train_split_ratio) * len(data))
+            else math.ceil((1 - train_split_ratio) * len(data))
         )
-        assert (
-            isinstance(seq_len, int) and 0 < seq_len < split_idx
-        ), f"seq_len must be an integer > 0 and < {np.floor(train_split_ratio * len(data))}"
+        split_idx = max(
+            split_idx, seq_len + 1
+        )  # handles sequence length longer than the data split
 
-        # Split the data and the time vector into two sections
+        # Split the data and the time vector into sections
         data_splits = np.array_split(data, indices_or_sections=[split_idx], axis=0)
         time_vec_splits = np.array_split(time_vec, indices_or_sections=[split_idx], axis=0)
 
         # Separate the splits into training and validation sets
+        # NOTE: This was originally written to be able to split the data into multipl equally sized folds;
+        # We have kep it this way despite deciding to only split into two folds (i.e. halves).
         if train_split_first:
             train_data_splits, val_data_splits = data_splits[::2], data_splits[1::2]
             train_time_vec_splits, val_time_vec_splits = (
@@ -1043,13 +1014,15 @@ def split_combined_dataset(
         train_samples_per_split = distribute_samples(train_data_splits, num_train_samples)
         val_samples_per_split = distribute_samples(val_data_splits, num_val_samples)
 
-        # Number of unique time steps across all samples for each worm and each split
+        # Number of unique time steps across all samples for each split
         train_split_time_steps, val_split_time_steps = 0, 0
 
         # Create a dataset for each split
-        for train_split, train_time_split, num_samples_split in zip(
+        for train_split, train_time_split, num_train_samples_split in zip(
             train_data_splits, train_time_vec_splits, train_samples_per_split
         ):
+            if train_split.shape[0] <= seq_len:
+                continue
             train_dataset.append(
                 NeuralActivityDataset(
                     data=train_split.detach(),
@@ -1058,7 +1031,7 @@ def split_combined_dataset(
                     wormID=original_wormID,  # worm ID from the original experimental dataset
                     worm_dataset=worm_dataset,  # name of the original experimental dataset the data is from
                     seq_len=seq_len,
-                    num_samples=num_samples_split,
+                    num_samples=num_train_samples_split,
                     use_residual=use_residual,
                     reverse=reverse,
                 )
@@ -1066,12 +1039,16 @@ def split_combined_dataset(
             train_split_time_steps += len(train_dataset[-1].unique_time_steps)
             if len(train_dataset[-1].unique_time_steps) > len(train_split):
                 raise ValueError(
-                    "A mistake occurred. There should not be more time steps from samples than there are time steps in the data."
+                    f"A mistake occurred. "
+                    f"There should not be more time steps from sampled"
+                    f"sequences than there are time steps in the data."
                 )
 
-        for val_split, val_time_split, num_samples_split in zip(
+        for val_split, val_time_split, num_val_samples_split in zip(
             val_data_splits, val_time_vec_splits, val_samples_per_split
         ):
+            if val_split.shape[0] <= seq_len:
+                continue
             val_dataset.append(
                 NeuralActivityDataset(
                     data=val_split.detach(),
@@ -1080,7 +1057,7 @@ def split_combined_dataset(
                     wormID=original_wormID,  # worm ID of the experimental dataset (original)
                     worm_dataset=worm_dataset,  # dataset where the worm comes from
                     seq_len=seq_len,
-                    num_samples=num_samples_split,
+                    num_samples=num_val_samples_split,
                     use_residual=use_residual,
                     reverse=reverse,
                 )
@@ -1088,7 +1065,9 @@ def split_combined_dataset(
             val_split_time_steps += len(val_dataset[-1].unique_time_steps)
             if len(val_dataset[-1].unique_time_steps) > len(val_split):
                 raise ValueError(
-                    "A mistake occurred. There should not be more time steps from samples than there are time steps in the data."
+                    f"A mistake occurred. "
+                    f"There should not be more time steps from sampled"
+                    f"sequences than there are time steps in the data."
                 )
 
         # Store the number of unique time steps for each worm
@@ -1110,11 +1089,11 @@ def split_combined_dataset(
         dataset_info_split["train_split_ratio"].append(train_split_ratio)
 
     # Concatenate the datasets
-    train_dataset = torch.utils.data.ConcatDataset(
-        train_dataset
+    train_dataset = (
+        torch.utils.data.ConcatDataset(train_dataset) if len(train_dataset) else None
     )  # number of train sequences = number train samples * number of worms
-    val_dataset = torch.utils.data.ConcatDataset(
-        val_dataset
+    val_dataset = (
+        torch.utils.data.ConcatDataset(val_dataset) if len(val_dataset) else None
     )  # number of val sequences = number val samples * number of worms
 
     # Convert information about the split datasets into a DataFrame

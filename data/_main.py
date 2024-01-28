@@ -180,6 +180,14 @@ def get_datasets(dataset_config: DictConfig, save=True):
                 train_split_first,
                 train_split_ratio,
             )
+            if created_train_dataset is None:
+                raise ValueError(
+                    f"Error creating training set. No sequences of length {seq_len} could be sampled."
+                )
+            if created_val_dataset is None:
+                raise ValueError(
+                    f"Error creating validation set. No sequences of length {seq_len} could be sampled."
+                )
 
             # Merge dataset_info and time_step_info
             created_dataset_info_train = dataset_info.merge(
@@ -260,6 +268,14 @@ def get_datasets(dataset_config: DictConfig, save=True):
             train_split_first,
             train_split_ratio,
         )
+        if train_dataset is None:
+            raise ValueError(
+                f"Error creating training set. No sequences of length {seq_len} could be sampled."
+            )
+        if val_dataset is None:
+            raise ValueError(
+                f"Error creating validation set. No sequences of length {seq_len} could be sampled."
+            )
 
         # Merge dataset_info and dataset_info_split
         dataset_info_train = dataset_info.merge(

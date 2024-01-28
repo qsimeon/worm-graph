@@ -94,7 +94,7 @@ def get_model(model_config: DictConfig, verbose=True) -> torch.nn.Module:
             logger.info("Initialized a new model: {}.".format(model_config.type))
             logger.info(f"Hidden size: {model_config.hidden_size}")
 
-    return model.to(torch.float32)
+    return model
 
 
 if __name__ == "__main__":

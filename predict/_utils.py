@@ -52,7 +52,7 @@ def model_predict(
     # Put model on device
     model = model.to(DEVICE)
 
-    # Iterate over combined datasets (same process as in split_combined_dataset in data/_utils.py)
+    # Iterate over combined datasets (same process as in `split_combined_dataset` in data/_utils.py)
     for _, single_worm_dataset in combined_dataset.items():
         # Extract relevant features from the dataset
         data = single_worm_dataset[key_data]
@@ -73,9 +73,9 @@ def model_predict(
             if train_split_first
             else int((1 - train_split_ratio) * len(data))
         )
-        assert (
-            isinstance(seq_len, int) and 0 < seq_len < split_idx
-        ), f"seq_len must be an integer > 0 and < {np.floor(train_split_ratio * len(data))}"
+        split_idx = max(
+            split_idx, seq_len + 1
+        )  # handles sequence length longer than the data split
 
         # Split the data and the time vector into two sections
         data_splits = np.array_split(data, indices_or_sections=[split_idx], axis=0)

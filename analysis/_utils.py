@@ -321,9 +321,14 @@ def loss_per_dataset(
             train_split_ratio=train_split_ratio,
         )
         select_dataset = train_dataset if mode == "train" else val_dataset
+        if select_dataset is None:
+            logger.info(
+                f"Skipping {mode} dataset from {dataset} because it is empty.\n"
+                f"Possibly no sequences of length {seq_len} could be sampled."
+            )
+            continue
 
         num_worms.append(len(combined_dataset))
-
         # TODO: Make this analysis `batch_size` a configurable parameter
         batch_size = 128
         dataloader = torch.utils.data.DataLoader(
@@ -336,7 +341,7 @@ def loss_per_dataset(
         model.eval()
 
         with torch.no_grad():
-            for batch_idx, (X, Y, mask, metadata) in enumerate(dataloader):
+            for _, (X, Y, mask, _) in enumerate(dataloader):
                 X = X.to(DEVICE)
                 Y = Y.to(DEVICE)
                 mask = mask.to(DEVICE)

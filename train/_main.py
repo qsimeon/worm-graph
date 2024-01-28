@@ -134,11 +134,6 @@ def train_model(
 
             # Baseline model/naive predictor: predict that the next time step is the same as the current one.
             if model.version_2:
-                # with torch.no_grad():
-                #     Y_base = model(
-                #         X_train, mask_train
-                #     )  # logits ``[batch_size, seq_len, num_tokens]``
-                #     train_baseline = criterion(output=Y_base, target=X_train, mask=mask_train)
                 train_baseline = torch.tensor(0.0)  # DEBUG
             else:
                 Y_base = X_train  # neural activity ``[batch_size, seq_len, input_size]``
@@ -196,8 +191,6 @@ def train_model(
 
                 # Baseline model/naive predictor: predict that the next time step is the same as the current one.
                 if model.version_2:
-                    # Y_base = model(X_val, mask_val)  # logits ``[batch_size, seq_len, num_tokens]``
-                    # val_baseline = criterion(output=Y_base, target=X_val, mask=mask_val)
                     val_baseline = torch.tensor(0.0)  # DEBUG
                 else:
                     Y_base = X_val  # neural activity ``[batch_size, seq_len, input_size]``
@@ -245,7 +238,7 @@ def train_model(
         # Print training progress metrics if in verbose mode
         if verbose:
             logger.info(
-                f"Epoch: {epoch}/{epochs} | Learning rate: {learning_rate[-1]:.5f} | "
+                f"Epoch: {epoch}/{epochs} | Learning rate: {learning_rate[-1]:.1e} | "
                 f"Train loss: {train_epoch_loss[-1]:.3f} | Train time (s): {computation_time[-1]:.3f} | "
                 f"Val. loss: {val_epoch_loss[-1]:.3f} | Val. baseline: {val_epoch_baseline[-1]:.3f} | "
             )
