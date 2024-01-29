@@ -748,9 +748,9 @@ class Model(torch.nn.Module):
             pass  # otherwise model is still training, so update neural_embedding
 
         # PART 2: Update `self.neural_embedding`
-        # Flatten token_sequence
+        # Flatten tensors to facilitate come computations
+        feature_mask_flat = feature_mask.view(-1)  # (batch_size * input_size, )
         token_sequence_flat = token_sequence.view(-1)  # (batch_size * seq_len, )
-        # Flatten neural_sequence
         neural_flat = neural_sequence.view(-1, input_size)  # (batch_size * seq_len, input_size)
         # Prepare tensors to accumulate sums and counts for each token
         token_sums = torch.zeros(
@@ -784,13 +784,28 @@ class Model(torch.nn.Module):
         new_token_means = new_token_means.to(self.neural_embedding.device)  # move to same device
 
         # Apply exponential moving average to update `self.neural_embedding`
-        # NOTE: Only update positions in self.neural_embedding that correspond to tokens observed in the current batch.
+        # NOTE: Only update positions in `self.neural_embedding` that correspond to tokens observed in the current batch.
+        # TODO: Also only update positions in `self.neural_embedding` that correspond to masked features in the current batch.
         observed_tokens = token_sequence_flat.unique()
+
+        # decay = 0.5  # decay factor for EMA
+        # self.neural_embedding[observed_tokens] = (
+        #     decay * self.neural_embedding[observed_tokens]
+        #     + (1 - decay) * new_token_means[observed_tokens]
+        # )
+
+        ### DEBUG ###
+        observed_masked_features = feature_mask_flat.detach().nonzero().unique()
+        print(f"observed_tokens: {observed_tokens.shape}\n")
+        print(f"observed_masked_features: {observed_masked_features.shape}\n")
+        print(f"self.neural_embedding: {self.neural_embedding.shape}\n")
+        print(f"new_token_means: {new_token_means.shape}\n")
         decay = 0.5  # decay factor for EMA
-        self.neural_embedding[observed_tokens] = (
-            decay * self.neural_embedding[observed_tokens]
-            + (1 - decay) * new_token_means[observed_tokens]
+        self.neural_embedding[observed_tokens][observed_masked_features] = (
+            decay * self.neural_embedding[observed_tokens][observed_masked_features]
+            + (1 - decay) * new_token_means[observed_tokens][observed_masked_features]
         )
+        ### DEBUG ###
 
         # Return the tokenized sequence
         return token_sequence
