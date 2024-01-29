@@ -631,7 +631,7 @@ class Model(torch.nn.Module):
             torch.Tensor: Distances for each batch. Shape (batch_size, seq_len, num_tokens).
         """
         # Get input shapes
-        batch_size, seq_len, input_size = neural_sequence.shape
+        batch_size, _, input_size = neural_sequence.shape
         assert (
             input_size == token_matrix.shape[-1]
         ), "Expected `token_matrix` to have same input size as `neural_sequence`."
