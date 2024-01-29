@@ -16,7 +16,6 @@ hydra:
     params:
       experiment.seed: 5
       # NOTE: LinearRegression is a shallow model (i.e. no hidden layers)
-      submodule.model.hidden_size: choice(8,10,12,16,20,26,34,42,54,68,88,110,140,178,228,288,366,466,590,750,954,1210,1538,1952,2480,3150,4000)
       submodule.dataset.experimental_datasets: choice({Shakespeare0000:all})
       submodule.predict.experimental_datasets: choice({Shakespeare0000:worm0})
       submodule.analysis.validation.experimental_datasets: choice({Shakespeare0000:all})

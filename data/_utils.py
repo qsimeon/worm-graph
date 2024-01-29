@@ -672,7 +672,7 @@ def select_desired_worms(multi_worm_dataset, worms):
 
 def create_combined_dataset(
     experimental_datasets: dict,
-    num_named_neurons: int,
+    num_named_neurons: Union[None, int] = None,
 ):
     """Returns a dict with the worm data of all requested datasets.
 
@@ -974,6 +974,7 @@ def split_combined_dataset(
 
     # Loop through the worms in the dataset
     for wormID, single_worm_dataset in combined_dataset.items():
+        # TODO: Encapsulate this inner part as a function `split_single_dataset`.
         # Extract relevant features from the dataset
         data = single_worm_dataset[key_data]
         neurons_mask = single_worm_dataset["named_neurons_mask"]

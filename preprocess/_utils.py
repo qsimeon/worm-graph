@@ -297,8 +297,8 @@ def moving_average_smooth(x, t, window_size):
     return x_smooth
 
 
-# NOTE: We define causal versions of the above Gaussian (GA) 
-# and Moving Average (MA) smoothing methods and alias the original 
+# NOTE: We define causal versions of the above Gaussian (GA)
+# and Moving Average (MA) smoothing methods and alias the original
 # functions to these new ones.
 def causal_gaussian_kernel_smooth(x, t, sigma):
     """
