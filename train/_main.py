@@ -62,7 +62,9 @@ def train_model(
     model = model.to(DEVICE)
 
     # Parameters
-    epochs = train_config.epochs
+    epochs = (
+        train_config.epochs // 2 if model.version_2 else train_config.epochs
+    )  # use fewer epochs for version 2
     batch_size = train_config.batch_size
     shuffle = train_config.shuffle
     criterion = model.loss_fn()
@@ -161,7 +163,7 @@ def train_model(
             elif batch_idx == 0:
                 computation_flops = FlopCountAnalysis(model, (X_train, mask_train)).total() / (
                     X_train.shape[0] * X_train.shape[1]
-                ) # FLOP per time step
+                )  # FLOP per time step
 
             # Update running metrics
             train_running_base_loss += train_baseline.item()
