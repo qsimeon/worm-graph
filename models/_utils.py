@@ -742,71 +742,126 @@ class Model(torch.nn.Module):
         # Find the minimum indices along the tokens dimension
         token_sequence = distances.argmin(dim=-1)  # (batch_size, seq_len)
         # Skip updating the neural_embedding if we are in eval mode
-        if not torch.is_grad_enabled():  # if eval mode, not updating neural_embedding
+        if not torch.is_grad_enabled():  # not updating neural_embedding
             return token_sequence
         else:
-            pass  # otherwise model is still training, so update neural_embedding
+            pass  # otherwise model is training, so update neural_embedding
 
         # PART 2: Update `self.neural_embedding`
-        # Flatten tensors to facilitate come computations
-        feature_mask_flat = feature_mask.view(-1)  # (batch_size * input_size, )
-        token_sequence_flat = token_sequence.view(-1)  # (batch_size * seq_len, )
-        neural_flat = neural_sequence.view(-1, input_size)  # (batch_size * seq_len, input_size)
-        # Prepare tensors to accumulate sums and counts for each token
-        token_sums = torch.zeros(
-            num_tokens,
-            input_size,
-            device=neural_flat.device,
-            dtype=neural_flat.dtype,
-        )
-        token_counts = torch.zeros(
-            token_matrix.shape[0], device=neural_flat.device, dtype=neural_flat.dtype
-        )
 
-        # Accumulate sums of neural activities for each token
-        # NOTE: The i-th row of neural_flat is added to the token_sequence_flat[i]-th row of token_sums;
-        # the i-th row of neural_flat is a vector of shape (input_size,) and token_sequence_flat[i] is some token;
-        # token_sums has as many rows as there are unique tokens.
-        token_sums.index_add_(0, index=token_sequence_flat, source=neural_flat)
-        # Count occurrences of each token
-        # NOTE: The i-th row of source is added to the token_sequence_flat[i]-th row of token_counts;
-        # the i-th row of source is a 1 and the token_sequence_flat[i] is some token;
-        # token_counts has as many rows as there are unique tokens.
-        token_counts.index_add_(
-            0,
-            index=token_sequence_flat,
-            source=torch.ones_like(token_sequence_flat, dtype=token_counts.dtype),
-        )
-        # Calculate the new averages for each token
-        new_token_means = token_sums / token_counts.clamp(min=1).unsqueeze(
-            -1
-        )  # avoid division by 0 by ensuring counts are at least 1
-        new_token_means = new_token_means.to(self.neural_embedding.device)  # move to same device
+        # # ### >>> FAST but INCORRECT, ORIGINAL Implementation >>> ###
+        # # NOTE: Correctly only updates positions in `self.neural_embedding` that correspond to tokens observed in the current batch;
+        # # but fails to only update positions in `self.neural_embedding` that correspond to masked inputs/features in the current batch.
+        # # Thus, this version will only work fully as expected if all inputs are masked (i.e. `feature_mask`` is all True).
+        # # Flatten neural sequence and token sequence
+        # token_sequence_flat = token_sequence.view(-1)  # (batch_size * seq_len, )
+        # neural_flat = neural_sequence.view(
+        #     -1, self.input_size
+        # )  # (batch_size * seq_len, input_size)
+        # # Initialize sums and counts tensors
+        # token_sums = torch.zeros_like(
+        #     self.neural_embedding,
+        #     device=neural_flat.device,
+        #     dtype=neural_flat.dtype,
+        # )
+        # token_counts = torch.zeros(
+        #     self.num_tokens,
+        #     device=neural_flat.device,
+        #     dtype=neural_flat.dtype,
+        # )
+        # # Accumulate sums for each token
+        # # ########
+        # # index_tensor = token_sequence_flat.unsqueeze(1).expand(
+        # #     -1, self.input_size
+        # # )  # use a large index tensor for scatter_add_
+        # # token_sums.scatter_add_(
+        # #     0, index_tensor, neural_flat
+        # # )  # has as many rows as there are unique tokens
+        # # ########
+        # ### DEBUG ###
+        # # NOTE: The i-th row of neural_flat is added to the token_sequence_flat[i]-th row of token_sums;
+        # # the i-th row of neural_flat is a vector of shape (input_size,) and token_sequence_flat[i] is some token;
+        # token_sums.index_add_(
+        #     dim=0, index=token_sequence_flat, source=neural_flat
+        # )  # use a vector index tensor for index_add_
+        # ### DEBUG ###
 
-        # Apply exponential moving average to update `self.neural_embedding`
-        # NOTE: Only update positions in `self.neural_embedding` that correspond to tokens observed in the current batch.
-        # TODO: Also only update positions in `self.neural_embedding` that correspond to masked features in the current batch.
-        observed_tokens = token_sequence_flat.unique()
+        # # Count occurrences of each token
+        # # ########
+        # # token_counts += torch.bincount(
+        # #     token_sequence_flat, minlength=self.num_tokens
+        # # )  # has as many rows as there are unique tokens
+        # # ########
+        # ### DEBUG ###
+        # # NOTE: The i-th row of source is added to the token_sequence_flat[i]-th row of token_counts;
+        # # the i-th row of source is a 1 and the token_sequence_flat[i] is some token;
+        # token_counts.index_add_(
+        #     dim=0,
+        #     index=token_sequence_flat,
+        #     source=torch.ones_like(
+        #         token_sequence_flat,
+        #         dtype=token_counts.dtype,
+        #     ),
+        # )
+        # ### DEBUG ###
 
-        # decay = 0.5  # decay factor for EMA
+        # # Compute means and apply EMA update
+        # new_token_means = token_sums / token_counts.unsqueeze(1).clamp(min=1)  # avoid division by 0
+        # new_token_means = new_token_means.to(self.neural_embedding.device)  # move to same device
+        # # ########
+        # # decay = 0.5  # EMA decay factor
+        # # self.neural_embedding *= decay
+        # # self.neural_embedding += (1 - decay) * new_token_means
+        # # ########
+        # ### DEBUG ###
+        # observed_tokens = token_sequence_flat.unique()
+        # decay = 0.5  # EMA decay factor
         # self.neural_embedding[observed_tokens] = (
         #     decay * self.neural_embedding[observed_tokens]
         #     + (1 - decay) * new_token_means[observed_tokens]
         # )
+        # ### DEBUG ###
+        # # ### <<< FAST but INCORRECT, ORIGINAL Implementation <<< ###
 
-        ### DEBUG ###
-        observed_masked_features = feature_mask_flat.detach().nonzero().unique()
-        print(f"observed_tokens: {observed_tokens.shape}\n")
-        print(f"observed_masked_features: {observed_masked_features.shape}\n")
-        print(f"self.neural_embedding: {self.neural_embedding.shape}\n")
-        print(f"new_token_means: {new_token_means.shape}\n")
+        ### >>> SLOW but CORRECT, NEW Implementation >>> ###
+        # NOTE: Updates positions in `self.neural_embedding` that correspond to observed tokens and masked inputs.
+        # Get positions of masked/observed input features
+        # print(f"neural_sequence: {neural_sequence.shape, neural_sequence.dtype}\n") # DEBUG
+        # print(f"feature_mask: {feature_mask.shape, feature_mask.dtype}\n") # DEBUG
+        masked_input_positions = feature_mask.nonzero(
+            as_tuple=False
+        )  # (<= batch_size * input_size, 2)
+        # print(
+        #     f"masked_input_positions: {masked_input_positions.shape, masked_input_positions.dtype}\n"
+        # ) # DEBUG
+        # Get unique values and their counts in batch dimension (first column)
+        _, counts = torch.unique(masked_input_positions[:, 0], return_counts=True)
+        # Split the tensor into groups based on the batch dimension
+        batch_groups = torch.split(masked_input_positions, counts.tolist())
+        # For each batch index update the neural embedding only using observed tokens and maksed features
         decay = 0.5  # decay factor for EMA
-        self.neural_embedding[observed_tokens][observed_masked_features] = (
-            decay * self.neural_embedding[observed_tokens][observed_masked_features]
-            + (1 - decay) * new_token_means[observed_tokens][observed_masked_features]
-        )
-        ### DEBUG ###
-
+        for group in batch_groups:  # bigO(batch_size)
+            batch_idx = group[:, 0].unique().item()
+            # print(f"batch_idx {batch_idx}")  # DEBUG
+            observed_inputs = group[:, 1]
+            # print(f"observed_inputs: {observed_inputs.shape, observed_inputs.dtype}\n")  # DEBUG
+            batch_tokens = token_sequence[batch_idx]  # (seq_len, ) # DEBUG
+            # print(f"batch_tokens: {batch_tokens.shape, batch_tokens.dtype}\n")
+            batch_inputs = neural_sequence[batch_idx]  # (seq_len, input_size) # DEBUG
+            # print(f"batch_inputs: {batch_inputs.shape, batch_inputs.dtype}\n")
+            for token in batch_tokens.unique():
+                # print(f"token: {token}")  # DEBUG
+                OLD = self.neural_embedding[token, observed_inputs]
+                # print(
+                #     f"self.neural_embedding[token, observed_inputs]: {OLD.shape, OLD.dtype}\n"
+                # )  # DEBUG
+                NEW = batch_inputs[batch_tokens == token].mean(dim=0)[observed_inputs]
+                # print(
+                #     f"batch_inputs[batch_tokens == token].mean(dim=0)[observed_inputs]: {NEW.shape, NEW.mean(dim=0).dtype}\n"
+                # )  # DEBUG
+                self.neural_embedding[token, observed_inputs] = decay * OLD + (1 - decay) * NEW
+        ### <<< SLOW but CORRECT, NEW Implementation <<< ###
+                
         # Return the tokenized sequence
         return token_sequence
 
