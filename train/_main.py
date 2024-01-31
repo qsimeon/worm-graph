@@ -63,7 +63,7 @@ def train_model(
 
     # Parameters
     epochs = (
-        train_config.epochs // 2 if model.version_2 else train_config.epochs
+        train_config.epochs // 5 if model.version_2 else train_config.epochs
     )  # use fewer epochs for version 2
     batch_size = train_config.batch_size
     shuffle = train_config.shuffle

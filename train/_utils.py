@@ -64,6 +64,9 @@ def save_model_checkpoint(model, checkpoint_path, other_info=dict()):
         "hidden_size": model.get_hidden_size(),
         "loss_name": model.get_loss_name(),
         "l1_reg_param": model.get_l1_reg_param(),
+        # New attributes for version 2
+        "version_2": model.version_2,
+        "num_tokens": model.num_tokens if model.version_2 else None,
     }
     save_info = {**base_info, **other_info}
     torch.save(save_info, checkpoint_path)

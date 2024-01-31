@@ -93,17 +93,26 @@ def load_model_checkpoint(checkpoint_path):
     if not os.path.isabs(checkpoint_path):
         checkpoint_path = os.path.join(ROOT_DIR, checkpoint_path)
     checkpoint = torch.load(checkpoint_path, map_location=DEVICE)
+    # State dictionaries
+    model_state_dict = checkpoint["model_state_dict"]
+    # Names
     model_name = checkpoint["model_name"]
+    # Model parameters
     input_size = checkpoint["input_size"]
     hidden_size = checkpoint["hidden_size"]
     loss_name = checkpoint["loss_name"]
     l1_reg_param = checkpoint["l1_reg_param"]
-    model_state_dict = checkpoint["model_state_dict"]
+    # New attributes for version 2
+    version_2 = checkpoint.get("version_2", VERSION_2)
+    num_tokens = checkpoint.get("num_tokens", NUM_TOKENS)
+    # Reinstantiate the model
     model = eval(model_name)(
         input_size,
         hidden_size,
         loss=loss_name,
         l1_reg_param=l1_reg_param,
+        version_2=version_2,
+        num_tokens=num_tokens,
     ).to(DEVICE)
     model.load_state_dict(model_state_dict)
     return model
@@ -491,7 +500,7 @@ class Model(torch.nn.Module):
         hidden_size: Union[int, None],
         loss: Union[Callable, None] = None,
         l1_reg_param: float = 0.0,
-        # Hyperparameters for version 2
+        # New attributes for version 2
         version_2: bool = VERSION_2,
         num_tokens: int = NUM_TOKENS,
     ):
@@ -861,7 +870,7 @@ class Model(torch.nn.Module):
                 # )  # DEBUG
                 self.neural_embedding[token, observed_inputs] = decay * OLD + (1 - decay) * NEW
         ### <<< SLOW but CORRECT, NEW Implementation <<< ###
-                
+
         # Return the tokenized sequence
         return token_sequence
 
