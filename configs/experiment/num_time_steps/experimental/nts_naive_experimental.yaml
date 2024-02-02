@@ -63,6 +63,7 @@ submodule:
 
   # Choose the worms that you want to predict
   predict:
+    predict_this_log_dir: null
     experimental_datasets:
       # This gets overwritten by the sweeper
       Kato2015: null
