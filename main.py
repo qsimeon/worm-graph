@@ -25,11 +25,21 @@ def pipeline(cfg: DictConfig) -> None:
             raise AssertionError("Need to specify a dataset before training.")
 
     if "predict" in cfg.submodule:
-        # Need to have a model and a dataset
-        if "model" not in cfg.submodule:
-            raise AssertionError("Need to specify a model before predicting.")
-        if "dataset" not in cfg.submodule:
-            raise AssertionError("Need to specify a dataset before predicting.")
+        # Predicting on a existing log folder
+        if cfg.submodule.predict.predict_this_log_dir is not None:
+            log_dir = cfg.submodule.predict.predict_this_log_dir
+            OmegaConf.update(
+                cfg.submodule,
+                "model.use_this_pretrained_model",
+                os.path.join(log_dir, "train", "checkpoints", "model_best.pt"),
+                force_add=True,
+            )
+        else:
+            # Need to have a model and a dataset
+            if "model" not in cfg.submodule:
+                raise AssertionError("Need to specify a model before predicting.")
+            if "dataset" not in cfg.submodule:
+                raise AssertionError("Need to specify a dataset before predicting.")
 
     logger.info("Torch device: %s" % (DEVICE))
 

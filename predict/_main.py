@@ -24,7 +24,11 @@ def make_predictions(
         Validation dataset with worm data examples.
     """
 
-    log_dir = os.getcwd()  # logs/hydra/${now:%Y_%m_%d_%H_%M_%S}
+    # Use current working directory if one is not specified in predict_config
+    if predict_config.predict_this_log_dir is None:
+        log_dir = os.getcwd()  # logs/hydra/${now:%Y_%m_%d_%H_%M_%S}
+    else:
+        log_dir = predict_config.predict_this_log_dir
 
     # Create prediction directories
     os.makedirs(os.path.join(log_dir, "prediction"), exist_ok=True)
