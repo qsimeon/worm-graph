@@ -14,7 +14,7 @@ hydra:
   mode: MULTIRUN
   sweeper:
     params:
-      experiment.seed: 0
+      experiment.seed: 1
       # NOTE: LinearRegression is a shallow model (i.e. no hidden layers)
       submodule.dataset.experimental_datasets: choice({Kato2015:all,Nichols2017:all,Skora2018:all,Kaplan2020:all,Yemini2021:all,Uzel2022:all,Flavell2023:all,Leifer2023:all})
       submodule.predict.experimental_datasets: choice({Kato2015:worm0,Nichols2017:worm0,Skora2018:worm0,Kaplan2020:worm0,Yemini2021:worm0,Uzel2022:worm0,Flavell2023:worm1,Leifer2023:worm0})
@@ -61,6 +61,7 @@ submodule:
 
   # Choose the worms that you want to predict
   predict:
+    predict_this_log_dir: null
     experimental_datasets:
       # This gets overwritten by the sweeper
       Kato2015: null

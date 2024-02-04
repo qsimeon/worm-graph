@@ -6,7 +6,7 @@
 # We increase gradually the quantity of worms from all datasets.
 # We choose the hidden size to get a model with ~0.574M (trainable) parameters.
 defaults:
-  - override /submodule: [preprocess, model, train, predict, analysis, visualize]
+  - override /submodule: [preprocess, model, train, visualize]
   - _self_
 
 hydra:
