@@ -890,7 +890,7 @@ def pickle_neural_data(
     url,
     zipfile,
     dataset="all",
-    transform=StandardScaler(),  # PowerTransformer() # CausalNormalizer()
+    transform=CausalNormalizer(),  # StandardScaler() # PowerTransformer() # CausalNormalizer()
     smooth_method="ma",
     interpolate_method="linear",
     resample_dt=None,
@@ -1051,7 +1051,7 @@ class BasePreprocessor:
         self,
         dataset_name,
         # TODO: Try different transforms from sklearn such as QuantileTransformer, etc. as well as our own custom CausalNormalizer.
-        transform=StandardScaler(),  # PowerTransformer() # CausalNormalizer()
+        transform=CausalNormalizer(),  # StandardScaler() # PowerTransformer() # CausalNormalizer()
         smooth_method="MA",
         interpolate_method="linear",
         resample_dt=0.1,
