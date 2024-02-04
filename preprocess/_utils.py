@@ -806,10 +806,39 @@ class CausalNormalizer:
     and present data, maintaining the causal nature of the time series.
     """
 
-    def __init__(self):
+    def __init__(self, nan_fill_method='ffill'):
+        """
+        Initialize the CausalNormalizer with a method to handle NaN values.
+
+        Parameters:
+        nan_fill_method (str): Method to fill NaN values. Options are 'ffill', 'bfill', and 'interpolate'.
+                               Default is 'ffill' (forward fill).
+        """
         self.cumulative_mean_ = None
         self.cumulative_std_ = None
+        self.nan_fill_method = nan_fill_method
 
+    def _handle_nans(self, X):
+        """
+        Handle NaN values in the dataset X based on the specified method.
+
+        Parameters:
+        X (array-like): The input data with potential NaN values.
+
+        Returns:
+        X_filled (array-like): The data with NaN values handled.
+        """
+        df = pd.DataFrame(X)
+        if self.nan_fill_method == 'ffill':
+            df.fillna(method='ffill', inplace=True)
+        elif self.nan_fill_method == 'bfill':
+            df.fillna(method='bfill', inplace=True)
+        elif self.nan_fill_method == 'interpolate':
+            df.interpolate(method='linear', inplace=True)
+        else:
+            raise ValueError("Invalid NaN fill method specified.")
+        return df.values
+    
     def fit(self, X, y=None):
         """
         Compute the cumulative mean and standard deviation of the dataset X.
@@ -827,6 +856,7 @@ class CausalNormalizer:
         self : object
             Returns the instance itself.
         """
+        X = self._handle_nans(X)
         T, D = X.shape
         cumulative_sum = np.cumsum(X, axis=0)
         cumulative_squares_sum = np.cumsum(X**2, axis=0)
@@ -890,7 +920,7 @@ def pickle_neural_data(
     url,
     zipfile,
     dataset="all",
-    transform=CausalNormalizer(),  # StandardScaler() # PowerTransformer() # CausalNormalizer()
+    transform=StandardScaler(),  # StandardScaler() # PowerTransformer() # CausalNormalizer()
     smooth_method="ma",
     interpolate_method="linear",
     resample_dt=None,
@@ -1051,7 +1081,7 @@ class BasePreprocessor:
         self,
         dataset_name,
         # TODO: Try different transforms from sklearn such as QuantileTransformer, etc. as well as our own custom CausalNormalizer.
-        transform=CausalNormalizer(),  # StandardScaler() # PowerTransformer() # CausalNormalizer()
+        transform=StandardScaler(),  # StandardScaler() # PowerTransformer() # CausalNormalizer()
         smooth_method="MA",
         interpolate_method="linear",
         resample_dt=0.1,
