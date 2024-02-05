@@ -1378,12 +1378,10 @@ class PureAttention(Model):
         # Input to hidden transformation
         self.input_hidden = torch.nn.Sequential(
             self.latent_embedding,
+            torch.nn.ReLU(),
             self.positional_encoding,
-            # # TODO: Should we exclude the ReLU here for the attention model?
-            # torch.nn.ReLU(),
-            # NOTE: YES use LayerNorm here!
-            self.layer_norm,
-            # TODO: Figure out if we should use LayerNorm here or not.
+            # # NOTE: Do NOT use LayerNorm here!
+            # self.layer_norm,
         )
         # Hidden to hidden transformation: Multihead Attention layer
         self.hidden_hidden = SelfAttention(
@@ -1449,9 +1447,8 @@ class NeuralTransformer(Model):
         # Input to hidden transformation
         self.input_hidden = torch.nn.Sequential(
             self.latent_embedding,
+            torch.nn.ReLU(),
             self.positional_encoding,
-            # # TODO: Should we exclude the ReLU here for the transformer model?
-            # torch.nn.ReLU(),
             # NOTE: Do NOT use LayerNorm here! (it's already in the TransformerEncoderLayer)
         )
         # Hidden to hidden transformation: TransformerEncoderLayer

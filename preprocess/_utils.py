@@ -806,13 +806,13 @@ class CausalNormalizer:
     and present data, maintaining the causal nature of the time series.
     """
 
-    def __init__(self, nan_fill_method='ffill'):
+    def __init__(self, nan_fill_method='interpolate'):
         """
         Initialize the CausalNormalizer with a method to handle NaN values.
 
         Parameters:
-        nan_fill_method (str): Method to fill NaN values. Options are 'ffill', 'bfill', and 'interpolate'.
-                               Default is 'ffill' (forward fill).
+        nan_fill_method (str): Method to fill NaN values. Options are 'ffill' (forward fill), 
+                                'bfill' (backward fill), and 'interpolate'. Default is 'interpolate'.
         """
         self.cumulative_mean_ = None
         self.cumulative_std_ = None
@@ -866,8 +866,9 @@ class CausalNormalizer:
         cumulative_variance = (
             cumulative_squares_sum
             - 2 * self.cumulative_mean_ * cumulative_sum
-            + count * self.cumulative_mean_**2
+                      + count * self.cumulative_mean_**2
         ) / count
+        self.cumulative_std_ = np.sqrt(cumulative_variance)
         self.cumulative_std_ = np.sqrt(cumulative_variance)
 
         # Avoid division by zero
