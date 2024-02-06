@@ -616,6 +616,7 @@ class Model(torch.nn.Module):
     @torch.autocast(device_type=DEVICE.type, dtype=torch.half)
     def sequence_normalization(self, neural_sequence):
         """
+        TODO: Get this working.
         Normalize the neural seqeunce causally.
         """
         device = neural_sequence.device
@@ -874,10 +875,10 @@ class Model(torch.nn.Module):
         input_activity = self.identity(
             input * mask.unsqueeze(1).expand_as(input)
         )  # (batch_size, seq_len, input_size)
-        ### DEBUG ###
-        # Normalize the input sequence 
-        input_activity = self.sequence_normalization(input_activity)
-        ### DEBUG ###
+        # ### DEBUG ###
+        # # Normalize the input sequence 
+        # input_activity = self.sequence_normalization(input_activity)
+        # ### DEBUG ###
         # Transform the input into a latent
         latent_out = self.input_hidden(input_activity)  # (batch_size, seq_len, hidden_size)
         # Transform the latent
@@ -902,10 +903,10 @@ class Model(torch.nn.Module):
         input_activity = self.identity(
             input * mask.unsqueeze(1).expand_as(input)
         )  # (batch_size, seq_len, input_size)
-        ### DEBUG ###
-        # Normalize the input sequence 
-        input_activity = self.sequence_normalization(input_activity)
-        ### DEBUG ###
+        # ### DEBUG ###
+        # # Normalize the input sequence 
+        # input_activity = self.sequence_normalization(input_activity)
+        # ### DEBUG ###
         # Convert the high-D neural sequence into a 1-D token sequence
         input_tokens = self.tokenize_neural_data(
             neural_sequence=input_activity,
