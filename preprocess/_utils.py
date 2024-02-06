@@ -921,7 +921,7 @@ def pickle_neural_data(
     url,
     zipfile,
     dataset="all",
-    transform=StandardScaler(),  # StandardScaler() # PowerTransformer() # CausalNormalizer()
+    transform=None,  # StandardScaler() # PowerTransformer() # CausalNormalizer() # None
     smooth_method="ma",
     interpolate_method="linear",
     resample_dt=None,
@@ -1082,7 +1082,7 @@ class BasePreprocessor:
         self,
         dataset_name,
         # TODO: Try different transforms from sklearn such as QuantileTransformer, etc. as well as our own custom CausalNormalizer.
-        transform=StandardScaler(),  # StandardScaler() # PowerTransformer() # CausalNormalizer()
+        transform=None,  # StandardScaler() # PowerTransformer() # CausalNormalizer() # None
         smooth_method="MA",
         interpolate_method="linear",
         resample_dt=0.1,
@@ -1123,6 +1123,8 @@ class BasePreprocessor:
             return aggregate_data(interp_time, interp_ca, target_dt=self.resample_dt)
 
     def normalize_data(self, data):
+        if transform is None:
+            return data
         return self.transform.fit_transform(data)
 
     def save_data(self, data_dict):
@@ -1217,7 +1219,7 @@ class BasePreprocessor:
                 :, unique_indices.astype(int)
             ]  # only get data for unique neurons
 
-            # 2. Transform data
+            # 2. Normalize calcium data
             calcium_data = self.normalize_data(trace_data)
 
             # 3. Compute calcium dynamics (residual calcium)
@@ -1784,7 +1786,7 @@ class Leifer2023Preprocessor(BasePreprocessor):
                 worm_idx -= 1
                 continue
 
-            # 2. Transform data
+            # 2. Normalize calcium data
             calcium_data = self.normalize_data(real_data)
 
             # 3. Compute calcium dynamics (residual calcium)
@@ -1979,8 +1981,8 @@ class Flavell2023Preprocessor(BasePreprocessor):
             # 1. Map named neurons
             neuron_to_idx, num_named_neurons = self.create_neuron_idx(neurons)
 
-            # 2. Transform data
-            calcium_data = self.transform.fit_transform(calcium_data)
+            # 2. Normalize calcium data
+            calcium_data = sel.normalize_data(calcium_data)
 
             # 3. Compute calcium dynamics (residual calcium)
             dt = np.gradient(time_in_seconds, axis=0)

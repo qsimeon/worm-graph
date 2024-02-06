@@ -337,12 +337,6 @@ class SelfAttention(torch.nn.Module):
             dropout,
             batch_first=True,
         )
-        # ### DEBUG ###
-        # # NOTE: Maintain exponential moving average (EMA) of attention weights averaged
-        # # across heads and batches; this is purely for interpretability analysis.
-        # self.attn_weights = 0  #
-        # self.decay = 0.5  # decay factor for EMA
-        # ### DEBUG ###
 
     def forward(self, src):
         """
@@ -354,7 +348,7 @@ class SelfAttention(torch.nn.Module):
             device=src.device,
         )
         # Apply self-attention
-        attn_output, attn_output_weights = self.attn(
+        attn_output, _ = self.attn(
             key=src,
             query=src,
             value=src,
@@ -363,13 +357,6 @@ class SelfAttention(torch.nn.Module):
             need_weights=False,
             average_attn_weights=True,
         )
-        # ### DEBUG ###
-        # # Update the EMA of attention weights averaged across heads and batches
-        # self.attn_weights *= self.decay  # scale existing values by decay factor
-        # self.attn_weights += (1 - self.decay) * attn_output_weights.detach().mean(
-        #     dim=0
-        # )  # update with scaled new means
-        # ### DEBUG ###
         # Return attention output w/ shape (batch, seq_len, embed_dim)
         return attn_output
 
@@ -560,7 +547,10 @@ class Model(torch.nn.Module):
         self.linear = torch.nn.Linear(self.hidden_size, self.output_size)
         # Optional layer normalization
         self.layer_norm = torch.nn.LayerNorm(self.hidden_size, elementwise_affine=True)
-        # Version 2 tokenizes neural data either as a 1-D sequence
+        # Initialize running mean and variance for sequence normalization
+        self.register_buffer('running_mean', torch.zeros(self.input_size))
+        self.register_buffer('running_var', torch.ones(self.input_size))
+        # Model version_2 tokenizes neural data either as a 1-D sequence
         self.version_2 = version_2
         self.num_tokens = num_tokens
         # New attributes and parameters for version 2 with tokenization
@@ -626,7 +616,34 @@ class Model(torch.nn.Module):
     def get_l1_reg_param(self):
         return self.l1_reg_param
 
+    # @torch.autocast(device_type=DEVICE.type, dtype=torch.half) # DEBUG
+    def update_running_stats(self, neural_sequence, momentum=0.5):
+        """
+        Update running mean and variance statistics for the features in neural_sequence.
+        The momentum argument controls the weight given to the new statistics.
+        """
+        batch_mean = torch.mean(neural_sequence, dim=[0, 1])  # mean over batch and sequence
+        batch_var = torch.var(neural_sequence, dim=[0, 1], unbiased=False)  # variance over batch and sequence
+        
+        # Update the running estimates
+        self.running_mean = momentum * batch_mean + (1 - momentum) * self.running_mean
+        self.running_var = momentum * batch_var + (1 - momentum) * self.running_var
+
     @torch.autocast(device_type=DEVICE.type, dtype=torch.half)
+    def sequence_normalization(self, neural_sequence):
+        """
+        Normalize the sequence using the running statistics.
+        During training, also update the running statistics.
+        """
+        # If in training mode, update running statistics
+        if torch.is_grad_enabled(): # training
+            self.update_running_stats(neural_sequence)
+
+        # Normalize using the running statistics
+        neural_sequence_normalized = (neural_sequence - self.running_mean) / torch.sqrt(self.running_var).clamp(min=1) # avoid division by 0
+        return neural_sequence_normalized
+
+    # @torch.autocast(device_type=DEVICE.type, dtype=torch.half) # DEBUG
     def calculate_distances(self, neural_sequence, token_matrix, feature_mask=None):
         """
         Efficiently calculates Euclidean distances between neural sequence vectors and token matrix vectors.
@@ -697,6 +714,7 @@ class Model(torch.nn.Module):
         neural_sequence: torch.Tensor,
         feature_mask: Union[None, torch.Tensor] = None,
         token_matrix: Union[None, torch.Tensor] = None,
+        decay: float = 0.5,
     ):
         """
         Convert the high-dimensional sequence of neural states to a 1-D sequence of tokens.
@@ -710,6 +728,7 @@ class Model(torch.nn.Module):
             neural_sequence: tensor of shape (batch_size, seq_len, input_size)
             feature_mask: tensor of shape (batch_size, input_size)
             token_matrix: tensor of shape (num_tokens, input_size)
+            decay: float EMA decay factor for updating the neural embedding
         Output:
             token_sequence: tensor of shape (batch_size, seq_len)
         """
@@ -738,7 +757,7 @@ class Model(torch.nn.Module):
         token_matrix = token_matrix.to(neural_sequence.device)
         # Get shapes from the token_matrix
         # NOTE: We could use the attributes self.num_tokens and self.input_size of the model;
-        # but using this approach allows us to use this method as a standalone function.
+        # but getting the sizes this way allos us to use this method as a standalone function.
         num_tokens, _ = token_matrix.shape
 
         # PART 1: Tokenize the neural data
@@ -779,31 +798,10 @@ class Model(torch.nn.Module):
         #     dtype=neural_flat.dtype,
         # )
         # # Accumulate sums for each token
-        # # ########
-        # # index_tensor = token_sequence_flat.unsqueeze(1).expand(
-        # #     -1, self.input_size
-        # # )  # use a large index tensor for scatter_add_
-        # # token_sums.scatter_add_(
-        # #     0, index_tensor, neural_flat
-        # # )  # has as many rows as there are unique tokens
-        # # ########
-        # ### DEBUG ###
-        # # NOTE: The i-th row of neural_flat is added to the token_sequence_flat[i]-th row of token_sums;
-        # # the i-th row of neural_flat is a vector of shape (input_size,) and token_sequence_flat[i] is some token;
         # token_sums.index_add_(
         #     dim=0, index=token_sequence_flat, source=neural_flat
-        # )  # use a vector index tensor for index_add_
-        # ### DEBUG ###
-
+        # ) 
         # # Count occurrences of each token
-        # # ########
-        # # token_counts += torch.bincount(
-        # #     token_sequence_flat, minlength=self.num_tokens
-        # # )  # has as many rows as there are unique tokens
-        # # ########
-        # ### DEBUG ###
-        # # NOTE: The i-th row of source is added to the token_sequence_flat[i]-th row of token_counts;
-        # # the i-th row of source is a 1 and the token_sequence_flat[i] is some token;
         # token_counts.index_add_(
         #     dim=0,
         #     index=token_sequence_flat,
@@ -811,38 +809,23 @@ class Model(torch.nn.Module):
         #         token_sequence_flat,
         #         dtype=token_counts.dtype,
         #     ),
-        # )
-        # ### DEBUG ###
-
+        # ) 
         # # Compute means and apply EMA update
         # new_token_means = token_sums / token_counts.unsqueeze(1).clamp(min=1)  # avoid division by 0
         # new_token_means = new_token_means.to(self.neural_embedding.device)  # move to same device
-        # # ########
-        # # decay = 0.5  # EMA decay factor
-        # # self.neural_embedding *= decay
-        # # self.neural_embedding += (1 - decay) * new_token_means
-        # # ########
-        # ### DEBUG ###
         # observed_tokens = token_sequence_flat.unique()
         # decay = 0.5  # EMA decay factor
-        # self.neural_embedding[observed_tokens] = (
-        #     decay * self.neural_embedding[observed_tokens]
-        #     + (1 - decay) * new_token_means[observed_tokens]
-        # )
-        # ### DEBUG ###
+        # OLD = self.neural_embedding[observed_tokens]
+        # NEW = new_token_means[observed_tokens]
+        # self.neural_embedding[observed_tokens] = decay * OLD + (1 - decay) * NEW
         # # ### <<< FAST but INCORRECT, ORIGINAL Implementation <<< ###
 
         ### >>> SLOW but CORRECT, NEW Implementation >>> ###
         # NOTE: Updates positions in `self.neural_embedding` that correspond to observed tokens and masked inputs.
         # Get positions of masked/observed input features
-        # print(f"neural_sequence: {neural_sequence.shape, neural_sequence.dtype}\n") # DEBUG
-        # print(f"feature_mask: {feature_mask.shape, feature_mask.dtype}\n") # DEBUG
         masked_input_positions = feature_mask.nonzero(
             as_tuple=False
         )  # (<= batch_size * input_size, 2)
-        # print(
-        #     f"masked_input_positions: {masked_input_positions.shape, masked_input_positions.dtype}\n"
-        # ) # DEBUG
         # Get unique values and their counts in batch dimension (first column)
         _, counts = torch.unique(masked_input_positions[:, 0], return_counts=True)
         # Split the tensor into groups based on the batch dimension
@@ -851,29 +834,18 @@ class Model(torch.nn.Module):
         decay = 0.5  # decay factor for EMA
         for group in batch_groups:  # bigO(batch_size)
             batch_idx = group[:, 0].unique().item()
-            # print(f"batch_idx {batch_idx}")  # DEBUG
             observed_inputs = group[:, 1]
-            # print(f"observed_inputs: {observed_inputs.shape, observed_inputs.dtype}\n")  # DEBUG
-            batch_tokens = token_sequence[batch_idx]  # (seq_len, ) # DEBUG
-            # print(f"batch_tokens: {batch_tokens.shape, batch_tokens.dtype}\n")
-            batch_inputs = neural_sequence[batch_idx]  # (seq_len, input_size) # DEBUG
-            # print(f"batch_inputs: {batch_inputs.shape, batch_inputs.dtype}\n")
+            batch_tokens = token_sequence[batch_idx]  # (seq_len, ) 
+            batch_inputs = neural_sequence[batch_idx]  # (seq_len, input_size) 
             for token in batch_tokens.unique():
-                # print(f"token: {token}")  # DEBUG
                 OLD = self.neural_embedding[token, observed_inputs]
-                # print(
-                #     f"self.neural_embedding[token, observed_inputs]: {OLD.shape, OLD.dtype}\n"
-                # )  # DEBUG
                 NEW = batch_inputs[batch_tokens == token].mean(dim=0)[observed_inputs]
-                # print(
-                #     f"batch_inputs[batch_tokens == token].mean(dim=0)[observed_inputs]: {NEW.shape, NEW.mean(dim=0).dtype}\n"
-                # )  # DEBUG
                 self.neural_embedding[token, observed_inputs] = decay * OLD + (1 - decay) * NEW
         ### <<< SLOW but CORRECT, NEW Implementation <<< ###
 
         # Return the tokenized sequence
         return token_sequence
-
+        
     @torch.autocast(device_type=DEVICE.type, dtype=torch.long)
     def bin_tensor(self, nt):
         """
@@ -915,6 +887,10 @@ class Model(torch.nn.Module):
         input_activity = self.identity(
             input * mask.unsqueeze(1).expand_as(input)
         )  # (batch_size, seq_len, input_size)
+        ### DEBUG ###
+        # Normalize the input sequence 
+        input_activity = self.sequence_normalization(input_activity)
+        ### DEBUG ###
         # Transform the input into a latent
         latent_out = self.input_hidden(input_activity)  # (batch_size, seq_len, hidden_size)
         # Transform the latent
@@ -939,6 +915,10 @@ class Model(torch.nn.Module):
         input_activity = self.identity(
             input * mask.unsqueeze(1).expand_as(input)
         )  # (batch_size, seq_len, input_size)
+        ### DEBUG ###
+        # Normalize the input sequence 
+        input_activity = self.sequence_normalization(input_activity)
+        ### DEBUG ###
         # Convert the high-D neural sequence into a 1-D token sequence
         input_tokens = self.tokenize_neural_data(
             neural_sequence=input_activity,
@@ -1270,7 +1250,7 @@ class LinearRegression(Model):
         # Input to hidden transformation
         self.input_hidden = torch.nn.Sequential(
             self.latent_embedding,
-            # NOTE: Don't use ReLU because that would be nonlinear model.
+            # NOTE: No ReLU because that would be nonlinear model.
         )
         # Hidden to hidden transformation
         self.hidden_hidden = torch.nn.Identity()
@@ -1309,13 +1289,13 @@ class FeatureFFNN(Model):
             hidden_size,
             loss,
             l1_reg_param,
+            **kwargs,
         )
         # Special parameters for this model
         self.dropout = 0.1  # dropout rate
         # Input to hidden transformation
         self.input_hidden = torch.nn.Sequential(
             self.latent_embedding,
-            torch.nn.ReLU(),
             # NOTE: Do NOT use LayerNorm here!
         )
         # Hidden to hidden transformation: FeedForward layer
@@ -1378,10 +1358,8 @@ class PureAttention(Model):
         # Input to hidden transformation
         self.input_hidden = torch.nn.Sequential(
             self.latent_embedding,
-            torch.nn.ReLU(),
             self.positional_encoding,
-            # # NOTE: Do NOT use LayerNorm here!
-            # self.layer_norm,
+            # NOTE: Do NOT use LayerNorm here!
         )
         # Hidden to hidden transformation: Multihead Attention layer
         self.hidden_hidden = SelfAttention(
@@ -1447,9 +1425,8 @@ class NeuralTransformer(Model):
         # Input to hidden transformation
         self.input_hidden = torch.nn.Sequential(
             self.latent_embedding,
-            torch.nn.ReLU(),
             self.positional_encoding,
-            # NOTE: Do NOT use LayerNorm here! (it's already in the TransformerEncoderLayer)
+            # NOTE: No LayerNorm because it is already part of TransformerEncoderLayer.  
         )
         # Hidden to hidden transformation: TransformerEncoderLayer
         self.hidden_hidden = CausalTransformer(
@@ -1493,7 +1470,6 @@ class NetworkCTRNN(Model):
         # Input to hidden transformation
         self.input_hidden = torch.nn.Sequential(
             self.latent_embedding,
-            torch.nn.ReLU(),
             # NOTE: YES use LayerNorm here!
             self.layer_norm,
         )
@@ -1541,7 +1517,6 @@ class LiquidCfC(Model):
         # Input to hidden transformation
         self.input_hidden = torch.nn.Sequential(
             self.latent_embedding,
-            torch.nn.ReLU(),
             # NOTE: YES use LayerNorm here!
             self.layer_norm,
         )
@@ -1606,7 +1581,6 @@ class NetworkLSTM(Model):
         # Input to hidden transformation
         self.input_hidden = torch.nn.Sequential(
             self.latent_embedding,
-            torch.nn.ReLU(),
             # NOTE: YES use LayerNorm here!
             self.layer_norm,
         )
