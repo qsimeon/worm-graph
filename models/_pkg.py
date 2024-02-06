@@ -10,4 +10,5 @@ from scipy.stats import norm
 from typing import Callable, Union
 from prettytable import PrettyTable
 from omegaconf import DictConfig, OmegaConf
+from preprocess._utils import CausalNormalizer
 from utils import DEVICE, ROOT_DIR, BLOCK_SIZE, NUM_TOKENS, VERSION_2

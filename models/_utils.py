@@ -547,9 +547,6 @@ class Model(torch.nn.Module):
         self.linear = torch.nn.Linear(self.hidden_size, self.output_size)
         # Optional layer normalization
         self.layer_norm = torch.nn.LayerNorm(self.hidden_size, elementwise_affine=True)
-        # Initialize running mean and variance for sequence normalization
-        self.register_buffer('running_mean', torch.zeros(self.input_size))
-        self.register_buffer('running_var', torch.ones(self.input_size))
         # Model version_2 tokenizes neural data either as a 1-D sequence
         self.version_2 = version_2
         self.num_tokens = num_tokens
@@ -616,34 +613,24 @@ class Model(torch.nn.Module):
     def get_l1_reg_param(self):
         return self.l1_reg_param
 
-    # @torch.autocast(device_type=DEVICE.type, dtype=torch.half) # DEBUG
-    def update_running_stats(self, neural_sequence, momentum=0.5):
-        """
-        Update running mean and variance statistics for the features in neural_sequence.
-        The momentum argument controls the weight given to the new statistics.
-        """
-        batch_mean = torch.mean(neural_sequence, dim=[0, 1])  # mean over batch and sequence
-        batch_var = torch.var(neural_sequence, dim=[0, 1], unbiased=False)  # variance over batch and sequence
-        
-        # Update the running estimates
-        self.running_mean = momentum * batch_mean + (1 - momentum) * self.running_mean
-        self.running_var = momentum * batch_var + (1 - momentum) * self.running_var
-
     @torch.autocast(device_type=DEVICE.type, dtype=torch.half)
     def sequence_normalization(self, neural_sequence):
         """
-        Normalize the sequence using the running statistics.
-        During training, also update the running statistics.
+        Normalize the neural seqeunce causally.
         """
-        # If in training mode, update running statistics
-        if torch.is_grad_enabled(): # training
-            self.update_running_stats(neural_sequence)
-
-        # Normalize using the running statistics
-        neural_sequence_normalized = (neural_sequence - self.running_mean) / torch.sqrt(self.running_var).clamp(min=1) # avoid division by 0
+        device = neural_sequence.device
+        batch_size, _, _ = neural_sequence.shape
+        neural_sequence_normalized = torch.empty_like(neural_sequence, device=device)
+        transform = CausalNormalizer()
+        # Normalize using CausalNormalizer
+        for b in range(batch_size):
+            X = neural_sequence[b].cpu().numpy()
+            X = transform.fit_transform(X)
+            neural_sequence_normalized[b] = torch.from_numpy(X).to(neural_sequence.dtype).to(device)
+        # Return the normalized sequence
         return neural_sequence_normalized
 
-    # @torch.autocast(device_type=DEVICE.type, dtype=torch.half) # DEBUG
+    @torch.autocast(device_type=DEVICE.type, dtype=torch.half)
     def calculate_distances(self, neural_sequence, token_matrix, feature_mask=None):
         """
         Efficiently calculates Euclidean distances between neural sequence vectors and token matrix vectors.
