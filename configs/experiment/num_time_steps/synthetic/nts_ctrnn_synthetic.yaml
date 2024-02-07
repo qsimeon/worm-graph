@@ -1,7 +1,7 @@
 # @package _global_
-# File name: nts_lstm_synthetic.yaml
+# File name: nts_ctrnn_synthetic.yaml
 #   nts = number of time steps
-#   lstm = NetworkLSTM model
+#   ctrnn = NetworkCTRNN model
 #   synthetic = synthetic datasets (Sines, Lorenz, VanDerPol, RandWalk, WhiteNoise)
 # We increase gradually the quantity of worms from all datasets.
 # We choose the hidden size to get a model with ~0.580M (trainable) parameters.
@@ -51,8 +51,8 @@ submodule:
 
   model:
     # Build model from scratch
-    type: NetworkLSTM 
-    hidden_size: 234
+    type: NetworkCTRNN 
+    hidden_size: 408
 
   dataset:
     # This gets overwritten by the sweeper
@@ -137,5 +137,5 @@ submodule:
 experiment: 
   # What parameter you are experimenting with (key)
   key: num_time_steps 
-  name: nts_lstm_synthetic
+  name: nts_ctrnn_synthetic
   mode: MULTIRUN
