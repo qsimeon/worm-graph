@@ -4,7 +4,7 @@
 #   liquid = LiquidCfC model
 #   experimental = experimental datasets (Kato, Nichols, Skora, Uzel, Yemini, Kaplan, Flavell, Leifer)
 # We increase gradually the quantity of worms from all datasets.
-# We choose the hidden size to get a model with ~0.574M (trainable) parameters.
+# We choose the hidden size to get a model with ~0.580M (trainable) parameters.
 defaults:
   - override /submodule: [preprocess, model, train, visualize]
   - _self_
