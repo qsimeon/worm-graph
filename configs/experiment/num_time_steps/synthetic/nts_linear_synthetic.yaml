@@ -13,11 +13,11 @@ hydra:
   mode: MULTIRUN
   sweeper:
     params:
-      experiment.seed: 1 # assign each synthetic dataset a distinct random seed
-      submodule.dataset.use_these_datasets.path: choice(/om2/user/qsimeon/worm-graph/data/validation_Sines0000)
-      submodule.dataset.experimental_datasets: choice({Sines0000:10},{Sines0000:11},{Sines0000:13},{Sines0000:16},{Sines0000:18},{Sines0000:21},{Sines0000:25},{Sines0000:30},{Sines0000:35},{Sines0000:41},{Sines0000:48},{Sines0000:56},{Sines0000:66},{Sines0000:77},{Sines0000:90},{Sines0000:106},{Sines0000:124},{Sines0000:145},{Sines0000:170},{Sines0000:199})
-      submodule.predict.experimental_datasets: choice({Sines0000:[worm0, worm1]})
-      submodule.analysis.validation.experimental_datasets: choice({Sines0000:all})
+      experiment.seed: 4 # assign each synthetic dataset a distinct random seed
+      submodule.dataset.use_these_datasets.path: choice(/om2/user/qsimeon/worm-graph/data/validation_RandWalk0000)
+      submodule.dataset.experimental_datasets: choice({RandWalk0000:10},{RandWalk0000:11},{RandWalk0000:13},{RandWalk0000:16},{RandWalk0000:18},{RandWalk0000:21},{RandWalk0000:25},{RandWalk0000:30},{RandWalk0000:35},{RandWalk0000:41},{RandWalk0000:48},{RandWalk0000:56},{RandWalk0000:66},{RandWalk0000:77},{RandWalk0000:90},{RandWalk0000:106},{RandWalk0000:124},{RandWalk0000:145},{RandWalk0000:170},{RandWalk0000:199})
+      submodule.predict.experimental_datasets: choice({RandWalk0000:[worm0, worm1]})
+      submodule.analysis.validation.experimental_datasets: choice({RandWalk0000:all})
       ### submodule.dataset.use_these_datasets.path ###
       # seed 1: choice(/om2/user/qsimeon/worm-graph/data/validation_Sines0000)
       # seed 2: choice(/om2/user/qsimeon/worm-graph/data/validation_Lorenz0000)
