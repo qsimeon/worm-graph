@@ -20,12 +20,12 @@ dataset:
   # <str> = use this wormID particular worm in the dataset
   # <list> = use the worms with wormIDs in the list
   experimental_datasets:
-    # Sines0000: all
-    # Lorenz0000: all
-    # WhiteNoise0000: all
-    # RandWalk0000: all
-    # VanDerPol0000: all
-    # Shakespeare0000: all
+    # Sines0000: null
+    # Lorenz0000: null
+    # WhiteNoise0000: null
+    # RandWalk0000: null
+    # VanDerPol0000: null
+    # Shakespeare0000: null
     Kato2015: all
     Nichols2017: all
     Skora2018: all

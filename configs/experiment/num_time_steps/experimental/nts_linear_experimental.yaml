@@ -40,6 +40,12 @@ submodule:
 
     # This gets overwritten by the sweeper
     experimental_datasets:
+      Sines0000: null
+      Lorenz0000: null
+      WhiteNoise0000: null
+      RandWalk0000: null
+      VanDerPol0000: null
+      Shakespeare0000: null
       Kato2015: null
       Nichols2017: null
       Skora2018: null
@@ -63,15 +69,21 @@ submodule:
   # Choose the worms that you want to predict
   predict:
     predict_this_log_dir: null
+    # This gets overwritten by the sweeper
     experimental_datasets:
-      # This gets overwritten by the sweeper
+      Sines0000: null
+      Lorenz0000: null
+      WhiteNoise0000: null
+      RandWalk0000: null
+      VanDerPol0000: null
+      Shakespeare0000: null
       Kato2015: null
       Nichols2017: null
       Skora2018: null
       Kaplan2020: null
       Yemini2021: null
       Uzel2022: null
-      Flavell2023: null # something is wrong with worm0 in Flavell2023
+      Flavell2023: null
       Leifer2023: null
     # Number of time steps to generate
     num_new_timesteps: null
@@ -84,6 +96,12 @@ submodule:
     validation:
       # This gets overwritten by the sweeper
       experimental_datasets:
+        Sines0000: null
+        Lorenz0000: null
+        WhiteNoise0000: null
+        RandWalk0000: null
+        VanDerPol0000: null
+        Shakespeare0000: null
         Kato2015: null
         Nichols2017: null
         Skora2018: null

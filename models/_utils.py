@@ -614,22 +614,35 @@ class Model(torch.nn.Module):
         return self.l1_reg_param
 
     @torch.autocast(device_type=DEVICE.type, dtype=torch.half)
-    def sequence_normalization(self, neural_sequence):
+    def causal_normalization(self, neural_sequence):
         """
-        TODO: Get this working.
-        Normalize the neural seqeunce causally.
+        Apply a causal normalization to each sequence in the batch independently.
+        Args:
+            neural_sequence: tensor of shape (batch_size, seq_len, features).
+        Returns:
+            normalized_sequences: tensor of shape (batch_size, seq_len, features).
         """
-        device = neural_sequence.device
-        batch_size, _, _ = neural_sequence.shape
-        neural_sequence_normalized = torch.empty_like(neural_sequence, device=device)
-        transform = CausalNormalizer()
-        # Normalize using CausalNormalizer
-        for b in range(batch_size):
-            X = neural_sequence[b].cpu().numpy()
-            X = transform.fit_transform(X)
-            neural_sequence_normalized[b] = torch.from_numpy(X).to(neural_sequence.dtype).to(device)
-        # Return the normalized sequence
-        return neural_sequence_normalized
+        normalized_sequences = []
+
+        # Iterate over each sequence in the batch
+        for sequence in neural_sequence:
+            # Compute the cumulative sum for mean
+            cumsum = torch.cumsum(sequence, dim=0)
+            cumsum_sq = torch.cumsum(sequence ** 2, dim=0)
+            counts = torch.arange(1, sequence.shape[0] + 1).reshape(-1, 1).to(sequence.device)
+
+            # Compute the mean and variance using cumulative sums
+            mean = cumsum / counts
+            var = (cumsum_sq - 2 * mean * cumsum + counts * mean ** 2) / counts
+            std = torch.sqrt(var + 1e-5)  # Add epsilon to avoid division by zero
+
+            # Normalize the sequence
+            normalized_sequence = (sequence - mean) / std
+            normalized_sequences.append(normalized_sequence.unsqueeze(0))
+
+        # Concatenate all normalized sequences along the batch dimension
+        normalized_sequences = torch.cat(normalized_sequences, dim=0)
+        return normalized_sequences
 
     @torch.autocast(device_type=DEVICE.type, dtype=torch.half)
     def calculate_distances(self, neural_sequence, token_matrix, feature_mask=None):
@@ -642,7 +655,7 @@ class Model(torch.nn.Module):
             feature_mask (torch.Tensor, optional): Shape (batch_size, input_size). If None, all features are considered.
 
         Returns:
-            torch.Tensor: Distances for each batch. Shape (batch_size, seq_len, num_tokens).
+            distances (torch.Tensor): Distance matrix for each batch. Shape (batch_size, seq_len, num_tokens).
         """
         # Get input shapes
         batch_size, _, input_size = neural_sequence.shape
@@ -876,8 +889,8 @@ class Model(torch.nn.Module):
             input * mask.unsqueeze(1).expand_as(input)
         )  # (batch_size, seq_len, input_size)
         # ### DEBUG ###
-        # # Normalize the input sequence 
-        # input_activity = self.sequence_normalization(input_activity)
+        # # Normalize (causally) the input sequence 
+        # input_normalized = self.causal_normalization(input_activity)
         # ### DEBUG ###
         # Transform the input into a latent
         latent_out = self.input_hidden(input_activity)  # (batch_size, seq_len, hidden_size)
@@ -904,8 +917,8 @@ class Model(torch.nn.Module):
             input * mask.unsqueeze(1).expand_as(input)
         )  # (batch_size, seq_len, input_size)
         # ### DEBUG ###
-        # # Normalize the input sequence 
-        # input_activity = self.sequence_normalization(input_activity)
+        # # Normalize (causally) the input sequence 
+        # input_normalized = self.causal_normalization(input_activity)
         # ### DEBUG ###
         # Convert the high-D neural sequence into a 1-D token sequence
         input_tokens = self.tokenize_neural_data(

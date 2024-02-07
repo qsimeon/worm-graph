@@ -10,11 +10,11 @@ predict:
   # <list> = predict the worms with wormIDs in the list
   experimental_datasets:
     # Sines0000: [worm0, worm1] # test to check if distinct neuron signatures is preserved across worms
-    # Lorenz0000: worm0
-    # WhiteNoise0000: worm0
-    # RandWalk0000: worm0
-    # VanDerPol0000: worm0
-    # Shakespeare0000: worm0
+    # Lorenz0000: [worm0, worm1]
+    # WhiteNoise0000: [worm0, worm1]
+    # RandWalk0000: [worm0, worm1]
+    # VanDerPol0000: [worm0, worm1]
+    # Shakespeare0000: [worm0, worm1]
     Kato2015: worm0
     Nichols2017: worm0
     Skora2018: worm0
