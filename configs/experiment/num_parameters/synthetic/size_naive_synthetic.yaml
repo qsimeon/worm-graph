@@ -1,0 +1,137 @@
+# @package _global_
+# File name: size_naive_synthetic.yaml
+#   size = model size (key: num_parameters)
+#   naive = NaivePredictor model
+#   synthetic = synthetic datasets (Sines, Lorenz, VanDerPol, RandWalk, WhiteNoise)
+# We increase gradually the hidden size of the models as a way to increase the number of parameters.
+defaults:
+  - override /submodule: [preprocess, model, train, visualize]
+  - _self_
+
+hydra:
+  # The sweeper params will be used only when MULTIRUN mode is used.
+  # Uses the submodule parameters if in RUN mode.
+  mode: MULTIRUN
+  sweeper:
+    params:
+      experiment.seed: 1
+      # NOTE: NaivePredictor is a shallow model (i.e. no hidden layers)
+      submodule.dataset.experimental_datasets: choice({Sines0000:all})
+      submodule.predict.experimental_datasets: choice({Sines0000:[worm0, worm1]})
+      submodule.analysis.validation.experimental_datasets: choice({Sines0000:all})
+      # ###############################################################################################
+      ### submodule.dataset.experimental_datasets ###
+      # seed 1: choice({Sines0000:all})
+      # seed 2: choice({Lorenz0000:all})
+      # seed 3: choice({WhiteNoise0000:all})
+      # seed 4: choice({RandWalk0000:all})
+      # seed 5: choice({VanDerPol0000:all})
+      # seed 6: choice({Shakespeare0000:all})
+      ### submodule.predict.experimental_datasets ###
+      # seed 1: choice({Sines0000:[worm0, worm1]})
+      # seed 2: choice({Lorenz0000:[worm0, worm1]})
+      # seed 3: choice({WhiteNoise0000:[worm0, worm1]})
+      # seed 4: choice({RandWalk0000:[worm0, worm1]})
+      # seed 5: choice({VanDerPol0000:[worm0, worm1]})
+      # seed 6: choice({Shakespeare0000:[worm0, worm1]})
+      ### submodule.analysis.validation.experimental_datasets ###
+      # seed 1: choice({Sines0000:all})
+      # seed 2: choice({Lorenz0000:all})
+      # seed 3: choice({WhiteNoise0000:all})
+      # seed 4: choice({RandWalk0000:all})
+      # seed 5: choice({VanDerPol0000:all})
+      # seed 6: choice({Shakespeare0000:all})
+      # ###############################################################################################
+
+submodule:
+
+  # Build model from scratch
+  model:
+    type: NaivePredictor
+    # This gets overwritten by the sweeper
+    hidden_size: null
+
+  dataset:
+    # Set path to a directory with a fixed validation set
+    use_these_datasets:
+      path: null
+      num_worms: null
+
+    save_datasets: false
+
+    experimental_datasets:
+      # This gets overwritten by the sweeper
+      Sines0000: null
+      Lorenz0000: null
+      WhiteNoise0000: null
+      RandWalk0000: null
+      VanDerPol0000: null
+      Shakespeare0000: null
+      Kato2015: null
+      Nichols2017: null
+      Skora2018: null
+      Kaplan2020: null
+      Yemini2021: null
+      Uzel2022: null
+      Flavell2023: null
+      Leifer2023: null
+
+    num_named_neurons: null
+    num_train_samples: 32
+    num_val_samples: 32
+    # Set to the same value as submodule.predict.context_window
+    seq_len: 180
+    reverse: false
+    use_residual: false
+    smooth_data: true
+    train_split_first: true
+    train_split_ratio: 0.5
+
+  # Choose the worms that you want to predict
+  predict:
+    predict_this_log_dir: null
+    # This gets overwritten by the sweeper
+    experimental_datasets:
+      Sines0000: null
+      Lorenz0000: null
+      WhiteNoise0000: null
+      RandWalk0000: null
+      VanDerPol0000: null
+      Shakespeare0000: null
+      Kato2015: null
+      Nichols2017: null
+      Skora2018: null
+      Kaplan2020: null
+      Yemini2021: null
+      Uzel2022: null
+      Flavell2023: null
+      Leifer2023: null
+    # Number of time steps to generate
+    num_new_timesteps: null
+    # Set to the same value as submodule.dataset.seq_len
+    context_window: 180
+
+  analysis:
+    analyse_this_log_dir: null
+    validation:
+      # This gets overwritten by the sweeper
+      experimental_datasets:
+        Sines0000: null
+        Lorenz0000: null
+        WhiteNoise0000: null
+        RandWalk0000: null
+        VanDerPol0000: null
+        Shakespeare0000: null
+        Kato2015: null
+        Nichols2017: null
+        Skora2018: null
+        Kaplan2020: null
+        Yemini2021: null
+        Uzel2022: null
+        Flavell2023: null
+        Leifer2023: null
+
+experiment:
+  key: num_parameters
+  name: size_naive_synthetic
+  mode: MULTIRUN
