@@ -2,7 +2,7 @@
 # File name: size_linear_synthetic.yaml
 #   size = model size (key: num_parameters)
 #   linear = LinearRegression model
-#   synthetic = synthetic datasets (Sines, Lorenz, VanDerPol, RandWalk, WhiteNoise)
+#   synthetic = synthetic datasets (Sines, Lorenz, VanDerPol, RandWalk, WhiteNoise, Shakespeare)
 # We increase gradually the hidden size of the models as a way to increase the number of parameters.
 defaults:
   - override /submodule: [preprocess, model, train, visualize]
@@ -14,11 +14,11 @@ hydra:
   mode: MULTIRUN
   sweeper:
     params:
-      experiment.seed: 1
+      experiment.seed: 4
       # NOTE: LinearRegression is a shallow model (i.e. no hidden layers)
-      submodule.dataset.experimental_datasets: choice({Sines0000:all})
-      submodule.predict.experimental_datasets: choice({Sines0000:[worm0, worm1]})
-      submodule.analysis.validation.experimental_datasets: choice({Sines0000:all})
+      submodule.dataset.experimental_datasets: choice({RandWalk0000:all})
+      submodule.predict.experimental_datasets: choice({RandWalk0000:[worm0, worm1]})
+      submodule.analysis.validation.experimental_datasets: choice({RandWalk0000:all})
       # ###############################################################################################
       ### submodule.dataset.experimental_datasets ###
       # seed 1: choice({Sines0000:all})

@@ -14,11 +14,11 @@ hydra:
   mode: MULTIRUN
   sweeper:
     params:
-      experiment.seed: 1
+      experiment.seed: 4
       # NOTE: NaivePredictor is a shallow model (i.e. no hidden layers)
-      submodule.dataset.experimental_datasets: choice({Sines0000:all})
-      submodule.predict.experimental_datasets: choice({Sines0000:[worm0, worm1]})
-      submodule.analysis.validation.experimental_datasets: choice({Sines0000:all})
+      submodule.dataset.experimental_datasets: choice({RandWalk0000:all})
+      submodule.predict.experimental_datasets: choice({RandWalk0000:[worm0, worm1]})
+      submodule.analysis.validation.experimental_datasets: choice({RandWalk0000:all})
       # ###############################################################################################
       ### submodule.dataset.experimental_datasets ###
       # seed 1: choice({Sines0000:all})

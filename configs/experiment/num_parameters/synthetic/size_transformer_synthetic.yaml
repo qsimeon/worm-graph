@@ -14,11 +14,11 @@ hydra:
   mode: MULTIRUN
   sweeper:
     params:
-      experiment.seed: 1
+      experiment.seed: 4
       submodule.model.hidden_size: choice(8,12,16,22,30,42,58,80,110,154,214,296,412,572,794,1102,1530,2124,2950,4096)
-      submodule.dataset.experimental_datasets: choice({Sines0000:all})
-      submodule.predict.experimental_datasets: choice({Sines0000:[worm0, worm1]})
-      submodule.analysis.validation.experimental_datasets: choice({Sines0000:all})
+      submodule.dataset.experimental_datasets: choice({RandWalk0000:all})
+      submodule.predict.experimental_datasets: choice({RandWalk0000:[worm0, worm1]})
+      submodule.analysis.validation.experimental_datasets: choice({RandWalk0000:all})
       # ###############################################################################################
       ### submodule.dataset.experimental_datasets ###
       # seed 1: choice({Sines0000:all})

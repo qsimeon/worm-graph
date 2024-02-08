@@ -1,7 +1,7 @@
 # @package _global_
-# File name: size_ffnn_synthetic.yaml
+# File name: size_attention_synthetic.yaml
 #   size = model size (key: num_parameters)
-#   ffnn = FeatureFFNN model
+#   attention = PureAttention model
 #   synthetic = synthetic datasets (Sines, Lorenz, VanDerPol, RandWalk, WhiteNoise, Shakespeare)
 # We increase gradually the hidden size of the models as a way to increase the number of parameters.
 defaults:
@@ -47,7 +47,7 @@ submodule:
   
   # Build model from scratch
   model:
-    type: FeatureFFNN
+    type: PureAttention
     # This gets overwritten by the sweeper
     hidden_size: null
   
@@ -133,5 +133,5 @@ submodule:
 
 experiment:
   key: num_parameters
-  name: size_ffnn_synthetic
+  name: size_attention_synthetic
   mode: MULTIRUN
