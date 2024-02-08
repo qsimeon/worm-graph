@@ -2,7 +2,7 @@
 # File name: size_transformer_synthetic.yaml
 #   size = model size (key: num_parameters)
 #   transformer = NeuralTransformer model
-#   synthetic = synthetic datasets (Sines, Lorenz, VanDerPol, RandWalk, WhiteNoise)
+#   synthetic = synthetic datasets (Sines, Lorenz, VanDerPol, RandWalk, WhiteNoise, Shakespeare)
 # We increase gradually the hidden size of the models as a way to increase the number of parameters.
 defaults:
   - override /submodule: [preprocess, model, train, visualize]
