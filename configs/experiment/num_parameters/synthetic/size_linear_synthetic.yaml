@@ -14,57 +14,43 @@ hydra:
   mode: MULTIRUN
   sweeper:
     params:
-      experiment.seed: 5
+      experiment.seed: 1
       # NOTE: LinearRegression is a shallow model (i.e. no hidden layers)
-      submodule.dataset.experimental_datasets: choice({Shakespeare0000:all})
-      submodule.predict.experimental_datasets: choice({Shakespeare0000:worm0})
-      submodule.analysis.validation.experimental_datasets: choice({Shakespeare0000:all})
+      submodule.dataset.experimental_datasets: choice({Sines0000:all})
+      submodule.predict.experimental_datasets: choice({Sines0000:[worm0, worm1]})
+      submodule.analysis.validation.experimental_datasets: choice({Sines0000:all})
       # ###############################################################################################
-      # ### SINES ###
-      # experiment.seed: 0 
-      # # NOTE: LinearRegression is a shallow model (i.e. no hidden layers)
-      # submodule.dataset.experimental_datasets: choice({Sines0000:all})
-      # submodule.predict.experimental_datasets: choice({Sines0000:[worm0, worm1]})
-      # submodule.analysis.validation.experimental_datasets: choice({Sines0000:all})
-      # ###############################################################################################
-      ### LORENZ ###
-      # experiment.seed: 1 
-      # # NOTE: LinearRegression is a shallow model (i.e. no hidden layers)
-      # submodule.dataset.experimental_datasets: choice({Lorenz0000:all})
-      # submodule.predict.experimental_datasets: choice({Lorenz0000:worm0})
-      # submodule.analysis.validation.experimental_datasets: choice({Lorenz0000:all})
-      # ###############################################################################################
-      ### WHITE NOISE ###
-      # experiment.seed: 2 
-      # # NOTE: LinearRegression is a shallow model (i.e. no hidden layers)
-      # submodule.dataset.experimental_datasets: choice({WhiteNoise0000:all})
-      # submodule.predict.experimental_datasets: choice({WhiteNoise0000:worm0})
-      # submodule.analysis.validation.experimental_datasets: choice({WhiteNoise0000:all})
-      # ###############################################################################################
-      ### RAND WALK ###
-      # experiment.seed: 3
-      # # NOTE: LinearRegression is a shallow model (i.e. no hidden layers)
-      # submodule.dataset.experimental_datasets: choice({RandWalk0000:all})
-      # submodule.predict.experimental_datasets: choice({RandWalk0000:worm0})
-      # submodule.analysis.validation.experimental_datasets: choice({RandWalk0000:all})
-      # ###############################################################################################
-      ### VAN DER POL ###
-      # experiment.seed: 4
-      # # NOTE: LinearRegression is a shallow model (i.e. no hidden layers)
-      # submodule.dataset.experimental_datasets: choice({VanDerPol0000:all})
-      # submodule.predict.experimental_datasets: choice({VanDerPol0000:worm0})
-      # submodule.analysis.validation.experimental_datasets: choice({VanDerPol0000:all})
-      # ###############################################################################################
-      ### SHAKESPEARE ###
-      # experiment.seed: 5
-      # # NOTE: LinearRegression is a shallow model (i.e. no hidden layers)
-      # submodule.dataset.experimental_datasets: choice({Shakespeare0000:all})
-      # submodule.predict.experimental_datasets: choice({Shakespeare0000:worm0})
-      # submodule.analysis.validation.experimental_datasets: choice({Shakespeare0000:all})
+      ### submodule.dataset.experimental_datasets ###
+      # seed 1: choice({Sines0000:all})
+      # seed 2: choice({Lorenz0000:all})
+      # seed 3: choice({WhiteNoise0000:all})
+      # seed 4: choice({RandWalk0000:all})
+      # seed 5: choice({VanDerPol0000:all})
+      # seed 6: choice({Shakespeare0000:all})
+      ### submodule.predict.experimental_datasets ###
+      # seed 1: choice({Sines0000:[worm0, worm1]})
+      # seed 2: choice({Lorenz0000:[worm0, worm1]})
+      # seed 3: choice({WhiteNoise0000:[worm0, worm1]})
+      # seed 4: choice({RandWalk0000:[worm0, worm1]})
+      # seed 5: choice({VanDerPol0000:[worm0, worm1]})
+      # seed 6: choice({Shakespeare0000:[worm0, worm1]})
+      ### submodule.analysis.validation.experimental_datasets ###
+      # seed 1: choice({Sines0000:all})
+      # seed 2: choice({Lorenz0000:all})
+      # seed 3: choice({WhiteNoise0000:all})
+      # seed 4: choice({RandWalk0000:all})
+      # seed 5: choice({VanDerPol0000:all})
+      # seed 6: choice({Shakespeare0000:all})
       # ###############################################################################################
 
 submodule:
-  
+
+  # Build model from scratch
+  model:
+    type: LinearRegression 
+    # NOTE: LinearRegression is a shallow model (i.e. no hidden layers)
+    hidden_size: null
+
   dataset:
     # Set path to a directory with a fixed validation set
     use_these_datasets:
@@ -73,7 +59,6 @@ submodule:
 
     save_datasets: false
 
-    # No need to remake the datasets if we are using a fixed dataset
     experimental_datasets:
       # This gets overwritten by the sweeper
       Sines0000: null
@@ -82,6 +67,14 @@ submodule:
       RandWalk0000: null
       VanDerPol0000: null
       Shakespeare0000: null
+      Kato2015: null
+      Nichols2017: null
+      Skora2018: null
+      Kaplan2020: null
+      Yemini2021: null
+      Uzel2022: null
+      Flavell2023: null
+      Leifer2023: null
 
     num_named_neurons: null
     num_train_samples: 32
@@ -94,13 +87,9 @@ submodule:
     train_split_first: true
     train_split_ratio: 0.5
 
-  # Build model from scratch
-  model:
-    type: LinearRegression
-    # This gets overwritten by the sweeper
-    hidden_size: null
-
+  # Choose the worms that you want to predict
   predict:
+    predict_this_log_dir: null
     # This gets overwritten by the sweeper
     experimental_datasets:
       Sines0000: null
@@ -109,14 +98,21 @@ submodule:
       RandWalk0000: null
       VanDerPol0000: null
       Shakespeare0000: null
+      Kato2015: null
+      Nichols2017: null
+      Skora2018: null
+      Kaplan2020: null
+      Yemini2021: null
+      Uzel2022: null
+      Flavell2023: null
+      Leifer2023: null
     # Number of time steps to generate
     num_new_timesteps: null
     # Set to the same value as submodule.dataset.seq_len
-    context_window: 180 
+    context_window: 180
 
   analysis:
     analyse_this_log_dir: null
-    # Validate final model using worms only from the current synthetic dataset
     validation:
       # This gets overwritten by the sweeper
       experimental_datasets:
@@ -126,6 +122,14 @@ submodule:
         RandWalk0000: null
         VanDerPol0000: null
         Shakespeare0000: null
+        Kato2015: null
+        Nichols2017: null
+        Skora2018: null
+        Kaplan2020: null
+        Yemini2021: null
+        Uzel2022: null
+        Flavell2023: null
+        Leifer2023: null
 
 experiment:
   key: num_parameters

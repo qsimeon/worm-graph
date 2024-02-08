@@ -21,6 +21,12 @@ hydra:
       submodule.analysis.validation.experimental_datasets: choice({Kato2015:all,Nichols2017:all,Skora2018:all,Kaplan2020:all,Yemini2021:all,Uzel2022:all,Flavell2023:all,Leifer2023:all})
 
 submodule:
+
+  # Build model from scratch
+  model:
+    type: NaivePredictor
+    # This gets overwritten by the sweeper
+    hidden_size: null
   
   dataset:
     # Set path to a directory with a fixed validation set
@@ -30,8 +36,14 @@ submodule:
 
     save_datasets: false
 
-    # No need to remake the datasets if we are using a fixed dataset
     experimental_datasets:
+      # This gets overwritten by the sweeper
+      Sines0000: null
+      Lorenz0000: null
+      WhiteNoise0000: null
+      RandWalk0000: null
+      VanDerPol0000: null
+      Shakespeare0000: null
       Kato2015: null
       Nichols2017: null
       Skora2018: null
@@ -49,28 +61,27 @@ submodule:
     reverse: false
     use_residual: false
     smooth_data: true
-    # This gets overwritten by the sweeper
     train_split_first: true
     train_split_ratio: 0.5
-
-  # Build model from scratch
-  model:
-    type: NaivePredictor
-    # This gets overwritten by the sweeper
-    hidden_size: null
 
   # Choose the worms that you want to predict
   predict:
     predict_this_log_dir: null
+    # This gets overwritten by the sweeper
     experimental_datasets:
-      # This gets overwritten by the sweeper
+      Sines0000: null
+      Lorenz0000: null
+      WhiteNoise0000: null
+      RandWalk0000: null
+      VanDerPol0000: null
+      Shakespeare0000: null
       Kato2015: null
       Nichols2017: null
       Skora2018: null
       Kaplan2020: null
       Yemini2021: null
       Uzel2022: null
-      Flavell2023: null # something is wrong with worm0 in Flavell2023
+      Flavell2023: null
       Leifer2023: null
     # Number of time steps to generate
     num_new_timesteps: null
@@ -79,10 +90,15 @@ submodule:
 
   analysis:
     analyse_this_log_dir: null
-    # Validate final model using worms from each experimental datasets
     validation:
       # This gets overwritten by the sweeper
       experimental_datasets:
+        Sines0000: null
+        Lorenz0000: null
+        WhiteNoise0000: null
+        RandWalk0000: null
+        VanDerPol0000: null
+        Shakespeare0000: null
         Kato2015: null
         Nichols2017: null
         Skora2018: null
