@@ -16,7 +16,7 @@ hydra:
     mem_gb: 40  # Memory required per node in GB
     nodes: 1  # Number of nodes to use
     name: ${hydra.job.name}  # Name of the job
-    partition: yanglab # Partition to submit to
+    partition: use-everything # yanglab # Partition to submit to
     qos: null  # Quality of Service level
     comment: null  # Comment to pass to the job
     constraint: high-capacity  # Constraint specification
