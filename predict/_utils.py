@@ -57,7 +57,7 @@ def model_predict(
         # Extract relevant features from the dataset
         data = single_worm_dataset[key_data]
         neurons_mask = single_worm_dataset["named_neurons_mask"]
-        worm_dataset = single_worm_dataset["dataset"]
+        worm_dataset = single_worm_dataset["source_dataset"]
         original_wormID = single_worm_dataset["original_worm"]
 
         # Query and save the named neurons to plot predictions afterwards

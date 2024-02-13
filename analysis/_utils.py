@@ -294,7 +294,7 @@ def loss_per_dataset(
     model.to(DEVICE)
     criterion = model.loss_fn()
 
-    for dataset, worms_to_use in experimental_datasets.items():
+    for source_dataset, worms_to_use in experimental_datasets.items():
         # Skip some datasets
         if worms_to_use is None:
             continue
@@ -306,7 +306,7 @@ def loss_per_dataset(
 
         # Create dataset
         combined_dataset, _ = create_combined_dataset(
-            experimental_datasets={dataset: worms_to_use},
+            experimental_datasets={source_dataset: worms_to_use},
             num_named_neurons=None,  # use all available neurons
         )
         train_dataset, val_dataset, _ = split_combined_dataset(
@@ -323,7 +323,7 @@ def loss_per_dataset(
         select_dataset = train_dataset if mode == "train" else val_dataset
         if select_dataset is None:
             logger.info(
-                f"Skipping {mode} dataset from {dataset} because it is empty.\n"
+                f"Skipping {mode} dataset from {source_dataset} because it is empty.\n"
                 f"Possibly no sequences of length {seq_len} could be sampled."
             )
             continue
@@ -364,7 +364,7 @@ def loss_per_dataset(
                 running_loss += loss.item()
 
             # Store metrics
-            dataset_names.append(dataset)
+            dataset_names.append(source_dataset)
             dataset_loss.append(running_loss / len(dataloader))
             dataset_baseline.append(running_base_loss / len(dataloader))
 
@@ -375,7 +375,7 @@ def loss_per_dataset(
     # Save losses in csv
     losses = pd.DataFrame(
         {
-            "dataset": dataset_names,  # DEBUG
+            "source_dataset": dataset_names,  # DEBUG
             f"{mode}_loss": dataset_loss,
             f"{mode}_baseline": dataset_baseline,
             "num_worms": num_worms,

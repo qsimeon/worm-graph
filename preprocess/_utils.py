@@ -466,7 +466,7 @@ class CalciumDataReshaper:
     def _init_neuron_data(self):
         self.time_in_seconds = self.worm_dataset["time_in_seconds"]
         self.max_timesteps = self.worm_dataset["max_timesteps"]
-        self.resample_median_dt = self.worm_dataset["resample_median_dt"]
+        self.median_dt = self.worm_dataset["median_dt"]
         self.calcium_data = self.worm_dataset["calcium_data"]
         self.smooth_calcium_data = self.worm_dataset["smooth_calcium_data"]
         self.residual_calcium = self.worm_dataset["residual_calcium"]
@@ -496,7 +496,7 @@ class CalciumDataReshaper:
             self.worm_dataset["smooth_residual_calcium"],
         )
         self.original_median_dt = self.worm_dataset.get(
-            "original_median_dt", self.worm_dataset["resample_median_dt"]
+            "original_median_dt", self.worm_dataset["median_dt"]
         )
 
     def _reshape_data(self):
@@ -634,7 +634,7 @@ class CalciumDataReshaper:
                 "original_smooth_calcium_data": self.standard_original_smooth_calcium_data,  # original, normalized, smoothed
                 "original_smooth_residual_calcium": self.standard_original_smooth_residual_calcium,  # original, smoothed
                 "original_time_in_seconds": self.original_time_in_seconds,  # original
-                "resample_median_dt": self.resample_median_dt,  # resampled (scalar)
+                "median_dt": self.median_dt,  # resampled (scalar)
                 "residual_calcium": self.standard_residual_calcium,  # resampled
                 "smooth_calcium_data": self.standard_smooth_calcium_data,  # normalized, smoothed, resampled
                 "smooth_residual_calcium": self.standard_residual_smooth_calcium,  # smoothed, resampled
@@ -1089,7 +1089,7 @@ class BasePreprocessor:
         resample_dt=0.1,
         **kwargs,
     ):
-        self.dataset = dataset_name
+        self.source_dataset = dataset_name
         self.transform = transform
         self.smooth_method = smooth_method
         self.smooth_kwargs = kwargs
@@ -1129,7 +1129,7 @@ class BasePreprocessor:
         return self.transform.fit_transform(data)
 
     def save_data(self, data_dict):
-        file = os.path.join(self.processed_data_path, f"{self.dataset}.pickle")
+        file = os.path.join(self.processed_data_path, f"{self.source_dataset}.pickle")
         with open(file, "wb") as f:
             pickle.dump(data_dict, f)
 
@@ -1156,7 +1156,7 @@ class BasePreprocessor:
 
     def load_data(self, file_name):
         # Valid for Skora, Kato, Nichols, Uzel (+ Kaplan if not silencing logger).
-        return mat73.loadmat(os.path.join(self.raw_data_path, self.dataset, file_name))
+        return mat73.loadmat(os.path.join(self.raw_data_path, self.source_dataset, file_name))
 
     def extract_data(self):
         raise NotImplementedError()
@@ -1264,7 +1264,7 @@ class BasePreprocessor:
             worm_dict = {
                 worm: {
                     "calcium_data": resampled_calcium_data,  # normalized and resampled
-                    "dataset": self.dataset,
+                    "source_dataset": self.source_dataset,
                     "dt": dt,  # vector from original time vector
                     "idx_to_neuron": dict((v, k) for k, v in neuron_to_idx.items()),
                     "interpolate_method": self.interpolate_method,
@@ -1282,7 +1282,7 @@ class BasePreprocessor:
                     "original_smooth_calcium_data": smooth_calcium_data,  # normalized and smoothed
                     "original_smooth_residual_calcium": smooth_residual_calcium,  # smoothed but not resampled
                     "original_time_in_seconds": time_in_seconds,  # original time vector
-                    "resample_median_dt": self.resample_dt,  # scalar from resampled time vector
+                    "median_dt": self.resample_dt,  # scalar from resampled time vector
                     "residual_calcium": resampled_residual_calcium,  # resampled
                     "smooth_calcium_data": resampled_smooth_calcium_data,  # normalized, smoothed and resampled
                     "smooth_method": self.smooth_method,
@@ -1335,7 +1335,7 @@ class Skora2018Preprocessor(BasePreprocessor):
 
         # Save data
         self.save_data(preprocessed_data)
-        logger.info(f"Finished processing {self.dataset}.")
+        logger.info(f"Finished processing {self.source_dataset}.")
 
 
 class Kato2015Preprocessor(BasePreprocessor):
@@ -1375,7 +1375,7 @@ class Kato2015Preprocessor(BasePreprocessor):
 
         # Save data
         self.save_data(preprocessed_data)
-        logger.info(f"Finished processing {self.dataset}.")
+        logger.info(f"Finished processing {self.source_dataset}.")
 
 
 class Nichols2017Preprocessor(BasePreprocessor):
@@ -1418,7 +1418,7 @@ class Nichols2017Preprocessor(BasePreprocessor):
 
         # Save data
         self.save_data(preprocessed_data)
-        logger.info(f"Finished processing {self.dataset}.")
+        logger.info(f"Finished processing {self.source_dataset}.")
 
 
 class Kaplan2020Preprocessor(BasePreprocessor):
@@ -1434,7 +1434,7 @@ class Kaplan2020Preprocessor(BasePreprocessor):
 
     def load_data(self, file_name):
         # load data with mat73
-        data = mat73.loadmat(os.path.join(self.raw_data_path, self.dataset, file_name))
+        data = mat73.loadmat(os.path.join(self.raw_data_path, self.source_dataset, file_name))
         return data
 
     def extract_data(self, arr):
@@ -1465,7 +1465,7 @@ class Kaplan2020Preprocessor(BasePreprocessor):
 
         # Save data
         self.save_data(preprocessed_data)
-        logger.info(f"Finished processing {self.dataset}.")
+        logger.info(f"Finished processing {self.source_dataset}.")
 
 
 class Uzel2022Preprocessor(BasePreprocessor):
@@ -1480,7 +1480,7 @@ class Uzel2022Preprocessor(BasePreprocessor):
         )
 
     def load_data(self, file_name):
-        return mat73.loadmat(os.path.join(self.raw_data_path, self.dataset, file_name))
+        return mat73.loadmat(os.path.join(self.raw_data_path, self.source_dataset, file_name))
 
     def extract_data(self, arr):
         all_IDs = arr["IDs"]
@@ -1506,7 +1506,7 @@ class Uzel2022Preprocessor(BasePreprocessor):
 
         # Save data
         self.save_data(preprocessed_data)
-        logger.info(f"Finished processing {self.dataset}.")
+        logger.info(f"Finished processing {self.source_dataset}.")
 
 
 class Yemini2021Preprocessor(BasePreprocessor):
@@ -1522,7 +1522,7 @@ class Yemini2021Preprocessor(BasePreprocessor):
 
     def load_data(self, file_name):
         # Overriding the base class method to use scipy.io.loadmat for .mat files
-        data = loadmat(os.path.join(self.raw_data_path, self.dataset, file_name))
+        data = loadmat(os.path.join(self.raw_data_path, self.source_dataset, file_name))
         return data
 
     def extract_data(self, raw_data):
@@ -1639,7 +1639,7 @@ class Yemini2021Preprocessor(BasePreprocessor):
 
         # Save data
         self.save_data(preprocessed_data)
-        logger.info(f"Finished processing {self.dataset}.")
+        logger.info(f"Finished processing {self.source_dataset}.")
 
 
 class Leifer2023Preprocessor(BasePreprocessor):
@@ -1654,7 +1654,7 @@ class Leifer2023Preprocessor(BasePreprocessor):
         )
 
     def load_data(self, file_name):
-        with open(os.path.join(self.raw_data_path, self.dataset, file_name), "r") as f:
+        with open(os.path.join(self.raw_data_path, self.source_dataset, file_name), "r") as f:
             data = [list(map(float, line.split(" "))) for line in f.readlines()]
         data_array = np.array(data, dtype=np.float32)
         return data_array
@@ -1758,7 +1758,7 @@ class Leifer2023Preprocessor(BasePreprocessor):
         """
         # load and preprocess data
         preprocessed_data = {}
-        data_dir = os.path.join(self.raw_data_path, self.dataset)
+        data_dir = os.path.join(self.raw_data_path, self.source_dataset)
         files = os.listdir(data_dir)
         num_worms = int(len(files) / 6)  # every worm has 6 txt files
         worm_idx = 0  # Initialize worm index outside file loop
@@ -1824,7 +1824,7 @@ class Leifer2023Preprocessor(BasePreprocessor):
             worm_dict = {
                 worm: {
                     "calcium_data": resampled_calcium_data,  # normalized and resampled
-                    "dataset": self.dataset,
+                    "source_dataset": self.source_dataset,
                     "dt": dt,  # vector from original time vector
                     "idx_to_neuron": dict((v, k) for k, v in neuron_to_idx.items()),
                     "interpolate_method": self.interpolate_method,
@@ -1842,7 +1842,7 @@ class Leifer2023Preprocessor(BasePreprocessor):
                     "original_smooth_calcium_data": smooth_calcium_data,  # normalized and smoothed
                     "original_smooth_residual_calcium": smooth_residual_calcium,  # smoothed but not resampled
                     "original_time_in_seconds": time_in_seconds,  # original time vector
-                    "resample_median_dt": self.resample_dt,  # scalar from resampled time vector
+                    "median_dt": self.resample_dt,  # scalar from resampled time vector
                     "residual_calcium": resampled_residual_calcium,  # resampled
                     "smooth_calcium_data": resampled_smooth_calcium_data,  # normalized, smoothed and resampled
                     "smooth_residual_calcium": resampled_smooth_residual_calcium,  # smoothed and resampled
@@ -1859,7 +1859,7 @@ class Leifer2023Preprocessor(BasePreprocessor):
 
         # Save data
         self.save_data(preprocessed_data)
-        logger.info(f"Finished processing {self.dataset}.")
+        logger.info(f"Finished processing {self.source_dataset}.")
 
 
 class Flavell2023Preprocessor(BasePreprocessor):
@@ -1875,9 +1875,9 @@ class Flavell2023Preprocessor(BasePreprocessor):
 
     def load_data(self, file_name):
         if file_name.endswith(".h5"):
-            data = h5py.File(os.path.join(self.raw_data_path, self.dataset, file_name), "r")
+            data = h5py.File(os.path.join(self.raw_data_path, self.source_dataset, file_name), "r")
         elif file_name.endswith(".json"):
-            with open(os.path.join(self.raw_data_path, self.dataset, file_name), "r") as f:
+            with open(os.path.join(self.raw_data_path, self.source_dataset, file_name), "r") as f:
                 data = json.load(f)
         else:
             raise ValueError(f"Unsupported file format: {file_name}")
@@ -1971,7 +1971,7 @@ class Flavell2023Preprocessor(BasePreprocessor):
     def preprocess(self):
         # load and preprocess data
         preprocessed_data = {}
-        for i, file in enumerate(os.listdir(os.path.join(self.raw_data_path, self.dataset))):
+        for i, file in enumerate(os.listdir(os.path.join(self.raw_data_path, self.source_dataset))):
             if not (file.endswith(".h5") or file.endswith(".json")):
                 continue
 
@@ -2018,7 +2018,7 @@ class Flavell2023Preprocessor(BasePreprocessor):
             # 6. Save data
             worm_dict = {
                 worm: {
-                    "dataset": self.dataset,
+                    "source_dataset": self.source_dataset,
                     "smooth_method": self.smooth_method,
                     "interpolate_method": self.interpolate_method,
                     "worm": worm,
@@ -2040,7 +2040,7 @@ class Flavell2023Preprocessor(BasePreprocessor):
                     "time_in_seconds": resampled_time_in_seconds,  # resampled time vector
                     "dt": dt,  # vector from original time vector
                     "original_median_dt": original_dt,  # scalar from original time vector
-                    "resample_median_dt": self.resample_dt,  # scalar from resampled time vector
+                    "median_dt": self.resample_dt,  # scalar from resampled time vector
                     "num_neurons": int(num_neurons),
                     "num_named_neurons": num_named_neurons,
                     "num_unknown_neurons": num_unknown_neurons,
@@ -2053,4 +2053,4 @@ class Flavell2023Preprocessor(BasePreprocessor):
             preprocessed_data[worm] = reshape_calcium_data(preprocessed_data[worm])
         # save data
         self.save_data(preprocessed_data)
-        logger.info(f"Finished processing {self.dataset}.")
+        logger.info(f"Finished processing {self.source_dataset}.")

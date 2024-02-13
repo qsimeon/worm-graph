@@ -173,7 +173,7 @@ def plot_dataset_info(log_dir):
     neuron_idx = [neuron_idx_mapping[neuron] for neuron in unique_neurons_train]
     standard_counts_train[neuron_idx] = neuron_counts_train
     # Get unique datasets
-    train_exp_datasets = df_train["dataset"].unique().tolist()
+    train_exp_datasets = df_train["source_dataset"].unique().tolist()
     # Create DataFrame for train data
     train_data = {"Neuron": NEURONS_302, "Count": standard_counts_train}
     df_train_plot = pd.DataFrame(train_data)
@@ -193,7 +193,7 @@ def plot_dataset_info(log_dir):
     neuron_idx_val = [neuron_idx_mapping[neuron] for neuron in unique_neurons_val]
     standard_counts_val[neuron_idx_val] = neuron_counts_val
     # Get unique datasets
-    val_exp_datasets = df_val["dataset"].unique().tolist()
+    val_exp_datasets = df_val["source_dataset"].unique().tolist()
     # Create DataFrame for validation data
     val_data = {"Neuron": NEURONS_302, "Count": standard_counts_val}
     df_val_plot = pd.DataFrame(val_data)
@@ -657,7 +657,7 @@ def plot_worm_data(worm_data, num_neurons=5, smooth=False):
     :param num_neurons: The number of neurons to plot.
     """
     worm = worm_data["worm"]
-    dataset = worm_data["dataset"]
+    source_dataset = worm_data["source_dataset"]
     if smooth:
         calcium_data = worm_data["smooth_calcium_data"]
     else:
@@ -677,7 +677,7 @@ def plot_worm_data(worm_data, num_neurons=5, smooth=False):
 
     plt.xlabel("Time (seconds)")
     plt.ylabel("Calcium Activity")
-    plt.title(f"Dataset: {dataset}, Worm: {worm}\nCalcium Traces of Random {num_neurons} Neurons")
+    plt.title(f"Dataset: {source_dataset}, Worm: {worm}\nCalcium Traces of Random {num_neurons} Neurons")
     plt.legend()
     plt.show()
 
@@ -786,6 +786,7 @@ def experiment_parameter(exp_dir, key):
 
     if key in {
         "dataset",
+        "source_dataset",
         "dataset_name",
         "train_dataset",
         "train_dataset_name",
@@ -914,7 +915,7 @@ def experiment_parameter(exp_dir, key):
         title = "Loss function"
         xaxis = "Loss function type"
 
-    if key == "resample_dt":
+    if key in {"dt", "median_dt", "resample_dt"}:
         # The time step (in seconds) the data was resampled at
         pipeline_info = OmegaConf.load(os.path.join(exp_dir, "pipeline_info.yaml"))
         ### DEBUG ###
@@ -1252,7 +1253,7 @@ def plot_loss_per_dataset(log_dir, mode="validation"):
         os.path.join(log_dir, "dataset", "train_dataset_info.csv"),
         converters={"neurons": ast.literal_eval},
     )
-    train_dataset_names = train_info["dataset"].unique()
+    train_dataset_names = train_info["source_dataset"].unique()
 
     sns.set_theme(style="whitegrid")
     sns.set_palette("tab10")
@@ -1285,7 +1286,7 @@ def plot_loss_per_dataset(log_dir, mode="validation"):
     )
 
     ax.set_xticks(index + bar_width / 2)  # Set x-ticks to be in the middle of the grouped bars
-    ax.set_xticklabels(losses["dataset"].values, rotation=0, ha="center")
+    ax.set_xticklabels(losses["source_dataset"].values, rotation=0, ha="center")
     ax.set_ylabel("Loss")
     ax.set_yscale("log")  # Set y-axis to log-scale
     ax.set_title(f"{mode.capitalize()} set loss across datasets")
@@ -1333,7 +1334,7 @@ def plot_experiment_loss_per_dataset(exp_log_dir, exp_key, exp_plot_dir=None, mo
 
     # =============== Collect information ===============
     # Create an empty DataFrame to store the losses
-    losses = pd.DataFrame(columns=["dataset", f"{mode}_loss", f"{mode}_baseline", "exp_param"])
+    losses = pd.DataFrame(columns=["source_dataset", f"{mode}_loss", f"{mode}_baseline", "exp_param"])
 
     # Loop through all experiments
     for file in sorted(os.listdir(exp_log_dir), key=lambda x: x.strip("exp_")):
@@ -1365,7 +1366,7 @@ def plot_experiment_loss_per_dataset(exp_log_dir, exp_key, exp_plot_dir=None, mo
         )
 
         # Dataset names used for training
-        train_dataset_names = train_info["dataset"].unique()
+        train_dataset_names = train_info["source_dataset"].unique()
         tmp_df["train_dataset_names"] = ", ".join(train_dataset_names)
 
         # Name of the model
@@ -1380,30 +1381,30 @@ def plot_experiment_loss_per_dataset(exp_log_dir, exp_key, exp_plot_dir=None, mo
     # Make sure all NaNs are dropped before setting the index
     losses = losses.dropna()  # Do not use reset_index here
 
-    # Now set the multi-index with 'exp_param' and 'dataset'
+    # Now set the multi-index with 'exp_param' and 'source_dataset'
     losses.set_index(["exp_param", "dataset"], inplace=True)
 
     # After this, your unique call should work correctly
-    # Create one subplot per dataset, arranged in two columns
-    num_datasets = len(losses.index.unique(level="dataset"))
+    # Create one subplot per source dataset, arranged in two columns
+    num_datasets = len(losses.index.unique(level="source_dataset"))
     num_rows = int(np.ceil(num_datasets / 2))
 
     # =============== Start plotting ===============
 
     # Plot loss vs. exp_param for all datasets
-    palette = sns.color_palette("tab10", len(losses.index.unique(level="dataset")))
-    for color_idx, dataset in enumerate(losses.index.unique(level="dataset")):
+    palette = sns.color_palette("tab10", len(losses.index.unique(level="source_dataset")))
+    for color_idx, source_dataset in enumerate(losses.index.unique(level="source_dataset")):
         # Get the subset of losses and baselines for the current dataset
         df_subset_model = losses.loc[
-            losses.index.get_level_values("dataset") == dataset, f"{mode}_loss"
+            losses.index.get_level_values("source_dataset") == source_dataset, f"{mode}_loss"
         ].reset_index()
         df_subset_baseline = losses.loc[
-            losses.index.get_level_values("dataset") == dataset, f"{mode}_baseline"
+            losses.index.get_level_values("source_dataset") == source_dataset, f"{mode}_baseline"
         ].reset_index()
 
         # Get the model name for the current dataset
         model_name = losses.loc[
-            losses.index.get_level_values("dataset") == dataset, "model_name"
+            losses.index.get_level_values("source_dataset") == source_dataset, "model_name"
         ].values[0]
 
         # Get the color for the current dataset
@@ -1417,7 +1418,7 @@ def plot_experiment_loss_per_dataset(exp_log_dir, exp_key, exp_plot_dir=None, mo
             ax=ax,
             color=color,
             alpha=0.5,
-            label=f"{model_name} ({dataset})",
+            label=f"{model_name} ({source_dataset})",
         )
 
         # Line plot of baseline losses vs. experiment parameter
@@ -1433,7 +1434,7 @@ def plot_experiment_loss_per_dataset(exp_log_dir, exp_key, exp_plot_dir=None, mo
 
         # Annotate number of val. worms
         num_worms = losses.loc[
-            losses.index.get_level_values("dataset") == dataset, "num_worms"
+            losses.index.get_level_values("source_dataset") == source_dataset, "num_worms"
         ].values[0]
         min_exp_param = df_subset_baseline["exp_param"].min()
         max_baseline = df_subset_baseline[f"{mode}_baseline"].max()
@@ -1470,7 +1471,7 @@ def plot_experiment_loss_per_dataset(exp_log_dir, exp_key, exp_plot_dir=None, mo
             )
         except Exception as e:
             logger.info(
-                "Failed to fit linear regression (log-log scale) for dataset {}".format(dataset)
+                "Failed to fit linear regression (log-log scale) for dataset {}".format(source_dataset)
             )
             logger.error(f"The error that occurred: {e}")
             # # This will print the full traceback
