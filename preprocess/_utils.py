@@ -800,7 +800,7 @@ def extract_zip(path: str, folder: str, log: bool = True, delete_zip: bool = Tru
 
 class CausalNormalizer:
     """
-    A transformer for causal normalization of time series data.
+    A transform for causal normalization of time series data.
     This normalizer computes the mean and standard deviation up to each time point t,
     ensuring that the normalization at each time point is based solely on past
     and present data, maintaining the causal nature of the time series.
@@ -920,7 +920,7 @@ class CausalNormalizer:
 def pickle_neural_data(
     url,
     zipfile,
-    dataset="all",
+    source_dataset="all",
     # TODO: Try different transforms from sklearn such as QuantileTransformer, etc. as well as our own custom CausalNormalizer.
     transform=StandardScaler(),  #StandardScaler() #PowerTransformer() #CausalNormalizer() #None
     smooth_method="ma",
@@ -942,8 +942,8 @@ def pickle_neural_data(
         Download link to a zip file containing the opensource data in raw form.
     zipfile : str
         The name of the zipfile that is being downloaded.
-    dataset : str, optional (default: 'all')
-        The name of the dataset to be pickled.
+    source_dataset : str, optional (default: 'all')
+        The name of the source dataset to be pickled.
         If None or 'all', all datasets are pickled.
     transform : object, optional (default: StandardScaler())
         The sklearn transformation to be applied to the data.
@@ -976,16 +976,16 @@ def pickle_neural_data(
         download_url(url=url, folder=ROOT_DIR, filename=zipfile)
 
         # Extract all the datasets ... OR
-        if dataset.lower() == "all":
+        if source_dataset.lower() == "all":
             extract_zip(
                 zip_path, folder=source_path, delete_zip=True
             )  # Extract zip file then delete it
-        # Extract just the requested dataset
+        # Extract just the requested source dataset
         else:
             bash_command = [
                 "unzip",
                 zip_path,
-                "{}/*".format(dataset),
+                "{}/*".format(source_dataset),
                 "-d",
                 source_path,
                 "-x",
@@ -995,12 +995,12 @@ def pickle_neural_data(
             print(std_out, end="\n\n")
 
     # (re)-Pickle all the datasets ... OR
-    if dataset is None or dataset.lower() == "all":
-        for dataset in VALID_DATASETS:
-            logger.info(f"Start processing {dataset}.")
+    if source_dataset is None or source_dataset.lower() == "all":
+        for source in VALID_DATASETS:
+            logger.info(f"Start processing {source}.")
             try:
                 # instantiate the relevant preprocessor class
-                preprocessor = eval(dataset + "Preprocessor")(
+                preprocessor = eval(source + "Preprocessor")(
                     transform,
                     smooth_method,
                     interpolate_method,
@@ -1015,12 +1015,12 @@ def pickle_neural_data(
     # ... (re)-Pickle a single dataset
     else:
         assert (
-            dataset in VALID_DATASETS
-        ), "Invalid dataset requested! Please pick one from:\n{}".format(list(VALID_DATASETS))
-        logger.info(f"Start processing {dataset}.")
+            source_dataset in VALID_DATASETS
+        ), "Invalid source dataset requested! Please pick one from:\n{}".format(list(VALID_DATASETS))
+        logger.info(f"Start processing {source_dataset}.")
         try:
             # instantiate the relevant preprocessor class
-            preprocessor = eval(dataset + "Preprocessor")(
+            preprocessor = eval(source_dataset + "Preprocessor")(
                 transform,
                 smooth_method,
                 interpolate_method,
@@ -1052,7 +1052,7 @@ class BasePreprocessor:
     and overriding the methods as necessary.
 
     Attributes:
-        dataset (str): The specific dataset to be preprocessed.
+        dataset_name (str): The specific source dataset to be preprocessed.
         raw_data (str): The path to the raw dataset.
         processed_data (str): The path to save the processed data.
 
