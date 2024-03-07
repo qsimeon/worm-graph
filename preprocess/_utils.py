@@ -381,7 +381,7 @@ gaussian_kernel_smooth = causal_gaussian_kernel_smooth
 ##############################################
 
 
-# The Exponential Kernel Smooth (ES) methog is already causal.
+# The Exponential Kernel Smooth (ES) method is already causal.
 def exponential_kernel_smooth(x, t, alpha):
     """
     Exponential smoothing for a multidimensional time series.
@@ -921,7 +921,7 @@ def pickle_neural_data(
     url,
     zipfile,
     source_dataset="all",
-    # TODO: Try different transforms from sklearn such as QuantileTransformer, etc. as well as our own custom CausalNormalizer.
+    # TODO: Try different transforms from sklearn such as QuantileTransformer, etc. as well as custom CausalNormalizer.
     transform=StandardScaler(),  # StandardScaler() #PowerTransformer() #CausalNormalizer() #None
     smooth_method="ma",
     interpolate_method="linear",
@@ -1084,7 +1084,7 @@ class BasePreprocessor:
     def __init__(
         self,
         dataset_name,
-        # TODO: Try different transforms from sklearn such as QuantileTransformer, etc. as well as our own custom CausalNormalizer.
+        # TODO: Try different transforms from sklearn such as QuantileTransformer, etc. as well as custom CausalNormalizer.
         transform=StandardScaler(),  # StandardScaler() #PowerTransformer() #CausalNormalizer() #None
         smooth_method="MA",
         interpolate_method="linear",
@@ -1644,7 +1644,7 @@ class Yemini2021Preprocessor(BasePreprocessor):
         logger.info(f"Finished processing {self.source_dataset}.")
 
 
-class Line2023Preprocessor(BasePreprocessor):
+class Lin2023Preprocessor(BasePreprocessor):
     def __init__(self, transform, smooth_method, interpolate_method, resample_dt, **kwargs):
         super().__init__(
             "Lin2023",
@@ -1654,6 +1654,51 @@ class Line2023Preprocessor(BasePreprocessor):
             resample_dt,
             **kwargs,
         )
+
+    def load_data(self, file_name):
+        # Overriding the base class method to use scipy.io.loadmat for .mat files
+        data = loadmat(os.path.join(self.raw_data_path, self.source_dataset, file_name))
+        return data
+
+    def extract_data(self, data_file):
+        dataset_raw = self.load_data(data_file)
+        # Filter for proofread neurons.
+        _filter = dataset_raw["use_flag"].flatten() > 0
+        neurons = [str(_.item()) for _ in dataset_raw["proofread_neurons"].flatten()[_filter]]
+        raw_time_vec = np.array(dataset_raw["times"].flatten()[0][-1])
+        raw_activitiy = dataset_raw["corrected_F"][_filter].T # (time, neurons)
+        # Replace first nan with F0 value
+        _f0 = dataset_raw["F_0"][_filter][:, 0]
+        raw_activitiy[0,:] = _f0
+        # Impute any remaining NaN values
+        imputer = IterativeImputer(random_state=0)
+        if np.isnan(raw_activitiy).any():
+            raw_activitiy = imputer.fit_transform(raw_activitiy)
+        # Return the extracted data
+        neuron_IDs, raw_traces, time_vector_seconds = [neurons], [raw_activitiy], [raw_time_vec]
+        return neuron_IDs, raw_traces, time_vector_seconds
+    
+    def preprocess(self):
+        preprocessed_data = {}  # Store preprocessed data
+        worm_idx = 0  # Initialize worm index outside file loop
+        # Have multiple .mat files that you iterate over
+        data_files = os.path.join(self.raw_data_path, "Lin2023")
+        for file in os.listdir(data_files):
+            if not file.endswith('.mat'):
+                continue
+            neurons, raw_traces, time_vector_seconds = self.extract_data(file)
+            preprocessed_data, worm_idx = self.preprocess_traces(neurons, raw_traces, time_vector_seconds, 
+                                                                 preprocessed_data, worm_idx)  # preprocess
+
+        # Reshape calcium data
+        for worm in preprocessed_data.keys():
+            preprocessed_data[worm] = reshape_calcium_data(preprocessed_data[worm])
+
+        # Save data
+        self.save_data(preprocessed_data)
+        logger.info(f"Finished processing {self.source_dataset}.")
+        return None
+
 
 
 class Leifer2023Preprocessor(BasePreprocessor):
