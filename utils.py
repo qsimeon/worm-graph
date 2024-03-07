@@ -33,7 +33,7 @@ RAW_DATA_URL = "https://www.dropbox.com/s/45yqpvtsncx4095/raw_data.zip?dl=1"
 RAW_ZIP = "raw_data.zip"
 
 # Essential raw data files that must be in the raw data directory
-RAW_FILES = [
+RAW_FILES = [  # TODO: Cite sources of these files.
     "GHermChem_Edges.csv",
     "GHermChem_Nodes.csv",
     "GHermElec_Sym_Edges.csv",
@@ -62,6 +62,7 @@ else:
 # Set real C. elegans datasets we have processed
 VALID_DATASETS = {
     "Leifer2023",  # Different type of dataset: stimulus-response.
+    "Lin2023",
     "Flavell2023",  # TODO: Something is wrong with worm0 always in this dataset. Why?
     "Uzel2022",
     "Yemini2021",
@@ -92,7 +93,7 @@ if os.path.exists(RAW_DATA_DIR):
     )
 else:
     # fmt: off
-    NEURONS_302 = [
+    NEURONS_302 = [ # TODO: Cite source of this list.
             "ADAL", "ADAR", "ADEL", "ADER", "ADFL", "ADFR", "ADLL", "ADLR", "AFDL", "AFDR",
             "AIAL", "AIAR", "AIBL", "AIBR", "AIML", "AIMR", "AINL", "AINR", "AIYL", "AIYR",
             "AIZL", "AIZR", "ALA", "ALML", "ALMR", "ALNL", "ALNR", "AQR", "AS1", "AS10",

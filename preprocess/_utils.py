@@ -806,12 +806,12 @@ class CausalNormalizer:
     and present data, maintaining the causal nature of the time series.
     """
 
-    def __init__(self, nan_fill_method='interpolate'):
+    def __init__(self, nan_fill_method="interpolate"):
         """
         Initialize the CausalNormalizer with a method to handle NaN values.
 
         Parameters:
-        nan_fill_method (str): Method to fill NaN values. Options are 'ffill' (forward fill), 
+        nan_fill_method (str): Method to fill NaN values. Options are 'ffill' (forward fill),
                                 'bfill' (backward fill), and 'interpolate'. Default is 'interpolate'.
         """
         self.cumulative_mean_ = None
@@ -829,16 +829,16 @@ class CausalNormalizer:
         X_filled (array-like): The data with NaN values handled.
         """
         df = pd.DataFrame(X)
-        if self.nan_fill_method == 'ffill':
-            df.fillna(method='ffill', inplace=True)
-        elif self.nan_fill_method == 'bfill':
-            df.fillna(method='bfill', inplace=True)
-        elif self.nan_fill_method == 'interpolate':
-            df.interpolate(method='linear', inplace=True)
+        if self.nan_fill_method == "ffill":
+            df.fillna(method="ffill", inplace=True)
+        elif self.nan_fill_method == "bfill":
+            df.fillna(method="bfill", inplace=True)
+        elif self.nan_fill_method == "interpolate":
+            df.interpolate(method="linear", inplace=True)
         else:
             raise ValueError("Invalid NaN fill method specified.")
         return df.values
-    
+
     def fit(self, X, y=None):
         """
         Compute the cumulative mean and standard deviation of the dataset X.
@@ -866,7 +866,7 @@ class CausalNormalizer:
         cumulative_variance = (
             cumulative_squares_sum
             - 2 * self.cumulative_mean_ * cumulative_sum
-                      + count * self.cumulative_mean_**2
+            + count * self.cumulative_mean_**2
         ) / count
         self.cumulative_std_ = np.sqrt(cumulative_variance)
         self.cumulative_std_ = np.sqrt(cumulative_variance)
@@ -922,7 +922,7 @@ def pickle_neural_data(
     zipfile,
     source_dataset="all",
     # TODO: Try different transforms from sklearn such as QuantileTransformer, etc. as well as our own custom CausalNormalizer.
-    transform=StandardScaler(),  #StandardScaler() #PowerTransformer() #CausalNormalizer() #None
+    transform=StandardScaler(),  # StandardScaler() #PowerTransformer() #CausalNormalizer() #None
     smooth_method="ma",
     interpolate_method="linear",
     resample_dt=None,
@@ -1016,7 +1016,9 @@ def pickle_neural_data(
     else:
         assert (
             source_dataset in VALID_DATASETS
-        ), "Invalid source dataset requested! Please pick one from:\n{}".format(list(VALID_DATASETS))
+        ), "Invalid source dataset requested! Please pick one from:\n{}".format(
+            list(VALID_DATASETS)
+        )
         logger.info(f"Start processing {source_dataset}.")
         try:
             # instantiate the relevant preprocessor class
@@ -1083,7 +1085,7 @@ class BasePreprocessor:
         self,
         dataset_name,
         # TODO: Try different transforms from sklearn such as QuantileTransformer, etc. as well as our own custom CausalNormalizer.
-        transform=StandardScaler(),  #StandardScaler() #PowerTransformer() #CausalNormalizer() #None
+        transform=StandardScaler(),  # StandardScaler() #PowerTransformer() #CausalNormalizer() #None
         smooth_method="MA",
         interpolate_method="linear",
         resample_dt=0.1,
@@ -1640,6 +1642,18 @@ class Yemini2021Preprocessor(BasePreprocessor):
         # Save data
         self.save_data(preprocessed_data)
         logger.info(f"Finished processing {self.source_dataset}.")
+
+
+class Line2023Preprocessor(BasePreprocessor):
+    def __init__(self, transform, smooth_method, interpolate_method, resample_dt, **kwargs):
+        super().__init__(
+            "Lin2023",
+            transform,
+            smooth_method,
+            interpolate_method,
+            resample_dt,
+            **kwargs,
+        )
 
 
 class Leifer2023Preprocessor(BasePreprocessor):

@@ -1,7 +1,5 @@
 black[jupyter] # uses pip
 datasets # uses pip
-dtaidistance
-fvcore # uses pip
 h5py
 hydra-core # uses pip
 hydra-optuna-sweeper # uses pip

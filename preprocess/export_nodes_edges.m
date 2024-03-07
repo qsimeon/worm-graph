@@ -5,7 +5,7 @@ cd '..data/raw/'
 
 % The input data adapted from Supplementary Information 5 of Cook et al., 2019. "Excel connectivity tables in MATLAB-ready format".
 load('GHermChem.mat') % chemical synapses (directed graph)
-load('GHermElec_Sym.mat') % gap junctions (indirected graph)
+load('GHermElec_Sym.mat') % gap junctions (undirected graph)
 
 % Write as .csv in order to load as a Pandas dataframe in Python.
 writetable(GHermChem.Edges, 'GHermChem_Edges.csv')

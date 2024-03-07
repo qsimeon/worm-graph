@@ -13,8 +13,6 @@ dependencies:
   - scipy
   - pandas
   - seaborn
-  - dtaidistance
-  - fvcore
   - ipykernel
   - jupyter
   - jupyterlab
