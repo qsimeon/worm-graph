@@ -102,7 +102,9 @@ cd setup
 
 After finishing one of the installations above, navigate back to the root directory (`worm-graph/`) and run:
 
+    ```
     conda develop .
+    ```
 
 **Note:** 
 * Please ensure to carry out this step, otherwise you may encounter `ModuleNotFoundError` later on.

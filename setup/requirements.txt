@@ -1,5 +1,6 @@
 black[jupyter] # uses pip
 datasets # uses pip
+einops # uses pip
 h5py
 hydra-core # uses pip
 hydra-optuna-sweeper # uses pip
@@ -15,9 +16,9 @@ nbimporter # uses pip
 ncps # uses pip
 networkx
 notebook
-numpy==1.24
+numpy==1.26
 omegaconf
-pandas==1.5
+pandas==2.2.1
 pickleshare
 pytest
 requests

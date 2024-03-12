@@ -21,12 +21,12 @@ function get_cuda_version {
 
 ENV_NAME="worm-graph"
 
-# Create a new conda environment with Python 3.10
+# Create a new conda environment with Python 3.12
 echo ""
 echo "Creating $ENV_NAME environment."
 echo ""
 conda clean -y --packages
-conda create -y -n $ENV_NAME python=3.10 conda-build pip
+conda create -y -n $ENV_NAME python=3.12 conda-build pip
 echo ""
 conda activate $ENV_NAME
 
@@ -39,7 +39,7 @@ case "$(uname -s)" in
         echo ""
         echo "Mac OS Detected"
         # If you prefer to use conda:
-        conda install -y -n $ENV_NAME -c pytorch pytorch torchvision torchaudio
+        conda install -y -n $ENV_NAME pytorch::pytorch torchvision torchaudio -c pytorch
         conda install -y -n $ENV_NAME pyg -c pyg
         # # If you prefer to use pip:
         # pip install torch torchvision torchaudio
@@ -55,17 +55,17 @@ case "$(uname -s)" in
             if [ "$CUDA_VER" != "" ]; then
                 echo "CUDA Version $CUDA_VER Detected"
                 # If you prefer to use conda:
-                conda install -y -n $ENV_NAME pytorch torchvision torchaudio pytorch-cuda=11.8 -c pytorch -c nvidia
+                conda install -y -n $ENV_NAME pytorch torchvision torchaudio pytorch-cuda=12.1 -c pytorch -c nvidia
                 conda install -y -n $ENV_NAME pyg -c pyg
                 # # If you prefer to use pip:
-                # pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
+                # pip install torch torchvision torchaudio #--index-url https://download.pytorch.org/whl/cu118
                 # pip install torch_geometric
             else
                 # If you prefer to use conda:
-                conda install -y -n $ENV_NAME pytorch torchvision torchaudio pytorch-cuda=11.8 -c pytorch -c nvidia
+                conda install -y -n $ENV_NAME pytorch torchvision torchaudio pytorch-cuda=12.1 -c pytorch -c nvidia
                 conda install -y -n $ENV_NAME pyg -c pyg
                 # # If you prefer to use pip:
-                # pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
+                # pip install torch torchvision torchaudio #--index-url https://download.pytorch.org/whl/cpu
                 # pip install torch_geometric
             fi
         else
@@ -73,7 +73,7 @@ case "$(uname -s)" in
             conda install -y -n $ENV_NAME pytorch torchvision torchaudio cpuonly -c pytorch
             conda install -y -n $ENV_NAME pyg -c pyg
             # # If you prefer to use pip:
-            # pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu
+            # pip install torch torchvision torchaudio #--index-url https://download.pytorch.org/whl/cpu
             # pip install torch_geometric
         fi
     ;;
@@ -84,10 +84,10 @@ case "$(uname -s)" in
         if has_gpu; then
             echo "Nvidia GPU Detected"
             # If you prefer to use conda:
-            conda install -y -n $ENV_NAME pytorch torchvision torchaudio pytorch-cuda=11.8 -c pytorch -c nvidia
+            conda install -y -n $ENV_NAME pytorch torchvision torchaudio pytorch-cuda=12.1 -c pytorch -c nvidia
             conda install -y -n $ENV_NAME pyg -c pyg
             # # If you prefer to use pip:
-            # pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
+            # pip install torch torchvision torchaudio #--index-url https://download.pytorch.org/whl/cu118
             # pip install torch_geometric
         else
             # If you prefer to use conda:
@@ -104,19 +104,6 @@ case "$(uname -s)" in
         echo "Unknown OS"
     ;;
 esac
-
-# Install cudf Pandas accelerator and related packages
-echo ""
-echo "Installing cudf Pandas accelerator and related packages."
-if has_gpu && [ "$(get_cuda_version)" != "" ] && [ "$(uname -s)" == "Linux" ]; then
-    # If you prefer to use conda:
-    conda install -y -n $ENV_NAME --solver=libmamba -c rapidsai -c nvidia -c conda-forge cudf=23.10 python=3.10 cuda-version=11.8
-    # # If you prefer to use pip:
-    # pip install --extra-index-url=https://pypi.nvidia.com cudf-cu11
-else
-    echo ""
-    echo "Skipping cudf installation as no compatible GPU/CUDA version found."
-fi
 
 # Split requirements into conda and pip specific files
 echo ""
