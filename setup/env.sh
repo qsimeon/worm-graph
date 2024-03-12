@@ -21,12 +21,12 @@ function get_cuda_version {
 
 ENV_NAME="worm-graph"
 
-# Create a new conda environment with Python 3.12
+# Create a new conda environment with Python 3.11
 echo ""
 echo "Creating $ENV_NAME environment."
 echo ""
 conda clean -y --packages
-conda create -y -n $ENV_NAME python=3.12 conda-build pip
+conda create -y -n $ENV_NAME python=3.11 conda-build pip
 echo ""
 conda activate $ENV_NAME
 
@@ -39,10 +39,10 @@ case "$(uname -s)" in
         echo ""
         echo "Mac OS Detected"
         # If you prefer to use conda:
-        conda install -y -n $ENV_NAME pytorch::pytorch torchvision torchaudio -c pytorch
+        conda install -y -n $ENV_NAME pytorch==2.0.1 torchvision==0.15.2 torchaudio==2.0.2 -c pytorch
         conda install -y -n $ENV_NAME pyg -c pyg
         # # If you prefer to use pip:
-        # pip install torch torchvision torchaudio
+        # pip install torch==2.0.1 torchvision==0.15.2 torchaudio==2.0.2
         # pip install torch_geometric
     ;;
 
@@ -55,25 +55,25 @@ case "$(uname -s)" in
             if [ "$CUDA_VER" != "" ]; then
                 echo "CUDA Version $CUDA_VER Detected"
                 # If you prefer to use conda:
-                conda install -y -n $ENV_NAME pytorch torchvision torchaudio pytorch-cuda=12.1 -c pytorch -c nvidia
+                conda install -y -n $ENV_NAME pytorch==2.0.1 torchvision==0.15.2 torchaudio==2.0.2 pytorch-cuda=$CUDA_VER -c pytorch -c nvidia
                 conda install -y -n $ENV_NAME pyg -c pyg
                 # # If you prefer to use pip:
-                # pip install torch torchvision torchaudio #--index-url https://download.pytorch.org/whl/cu118
+                # pip install torch==2.0.1 torchvision==0.15.2 torchaudio==2.0.2
                 # pip install torch_geometric
             else
                 # If you prefer to use conda:
-                conda install -y -n $ENV_NAME pytorch torchvision torchaudio pytorch-cuda=12.1 -c pytorch -c nvidia
+                conda install -y -n $ENV_NAME pytorch==2.0.1 torchvision==0.15.2 torchaudio==2.0.2 pytorch-cuda=11.7 -c pytorch -c nvidia
                 conda install -y -n $ENV_NAME pyg -c pyg
                 # # If you prefer to use pip:
-                # pip install torch torchvision torchaudio #--index-url https://download.pytorch.org/whl/cpu
+                # pip install torch==2.0.1 torchvision==0.15.2 torchaudio==2.0.2
                 # pip install torch_geometric
             fi
         else
             # If you prefer to use conda:
-            conda install -y -n $ENV_NAME pytorch torchvision torchaudio cpuonly -c pytorch
+            conda install -y -n $ENV_NAME pytorch==2.0.1 torchvision==0.15.2 torchaudio==2.0.2 cpuonly -c pytorch
             conda install -y -n $ENV_NAME pyg -c pyg
             # # If you prefer to use pip:
-            # pip install torch torchvision torchaudio #--index-url https://download.pytorch.org/whl/cpu
+            # pip install torch==2.0.1 torchvision==0.15.2 torchaudio==2.0.2 --index-url https://download.pytorch.org/whl/cpu
             # pip install torch_geometric
         fi
     ;;
@@ -84,17 +84,17 @@ case "$(uname -s)" in
         if has_gpu; then
             echo "Nvidia GPU Detected"
             # If you prefer to use conda:
-            conda install -y -n $ENV_NAME pytorch torchvision torchaudio pytorch-cuda=12.1 -c pytorch -c nvidia
+            conda install -y -n $ENV_NAME pytorch==2.0.1 torchvision==0.15.2 torchaudio==2.0.2 pytorch-cuda=11.8 -c pytorch -c nvidia
             conda install -y -n $ENV_NAME pyg -c pyg
             # # If you prefer to use pip:
-            # pip install torch torchvision torchaudio #--index-url https://download.pytorch.org/whl/cu118
+            # pip install torch==2.0.1 torchvision==0.15.2 torchaudio==2.0.2 --index-url https://download.pytorch.org/whl/cu118
             # pip install torch_geometric
         else
             # If you prefer to use conda:
-            conda install -y -n $ENV_NAME pytorch torchvision torchaudio cpuonly -c pytorch
+            conda install -y -n $ENV_NAME pytorch==2.0.1 torchvision==0.15.2 torchaudio==2.0.2 cpuonly -c pytorch
             conda install -y -n $ENV_NAME pyg -c pyg
             # # If you prefer to use pip:
-            # pip install torch torchvision torchaudio
+            # pip install torch==2.0.1 torchvision==0.15.2 torchaudio==2.0.2 --index-url https://download.pytorch.org/whl/cpu
             # pip install torch_geometric
         fi
     ;;
@@ -115,7 +115,7 @@ echo ""
 echo "Installing common packages using conda."
 conda install -y -n $ENV_NAME -c conda-forge --file requirements_conda.txt
 
-# Install packages that require pip
+# Install packages that require pip (after conda to avoid conflicts)
 echo ""
 echo "Installing pip-specific packages."
 pip install -r requirements_pip.txt

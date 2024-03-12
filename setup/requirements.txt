@@ -16,16 +16,15 @@ nbimporter # uses pip
 ncps # uses pip
 networkx
 notebook
-numpy==1.26
+numpy
 omegaconf
-pandas==2.2.1
+pandas
 pickleshare
 pytest
 requests
 scikit-learn
 scipy
 seaborn
-spectrum
 statsmodels
 tokenizers # uses pip
 tqdm

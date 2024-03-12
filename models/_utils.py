@@ -435,31 +435,35 @@ class ModelArgs:
     vocab_size: int
     d_state: int = 16
     expand: int = 2
-    dt_rank: Union[int, str] = 'auto'
-    d_conv: int = 4 
+    dt_rank: Union[int, str] = "auto"
+    d_conv: int = 4
     pad_vocab_size_multiple: int = 8
     conv_bias: bool = True
     bias: bool = False
-    
+
     def __post_init__(self):
         self.d_inner = int(self.expand * self.d_model)
-        
-        if self.dt_rank == 'auto':
+
+        if self.dt_rank == "auto":
             self.dt_rank = math.ceil(self.d_model / 16)
-            
+
         if self.vocab_size % self.pad_vocab_size_multiple != 0:
-            self.vocab_size += (self.pad_vocab_size_multiple
-                                - self.vocab_size % self.pad_vocab_size_multiple)
-            
-class MambaBlock(nn.Module):
+            self.vocab_size += (
+                self.pad_vocab_size_multiple - self.vocab_size % self.pad_vocab_size_multiple
+            )
+
+
+class MambaBlock(torch.nn.Module):
+    """Code taken from https://github.com/johnma2006/mamba-minimal/blob/master/model.py#L143."""
+
     def __init__(self, args: ModelArgs):
         """A single Mamba block, as described in Figure 3 in Section 3.4 in the Mamba paper [1]."""
         super().__init__()
         self.args = args
 
-        self.in_proj = nn.Linear(args.d_model, args.d_inner * 2, bias=args.bias)
+        self.in_proj = torch.nn.Linear(args.d_model, args.d_inner * 2, bias=args.bias)
 
-        self.conv1d = nn.Conv1d(
+        self.conv1d = torch.nn.Conv1d(
             in_channels=args.d_inner,
             out_channels=args.d_inner,
             bias=args.conv_bias,
@@ -469,51 +473,49 @@ class MambaBlock(nn.Module):
         )
 
         # x_proj takes in `x` and outputs the input-specific Δ, B, C
-        self.x_proj = nn.Linear(args.d_inner, args.dt_rank + args.d_state * 2, bias=False)
-        
-        # dt_proj projects Δ from dt_rank to d_in
-        self.dt_proj = nn.Linear(args.dt_rank, args.d_inner, bias=True)
+        self.x_proj = torch.nn.Linear(args.d_inner, args.dt_rank + args.d_state * 2, bias=False)
 
-        A = repeat(torch.arange(1, args.d_state + 1), 'n -> d n', d=args.d_inner)
-        self.A_log = nn.Parameter(torch.log(A))
-        self.D = nn.Parameter(torch.ones(args.d_inner))
-        self.out_proj = nn.Linear(args.d_inner, args.d_model, bias=args.bias)
-        
+        # dt_proj projects Δ from dt_rank to d_in
+        self.dt_proj = torch.nn.Linear(args.dt_rank, args.d_inner, bias=True)
+
+        A = repeat(torch.arange(1, args.d_state + 1), "n -> d n", d=args.d_inner)
+        self.A_log = torch.nn.Parameter(torch.log(A))
+        self.D = torch.nn.Parameter(torch.ones(args.d_inner))
+        self.out_proj = torch.nn.Linear(args.d_inner, args.d_model, bias=args.bias)
 
     def forward(self, x):
         """Mamba block forward. This looks the same as Figure 3 in Section 3.4 in the Mamba paper [1].
-    
+
         Args:
             x: shape (b, l, d)    (See Glossary at top for definitions of b, l, d_in, n...)
-    
+
         Returns:
             output: shape (b, l, d)
-        
+
         Official Implementation:
             class Mamba, https://github.com/state-spaces/mamba/blob/main/mamba_ssm/modules/mamba_simple.py#L119
             mamba_inner_ref(), https://github.com/state-spaces/mamba/blob/main/mamba_ssm/ops/selective_scan_interface.py#L311
-            
+
         """
         (b, l, d) = x.shape
-        
+
         x_and_res = self.in_proj(x)  # shape (b, l, 2 * d_in)
         (x, res) = x_and_res.split(split_size=[self.args.d_inner, self.args.d_inner], dim=-1)
 
-        x = rearrange(x, 'b l d_in -> b d_in l')
+        x = rearrange(x, "b l d_in -> b d_in l")
         x = self.conv1d(x)[:, :, :l]
-        x = rearrange(x, 'b d_in l -> b l d_in')
-        
+        x = rearrange(x, "b d_in l -> b l d_in")
+
         x = F.silu(x)
 
         y = self.ssm(x)
-        
+
         y = y * F.silu(res)
-        
+
         output = self.out_proj(y)
 
         return output
 
-    
     def ssm(self, x):
         """Runs the SSM. See:
             - Algorithm 2 in Section 3.2 in the Mamba paper [1]
@@ -521,13 +523,13 @@ class MambaBlock(nn.Module):
 
         Args:
             x: shape (b, l, d_in)    (See Glossary at top for definitions of b, l, d_in, n...)
-    
+
         Returns:
             output: shape (b, l, d_in)
 
         Official Implementation:
             mamba_inner_ref(), https://github.com/state-spaces/mamba/blob/main/mamba_ssm/ops/selective_scan_interface.py#L311
-            
+
         """
         (d_in, n) = self.A_log.shape
 
@@ -535,20 +537,23 @@ class MambaBlock(nn.Module):
         #     A, D are input independent (see Mamba paper [1] Section 3.5.2 "Interpretation of A" for why A isn't selective)
         #     ∆, B, C are input-dependent (this is a key difference between Mamba and the linear time invariant S4,
         #                                  and is why Mamba is called **selective** state spaces)
-        
+
         A = -torch.exp(self.A_log.float())  # shape (d_in, n)
         D = self.D.float()
 
         x_dbl = self.x_proj(x)  # (b, l, dt_rank + 2*n)
-        
-        (delta, B, C) = x_dbl.split(split_size=[self.args.dt_rank, n, n], dim=-1)  # delta: (b, l, dt_rank). B, C: (b, l, n)
+
+        (delta, B, C) = x_dbl.split(
+            split_size=[self.args.dt_rank, n, n], dim=-1
+        )  # delta: (b, l, dt_rank). B, C: (b, l, n)
         delta = F.softplus(self.dt_proj(delta))  # (b, l, d_in)
-        
-        y = self.selective_scan(x, delta, A, B, C, D)  # This is similar to run_SSM(A, B, C, u) in The Annotated S4 [2]
-        
+
+        y = self.selective_scan(
+            x, delta, A, B, C, D
+        )  # This is similar to run_SSM(A, B, C, u) in The Annotated S4 [2]
+
         return y
 
-    
     def selective_scan(self, u, delta, A, B, C, D):
         """Does selective scan algorithm. See:
             - Section 2 State Space Models in the Mamba paper [1]
@@ -559,7 +564,7 @@ class MambaBlock(nn.Module):
             x(t + 1) = Ax(t) + Bu(t)
             y(t)     = Cx(t) + Du(t)
         except B and C (and the step size delta, which is used for discretization) are dependent on the input x(t).
-    
+
         Args:
             u: shape (b, l, d_in)    (See Glossary at top for definitions of b, l, d_in, n...)
             delta: shape (b, l, d_in)
@@ -567,40 +572,41 @@ class MambaBlock(nn.Module):
             B: shape (b, l, n)
             C: shape (b, l, n)
             D: shape (d_in,)
-    
+
         Returns:
             output: shape (b, l, d_in)
-    
+
         Official Implementation:
             selective_scan_ref(), https://github.com/state-spaces/mamba/blob/main/mamba_ssm/ops/selective_scan_interface.py#L86
             Note: I refactored some parts out of `selective_scan_ref` out, so the functionality doesn't match exactly.
-            
+
         """
         (b, l, d_in) = u.shape
         n = A.shape[1]
-        
+
         # Discretize continuous parameters (A, B)
         # - A is discretized using zero-order hold (ZOH) discretization (see Section 2 Equation 4 in the Mamba paper [1])
         # - B is discretized using a simplified Euler discretization instead of ZOH. From a discussion with authors:
         #   "A is the more important term and the performance doesn't change much with the simplification on B"
-        deltaA = torch.exp(einsum(delta, A, 'b l d_in, d_in n -> b l d_in n'))
-        deltaB_u = einsum(delta, B, u, 'b l d_in, b l n, b l d_in -> b l d_in n')
-        
+        deltaA = torch.exp(einsum(delta, A, "b l d_in, d_in n -> b l d_in n"))
+        deltaB_u = einsum(delta, B, u, "b l d_in, b l n, b l d_in -> b l d_in n")
+
         # Perform selective scan (see scan_SSM() in The Annotated S4 [2])
         # Note that the below is sequential, while the official implementation does a much faster parallel scan that
         # is additionally hardware-aware (like FlashAttention).
         x = torch.zeros((b, d_in, n), device=deltaA.device)
-        ys = []    
+        ys = []
         for i in range(l):
             x = deltaA[:, i] * x + deltaB_u[:, i]
-            y = einsum(x, C[:, i, :], 'b d_in n, b n -> b d_in')
+            y = einsum(x, C[:, i, :], "b d_in n, b n -> b d_in")
             ys.append(y)
         y = torch.stack(ys, dim=1)  # shape (b, l, d_in)
-        
+
         y = y + u * D
-    
+
         return y
-    
+
+
 # # # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
 
 
@@ -801,12 +807,12 @@ class Model(torch.nn.Module):
         for sequence in neural_sequence:
             # Compute the cumulative sum for mean
             cumsum = torch.cumsum(sequence, dim=0)
-            cumsum_sq = torch.cumsum(sequence ** 2, dim=0)
+            cumsum_sq = torch.cumsum(sequence**2, dim=0)
             counts = torch.arange(1, sequence.shape[0] + 1).reshape(-1, 1).to(sequence.device)
 
             # Compute the mean and variance using cumulative sums
             mean = cumsum / counts
-            var = (cumsum_sq - 2 * mean * cumsum + counts * mean ** 2) / counts
+            var = (cumsum_sq - 2 * mean * cumsum + counts * mean**2) / counts
             std = torch.sqrt(var + 1e-5)  # Add epsilon to avoid division by zero
 
             # Normalize the sequence
@@ -974,7 +980,7 @@ class Model(torch.nn.Module):
         # # Accumulate sums for each token
         # token_sums.index_add_(
         #     dim=0, index=token_sequence_flat, source=neural_flat
-        # ) 
+        # )
         # # Count occurrences of each token
         # token_counts.index_add_(
         #     dim=0,
@@ -983,7 +989,7 @@ class Model(torch.nn.Module):
         #         token_sequence_flat,
         #         dtype=token_counts.dtype,
         #     ),
-        # ) 
+        # )
         # # Compute means and apply EMA update
         # new_token_means = token_sums / token_counts.unsqueeze(1).clamp(min=1)  # avoid division by 0
         # new_token_means = new_token_means.to(self.neural_embedding.device)  # move to same device
@@ -1009,8 +1015,8 @@ class Model(torch.nn.Module):
         for group in batch_groups:  # bigO(batch_size)
             batch_idx = group[:, 0].unique().item()
             observed_inputs = group[:, 1]
-            batch_tokens = token_sequence[batch_idx]  # (seq_len, ) 
-            batch_inputs = neural_sequence[batch_idx]  # (seq_len, input_size) 
+            batch_tokens = token_sequence[batch_idx]  # (seq_len, )
+            batch_inputs = neural_sequence[batch_idx]  # (seq_len, input_size)
             for token in batch_tokens.unique():
                 OLD = self.neural_embedding[token, observed_inputs]
                 NEW = batch_inputs[batch_tokens == token].mean(dim=0)[observed_inputs]
@@ -1019,7 +1025,7 @@ class Model(torch.nn.Module):
 
         # Return the tokenized sequence
         return token_sequence
-        
+
     @torch.autocast(device_type=DEVICE.type, dtype=torch.long)
     def bin_tensor(self, nt):
         """
@@ -1062,7 +1068,7 @@ class Model(torch.nn.Module):
             input * mask.unsqueeze(1).expand_as(input)
         )  # (batch_size, seq_len, input_size)
         # ### DEBUG ###
-        # # Normalize (causally) the input sequence 
+        # # Normalize (causally) the input sequence
         # input_normalized = self.causal_normalization(input_activity)
         # ### DEBUG ###
         # Transform the input into a latent
@@ -1090,7 +1096,7 @@ class Model(torch.nn.Module):
             input * mask.unsqueeze(1).expand_as(input)
         )  # (batch_size, seq_len, input_size)
         # ### DEBUG ###
-        # # Normalize (causally) the input sequence 
+        # # Normalize (causally) the input sequence
         # input_normalized = self.causal_normalization(input_activity)
         # ### DEBUG ###
         # Convert the high-D neural sequence into a 1-D token sequence
@@ -1600,7 +1606,7 @@ class NeuralTransformer(Model):
         self.input_hidden = torch.nn.Sequential(
             self.latent_embedding,
             self.positional_encoding,
-            # NOTE: No LayerNorm because it is already part of TransformerEncoderLayer.  
+            # NOTE: No LayerNorm because it is already part of TransformerEncoderLayer.
         )
         # Hidden to hidden transformation: TransformerEncoderLayer
         self.hidden_hidden = CausalTransformer(

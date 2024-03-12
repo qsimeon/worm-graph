@@ -49,18 +49,16 @@ This repository serves as a platform to investigate the effects of training data
 
 ## Environment Setup
 
-To prepare your environment for this project, you can use either the provided `.yml` files or the `init.sh` script. Choose the option that works most efficiently for your system.
-
-Firstly, navigate to the `setup` directory. This directory contains all the necessary configuration files to set up the virtual environment. Use the following command to access the directory:
+To prepare your environment for this project, you should use either the provided `env.sh` script. Firstly, navigate to the `setup` directory. This directory contains all the necessary configuration files to set up the virtual environment. Use the following command to access the directory:
 
 ```
 cd setup
 ```
 
-**Note:** Installing the environment can take up to 2 hours!
+**Note:** Installing the environment can sometimes take up to 1 hour!
 
 
-### Option A: Setting up with the bash script (recommended) 
+### Setting up with the bash script (recommended) 
 
 1. Run the `env.sh` script. This will create the new `worm-graph` environment and install the required packages:
 
@@ -81,26 +79,12 @@ cd setup
     ```
 
 
-### Option B: Setting up with the `.yml` file
-
-1. Open the `environment.yml` file. If you have a compatible Nvidia GPU, uncomment the lines under the NVIDIA packages section.
-
-2. Create a new Conda environment using the `.yml` file. The first line of the `.yml` file sets the name of the new environment:
-
+4. After finishing the installations above, navigate back to the root directory (`worm-graph/`):
     ```
-    conda env create -f environment.yml
+    cd ..
     ```
 
-3. After creating the environment, activate it:
-
-    ```
-    conda activate worm-graph
-    ```
-
-**Note:** This approach simplifies the environment setup but requires manual intervention for GPU-specific packages.
-
-
-After finishing one of the installations above, navigate back to the root directory (`worm-graph/`) and run:
+    then run:
 
     ```
     conda develop .
@@ -109,15 +93,14 @@ After finishing one of the installations above, navigate back to the root direct
 **Note:** 
 * Please ensure to carry out this step, otherwise you may encounter `ModuleNotFoundError` later on.
 
-* You can check if the environment was successfully installed by running `conda env list` or `conda info --envs`.
+* You can check if the environment was successfully installed by running `conda env list` or `conda info --envs`. 
 
 **Important Reminder:** Always activate the environment before starting your work on the project by running `conda activate worm-graph`.
 
 
 ## Getting Started
 
-To make sure nothing breaks, the first thing you need to do is download and preprocess our curated collection of _C. elegans_ neural activity datasets. 
-From the root (`worm-graph`) directory, run the command:
+To make sure nothing breaks, the first thing you need to do is download and preprocess our curated collection of _C. elegans_ neural activity datasets. From the root (`worm-graph`) directory, run the command:
 
 `python main.py +submodule=[preprocess]`
 
@@ -187,7 +170,6 @@ For Jupyter notebooks, use the `CamelCase` naming style.
 
 ## Future Tasks
 
-- Write the Project Overview section of the README.
 - Post the preprocess datasets to a file-hosting site.
 - Implement unit tests for all submodules in the `tests` directory.
 - Add docstrings to all functions and classes. Follow the Google Python Style Guide for formating.
