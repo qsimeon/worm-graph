@@ -7,18 +7,6 @@ function has_gpu {
     command -v nvidia-smi > /dev/null && nvidia-smi > /dev/null 2>&1
 }
 
-function get_cuda_version {
-    if ! type "nvidia-smi" > /dev/null; then
-        # CUDA is not installed; return an empty string
-        echo ""
-    else
-        # Extract the CUDA version from the nvidia-smi output
-        local cuda_version
-        cuda_version=$(nvidia-smi | grep -oP '(?<=CUDA Version: )\d+\.\d+')
-        echo "$cuda_version"
-    fi
-}
-
 ENV_NAME="worm-graph"
 
 # Create a new conda environment with Python 3.11
@@ -51,23 +39,12 @@ case "$(uname -s)" in
         if has_gpu; then
             echo ""
             echo "Nvidia GPU Detected"
-            CUDA_VER=$(get_cuda_version)
-            if [ "$CUDA_VER" != "" ]; then
-                echo "CUDA Version $CUDA_VER Detected"
-                # If you prefer to use conda:
-                conda install -y -n $ENV_NAME pytorch==2.0.1 torchvision==0.15.2 torchaudio==2.0.2 pytorch-cuda=$CUDA_VER -c pytorch -c nvidia
-                conda install -y -n $ENV_NAME pyg -c pyg
-                # # If you prefer to use pip:
-                # pip install torch==2.0.1 torchvision==0.15.2 torchaudio==2.0.2
-                # pip install torch_geometric
-            else
-                # If you prefer to use conda:
-                conda install -y -n $ENV_NAME pytorch==2.0.1 torchvision==0.15.2 torchaudio==2.0.2 pytorch-cuda=11.7 -c pytorch -c nvidia
-                conda install -y -n $ENV_NAME pyg -c pyg
-                # # If you prefer to use pip:
-                # pip install torch==2.0.1 torchvision==0.15.2 torchaudio==2.0.2
-                # pip install torch_geometric
-            fi
+            # If you prefer to use conda:
+            conda install -y -n $ENV_NAME pytorch==2.0.1 torchvision==0.15.2 torchaudio==2.0.2 pytorch-cuda=11.8 -c pytorch -c nvidia
+            conda install -y -n $ENV_NAME pyg -c pyg
+            # # If you prefer to use pip:
+            # pip install torch==2.0.1 torchvision==0.15.2 torchaudio==2.0.2
+            # pip install torch_geometric
         else
             # If you prefer to use conda:
             conda install -y -n $ENV_NAME pytorch==2.0.1 torchvision==0.15.2 torchaudio==2.0.2 cpuonly -c pytorch
