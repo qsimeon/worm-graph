@@ -476,27 +476,27 @@ class CalciumDataReshaper:
         self.idx_to_neuron = self.worm_dataset["idx_to_neuron"]
 
         # Raw data
-        self.original_time_in_seconds = self.worm_dataset.get(
-            "original_time_in_seconds", self.worm_dataset["time_in_seconds"]
+        self.og_time_in_seconds = self.worm_dataset.get(
+            "og_time_in_seconds", self.worm_dataset["time_in_seconds"]
         )
-        self.original_max_timesteps = self.worm_dataset.get(
-            "original_max_timesteps", self.worm_dataset["max_timesteps"]
+        self.og_max_timesteps = self.worm_dataset.get(
+            "og_max_timesteps", self.worm_dataset["max_timesteps"]
         )
-        self.original_calcium_data = self.worm_dataset.get(
-            "original_calcium_data", self.worm_dataset["calcium_data"]
+        self.og_calcium_data = self.worm_dataset.get(
+            "og_calcium_data", self.worm_dataset["calcium_data"]
         )
-        self.original_smooth_calcium_data = self.worm_dataset.get(
-            "original_smooth_calcium_data", self.worm_dataset["smooth_calcium_data"]
+        self.og_smooth_calcium_data = self.worm_dataset.get(
+            "og_smooth_calcium_data", self.worm_dataset["smooth_calcium_data"]
         )
-        self.original_residual_calcium = self.worm_dataset.get(
-            "original_residual_calcium", self.worm_dataset["residual_calcium"]
+        self.og_residual_calcium = self.worm_dataset.get(
+            "og_residual_calcium", self.worm_dataset["residual_calcium"]
         )
-        self.original_smooth_residual_calcium = self.worm_dataset.get(
-            "original_smooth_residual_calcium",
+        self.og_smooth_residual_calcium = self.worm_dataset.get(
+            "og_smooth_residual_calcium",
             self.worm_dataset["smooth_residual_calcium"],
         )
-        self.original_median_dt = self.worm_dataset.get(
-            "original_median_dt", self.worm_dataset["median_dt"]
+        self.og_median_dt = self.worm_dataset.get(
+            "og_median_dt", self.worm_dataset["median_dt"]
         )
 
     def _reshape_data(self):
@@ -528,17 +528,17 @@ class CalciumDataReshaper:
         )
 
         # Raw data
-        self.standard_original_calcium_data = torch.zeros(
-            self.original_max_timesteps, NUM_NEURONS, dtype=self.dtype
+        self.standard_og_calcium_data = torch.zeros(
+            self.og_max_timesteps, NUM_NEURONS, dtype=self.dtype
         )
-        self.standard_original_smooth_calcium_data = torch.zeros(
-            self.original_max_timesteps, NUM_NEURONS, dtype=self.dtype
+        self.standard_og_smooth_calcium_data = torch.zeros(
+            self.og_max_timesteps, NUM_NEURONS, dtype=self.dtype
         )
-        self.standard_original_residual_calcium = torch.zeros(
-            self.original_max_timesteps, NUM_NEURONS, dtype=self.dtype
+        self.standard_og_residual_calcium = torch.zeros(
+            self.og_max_timesteps, NUM_NEURONS, dtype=self.dtype
         )
-        self.standard_original_smooth_residual_calcium = torch.zeros(
-            self.original_max_timesteps, NUM_NEURONS, dtype=self.dtype
+        self.standard_og_smooth_residual_calcium = torch.zeros(
+            self.og_max_timesteps, NUM_NEURONS, dtype=self.dtype
         )
 
     def _tensor_time_data(self):
@@ -554,17 +554,17 @@ class CalciumDataReshaper:
             self.dt = self.dt.unsqueeze(-1)
 
         # Raw data
-        self.original_time_in_seconds = torch.from_numpy(self.original_time_in_seconds).to(
+        self.og_time_in_seconds = torch.from_numpy(self.og_time_in_seconds).to(
             self.dtype
         )
-        if self.original_time_in_seconds.ndim == 1:
-            self.original_time_in_seconds = self.time_in_seconds.unsqueeze(-1)
-        original_dt = np.gradient(self.original_time_in_seconds, axis=0)
-        original_dt[original_dt == 0] = np.finfo(float).eps
-        self.original_dt = original_dt
-        self.original_dt = torch.from_numpy(self.original_dt).to(self.dtype)
-        if self.original_dt.ndim == 1:
-            self.original_dt = self.original_dt.unsqueeze(-1)
+        if self.og_time_in_seconds.ndim == 1:
+            self.og_time_in_seconds = self.time_in_seconds.unsqueeze(-1)
+        og_dt = np.gradient(self.og_time_in_seconds, axis=0)
+        og_dt[og_dt == 0] = np.finfo(float).eps
+        self.og_dt = og_dt
+        self.og_dt = torch.from_numpy(self.og_dt).to(self.dtype)
+        if self.og_dt.ndim == 1:
+            self.og_dt = self.og_dt.unsqueeze(-1)
 
     def _fill_named_neurons_data(self):
         for slot, neuron in enumerate(NEURONS_302):
@@ -590,17 +590,17 @@ class CalciumDataReshaper:
         ).to(self.dtype)
 
         # Raw data
-        self.standard_original_calcium_data[:, slot] = torch.from_numpy(
-            self.original_calcium_data[:, idx]
+        self.standard_og_calcium_data[:, slot] = torch.from_numpy(
+            self.og_calcium_data[:, idx]
         ).to(self.dtype)
-        self.standard_original_smooth_calcium_data[:, slot] = torch.from_numpy(
-            self.original_smooth_calcium_data[:, idx]
+        self.standard_og_smooth_calcium_data[:, slot] = torch.from_numpy(
+            self.og_smooth_calcium_data[:, idx]
         ).to(self.dtype)
-        self.standard_original_residual_calcium[:, slot] = torch.from_numpy(
-            self.original_residual_calcium[:, idx]
+        self.standard_og_residual_calcium[:, slot] = torch.from_numpy(
+            self.og_residual_calcium[:, idx]
         ).to(self.dtype)
-        self.standard_original_smooth_residual_calcium[:, slot] = torch.from_numpy(
-            self.original_smooth_residual_calcium[:, idx]
+        self.standard_og_smooth_residual_calcium[:, slot] = torch.from_numpy(
+            self.og_smooth_residual_calcium[:, idx]
         ).to(self.dtype)
 
     def _fill_unknown_neurons_data(self):
@@ -627,13 +627,13 @@ class CalciumDataReshaper:
                 "named_neurons_mask": self.named_neurons_mask,
                 "neuron_to_slot": {v: k for k, v in self.slot_to_neuron.items()},
                 "neurons_mask": self.named_neurons_mask | self.unknown_neurons_mask,
-                "original_calcium_data": self.standard_original_calcium_data,  # original, normalized
-                "original_dt": self.original_dt,  # original (vector)
-                "original_median_dt": self.original_median_dt,  # original (scalar)
-                "original_residual_calcium": self.standard_original_residual_calcium,  # original
-                "original_smooth_calcium_data": self.standard_original_smooth_calcium_data,  # original, normalized, smoothed
-                "original_smooth_residual_calcium": self.standard_original_smooth_residual_calcium,  # original, smoothed
-                "original_time_in_seconds": self.original_time_in_seconds,  # original
+                "og_calcium_data": self.standard_og_calcium_data,  # original, normalized
+                "og_dt": self.og_dt,  # original (vector)
+                "og_median_dt": self.og_median_dt,  # original (scalar)
+                "og_residual_calcium": self.standard_og_residual_calcium,  # original
+                "og_smooth_calcium_data": self.standard_og_smooth_calcium_data,  # original, normalized, smoothed
+                "og_smooth_residual_calcium": self.standard_og_smooth_residual_calcium,  # original, smoothed
+                "og_time_in_seconds": self.og_time_in_seconds,  # original
                 "median_dt": self.median_dt,  # resampled (scalar)
                 "residual_calcium": self.standard_residual_calcium,  # resampled
                 "smooth_calcium_data": self.standard_smooth_calcium_data,  # normalized, smoothed, resampled
@@ -759,8 +759,8 @@ def aggregate_data(time, data, target_dt):
     time = time.squeeze()
 
     # Compute the downsample rate
-    original_dt = time[1] - time[0]
-    downsample_rate = int(target_dt / original_dt)
+    og_dt = time[1] - time[0]
+    downsample_rate = int(target_dt / og_dt)
 
     # Determine the number of intervals
     num_intervals = len(time) // downsample_rate
@@ -1109,9 +1109,9 @@ class BasePreprocessor:
         )
 
     def resample_data(self, time_in_seconds, data):
-        original_dt = time_in_seconds[1] - time_in_seconds[0]
+        og_dt = time_in_seconds[1] - time_in_seconds[0]
         # Upsample (interpolate)
-        if original_dt >= self.resample_dt:
+        if og_dt >= self.resample_dt:
             return interpolate_data(
                 time_in_seconds,
                 data,
@@ -1231,7 +1231,7 @@ class BasePreprocessor:
 
             dt = np.gradient(time_in_seconds, axis=0)  # vector
             dt[dt == 0] = np.finfo(float).eps
-            original_dt = np.median(dt).item()  # scalar
+            og_dt = np.median(dt).item()  # scalar
 
             residual_calcium = np.gradient(calcium_data, axis=0) / dt  # calcium dynamics
 
@@ -1275,15 +1275,15 @@ class BasePreprocessor:
                     "num_named_neurons": num_named_neurons,
                     "num_neurons": int(num_neurons),
                     "num_unknown_neurons": num_unknown_neurons,
-                    "original_calcium_data": calcium_data,  # normalized
-                    "original_max_timesteps": int(
+                    "og_calcium_data": calcium_data,  # normalized
+                    "og_max_timesteps": int(
                         calcium_data.shape[0]
                     ),  # from original time vector
-                    "original_median_dt": original_dt,  # scalar from original time vector
-                    "original_residual_calcium": residual_calcium,  # not resampled
-                    "original_smooth_calcium_data": smooth_calcium_data,  # normalized and smoothed
-                    "original_smooth_residual_calcium": smooth_residual_calcium,  # smoothed but not resampled
-                    "original_time_in_seconds": time_in_seconds,  # original time vector
+                    "og_median_dt": og_dt,  # scalar from original time vector
+                    "og_residual_calcium": residual_calcium,  # not resampled
+                    "og_smooth_calcium_data": smooth_calcium_data,  # normalized and smoothed
+                    "og_smooth_residual_calcium": smooth_residual_calcium,  # smoothed but not resampled
+                    "og_time_in_seconds": time_in_seconds,  # original time vector
                     "median_dt": self.resample_dt,  # scalar from resampled time vector
                     "residual_calcium": resampled_residual_calcium,  # resampled
                     "smooth_calcium_data": resampled_smooth_calcium_data,  # normalized, smoothed and resampled
@@ -1852,7 +1852,7 @@ class Leifer2023Preprocessor(BasePreprocessor):
             # 3. Compute calcium dynamics (residual calcium)
             dt = np.gradient(time_in_seconds, axis=0)  # vector
             dt[dt == 0] = np.finfo(float).eps
-            original_dt = np.median(dt).item()  # scalar
+            og_dt = np.median(dt).item()  # scalar
 
             residual_calcium = np.gradient(calcium_data, axis=0) / dt
 
@@ -1892,15 +1892,15 @@ class Leifer2023Preprocessor(BasePreprocessor):
                     "num_named_neurons": num_named_neurons,
                     "num_neurons": int(num_neurons),
                     "num_unknown_neurons": num_unknown_neurons,
-                    "original_calcium_data": calcium_data,  # normalized
-                    "original_max_timesteps": int(
+                    "og_calcium_data": calcium_data,  # normalized
+                    "og_max_timesteps": int(
                         calcium_data.shape[0]
                     ),  # from original time vector
-                    "original_median_dt": original_dt,  # scalar from original time vector
-                    "original_residual_calcium": residual_calcium,  # not resampled
-                    "original_smooth_calcium_data": smooth_calcium_data,  # normalized and smoothed
-                    "original_smooth_residual_calcium": smooth_residual_calcium,  # smoothed but not resampled
-                    "original_time_in_seconds": time_in_seconds,  # original time vector
+                    "og_median_dt": og_dt,  # scalar from original time vector
+                    "og_residual_calcium": residual_calcium,  # not resampled
+                    "og_smooth_calcium_data": smooth_calcium_data,  # normalized and smoothed
+                    "og_smooth_residual_calcium": smooth_residual_calcium,  # smoothed but not resampled
+                    "og_time_in_seconds": time_in_seconds,  # original time vector
                     "median_dt": self.resample_dt,  # scalar from resampled time vector
                     "residual_calcium": resampled_residual_calcium,  # resampled
                     "smooth_calcium_data": resampled_smooth_calcium_data,  # normalized, smoothed and resampled
@@ -2047,7 +2047,7 @@ class Flavell2023Preprocessor(BasePreprocessor):
             # 3. Compute calcium dynamics (residual calcium)
             dt = np.gradient(time_in_seconds, axis=0)
             dt[dt == 0] = np.finfo(float).eps
-            original_dt = np.median(dt).item()
+            og_dt = np.median(dt).item()
 
             residual_calcium = np.gradient(calcium_data, axis=0) / dt
 
@@ -2081,24 +2081,24 @@ class Flavell2023Preprocessor(BasePreprocessor):
                     "smooth_method": self.smooth_method,
                     "interpolate_method": self.interpolate_method,
                     "worm": worm,
-                    "original_calcium_data": calcium_data,  # normalized
-                    "original_smooth_calcium_data": smooth_calcium_data,  # normalized and smoothed
+                    "og_calcium_data": calcium_data,  # normalized
+                    "og_smooth_calcium_data": smooth_calcium_data,  # normalized and smoothed
                     "calcium_data": resampled_calcium_data,  # normalized and resampled
                     "smooth_calcium_data": resampled_smooth_calcium_data,  # normalized, smoothed and resampled
                     "residual_calcium": resampled_residual_calcium,  # resampled
-                    "original_residual_calcium": residual_calcium,  # not resampled
+                    "og_residual_calcium": residual_calcium,  # not resampled
                     "smooth_residual_calcium": resampled_smooth_residual_calcium,  # smoothed and resampled
-                    "original_smooth_residual_calcium": smooth_residual_calcium,  # smoothed but not resampled
+                    "og_smooth_residual_calcium": smooth_residual_calcium,  # smoothed but not resampled
                     "neuron_to_idx": neuron_to_idx,
                     "idx_to_neuron": dict((v, k) for k, v in neuron_to_idx.items()),
                     "max_timesteps": int(max_timesteps),  # from resampled time vector
-                    "original_max_timesteps": int(
+                    "og_max_timesteps": int(
                         calcium_data.shape[0]
                     ),  # from original time vector
-                    "original_time_in_seconds": time_in_seconds,  # original time vector
+                    "og_time_in_seconds": time_in_seconds,  # original time vector
                     "time_in_seconds": resampled_time_in_seconds,  # resampled time vector
                     "dt": dt,  # vector from original time vector
-                    "original_median_dt": original_dt,  # scalar from original time vector
+                    "og_median_dt": og_dt,  # scalar from original time vector
                     "median_dt": self.resample_dt,  # scalar from resampled time vector
                     "num_neurons": int(num_neurons),
                     "num_named_neurons": num_named_neurons,

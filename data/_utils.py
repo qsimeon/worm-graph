@@ -438,8 +438,8 @@ def filter_loaded_combined_dataset(combined_dataset, num_worms, num_named_neuron
     # Information about the dataset
     dataset_info = {
         "dataset": [],
-        "original_median_dt": [],
-        "original_index": [],
+        "og_median_dt": [],
+        "og_index": [],
         "combined_dataset_index": [],
         "neurons": [],
         "num_neurons": [],
@@ -447,8 +447,8 @@ def filter_loaded_combined_dataset(combined_dataset, num_worms, num_named_neuron
 
     for worm, data in combined_dataset.items():
         dataset_info["dataset"].append(data["dataset"])
-        dataset_info["original_median_dt"].append(data["original_median_dt"])
-        dataset_info["original_index"].append(data["original_worm"])
+        dataset_info["og_median_dt"].append(data["og_median_dt"])
+        dataset_info["og_index"].append(data["og_worm"])
         dataset_info["combined_dataset_index"].append(worm)
         worm_neurons = [neuron for slot, neuron in data["slot_to_named_neuron"].items()]
         dataset_info["neurons"].append(worm_neurons)
@@ -740,10 +740,10 @@ def create_combined_dataset(
                 worm_ = "worm" + str(worm_)
                 combined_dataset[worm_] = multi_worms_dataset[worm]
                 combined_dataset[worm_]["worm"] = worm_
-                combined_dataset[worm_]["original_worm"] = worm
+                combined_dataset[worm_]["og_worm"] = worm
             else:
                 combined_dataset[worm] = multi_worms_dataset[worm]
-                combined_dataset[worm]["original_worm"] = worm
+                combined_dataset[worm]["og_worm"] = worm
 
     logger.info("Combined dataset has {} worms".format(len(combined_dataset)))
 
@@ -753,8 +753,8 @@ def create_combined_dataset(
     # Information about the dataset
     dataset_info = {
         "dataset": [],
-        "original_median_dt": [],
-        "original_index": [],
+        "og_median_dt": [],
+        "og_index": [],
         "combined_dataset_index": [],
         "neurons": [],
         "num_neurons": [],
@@ -762,8 +762,8 @@ def create_combined_dataset(
 
     for worm, data in combined_dataset.items():
         dataset_info["dataset"].append(data["dataset"])
-        dataset_info["original_median_dt"].append(data["original_median_dt"])
-        dataset_info["original_index"].append(data["original_worm"])
+        dataset_info["og_median_dt"].append(data["og_median_dt"])
+        dataset_info["og_index"].append(data["og_worm"])
         dataset_info["combined_dataset_index"].append(worm)
         worm_neurons = [neuron for _, neuron in data["slot_to_named_neuron"].items()]
         dataset_info["neurons"].append(worm_neurons)
@@ -980,7 +980,7 @@ def split_combined_dataset(
         neurons_mask = single_worm_dataset["named_neurons_mask"]
         time_vec = single_worm_dataset["time_in_seconds"]
         worm_dataset = single_worm_dataset["dataset"]
-        original_wormID = single_worm_dataset["original_worm"]
+        og_wormID = single_worm_dataset["og_worm"]
 
         # The index where to split the data
         split_idx = (
@@ -1030,7 +1030,7 @@ def split_combined_dataset(
                     data=train_split.detach(),
                     time_vec=train_time_split.detach(),
                     neurons_mask=neurons_mask,
-                    wormID=original_wormID,  # worm ID from the original experimental dataset
+                    wormID=og_wormID,  # worm ID from the original experimental dataset
                     worm_dataset=worm_dataset,  # name of the original experimental dataset the data is from
                     seq_len=seq_len,
                     num_samples=num_train_samples_split,
@@ -1056,7 +1056,7 @@ def split_combined_dataset(
                     data=val_split.detach(),
                     time_vec=val_time_split.detach(),
                     neurons_mask=neurons_mask,
-                    wormID=original_wormID,  # worm ID of the experimental dataset (original)
+                    wormID=og_wormID,  # worm ID of the experimental dataset (original)
                     worm_dataset=worm_dataset,  # dataset where the worm comes from
                     seq_len=seq_len,
                     num_samples=num_val_samples_split,

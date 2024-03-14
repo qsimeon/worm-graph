@@ -40,7 +40,7 @@ case "$(uname -s)" in
             echo ""
             echo "Nvidia GPU Detected"
             # If you prefer to use conda:
-            conda install -y -n $ENV_NAME pytorch==2.0.1 torchvision==0.15.2 torchaudio==2.0.2 pytorch-cuda=11.8 -c pytorch -c nvidia
+            conda install -y -n $ENV_NAME pytorch==2.0.1 torchvision==0.15.2 torchaudio==2.0.2 pytorch-cuda=11.7 -c pytorch -c nvidia
             conda install -y -n $ENV_NAME pyg -c pyg
             # # If you prefer to use pip:
             # pip install torch==2.0.1 torchvision==0.15.2 torchaudio==2.0.2
@@ -61,7 +61,7 @@ case "$(uname -s)" in
         if has_gpu; then
             echo "Nvidia GPU Detected"
             # If you prefer to use conda:
-            conda install -y -n $ENV_NAME pytorch==2.0.1 torchvision==0.15.2 torchaudio==2.0.2 pytorch-cuda=11.8 -c pytorch -c nvidia
+            conda install -y -n $ENV_NAME pytorch==2.0.1 torchvision==0.15.2 torchaudio==2.0.2 pytorch-cuda=11.7 -c pytorch -c nvidia
             conda install -y -n $ENV_NAME pyg -c pyg
             # # If you prefer to use pip:
             # pip install torch==2.0.1 torchvision==0.15.2 torchaudio==2.0.2 --index-url https://download.pytorch.org/whl/cu118
