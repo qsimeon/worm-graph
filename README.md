@@ -1,6 +1,5 @@
 ## NOTE to Users! 
-### Revert to commit: `3495d274d0d4c06209899fd68a62760bdd09101c`
-##### [Use the repository at this specific commit](https://github.com/metaconsciousgroup/worm-graph/tree/3495d274d0d4c06209899fd68a62760bdd09101c)
+#### [Use the repository at this specific commit](https://github.com/metaconsciousgroup/worm-graph/tree/3495d274d0d4c06209899fd68a62760bdd09101c)
 We are currently working on changes involving adding a ninth dataset in the main branch so the current commit will not run!
 We apologize for the incovenience and expect to have working code after publication or by the end of March 31st, 2024!
 
