@@ -1,13 +1,14 @@
+## NOTE to Users! 
+### Revert to commit: 3495d274d0d4c06209899fd68a62760bdd09101c 
+We are currently working on changes involving adding a ninth dataset in the main branch so the current commit will not run!
+We apologize for the incovenience and expect to have working code after publication by the end of March 2024!
+
 # worm-graph
 
 ### Simulating the _C. elegans_ whole brain with neural networks.
 
 ### Cite
 Simeon, Quilee, Leandro Venâncio, Michael A. Skuhersky, Aran Nayebi, Edward S. Boyden, and Guangyu Robert Yang. 2024. “Scaling Properties for Artificial Neural Network Models of a Small Nervous System.” bioRxiv. https://doi.org/10.1101/2024.02.13.580186.
-
-# NOTE to Users! Use code from this commit: 3495d274d0d4c06209899fd68a62760bdd09101c 
-We are currently working on changes involving adding a ninth dataset in the main branch so the current commit will not run!
-We apologize for the incovenience and expect to have working code after publication by the end of March 2024!
 
 ### Table of Contents
 1. [Project Overview](#worm-graph)
