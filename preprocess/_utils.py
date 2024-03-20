@@ -869,7 +869,6 @@ class CausalNormalizer:
             + count * self.cumulative_mean_**2
         ) / count
         self.cumulative_std_ = np.sqrt(cumulative_variance)
-        self.cumulative_std_ = np.sqrt(cumulative_variance)
 
         # Avoid division by zero
         self.cumulative_std_[self.cumulative_std_ == 0] = 1
@@ -993,6 +992,7 @@ def pickle_neural_data(
             ]
             std_out = subprocess.run(bash_command, text=True)  # Run the bash command
             print(std_out, end="\n\n")
+            os.unlink(zip_path)  # Delete the zip file
 
     # (re)-Pickle all the datasets ... OR
     if source_dataset is None or source_dataset.lower() == "all":
@@ -1035,7 +1035,7 @@ def pickle_neural_data(
             pass
 
     if cleanup:
-        # Delete the downloaded raw datasets
+        # Delete the unzipped and downloaded files
         shutil.rmtree(source_path)
 
     # Create a file to indicate that the preprocessing was successful
@@ -1666,10 +1666,10 @@ class Lin2023Preprocessor(BasePreprocessor):
         _filter = dataset_raw["use_flag"].flatten() > 0
         neurons = [str(_.item()) for _ in dataset_raw["proofread_neurons"].flatten()[_filter]]
         raw_time_vec = np.array(dataset_raw["times"].flatten()[0][-1])
-        raw_activitiy = dataset_raw["corrected_F"][_filter].T # (time, neurons)
+        raw_activitiy = dataset_raw["corrected_F"][_filter].T  # (time, neurons)
         # Replace first nan with F0 value
         _f0 = dataset_raw["F_0"][_filter][:, 0]
-        raw_activitiy[0,:] = _f0
+        raw_activitiy[0, :] = _f0
         # Impute any remaining NaN values
         imputer = IterativeImputer(random_state=0)
         if np.isnan(raw_activitiy).any():
@@ -1677,18 +1677,19 @@ class Lin2023Preprocessor(BasePreprocessor):
         # Return the extracted data
         neuron_IDs, raw_traces, time_vector_seconds = [neurons], [raw_activitiy], [raw_time_vec]
         return neuron_IDs, raw_traces, time_vector_seconds
-    
+
     def preprocess(self):
         preprocessed_data = {}  # Store preprocessed data
         worm_idx = 0  # Initialize worm index outside file loop
         # Have multiple .mat files that you iterate over
         data_files = os.path.join(self.raw_data_path, "Lin2023")
         for file in os.listdir(data_files):
-            if not file.endswith('.mat'):
+            if not file.endswith(".mat"):
                 continue
             neurons, raw_traces, time_vector_seconds = self.extract_data(file)
-            preprocessed_data, worm_idx = self.preprocess_traces(neurons, raw_traces, time_vector_seconds, 
-                                                                 preprocessed_data, worm_idx)  # preprocess
+            preprocessed_data, worm_idx = self.preprocess_traces(
+                neurons, raw_traces, time_vector_seconds, preprocessed_data, worm_idx
+            )  # preprocess
 
         # Reshape calcium data
         for worm in preprocessed_data.keys():
@@ -1698,7 +1699,6 @@ class Lin2023Preprocessor(BasePreprocessor):
         self.save_data(preprocessed_data)
         logger.info(f"Finished processing {self.source_dataset}.")
         return None
-
 
 
 class Leifer2023Preprocessor(BasePreprocessor):

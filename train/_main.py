@@ -82,9 +82,11 @@ def train_model(
 
     # Instantiate early stopping
     es = EarlyStopping(
-        patience=train_config.early_stopping.patience // 2
-        if model.version_2
-        else train_config.early_stopping.patience,
+        patience=(
+            train_config.early_stopping.patience // 2
+            if model.version_2
+            else train_config.early_stopping.patience
+        ),
         min_delta=train_config.early_stopping.delta,
     )
 
@@ -163,9 +165,12 @@ def train_model(
 
             # Calculate total FLOP only at the first epoch and batch
             elif batch_idx == 0:
-                computation_flops = FlopCountAnalysis(model, (X_train, mask_train)).total() / (
-                    X_train.shape[0] * X_train.shape[1]
-                )  # FLOP per time step
+                ### DEBUG: Find way to compute FLOP using Pytorch Profiler ###
+                computation_flops = 0
+                # FlopCountAnalysis(model, (X_train, mask_train)).total() / (
+                #     X_train.shape[0] * X_train.shape[1]
+                # )  # FLOP per time step
+                ### DEBUG: Find way to compute FLOP using Pytorch Profiler ###
 
             # Update running metrics
             train_running_base_loss += train_baseline.item()
