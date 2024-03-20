@@ -3,6 +3,9 @@
 We are currently working on changes involving adding a ninth dataset in the main branch so the current commit will not run!
 We apologize for the incovenience and expect to have working code after publication or by the end of March 31st, 2024!
 
+#### [See this Wiki page if running locally (i.e. not on a SLURM cluster](https://github.com/metaconsciousgroup/worm-graph/wiki/Pipeline-Structure#overview)
+Please change `submitit_slurm` to `submitit_local` in the file `configs/pipeline.yaml` if running on your local machine.
+
 # worm-graph
 
 ### Simulating the _C. elegans_ whole brain with neural networks.
