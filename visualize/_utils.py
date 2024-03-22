@@ -677,7 +677,9 @@ def plot_worm_data(worm_data, num_neurons=5, smooth=False):
 
     plt.xlabel("Time (seconds)")
     plt.ylabel("Calcium Activity")
-    plt.title(f"Dataset: {source_dataset}, Worm: {worm}\nCalcium Traces of Random {num_neurons} Neurons")
+    plt.title(
+        f"Dataset: {source_dataset}, Worm: {worm}\nCalcium Traces of Random {num_neurons} Neurons"
+    )
     plt.legend()
     plt.show()
 
@@ -1093,9 +1095,9 @@ def plot_experiment_losses(exp_log_dir, exp_key, exp_plot_dir=None):
     sampled_labels, sampled_handles = zip(
         *sorted(
             zip(sampled_labels, sampled_handles),
-            key=lambda t: float(t[0])
-            if (isinstance(t[0], str) and str(t[0]).isnumeric())
-            else t[0],
+            key=lambda t: (
+                float(t[0]) if (isinstance(t[0], str) and str(t[0]).isnumeric()) else t[0]
+            ),
         )
     )
 
@@ -1334,7 +1336,9 @@ def plot_experiment_loss_per_dataset(exp_log_dir, exp_key, exp_plot_dir=None, mo
 
     # =============== Collect information ===============
     # Create an empty DataFrame to store the losses
-    losses = pd.DataFrame(columns=["source_dataset", f"{mode}_loss", f"{mode}_baseline", "exp_param"])
+    losses = pd.DataFrame(
+        columns=["source_dataset", f"{mode}_loss", f"{mode}_baseline", "exp_param"]
+    )
 
     # Loop through all experiments
     for file in sorted(os.listdir(exp_log_dir), key=lambda x: x.strip("exp_")):
@@ -1382,7 +1386,7 @@ def plot_experiment_loss_per_dataset(exp_log_dir, exp_key, exp_plot_dir=None, mo
     losses = losses.dropna()  # Do not use reset_index here
 
     # Now set the multi-index with 'exp_param' and 'source_dataset'
-    losses.set_index(["exp_param", "dataset"], inplace=True)
+    losses.set_index(["exp_param", "source_dataset"], inplace=True)
 
     # After this, your unique call should work correctly
     # Create one subplot per source dataset, arranged in two columns
@@ -1471,7 +1475,9 @@ def plot_experiment_loss_per_dataset(exp_log_dir, exp_key, exp_plot_dir=None, mo
             )
         except Exception as e:
             logger.info(
-                "Failed to fit linear regression (log-log scale) for dataset {}".format(source_dataset)
+                "Failed to fit linear regression (log-log scale) for dataset {}".format(
+                    source_dataset
+                )
             )
             logger.error(f"The error that occurred: {e}")
             # # This will print the full traceback
