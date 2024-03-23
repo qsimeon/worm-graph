@@ -667,7 +667,7 @@ def plot_worm_data(worm_data, num_neurons=5, smooth=False):
     neuron_indices = set(
         np.random.choice(list(slot_to_named_neuron.keys()), num_neurons, replace=True)
     )
-
+    plt.figure(figsize=(10, 5))
     for neuron_idx in neuron_indices:
         neuron_name = slot_to_named_neuron.get(neuron_idx, None)
         if neuron_name is not None:

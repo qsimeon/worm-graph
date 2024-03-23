@@ -511,7 +511,7 @@ class CalciumDataReshaper:
         if self.time_in_seconds.ndim == 1:
             self.time_in_seconds = self.time_in_seconds.unsqueeze(-1)
         self.time_in_seconds = (
-            self.time_in_seconds - self.time_in_seconds[:, 0]
+            self.time_in_seconds - self.time_in_seconds[0]
         )  # start at 0.0 seconds
         dt = np.gradient(self.time_in_seconds, axis=0)
         dt[dt == 0] = np.finfo(float).eps
@@ -526,7 +526,7 @@ class CalciumDataReshaper:
         if self.original_time_in_seconds.ndim == 1:
             self.original_time_in_seconds = self.time_in_seconds.unsqueeze(-1)
         self.original_time_in_seconds = (
-            self.original_time_in_seconds - self.original_time_in_seconds[:, 0]
+            self.original_time_in_seconds - self.original_time_in_seconds[0]
         )  # start at 0.0 seconds
         original_dt = np.gradient(self.original_time_in_seconds, axis=0)
         original_dt[original_dt == 0] = np.finfo(float).eps
@@ -989,7 +989,7 @@ def pickle_neural_data(
             preprocessor.preprocess()
         except NameError:
             pass
-    # Delete the unzipped and downloaded files
+    # Delete the unzipped folder
     if cleanup:
         shutil.rmtree(source_path)
     # Create a file to indicate that the preprocessing was successful
