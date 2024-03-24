@@ -57,6 +57,7 @@ This repository serves as a platform to investigate the effects of training data
 ├── utils.py
 └── visualize
 ```
+![image](https://github.com/metaconsciousgroup/worm-graph/assets/35947758/6b053fce-3dc4-457e-98e1-ef24e3a67c5a)
 
 
 ## Environment Setup
