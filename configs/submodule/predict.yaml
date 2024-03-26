@@ -28,5 +28,5 @@ predict:
   # null = generate all remaining time steps (max_timesteps - context_window)
   num_new_timesteps: null
   
-  # Set to integer less than or equal to the value used for submodule.dataset.seq_len 
+  # Set to integer value that is the same as that used for submodule.dataset.seq_len 
   context_window: 180

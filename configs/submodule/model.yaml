@@ -6,3 +6,17 @@ model:
   loss: MSE # options: MSE, MASE, Huber, L1, Poisson # TODO: Improve and validate implementation of MASE.
   l1_reg_param: 0.0 # how much to regularize the loss by L1 norm of the model parameters; options: 0.0 <= float <= 1.0
   use_this_pretrained_model: null # options: null, logs/hydra/<YYYY_MM_DD_HH_MM_SS>/train/checkpoints/<model.pt>
+
+  # mamba params
+  d_model: 256
+  # TODO not used yet
+  n_layer: 1
+  vocab_size: 302
+  #defaults
+  d_state: 16
+  expand: 2
+  dt_rank: "auto"
+  d_conv: 4
+  pad_vocab_size_multiple: 8
+  conv_bias: True
+  bias: False

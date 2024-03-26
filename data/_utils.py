@@ -68,9 +68,9 @@ class NeuralActivityDataset(torch.utils.data.Dataset):
         ID of the worm.
     worm_dataset : str
         Name of the worm dataset.
-    seq_len : int, default=1
+    seq_len : int or None, default=None
         Sequences of length `seq_len` are generated until the dataset
-        size is achieved.
+        size is achieved. 
     num_samples : int, default=10
         Total number of (input, target) data pairs to generate.
         0 < num_samples <= max_timesteps
@@ -998,7 +998,7 @@ def split_combined_dataset(
 
         # Separate the splits into training and validation sets
         # NOTE: This was originally written to be able to split the data into multipl equally sized folds;
-        # We have kep it this way despite deciding to only split into two folds (i.e. halves).
+        #       We have kept it this way despite deciding to only split into two folds (i.e. halves).
         if train_split_first:
             train_data_splits, val_data_splits = data_splits[::2], data_splits[1::2]
             train_time_vec_splits, val_time_vec_splits = (
