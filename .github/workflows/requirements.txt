@@ -1,11 +1,34 @@
-black[jupyter]
-fvcore
-hydra-core
-hydra-optuna-sweeper
-hydra-submitit-launcher
+black[jupyter] # uses pip
+datasets # uses pip
+einops # uses pip
+h5py
+hydra-core # uses pip
+hydra-optuna-sweeper # uses pip
+hydra-submitit-launcher # uses pip
+ipykernel
+ipython
+jinja2
+jupyter
+jupyterlab
 mat73
-ncps
+matplotlib
+nbimporter # uses pip
+ncps # uses pip
+networkx
+notebook
+numpy
 omegaconf
+pandas
+pickleshare
 pytest
+requests
+scikit-learn
+scipy
+seaborn
 statsmodels
-torch_geometric
+tokenizers # uses pip
+tqdm
+transformers # uses pip
+typing
+typing_extensions
+pyyaml
