@@ -58,7 +58,7 @@ def model_predict(
         data = single_worm_dataset[key_data]
         neurons_mask = single_worm_dataset["named_neurons_mask"]
         worm_dataset = single_worm_dataset["source_dataset"]
-        original_wormID = single_worm_dataset["original_worm"]
+        og_wormID = single_worm_dataset["og_worm"]
 
         # Query and save the named neurons to plot predictions afterwards
         neurons = dataset_info.query(
@@ -105,7 +105,7 @@ def model_predict(
             os.path.join(log_dir, "prediction", "train", worm_dataset), exist_ok=True
         )  # dataset level
         os.makedirs(
-            os.path.join(log_dir, "prediction", "train", worm_dataset, original_wormID),
+            os.path.join(log_dir, "prediction", "train", worm_dataset, og_wormID),
             exist_ok=True,
         )  # worm level
         # Save results in dataframes
@@ -121,7 +121,7 @@ def model_predict(
                 "prediction",
                 "train",
                 worm_dataset,
-                original_wormID,
+                og_wormID,
                 "predictions.csv",
             )
         )
@@ -131,7 +131,7 @@ def model_predict(
                 "prediction",
                 "train",
                 worm_dataset,
-                original_wormID,
+                og_wormID,
                 "named_neurons.csv",
             )
         )
@@ -152,7 +152,7 @@ def model_predict(
             os.path.join(log_dir, "prediction", "val", worm_dataset), exist_ok=True
         )  # dataset level
         os.makedirs(
-            os.path.join(log_dir, "prediction", "val", worm_dataset, original_wormID),
+            os.path.join(log_dir, "prediction", "val", worm_dataset, og_wormID),
             exist_ok=True,
         )  # worm level
         # Save results in dataframes
@@ -168,7 +168,7 @@ def model_predict(
                 "prediction",
                 "val",
                 worm_dataset,
-                original_wormID,
+                og_wormID,
                 "predictions.csv",
             )
         )
@@ -178,7 +178,7 @@ def model_predict(
                 "prediction",
                 "val",
                 worm_dataset,
-                original_wormID,
+                og_wormID,
                 "named_neurons.csv",
             )
         )

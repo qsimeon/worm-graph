@@ -1,6 +1,6 @@
 black[jupyter] # uses pip
-datasets # uses pip
-einops # uses pip
+datasets 
+einops
 h5py
 hydra-core # uses pip
 hydra-optuna-sweeper # uses pip
@@ -8,8 +8,6 @@ hydra-submitit-launcher # uses pip
 ipykernel
 ipywidgets
 ipython
-jinja2
-jupyter
 jupyterlab
 mat73
 matplotlib
@@ -20,16 +18,14 @@ notebook
 numpy
 omegaconf
 pandas
-pickleshare
 pytest
 requests
 scikit-learn
 scipy
 seaborn
 statsmodels
-tokenizers # uses pip
+tokenizers
 tqdm
-transformers # uses pip
+transformers 
 typing
-typing_extensions
 pyyaml

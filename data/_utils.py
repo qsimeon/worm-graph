@@ -70,7 +70,7 @@ class NeuralActivityDataset(torch.utils.data.Dataset):
         Name of the worm dataset.
     seq_len : int or None, default=None
         Sequences of length `seq_len` are generated until the dataset
-        size is achieved. 
+        size is achieved.
     num_samples : int, default=10
         Total number of (input, target) data pairs to generate.
         0 < num_samples <= max_timesteps
@@ -740,10 +740,10 @@ def create_combined_dataset(
                 worm_ = "worm" + str(worm_)
                 combined_dataset[worm_] = multi_worms_dataset[worm]
                 combined_dataset[worm_]["worm"] = worm_
-                combined_dataset[worm_]["original_worm"] = worm
+                combined_dataset[worm_]["og_worm"] = worm
             else:
                 combined_dataset[worm] = multi_worms_dataset[worm]
-                combined_dataset[worm]["original_worm"] = worm
+                combined_dataset[worm]["og_worm"] = worm
 
     logger.info("Combined dataset has {} worms".format(len(combined_dataset)))
 
@@ -1030,7 +1030,7 @@ def split_combined_dataset(
                     data=train_split.detach(),
                     time_vec=train_time_split.detach(),
                     neurons_mask=neurons_mask,
-                    wormID=original_wormID,  # worm ID from the original experimental dataset
+                    wormID=og_wormID,  # worm ID from the original experimental dataset
                     worm_dataset=worm_dataset,  # name of the original experimental dataset the data is from
                     seq_len=seq_len,
                     num_samples=num_train_samples_split,
@@ -1056,7 +1056,7 @@ def split_combined_dataset(
                     data=val_split.detach(),
                     time_vec=val_time_split.detach(),
                     neurons_mask=neurons_mask,
-                    wormID=original_wormID,  # worm ID of the experimental dataset (original)
+                    wormID=og_wormID,  # worm ID of the experimental dataset (original)
                     worm_dataset=worm_dataset,  # dataset where the worm comes from
                     seq_len=seq_len,
                     num_samples=num_val_samples_split,
