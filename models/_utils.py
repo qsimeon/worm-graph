@@ -897,7 +897,7 @@ class Model(torch.nn.Module):
         neural_sequence: torch.Tensor,
         feature_mask: Union[None, torch.Tensor] = None,
         token_matrix: Union[None, torch.Tensor] = None,
-        decay: float = 0.5,
+        decay: float = 0.5,  # TODO: Make a vector and hyperparameter
     ):
         """
         Convert the high-dimensional sequence of neural states to a 1-D sequence of tokens.
@@ -1014,7 +1014,6 @@ class Model(torch.nn.Module):
         # Split the tensor into groups based on the batch dimension
         batch_groups = torch.split(masked_input_positions, counts.tolist())
         # For each batch index update the neural embedding only using observed tokens and maksed features
-        decay = 0.5  # decay factor for EMA
         for group in batch_groups:  # bigO(batch_size)
             batch_idx = group[:, 0].unique().item()
             observed_inputs = group[:, 1]
