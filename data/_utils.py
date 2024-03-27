@@ -740,10 +740,10 @@ def create_combined_dataset(
                 worm_ = "worm" + str(worm_)
                 combined_dataset[worm_] = multi_worms_dataset[worm]
                 combined_dataset[worm_]["worm"] = worm_
-                combined_dataset[worm_]["og_worm"] = worm
+                combined_dataset[worm_]["original_worm"] = worm
             else:
                 combined_dataset[worm] = multi_worms_dataset[worm]
-                combined_dataset[worm]["og_worm"] = worm
+                combined_dataset[worm]["original_worm"] = worm
 
     logger.info("Combined dataset has {} worms".format(len(combined_dataset)))
 
@@ -760,11 +760,11 @@ def create_combined_dataset(
         "num_neurons": [],
     }
 
-    for worm, data in combined_dataset.items():
+    for _, data in combined_dataset.items():
         dataset_info["source_dataset"].append(data["source_dataset"])
         dataset_info["original_median_dt"].append(data["original_median_dt"])
         dataset_info["original_index"].append(data["original_worm"])
-        dataset_info["combined_dataset_index"].append(worm)
+        dataset_info["combined_dataset_index"].append(data["worm"])
         worm_neurons = [neuron for _, neuron in data["slot_to_named_neuron"].items()]
         dataset_info["neurons"].append(worm_neurons)
         dataset_info["num_neurons"].append(len(worm_neurons))
@@ -940,21 +940,17 @@ def split_combined_dataset(
     """
     # Perform some argument checks
     assert isinstance(seq_len, int) and seq_len > 0, f"`seq_len` must be an integer > 0."
-
     # Choose whether to use calcium or residual data
     if use_residual:
         key_data = "residual_calcium"
     else:
         key_data = "calcium_data"
-
     # Choose whether to use original or smoothed data
     if smooth_data:
         key_data = "smooth_" + key_data
-
     # Store the training and validation datasets
     train_dataset = []
     val_dataset = []
-
     # Store the time steps info
     dataset_info_split = {
         "combined_dataset_index": [],
@@ -971,7 +967,6 @@ def split_combined_dataset(
         "train_split_first": [],
         "train_split_ratio": [],
     }
-
     # Loop through the worms in the dataset
     for wormID, single_worm_dataset in combined_dataset.items():
         # TODO: Encapsulate this inner part as a function `split_single_dataset`.
@@ -980,8 +975,7 @@ def split_combined_dataset(
         neurons_mask = single_worm_dataset["named_neurons_mask"]
         time_vec = single_worm_dataset["time_in_seconds"]
         worm_dataset = single_worm_dataset["source_dataset"]
-        original_wormID = single_worm_dataset["original_worm"]
-
+        original_worm_id = single_worm_dataset["original_worm"]
         # The index where to split the data
         split_idx = (
             math.ceil(train_split_ratio * len(data))
@@ -991,11 +985,9 @@ def split_combined_dataset(
         split_idx = max(
             split_idx, seq_len + 1
         )  # handles sequence length longer than the data split
-
         # Split the data and the time vector into sections
         data_splits = np.array_split(data, indices_or_sections=[split_idx], axis=0)
         time_vec_splits = np.array_split(time_vec, indices_or_sections=[split_idx], axis=0)
-
         # Separate the splits into training and validation sets
         # NOTE: This was originally written to be able to split the data into multipl equally sized folds;
         #       We have kept it this way despite deciding to only split into two folds (i.e. halves).
@@ -1011,15 +1003,13 @@ def split_combined_dataset(
                 time_vec_splits[1::2],
                 time_vec_splits[::2],
             )
-
         # Number of samples in each split
         train_samples_per_split = distribute_samples(train_data_splits, num_train_samples)
         val_samples_per_split = distribute_samples(val_data_splits, num_val_samples)
-
         # Number of unique time steps across all samples for each split
         train_split_time_steps, val_split_time_steps = 0, 0
-
         # Create a dataset for each split
+        # TRAINING
         for train_split, train_time_split, num_train_samples_split in zip(
             train_data_splits, train_time_vec_splits, train_samples_per_split
         ):
@@ -1030,7 +1020,7 @@ def split_combined_dataset(
                     data=train_split.detach(),
                     time_vec=train_time_split.detach(),
                     neurons_mask=neurons_mask,
-                    wormID=og_wormID,  # worm ID from the original experimental dataset
+                    wormID=original_worm_id,  # worm ID from the original experimental dataset
                     worm_dataset=worm_dataset,  # name of the original experimental dataset the data is from
                     seq_len=seq_len,
                     num_samples=num_train_samples_split,
@@ -1045,7 +1035,7 @@ def split_combined_dataset(
                     f"There should not be more time steps from sampled"
                     f"sequences than there are time steps in the data."
                 )
-
+        # VALIDATION
         for val_split, val_time_split, num_val_samples_split in zip(
             val_data_splits, val_time_vec_splits, val_samples_per_split
         ):
@@ -1056,7 +1046,7 @@ def split_combined_dataset(
                     data=val_split.detach(),
                     time_vec=val_time_split.detach(),
                     neurons_mask=neurons_mask,
-                    wormID=og_wormID,  # worm ID of the experimental dataset (original)
+                    wormID=original_worm_id,  # worm ID of the experimental dataset (original)
                     worm_dataset=worm_dataset,  # dataset where the worm comes from
                     seq_len=seq_len,
                     num_samples=num_val_samples_split,
@@ -1071,25 +1061,22 @@ def split_combined_dataset(
                     f"There should not be more time steps from sampled"
                     f"sequences than there are time steps in the data."
                 )
-
         # Store the number of unique time steps for each worm
         dataset_info_split["combined_dataset_index"].append(wormID)
         dataset_info_split["smooth_data"].append(smooth_data)
         dataset_info_split["use_residual"].append(use_residual)
-
+        dataset_info_split["train_split_first"].append(train_split_first)
+        dataset_info_split["train_split_ratio"].append(train_split_ratio)
+        # TRAINING
         dataset_info_split["train_time_steps"].append(train_split_time_steps)
         dataset_info_split["num_train_samples"].append(num_train_samples)
         dataset_info_split["train_seq_len"].append(seq_len)
         dataset_info_split["train_split_idx"].append(split_idx)
-
+        # VALIDATION
         dataset_info_split["val_time_steps"].append(val_split_time_steps)
         dataset_info_split["num_val_samples"].append(num_val_samples)
         dataset_info_split["val_seq_len"].append(seq_len)
         dataset_info_split["val_split_idx"].append(split_idx)
-
-        dataset_info_split["train_split_first"].append(train_split_first)
-        dataset_info_split["train_split_ratio"].append(train_split_ratio)
-
     # Concatenate the datasets
     train_dataset = (
         torch.utils.data.ConcatDataset(train_dataset) if len(train_dataset) else None
@@ -1097,10 +1084,8 @@ def split_combined_dataset(
     val_dataset = (
         torch.utils.data.ConcatDataset(val_dataset) if len(val_dataset) else None
     )  # number of val sequences = number val samples * number of worms
-
     # Convert information about the split datasets into a DataFrame
     dataset_info_split = pd.DataFrame(dataset_info_split)
-
     return train_dataset, val_dataset, dataset_info_split
 
 
