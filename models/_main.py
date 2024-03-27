@@ -19,6 +19,7 @@ def get_model(model_config: DictConfig, verbose=True) -> torch.nn.Module:
 
     Calls
     -----
+    MambaCore : class in models/_utils.py
     PureAttention : class in models/_utils.py
     NeuralTransformer : class in models/_utils.py
     NetworkLSTM : class in models/_utils.py
@@ -69,7 +70,9 @@ def get_model(model_config: DictConfig, verbose=True) -> torch.nn.Module:
             loss=model_config.loss,
             l1_reg_param=model_config.l1_reg_param,
         )
-        if model_config.type == "PureAttention":
+        if model_config.type == "MambaCore":
+            model = MambaCore(**args)
+        elif model_config.type == "PureAttention":
             model = PureAttention(**args)
         elif model_config.type == "NeuralTransformer":
             model = NeuralTransformer(**args)

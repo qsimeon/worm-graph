@@ -52,50 +52,34 @@ def train_model(
         "RMSprop",
     ], "optimizer must be one of SGD, Adam, AdamW, Adagrad, Adadelta, RMSprop"
 
+    # Initialize log directory
     log_dir = os.getcwd()  # logs/hydra/${now:%Y_%m_%d_%H_%M_%S}
 
     # Create train and checkpoints directories
     os.makedirs(os.path.join(log_dir, "train"), exist_ok=True)
     os.makedirs(os.path.join(log_dir, "train", "checkpoints"), exist_ok=True)
 
-    # Load model to device
-    model = model.to(DEVICE)
+    # Extract hyperparams defined in the config file
+    batch_size = train_config.batch_size
+    shuffle = train_config.shuffle
+    save_freq = train_config.save_freq
+    optim_name = "torch.optim." + train_config.optimizer
+    lr = 10 * train_config.lr if model.version_2 else train_config.lr  # starting learning rate
 
-    # Parameters
+    # Loss function and number of epochs
+    criterion = model.loss_fn()
     epochs = (
         train_config.epochs // 2 if model.version_2 else train_config.epochs
     )  # use fewer epochs for version 2
-    batch_size = train_config.batch_size
-    shuffle = train_config.shuffle
-    criterion = model.loss_fn()
-    save_freq = train_config.save_freq
-
-    # Initialize optimizer, learning rate scheduler and gradient scaler
-    optim_name = "torch.optim." + train_config.optimizer
-    lr = 10 * train_config.lr if model.version_2 else train_config.lr  # starting learning rate
-    optimizer = eval(optim_name + "(model.parameters(), lr=" + str(lr) + ")")
-    # TODO: Experiment with different learning rate schedulers.
-    scheduler = lr_scheduler.ReduceLROnPlateau(optimizer, mode="min")
-    # scheduler = lr_scheduler.CyclicLR(base_lr=0.1 * lr, max_lr=10 * lr)
-    # scheduler = lr_scheduler.StepLR(optimizer, step_size=int(epochs ** (1 / 3)), gamma=0.9)
-    scaler = GradScaler()
 
     # Instantiate early stopping
-    es = EarlyStopping(
+    early_stopper = EarlyStopping(
         patience=(
             train_config.early_stopping.patience // 2
             if model.version_2
             else train_config.early_stopping.patience
         ),
         min_delta=train_config.early_stopping.delta,
-    )
-
-    # Create dataloaders
-    trainloader = torch.utils.data.DataLoader(
-        train_dataset, batch_size=batch_size, shuffle=shuffle, num_workers=0
-    )
-    valloader = torch.utils.data.DataLoader(
-        val_dataset, batch_size=batch_size, shuffle=shuffle, num_workers=0
     )
 
     # Loss metrics
@@ -113,6 +97,26 @@ def train_model(
     learning_rate = []
     computation_time = []
     computation_flops = 0
+
+    # Load model to device
+    rank = DEVICE
+    model = model.to(rank)
+
+    # Initialize optimizer, learning rate scheduler and gradient scaler
+    optimizer = eval(optim_name + "(model.parameters(), lr=" + str(lr) + ")")
+    # TODO: Experiment with different learning rate schedulers.
+    scheduler = lr_scheduler.ReduceLROnPlateau(optimizer, mode="min")
+    # scheduler = lr_scheduler.CyclicLR(base_lr=0.1 * lr, max_lr=10 * lr)
+    # scheduler = lr_scheduler.StepLR(optimizer, step_size=int(epochs ** (1 / 3)), gamma=0.9)
+    scaler = GradScaler()
+
+    # Create dataloaders
+    train_loader = torch.utils.data.DataLoader(
+        train_dataset, batch_size=batch_size, shuffle=shuffle, num_workers=0
+    )
+    val_loader = torch.utils.data.DataLoader(
+        val_dataset, batch_size=batch_size, shuffle=shuffle, num_workers=0
+    )
 
     # Start training
     logger.info("Starting training loop...")
@@ -133,10 +137,10 @@ def train_model(
         # Measure the time for an epoch
         start_time = time.perf_counter()
 
-        for batch_idx, (X_train, Y_train, mask_train, _) in enumerate(trainloader):
-            X_train = X_train.to(DEVICE)
-            Y_train = Y_train.to(DEVICE)
-            mask_train = mask_train.to(DEVICE)
+        for batch_idx, (X_train, Y_train, mask_train, _) in enumerate(train_loader):
+            X_train = X_train.to(rank)
+            Y_train = Y_train.to(rank)
+            mask_train = mask_train.to(rank)
 
             # Baseline model/naive predictor: predict that the next time step is the same as the current one.
             if model.version_2:
@@ -165,12 +169,8 @@ def train_model(
 
             # Calculate total FLOP only at the first epoch and batch
             elif batch_idx == 0:
-                ### TODO: Find way to compute FLOP using Pytorch Profiler ###
+                # TODO: Find way to compute FLOP using Pytorch Profiler
                 computation_flops = 0
-                # FlopCountAnalysis(model, (X_train, mask_train)).total() / (
-                #     X_train.shape[0] * X_train.shape[1]
-                # )  # FLOP per time step
-                ### TODO: Find way to compute FLOP using Pytorch Profiler ###
 
             # Update running metrics
             train_running_base_loss += train_baseline.item()
@@ -181,8 +181,8 @@ def train_model(
         computation_time.append(end_time - start_time)
 
         # Store metrics
-        train_epoch_baseline.append(train_running_base_loss / len(trainloader))
-        train_epoch_loss.append(train_running_loss / len(trainloader))
+        train_epoch_baseline.append(train_running_base_loss / len(train_loader))
+        train_epoch_loss.append(train_running_loss / len(train_loader))
 
         # Reset metrics
         train_running_base_loss = 0
@@ -193,10 +193,10 @@ def train_model(
         model.eval()
 
         with torch.no_grad():
-            for batch_idx, (X_val, Y_val, mask_val, _) in enumerate(valloader):
-                X_val = X_val.to(DEVICE)
-                Y_val = Y_val.to(DEVICE)
-                mask_val = mask_val.to(DEVICE)
+            for batch_idx, (X_val, Y_val, mask_val, _) in enumerate(val_loader):
+                X_val = X_val.to(rank)
+                Y_val = Y_val.to(rank)
+                mask_val = mask_val.to(rank)
 
                 # Baseline model/naive predictor: predict that the next time step is the same as the current one.
                 if model.version_2:
@@ -214,8 +214,8 @@ def train_model(
                 val_running_loss += val_loss.item()
 
             # Store metrics
-            val_epoch_loss.append(val_running_loss / len(valloader))
-            val_epoch_baseline.append(val_running_base_loss / len(valloader))
+            val_epoch_loss.append(val_running_loss / len(val_loader))
+            val_epoch_baseline.append(val_running_base_loss / len(val_loader))
 
             # Reset running losses
             val_running_base_loss = 0
@@ -236,11 +236,11 @@ def train_model(
                     "computation_flops": computation_flops,
                     "time_last_epoch": computation_time[-1],
                     "current_lr": learning_rate[-1],
-                },  # add FLOP info to checkpoint
+                },  # save additional info to checkpoint
             )
 
         # Early stopping
-        if es(model, val_epoch_loss[-1]):  # on validation loss
+        if early_stopper(model, val_epoch_loss[-1]):  # on validation loss
             logger.info("Early stopping triggered (epoch {}).".format(epoch))
             break
 
@@ -258,7 +258,7 @@ def train_model(
 
     # Restore best model and save it with additional info
     logger.info("Training loop is over. Loading best model.")
-    model.load_state_dict(es.best_model.state_dict())
+    model.load_state_dict(early_stopper.best_model.state_dict())
     save_model_checkpoint(
         model,
         os.path.join(log_dir, "train", "checkpoints", "model_best.pt"),
@@ -266,7 +266,7 @@ def train_model(
             "computation_flops": computation_flops,
             "time_last_epoch": computation_time[-1],
             "current_lr": learning_rate[-1],
-        },  # add FLOP info to checkpoint
+        },  # add additional info to checkpoint
     )
     logger.info(
         f"FLOP: {computation_flops}, \t Time (s) last epoch: {computation_time[-1]}, \t Parameter counts (total, trainable): {print_parameters(model, verbose=False)}"
@@ -286,7 +286,7 @@ def train_model(
     )
     train_metrics.to_csv(os.path.join(log_dir, "train", "train_metrics.csv"), index=False)
 
-    # Metric for optuna (lowest validation loss)
+    # Metric for Optuna (lowest validation loss)
     metric = min(val_epoch_loss)
     if metric == np.nan or metric is None:
         metric = float("inf")
@@ -325,4 +325,5 @@ if __name__ == "__main__":
         train_dataset=train_dataset,
         val_dataset=val_dataset,
     )
+
     print(f"Final metric: \t {metric}\n")

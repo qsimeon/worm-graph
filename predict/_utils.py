@@ -62,7 +62,9 @@ def model_predict(
 
         # Query and save the named neurons to plot predictions afterwards
         neurons = dataset_info.query(
-            'dataset == "{}" and original_index == "{}"'.format(worm_dataset, original_wormID)
+            'source_dataset == "{}" and original_index == "{}"'.format(
+                worm_dataset, original_wormID
+            )
         )["neurons"].iloc[0]
         # Now create the DataFrame
         neuron_df = pd.DataFrame({"named_neurons": neurons})
