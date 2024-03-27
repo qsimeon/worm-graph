@@ -17,9 +17,13 @@ from models._main import get_model
 from data._main import get_datasets
 from torch.optim import lr_scheduler
 from torch.cuda.amp import GradScaler
-from fvcore.nn import FlopCountAnalysis
 from models._utils import print_parameters
 from omegaconf import DictConfig, OmegaConf
-from utils import DEVICE, LOGS_DIR, NEURONS_302
 from torch.utils.data import ConcatDataset, DataLoader
 from data._utils import NeuralActivityDataset, pick_worm
+from utils import WORLD_SIZE, DEVICE, LOGS_DIR, NEURONS_302
+
+### Imports below are needed for DISTRIBUTED training
+from torch.utils.data.distributed import DistributedSampler
+from torch.nn.parallel import DistributedDataParallel as DDP
+from torch.distributed import init_process_group, destroy_process_group

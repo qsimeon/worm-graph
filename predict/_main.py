@@ -67,7 +67,7 @@ if __name__ == "__main__":
     model = get_model(model_config.model)
 
     # Get the dataset
-    dataset = get_datasets(dataset_config.dataset.predict)
+    dataset = get_datasets(dataset_config.dataset)
 
     # Make predictions
     make_predictions(

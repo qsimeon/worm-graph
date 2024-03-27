@@ -428,12 +428,13 @@ class CTRNN(torch.nn.Module):
         return output, hidden
 
 
+# TODO: Implement MAMBA Model
 @dataclass
-class ModelArgs:
-    d_model: int
+class MambaArgs:
+    d_model: int  # dimension of input
     n_layer: int
     vocab_size: int
-    d_state: int = 16
+    d_state: int = 16  # dimension of hidden state/output
     expand: int = 2
     dt_rank: Union[int, str] = "auto"
     d_conv: int = 4
@@ -454,9 +455,11 @@ class ModelArgs:
 
 
 class MambaBlock(torch.nn.Module):
-    """Code taken from https://github.com/johnma2006/mamba-minimal/blob/master/model.py#L143."""
+    """
+    Code taken from https://github.com/johnma2006/mamba-minimal/blob/master/model.py#L143.
+    """
 
-    def __init__(self, args: ModelArgs):
+    def __init__(self, args: MambaArgs):
         """A single Mamba block, as described in Figure 3 in Section 3.4 in the Mamba paper [1]."""
         super().__init__()
         self.args = args
@@ -506,11 +509,11 @@ class MambaBlock(torch.nn.Module):
         x = self.conv1d(x)[:, :, :l]
         x = rearrange(x, "b d_in l -> b l d_in")
 
-        x = F.silu(x)
+        x = torch.nn.functional.silu(x)
 
         y = self.ssm(x)
 
-        y = y * F.silu(res)
+        y = y * torch.nn.functional.silu(res)
 
         output = self.out_proj(y)
 
@@ -546,7 +549,7 @@ class MambaBlock(torch.nn.Module):
         (delta, B, C) = x_dbl.split(
             split_size=[self.args.dt_rank, n, n], dim=-1
         )  # delta: (b, l, dt_rank). B, C: (b, l, n)
-        delta = F.softplus(self.dt_proj(delta))  # (b, l, d_in)
+        delta = torch.nn.functional.softplus(self.dt_proj(delta))  # (b, l, d_in)
 
         y = self.selective_scan(
             x, delta, A, B, C, D
@@ -900,7 +903,7 @@ class Model(torch.nn.Module):
         Convert the high-dimensional sequence of neural states to a 1-D sequence of tokens.
         The approach used is similar to that of VQ-VAEs where the neural data is treated as the
         encoder output, the decoder input is the nearest-neighbor codebook vector, and the tokens
-        are the indices of those vectors in the codebok. The decoder is treated as rest of the
+        are the indices of those vectors in the codebok. The decoder is treated as the rest of the
         model after the tokenization step. The dimensionality of the embedding space is the same
         as the dimensionality of the neural data (i.e. `input_size` or `num_channels`).
 
@@ -937,7 +940,7 @@ class Model(torch.nn.Module):
         token_matrix = token_matrix.to(neural_sequence.device)
         # Get shapes from the token_matrix
         # NOTE: We could use the attributes self.num_tokens and self.input_size of the model;
-        # but getting the sizes this way allos us to use this method as a standalone function.
+        # but getting the sizes this way allows us to use this method as a standalone function.
         num_tokens, _ = token_matrix.shape
 
         # PART 1: Tokenize the neural data
@@ -1493,9 +1496,67 @@ class FeatureFFNN(Model):
         return None
 
 
+class MambaCore(Model):
+    """
+    # TODO: Just make these default args of the MambaCore class in models/_utils.py
+    # mamba params
+    d_model: 256
+    # TODO not used yet
+    n_layer: 1
+    vocab_size: 302
+    #defaults
+    d_state: 16
+    expand: 2
+    dt_rank: "auto"
+    d_conv: 4
+    pad_vocab_size_multiple: 8
+    conv_bias: True
+    bias: False
+    """
+
+    def __init__(
+        self,
+        input_size: int,
+        hidden_size: Union[int, None] = None,
+        loss: Union[Callable, None] = None,
+        l1_reg_param: float = 0.0,
+        **kwargs,
+    ):
+        # Initialize super class
+        super(MambaCore, self).__init__(
+            input_size,
+            hidden_size,
+            loss,
+            l1_reg_param,
+            **kwargs,
+        )
+        # Special parameters for this model
+        self.mamba_args = MambaArgs(
+            d_model=self.hidden_size,
+            n_layer=1,  # all cores are single-layer modules
+            vocab_size=NUM_TOKENS,
+            d_state=self.hidden_size,
+            # remaining args use defaults of MambaArgs dataclass
+        )
+        # Input to hidden transformation
+        self.input_hidden = torch.nn.Sequential(
+            self.latent_embedding,
+            # NOTE: Do NOT use LayerNorm here!
+        )
+        # Hidden to hidden transformation: FeedForward layer
+        self.hidden_hidden = MambaBlock(self.mamba_args)
+        # Instantiate internal hidden model (i.e. the "core")
+        self.inner_hidden_model = InnerHiddenModel(
+            hidden_hidden_model=self.hidden_hidden,
+            hidden_state=self.hidden,
+        )
+
+    def init_hidden(self, input_shape=None):
+        return None
+
+
 class PureAttention(Model):
     """
-    TODO
     A model that used just the multi-head attention mechanism of the Transformer encoder
     as its internal "core. This is in contrast to NeuralTransformer which uses a complete
     TransformerEncoderLayer as its "core" or inner hidden model.

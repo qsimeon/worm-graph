@@ -70,3 +70,27 @@ def save_model_checkpoint(model, checkpoint_path, other_info=dict()):
     }
     save_info = {**base_info, **other_info}
     torch.save(save_info, checkpoint_path)
+
+
+############################## Constructing the process group for distributed training
+
+# Rank is the id of each process. In this case, for each GPU. Indexing starts by zero.
+# World_size is the total number of processes. In this case, the number of GPUs.
+
+
+def ddp_setup(rank, world_size=WORLD_SIZE):
+    """
+    Set up distributed data training.
+
+    Args:
+        rank (int): Unique identifier for each gpu
+        world_size (int): Total number of processes
+    """
+    init_process_group(
+        backend="nccl", rank=rank, world_size=world_size
+    )  # nccl für cuda, gloo für cpu
+    torch.cuda.set_device(rank)
+    torch.backends.cudnn.benchmark = True
+
+
+##############################

@@ -62,7 +62,9 @@ def model_predict(
 
         # Query and save the named neurons to plot predictions afterwards
         neurons = dataset_info.query(
-            'dataset == "{}" and og_index == "{}"'.format(worm_dataset, og_wormID)
+            'source_dataset == "{}" and original_index == "{}"'.format(
+                worm_dataset, original_wormID
+            )
         )["neurons"].iloc[0]
         # Now create the DataFrame
         neuron_df = pd.DataFrame({"named_neurons": neurons})
@@ -141,7 +143,7 @@ def model_predict(
             mask=neurons_mask.unsqueeze(0).to(DEVICE),
             # generate as many time steps as the context_window
             num_new_timesteps=context_window,
-            context_window=context_window, # DEBUG
+            context_window=context_window,  # DEBUG
         ).squeeze(
             0
         )  # autoregressive generation

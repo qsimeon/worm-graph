@@ -7,6 +7,7 @@ import logging
 
 from ncps.torch import CfC
 from scipy.stats import norm
+from dataclasses import dataclass
 from typing import Callable, Union
 from prettytable import PrettyTable
 from omegaconf import DictConfig, OmegaConf

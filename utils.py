@@ -13,29 +13,36 @@ warnings.filterwarnings(action="ignore")
 torch.multiprocessing.set_start_method("spawn", force=True)
 
 # Set some environment variables
-os.environ["HYDRA_FULL_ERROR"] = "1"
-os.environ["CUDA_LAUNCH_BLOCKING"] = "1"
-os.environ["OC_CAUSE"] = "1"
 os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "max_split_size_mb:32"
+os.environ["CUDA_LAUNCH_BLOCKING"] = "1"
+os.environ["HYDRA_FULL_ERROR"] = "1"
+os.environ["MASTER_ADDR"] = "localhost"
+os.environ["MASTER_PORT"] = "12345"  # just a random port
+os.environ["OC_CAUSE"] = "1"
 
-USER = "qsimeon"  # OpenMind username
+# Set some global variables
+USER = "qsimeon"  # OpenMind/computing cluster username
 
 NUM_NEURONS = 302  # number of neurons in the model organism
 
-BLOCK_SIZE = 5000  # maximum attention block size for Transformer models
+BLOCK_SIZE = 200  # maximum attention block size for Transformer models
 
 VERSION_2 = False  # whether to use version 2 of the model (tokenizes neural data)
 
 NUM_TOKENS = 128  # number of tokens in the neural vocabulary if using version 2
 
-RAW_DATA_URL = "https://www.dropbox.com/s/45yqpvtsncx4095/raw_data.zip?dl=1"
+WORLD_SIZE = torch.cuda.device_count()
+
+RAW_DATA_URL = "https://www.dropbox.com/scl/fi/q0dg6grqt5nz28dqbxok4/raw_data.zip?rlkey=q7yea001kxuen9w4sedi930oc&dl=1"
 
 RAW_ZIP = "raw_data.zip"
 
 # Essential raw data files that must be in the raw data directory
 RAW_FILES = [  # TODO: Cite sources of these files.
+    "GHermChem.mat",
     "GHermChem_Edges.csv",
     "GHermChem_Nodes.csv",
+    "GHermElec_Sym.mat",
     "GHermElec_Sym_Edges.csv",
     "GHermElec_Sym_Nodes.csv",
     "LowResAtlasWithHighResHeadsAndTails.csv",

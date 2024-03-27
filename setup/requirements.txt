@@ -6,6 +6,7 @@ hydra-core # uses pip
 hydra-optuna-sweeper # uses pip
 hydra-submitit-launcher # uses pip
 ipykernel
+ipywidgets
 ipython
 jupyterlab
 mat73

@@ -8,10 +8,22 @@ Please change `submitit_slurm` to `submitit_local` in the file `configs/pipeline
 
 #### Disable autocast if on cpu.
 
+## NOTE to Users! 
+#### [Use the repository at this specific commit](https://github.com/metaconsciousgroup/worm-graph/tree/3495d274d0d4c06209899fd68a62760bdd09101c)
+We are currently working on changes involving adding a ninth dataset in the main branch so the current commit will not run!
+We apologize for the incovenience and expect to have working code after publication or by the end of March 31st, 2024!
+
+#### [See this Wiki page if running locally (i.e. not on a SLURM cluster)](https://github.com/metaconsciousgroup/worm-graph/wiki/Pipeline-Structure#overview)
+Please change `submitit_slurm` to `submitit_local` in the file `configs/pipeline.yaml` if running on your local machine.
+
+#### Disable autocast if on cpu.
+
 # worm-graph
 
 ### Simulating the _C. elegans_ whole brain with neural networks.
 
+### Cite
+Simeon, Quilee, Leandro Venâncio, Michael A. Skuhersky, Aran Nayebi, Edward S. Boyden, and Guangyu Robert Yang. 2024. “Scaling Properties for Artificial Neural Network Models of a Small Nervous System.” bioRxiv. https://doi.org/10.1101/2024.02.13.580186.
 ### Cite
 Simeon, Quilee, Leandro Venâncio, Michael A. Skuhersky, Aran Nayebi, Edward S. Boyden, and Guangyu Robert Yang. 2024. “Scaling Properties for Artificial Neural Network Models of a Small Nervous System.” bioRxiv. https://doi.org/10.1101/2024.02.13.580186.
 
@@ -57,7 +69,7 @@ This repository serves as a platform to investigate the effects of training data
 ├── utils.py
 └── visualize
 ```
-![image](https://github.com/metaconsciousgroup/worm-graph/assets/35947758/6b053fce-3dc4-457e-98e1-ef24e3a67c5a)
+![image](https://github.com/metaconsciousgroup/worm-graph/assets/35947758/2ac8f61f-52f3-4ba4-91dc-dbd967a80443)
 
 
 ## Environment Setup
