@@ -1493,6 +1493,70 @@ class FeatureFFNN(Model):
         return None
 
 
+class MambaCore(Model):
+    """
+    The Mamba model implementation.
+    """
+
+    def __init__(
+        self,
+        input_size: int,
+        d_model: int,
+        n_layer: int,
+        vocab_size: int,
+        hidden_size: Union[int, None] = None,
+        loss: Union[Callable, None] = None,
+        l1_reg_param: float = 0.0,
+        d_state: int = 16,
+        expand: int = 2,
+        dt_rank: Union[int, str] = "auto",
+        d_conv: int = 4,
+        pad_vocab_size_multiple: int = 8,
+        conv_bias: bool = True,
+        bias: bool = False,
+        **kwargs,
+    ):
+        # Initialize super class
+        super(MambaCore, self).__init__(
+            input_size,
+            hidden_size,
+            loss,
+            l1_reg_param,
+            **kwargs,
+        )
+
+        # Special parameters for this model
+        self.dropout = 0.1  # dropout rate
+        # Input to hidden transformation
+        self.input_hidden = torch.nn.Sequential(
+            self.latent_embedding,
+            # NOTE: Do NOT use LayerNorm here!
+        )
+        # Hidden to hidden transformation: FeedForward layer
+        mamba_args = kwargs.items()
+        self.hidden_hidden = MambaBlock(
+            ModelArgs(d_model=d_model,
+            n_layer=n_layer,
+            vocab_size=vocab_size,
+            d_state=d_state,
+            expand=expand,
+            dt_rank=dt_rank,
+            d_conv=d_conv,
+            pad_vocab_size_multiple=pad_vocab_size_multiple,
+            conv_bias=conv_bias,
+            bias=bias)
+        )
+
+        # Instantiate internal hidden model (i.e. the "core")
+        self.inner_hidden_model = InnerHiddenModel(
+            hidden_hidden_model=self.hidden_hidden,
+            hidden_state=self.hidden,
+        )
+
+    def init_hidden(self, input_shape=None):
+        return None
+
+
 class PureAttention(Model):
     """
     TODO

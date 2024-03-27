@@ -5,6 +5,7 @@ import math
 import torch
 import logging
 
+from dataclasses import dataclass
 from ncps.torch import CfC
 from scipy.stats import norm
 from typing import Callable, Union

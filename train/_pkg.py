@@ -17,7 +17,7 @@ from models._main import get_model
 from data._main import get_datasets
 from torch.optim import lr_scheduler
 from torch.cuda.amp import GradScaler
-from fvcore.nn import FlopCountAnalysis
+# from fvcore.nn import FlopCountAnalysis
 from models._utils import print_parameters
 from omegaconf import DictConfig, OmegaConf
 from utils import DEVICE, LOGS_DIR, NEURONS_302

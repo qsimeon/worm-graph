@@ -69,6 +69,18 @@ def get_model(model_config: DictConfig, verbose=True) -> torch.nn.Module:
             loss=model_config.loss,
             l1_reg_param=model_config.l1_reg_param,
         )
+        mamba_args = dict(
+            d_model=model_config.d_model,
+            n_layer=model_config.n_layer,
+            vocab_size=model_config.vocab_size,
+            d_state=model_config.d_state,
+            expand=model_config.expand,
+            dt_rank=model_config.dt_rank,
+            d_conv=model_config.d_conv,
+            pad_vocab_size_multiple=model_config.pad_vocab_size_multiple,
+            conv_bias=model_config.conv_bias,
+            bias=model_config.bias
+        )
         if model_config.type == "PureAttention":
             model = PureAttention(**args)
         elif model_config.type == "NeuralTransformer":
@@ -85,6 +97,9 @@ def get_model(model_config: DictConfig, verbose=True) -> torch.nn.Module:
             model = NaivePredictor(**args)
         elif model_config.type == "LinearRegression":
             model = LinearRegression(**args)
+        elif model_config.type == "MambaCore":
+            mamba_args = args.update(mamba_args)
+            model = MambaCore(**args)
         else:  # default to "LinearRegression" model
             model = LinearRegression(**args)
 
