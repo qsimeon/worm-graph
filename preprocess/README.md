@@ -47,6 +47,7 @@ Each dataset is stored in a Python dictionary:
 - `original_max_timesteps`: (int) Number of time steps before resampling
 - `max_timesteps`: (int) Number of time steps after resampling
 - `original_dt`: (torch.tensor) Column vector containing the difference between time steps (before resampling). Shape: (original_max_timesteps, 1)
+- `original_median_dt`: (float) The median `dt` of the original time series
 - `dt`: (torch.tensor) Column vector containing the difference between time steps. Shape: (max_timesteps, 1)
 - `residual_` and `original_calcium_data`: (torch.tensor) Standardized and normalized calcium data. Shape: (original_max_timesteps, 302)
 - `residual_` and `calcium_data`: (torch.tensor) Standardized, normalized and resampled calcium data. Shape: (max_timesteps, 302)
