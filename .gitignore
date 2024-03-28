@@ -17,7 +17,7 @@ setup/requirements_pip.txt
 setup/requirements_conda.txt
 
 # Large files
-data/worm_data_short.csv
+data/worm_data*
 models/*.pt
 opensource_data.zip
 opensource_data/
