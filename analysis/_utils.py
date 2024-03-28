@@ -96,14 +96,14 @@ def hierarchical_clustering_algorithm(
     )  # Quality of the clustering -> cosine distance gave best results
 
     # === Sorting ===
-    og_neuron_labels = np.array(
+    original_neuron_labels = np.array(
         [label for idx, label in single_worm_data["slot_to_named_neuron"].items()]
     )
 
     # Now we can sort the correlation matrix according to the cluster labels, and plot the correlation matrix again.
     sorted_R = R[:, np.argsort(computed_cluster_labels)]  # sort columns
     sorted_R = sorted_R[np.argsort(computed_cluster_labels), :]  # sort rows
-    sorted_neuron_labels = og_neuron_labels[np.argsort(computed_cluster_labels)]
+    sorted_neuron_labels = original_neuron_labels[np.argsort(computed_cluster_labels)]
     sorted_computed_cluster_labels = computed_cluster_labels[np.argsort(computed_cluster_labels)]
 
     if save_fig:
@@ -112,13 +112,13 @@ def hierarchical_clustering_algorithm(
             title="Original {} ({})".format(title_plot, wormID),
             xlabel="Neuron",
             ylabel="Neuron",
-            xticks=og_neuron_labels,
-            yticks=og_neuron_labels,
+            xticks=original_neuron_labels,
+            yticks=original_neuron_labels,
             xtick_skip=2,
             ytick_skip=2,
         )
         plt.savefig(
-            "analysis/results/hierarchical_clustering/og_distance_matrix.png",
+            "analysis/results/hierarchical_clustering/original_distance_matrix.png",
             dpi=300,
         )
         plt.close()

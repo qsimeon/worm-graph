@@ -229,6 +229,21 @@ class ToFloat32(torch.nn.Module):
         return x.to(torch.float32)
 
 
+class RMSNorm(torch.nn.Module):
+    """
+    Straightforward implementation of root-mean-square normalization.
+    """
+
+    def __init__(self, d_model: int, eps: float = 1e-5):
+        super().__init__()
+        self.eps = eps
+        self.weight = torch.nn.Parameter(torch.ones(d_model))
+
+    def forward(self, x):
+        output = x * torch.rsqrt(x.pow(2).mean(-1, keepdim=True) + self.eps) * self.weight
+        return output
+
+
 class PositionalEncoding(torch.nn.Module):
     """
     Sinuosoidal positional encoding from Attention is All You Need paper,
@@ -433,12 +448,10 @@ class CTRNN(torch.nn.Module):
 class MambaArgs:
     d_model: int  # dimension of input
     n_layer: int
-    vocab_size: int
-    d_state: int = 16  # dimension of hidden state/output
-    expand: int = 2
+    d_state: int = 16  # dimension of hidden state
+    expand: int = 1  # expansion factor (1 = no expansion)
     dt_rank: Union[int, str] = "auto"
     d_conv: int = 4
-    pad_vocab_size_multiple: int = 8
     conv_bias: bool = True
     bias: bool = False
 
@@ -447,11 +460,6 @@ class MambaArgs:
 
         if self.dt_rank == "auto":
             self.dt_rank = math.ceil(self.d_model / 16)
-
-        if self.vocab_size % self.pad_vocab_size_multiple != 0:
-            self.vocab_size += (
-                self.pad_vocab_size_multiple - self.vocab_size % self.pad_vocab_size_multiple
-            )
 
 
 class MambaBlock(torch.nn.Module):
@@ -463,6 +471,8 @@ class MambaBlock(torch.nn.Module):
         """A single Mamba block, as described in Figure 3 in Section 3.4 in the Mamba paper [1]."""
         super().__init__()
         self.args = args
+
+        self.norm = RMSNorm(args.d_model)
 
         self.in_proj = torch.nn.Linear(args.d_model, args.d_inner * 2, bias=args.bias)
 
@@ -500,6 +510,8 @@ class MambaBlock(torch.nn.Module):
             mamba_inner_ref(), https://github.com/state-spaces/mamba/blob/main/mamba_ssm/ops/selective_scan_interface.py#L311
 
         """
+        x_copy, x = torch.clone(x), self.norm(x)  # hack that does what a residual block would
+
         (b, l, d) = x.shape
 
         x_and_res = self.in_proj(x)  # shape (b, l, 2 * d_in)
@@ -515,7 +527,7 @@ class MambaBlock(torch.nn.Module):
 
         y = y * torch.nn.functional.silu(res)
 
-        output = self.out_proj(y)
+        output = self.out_proj(y) + x_copy  # residual/skip connection
 
         return output
 
@@ -1246,6 +1258,25 @@ class Model(torch.nn.Module):
             Generated data with shape (num_new_timesteps, neurons)
 
         TODO: Need to normalize adaptively to avoid generations that blow up.
+        TODO: Do latent generations.
+                '''
+                # Initialize hidden state
+                self.hidden = self.init_hidden(input.shape)
+                # Set hidden state of internal model
+                self.inner_hidden_model.set_hidden(self.hidden)
+                # Multiply input by the mask (expanded to match input shape)
+                input_activity = self.identity(
+                    input * mask.unsqueeze(1).expand_as(input)
+                )  # (batch_size, seq_len, input_size)
+                # ### DEBUG ###
+                # # Normalize (causally) the input sequence
+                # input_normalized = self.causal_normalization(input_activity)
+                # ### DEBUG ###
+                # Transform the input into a latent
+                latent_out = self.input_hidden(input_activity)  # (batch_size, seq_len, hidden_size)
+                # Transform the latent
+                hidden_out = self.inner_hidden_model(latent_out)  # (batch_size, seq_len, hidden_size)
+                '''
         """
         # Route to the appropriate generate method
         if self.version_2:
@@ -1497,20 +1528,7 @@ class FeatureFFNN(Model):
 
 class MambaCore(Model):
     """
-    # TODO: Just make these default args of the MambaCore class in models/_utils.py
-    # mamba params
-    d_model: 256
-    # TODO not used yet
-    n_layer: 1
-    vocab_size: 302
-    #defaults
-    d_state: 16
-    expand: 2
-    dt_rank: "auto"
-    d_conv: 4
-    pad_vocab_size_multiple: 8
-    conv_bias: True
-    bias: False
+    # TODO: Write a docstring for this model. Also get it working.
     """
 
     def __init__(
@@ -1532,8 +1550,7 @@ class MambaCore(Model):
         # Special parameters for this model
         self.mamba_args = MambaArgs(
             d_model=self.hidden_size,
-            n_layer=1,  # all cores are single-layer modules
-            vocab_size=NUM_TOKENS,
+            n_layer=1,  # all our cores are single-layer modules
             d_state=self.hidden_size,
             # remaining args use defaults of MambaArgs dataclass
         )
