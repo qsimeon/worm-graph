@@ -153,9 +153,8 @@ def plot_frequency_distribution(data, ax, title, dt=0.5):
 
 
 def plot_dataset_info(log_dir):
-    # Map the 302 C. elgans neurons to their index
-    neuron_idx_mapping = {neuron: idx for idx, neuron in enumerate(NEURONS_302)}
-
+    # Map the 302 C. elgans neurons to their standard slot/index
+    neuron_slot_mapping = {neuron: slot for slot, neuron in enumerate(NEURONS_302)}
     # Train dataset
     df_train = pd.read_csv(
         os.path.join(log_dir, "dataset", "train_dataset_info.csv"),
@@ -170,14 +169,13 @@ def plot_dataset_info(log_dir):
     )
     # Standard sorting
     standard_counts_train = np.zeros(302, dtype=int)
-    neuron_idx = [neuron_idx_mapping[neuron] for neuron in unique_neurons_train]
+    neuron_idx = [neuron_slot_mapping[neuron] for neuron in unique_neurons_train]
     standard_counts_train[neuron_idx] = neuron_counts_train
     # Get unique datasets
     train_exp_datasets = df_train["source_dataset"].unique().tolist()
     # Create DataFrame for train data
     train_data = {"Neuron": NEURONS_302, "Count": standard_counts_train}
     df_train_plot = pd.DataFrame(train_data)
-
     # Validation dataset
     df_val = pd.read_csv(
         os.path.join(log_dir, "dataset", "val_dataset_info.csv"),
@@ -190,19 +188,17 @@ def plot_dataset_info(log_dir):
     unique_neurons_val, neuron_counts_val = np.unique(flattened_neurons_val, return_counts=True)
     # Standard sorting
     standard_counts_val = np.zeros(302, dtype=int)
-    neuron_idx_val = [neuron_idx_mapping[neuron] for neuron in unique_neurons_val]
+    neuron_idx_val = [neuron_slot_mapping[neuron] for neuron in unique_neurons_val]
     standard_counts_val[neuron_idx_val] = neuron_counts_val
     # Get unique datasets
     val_exp_datasets = df_val["source_dataset"].unique().tolist()
     # Create DataFrame for validation data
     val_data = {"Neuron": NEURONS_302, "Count": standard_counts_val}
     df_val_plot = pd.DataFrame(val_data)
-
     # Plot histogram using sns
     fig, ax = plt.subplots(2, 1, figsize=(10, 8))
     sns.set_style("whitegrid")
     sns.set_palette("tab10")
-
     # Train dataset plot
     sns.barplot(x="Neuron", y="Count", data=df_train_plot, ax=ax[0], errorbar=None)
     ax[0].set_xticklabels(ax[0].get_xticklabels(), rotation=45, ha="right")
@@ -227,7 +223,6 @@ def plot_dataset_info(log_dir):
         verticalalignment="top",
         bbox=dict(boxstyle="round, pad=1", facecolor="white", edgecolor="black", alpha=0.5),
     )
-
     # Validation dataset plot
     sns.barplot(x="Neuron", y="Count", data=df_val_plot, ax=ax[1], errorbar=None)
     ax[1].set_xticklabels(ax[1].get_xticklabels(), rotation=45, ha="right")
@@ -252,14 +247,11 @@ def plot_dataset_info(log_dir):
         verticalalignment="top",
         bbox=dict(boxstyle="round, pad=1", facecolor="white", edgecolor="black", alpha=0.5),
     )
-
     # Set y-axes to only use integer values
     ax[0].yaxis.set_major_locator(ticker.MaxNLocator(integer=True))
     ax[1].yaxis.set_major_locator(ticker.MaxNLocator(integer=True))
-
-    plt.tight_layout()
-
     # Save figure
+    plt.tight_layout()
     fig.savefig(os.path.join(log_dir, "dataset", "dataset_info.png"), dpi=300)
     plt.close()
 

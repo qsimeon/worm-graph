@@ -29,7 +29,6 @@ def model_predict(
     # Convert DictConfig to dict
     if isinstance(experimental_datasets, DictConfig):
         experimental_datasets = OmegaConf.to_object(experimental_datasets)
-
     # Retrieve information from training
     train_dataset_info = pd.read_csv(
         os.path.join(log_dir, "dataset", "train_dataset_info.csv"),
@@ -42,33 +41,28 @@ def model_predict(
     train_split_ratio = float(train_dataset_info["train_split_ratio"].values[0])
     key_data = "residual_calcium" if use_residual else "calcium_data"
     key_data = "smooth_" + key_data if smooth_data else key_data
-
-    # Load dataset with
+    # Load the combined dataset
     combined_dataset, dataset_info = create_combined_dataset(
         experimental_datasets=experimental_datasets,
         num_named_neurons=None,  # use all available neurons
     )
-
     # Put model on device
     model = model.to(DEVICE)
-
     # Iterate over combined datasets (same process as in `split_combined_dataset` in data/_utils.py)
     for _, single_worm_dataset in combined_dataset.items():
         # Extract relevant features from the dataset
         data = single_worm_dataset[key_data]
         neurons_mask = single_worm_dataset["named_neurons_mask"]
         worm_dataset = single_worm_dataset["source_dataset"]
-        og_wormID = single_worm_dataset["og_worm"]
-
+        original_worm_id = single_worm_dataset["original_worm"]
         # Query and save the named neurons to plot predictions afterwards
         neurons = dataset_info.query(
             'source_dataset == "{}" and original_index == "{}"'.format(
-                worm_dataset, original_wormID
+                worm_dataset, original_worm_id
             )
         )["neurons"].iloc[0]
         # Now create the DataFrame
         neuron_df = pd.DataFrame({"named_neurons": neurons})
-
         # The index where to split the data
         split_idx = (
             int(train_split_ratio * len(data))
@@ -78,16 +72,13 @@ def model_predict(
         split_idx = max(
             split_idx, seq_len + 1
         )  # handles sequence length longer than the data split
-
         # Split the data and the time vector into two sections
         data_splits = np.array_split(data, indices_or_sections=[split_idx], axis=0)
-
         # Separate the splits into training and validation sets
         if train_split_first:
             train_data_splits, val_data_splits = data_splits[::2], data_splits[1::2]
         else:
             train_data_splits, val_data_splits = data_splits[1::2], data_splits[::2]
-
         # Predictions using the first train split
         generated_activity_train = model.generate(  # seed with the first context_window time steps
             # add batch dimesnions to input and mask
@@ -99,13 +90,12 @@ def model_predict(
         ).squeeze(
             0
         )  # autoregressive generation
-
         # Create directories for saving results
         os.makedirs(
             os.path.join(log_dir, "prediction", "train", worm_dataset), exist_ok=True
         )  # dataset level
         os.makedirs(
-            os.path.join(log_dir, "prediction", "train", worm_dataset, og_wormID),
+            os.path.join(log_dir, "prediction", "train", worm_dataset, original_worm_id),
             exist_ok=True,
         )  # worm level
         # Save results in dataframes
@@ -121,7 +111,7 @@ def model_predict(
                 "prediction",
                 "train",
                 worm_dataset,
-                og_wormID,
+                original_worm_id,
                 "predictions.csv",
             )
         )
@@ -131,11 +121,10 @@ def model_predict(
                 "prediction",
                 "train",
                 worm_dataset,
-                og_wormID,
+                original_worm_id,
                 "named_neurons.csv",
             )
         )
-
         # Predictions using the first validation split
         generated_activity_val = model.generate(  # seed with the first context_window time steps
             # add batch dimesnions to input and mask
@@ -152,7 +141,7 @@ def model_predict(
             os.path.join(log_dir, "prediction", "val", worm_dataset), exist_ok=True
         )  # dataset level
         os.makedirs(
-            os.path.join(log_dir, "prediction", "val", worm_dataset, og_wormID),
+            os.path.join(log_dir, "prediction", "val", worm_dataset, original_worm_id),
             exist_ok=True,
         )  # worm level
         # Save results in dataframes
@@ -168,7 +157,7 @@ def model_predict(
                 "prediction",
                 "val",
                 worm_dataset,
-                og_wormID,
+                original_worm_id,
                 "predictions.csv",
             )
         )
@@ -178,7 +167,7 @@ def model_predict(
                 "prediction",
                 "val",
                 worm_dataset,
-                og_wormID,
+                original_worm_id,
                 "named_neurons.csv",
             )
         )
