@@ -808,37 +808,6 @@ class Model(torch.nn.Module):
         return self.l1_reg_param
 
     @torch.autocast(device_type=DEVICE.type, dtype=torch.half)
-    def causal_normalization(self, neural_sequence):
-        """
-        Apply a causal normalization to each sequence in the batch independently.
-        Args:
-            neural_sequence: tensor of shape (batch_size, seq_len, features).
-        Returns:
-            normalized_sequences: tensor of shape (batch_size, seq_len, features).
-        """
-        normalized_sequences = []
-
-        # Iterate over each sequence in the batch
-        for sequence in neural_sequence:
-            # Compute the cumulative sum for mean
-            cumsum = torch.cumsum(sequence, dim=0)
-            cumsum_sq = torch.cumsum(sequence**2, dim=0)
-            counts = torch.arange(1, sequence.shape[0] + 1).reshape(-1, 1).to(sequence.device)
-
-            # Compute the mean and variance using cumulative sums
-            mean = cumsum / counts
-            var = (cumsum_sq - 2 * mean * cumsum + counts * mean**2) / counts
-            std = torch.sqrt(var + 1e-5)  # Add epsilon to avoid division by zero
-
-            # Normalize the sequence
-            normalized_sequence = (sequence - mean) / std
-            normalized_sequences.append(normalized_sequence.unsqueeze(0))
-
-        # Concatenate all normalized sequences along the batch dimension
-        normalized_sequences = torch.cat(normalized_sequences, dim=0)
-        return normalized_sequences
-
-    @torch.autocast(device_type=DEVICE.type, dtype=torch.half)
     def calculate_distances(self, neural_sequence, token_matrix, feature_mask=None):
         """
         Efficiently calculates Euclidean distances between neural sequence vectors and token matrix vectors.
@@ -871,7 +840,6 @@ class Model(torch.nn.Module):
         masked_token_matrix = token_matrix.unsqueeze(0) * feature_mask.unsqueeze(
             1
         )  # (1, num_tokens, input_size) * (batch_size, 1, input_size) -> (batch_size, num_tokens, input_size)
-
         ### >>> FAST, NEW Implementation >>> ###
         # Fast and memory efficient distance calculation
         TERM_1 = masked_neural_sequence.pow(2).sum(dim=-1, keepdim=True)  # (batch_size, seq_len, 1)
@@ -884,22 +852,6 @@ class Model(torch.nn.Module):
         )  # (batch_size, 1, num_tokens)
         distances = TERM_1 + TERM_2 + TERM_3  # (batch_size, seq_len, num_tokens)
         ### <<< FAST, NEW Implementation <<< ###
-
-        # ### >>> SLOW, ORIGINAL Implementation >>> ###
-        # # Expand dimensions for broadcasting
-        # masked_neural_sequence_expanded = masked_neural_sequence.unsqueeze(
-        #     2
-        # )  # (batch_size, seq_len, 1, input_size)
-        # masked_token_matrix_expanded = masked_token_matrix.unsqueeze(
-        #     1
-        # )  # (batch_size, 1, num_tokens, input_size)
-        # distances = torch.mean(
-        #     (masked_neural_sequence_expanded - masked_token_matrix_expanded)
-        #     ** 2,  # (batch_size, seq_len, 1, input_size) - (batch_size, 1, num_tokens, input_size) -> (batch_size, seq_len, num_tokens, input_size)
-        #     dim=-1,
-        # )  # (batch_size, seq_len, num_tokens)
-        # ### <<< SLOW, ORIGINAL Implementation <<< ###
-
         # Return distance matrix
         return distances
 
@@ -954,7 +906,6 @@ class Model(torch.nn.Module):
         # NOTE: We could use the attributes self.num_tokens and self.input_size of the model;
         # but getting the sizes this way allows us to use this method as a standalone function.
         num_tokens, _ = token_matrix.shape
-
         # PART 1: Tokenize the neural data
         # Calculate distances between neural data and embedding vectors
         distances = self.calculate_distances(
@@ -969,52 +920,7 @@ class Model(torch.nn.Module):
             return token_sequence
         else:
             pass  # otherwise model is training, so update neural_embedding
-
         # PART 2: Update `self.neural_embedding`
-
-        # # ### >>> FAST but INCORRECT, ORIGINAL Implementation >>> ###
-        # # NOTE: Correctly only updates positions in `self.neural_embedding` that correspond to tokens observed in the current batch;
-        # # but fails to only update positions in `self.neural_embedding` that correspond to masked inputs/features in the current batch.
-        # # Thus, this version will only work fully as expected if all inputs are masked (i.e. `feature_mask`` is all True).
-        # # Flatten neural sequence and token sequence
-        # token_sequence_flat = token_sequence.view(-1)  # (batch_size * seq_len, )
-        # neural_flat = neural_sequence.view(
-        #     -1, self.input_size
-        # )  # (batch_size * seq_len, input_size)
-        # # Initialize sums and counts tensors
-        # token_sums = torch.zeros_like(
-        #     self.neural_embedding,
-        #     device=neural_flat.device,
-        #     dtype=neural_flat.dtype,
-        # )
-        # token_counts = torch.zeros(
-        #     self.num_tokens,
-        #     device=neural_flat.device,
-        #     dtype=neural_flat.dtype,
-        # )
-        # # Accumulate sums for each token
-        # token_sums.index_add_(
-        #     dim=0, index=token_sequence_flat, source=neural_flat
-        # )
-        # # Count occurrences of each token
-        # token_counts.index_add_(
-        #     dim=0,
-        #     index=token_sequence_flat,
-        #     source=torch.ones_like(
-        #         token_sequence_flat,
-        #         dtype=token_counts.dtype,
-        #     ),
-        # )
-        # # Compute means and apply EMA update
-        # new_token_means = token_sums / token_counts.unsqueeze(1).clamp(min=1)  # avoid division by 0
-        # new_token_means = new_token_means.to(self.neural_embedding.device)  # move to same device
-        # observed_tokens = token_sequence_flat.unique()
-        # decay = 0.5  # EMA decay factor
-        # OLD = self.neural_embedding[observed_tokens]
-        # NEW = new_token_means[observed_tokens]
-        # self.neural_embedding[observed_tokens] = decay * OLD + (1 - decay) * NEW
-        # # ### <<< FAST but INCORRECT, ORIGINAL Implementation <<< ###
-
         ### >>> SLOW but CORRECT, NEW Implementation >>> ###
         # NOTE: Updates positions in `self.neural_embedding` that correspond to observed tokens and masked inputs.
         # Get positions of masked/observed input features
@@ -1036,7 +942,6 @@ class Model(torch.nn.Module):
                 NEW = batch_inputs[batch_tokens == token].mean(dim=0)[observed_inputs]
                 self.neural_embedding[token, observed_inputs] = decay * OLD + (1 - decay) * NEW
         ### <<< SLOW but CORRECT, NEW Implementation <<< ###
-
         # Return the tokenized sequence
         return token_sequence
 
@@ -1081,10 +986,6 @@ class Model(torch.nn.Module):
         input_activity = self.identity(
             input * mask.unsqueeze(1).expand_as(input)
         )  # (batch_size, seq_len, input_size)
-        # ### DEBUG ###
-        # # Normalize (causally) the input sequence
-        # input_normalized = self.causal_normalization(input_activity)
-        # ### DEBUG ###
         # Transform the input into a latent
         latent_out = self.input_hidden(input_activity)  # (batch_size, seq_len, hidden_size)
         # Transform the latent
@@ -1109,10 +1010,6 @@ class Model(torch.nn.Module):
         input_activity = self.identity(
             input * mask.unsqueeze(1).expand_as(input)
         )  # (batch_size, seq_len, input_size)
-        # ### DEBUG ###
-        # # Normalize (causally) the input sequence
-        # input_normalized = self.causal_normalization(input_activity)
-        # ### DEBUG ###
         # Convert the high-D neural sequence into a 1-D token sequence
         input_tokens = self.tokenize_neural_data(
             neural_sequence=input_activity,
@@ -1256,56 +1153,74 @@ class Model(torch.nn.Module):
         -------
         generated_tensor : torch.Tensor
             Generated data with shape (num_new_timesteps, neurons)
-
-        TODO: Need to normalize adaptively to avoid generations that blow up.
-        TODO: Do latent generations.
-                '''
-                # Initialize hidden state
-                self.hidden = self.init_hidden(input.shape)
-                # Set hidden state of internal model
-                self.inner_hidden_model.set_hidden(self.hidden)
-                # Multiply input by the mask (expanded to match input shape)
-                input_activity = self.identity(
-                    input * mask.unsqueeze(1).expand_as(input)
-                )  # (batch_size, seq_len, input_size)
-                # ### DEBUG ###
-                # # Normalize (causally) the input sequence
-                # input_normalized = self.causal_normalization(input_activity)
-                # ### DEBUG ###
-                # Transform the input into a latent
-                latent_out = self.input_hidden(input_activity)  # (batch_size, seq_len, hidden_size)
-                # Transform the latent
-                hidden_out = self.inner_hidden_model(latent_out)  # (batch_size, seq_len, hidden_size)
-                '''
         """
         # Route to the appropriate generate method
         if self.version_2:
             return self.generate_v2(input, mask, num_new_timesteps, context_window)
         # Set model to evaluation mode
         self.eval()
+
+        # # Detach and copy the input
+        # input_copy = input.detach().clone()
+
+        ### DEBUG ###
+        # TODO: Do generation in the latent space.
         # Detach and copy the input
         input_copy = input.detach().clone()
+        # Multiply input by the mask (expanded to match input shape)
+        input_copy = self.identity(
+            input_copy * mask.unsqueeze(1).expand_as(input)
+        )  # (batch_size, seq_len, input_size)
+        # Transform the input into a latent
+        input_copy = self.input_hidden(input_copy)  # (batch_size, seq_len, hidden_size)
+        ### DEBUG ###
+
         # Loop through time
         for _ in range(num_new_timesteps):
             # If the sequence context is growing too long we must crop it
             input_cond = input_copy[
                 :, -context_window:, :
             ].detach()  # (batch_size, context_window, neurons)
-            # Forward the model to get the predictions
-            predictions = self(input_cond, mask)  # (batch_size, context_window, neurons)
+
+            ### DEBUG ###
+            # Initialize hidden state
+            self.hidden = self.init_hidden(input_cond.shape)
+            # Set hidden state of internal model
+            self.inner_hidden_model.set_hidden(self.hidden)
+            # Transform the latent
+            predictions = self.inner_hidden_model(input_cond)  # (batch_size, seq_len, hidden_size)
             # Get the last predicted value
-            input_next = predictions[:, [-1], :]  # (batch_size, 1, neurons)
-            # TODO: Make adaptive normalization a function of the model itself;
-            # The current clamping is just a quick fix to prevent exploding values.
-            input_next = torch.clamp(input_next, min=input_cond.min(), max=input_cond.max())
+            input_next = predictions[:, [-1], :]  # (batch_size, 1, hidden_size)
             # Append the prediction to the the running sequence and continue
             input_copy = torch.cat(
                 (input_copy, input_next), dim=1
             )  # generating values autoregressively
+            ### DEBUG ###
+
+            # # Forward the model to get the predictions
+            # predictions = self(input_cond, mask)  # (batch_size, context_window, neurons)
+            # # Get the last predicted value
+            # input_next = predictions[:, [-1], :]  # (batch_size, 1, neurons)
+            # # TODO: Implement adaptive normalization to avoid generations that blow up.
+            # # The current clamping is just a quick fix to prevent exploding values.
+            # input_next = torch.clamp(input_next, min=input_cond.min(), max=input_cond.max())
+            # # Append the prediction to the the running sequence and continue
+            # input_copy = torch.cat(
+            #     (input_copy, input_next), dim=1
+            # )  # generating values autoregressively
+
+        # # Get only the newly generated time steps
+        # generated_values = input_copy[
+        #     :, -num_new_timesteps:, :
+        # ].detach()  # (batch_size, num_new_timesteps, input_size)
+
+        ### DEBUG ###
         # Get only the newly generated time steps
-        generated_values = input_copy[
-            :, -num_new_timesteps:, :
-        ].detach()  # (batch_size, num_new_timesteps, input_size)
+        generated_values = self.linear(
+            input_copy[:, -num_new_timesteps:, :]
+        ).detach()  # (batch_size, num_new_timesteps, input_size)
+        ### DEBUG ###
+
         # Return the generations
         return generated_values
 

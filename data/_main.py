@@ -162,7 +162,7 @@ def get_datasets(dataset_config: DictConfig, save=True):
                         dataset["max_timesteps"] for _, dataset in combined_dataset.items()
                     )
                     seq_len = (min_timesteps // 2) - max_num_samples - 1
-                    logger.info(f"DEBUG computed sequence length: {min_timesteps}\n")  # DEBUG
+                logger.info(f"Chosen sequence length: {min_timesteps}\n")  # DEBUG
                 # Split the combined dataset into train and validation datasets
                 created_train_dataset, created_val_dataset, dataset_info_split = (
                     split_combined_dataset(
@@ -253,7 +253,7 @@ def get_datasets(dataset_config: DictConfig, save=True):
             max_num_samples = max(num_train_samples, num_val_samples)
             min_timesteps = min(dataset["max_timesteps"] for _, dataset in combined_dataset.items())
             seq_len = (min_timesteps // 2) - max_num_samples - 1
-            logger.info(f"DEBUG computed sequence length: {seq_len}\n")  # DEBUG
+        logger.info(f"Chosen sequence length: {seq_len}\n")  # DEBUG
         # Split the combined dataset into train and validation datasets
         train_dataset, val_dataset, dataset_info_split = split_combined_dataset(
             combined_dataset,
