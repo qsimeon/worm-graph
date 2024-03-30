@@ -106,14 +106,16 @@ def train_model(
         batch_size=batch_size,
         shuffle=shuffle,
         # num_workers=1,  # DEBUG
-        pin_memory="cuda" in DEVICE.type,
+        pin_memory=False,
+        # pin_memory="cuda" in DEVICE.type,  # DEBUG
     )
     val_loader = torch.utils.data.DataLoader(
         val_dataset,
         batch_size=batch_size,
         shuffle=shuffle,
         # num_workers=1,  # DEBUG
-        pin_memory="cuda" in DEVICE.type,
+        pin_memory=False,
+        # pin_memory="cuda" in DEVICE.type,  # DEBUG
     )
     # Start training
     logger.info("Starting training loop...")

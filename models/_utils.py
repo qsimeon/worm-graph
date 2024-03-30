@@ -1165,8 +1165,8 @@ class Model(torch.nn.Module):
 
         ### DEBUG ###
         # TODO: Do generation in the latent space.
-        # Detach and copy the input
-        input_copy = input.detach().clone()
+        # Detach and copy the input and convert to dtype of the model
+        input_copy = input.detach().clone().to(dtype=next(self.parameters()).dtype)
         # Multiply input by the mask (expanded to match input shape)
         input_copy = self.identity(
             input_copy * mask.unsqueeze(1).expand_as(input)

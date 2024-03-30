@@ -190,7 +190,14 @@ class NeuralActivityDataset(torch.utils.data.Dataset):
         Returns:
             The data sample at the given index.
         """
-        return self.data_samples[index]
+        data = self.data_samples[index]
+        # ### DEBUG ###
+        # process = psutil.Process()
+        # logger.info(
+        #     f"DEBUG Worker PID: {process.pid}, Memory Usage: {process.memory_info().rss / (1024 ** 3)} GB"
+        # )
+        # ### DEBUG ###
+        return data
 
     def parfor_func(self, start):
         """Helper function for parallelizing `__data_generator`.
