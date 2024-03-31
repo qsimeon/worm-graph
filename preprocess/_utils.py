@@ -1029,6 +1029,8 @@ class BasePreprocessor:
     Attributes:
         source_dataset (str): The specific source dataset to be preprocessed.
         transform (object): The sklearn transformation to be applied to the data.
+        smooth_method (str): The smoothing method to apply to the data.
+        resample_dt (float): The resampling time interval in seconds.
         raw_data_path (str): The path where the raw dat is downloaded at.
         processed_data_apth (str): The path at which to save the processed dataset.
 
@@ -1041,7 +1043,7 @@ class BasePreprocessor:
         save_data(): Method for saving the processed data to .pickle format.
         create_neuron_idx(): Method for extracting a neuron label to index mapping from the raw data.
         preprocess_traces(): Base method for preprocessing the calcium traces. Some datasets may require
-            additional preprocessing steps, in which case this method should be overridden.
+                    additional preprocessing steps, in which case this method should be overridden.
 
     Note:
         This class is intended to be subclassed, not directly instantiated.
@@ -1069,9 +1071,9 @@ class BasePreprocessor:
         self.source_dataset = dataset_name
         self.transform = transform
         self.smooth_method = smooth_method
-        self.smooth_kwargs = kwargs
-        self.resample_dt = resample_dt
         self.interpolate_method = interpolate_method
+        self.resample_dt = resample_dt
+        self.smooth_kwargs = kwargs
         self.raw_data_path = os.path.join(ROOT_DIR, "opensource_data")
         self.processed_data_path = os.path.join(ROOT_DIR, "data/processed/neural")
 
@@ -1178,7 +1180,7 @@ class BasePreprocessor:
         worm_idx,
     ):
         """
-        Helper function for preprocess calcium imaging data from one worm.
+        Helper function for preprocessing calcium fluorescence neural data from one worm.
 
         Args:
             neuron_IDs (list): List of arrays of neuron IDs.
@@ -1454,13 +1456,6 @@ class Kaplan2020Preprocessor(BasePreprocessor):
         all_traces = arr["traces_bleach_corrected"]
         # Time vector in seconds
         timeVectorSeconds = arr["time_vector"]
-        ### DEBUG ###
-        logger.info(
-            f"DEBUG Kaplan2020Preprocessor extract_data: \n\t timeVectorSeconds: {type(timeVectorSeconds)}"
-        )
-        ### DEBUG ###
-        # Set time to start at 0.0 seconds
-        timeVectorSeconds = timeVectorSeconds - timeVectorSeconds[0]
         # Return the extracted data
         return all_IDs, all_traces, timeVectorSeconds
 
@@ -1600,13 +1595,6 @@ class Yemini2021Preprocessor(BasePreprocessor):
             traces.append(activity)
             # Add time vector to list of time vectors
             time_vector_seconds.append(tvec)
-        ### DEBUG ###
-        logger.info(
-            f"DEBUG Yemini2021Preprocessor extract_data: \n\t timeVectorSeconds: {type(time_vector_seconds)}"
-        )
-        ### DEBUG ###
-        # Set time to start at 0.0 seconds
-        time_vector_seconds = time_vector_seconds - time_vector_seconds[0]
         # Return the extracted data
         return neuron_IDs, traces, time_vector_seconds
 
@@ -1652,6 +1640,7 @@ class Uzel2022Preprocessor(BasePreprocessor):
         )
 
     def load_data(self, file_name):
+        # Load data with mat73
         return mat73.loadmat(os.path.join(self.raw_data_path, self.source_dataset, file_name))
 
     def extract_data(self, arr):
@@ -1661,13 +1650,6 @@ class Uzel2022Preprocessor(BasePreprocessor):
         all_traces = arr["traces"]  # (time, neurons)
         # Time vector in seconds
         timeVectorSeconds = arr["tv"]
-        ### DEBUG ###
-        logger.info(
-            f"DEBUG Uzel2022Preprocessor extract_data: \n\t timeVectorSeconds: {type(timeVectorSeconds)}"
-        )
-        ### DEBUG ###
-        # Set time to start at 0.0 seconds
-        timeVectorSeconds = timeVectorSeconds - timeVectorSeconds[0]
         # Return the extracted data
         return all_IDs, all_traces, timeVectorSeconds
 
@@ -1713,6 +1695,7 @@ class Lin2023Preprocessor(BasePreprocessor):
         return data
 
     def extract_data(self, data_file):
+        """Slightly different extract_data method for Lin2023 dataset."""
         dataset_raw = self.load_data(data_file)
         # Filter for proofread neurons.
         _filter = dataset_raw["use_flag"].flatten() > 0
@@ -1726,8 +1709,6 @@ class Lin2023Preprocessor(BasePreprocessor):
         imputer = IterativeImputer(random_state=0)
         if np.isnan(raw_activitiy).any():
             raw_activitiy = imputer.fit_transform(raw_activitiy)
-        # Set time to start at 0.0 seconds
-        raw_time_vec = raw_time_vec - raw_time_vec[0]
         # Make the extracted data into a list of lists
         neuron_IDs, raw_traces, time_vector_seconds = [neurons], [raw_activitiy], [raw_time_vec]
         # Return the extracted data
@@ -1779,6 +1760,7 @@ class Leifer2023Preprocessor(BasePreprocessor):
         return data_array
 
     def extract_data(self, data_file, labels_file, time_file):
+        """Slightly different extract_data method for Leifer2023 dataset."""
         real_data = self.load_data(data_file)
         label_list = self.load_labels(labels_file)[: real_data.shape[1]]
         time_in_seconds = self.load_time_vector(time_file)
@@ -1798,7 +1780,7 @@ class Leifer2023Preprocessor(BasePreprocessor):
             real_data.shape[0] == time_in_seconds.shape[0]
         ), "Time vector does not match data!\n Files: {data_file}, {time_file}"
         # Return the extracted data
-        return real_data, label_list, time_in_seconds
+        return label_list, real_data, time_in_seconds
 
     def create_neuron_idx(self, label_list):
         """
@@ -1901,7 +1883,7 @@ class Leifer2023Preprocessor(BasePreprocessor):
             labels_file = os.path.join(data_dir, f"{str(i)}_labels.txt")
             time_file = os.path.join(data_dir, f"{str(i)}_t.txt")
             # Load and extract raw data
-            real_data, label_list, time_in_seconds = self.extract_data(
+            label_list, real_data, time_in_seconds = self.extract_data(
                 data_file, labels_file, time_file
             )
             # Set time to start at 0.0 seconds
@@ -2103,7 +2085,7 @@ class Flavell2023Preprocessor(BasePreprocessor):
         else:
             raise ValueError(f"Unsupported data type: {type(file_data)}")
         # Return the extracted data
-        return time_in_seconds, calcium_data, neurons
+        return neurons, calcium_data, time_in_seconds
 
     def create_metadata(self):
         extra_info = dict(
@@ -2120,7 +2102,7 @@ class Flavell2023Preprocessor(BasePreprocessor):
             worm = "worm" + str(i)
             file_data = self.load_data(file)  # load
             # 0. Extract raw data
-            time_in_seconds, calcium_data, neurons = self.extract_data(file_data)  
+            neurons, calcium_data, time_in_seconds = self.extract_data(file_data)
             # Set time to start at 0.0 seconds
             time_in_seconds = time_in_seconds - time_in_seconds[0]
             # 1. Map named neurons
