@@ -1,15 +1,30 @@
 #!/bin/bash
 
+# Get the absolute path of the script's directory
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
+echo "env.sh called from $SCRIPT_DIR"
+# Navigate to the script's directory then to the root of the repo
+cd "$SCRIPT_DIR"/..
+
 # Initialize conda for bash shell
 eval "$(conda shell.bash hook)"
 
+# Function to detect if running on a Slurm cluster
+function is_slurm_cluster {
+    if command -v sinfo >/dev/null 2>&1 || [ -n "$SLURM_JOB_ID" ]; then
+        return 0  # Equivalent to boolean True in bash (success)
+    else
+        return 1  # Equivalent to boolean False in bash (failure)
+    fi
+}
+
+# Function to check for Nvidia GPU
 function has_gpu {
     command -v nvidia-smi > /dev/null && nvidia-smi > /dev/null 2>&1
 }
 
-ENV_NAME="worm-graph"
-
 # Create a new conda environment with Python 3.11
+ENV_NAME="worm-graph"
 echo ""
 echo "Creating $ENV_NAME environment."
 echo ""
@@ -20,6 +35,19 @@ conda activate $ENV_NAME
 
 # Update pip in the new environment
 python -m pip install --upgrade pip
+
+# Check if running on a Slurm cluster and adjust configs/pipeline.yaml accordingly
+if ! is_slurm_cluster; then
+    echo "Not on a Slurm cluster. Adjusting configs/pipeline.yaml for local execution."
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+        sed -i '' 's/submitit_slurm/submitit_local/g' configs/pipeline.yaml
+    else
+        sed -i 's/submitit_slurm/submitit_local/g' configs/pipeline.yaml
+    fi
+fi
+
+# Operating System Detection and Environment Setup
+echo ""
 
 # Detect the Operating System and Check for GPU
 case "$(uname -s)" in
