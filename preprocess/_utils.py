@@ -1,6 +1,9 @@
 from preprocess._pkg import *
 
-# Init logger
+# Set global logging level to CRITICAL to suppress ERROR messages
+logging.basicConfig(level=logging.CRITICAL)
+
+# Initialize logger
 logger = logging.getLogger(__name__)
 
 
@@ -444,23 +447,25 @@ class CalciumDataReshaper:
         self.original_time_in_seconds = self.worm_dataset.get(
             "original_time_in_seconds", self.worm_dataset["time_in_seconds"]
         )
-        self.og_max_timesteps = self.worm_dataset.get(
-            "og_max_timesteps", self.worm_dataset["max_timesteps"]
+        self.original_max_timesteps = self.worm_dataset.get(
+            "original_max_timesteps", self.worm_dataset["max_timesteps"]
         )
-        self.og_calcium_data = self.worm_dataset.get(
-            "og_calcium_data", self.worm_dataset["calcium_data"]
+        self.original_calcium_data = self.worm_dataset.get(
+            "original_calcium_data", self.worm_dataset["calcium_data"]
         )
-        self.og_smooth_calcium_data = self.worm_dataset.get(
-            "og_smooth_calcium_data", self.worm_dataset["smooth_calcium_data"]
+        self.original_smooth_calcium_data = self.worm_dataset.get(
+            "original_smooth_calcium_data", self.worm_dataset["smooth_calcium_data"]
         )
-        self.og_residual_calcium = self.worm_dataset.get(
-            "og_residual_calcium", self.worm_dataset["residual_calcium"]
+        self.original_residual_calcium = self.worm_dataset.get(
+            "original_residual_calcium", self.worm_dataset["residual_calcium"]
         )
-        self.og_smooth_residual_calcium = self.worm_dataset.get(
-            "og_smooth_residual_calcium",
+        self.original_smooth_residual_calcium = self.worm_dataset.get(
+            "original_smooth_residual_calcium",
             self.worm_dataset["smooth_residual_calcium"],
         )
-        self.og_median_dt = self.worm_dataset.get("og_median_dt", self.worm_dataset["median_dt"])
+        self.original_median_dt = self.worm_dataset.get(
+            "original_median_dt", self.worm_dataset["median_dt"]
+        )
 
     def _reshape_data(self):
         self._prepare_initial_data()
@@ -490,17 +495,17 @@ class CalciumDataReshaper:
             self.max_timesteps, NUM_NEURONS, dtype=self.dtype
         )
         # Raw data
-        self.standard_og_calcium_data = torch.zeros(
-            self.og_max_timesteps, NUM_NEURONS, dtype=self.dtype
+        self.standard_original_calcium_data = torch.zeros(
+            self.original_max_timesteps, NUM_NEURONS, dtype=self.dtype
         )
-        self.standard_og_smooth_calcium_data = torch.zeros(
-            self.og_max_timesteps, NUM_NEURONS, dtype=self.dtype
+        self.standard_original_smooth_calcium_data = torch.zeros(
+            self.original_max_timesteps, NUM_NEURONS, dtype=self.dtype
         )
-        self.standard_og_residual_calcium = torch.zeros(
-            self.og_max_timesteps, NUM_NEURONS, dtype=self.dtype
+        self.standard_original_residual_calcium = torch.zeros(
+            self.original_max_timesteps, NUM_NEURONS, dtype=self.dtype
         )
-        self.standard_og_smooth_residual_calcium = torch.zeros(
-            self.og_max_timesteps, NUM_NEURONS, dtype=self.dtype
+        self.standard_original_smooth_residual_calcium = torch.zeros(
+            self.original_max_timesteps, NUM_NEURONS, dtype=self.dtype
         )
 
     def _tensor_time_data(self):
@@ -518,7 +523,9 @@ class CalciumDataReshaper:
         if self.dt.ndim == 1:
             self.dt = self.dt.unsqueeze(-1)
         # Raw data
-        self.og_time_in_seconds = torch.from_numpy(self.og_time_in_seconds).to(self.dtype)
+        self.original_time_in_seconds = torch.from_numpy(self.original_time_in_seconds).to(
+            self.dtype
+        )
         if self.original_time_in_seconds.ndim == 1:
             self.original_time_in_seconds = self.time_in_seconds.unsqueeze(-1)
         self.original_time_in_seconds = (
@@ -554,17 +561,17 @@ class CalciumDataReshaper:
             self.smooth_residual_calcium[:, idx]
         ).to(self.dtype)
         # Raw data
-        self.standard_og_calcium_data[:, slot] = torch.from_numpy(self.og_calcium_data[:, idx]).to(
-            self.dtype
-        )
-        self.standard_og_smooth_calcium_data[:, slot] = torch.from_numpy(
-            self.og_smooth_calcium_data[:, idx]
+        self.standard_original_calcium_data[:, slot] = torch.from_numpy(
+            self.original_calcium_data[:, idx]
         ).to(self.dtype)
-        self.standard_og_residual_calcium[:, slot] = torch.from_numpy(
-            self.og_residual_calcium[:, idx]
+        self.standard_original_smooth_calcium_data[:, slot] = torch.from_numpy(
+            self.original_smooth_calcium_data[:, idx]
         ).to(self.dtype)
-        self.standard_og_smooth_residual_calcium[:, slot] = torch.from_numpy(
-            self.og_smooth_residual_calcium[:, idx]
+        self.standard_original_residual_calcium[:, slot] = torch.from_numpy(
+            self.original_residual_calcium[:, idx]
+        ).to(self.dtype)
+        self.standard_original_smooth_residual_calcium[:, slot] = torch.from_numpy(
+            self.original_smooth_residual_calcium[:, idx]
         ).to(self.dtype)
 
     def _fill_unknown_neurons_data(self):
@@ -591,13 +598,13 @@ class CalciumDataReshaper:
                 "named_neurons_mask": self.named_neurons_mask,
                 "neuron_to_slot": {v: k for k, v in self.slot_to_neuron.items()},
                 "neurons_mask": self.named_neurons_mask | self.unknown_neurons_mask,
-                "og_calcium_data": self.standard_og_calcium_data,  # original, normalized
-                "og_dt": self.og_dt,  # original (vector)
-                "og_median_dt": self.og_median_dt,  # original (scalar)
-                "og_residual_calcium": self.standard_og_residual_calcium,  # original
-                "og_smooth_calcium_data": self.standard_og_smooth_calcium_data,  # original, normalized, smoothed
-                "og_smooth_residual_calcium": self.standard_og_smooth_residual_calcium,  # original, smoothed
-                "og_time_in_seconds": self.og_time_in_seconds,  # original
+                "original_calcium_data": self.standard_original_calcium_data,  # original, normalized
+                "original_dt": self.original_dt,  # original (vector)
+                "original_median_dt": self.original_median_dt,  # original (scalar)
+                "original_residual_calcium": self.standard_original_residual_calcium,  # original
+                "original_smooth_calcium_data": self.standard_original_smooth_calcium_data,  # original, normalized, smoothed
+                "original_smooth_residual_calcium": self.standard_original_smooth_residual_calcium,  # original, smoothed
+                "original_time_in_seconds": self.original_time_in_seconds,  # original
                 "median_dt": self.median_dt,  # resampled (scalar)
                 "residual_calcium": self.standard_residual_calcium,  # resampled
                 "smooth_calcium_data": self.standard_smooth_calcium_data,  # normalized, smoothed, resampled
@@ -753,6 +760,25 @@ def extract_zip(path: str, folder: str, log: bool = True, delete_zip: bool = Tru
         os.unlink(path)
 
 
+def find_nearest_label(query, possible_labels, char="?"):
+    """
+    Function for finding the nerest neuron label from a list given a query.
+    """
+    # Remove the '?' from the query to simplify comparison
+    query_base = query.replace(char, "")
+    # Initialize variables to track the best match
+    nearest_label = None
+    highest_similarity = -1  # Start with lowest similarity possible
+    for label in possible_labels:
+        # Count matching characters, ignoring the character at the position of '?'
+        similarity = sum(1 for q, l in zip(query_base, label) if q == l)
+        # Update the nearest label if this one is more similar
+        if similarity > highest_similarity:
+            nearest_label = label
+            highest_similarity = similarity
+    return nearest_label, possible_labels.index(nearest_label)
+
+
 class CausalNormalizer:
     """
     A transform for causal normalization of time series data.
@@ -832,9 +858,8 @@ class CausalNormalizer:
         return self
 
     def transform(self, X):
-        """
-        Perform causal normalization on the dataset X using the previously
-        computed cumulative mean and standard deviation.
+        """Perform causal normalization on the dataset X using the
+        previously computed cumulative mean and standard deviation.
 
         Parameters
         ----------
@@ -848,7 +873,6 @@ class CausalNormalizer:
         """
         if self.cumulative_mean_ is None or self.cumulative_std_ is None:
             raise RuntimeError("The transformer has not been fitted yet.")
-
         X_transformed = (X - self.cumulative_mean_) / self.cumulative_std_
         return X_transformed
 
@@ -944,7 +968,7 @@ def pickle_neural_data(
             # Run the bash command
             std_out = subprocess.run(bash_command, text=True)
             # Output to log or terminal
-            print(std_out, end="\n\n")
+            logger.info(std_out)
             # Delete the zip file
             os.unlink(zip_path)
     # (re)-Pickle all the datasets ... OR
@@ -964,6 +988,8 @@ def pickle_neural_data(
                 preprocessor.preprocess()
             except NameError:
                 continue
+        # Create a file to indicate that the preprocessing was successful
+        open(os.path.join(processed_path, ".processed"), "a").close()
     # ... (re)-Pickle a single dataset
     else:
         assert (
@@ -988,8 +1014,6 @@ def pickle_neural_data(
     # Delete the unzipped folder
     if cleanup:
         shutil.rmtree(source_path)
-    # Create a file to indicate that the preprocessing was successful
-    open(os.path.join(processed_path, ".processed"), "a").close()
     return None
 
 
@@ -1005,6 +1029,8 @@ class BasePreprocessor:
     Attributes:
         source_dataset (str): The specific source dataset to be preprocessed.
         transform (object): The sklearn transformation to be applied to the data.
+        smooth_method (str): The smoothing method to apply to the data.
+        resample_dt (float): The resampling time interval in seconds.
         raw_data_path (str): The path where the raw dat is downloaded at.
         processed_data_apth (str): The path at which to save the processed dataset.
 
@@ -1017,7 +1043,7 @@ class BasePreprocessor:
         save_data(): Method for saving the processed data to .pickle format.
         create_neuron_idx(): Method for extracting a neuron label to index mapping from the raw data.
         preprocess_traces(): Base method for preprocessing the calcium traces. Some datasets may require
-            additional preprocessing steps, in which case this method should be overridden.
+                    additional preprocessing steps, in which case this method should be overridden.
 
     Note:
         This class is intended to be subclassed, not directly instantiated.
@@ -1045,9 +1071,9 @@ class BasePreprocessor:
         self.source_dataset = dataset_name
         self.transform = transform
         self.smooth_method = smooth_method
-        self.smooth_kwargs = kwargs
-        self.resample_dt = resample_dt
         self.interpolate_method = interpolate_method
+        self.resample_dt = resample_dt
+        self.smooth_kwargs = kwargs
         self.raw_data_path = os.path.join(ROOT_DIR, "opensource_data")
         self.processed_data_path = os.path.join(ROOT_DIR, "data/processed/neural")
 
@@ -1060,9 +1086,9 @@ class BasePreprocessor:
         )
 
     def resample_data(self, time_in_seconds, data):
-        og_dt = time_in_seconds[1] - time_in_seconds[0]
+        original_dt = time_in_seconds[1] - time_in_seconds[0]
         # Upsample (interpolate)
-        if og_dt >= self.resample_dt:
+        if original_dt >= self.resample_dt:
             return interpolate_data(
                 time_in_seconds,
                 data,
@@ -1154,7 +1180,7 @@ class BasePreprocessor:
         worm_idx,
     ):
         """
-        Helper function for preprocess calcium imaging data from one worm.
+        Helper function for preprocessing calcium fluorescence neural data from one worm.
 
         Args:
             neuron_IDs (list): List of arrays of neuron IDs.
@@ -1198,10 +1224,10 @@ class BasePreprocessor:
             # 3. Compute calcium dynamics (residual calcium)
             time_in_seconds = raw_timeVectorSeconds[i].reshape(raw_timeVectorSeconds[i].shape[0], 1)
             time_in_seconds = np.array(time_in_seconds, dtype=np.float32)
-
+            time_in_seconds = time_in_seconds - time_in_seconds[0]  # start at 0.0 seconds
             dt = np.gradient(time_in_seconds, axis=0)  # vector
             dt[dt == 0] = np.finfo(float).eps
-            original_dt = np.median(dt).item()  # scalar
+            original_median_dt = np.median(dt).item()  # scalar
             residual_calcium = np.gradient(calcium_data, axis=0) / dt  # calcium dynamics
             # 4. Smooth data
             smooth_calcium_data = self.smooth_data(calcium_data, time_in_seconds)
@@ -1233,13 +1259,15 @@ class BasePreprocessor:
                     "num_named_neurons": num_named_neurons,
                     "num_neurons": int(num_neurons),
                     "num_unknown_neurons": num_unknown_neurons,
-                    "og_calcium_data": calcium_data,  # normalized
-                    "og_max_timesteps": int(calcium_data.shape[0]),  # from original time vector
-                    "og_median_dt": og_dt,  # scalar from original time vector
-                    "og_residual_calcium": residual_calcium,  # not resampled
-                    "og_smooth_calcium_data": smooth_calcium_data,  # normalized and smoothed
-                    "og_smooth_residual_calcium": smooth_residual_calcium,  # smoothed but not resampled
-                    "og_time_in_seconds": time_in_seconds,  # original time vector
+                    "original_calcium_data": calcium_data,  # normalized
+                    "original_max_timesteps": int(
+                        calcium_data.shape[0]
+                    ),  # from original time vector
+                    "original_median_dt": original_median_dt,  # scalar from original time vector
+                    "original_residual_calcium": residual_calcium,  # not resampled
+                    "original_smooth_calcium_data": smooth_calcium_data,  # normalized and smoothed
+                    "original_smooth_residual_calcium": smooth_residual_calcium,  # smoothed but not resampled
+                    "original_time_in_seconds": time_in_seconds,  # original time vector
                     "median_dt": self.resample_dt,  # scalar from resampled time vector
                     "residual_calcium": resampled_residual_calcium,  # resampled
                     "smooth_calcium_data": resampled_smooth_calcium_data,  # normalized, smoothed and resampled
@@ -1274,6 +1302,7 @@ class Kato2015Preprocessor(BasePreprocessor):
         timeVectorSeconds = (
             arr["timeVectorSeconds"] if "timeVectorSeconds" in arr.keys() else arr["tv"]
         )
+        # Return the extracted data
         return all_IDs, all_traces, timeVectorSeconds
 
     def create_metadata(self):
@@ -1321,6 +1350,7 @@ class Nichols2017Preprocessor(BasePreprocessor):
         all_traces = arr["traces"]
         # Time vector in seconds
         timeVectorSeconds = arr["timeVectorSeconds"]
+        # Return the extracted data
         return all_IDs, all_traces, timeVectorSeconds
 
     def create_metadata(self):
@@ -1367,9 +1397,13 @@ class Skora2018Preprocessor(BasePreprocessor):
         )
 
     def extract_data(self, arr):
+        # Identified neuron IDs (only subset have neuron names)
         all_IDs = arr["IDs"]
+        # Neural activity traces corrected for bleaching
         all_traces = arr["traces"]
+        # Time vector in seconds
         timeVectorSeconds = arr["timeVectorSeconds"]
+        # Return the extracted data
         return all_IDs, all_traces, timeVectorSeconds
 
     def create_metadata(self):
@@ -1416,9 +1450,13 @@ class Kaplan2020Preprocessor(BasePreprocessor):
         return data
 
     def extract_data(self, arr):
+        # Identified neuron IDs (only subset have neuron names)
         all_IDs = arr["neuron_ID"]
+        # Neural activity traces corrected for bleaching
         all_traces = arr["traces_bleach_corrected"]
+        # Time vector in seconds
         timeVectorSeconds = arr["time_vector"]
+        # Return the extracted data
         return all_IDs, all_traces, timeVectorSeconds
 
     def create_metadata(self):
@@ -1470,7 +1508,8 @@ class Yemini2021Preprocessor(BasePreprocessor):
 
     def extract_data(self, raw_data):
         """
-        A more complicated `extract_data` method was necessary for the Yemini2021 dataset.
+        A more complicated `extract_data` method
+        was necessary for the Yemini2021 dataset.
         """
         # Frames per second
         fps = raw_data["fps"].item()
@@ -1601,12 +1640,17 @@ class Uzel2022Preprocessor(BasePreprocessor):
         )
 
     def load_data(self, file_name):
+        # Load data with mat73
         return mat73.loadmat(os.path.join(self.raw_data_path, self.source_dataset, file_name))
 
     def extract_data(self, arr):
+        # Identified neuron IDs (only subset have neuron names)
         all_IDs = arr["IDs"]
+        # Neural activity traces corrected for bleaching
         all_traces = arr["traces"]  # (time, neurons)
+        # Time vector in seconds
         timeVectorSeconds = arr["tv"]
+        # Return the extracted data
         return all_IDs, all_traces, timeVectorSeconds
 
     def create_metadata(self):
@@ -1651,6 +1695,7 @@ class Lin2023Preprocessor(BasePreprocessor):
         return data
 
     def extract_data(self, data_file):
+        """Slightly different extract_data method for Lin2023 dataset."""
         dataset_raw = self.load_data(data_file)
         # Filter for proofread neurons.
         _filter = dataset_raw["use_flag"].flatten() > 0
@@ -1664,8 +1709,9 @@ class Lin2023Preprocessor(BasePreprocessor):
         imputer = IterativeImputer(random_state=0)
         if np.isnan(raw_activitiy).any():
             raw_activitiy = imputer.fit_transform(raw_activitiy)
-        # Return the extracted data
+        # Make the extracted data into a list of lists
         neuron_IDs, raw_traces, time_vector_seconds = [neurons], [raw_activitiy], [raw_time_vec]
+        # Return the extracted data
         return neuron_IDs, raw_traces, time_vector_seconds
 
     def create_metadata(self):
@@ -1714,10 +1760,11 @@ class Leifer2023Preprocessor(BasePreprocessor):
         return data_array
 
     def extract_data(self, data_file, labels_file, time_file):
+        """Slightly different extract_data method for Leifer2023 dataset."""
         real_data = self.load_data(data_file)
         label_list = self.load_labels(labels_file)[: real_data.shape[1]]
         time_in_seconds = self.load_time_vector(time_file)
-        # remove columns where all values are NaN
+        # Remove columns where all values are NaN
         mask = np.argwhere(~np.isnan(real_data).all(axis=0)).flatten()
         real_data = real_data[:, mask]
         label_list = np.array(label_list, dtype=str)[mask].tolist()
@@ -1733,7 +1780,7 @@ class Leifer2023Preprocessor(BasePreprocessor):
             real_data.shape[0] == time_in_seconds.shape[0]
         ), "Time vector does not match data!\n Files: {data_file}, {time_file}"
         # Return the extracted data
-        return real_data, label_list, time_in_seconds
+        return label_list, real_data, time_in_seconds
 
     def create_neuron_idx(self, label_list):
         """
@@ -1836,9 +1883,11 @@ class Leifer2023Preprocessor(BasePreprocessor):
             labels_file = os.path.join(data_dir, f"{str(i)}_labels.txt")
             time_file = os.path.join(data_dir, f"{str(i)}_t.txt")
             # Load and extract raw data
-            real_data, label_list, time_in_seconds = self.extract_data(
+            label_list, real_data, time_in_seconds = self.extract_data(
                 data_file, labels_file, time_file
             )
+            # Set time to start at 0.0 seconds
+            time_in_seconds = time_in_seconds - time_in_seconds[0]
             # Skip worms with no recorded neurons
             if len(label_list) == 0:
                 worm_idx -= 1
@@ -1857,7 +1906,7 @@ class Leifer2023Preprocessor(BasePreprocessor):
             # 3. Compute calcium dynamics (residual calcium)
             dt = np.gradient(time_in_seconds, axis=0)  # vector
             dt[dt == 0] = np.finfo(float).eps
-            original_dt = np.median(dt).item()  # scalar
+            original_median_dt = np.median(dt).item()  # scalar
             residual_calcium = np.gradient(calcium_data, axis=0) / dt
             # 4. Smooth data
             smooth_calcium_data = self.smooth_data(calcium_data, time_in_seconds)
@@ -1892,13 +1941,15 @@ class Leifer2023Preprocessor(BasePreprocessor):
                     "num_named_neurons": num_named_neurons,
                     "num_neurons": int(num_neurons),
                     "num_unknown_neurons": num_unknown_neurons,
-                    "og_calcium_data": calcium_data,  # normalized
-                    "og_max_timesteps": int(calcium_data.shape[0]),  # from original time vector
-                    "og_median_dt": og_dt,  # scalar from original time vector
-                    "og_residual_calcium": residual_calcium,  # not resampled
-                    "og_smooth_calcium_data": smooth_calcium_data,  # normalized and smoothed
-                    "og_smooth_residual_calcium": smooth_residual_calcium,  # smoothed but not resampled
-                    "og_time_in_seconds": time_in_seconds,  # original time vector
+                    "original_calcium_data": calcium_data,  # normalized
+                    "original_max_timesteps": int(
+                        calcium_data.shape[0]
+                    ),  # from original time vector
+                    "original_median_dt": original_median_dt,  # scalar from original time vector
+                    "original_residual_calcium": residual_calcium,  # not resampled
+                    "original_smooth_calcium_data": smooth_calcium_data,  # normalized and smoothed
+                    "original_smooth_residual_calcium": smooth_residual_calcium,  # smoothed but not resampled
+                    "original_time_in_seconds": time_in_seconds,  # original time vector
                     "median_dt": self.resample_dt,  # scalar from resampled time vector
                     "residual_calcium": resampled_residual_calcium,  # resampled
                     "smooth_calcium_data": resampled_smooth_calcium_data,  # normalized, smoothed and resampled
@@ -1945,24 +1996,28 @@ class Flavell2023Preprocessor(BasePreprocessor):
         """
         # If files use H5 format
         if isinstance(file_data, h5py.File):
+            # Time vector in seconds
             time_in_seconds = np.array(file_data["timestamp_confocal"], dtype=np.float32)
-            # Start time at 0.0 seconds
-            time_in_seconds = time_in_seconds - time_in_seconds[0]
             time_in_seconds = time_in_seconds.reshape((-1, 1))
             calcium_data = np.array(file_data["trace_array"], dtype=np.float32)
             neurons = np.array(file_data["neuropal_label"], dtype=str)
+            # For bilateral neurons with ambiguous location, we randomly assign L/R
             neurons_copy = []
+            # TODO: This is not comprehensive enough; make more like below
             for neuron in neurons:
                 if neuron.replace("?", "L") not in set(neurons_copy):
                     neurons_copy.append(neuron.replace("?", "L"))
                 else:
                     neurons_copy.append(neuron.replace("?", "R"))
+            # Filter for unique neuron labels
             neurons = np.array(neurons_copy, dtype=str)
+            neurons, unique_indices = np.unique(neurons, return_index=True, return_counts=False)
+            # Only get data for unique neurons
+            calcium_data = calcium_data[:, unique_indices]
         # Otherwise if files use JSON format
         elif isinstance(file_data, dict):
+            # Time vector in seconds
             time_in_seconds = np.array(file_data["timestamp_confocal"], dtype=np.float32)
-            # Start time at 0.0 seconds
-            time_in_seconds = time_in_seconds - time_in_seconds[0]
             time_in_seconds = time_in_seconds.reshape((-1, 1))
             # Raw traces (list)
             raw_traces = file_data["trace_array"]
@@ -1980,51 +2035,57 @@ class Flavell2023Preprocessor(BasePreprocessor):
             for i in ids.keys():
                 label = ids[str(i)]["label"]
                 neurons[int(i) - 1] = label
-            # Treat the '?' labels
+            # Handle ambiguous neuron labels
             for i in range(number_neurons):
                 label = neurons[i]
                 if not label.isnumeric():
+                    # Treat the '?' in labels
                     if "?" in label and "??" not in label:
                         # Find the group which the neuron belongs to
-                        label_split = label.split("?")[0]
-                        # Verify possible labels
-                        possible_labels = [
-                            neuron_name for neuron_name in NEURONS_302 if label_split in neuron_name
-                        ]
-                        # Exclude possibilities that we already have
+                        label_split = label.split("?")
+                        # Find potential label matches excluding ones we already have
                         possible_labels = [
                             neuron_name
-                            for neuron_name in possible_labels
-                            if neuron_name not in neurons
+                            for neuron_name in NEURONS_302
+                            if (label_split[0] in neuron_name)
+                            and (label_split[-1] in neuron_name)
+                            and (neuron_name not in set(neurons))
                         ]
-                        # Random pick one of the possibilities
-                        neurons[i] = np.random.choice(possible_labels)
-            for i in range(number_neurons):
-                label = neurons[i]
-                if not label.isnumeric():
-                    if "??" in label:
+                        ### DEBUG: Old appraoch ###
+                        # # Random pick one of the possibilities
+                        # neurons[i] = np.random.choice(possible_labels)
+                        ###########################
+                        # Pick the neuron label with the nearest similarity
+                        neuron_label, _ = find_nearest_label(label, possible_labels, char="?")
+                        neurons[i] = neuron_label
+                    # Treat the '??' in labels
+                    elif "??" in label:
                         # Find the group which the neuron belongs to
-                        label_split = label.split("?")[0]
-                        # Verify possible labels
-                        possible_labels = [
-                            neuron_name for neuron_name in NEURONS_302 if label_split in neuron_name
-                        ]
-                        # Exclude possibilities that we already have
+                        label_split = label.split("??")
+                        # Find potential label matches excluding ones we already have
                         possible_labels = [
                             neuron_name
-                            for neuron_name in possible_labels
-                            if neuron_name not in neurons
+                            for neuron_name in NEURONS_302
+                            if (label_split[0] in neuron_name)
+                            and (label_split[-1] in neuron_name)
+                            and (neuron_name not in set(neurons))
                         ]
-                        # Random pick one of the possibilities
-                        neurons[i] = np.random.choice(possible_labels)
+                        ### DEBUG: Old appraoch ###
+                        # # Random pick one of the possibilities
+                        # neurons[i] = np.random.choice(possible_labels)
+                        ###########################
+                        # Pick the neuron label with the nearest similarity
+                        neuron_label, _ = find_nearest_label(label, possible_labels, char="??")
+                        neurons[i] = neuron_label
+            # Filter for unique neuron labels
             neurons = np.array(neurons, dtype=str)
             neurons, unique_indices = np.unique(neurons, return_index=True, return_counts=False)
             # Only get data for unique neurons
             calcium_data = calcium_data[:, unique_indices]
         else:
             raise ValueError(f"Unsupported data type: {type(file_data)}")
-        # Return the data
-        return time_in_seconds, calcium_data, neurons
+        # Return the extracted data
+        return neurons, calcium_data, time_in_seconds
 
     def create_metadata(self):
         extra_info = dict(
@@ -2038,28 +2099,24 @@ class Flavell2023Preprocessor(BasePreprocessor):
         for i, file in enumerate(os.listdir(os.path.join(self.raw_data_path, self.source_dataset))):
             if not (file.endswith(".h5") or file.endswith(".json")):
                 continue
-
             worm = "worm" + str(i)
             file_data = self.load_data(file)  # load
-            time_in_seconds, calcium_data, neurons = self.extract_data(file_data)  # extract
-
+            # 0. Extract raw data
+            neurons, calcium_data, time_in_seconds = self.extract_data(file_data)
+            # Set time to start at 0.0 seconds
+            time_in_seconds = time_in_seconds - time_in_seconds[0]
             # 1. Map named neurons
             neuron_to_idx, num_named_neurons = self.create_neuron_idx(neurons)
-
             # 2. Normalize calcium data
             calcium_data = self.normalize_data(calcium_data)
-
             # 3. Compute calcium dynamics (residual calcium)
             dt = np.gradient(time_in_seconds, axis=0)
             dt[dt == 0] = np.finfo(float).eps
-            og_dt = np.median(dt).item()
-
+            original_median_dt = np.median(dt).item()
             residual_calcium = np.gradient(calcium_data, axis=0) / dt
-
             # 4. Smooth data
             smooth_calcium_data = self.smooth_data(calcium_data, time_in_seconds)
             smooth_residual_calcium = self.smooth_data(residual_calcium, time_in_seconds)
-
             # 5. Resample data (raw and smoothed)
             resampled_time_in_seconds, resampled_calcium_data = self.resample_data(
                 time_in_seconds, calcium_data
@@ -2075,10 +2132,8 @@ class Flavell2023Preprocessor(BasePreprocessor):
                 resampled_time_in_seconds,
                 resampled_smooth_residual_calcium,
             ) = self.resample_data(time_in_seconds, smooth_residual_calcium)
-
             max_timesteps, num_neurons = resampled_calcium_data.shape
             num_unknown_neurons = int(num_neurons) - num_named_neurons
-
             # 6. Save data
             worm_dict = {
                 worm: {
@@ -2086,22 +2141,24 @@ class Flavell2023Preprocessor(BasePreprocessor):
                     "smooth_method": self.smooth_method,
                     "interpolate_method": self.interpolate_method,
                     "worm": worm,
-                    "og_calcium_data": calcium_data,  # normalized
-                    "og_smooth_calcium_data": smooth_calcium_data,  # normalized and smoothed
+                    "original_calcium_data": calcium_data,  # normalized
+                    "original_smooth_calcium_data": smooth_calcium_data,  # normalized and smoothed
                     "calcium_data": resampled_calcium_data,  # normalized and resampled
                     "smooth_calcium_data": resampled_smooth_calcium_data,  # normalized, smoothed and resampled
                     "residual_calcium": resampled_residual_calcium,  # resampled
-                    "og_residual_calcium": residual_calcium,  # not resampled
+                    "original_residual_calcium": residual_calcium,  # not resampled
                     "smooth_residual_calcium": resampled_smooth_residual_calcium,  # smoothed and resampled
-                    "og_smooth_residual_calcium": smooth_residual_calcium,  # smoothed but not resampled
+                    "original_smooth_residual_calcium": smooth_residual_calcium,  # smoothed but not resampled
                     "neuron_to_idx": neuron_to_idx,
                     "idx_to_neuron": dict((v, k) for k, v in neuron_to_idx.items()),
                     "max_timesteps": int(max_timesteps),  # from resampled time vector
-                    "og_max_timesteps": int(calcium_data.shape[0]),  # from original time vector
-                    "og_time_in_seconds": time_in_seconds,  # original time vector
+                    "original_max_timesteps": int(
+                        calcium_data.shape[0]
+                    ),  # from original time vector
+                    "original_time_in_seconds": time_in_seconds,  # original time vector
                     "time_in_seconds": resampled_time_in_seconds,  # resampled time vector
                     "dt": dt,  # vector from original time vector
-                    "og_median_dt": og_dt,  # scalar from original time vector
+                    "original_median_dt": original_median_dt,  # scalar from original time vector
                     "median_dt": self.resample_dt,  # scalar from resampled time vector
                     "num_neurons": int(num_neurons),
                     "num_named_neurons": num_named_neurons,
@@ -2110,10 +2167,9 @@ class Flavell2023Preprocessor(BasePreprocessor):
                 }
             }
             preprocessed_data.update(worm_dict)
-
-        # reshape calcium data
+        # Reshape calcium data
         for worm in preprocessed_data.keys():
             preprocessed_data[worm] = reshape_calcium_data(preprocessed_data[worm])
-        # save data
+        # Save data
         self.save_data(preprocessed_data)
         logger.info(f"Finished processing {self.source_dataset}.")

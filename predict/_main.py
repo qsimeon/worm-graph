@@ -34,7 +34,7 @@ def make_predictions(
     context_window = predict_config.context_window
     if context_window is None:
         context_window = BLOCK_SIZE
-        logger.info(f"DEBUG default context window: {context_window}\n")  # DEBUG
+        logger.info(f"Defaulting to context window: {context_window}\n")  # DEBUG
     # Create prediction directories
     os.makedirs(os.path.join(log_dir, "prediction"), exist_ok=True)
     os.makedirs(os.path.join(log_dir, "prediction", "train"), exist_ok=True)
