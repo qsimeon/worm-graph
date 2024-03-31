@@ -143,92 +143,8 @@ def print_parameters(model, verbose=False):
 
 # # # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
 
-
-# # # "Cores" or Inner Models for Different Model Architectures # # #
+# # # Some helpful module implementations to be used in some model architectures # # #
 # # # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
-
-
-class MultiChannelReadout(torch.nn.Module):
-    """
-    A module for obtaining a readout function for each channel in a multi-dimensional input.
-    """
-
-    def __init__(self, num_channels, in_features, out_features):
-        super().__init__()
-        self.num_channels = num_channels
-        self.in_features = in_features
-        self.out_features = out_features
-        self.readouts = torch.nn.ModuleList(
-            [torch.nn.Linear(self.in_features, self.out_features) for _ in range(self.num_channels)]
-        )
-
-    def forward(self, x):
-        """
-        Args:
-            x: Tensor, shape (batch_size, seq_len, in_features)
-        Output:
-            output: Tensor, shape (batch_size, seq_len, num_channels, out_features)
-        """
-        batch_size, seq_len, in_features = x.shape
-        assert (
-            in_features == self.in_features
-        ), "Input dimension does not match expected `in_features`."
-        output = torch.empty(batch_size, seq_len, self.num_channels, self.out_features).to(x.device)
-        for _ in range(self.num_channels):
-            output[:, :, _, :] = self.readouts[_](x)
-        return output  # (batch_size, seq_len, num_channels, out_features)
-
-
-class MultiChannelEmbedding(torch.nn.Module):
-    """
-    A module for obtaining an embedding table for each channel of a multi-dimensional token.
-    """
-
-    def __init__(self, num_channels, num_embeddings, embedding_dim):
-        super().__init__()
-        self.num_channels = num_channels
-        self.num_embeddings = num_embeddings + 1  # 0-th index token used for unmasked values
-        self.embedding_dim = embedding_dim
-        self.embeddings = torch.nn.ModuleList(
-            [
-                torch.nn.Embedding(self.num_embeddings, self.embedding_dim)
-                for _ in range(self.num_channels)
-            ]
-        )
-
-    @torch.autocast(
-        device_type=DEVICE.type, dtype=torch.half if "cuda" in DEVICE.type else torch.bfloat16
-    )
-    def forward(self, x):
-        """
-        Args:
-            x: Tensor, shape (batch_size, seq_len, num_channels)
-        Output:
-            output: Tensor, shape (batch_size, seq_len, embedding_dim)
-        """
-        # Get the input shape
-        batch_size, seq_len, num_channels = x.shape
-        # Reshape x to a 2D tensor for embedding lookup
-        x_reshaped = x.view(-1, num_channels)  # (batch_size * seq_len, num_channels)
-        # Perform embedding lookup for each channel and concatenate
-        embedded = torch.cat(
-            [self.embeddings[i](x_reshaped[:, i]) for i in range(num_channels)], dim=-1
-        )
-        # Reshape back to the original batch_size and seq_len, sum across channels
-        output = embedded.view(batch_size, seq_len, num_channels, self.embedding_dim).sum(
-            dim=2
-        )  # (batch_size, seq_len, embedding_dim)
-        # Return the embedding output
-        return output
-
-
-class ToFloat32(torch.nn.Module):
-    """
-    A custom layer for type conversion.
-    """
-
-    def forward(self, x):
-        return x.to(torch.float32)
 
 
 class RMSNorm(torch.nn.Module):
@@ -278,6 +194,13 @@ class PositionalEncoding(torch.nn.Module):
         x = x * math.sqrt(self.d_model)  # normalization used in Transformers
         x = x + self.pe[:, : x.size(1), :]  # add positional encoding to input
         return self.dropout(x)
+
+
+# # # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
+
+
+# # # "Cores" or Inner Models for Different Model Architectures # # #
+# # # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
 
 
 class CausalTransformer(torch.nn.Module):
@@ -759,7 +682,7 @@ class Model(torch.nn.Module):
         # Split the tensor into groups based on the batch dimension
         batch_groups = torch.split(masked_input_positions, counts.tolist())
         # For each batch index update the neural embedding only using observed tokens and maksed features
-        for group in batch_groups:  # bigO(batch_size)
+        for group in batch_groups:  # time ~ bigO(batch_size)
             batch_idx = group[:, 0].unique().item()
             observed_inputs = group[:, 1]
             batch_tokens = token_sequence[batch_idx]  # (seq_len, )
