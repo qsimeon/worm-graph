@@ -1518,14 +1518,14 @@ class Yemini2021Preprocessor(BasePreprocessor):
         # The list `bilat_neurons` does not disambiguate L/R neurons, so we need to do that
         bilat_neurons = [_.item() for _ in raw_data["neurons"].squeeze()]
         # List of lists. Outer list same length as `neuron`. Inner lists are boolean masks for L/R neurons organized by file in `files`.
-        is_left_neuron = [
+        is_left_neuron = [  # in each inner list, all L (1) neurons appear before all R (0) neurons
             _.squeeze().tolist() for _ in raw_data["is_L"].squeeze()
-        ]  # in each inner list, all L (1) neurons appear before all R (0) neurons. non-bilateral neurons are nan
-        #  Histogram-normalized neuronal traces linearly scaled and offset so that neurons are comparable
+        ]  # non-bilateral neurons are nan
+        # Histogram-normalized neuronal traces linearly scaled and offset so that neurons are comparable
         norm_traces = [
             _.squeeze().tolist() for _ in raw_data["norm_traces"].squeeze()
-        ]  # list-of-lists like is_left_neuron
-        # This part is the extract_data
+        ]  # list-of-lists like `is_left_neuron`
+        # This part is the meat of the `extract_data` method
         neuron_IDs = []
         traces = []
         time_vector_seconds = []
@@ -1579,7 +1579,7 @@ class Yemini2021Preprocessor(BasePreprocessor):
                     tvec = np.arange(act.size) / fps
             # Add neurons to list of neuron_IDs
             neuron_IDs.append(neurons)
-            # Reshape activity to be a 2D array
+            # Reshape activity to be a 2D array with shape (time, neurons)
             activity = np.stack(
                 [
                     np.zeros_like(tvec, dtype=np.float32) if act.size == 0 else act
@@ -1870,7 +1870,7 @@ class Leifer2023Preprocessor(BasePreprocessor):
         # Load and preprocess data
         preprocessed_data = dict()
         data_dir = os.path.join(self.raw_data_path, self.source_dataset)
-        # Every worm has 6 txt files
+        # Every worm has 6 text files
         files = os.listdir(data_dir)
         num_worms = int(len(files) / 6)
         # Initialize worm index outside file loop
@@ -1890,10 +1890,16 @@ class Leifer2023Preprocessor(BasePreprocessor):
             time_in_seconds = time_in_seconds - time_in_seconds[0]
             # Skip worms with no recorded neurons
             if len(label_list) == 0:
+                logger.info(
+                    f"No recorded neurons from {worm}: \n\t {(data_file, labels_file, time_file)} "
+                )  # DEBUG
                 worm_idx -= 1
                 continue
             # Skip worms with very short recordings
             if len(time_in_seconds) < 1000:
+                logger.info(
+                    f"Recording too short from {worm}: \n\t {len(time_in_seconds)} timesteps"
+                )  # DEBUG
                 worm_idx -= 1
                 continue
             # 1. Map named neurons
@@ -1907,7 +1913,7 @@ class Leifer2023Preprocessor(BasePreprocessor):
             dt = np.gradient(time_in_seconds, axis=0)  # vector
             dt[dt == 0] = np.finfo(float).eps
             original_median_dt = np.median(dt).item()  # scalar
-            residual_calcium = np.gradient(calcium_data, axis=0) / dt
+            residual_calcium = np.gradient(calcium_data, axis=0) / dt  # vector
             # 4. Smooth data
             smooth_calcium_data = self.smooth_data(calcium_data, time_in_seconds)
             smooth_residual_calcium = self.smooth_data(residual_calcium, time_in_seconds)
@@ -2051,10 +2057,6 @@ class Flavell2023Preprocessor(BasePreprocessor):
                             and (label_split[-1] in neuron_name)
                             and (neuron_name not in set(neurons))
                         ]
-                        ### DEBUG: Old appraoch ###
-                        # # Random pick one of the possibilities
-                        # neurons[i] = np.random.choice(possible_labels)
-                        ###########################
                         # Pick the neuron label with the nearest similarity
                         neuron_label, _ = find_nearest_label(label, possible_labels, char="?")
                         neurons[i] = neuron_label
@@ -2070,10 +2072,6 @@ class Flavell2023Preprocessor(BasePreprocessor):
                             and (label_split[-1] in neuron_name)
                             and (neuron_name not in set(neurons))
                         ]
-                        ### DEBUG: Old appraoch ###
-                        # # Random pick one of the possibilities
-                        # neurons[i] = np.random.choice(possible_labels)
-                        ###########################
                         # Pick the neuron label with the nearest similarity
                         neuron_label, _ = find_nearest_label(label, possible_labels, char="??")
                         neurons[i] = neuron_label

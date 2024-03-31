@@ -273,7 +273,7 @@ class PositionalEncoding(torch.nn.Module):
         Args:
             x: Tensor, shape (batch_size, seq_len, embedding_dim)
         """
-        x = x * math.sqrt(self.d_model)  # normalization used in the original transformer paper
+        x = x * math.sqrt(self.d_model)  # normalization used in Transformers
         x = x + self.pe[:, : x.size(1), :]  # add positional encoding to input
         return self.dropout(x)
 
@@ -309,8 +309,8 @@ class CausalTransformer(torch.nn.Module):
 
 
 class FeedForward(torch.nn.Module):
-    """
-    A simple linear layer followed by a non-linearity and dropout.
+    """Simple linear layer followed by a non-linearity and dropout.
+    Includes a residual/'skip' connection in the forward method.
     n_embd: embedding dimension or width of the single hidden layer.
     dropout: probability of dropping a neuron.
     """
@@ -324,9 +324,6 @@ class FeedForward(torch.nn.Module):
         )
 
     def forward(self, x):
-        """
-        Uses residual ("skip") connection.
-        """
         x = x + self.ffwd(x)
         return x
 
@@ -362,6 +359,9 @@ class SelfAttention(torch.nn.Module):
             src.size(1),
             device=src.device,
         )
+        ### DEBUG ###
+        logger.info(f"causal_mask: {causal_mask}")  # DEBUG
+        ### DEBUG ###
         # Apply self-attention
         attn_output, _ = self.attn(
             key=src,
@@ -441,185 +441,6 @@ class CTRNN(torch.nn.Module):
         # Stack together output from all time steps
         output = torch.stack(output, dim=1)  # (batch, seq_len, hidden_size)
         return output, hidden
-
-
-# TODO: Implement MAMBA Model
-@dataclass
-class MambaArgs:
-    d_model: int  # dimension of input
-    n_layer: int
-    d_state: int = 16  # dimension of hidden state
-    expand: int = 1  # expansion factor (1 = no expansion)
-    dt_rank: Union[int, str] = "auto"
-    d_conv: int = 4
-    conv_bias: bool = True
-    bias: bool = False
-
-    def __post_init__(self):
-        self.d_inner = int(self.expand * self.d_model)
-
-        if self.dt_rank == "auto":
-            self.dt_rank = math.ceil(self.d_model / 16)
-
-
-class MambaBlock(torch.nn.Module):
-    """
-    Code taken from https://github.com/johnma2006/mamba-minimal/blob/master/model.py#L143.
-    """
-
-    def __init__(self, args: MambaArgs):
-        """A single Mamba block, as described in Figure 3 in Section 3.4 in the Mamba paper [1]."""
-        super().__init__()
-        self.args = args
-
-        self.norm = RMSNorm(args.d_model)
-
-        self.in_proj = torch.nn.Linear(args.d_model, args.d_inner * 2, bias=args.bias)
-
-        self.conv1d = torch.nn.Conv1d(
-            in_channels=args.d_inner,
-            out_channels=args.d_inner,
-            bias=args.conv_bias,
-            kernel_size=args.d_conv,
-            groups=args.d_inner,
-            padding=args.d_conv - 1,
-        )
-
-        # x_proj takes in `x` and outputs the input-specific Δ, B, C
-        self.x_proj = torch.nn.Linear(args.d_inner, args.dt_rank + args.d_state * 2, bias=False)
-
-        # dt_proj projects Δ from dt_rank to d_in
-        self.dt_proj = torch.nn.Linear(args.dt_rank, args.d_inner, bias=True)
-
-        A = repeat(torch.arange(1, args.d_state + 1), "n -> d n", d=args.d_inner)
-        self.A_log = torch.nn.Parameter(torch.log(A))
-        self.D = torch.nn.Parameter(torch.ones(args.d_inner))
-        self.out_proj = torch.nn.Linear(args.d_inner, args.d_model, bias=args.bias)
-
-    def forward(self, x):
-        """Mamba block forward. This looks the same as Figure 3 in Section 3.4 in the Mamba paper [1].
-
-        Args:
-            x: shape (b, l, d)    (See Glossary at top for definitions of b, l, d_in, n...)
-
-        Returns:
-            output: shape (b, l, d)
-
-        Official Implementation:
-            class Mamba, https://github.com/state-spaces/mamba/blob/main/mamba_ssm/modules/mamba_simple.py#L119
-            mamba_inner_ref(), https://github.com/state-spaces/mamba/blob/main/mamba_ssm/ops/selective_scan_interface.py#L311
-
-        """
-        x_copy, x = torch.clone(x), self.norm(x)  # hack that does what a residual block would
-
-        (b, l, d) = x.shape
-
-        x_and_res = self.in_proj(x)  # shape (b, l, 2 * d_in)
-        (x, res) = x_and_res.split(split_size=[self.args.d_inner, self.args.d_inner], dim=-1)
-
-        x = rearrange(x, "b l d_in -> b d_in l")
-        x = self.conv1d(x)[:, :, :l]
-        x = rearrange(x, "b d_in l -> b l d_in")
-
-        x = torch.nn.functional.silu(x)
-
-        y = self.ssm(x)
-
-        y = y * torch.nn.functional.silu(res)
-
-        output = self.out_proj(y) + x_copy  # residual/skip connection
-
-        return output
-
-    def ssm(self, x):
-        """Runs the SSM. See:
-            - Algorithm 2 in Section 3.2 in the Mamba paper [1]
-            - run_SSM(A, B, C, u) in The Annotated S4 [2]
-
-        Args:
-            x: shape (b, l, d_in)    (See Glossary at top for definitions of b, l, d_in, n...)
-
-        Returns:
-            output: shape (b, l, d_in)
-
-        Official Implementation:
-            mamba_inner_ref(), https://github.com/state-spaces/mamba/blob/main/mamba_ssm/ops/selective_scan_interface.py#L311
-
-        """
-        (d_in, n) = self.A_log.shape
-
-        # Compute ∆ A B C D, the state space parameters.
-        #     A, D are input independent (see Mamba paper [1] Section 3.5.2 "Interpretation of A" for why A isn't selective)
-        #     ∆, B, C are input-dependent (this is a key difference between Mamba and the linear time invariant S4,
-        #                                  and is why Mamba is called **selective** state spaces)
-
-        A = -torch.exp(self.A_log.float())  # shape (d_in, n)
-        D = self.D.float()
-
-        x_dbl = self.x_proj(x)  # (b, l, dt_rank + 2*n)
-
-        (delta, B, C) = x_dbl.split(
-            split_size=[self.args.dt_rank, n, n], dim=-1
-        )  # delta: (b, l, dt_rank). B, C: (b, l, n)
-        delta = torch.nn.functional.softplus(self.dt_proj(delta))  # (b, l, d_in)
-
-        y = self.selective_scan(
-            x, delta, A, B, C, D
-        )  # This is similar to run_SSM(A, B, C, u) in The Annotated S4 [2]
-
-        return y
-
-    def selective_scan(self, u, delta, A, B, C, D):
-        """Does selective scan algorithm. See:
-            - Section 2 State Space Models in the Mamba paper [1]
-            - Algorithm 2 in Section 3.2 in the Mamba paper [1]
-            - run_SSM(A, B, C, u) in The Annotated S4 [2]
-
-        This is the classic discrete state space formula:
-            x(t + 1) = Ax(t) + Bu(t)
-            y(t)     = Cx(t) + Du(t)
-        except B and C (and the step size delta, which is used for discretization) are dependent on the input x(t).
-
-        Args:
-            u: shape (b, l, d_in)    (See Glossary at top for definitions of b, l, d_in, n...)
-            delta: shape (b, l, d_in)
-            A: shape (d_in, n)
-            B: shape (b, l, n)
-            C: shape (b, l, n)
-            D: shape (d_in,)
-
-        Returns:
-            output: shape (b, l, d_in)
-
-        Official Implementation:
-            selective_scan_ref(), https://github.com/state-spaces/mamba/blob/main/mamba_ssm/ops/selective_scan_interface.py#L86
-            Note: I refactored some parts out of `selective_scan_ref` out, so the functionality doesn't match exactly.
-
-        """
-        (b, l, d_in) = u.shape
-        n = A.shape[1]
-
-        # Discretize continuous parameters (A, B)
-        # - A is discretized using zero-order hold (ZOH) discretization (see Section 2 Equation 4 in the Mamba paper [1])
-        # - B is discretized using a simplified Euler discretization instead of ZOH. From a discussion with authors:
-        #   "A is the more important term and the performance doesn't change much with the simplification on B"
-        deltaA = torch.exp(einsum(delta, A, "b l d_in, d_in n -> b l d_in n"))
-        deltaB_u = einsum(delta, B, u, "b l d_in, b l n, b l d_in -> b l d_in n")
-
-        # Perform selective scan (see scan_SSM() in The Annotated S4 [2])
-        # Note that the below is sequential, while the official implementation does a much faster parallel scan that
-        # is additionally hardware-aware (like FlashAttention).
-        x = torch.zeros((b, d_in, n), device=deltaA.device)
-        ys = []
-        for i in range(l):
-            x = deltaA[:, i] * x + deltaB_u[:, i]
-            y = einsum(x, C[:, i, :], "b d_in n, b n -> b d_in")
-            ys.append(y)
-        y = torch.stack(ys, dim=1)  # shape (b, l, d_in)
-
-        y = y + u * D
-
-        return y
 
 
 # # # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
@@ -1441,54 +1262,9 @@ class FeatureFFNN(Model):
         return None
 
 
-class MambaCore(Model):
-    """
-    # TODO: Write a docstring for this model. Also get it working.
-    """
-
-    def __init__(
-        self,
-        input_size: int,
-        hidden_size: Union[int, None] = None,
-        loss: Union[Callable, None] = None,
-        l1_reg_param: float = 0.0,
-        **kwargs,
-    ):
-        # Initialize super class
-        super(MambaCore, self).__init__(
-            input_size,
-            hidden_size,
-            loss,
-            l1_reg_param,
-            **kwargs,
-        )
-        # Special parameters for this model
-        self.mamba_args = MambaArgs(
-            d_model=self.hidden_size,
-            n_layer=1,  # all our cores are single-layer modules
-            d_state=self.hidden_size,
-            # remaining args use defaults of MambaArgs dataclass
-        )
-        # Input to hidden transformation
-        self.input_hidden = torch.nn.Sequential(
-            self.latent_embedding,
-            # NOTE: Do NOT use LayerNorm here!
-        )
-        # Hidden to hidden transformation: FeedForward layer
-        self.hidden_hidden = MambaBlock(self.mamba_args)
-        # Instantiate internal hidden model (i.e. the "core")
-        self.inner_hidden_model = InnerHiddenModel(
-            hidden_hidden_model=self.hidden_hidden,
-            hidden_state=self.hidden,
-        )
-
-    def init_hidden(self, input_shape=None):
-        return None
-
-
 class PureAttention(Model):
     """
-    A model that used just the multi-head attention mechanism of the Transformer encoder
+    A model that uses just the multi-head attention mechanism of the Transformer encoder
     as its internal "core. This is in contrast to NeuralTransformer which uses a complete
     TransformerEncoderLayer as its "core" or inner hidden model.
     """
@@ -1522,7 +1298,7 @@ class PureAttention(Model):
         )  # number of attention heads (NOTE: must be divisor of `hidden_size`)
         logger.info(f"Number of attention heads: {self.num_heads}.")
         self.dropout = 0.1  # dropout rate
-        # Positional encoding (NOTE: must be after embedding)
+        # Positional encoding (NOTE:must be applied after embedding)
         self.positional_encoding = PositionalEncoding(
             d_model=self.hidden_size,
             dropout=self.dropout,
@@ -1589,7 +1365,7 @@ class NeuralTransformer(Model):
         )  # number of attention heads (NOTE: must be divisor of `hidden_size`)
         logger.info(f"Number of attention heads: {self.num_heads}.")
         self.dropout = 0.1  # dropout rate
-        # Positional encoding (NOTE: must be after embedding)
+        # Positional encoding (NOTE:must be applied after embedding)
         self.positional_encoding = PositionalEncoding(
             d_model=self.hidden_size,
             dropout=self.dropout,
