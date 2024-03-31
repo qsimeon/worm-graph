@@ -968,7 +968,7 @@ def pickle_neural_data(
             # Run the bash command
             std_out = subprocess.run(bash_command, text=True)
             # Output to log or terminal
-            print(std_out, end="\n\n")
+            logger.info(std_out)
             # Delete the zip file
             os.unlink(zip_path)
     # (re)-Pickle all the datasets ... OR
@@ -2014,20 +2014,27 @@ class Flavell2023Preprocessor(BasePreprocessor):
         """
         # If files use H5 format
         if isinstance(file_data, h5py.File):
+            # Time vector in seconds
             time_in_seconds = np.array(file_data["timestamp_confocal"], dtype=np.float32)
             time_in_seconds = time_in_seconds.reshape((-1, 1))
             calcium_data = np.array(file_data["trace_array"], dtype=np.float32)
             neurons = np.array(file_data["neuropal_label"], dtype=str)
             # For bilateral neurons with ambiguous location, we randomly assign L/R
             neurons_copy = []
+            # TODO: This is not comprehensive enough; make more like below
             for neuron in neurons:
                 if neuron.replace("?", "L") not in set(neurons_copy):
                     neurons_copy.append(neuron.replace("?", "L"))
                 else:
                     neurons_copy.append(neuron.replace("?", "R"))
+            # Filter for unique neuron labels
             neurons = np.array(neurons_copy, dtype=str)
+            neurons, unique_indices = np.unique(neurons, return_index=True, return_counts=False)
+            # Only get data for unique neurons
+            calcium_data = calcium_data[:, unique_indices]
         # Otherwise if files use JSON format
         elif isinstance(file_data, dict):
+            # Time vector in seconds
             time_in_seconds = np.array(file_data["timestamp_confocal"], dtype=np.float32)
             time_in_seconds = time_in_seconds.reshape((-1, 1))
             # Raw traces (list)
@@ -2046,72 +2053,55 @@ class Flavell2023Preprocessor(BasePreprocessor):
             for i in ids.keys():
                 label = ids[str(i)]["label"]
                 neurons[int(i) - 1] = label
-            # Treat the '?' in labels
+            # Handle ambiguous neuron labels
             for i in range(number_neurons):
                 label = neurons[i]
                 if not label.isnumeric():
+                    # Treat the '?' in labels
                     if "?" in label and "??" not in label:
                         # Find the group which the neuron belongs to
-                        label_split = label.split("?")[0]
-                        # Verify possible labels
-                        possible_labels = [
-                            neuron_name for neuron_name in NEURONS_302 if label_split in neuron_name
-                        ]
-                        # Exclude possibilities that we already have
+                        label_split = label.split("?")
+                        # Find potential label matches excluding ones we already have
                         possible_labels = [
                             neuron_name
-                            for neuron_name in possible_labels
-                            if neuron_name not in neurons
+                            for neuron_name in NEURONS_302
+                            if (label_split[0] in neuron_name)
+                            and (label_split[-1] in neuron_name)
+                            and (neuron_name not in set(neurons))
                         ]
+                        ### DEBUG: Old appraoch ###
                         # # Random pick one of the possibilities
                         # neurons[i] = np.random.choice(possible_labels)
-
-                        ### DEBUG ###
-                        _ = find_nearest_label(label_split, possible_labels, char="?")
-                        logger.info(
-                            f"DEBUG Flavell2023Preprocessor.extract_data\n\t original label: {label} \n\t possible labels: {possible_labels} \n\t chosen label: {_}"
-                        )
-                        # Pick the potential label with the nearest similarity
-                        neurons[i], _ = find_nearest_label(label_split, possible_labels, char="?")
-                        ### DEBUG ###
-
-            # Treat the '??' in labels
-            for i in range(number_neurons):
-                label = neurons[i]
-                if not label.isnumeric():
-                    if "??" in label:
+                        ###########################
+                        # Pick the neuron label with the nearest similarity
+                        neuron_label, _ = find_nearest_label(label, possible_labels, char="?")
+                        neurons[i] = neuron_label
+                    # Treat the '??' in labels
+                    elif "??" in label:
                         # Find the group which the neuron belongs to
-                        label_split = label.split("?")[0]
-                        # Verify possible labels
-                        possible_labels = [
-                            neuron_name for neuron_name in NEURONS_302 if label_split in neuron_name
-                        ]
-                        # Exclude possibilities that we already have
+                        label_split = label.split("??")
+                        # Find potential label matches excluding ones we already have
                         possible_labels = [
                             neuron_name
-                            for neuron_name in possible_labels
-                            if neuron_name not in neurons
+                            for neuron_name in NEURONS_302
+                            if (label_split[0] in neuron_name)
+                            and (label_split[-1] in neuron_name)
+                            and (neuron_name not in set(neurons))
                         ]
+                        ### DEBUG: Old appraoch ###
                         # # Random pick one of the possibilities
                         # neurons[i] = np.random.choice(possible_labels)
-
-                        ### DEBUG ###
-                        _ = find_nearest_label(label_split, possible_labels, char="?")
-                        logger.info(
-                            f"DEBUG Flavell2023Preprocessor.extract_data\n\t original label: {label} \n\t possible labels: {possible_labels} \n\t chosen label: {_}"
-                        )
-                        # Pick the potential label with the nearest similarity
-                        neurons[i], _ = find_nearest_label(label_split, possible_labels, char="?")
-                        ### DEBUG ###
-
+                        ###########################
+                        # Pick the neuron label with the nearest similarity
+                        neuron_label, _ = find_nearest_label(label, possible_labels, char="??")
+                        neurons[i] = neuron_label
+            # Filter for unique neuron labels
             neurons = np.array(neurons, dtype=str)
             neurons, unique_indices = np.unique(neurons, return_index=True, return_counts=False)
             # Only get data for unique neurons
             calcium_data = calcium_data[:, unique_indices]
         else:
             raise ValueError(f"Unsupported data type: {type(file_data)}")
-        # Set time to start at 0.0 seconds
-        time_in_seconds = time_in_seconds - time_in_seconds[0]
         # Return the extracted data
         return time_in_seconds, calcium_data, neurons
 
@@ -2130,22 +2120,9 @@ class Flavell2023Preprocessor(BasePreprocessor):
             worm = "worm" + str(i)
             file_data = self.load_data(file)  # load
             # 0. Extract raw data
-            time_in_seconds, calcium_data, neurons = self.extract_data(file_data)  # extract
-
-            ### DEBUG ###
-            logger.info(
-                f"DEBUG Flavell2023Preprocessor (preprocess) \n\t time_in_seconds: {type(time_in_seconds), time_in_seconds.shape}"
-            )
-            logger.info(f"\n\t initial time: {time_in_seconds[0]}")
-            ### DEBUG ###
-
+            time_in_seconds, calcium_data, neurons = self.extract_data(file_data)  
             # Set time to start at 0.0 seconds
             time_in_seconds = time_in_seconds - time_in_seconds[0]
-
-            ### DEBUG ###
-            logger.info(f"\n\t updated time: {time_in_seconds[0]}")
-            ### DEBUG ###
-
             # 1. Map named neurons
             neuron_to_idx, num_named_neurons = self.create_neuron_idx(neurons)
             # 2. Normalize calcium data
