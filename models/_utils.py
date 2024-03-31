@@ -196,7 +196,9 @@ class MultiChannelEmbedding(torch.nn.Module):
             ]
         )
 
-    @torch.autocast(device_type=DEVICE.type, dtype=torch.long)
+    @torch.autocast(
+        device_type=DEVICE.type, dtype=torch.half if "cuda" in DEVICE.type else torch.bfloat16
+    )
     def forward(self, x):
         """
         Args:
@@ -628,7 +630,9 @@ class Model(torch.nn.Module):
     def get_l1_reg_param(self):
         return self.l1_reg_param
 
-    @torch.autocast(device_type=DEVICE.type, dtype=torch.half)
+    @torch.autocast(
+        device_type=DEVICE.type, dtype=torch.half if "cuda" in DEVICE.type else torch.bfloat16
+    )
     def calculate_distances(self, neural_sequence, token_matrix, feature_mask=None):
         """
         Efficiently calculates Euclidean distances between neural sequence vectors and token matrix vectors.
@@ -676,7 +680,9 @@ class Model(torch.nn.Module):
         # Return distance matrix
         return distances
 
-    @torch.autocast(device_type=DEVICE.type, dtype=torch.half)
+    @torch.autocast(
+        device_type=DEVICE.type, dtype=torch.half if "cuda" in DEVICE.type else torch.bfloat16
+    )
     def tokenize_neural_data(
         self,
         neural_sequence: torch.Tensor,
@@ -766,7 +772,6 @@ class Model(torch.nn.Module):
         # Return the tokenized sequence
         return token_sequence
 
-    @torch.autocast(device_type=DEVICE.type, dtype=torch.long)
     def bin_tensor(self, nt):
         """
         Converts a neural tensor of continuous values from a standard normal
@@ -784,7 +789,9 @@ class Model(torch.nn.Module):
         it = bool_arr.argmax(dim=-1) + 1
         return it
 
-    @torch.autocast(device_type=DEVICE.type, dtype=torch.half)
+    @torch.autocast(
+        device_type=DEVICE.type, dtype=torch.half if "cuda" in DEVICE.type else torch.bfloat16
+    )
     def forward(self, input: torch.Tensor, mask: torch.Tensor):
         """
         Common forward method for all models.
@@ -816,7 +823,9 @@ class Model(torch.nn.Module):
         # Return output neural data
         return output
 
-    @torch.autocast(device_type=DEVICE.type, dtype=torch.half)
+    @torch.autocast(
+        device_type=DEVICE.type, dtype=torch.half if "cuda" in DEVICE.type else torch.bfloat16
+    )
     def forward_v2(self, input: torch.Tensor, mask: torch.Tensor):
         """
         Special forward method for the newer version (version_2) of the models
@@ -845,7 +854,9 @@ class Model(torch.nn.Module):
         # Return output token logits
         return output_logits
 
-    @torch.autocast(device_type=DEVICE.type, dtype=torch.half)
+    @torch.autocast(
+        device_type=DEVICE.type, dtype=torch.half if "cuda" in DEVICE.type else torch.bfloat16
+    )
     def loss_fn(self):
         """
         The loss function to be used by all the models (default versions).
@@ -903,7 +914,9 @@ class Model(torch.nn.Module):
         return loss
 
     ### >>> DEBUG: Different loss function needed for new token mode >>> ###
-    @torch.autocast(device_type=DEVICE.type, dtype=torch.half)
+    @torch.autocast(
+        device_type=DEVICE.type, dtype=torch.half if "cuda" in DEVICE.type else torch.bfloat16
+    )
     def loss_fn_v2(self):
         """
         Special loss function for the newer version (version_2) of the models based
