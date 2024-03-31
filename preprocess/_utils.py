@@ -1,6 +1,9 @@
 from preprocess._pkg import *
 
-# Init logger
+# Set global logging level to CRITICAL to suppress ERROR messages
+logging.basicConfig(level=logging.CRITICAL)
+
+# Initialize logger
 logger = logging.getLogger(__name__)
 
 
@@ -757,6 +760,25 @@ def extract_zip(path: str, folder: str, log: bool = True, delete_zip: bool = Tru
         os.unlink(path)
 
 
+def find_nearest_label(query, possible_labels, char="?"):
+    """
+    Function for finding the nerest neuron label from a list given a query.
+    """
+    # Remove the '?' from the query to simplify comparison
+    query_base = query.replace(char, "")
+    # Initialize variables to track the best match
+    nearest_label = None
+    highest_similarity = -1  # Start with lowest similarity possible
+    for label in possible_labels:
+        # Count matching characters, ignoring the character at the position of '?'
+        similarity = sum(1 for q, l in zip(query_base, label) if q == l)
+        # Update the nearest label if this one is more similar
+        if similarity > highest_similarity:
+            nearest_label = label
+            highest_similarity = similarity
+    return nearest_label, possible_labels.index(nearest_label)
+
+
 class CausalNormalizer:
     """
     A transform for causal normalization of time series data.
@@ -966,6 +988,8 @@ def pickle_neural_data(
                 preprocessor.preprocess()
             except NameError:
                 continue
+        # Create a file to indicate that the preprocessing was successful
+        open(os.path.join(processed_path, ".processed"), "a").close()
     # ... (re)-Pickle a single dataset
     else:
         assert (
@@ -990,8 +1014,6 @@ def pickle_neural_data(
     # Delete the unzipped folder
     if cleanup:
         shutil.rmtree(source_path)
-    # Create a file to indicate that the preprocessing was successful
-    open(os.path.join(processed_path, ".processed"), "a").close()
     return None
 
 
@@ -1200,6 +1222,7 @@ class BasePreprocessor:
             # 3. Compute calcium dynamics (residual calcium)
             time_in_seconds = raw_timeVectorSeconds[i].reshape(raw_timeVectorSeconds[i].shape[0], 1)
             time_in_seconds = np.array(time_in_seconds, dtype=np.float32)
+            time_in_seconds = time_in_seconds - time_in_seconds[0]  # start at 0.0 seconds
             dt = np.gradient(time_in_seconds, axis=0)  # vector
             dt[dt == 0] = np.finfo(float).eps
             original_median_dt = np.median(dt).item()  # scalar
@@ -1277,6 +1300,7 @@ class Kato2015Preprocessor(BasePreprocessor):
         timeVectorSeconds = (
             arr["timeVectorSeconds"] if "timeVectorSeconds" in arr.keys() else arr["tv"]
         )
+        # Return the extracted data
         return all_IDs, all_traces, timeVectorSeconds
 
     def create_metadata(self):
@@ -1324,6 +1348,7 @@ class Nichols2017Preprocessor(BasePreprocessor):
         all_traces = arr["traces"]
         # Time vector in seconds
         timeVectorSeconds = arr["timeVectorSeconds"]
+        # Return the extracted data
         return all_IDs, all_traces, timeVectorSeconds
 
     def create_metadata(self):
@@ -1370,9 +1395,13 @@ class Skora2018Preprocessor(BasePreprocessor):
         )
 
     def extract_data(self, arr):
+        # Identified neuron IDs (only subset have neuron names)
         all_IDs = arr["IDs"]
+        # Neural activity traces corrected for bleaching
         all_traces = arr["traces"]
+        # Time vector in seconds
         timeVectorSeconds = arr["timeVectorSeconds"]
+        # Return the extracted data
         return all_IDs, all_traces, timeVectorSeconds
 
     def create_metadata(self):
@@ -1419,9 +1448,20 @@ class Kaplan2020Preprocessor(BasePreprocessor):
         return data
 
     def extract_data(self, arr):
+        # Identified neuron IDs (only subset have neuron names)
         all_IDs = arr["neuron_ID"]
+        # Neural activity traces corrected for bleaching
         all_traces = arr["traces_bleach_corrected"]
+        # Time vector in seconds
         timeVectorSeconds = arr["time_vector"]
+        ### DEBUG ###
+        logger.info(
+            f"DEBUG Kaplan2020Preprocessor extract_data: \n\t timeVectorSeconds: {type(timeVectorSeconds)}"
+        )
+        ### DEBUG ###
+        # Set time to start at 0.0 seconds
+        timeVectorSeconds = timeVectorSeconds - timeVectorSeconds[0]
+        # Return the extracted data
         return all_IDs, all_traces, timeVectorSeconds
 
     def create_metadata(self):
@@ -1473,7 +1513,8 @@ class Yemini2021Preprocessor(BasePreprocessor):
 
     def extract_data(self, raw_data):
         """
-        A more complicated `extract_data` method was necessary for the Yemini2021 dataset.
+        A more complicated `extract_data` method
+        was necessary for the Yemini2021 dataset.
         """
         # Frames per second
         fps = raw_data["fps"].item()
@@ -1559,6 +1600,13 @@ class Yemini2021Preprocessor(BasePreprocessor):
             traces.append(activity)
             # Add time vector to list of time vectors
             time_vector_seconds.append(tvec)
+        ### DEBUG ###
+        logger.info(
+            f"DEBUG Yemini2021Preprocessor extract_data: \n\t timeVectorSeconds: {type(time_vector_seconds)}"
+        )
+        ### DEBUG ###
+        # Set time to start at 0.0 seconds
+        time_vector_seconds = time_vector_seconds - time_vector_seconds[0]
         # Return the extracted data
         return neuron_IDs, traces, time_vector_seconds
 
@@ -1607,9 +1655,20 @@ class Uzel2022Preprocessor(BasePreprocessor):
         return mat73.loadmat(os.path.join(self.raw_data_path, self.source_dataset, file_name))
 
     def extract_data(self, arr):
+        # Identified neuron IDs (only subset have neuron names)
         all_IDs = arr["IDs"]
+        # Neural activity traces corrected for bleaching
         all_traces = arr["traces"]  # (time, neurons)
+        # Time vector in seconds
         timeVectorSeconds = arr["tv"]
+        ### DEBUG ###
+        logger.info(
+            f"DEBUG Uzel2022Preprocessor extract_data: \n\t timeVectorSeconds: {type(timeVectorSeconds)}"
+        )
+        ### DEBUG ###
+        # Set time to start at 0.0 seconds
+        timeVectorSeconds = timeVectorSeconds - timeVectorSeconds[0]
+        # Return the extracted data
         return all_IDs, all_traces, timeVectorSeconds
 
     def create_metadata(self):
@@ -1667,8 +1726,11 @@ class Lin2023Preprocessor(BasePreprocessor):
         imputer = IterativeImputer(random_state=0)
         if np.isnan(raw_activitiy).any():
             raw_activitiy = imputer.fit_transform(raw_activitiy)
-        # Return the extracted data
+        # Set time to start at 0.0 seconds
+        raw_time_vec = raw_time_vec - raw_time_vec[0]
+        # Make the extracted data into a list of lists
         neuron_IDs, raw_traces, time_vector_seconds = [neurons], [raw_activitiy], [raw_time_vec]
+        # Return the extracted data
         return neuron_IDs, raw_traces, time_vector_seconds
 
     def create_metadata(self):
@@ -1720,7 +1782,7 @@ class Leifer2023Preprocessor(BasePreprocessor):
         real_data = self.load_data(data_file)
         label_list = self.load_labels(labels_file)[: real_data.shape[1]]
         time_in_seconds = self.load_time_vector(time_file)
-        # remove columns where all values are NaN
+        # Remove columns where all values are NaN
         mask = np.argwhere(~np.isnan(real_data).all(axis=0)).flatten()
         real_data = real_data[:, mask]
         label_list = np.array(label_list, dtype=str)[mask].tolist()
@@ -1842,6 +1904,8 @@ class Leifer2023Preprocessor(BasePreprocessor):
             real_data, label_list, time_in_seconds = self.extract_data(
                 data_file, labels_file, time_file
             )
+            # Set time to start at 0.0 seconds
+            time_in_seconds = time_in_seconds - time_in_seconds[0]
             # Skip worms with no recorded neurons
             if len(label_list) == 0:
                 worm_idx -= 1
@@ -1951,11 +2015,10 @@ class Flavell2023Preprocessor(BasePreprocessor):
         # If files use H5 format
         if isinstance(file_data, h5py.File):
             time_in_seconds = np.array(file_data["timestamp_confocal"], dtype=np.float32)
-            # Start time at 0.0 seconds
-            time_in_seconds = time_in_seconds - time_in_seconds[0]
             time_in_seconds = time_in_seconds.reshape((-1, 1))
             calcium_data = np.array(file_data["trace_array"], dtype=np.float32)
             neurons = np.array(file_data["neuropal_label"], dtype=str)
+            # For bilateral neurons with ambiguous location, we randomly assign L/R
             neurons_copy = []
             for neuron in neurons:
                 if neuron.replace("?", "L") not in set(neurons_copy):
@@ -1966,8 +2029,6 @@ class Flavell2023Preprocessor(BasePreprocessor):
         # Otherwise if files use JSON format
         elif isinstance(file_data, dict):
             time_in_seconds = np.array(file_data["timestamp_confocal"], dtype=np.float32)
-            # Start time at 0.0 seconds
-            time_in_seconds = time_in_seconds - time_in_seconds[0]
             time_in_seconds = time_in_seconds.reshape((-1, 1))
             # Raw traces (list)
             raw_traces = file_data["trace_array"]
@@ -1985,7 +2046,7 @@ class Flavell2023Preprocessor(BasePreprocessor):
             for i in ids.keys():
                 label = ids[str(i)]["label"]
                 neurons[int(i) - 1] = label
-            # Treat the '?' labels
+            # Treat the '?' in labels
             for i in range(number_neurons):
                 label = neurons[i]
                 if not label.isnumeric():
@@ -2002,8 +2063,19 @@ class Flavell2023Preprocessor(BasePreprocessor):
                             for neuron_name in possible_labels
                             if neuron_name not in neurons
                         ]
-                        # Random pick one of the possibilities
-                        neurons[i] = np.random.choice(possible_labels)
+                        # # Random pick one of the possibilities
+                        # neurons[i] = np.random.choice(possible_labels)
+
+                        ### DEBUG ###
+                        _ = find_nearest_label(label_split, possible_labels, char="?")
+                        logger.info(
+                            f"DEBUG Flavell2023Preprocessor.extract_data\n\t original label: {label} \n\t possible labels: {possible_labels} \n\t chosen label: {_}"
+                        )
+                        # Pick the potential label with the nearest similarity
+                        neurons[i], _ = find_nearest_label(label_split, possible_labels, char="?")
+                        ### DEBUG ###
+
+            # Treat the '??' in labels
             for i in range(number_neurons):
                 label = neurons[i]
                 if not label.isnumeric():
@@ -2020,15 +2092,27 @@ class Flavell2023Preprocessor(BasePreprocessor):
                             for neuron_name in possible_labels
                             if neuron_name not in neurons
                         ]
-                        # Random pick one of the possibilities
-                        neurons[i] = np.random.choice(possible_labels)
+                        # # Random pick one of the possibilities
+                        # neurons[i] = np.random.choice(possible_labels)
+
+                        ### DEBUG ###
+                        _ = find_nearest_label(label_split, possible_labels, char="?")
+                        logger.info(
+                            f"DEBUG Flavell2023Preprocessor.extract_data\n\t original label: {label} \n\t possible labels: {possible_labels} \n\t chosen label: {_}"
+                        )
+                        # Pick the potential label with the nearest similarity
+                        neurons[i], _ = find_nearest_label(label_split, possible_labels, char="?")
+                        ### DEBUG ###
+
             neurons = np.array(neurons, dtype=str)
             neurons, unique_indices = np.unique(neurons, return_index=True, return_counts=False)
             # Only get data for unique neurons
             calcium_data = calcium_data[:, unique_indices]
         else:
             raise ValueError(f"Unsupported data type: {type(file_data)}")
-        # Return the data
+        # Set time to start at 0.0 seconds
+        time_in_seconds = time_in_seconds - time_in_seconds[0]
+        # Return the extracted data
         return time_in_seconds, calcium_data, neurons
 
     def create_metadata(self):
@@ -2045,7 +2129,23 @@ class Flavell2023Preprocessor(BasePreprocessor):
                 continue
             worm = "worm" + str(i)
             file_data = self.load_data(file)  # load
+            # 0. Extract raw data
             time_in_seconds, calcium_data, neurons = self.extract_data(file_data)  # extract
+
+            ### DEBUG ###
+            logger.info(
+                f"DEBUG Flavell2023Preprocessor (preprocess) \n\t time_in_seconds: {type(time_in_seconds), time_in_seconds.shape}"
+            )
+            logger.info(f"\n\t initial time: {time_in_seconds[0]}")
+            ### DEBUG ###
+
+            # Set time to start at 0.0 seconds
+            time_in_seconds = time_in_seconds - time_in_seconds[0]
+
+            ### DEBUG ###
+            logger.info(f"\n\t updated time: {time_in_seconds[0]}")
+            ### DEBUG ###
+
             # 1. Map named neurons
             neuron_to_idx, num_named_neurons = self.create_neuron_idx(neurons)
             # 2. Normalize calcium data
@@ -2108,9 +2208,9 @@ class Flavell2023Preprocessor(BasePreprocessor):
                 }
             }
             preprocessed_data.update(worm_dict)
-        # reshape calcium data
+        # Reshape calcium data
         for worm in preprocessed_data.keys():
             preprocessed_data[worm] = reshape_calcium_data(preprocessed_data[worm])
-        # save data
+        # Save data
         self.save_data(preprocessed_data)
         logger.info(f"Finished processing {self.source_dataset}.")

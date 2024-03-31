@@ -19,13 +19,10 @@ def process_data(preprocess_config: DictConfig) -> None:
     pickle_neural_data : function in preprocess/_utils.py
         Preprocess and convert neural data to .pickle format.
     preprocess_connectome : function in preprocess/_utils.py
-
     """
-
     # Init logger
     logger = logging.getLogger(__name__)
-
-    # Pickle (and download) the data neural data if not already done
+    # Download and pickle the neural data if not already done
     if not os.path.exists(os.path.join(ROOT_DIR, "data/processed/neural/.processed")):
         logger.info("Preprocessing C. elegans neural data...")
         kwargs = dict(
@@ -36,7 +33,7 @@ def process_data(preprocess_config: DictConfig) -> None:
         pickle_neural_data(
             url=preprocess_config.url,
             zipfile=preprocess_config.zipfile,
-            dataset=preprocess_config.dataset,
+            source_dataset=preprocess_config.source_dataset,
             smooth_method=preprocess_config.smooth.method,
             resample_dt=preprocess_config.resample_dt,
             interpolate_method=preprocess_config.interpolate,
@@ -46,7 +43,6 @@ def process_data(preprocess_config: DictConfig) -> None:
         logger.info("Finished preprocessing neural data.")
     else:
         logger.info("Neural data already preprocessed.")
-
     # Preprocess the connectome data if not already done
     if not os.path.exists(os.path.join(ROOT_DIR, "data/processed/connectome/graph_tensors.pt")):
         logger.info("Preprocessing C. elegans connectome...")
@@ -55,7 +51,6 @@ def process_data(preprocess_config: DictConfig) -> None:
         logger.info("Finished preprocessing C. elegans connectome.")
     else:
         logger.info("Connectome already preprocessed.")
-
     return None
 
 
