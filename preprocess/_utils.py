@@ -1,8 +1,5 @@
 from preprocess._pkg import *
 
-# Set global logging level to CRITICAL to suppress ERROR messages
-logging.basicConfig(level=logging.CRITICAL)
-
 # Initialize logger
 logger = logging.getLogger(__name__)
 
@@ -41,6 +38,9 @@ def preprocess_connectome(raw_dir, raw_files):
       If the raw data isn't found, please download it at this link:
       https://wormwiring.org/matlab%20scripts/Premaratne%20MATLAB-ready%20files%20.zip
       and drop in the data/raw folder.
+
+    TODO: There have been many different C. elegans connectomes released (https://wormwiring.org/).
+    We should consider adding more of them to the data/raw folder and processing them as well.
     """
     # Check if the raw connectome data exists
     if not os.path.exists(raw_dir):
@@ -197,80 +197,7 @@ def preprocess_connectome(raw_dir, raw_files):
 
 
 def gaussian_kernel_smooth(x, t, sigma):
-    """Gaussian smoothing for a multidimensional time series.
-
-    Parameters:
-    ----------
-        x (ndarray): The input time series to be smoothed (time, neurons).
-        t (ndarray): The time vector (in seconds) corresponding to the input time series.
-        sigma (float): Standard deviation for Gaussian kernel.
-
-    Returns:
-    ----------
-        x_smooth (ndarray): The smoothed time series.
-    """
-    istensor = isinstance(x, torch.Tensor)
-    if istensor:
-        x = x.cpu().numpy()
-    dim = x.ndim
-    if dim == 1:
-        x = x.reshape(-1, 1)
-    x_smooth = gaussian_filter1d(x, sigma, axis=0)
-    if dim == 1:
-        x_smooth = x_smooth.squeeze(-1)
-    if istensor:
-        x_smooth = torch.from_numpy(x_smooth)
-    return x_smooth
-
-
-def moving_average_smooth(x, t, window_size):
-    """Applies a simple moving average smoothing filter to a multidimensional time series.
-
-    Parameters:
-    ----------
-        x (ndarray): The input time series to be smoothed.
-        t (ndarray): The time vector (in seconds) corresponding to the input time series.
-        window_size (int): The size of the moving average window. Must be an odd number.
-
-    Returns:
-    ----------
-        x_smooth (ndarray): The smoothed time series.
-    """
-    # Make sure that window_size is odd
-    if window_size % 2 == 0:
-        window_size += 1
-    # Check for correct dimensions
-    isnumpy = isinstance(x, np.ndarray)
-    if isnumpy:
-        x = torch.from_numpy(x)
-    dim = x.ndim
-    if dim == 1:
-        x = x.unsqueeze(-1)
-    x_smooth = torch.zeros_like(x)
-    # TODO: Vectorize this smoothing operation
-    for i in range(x.shape[1]):
-        x_smooth[:, i] = (
-            torch.nn.functional.conv1d(
-                x[:, i].unsqueeze(0).unsqueeze(0),
-                torch.ones(1, 1, window_size, dtype=x.dtype).to(x.device) / window_size,
-                padding=window_size // 2,
-            )
-            .squeeze(0)
-            .squeeze(0)
-        )
-    if dim == 1:
-        x_smooth = x_smooth.squeeze(-1)
-    if isnumpy:
-        x_smooth = x_smooth.cpu().numpy()
-    return x_smooth
-
-
-# NOTE: We define causal versions of the above Gaussian (GA)
-# and Moving Average (MA) smoothing methods and alias the original
-# functions to these new ones.
-def causal_gaussian_kernel_smooth(x, t, sigma):
-    """
-    Causal Gaussian smoothing for a multidimensional time series.
+    """Causal Gaussian smoothing for a multidimensional time series.
 
     Parameters:
         x (ndarray): The input time series to be smoothed (time, neurons).
@@ -289,10 +216,11 @@ def causal_gaussian_kernel_smooth(x, t, sigma):
     # Apply one-sided exponential decay
     x_smooth = np.zeros_like(x, dtype=np.float32)
     alpha = 1 / (2 * sigma**2)
-    for i in range(x.shape[0]):
+    # TODO: Vectorize this instead of using a loop.
+    for i in range(x.shape[0]):  # temporal dimension
         weights = np.exp(-alpha * np.arange(i, -1, -1) ** 2)
         weights /= weights.sum()
-        for j in range(x.shape[1]):
+        for j in range(x.shape[1]):  # feature dimension
             x_smooth[i, j] = np.dot(weights, x[: i + 1, j])
     if dim == 1:
         x_smooth = x_smooth.squeeze(-1)
@@ -301,9 +229,8 @@ def causal_gaussian_kernel_smooth(x, t, sigma):
     return x_smooth
 
 
-def causal_moving_average_smooth(x, t, window_size):
-    """
-    Applies a causal moving average smoothing filter to a multidimensional time series.
+def moving_average_smooth(x, t, window_size):
+    """Causal moving average smoothing filter to a multidimensional time series.
 
     Parameters:
     ----------
@@ -326,8 +253,9 @@ def causal_moving_average_smooth(x, t, window_size):
     if dim == 1:
         x = x.unsqueeze(-1)
     x_smooth = torch.zeros_like(x)
-    for i in range(x.shape[1]):
-        for j in range(x.shape[0]):
+    # TODO: Vectorize this instead of using a loop.
+    for i in range(x.shape[1]):  # feature dimension
+        for j in range(x.shape[0]):  # temporal dimension
             start = max(j - window_size // 2, 0)
             end = j + 1
             window = x[start:end, i]
@@ -339,17 +267,9 @@ def causal_moving_average_smooth(x, t, window_size):
     return x_smooth
 
 
-##############################################
-# Aliasing
-moving_average_smooth = causal_moving_average_smooth
-gaussian_kernel_smooth = causal_gaussian_kernel_smooth
-##############################################
-
-
-# The Exponential Kernel Smooth (ES) method is already causal.
 def exponential_kernel_smooth(x, t, alpha):
-    """
-    Exponential smoothing for a multidimensional time series.
+    """Exponential kernel smoothing for a multidimensional time series.
+    This method method is already causal by its definiton.
 
     Parameters:
         x (ndarray): The input time series to be smoothed (time, neurons).
@@ -382,17 +302,17 @@ def exponential_kernel_smooth(x, t, alpha):
 
 
 def smooth_data_preprocess(calcium_data, time_in_seconds, smooth_method, **kwargs):
-    """Smooths the calcium data provided as a (time, neurons) array `calcium_data`.
-
-    Returns the denoised signals calcium signals using the method specified by `smooth_method`.
+    """Smooths the calcium data provided using the specified smoothing method.
+    as a (time, neurons) array `calcium_data`.
+    Returns the denoised signals calcium signals using the method specified by .
 
     Args:
-        calcium_data: original calcium data from dataset
-        time_in_seconds: time vector corresponding to calcium_data
-        smooth_method: the method used to smooth the data
+        calcium_data (np.ndarray): original calcium data with shape (time, neurons)
+        time_in_seconds (np.ndarray): time vector with shape (time, 1)
+        smooth_method (str): the method used to smooth the data
 
     Returns:
-        smooth_ca_data: calcium data that is smoothed
+        smooth_ca_data (np.ndarray): calcium data that is smoothed
     """
     if smooth_method is None:
         smooth_ca_data = calcium_data
@@ -419,7 +339,7 @@ class CalciumDataReshaper:
         'idx' refers to the index of the neuron in the original dataset.
             0 < idx < N, where N is however many neurons were recorded.
         'slot' refers to the index of the neuron in the reshaped dataset.
-            0 < slot < 302, where 302 is the number of neurons in the C. elegans hermaphrodite.
+            0 < slot < 302, where 302 is the number of neurons in the _C. elegans_ hermaphrodite.
         """
         self.worm_dataset = worm_dataset
         self.named_neuron_to_idx = dict()
@@ -1890,13 +1810,10 @@ class Leifer2023Preprocessor(BasePreprocessor):
             time_in_seconds = time_in_seconds - time_in_seconds[0]
             # Skip worms with no recorded neurons
             if len(label_list) == 0:
-                logger.info(
-                    f"No recorded neurons from {worm}: \n\t {(data_file, labels_file, time_file)} "
-                )  # DEBUG
                 worm_idx -= 1
                 continue
             # Skip worms with very short recordings
-            if len(time_in_seconds) < 1000:
+            if len(time_in_seconds) < 700:
                 logger.info(
                     f"Recording too short from {worm}: \n\t {len(time_in_seconds)} timesteps"
                 )  # DEBUG

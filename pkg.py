@@ -1,8 +1,9 @@
 # All imports for main module
 import sys
 import hydra
-import logging
 
+# NOTE: Difference from the pattern seen in the submodule directories is that here we
+# import from utils into pkg, whereas in submodules we import from _pkg into _utils.
 from utils import *
 from datetime import datetime
 from models._main import get_model

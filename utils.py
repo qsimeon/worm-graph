@@ -1,10 +1,16 @@
+# NOTE: To oavoid circular imports, only import libraries essential to
+# initializing global variables and functions used by the main.py script.
 import os
 import torch
 import random
+import logging
 import warnings
 import numpy as np
 import pandas as pd
 import torch.multiprocessing
+
+# Configure logger
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
 # Ignore all warnings
 warnings.filterwarnings(action="ignore")
@@ -20,14 +26,14 @@ os.environ["MASTER_ADDR"] = "localhost"
 os.environ["MASTER_PORT"] = "12345"  # just a random port
 os.environ["OC_CAUSE"] = "1"
 
-# Set some global variables
+# Some global variables
 USER = "qsimeon"  # OpenMind/computing cluster username
 
 NUM_NEURONS = 302  # number of neurons in the model organism
 
-BLOCK_SIZE = 200  # maximum attention block size for Transformer models
+BLOCK_SIZE = 200  # maximum attention block size to use for Transformers
 
-VERSION_2 = False  # whether to use version 2 of the model (tokenizes neural data)
+VERSION_2 = False  # whether to use version 2 of the models (tokenizes neural data)
 
 NUM_TOKENS = 128  # number of tokens in the neural vocabulary if using version 2
 
