@@ -7,9 +7,10 @@ logger = logging.getLogger(__name__)
 ### Custom loss function (MASE) # # #
 # # # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
 class MASELoss(torch.nn.Module):
-    """
-    Mean Absolute Scaled Error (MASE) Loss Function.
+    """Mean Absolute Scaled Error (MASE) Loss Function.
+
     Supports 'none', 'mean', and 'sum' reductions.
+
     ---
     Example usage:
     mase_loss = MASELoss(reduction='mean')
@@ -79,10 +80,10 @@ def find_largest_divisor(hidden_size):
 
 
 def load_model_checkpoint(checkpoint_path):
-    """
-    Load a model from a checkpoint file. The checkpoint should
-    contain all the neccesary information to reinstantiate the model
-    using its constructor.
+    """Load a model from a checkpoint file.
+
+    The checkpoint should contain all the neccesary information to
+    reinstantiate the model using its constructor.
 
     Args:
         checkpoint_path (str): The path to the checkpoint file.

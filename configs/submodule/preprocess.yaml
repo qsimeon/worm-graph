@@ -2,7 +2,7 @@ preprocess:
   url: https://www.dropbox.com/s/icjii29um9u60zg/opensource_data.zip?dl=1
   zipfile: opensource_data.zip
   cleanup: true # Whether to delete the downloaded and unzipped opensource data folder
-  source_dataset: Leifer2023 #all # [Kato2015, Nichols2017, Skora2018, Kaplan2020, Yemini2021, Uzel2022, Flavell2023, Leifer2023] # any dataset in utils.VALID_DATASETS
+  source_dataset: Kato2015 #all # [Kato2015, Nichols2017, Skora2018, Kaplan2020, Yemini2021, Uzel2022, Flavell2023, Leifer2023] # any dataset in utils.VALID_DATASETS
   resample_dt: 0.666 # The time interval (in seconds) to resample the neural activity at; if null, no resampling is performed
   interpolate: linear # The method to use for interpolation; options: null, linear, quadratic, cubic
   smooth: 

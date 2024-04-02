@@ -14,6 +14,8 @@ import pandas as pd
 
 from scipy.io import loadmat
 from sklearn import preprocessing
+
+# NOTE: interp1d is considered legacy and may be removed in future updates of scipy.
 from scipy.interpolate import interp1d
 from torch_geometric.utils import coalesce
 from omegaconf import DictConfig, OmegaConf
