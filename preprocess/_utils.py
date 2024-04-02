@@ -1230,8 +1230,6 @@ class BasePreprocessor:
                     "extra_info": self.create_metadata(),  # additional information and metadata
                 }
             }
-            # Reshape calcium data
-            worm_dict[worm] = reshape_calcium_data(worm_dict[worm])
             # Update preprocessed data collection
             preprocessed_data.update(worm_dict)
         # Return the updated preprocessed data and worm index
@@ -1280,10 +1278,9 @@ class Kato2015Preprocessor(BasePreprocessor):
             preprocessed_data, worm_idx = self.preprocess_traces(
                 neuron_IDs, traces, raw_timeVectorSeconds, preprocessed_data, worm_idx
             )  # preprocess
-        # # Reshape calcium data
-        # # TODO: Move this step to the end of the `preprocess_traces` method of the BasePreprocessor class.
-        # for worm in preprocessed_data.keys():
-        #     preprocessed_data[worm] = reshape_calcium_data(preprocessed_data[worm])
+        # Reshape calcium data
+        for worm in preprocessed_data.keys():
+            preprocessed_data[worm] = reshape_calcium_data(preprocessed_data[worm])
         # Save data
         self.save_data(preprocessed_data)
         logger.info(f"Finished processing {self.source_dataset}.")
@@ -1334,10 +1331,9 @@ class Nichols2017Preprocessor(BasePreprocessor):
             preprocessed_data, worm_idx = self.preprocess_traces(
                 neuron_IDs, traces, raw_timeVectorSeconds, preprocessed_data, worm_idx
             )  # preprocess
-        # # Reshape calcium data
-        # # TODO: Move this step to the end of the `preprocess_traces` method of the BasePreprocessor class.
-        # for worm in preprocessed_data.keys():
-        #     preprocessed_data[worm] = reshape_calcium_data(preprocessed_data[worm])
+        # Reshape calcium data
+        for worm in preprocessed_data.keys():
+            preprocessed_data[worm] = reshape_calcium_data(preprocessed_data[worm])
         # Save data
         self.save_data(preprocessed_data)
         logger.info(f"Finished processing {self.source_dataset}.")
@@ -1383,10 +1379,9 @@ class Skora2018Preprocessor(BasePreprocessor):
             preprocessed_data, worm_idx = self.preprocess_traces(
                 neuron_IDs, traces, raw_timeVectorSeconds, preprocessed_data, worm_idx
             )  # preprocess
-        # # Reshape calcium data
-        # # TODO: Move this step to the end of the `preprocess_traces` method of the BasePreprocessor class.
-        # for worm in preprocessed_data.keys():
-        #     preprocessed_data[worm] = reshape_calcium_data(preprocessed_data[worm])
+        # Reshape calcium data
+        for worm in preprocessed_data.keys():
+            preprocessed_data[worm] = reshape_calcium_data(preprocessed_data[worm])
         # Save data
         self.save_data(preprocessed_data)
         logger.info(f"Finished processing {self.source_dataset}.")
@@ -1441,10 +1436,9 @@ class Kaplan2020Preprocessor(BasePreprocessor):
             preprocessed_data, worm_idx = self.preprocess_traces(
                 neuron_IDs, traces, raw_timeVectorSeconds, preprocessed_data, worm_idx
             )  # preprocess
-        # # Reshape calcium data
-        # # TODO: Move this step to the end of the `preprocess_traces` method of the BasePreprocessor class.
-        # for worm in preprocessed_data.keys():
-        #     preprocessed_data[worm] = reshape_calcium_data(preprocessed_data[worm])
+        # Reshape calcium data
+        for worm in preprocessed_data.keys():
+            preprocessed_data[worm] = reshape_calcium_data(preprocessed_data[worm])
         # Save data
         self.save_data(preprocessed_data)
         logger.info(f"Finished processing {self.source_dataset}.")
@@ -1580,10 +1574,9 @@ class Yemini2021Preprocessor(BasePreprocessor):
             preprocessed_data, worm_idx = self.preprocess_traces(
                 neuron_IDs, traces, raw_timeVectorSeconds, preprocessed_data, worm_idx
             )  # preprocess
-        # # Reshape calcium data
-        # # TODO: Move this step to the end of the `preprocess_traces` method of the BasePreprocessor class.
-        # for worm in preprocessed_data.keys():
-        #     preprocessed_data[worm] = reshape_calcium_data(preprocessed_data[worm])
+        # Reshape calcium data
+        for worm in preprocessed_data.keys():
+            preprocessed_data[worm] = reshape_calcium_data(preprocessed_data[worm])
         # Save data
         self.save_data(preprocessed_data)
         logger.info(f"Finished processing {self.source_dataset}.")
@@ -1631,10 +1624,9 @@ class Uzel2022Preprocessor(BasePreprocessor):
             preprocessed_data, worm_idx = self.preprocess_traces(
                 neuron_IDs, traces, raw_timeVectorSeconds, preprocessed_data, worm_idx
             )  # preprocess
-        # # Reshape calcium data
-        # # TODO: Move this step to the end of the `preprocess_traces` method of the BasePreprocessor class.
-        # for worm in preprocessed_data.keys():
-        #     preprocessed_data[worm] = reshape_calcium_data(preprocessed_data[worm])
+        # Reshape calcium data
+        for worm in preprocessed_data.keys():
+            preprocessed_data[worm] = reshape_calcium_data(preprocessed_data[worm])
         # Save data
         self.save_data(preprocessed_data)
         logger.info(f"Finished processing {self.source_dataset}.")
@@ -1696,10 +1688,9 @@ class Lin2023Preprocessor(BasePreprocessor):
             preprocessed_data, worm_idx = self.preprocess_traces(
                 neurons, raw_traces, time_vector_seconds, preprocessed_data, worm_idx
             )  # preprocess
-        # # Reshape calcium data
-        # # TODO: Move this step to the end of the `preprocess_traces` method of the BasePreprocessor class.
-        # for worm in preprocessed_data.keys():
-        #     preprocessed_data[worm] = reshape_calcium_data(preprocessed_data[worm])
+        # Reshape calcium data
+        for worm in preprocessed_data.keys():
+            preprocessed_data[worm] = reshape_calcium_data(preprocessed_data[worm])
         # Save data
         self.save_data(preprocessed_data)
         logger.info(f"Finished processing {self.source_dataset}.")
@@ -1931,13 +1922,11 @@ class Leifer2023Preprocessor(BasePreprocessor):
                     "extra_info": self.create_metadata(),  # additional information and metadata
                 }
             }
-            # Reshape calcium data
-            worm_dict[worm] = reshape_calcium_data(preprocessed_data[worm])
+            # Update preprocessed data collection
             preprocessed_data.update(worm_dict)
-        # # Reshape calcium data
-        # # TODO: Move this step to the end of the `preprocess_traces` method of the BasePreprocessor class.
-        # for worm in preprocessed_data.keys():
-        #     preprocessed_data[worm] = reshape_calcium_data(preprocessed_data[worm])
+        # Reshape calcium data
+        for worm in preprocessed_data.keys():
+            preprocessed_data[worm] = reshape_calcium_data(preprocessed_data[worm])
         # Save data
         self.save_data(preprocessed_data)
         logger.info(f"Finished processing {self.source_dataset}.")
@@ -2155,13 +2144,11 @@ class Flavell2023Preprocessor(BasePreprocessor):
                     "extra_info": self.create_metadata(),  # additional information and metadata
                 }
             }
-            # Reshape calcium data
-            worm_dict[worm] = reshape_calcium_data(preprocessed_data[worm])
+            # Update preprocessed data collection
             preprocessed_data.update(worm_dict)
-        # # Reshape calcium data
-        # # TODO: Move this step to the end of the `preprocess_traces` method of the BasePreprocessor class.
-        # for worm in preprocessed_data.keys():
-        #     preprocessed_data[worm] = reshape_calcium_data(preprocessed_data[worm])
+        # Reshape calcium data
+        for worm in preprocessed_data.keys():
+            preprocessed_data[worm] = reshape_calcium_data(preprocessed_data[worm])
         # Save data
         self.save_data(preprocessed_data)
         logger.info(f"Finished processing {self.source_dataset}.")
