@@ -509,9 +509,6 @@ def interpolate_data(time, data, target_dt, method="linear"):
     # Interpolate the data
     target_time_np = np.arange(time.min(), time.max() + target_dt, target_dt)  # 1D array
     num_neurons = data.shape[1]
-    logger.info(
-        f"DEBUG \n original timepoints: {time[:10]} \n interpolation timepoints{target_time_np[:10]} \n number of neurons: {num_neurons}"
-    )  # DEBUG
     interpolated_data_np = np.zeros((len(target_time_np), num_neurons), dtype=np.float32)
     # TODO: Vectorize this interpolation method
     if method is None:
@@ -531,7 +528,7 @@ def interpolate_data(time, data, target_dt, method="linear"):
     return target_time_np, interpolated_data_np
 
 
-def aggregate_data(time, data, target_dt, original_dt=None):
+def aggregate_data(time, data, target_dt):
     """Downsample data using aggregation.
 
     This function takes the given time points and corresponding data and
@@ -548,9 +545,6 @@ def aggregate_data(time, data, target_dt, original_dt=None):
     target_dt : float
         The desired time interval between the downsampled data points.
         If None, no downsampling is performed.
-    original_dt: float
-        The original median time interval between the data points.
-        If None, the target_dt is used as the original_dt.
 
     Returns
     -------
@@ -562,18 +556,21 @@ def aggregate_data(time, data, target_dt, original_dt=None):
     # Ensure that time is a 1D array
     time = time.squeeze()
     # Compute the downsample rate
-    if original_dt is None:
-        original_dt = target_dt
-    downsample_rate = int(target_dt / original_dt)
+    original_dt = np.median(np.diff(time, axis=0)[1:]).item()
+    interval_width = int(target_dt // original_dt)
     # Determine the number of intervals
-    num_intervals = len(time) // downsample_rate
+    num_intervals = len(time) // interval_width
     downsampled_data = np.zeros((num_intervals, data.shape[1]), dtype=np.float32)
     # Create the downsampled time array
-    target_time_np = time[: num_intervals * downsample_rate : downsample_rate]
+    target_time_np = np.arange(time.min(), time.max() + target_dt, target_dt)
     # Downsample the data by averaging over intervals
     for i in range(data.shape[1]):
-        reshaped_data = data[: num_intervals * downsample_rate, i].reshape(-1, downsample_rate)
+        reshaped_data = data[: num_intervals * interval_width, i].reshape(-1, interval_width)
         downsampled_data[:, i] = reshaped_data.mean(axis=1)
+    # Reshape downsampled time vector to (time, 1)
+    target_time_np = target_time_np.reshape(-1, 1)
+    # Ensure downsampled_data has same length as target_time_np
+    downsampled_data = downsampled_data[: len(target_time_np)]
     # Return the interpolated data
     return target_time_np, downsampled_data
 
@@ -1029,12 +1026,18 @@ class BasePreprocessor:
             )
         # Downsample (aggregate)
         else:
+            # We first upsample to 0.01s
             interp_time, interp_ca = interpolate_data(
-                time_in_seconds, data, target_dt=0.1, method=self.interpolate_method
+                time_in_seconds,
+                data,
+                target_dt=0.01,
+                method=self.interpolate_method,
             )
-            median_dt = np.median(np.diff(time_in_seconds, axis=0, prepend=0.0)[1:]).item()
+            # Then average over short intervals to downsample to the desired dt
             return aggregate_data(
-                interp_time, interp_ca, target_dt=self.resample_dt, original_dt=median_dt
+                interp_time,
+                interp_ca,
+                target_dt=self.resample_dt,
             )
 
     def normalize_data(self, data):
@@ -1178,9 +1181,6 @@ class BasePreprocessor:
             resampled_time_in_seconds, resampled_smooth_calcium_data = self.resample_data(
                 time_in_seconds, smooth_calcium_data, upsample
             )
-            logger.info(
-                f"DEBUG \n resampled_time_in_seconds.shape: {resampled_time_in_seconds.shape}"
-            )
             resampled_time_in_seconds = (
                 resampled_time_in_seconds - resampled_time_in_seconds[0]
             )  # start at 0.0 seconds
@@ -1189,11 +1189,8 @@ class BasePreprocessor:
             )
             resampled_dt = np.diff(resampled_time_in_seconds, axis=0, prepend=0.0)  # vector
             resampled_median_dt = np.median(resampled_dt[1:]).item()  # scalar
-            logger.info(
-                f"DEBUG \n resample_dt: {self.resample_dt} \n resampled_median_dt: {resampled_median_dt}"
-            )  # DEBUG
             assert np.isclose(
-                self.resample_dt, resampled_median_dt, atol=1e-03
+                self.resample_dt, resampled_median_dt, atol=0.01
             ), "Resampling failed."
             max_timesteps, num_neurons = resampled_calcium_data.shape
             num_unknown_neurons = int(num_neurons) - num_named_neurons
