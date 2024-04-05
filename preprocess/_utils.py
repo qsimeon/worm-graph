@@ -320,6 +320,26 @@ def preprocess_connectome(raw_dir, raw_files):
     return None
 
 
+def extract_zip(path: str, folder: str, log: bool = True, delete_zip: bool = True):
+    """
+    Extracts a zip archive to a specific folder while ignoring the __MACOSX directory.
+
+    Args:
+        path (str): The path to the zip archive.
+        folder (str): The folder where the files will be extracted to.
+        log (bool, optional): If False, will not print anything to the console. Default is True.
+        delete_zip (bool, optional): If True, will delete the zip archive after extraction. Default is True.
+    """
+    if log:
+        print(f"Extracting {path}...")
+    with zipfile.ZipFile(path, "r") as zip_ref:
+        for member in zip_ref.namelist():
+            if not member.startswith("__MACOSX/"):
+                zip_ref.extract(member, folder)
+    if delete_zip:
+        os.unlink(path)
+
+
 def gaussian_kernel_smooth(x, t, sigma):
     """Causal Gaussian smoothing for a multidimensional time series.
 
@@ -562,37 +582,15 @@ def aggregate_data(time, data, target_dt):
     num_intervals = len(time) // interval_width
     downsampled_data = np.zeros((num_intervals, data.shape[1]), dtype=np.float32)
     # Create the downsampled time array
-    target_time_np = np.arange(time.min(), time.max() + target_dt, target_dt)
+    target_time_np = np.arange(time.min(), time.max() + target_dt, target_dt)[:num_intervals]
     # Downsample the data by averaging over intervals
     for i in range(data.shape[1]):
         reshaped_data = data[: num_intervals * interval_width, i].reshape(-1, interval_width)
         downsampled_data[:, i] = reshaped_data.mean(axis=1)
     # Reshape downsampled time vector to (time, 1)
     target_time_np = target_time_np.reshape(-1, 1)
-    # Ensure downsampled_data has same length as target_time_np
-    downsampled_data = downsampled_data[: len(target_time_np)]
     # Return the interpolated data
     return target_time_np, downsampled_data
-
-
-def extract_zip(path: str, folder: str, log: bool = True, delete_zip: bool = True):
-    """
-    Extracts a zip archive to a specific folder while ignoring the __MACOSX directory.
-
-    Args:
-        path (str): The path to the zip archive.
-        folder (str): The folder where the files will be extracted to.
-        log (bool, optional): If False, will not print anything to the console. Default is True.
-        delete_zip (bool, optional): If True, will delete the zip archive after extraction. Default is True.
-    """
-    if log:
-        print(f"Extracting {path}...")
-    with zipfile.ZipFile(path, "r") as zip_ref:
-        for member in zip_ref.namelist():
-            if not member.startswith("__MACOSX/"):
-                zip_ref.extract(member, folder)
-    if delete_zip:
-        os.unlink(path)
 
 
 # # # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
@@ -822,33 +820,31 @@ class CalciumDataReshaper:
 
     def _tensor_time_data(self):
         # Resampled data
-        self.time_in_seconds = torch.from_numpy(self.time_in_seconds).to(self.dtype)
-        if self.time_in_seconds.ndim == 1:
-            self.time_in_seconds = self.time_in_seconds.unsqueeze(-1)
         self.time_in_seconds = (
             self.time_in_seconds - self.time_in_seconds[0]
         )  # start at 0.0 seconds
-        dt = np.diff(self.time_in_seconds, axis=0, prepend=0.0)
-        self.dt = dt
+        self.dt = np.diff(self.time_in_seconds, axis=0, prepend=0.0)
+        self.median_dt = np.median(self.dt[1:]).item()
+        self.time_in_seconds = torch.from_numpy(self.time_in_seconds).to(self.dtype)
+        if self.time_in_seconds.ndim == 1:
+            self.time_in_seconds = self.time_in_seconds.unsqueeze(-1)
         self.dt = torch.from_numpy(self.dt).to(self.dtype)
         if self.dt.ndim == 1:
             self.dt = self.dt.unsqueeze(-1)
-        self.median_dt = np.median(self.dt[1:]).item()
         # Raw data
+        self.original_time_in_seconds = (
+            self.original_time_in_seconds - self.original_time_in_seconds[0]
+        )  # start at 0.0 seconds
+        self.original_dt = np.diff(self.original_time_in_seconds, axis=0, prepend=0.0)
+        self.original_median_dt = np.median(self.original_dt[1:]).item()
         self.original_time_in_seconds = torch.from_numpy(self.original_time_in_seconds).to(
             self.dtype
         )
         if self.original_time_in_seconds.ndim == 1:
             self.original_time_in_seconds = self.time_in_seconds.unsqueeze(-1)
-        self.original_time_in_seconds = (
-            self.original_time_in_seconds - self.original_time_in_seconds[0]
-        )  # start at 0.0 seconds
-        original_dt = np.diff(self.original_time_in_seconds, axis=0, prepend=0.0)
-        self.original_dt = original_dt
         self.original_dt = torch.from_numpy(self.original_dt).to(self.dtype)
         if self.original_dt.ndim == 1:
             self.original_dt = self.original_dt.unsqueeze(-1)
-        self.original_median_dt = np.median(self.original_dt[1:]).item()
 
     def _fill_named_neurons_data(self):
         for slot, neuron in enumerate(NEURONS_302):
@@ -976,7 +972,6 @@ class BasePreprocessor:
         class SpecificDatasetPreprocessor(BasePreprocessor):
             def load_data(self):
                 # Implement dataset-specific loading logic here.
-
     """
 
     def __init__(
@@ -1026,11 +1021,11 @@ class BasePreprocessor:
             )
         # Downsample (aggregate)
         else:
-            # We first upsample to 0.01s
+            # We first upsample to a fraction of the desired dt
             interp_time, interp_ca = interpolate_data(
                 time_in_seconds,
                 data,
-                target_dt=0.01,
+                target_dt=self.resample_dt / 6,
                 method=self.interpolate_method,
             )
             # Then average over short intervals to downsample to the desired dt
@@ -1188,6 +1183,14 @@ class BasePreprocessor:
                 time_in_seconds, smooth_residual_calcium, upsample
             )
             resampled_dt = np.diff(resampled_time_in_seconds, axis=0, prepend=0.0)  # vector
+            # ### DEBUG ###
+            # logger.info(f"DEBUG Before reshaping")
+            # logger.info(f"resampled_dt: {resampled_dt.shape} \n\t {resampled_dt.squeeze()}")
+            # logger.info(
+            #     f"resampled_time_in_seconds: {resampled_time_in_seconds.shape} \n\t {np.diff(resampled_time_in_seconds, axis=0, prepend=0.0).squeeze()}"
+            # )
+            # logger.info(f"resampled_smooth_calcium_data: {resampled_smooth_calcium_data.shape}")
+            # ### DEBUG ###
             resampled_median_dt = np.median(resampled_dt[1:]).item()  # scalar
             assert np.isclose(
                 self.resample_dt, resampled_median_dt, atol=0.01
@@ -1627,6 +1630,18 @@ class Uzel2022Preprocessor(BasePreprocessor):
         # Reshape calcium data
         for worm in preprocessed_data.keys():
             preprocessed_data[worm] = reshape_calcium_data(preprocessed_data[worm])
+            # ### DEBUG ###
+            # logger.info(f"DEBUG After reshaping")
+            # logger.info(
+            #     f"resampled_dt: {preprocessed_data[worm]['dt'].shape} \n\t {preprocessed_data[worm]['dt'].squeeze()}"
+            # )
+            # logger.info(
+            #     f"resampled_time_in_seconds: {preprocessed_data[worm]['time_in_seconds'].shape} \n\t {np.diff(preprocessed_data[worm]['time_in_seconds'], axis=0, prepend=0.0).squeeze()}"
+            # )
+            # logger.info(
+            #     f"resampled_smooth_calcium_data: {preprocessed_data[worm]['smooth_calcium_data'].shape}"
+            # )
+            # ### DEBUG ###
         # Save data
         self.save_data(preprocessed_data)
         logger.info(f"Finished processing {self.source_dataset}.")
