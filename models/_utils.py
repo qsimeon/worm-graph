@@ -68,17 +68,6 @@ class MASELoss(torch.nn.Module):
 # # # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
 
 
-def find_largest_divisor(hidden_size):
-    # Set the maximum number of heads
-    max_heads = 5
-    # Iterate backwards from 5 down to 1 to find the largest divisor
-    for n in range(max_heads, 0, -1):
-        if hidden_size % n == 0:
-            return n
-    # If no divisor found between 1 and 5, default to 1
-    return 1
-
-
 def load_model_checkpoint(checkpoint_path):
     """Load a model from a checkpoint file.
 
@@ -174,12 +163,10 @@ class PositionalEncoding(torch.nn.Module):
         self,
         d_model: int,
         max_len: int = BLOCK_SIZE,
-        dropout: float = 0.1,
     ):
         super().__init__()
         self.d_model = d_model
         self.max_len = max_len
-        self.dropout = torch.nn.Dropout(p=dropout)
         position = torch.arange(max_len).unsqueeze(1)
         div_term = torch.exp(torch.arange(0, d_model, 2) * (-math.log(10000.0) / d_model))
         pe = torch.zeros(1, max_len, d_model)  # batch_first=True
@@ -194,7 +181,7 @@ class PositionalEncoding(torch.nn.Module):
         """
         x = x * math.sqrt(self.d_model)  # normalization used in Transformers
         x = x + self.pe[:, : x.size(1), :]  # add positional encoding to input
-        return self.dropout(x)
+        return x
 
 
 # # # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
@@ -285,9 +272,6 @@ class SelfAttention(torch.nn.Module):
             src.size(1),
             device=src.device,
         )
-        ### DEBUG ###
-        logger.info(f"causal_mask: {causal_mask}")  # DEBUG
-        ### DEBUG ###
         # Apply self-attention
         attn_output, _ = self.attn(
             key=src,
@@ -431,6 +415,9 @@ class Model(torch.nn.Module):
         # New attributes for version 2
         version_2: bool = VERSION_2,
         num_tokens: int = NUM_TOKENS,
+        # Additional keyword arguments
+        normalization: Union[str, None] = None, # 'rms_norm', 'layer_norm'
+        positional_encoding: Union[bool, None] = False,
     ):
         """
         Defines attributes common to all models.
@@ -460,9 +447,26 @@ class Model(torch.nn.Module):
         self.l1_reg_param = l1_reg_param
         # Initialize hidden state
         self._init_hidden()
-        # Identity layer
+        # Identity layer - used if needed
         self.identity = torch.nn.Identity()
-        # Input to hidden transformation - placeholder
+        # Embedding layer - placeholder
+        self.latent_embedding = torch.nn.Linear(
+            self.input_size,
+            self.hidden_size,
+        )
+        # Optional positional encoding layer
+        if positional_encoding:
+            self.positional_encoding = PositionalEncoding(d_model=self.hidden_size)
+        else:
+            self.positional_encoding = self.identity
+        # Optional normalization layer
+        if normalization == 'rms_norm':
+            self.normalization = RMSNorm(self.hidden_size) 
+        elif normalization == 'layer_norm':
+            self.normalization = torch.nn.LayerNorm(self.hidden_size, elementwise_affine=True)  
+        else:
+            self.normalization = self.identity
+        # Input to hidden transformation block - placeholder
         self.input_hidden = (
             torch.nn.Linear(self.input_size, self.hidden_size)
             if hidden_size is not None
@@ -479,15 +483,8 @@ class Model(torch.nn.Module):
             hidden_hidden_model=self.hidden_hidden,
             hidden_state=self.hidden,
         )
-        # Embedding layer - placeholder
-        self.latent_embedding = torch.nn.Linear(
-            self.input_size,
-            self.hidden_size,
-        )
         # Linear readout
         self.linear = torch.nn.Linear(self.hidden_size, self.output_size)
-        # Optional layer normalization
-        self.layer_norm = torch.nn.LayerNorm(self.hidden_size, elementwise_affine=True)
         # Model version_2 tokenizes neural data either as a 1-D sequence
         self.version_2 = version_2
         self.num_tokens = num_tokens
@@ -1083,6 +1080,9 @@ class NaivePredictor(Model):
                 "Switching to version_1."
             )
         kwargs["version_2"] = False
+        # Specify positional encoding and normalization 
+        kwargs["positional_encoding"] = False
+        kwargs["normalization"] = None
         # Initialize super class
         super(NaivePredictor, self).__init__(
             input_size,
@@ -1125,6 +1125,9 @@ class LinearRegression(Model):
         l1_reg_param=0.0,
         **kwargs,
     ):
+        # Specify positional encoding and normalization 
+        kwargs["positional_encoding"] = False
+        kwargs["normalization"] = None
         # Initialize super class
         super(LinearRegression, self).__init__(
             input_size,
@@ -1136,7 +1139,8 @@ class LinearRegression(Model):
         # Input to hidden transformation
         self.input_hidden = torch.nn.Sequential(
             self.latent_embedding,
-            # NOTE: No ReLU because that would be nonlinear model.
+            self.positional_encoding,
+            self.normalization,   
         )
         # Hidden to hidden transformation
         self.hidden_hidden = torch.nn.Identity()
@@ -1169,6 +1173,9 @@ class FeatureFFNN(Model):
         l1_reg_param: float = 0.0,
         **kwargs,
     ):
+        # Specify positional encoding and normalization 
+        kwargs["positional_encoding"] = False
+        kwargs["normalization"] = 'rms_norm'
         # Initialize super class
         super(FeatureFFNN, self).__init__(
             input_size,
@@ -1182,7 +1189,8 @@ class FeatureFFNN(Model):
         # Input to hidden transformation
         self.input_hidden = torch.nn.Sequential(
             self.latent_embedding,
-            # NOTE: Do NOT use LayerNorm here!
+            self.positional_encoding,
+            self.normalization,   
         )
         # Hidden to hidden transformation: FeedForward layer
         self.hidden_hidden = FeedForward(
@@ -1220,7 +1228,9 @@ class PureAttention(Model):
             hidden_size = hidden_size + 1
         else:
             logger.info(f"Using hidden_size: {hidden_size}.")
-
+        # Specify positional encoding and normalization 
+        kwargs["positional_encoding"] = True
+        kwargs["normalization"] = None
         # Initialize super class
         super(PureAttention, self).__init__(
             input_size,
@@ -1229,22 +1239,19 @@ class PureAttention(Model):
             l1_reg_param,
             **kwargs,
         )
-        # Special attention parameters
-        self.num_heads = find_largest_divisor(
-            hidden_size
-        )  # number of attention heads (NOTE: must be divisor of `hidden_size`)
-        logger.info(f"Number of attention heads: {self.num_heads}.")
+        # Special parameters for this model
+        ### DEBUG ###
+        # NOTE: number of attention heads must be divisor of `hidden_size`
+        # self.num_heads = max([i for i in range(1, 9) if hidden_size % i == 0])
+        self.num_heads = 1 
+        logger.info(f"Number of attention heads: {self.num_heads}.") # DEBUG
+        ### DEBUG ###
         self.dropout = 0.1  # dropout rate
-        # Positional encoding (NOTE:must be applied after embedding)
-        self.positional_encoding = PositionalEncoding(
-            d_model=self.hidden_size,
-            dropout=self.dropout,
-        )
         # Input to hidden transformation
         self.input_hidden = torch.nn.Sequential(
             self.latent_embedding,
             self.positional_encoding,
-            # NOTE: Do NOT use LayerNorm here!
+            self.normalization,  
         )
         # Hidden to hidden transformation: Multihead Attention layer
         self.hidden_hidden = SelfAttention(
@@ -1287,7 +1294,9 @@ class NeuralTransformer(Model):
             hidden_size = hidden_size + 1
         else:
             logger.info(f"Using hidden_size: {hidden_size}.")
-
+        # Specify positional encoding and normalization 
+        kwargs["positional_encoding"] = True
+        kwargs["normalization"] = None
         # Initialize super class
         super(NeuralTransformer, self).__init__(
             input_size,
@@ -1296,22 +1305,19 @@ class NeuralTransformer(Model):
             l1_reg_param,
             **kwargs,
         )
-        # Special attention parameters
-        self.num_heads = find_largest_divisor(
-            hidden_size
-        )  # number of attention heads (NOTE: must be divisor of `hidden_size`)
-        logger.info(f"Number of attention heads: {self.num_heads}.")
+        # Special parameters for this model
+        ### DEBUG ###
+        # NOTE: number of attention heads must be divisor of `hidden_size`
+        # self.num_heads = max([i for i in range(1, 9) if hidden_size % i == 0])
+        self.num_heads = 1 
+        logger.info(f"Number of attention heads: {self.num_heads}.") # DEBUG
+        ### DEBUG ###
         self.dropout = 0.1  # dropout rate
-        # Positional encoding (NOTE:must be applied after embedding)
-        self.positional_encoding = PositionalEncoding(
-            d_model=self.hidden_size,
-            dropout=self.dropout,
-        )
         # Input to hidden transformation
         self.input_hidden = torch.nn.Sequential(
             self.latent_embedding,
             self.positional_encoding,
-            # NOTE: No LayerNorm because it is already part of TransformerEncoderLayer.
+            self.normalization,  
         )
         # Hidden to hidden transformation: TransformerEncoderLayer
         self.hidden_hidden = CausalTransformer(
@@ -1344,6 +1350,9 @@ class NetworkCTRNN(Model):
         l1_reg_param: float = 0.0,
         **kwargs,
     ):
+        # Specify positional encoding and normalization 
+        kwargs["positional_encoding"] = False
+        kwargs["normalization"] = 'rms_norm'
         # Initialize super class
         super(NetworkCTRNN, self).__init__(
             input_size,
@@ -1355,8 +1364,8 @@ class NetworkCTRNN(Model):
         # Input to hidden transformation
         self.input_hidden = torch.nn.Sequential(
             self.latent_embedding,
-            # NOTE: YES use LayerNorm here!
-            self.layer_norm,
+            self.positional_encoding,
+            self.normalization,  
         )
         # Hidden to hidden transformation: Continuous time RNN (CTRNN) layer
         self.hidden_hidden = CTRNN(
@@ -1391,6 +1400,9 @@ class LiquidCfC(Model):
         l1_reg_param: float = 0.0,
         **kwargs,
     ):
+        # Specify positional encoding and normalization 
+        kwargs["positional_encoding"] = False
+        kwargs["normalization"] = 'rms_norm'
         # Initialize super class
         super(LiquidCfC, self).__init__(
             input_size,
@@ -1402,8 +1414,8 @@ class LiquidCfC(Model):
         # Input to hidden transformation
         self.input_hidden = torch.nn.Sequential(
             self.latent_embedding,
-            # NOTE: YES use LayerNorm here!
-            self.layer_norm,
+            self.positional_encoding,
+            self.normalization,  
         )
         # Hidden to hidden transformation: Closed-form continuous-time (CfC) layer
         self.hidden_hidden = CfC(
@@ -1455,6 +1467,9 @@ class NetworkLSTM(Model):
         l1_reg_param: float = 0.0,
         **kwargs,
     ):
+        # Specify positional encoding and normalization 
+        kwargs["positional_encoding"] = False
+        kwargs["normalization"] = 'rms_norm'
         # Initialize super class
         super(NetworkLSTM, self).__init__(
             input_size,
@@ -1466,8 +1481,8 @@ class NetworkLSTM(Model):
         # Input to hidden transformation
         self.input_hidden = torch.nn.Sequential(
             self.latent_embedding,
-            # NOTE: YES use LayerNorm here!
-            self.layer_norm,
+            self.positional_encoding,
+            self.normalization,  
         )
         # Hidden to hidden transformation: Long-short term memory (LSTM) layer
         self.hidden_hidden = torch.nn.LSTM(
