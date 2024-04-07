@@ -348,6 +348,37 @@ class SSM(torch.nn.Module):
         """
         h_new = self.A(hidden) + self.B(input)
         return h_new
+    
+    def K_conv(self, Ab, Bb, L):
+        """Computes the kernels for the convolutional mode of the SSM.
+        Ab and Bb are the discretized SSM parameter matrices. L is the sequence length.
+        
+        We create an independent kernel for each state dimension.
+        Each element of Kernels is a tensor of shape (hidden_size, input_size).
+        So Kernels should have shape (hidden_size, L, input_size).
+        """
+        assert Ab.shape == (self.hidden_size, self.hidden_size) and Bb.shape == (self.hidden_size, self.input_size), "SSM parameters are not of the right shape."
+        Kernels = torch.stack([(torch.matrix_power(Ab, l) @ Bb) for l in range(L)]).permute((1,0,-1))
+        return Kernels
+
+    def causal_convolution(self, u, Kernels):
+        """
+        u is the input tensor with shape (seq_len, input_size).
+        Kernels is hidden_size independent kernels of shape (seq_len, input_size).
+        ouputs should be a tensor with shape (seq_len, hidden_size).
+        """
+        assert Kernels.shape[0] == self.hidden_size and Kernels.shape[-1] == self.input_size, "Kernels do not have the right shape."
+        seq_len = u.shape[0]
+        outputs = []
+        for K in Kernels: # O(hidden_size) operations
+            u_padded = torch.nn.functional.pad(u, (0, 0, 0, K.shape[0]))
+            K_padded = torch.nn.functional.pad(K, (0, 0, 0, seq_len))
+            ud = torch.fft.rfft(u_padded, dim=0) # (seq_len, input_size)
+            Kd = torch.fft.rfft(K_padded, dim=0) # (seq_len, input_size)
+            out = torch.fft.irfft(ud * Kd, dim=0)[:seq_len].sum(dim=-1) # (seq_len,)
+            outputs.append(out) # (hidden_size, seq_len)
+        outputs = torch.stack(outputs).t() # (seq_len, hidden_size)
+        return outputs
 
     def forward(self, input, hidden=None, decode=False):
         """
@@ -385,38 +416,7 @@ class SSM(torch.nn.Module):
             # Stack together output from all time steps
             output = torch.stack(output, dim=1)  # (batch_size, seq_len, hidden_size)
         return output, hidden
-    
-    def causal_convolution(self, u, Kernels):
-        """
-        u is the input tensor with shape (seq_len, input_size).
-        Kernels is hidden_size independent kernels of shape (seq_len, input_size).
-        ouputs should be a tensor with shape (seq_len, hidden_size).
-        """
-        assert Kernels.shape[0] == self.hidden_size and Kernels.shape[-1] == self.input_size, "Kernels do not have the right shape."
-        seq_len = u.shape[0]
-        outputs = []
-        for K in Kernels: # O(hidden_size) operations
-            u_padded = torch.nn.functional.pad(u, (0, 0, 0, K.shape[0]))
-            K_padded = torch.nn.functional.pad(K, (0, 0, 0, seq_len))
-            ud = torch.fft.rfft(u_padded, dim=0) # (seq_len, input_size)
-            Kd = torch.fft.rfft(K_padded, dim=0) # (seq_len, input_size)
-            out = torch.fft.irfft(ud * Kd, dim=0)[:seq_len].sum(dim=-1) # (seq_len,)
-            outputs.append(out) # (hidden_size, seq_len)
-        outputs = torch.stack(outputs).t() # (seq_len, hidden_size)
-        return outputs
-    
-    def K_conv(self, Ab, Bb, L):
-        """
-        L is the sequence length.
-        Each element of Kernels is a tensor of shape (hidden_size, input_size).
-        We create an independent kernel for each hidden dimension.
-        So Kernels should have shape (hidden_size, L, input_size).
-        """
-        assert Ab.shape == (self.hidden_size, self.hidden_size) and Bb.shape == (self.hidden_size, self.input_size), "SSM parameters are not of the right shape."
-        Kernels = torch.stack([(torch.matrix_power(Ab, l) @ Bb) for l in range(L)]).permute((1,0,-1))
-        return Kernels
-    
-    
+
 class CTRNN(torch.nn.Module):
     """Continuous-time RNN.
 
