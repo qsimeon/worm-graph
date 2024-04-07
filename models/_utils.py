@@ -163,10 +163,12 @@ class PositionalEncoding(torch.nn.Module):
         self,
         d_model: int,
         max_len: int = BLOCK_SIZE,
+        dropout: float = 0.1,
     ):
         super().__init__()
         self.d_model = d_model
         self.max_len = max_len
+        self.dropout = torch.nn.Dropout(p=dropout)
         position = torch.arange(max_len).unsqueeze(1)
         div_term = torch.exp(torch.arange(0, d_model, 2) * (-math.log(10000.0) / d_model))
         pe = torch.zeros(1, max_len, d_model)  # batch_first=True
@@ -181,7 +183,7 @@ class PositionalEncoding(torch.nn.Module):
         """
         x = x * math.sqrt(self.d_model)  # normalization used in Transformers
         x = x + self.pe[:, : x.size(1), :]  # add positional encoding to input
-        return x
+        return self.dropout(x)
 
 
 # # # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
@@ -223,7 +225,6 @@ class CausalTransformer(torch.nn.Module):
 
 class FeedForward(torch.nn.Module):
     """Simple linear layer followed by a non-linearity and dropout.
-    Includes a residual/'skip' connection in the forward method.
     n_embd: embedding dimension or width of the single hidden layer.
     dropout: probability of dropping a neuron.
     """
@@ -237,8 +238,7 @@ class FeedForward(torch.nn.Module):
         )
 
     def forward(self, x):
-        x = x + self.ffwd(x)
-        return x
+        return self.ffwd(x)
 
 
 class SelfAttention(torch.nn.Module):
@@ -286,6 +286,113 @@ class SelfAttention(torch.nn.Module):
         return attn_output
 
 
+class SSM(torch.nn.Module):
+    """State Space Model.
+
+    Parameters:
+        input_size: Number of input neurons
+        hidden_size: Number of hidden neurons
+
+    Inputs:
+        input: tensor of shape (seq_len, batch, input_size)
+        hidden: tensor of shape (batch, hidden_size), initial hidden activity
+            if None, hidden is initialized through self.init_hidden()
+
+    Outputs:
+        output: tensor of shape (batch, seq_len, hidden_size)
+        hidden: tensor of shape (batch, hidden_size), final hidden activity
+    """
+
+    def __init__(self, input_size, hidden_size):
+        super().__init__()
+        self.input_size = input_size
+        self.hidden_size = hidden_size
+        # SSM parameters
+        step = torch.ones(1, hidden_size)
+        A = self.make_HiPPO(self.hidden_size)
+        B = torch.randn(self.hidden_size, self.input_size)
+        self.register_buffer(name="A", tensor=A) # not trained
+        self.register_parameter(name="B", param=torch.nn.Parameter(B))
+        self.register_parameter(name="step", param=torch.nn.Parameter(step))
+        
+    def discretize(self):
+        I = torch.eye(self.A.shape[0])
+        BL = torch.linalg.inv(I - (self.step / 2.0) * self.A)
+        Ab = BL @ (I + (self.step / 2.0) * self.A)
+        Bb = (BL * self.step) @ self.B
+        return Ab, Bb
+
+    def make_HiPPO(self, N):
+        P = torch.sqrt(1 + 2 * torch.arange(N))
+        A = P.unsqueeze(-1) @ P.unsqueeze(0)
+        A = torch.tril(A) - torch.diag(torch.arange(N))
+        return -A
+
+    def init_hidden(self, input_shape):
+        device = next(self.parameters()).device
+        batch_size = input_shape[0]  # because batch_first=True
+        hidden = torch.zeros(batch_size, self.hidden_size).to(device)
+        return hidden
+
+    def recurrence(self, input, hidden):
+        """
+        Run network for one time step.
+
+        Inputs:
+            input: tensor of shape (batch, input_size)
+            hidden: tensor of shape (batch, hidden_size)
+
+        Outputs:
+            h_new: tensor of shape (batch, hidden_size),
+                network activity at the next time step
+        """
+        A, B = self.discretize()
+        h_new = A @ hidden + B @ input 
+        return h_new
+
+    def forward(self, input, hidden=None):
+        """
+        Propagate input through the network. NOTE: Because we use
+        batch_first=True, input has shape (batch, seq_len, input_size).
+        """
+        # If hidden activity is not provided, initialize it
+        if hidden is None:
+            hidden = self.init_hidden(input.shape)
+        # Loop through time
+        output = []
+        steps = range(input.size(1))
+        for i in steps:
+            # `hidden` is just the most recent state
+            hidden = self.recurrence(input[:, i, :], hidden) 
+            output.append(hidden)
+        # Stack together output from all time steps
+        output = torch.stack(output, dim=1)  # (batch, seq_len, hidden_size)
+        return output, hidden
+    
+    def causal_convolution(u, K):
+        assert K.ndim == u.ndim and K.shape[1] == u.shape[1], "Signals do not have the same shapes."
+        return fftconvolve(u, K, mode="full")
+    
+    def K_conv(self, L):
+        """L is the sequence length."""
+        Ab, Bb = self.discretize()
+        K = torch.tensor([(torch.linalg.matrix_power(Ab, l) @ Bb).reshape() for l in range(L)])
+        return K
+    
+    # def test_cnn_is_rnn(N=4, L=16, step=1.0 / 16):
+    #     ssm = random_SSM(rng, N)
+    #     u = jax.random.uniform(rng, (L,))
+    #     jax.random.split(rng, 3)
+    #     # RNN
+    #     rec = run_SSM(*ssm, u)
+
+    #     # CNN
+    #     ssmb = discretize(*ssm, step=step)
+    #     conv = causal_convolution(u, K_conv(*ssmb, L))
+
+    #     # Check
+        # assert np.allclose(rec.ravel(), conv.ravel())
+    
 class CTRNN(torch.nn.Module):
     """Continuous-time RNN.
 
@@ -399,7 +506,7 @@ class Model(torch.nn.Module):
             loss function to be used by the model. The default
             loss function we use is `torch.nn.MSELoss()`.
         3. A readout layer is implemented and will always be
-            called `self.linear`.
+            called `self.linear_readout`.
         4. The core of all models is called `self.hidden_hidden` and it is
             comprised of a single hidden layer of an architecture of choice.
         7. Getter methods for the input size and hidden size called
@@ -484,7 +591,7 @@ class Model(torch.nn.Module):
             hidden_state=self.hidden,
         )
         # Linear readout
-        self.linear = torch.nn.Linear(self.hidden_size, self.output_size)
+        self.linear_readout = torch.nn.Linear(self.hidden_size, self.output_size)
         # Model version_2 tokenizes neural data either as a 1-D sequence
         self.version_2 = version_2
         self.num_tokens = num_tokens
@@ -510,7 +617,7 @@ class Model(torch.nn.Module):
                 num_embeddings=self.num_tokens, embedding_dim=self.hidden_size
             )  # embedding lookup table (learned)
             # Adjust linear readout to output token logits
-            self.linear = torch.nn.Linear(self.hidden_size, self.num_tokens)
+            self.linear_readout = torch.nn.Linear(self.hidden_size, self.num_tokens)
             # Initialize weights
             self._init_weights()
             # Alias methods to new versions
@@ -525,9 +632,9 @@ class Model(torch.nn.Module):
 
     def _init_weights(self):
         # Initialize the readout bias
-        torch.nn.init.zeros_(self.linear.bias)
+        torch.nn.init.zeros_(self.linear_readout.bias)
         # Initialize the readout weights
-        torch.nn.init.xavier_uniform_(self.linear.weight)
+        torch.nn.init.xavier_uniform_(self.linear_readout.weight)
         # Initialize the embedding weights
         torch.nn.init.normal_(self.latent_embedding.weight)
         return None
@@ -737,10 +844,10 @@ class Model(torch.nn.Module):
         )  # (batch_size, seq_len, input_size)
         # Transform the input into a latent
         latent_out = self.input_hidden(input_activity)  # (batch_size, seq_len, hidden_size)
-        # Transform the latent
-        hidden_out = self.inner_hidden_model(latent_out)  # (batch_size, seq_len, hidden_size)
+        # Transform the latent and add a skip connection
+        hidden_out = latent_out + self.inner_hidden_model(latent_out)  # (batch_size, seq_len, hidden_size)
         # Perform a linear readout to get the output
-        output = self.linear(hidden_out)  # (batch_size, seq_len, input_size)
+        output = self.linear_readout(hidden_out)  # (batch_size, seq_len, input_size)
         # Return output neural data
         return output
 
@@ -768,10 +875,10 @@ class Model(torch.nn.Module):
         )  # (batch_size, seq_len)
         # Embed the tokens and then transform to a latent
         latent_out = self.input_hidden(input_tokens)  # (batch_size, seq_len, hidden_size)
-        # Transform the latent
-        hidden_out = self.inner_hidden_model(latent_out)  # (batch_size, seq_len, hidden_size)
+        # Transform the latent and add a skip connection
+        hidden_out = latent_out + self.inner_hidden_model(latent_out)  # (batch_size, seq_len, hidden_size)
         # Perform a linear readout to get the output
-        output_logits = self.linear(hidden_out)  # (batch_size, seq_len, num_tokens)
+        output_logits = self.linear_readout(hidden_out)  # (batch_size, seq_len, num_tokens)
         # Return output token logits
         return output_logits
 
@@ -971,7 +1078,7 @@ class Model(torch.nn.Module):
 
         ### DEBUG ###
         # Get only the newly generated time steps
-        generated_values = self.linear(
+        generated_values = self.linear_readout(
             input_copy[:, -num_new_timesteps:, :]
         ).detach()  # (batch_size, num_new_timesteps, input_size)
         ### DEBUG ###
@@ -1101,7 +1208,7 @@ class NaivePredictor(Model):
             hidden_state=self.hidden,
         )
         # Override the linear readout
-        self.linear = torch.nn.Identity()
+        self.linear_readout = torch.nn.Identity()
         # Create a dud parameter to avoid errors with the optimizer
         self._ = torch.nn.Parameter(torch.tensor(0.0))
 
@@ -1335,6 +1442,52 @@ class NeuralTransformer(Model):
     def init_hidden(self, input_shape=None):
         return None
 
+class NetworkSSM(Model):
+    """
+    A model of the C. elegans nervous system using a state-space model (SSM) backbone.
+    """
+
+    def __init__(
+        self,
+        input_size: int,
+        hidden_size: Union[int, None] = None,
+        loss: Union[Callable, None] = None,
+        l1_reg_param: float = 0.0,
+        **kwargs,
+    ):
+        # Specify positional encoding and normalization 
+        kwargs["positional_encoding"] = False
+        kwargs["normalization"] = 'rms_norm'
+        # Initialize super class
+        super(NetworkSSM, self).__init__(
+            input_size,
+            hidden_size,
+            loss,
+            l1_reg_param,
+            **kwargs,
+        )
+        # Input to hidden transformation
+        self.input_hidden = torch.nn.Sequential(
+            self.latent_embedding,
+            self.positional_encoding,
+            self.normalization,  
+        )
+        # Hidden to hidden transformation: State Space Model (SSM) layer
+        self.hidden_hidden = SSM(
+            input_size=self.hidden_size,
+            hidden_size=self.hidden_size,
+        )
+        # Instantiate internal hidden model (i.e. the "core")
+        self.inner_hidden_model = InnerHiddenModel(
+            hidden_hidden_model=self.hidden_hidden,
+            hidden_state=self.hidden,
+        )
+
+    def init_hidden(self, input_shape):
+        device = next(self.parameters()).device
+        batch_size = input_shape[0]  # because batch_first=True
+        hidden = torch.zeros(batch_size, self.hidden_size).to(device)
+        return hidden
 
 class NetworkCTRNN(Model):
     """
