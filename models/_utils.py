@@ -303,7 +303,7 @@ class SSM(torch.nn.Module):
         hidden: tensor of shape (batch, hidden_size), final hidden activity
     """
 
-    def __init__(self, input_size, hidden_size, decode=False):
+    def __init__(self, input_size, hidden_size):
         super().__init__()
         self.input_size = input_size
         self.hidden_size = hidden_size
@@ -311,16 +311,17 @@ class SSM(torch.nn.Module):
         self.A = torch.nn.Linear(self.hidden_size, self.hidden_size, bias=False)
         self.A.weight = torch.nn.Parameter(self.make_HiPPO(self.hidden_size), requires_grad=False)
         self.B = torch.nn.Linear(self.input_size, self.hidden_size, bias=False)
-        self.step = torch.nn.Parameter(torch.ones(1, hidden_size))
+        self.register_parameter(name="step", param=torch.nn.Parameter(torch.ones(hidden_size)))
         
     def discretize(self):
-        I = torch.eye(self.hidden_size)
-        BL = torch.linalg.inv(I - (self.step / 2.0) * self.A.weight)
-        Ab = BL @ (I + (self.step / 2.0) * self.A.weight)
-        Bb = (BL * self.step) @ self.B.weight
-        self.A.weight.data = Ab
-        self.B.weight.data = Bb
-        return None
+        I = torch.eye(self.hidden_size, device=self.B.weight.device, dtype=self.B.weight.dtype)
+        step_half_A = (self.step / 2.0) * self.A.weight
+        BL = torch.linalg.inv(I - step_half_A)
+        Ab = BL @ (I + step_half_A)
+        Bb = (BL * self.step.unsqueeze(0)) @ self.B.weight
+        # Instead of assigning the values directly, return them and use them in forward pass
+        return Ab, Bb
+
 
     def make_HiPPO(self, N):
         P = torch.sqrt(1 + 2 * torch.arange(N))
@@ -334,7 +335,7 @@ class SSM(torch.nn.Module):
         hidden = torch.zeros(batch_size, self.hidden_size).to(device)
         return hidden
 
-    def recurrence(self, input, hidden):
+    def recurrence(self, input, hidden, A, B):
         """
         Run network for one time step.
 
@@ -346,8 +347,8 @@ class SSM(torch.nn.Module):
             h_new: tensor of shape (batch_size, hidden_size),
                 network activity at the next time step
         """
-        h_new = self.A(hidden) + self.B(input)
-        return h_new
+        h_new = A @ hidden.unsqueeze(-1) + B @ input.unsqueeze(-1)
+        return h_new.squeeze(-1)
     
     def K_conv(self, Ab, Bb, L):
         """Computes the kernels for the convolutional mode of the SSM.
@@ -364,18 +365,19 @@ class SSM(torch.nn.Module):
     def causal_convolution(self, u, Kernels):
         """
         u is the input tensor with shape (seq_len, input_size).
-        Kernels is hidden_size independent kernels of shape (seq_len, input_size).
-        ouputs should be a tensor with shape (seq_len, hidden_size).
+        Kernels is 3D tensor with `hidden_size` independent kernels, each with shape shape (seq_len, input_size).
+        outputs should be a tensor with shape (seq_len, hidden_size).
         """
-        assert Kernels.shape[0] == self.hidden_size and Kernels.shape[-1] == self.input_size, "Kernels do not have the right shape."
-        seq_len = u.shape[0]
+        seq_len = u.size(0)
+        assert Kernels.size(0) == self.hidden_size and Kernels.size(-1) == self.input_size, "`Kernels` should be a tensor w/ shape (hidden_size, seq_len, input_size)"
+        assert Kernels.size(1) == seq_len, "The kernels and input do not have the same sequence length."
         outputs = []
         for K in Kernels: # O(hidden_size) operations
-            u_padded = torch.nn.functional.pad(u, (0, 0, 0, K.shape[0]))
-            K_padded = torch.nn.functional.pad(K, (0, 0, 0, seq_len))
-            ud = torch.fft.rfft(u_padded, dim=0) # (seq_len, input_size)
-            Kd = torch.fft.rfft(K_padded, dim=0) # (seq_len, input_size)
-            out = torch.fft.irfft(ud * Kd, dim=0)[:seq_len].sum(dim=-1) # (seq_len,)
+            # print(f" u: {u.shape} \n K: {K.shape} \n\n") # DEBUG
+            ud = torch.fft.rfft(u.float(), dim=0) # (seq_len, input_size)
+            Kd = torch.fft.rfft(K.float(), dim=0) # (seq_len, input_size)
+            out = torch.fft.irfft(ud * Kd, dim=0)
+            out = out[:seq_len].sum(dim=-1) # (seq_len,)
             outputs.append(out) # (hidden_size, seq_len)
         outputs = torch.stack(outputs).t() # (seq_len, hidden_size)
         return outputs
@@ -390,12 +392,14 @@ class SSM(torch.nn.Module):
         # If hidden activity is not provided, initialize it
         if hidden is None:
             hidden = self.init_hidden(input.shape)
-        # Discretize the SSM parameters
-        self.discretize()
+        # # Discretize the SSM parameters
+        # self.discretize()
+        # Get the discretized SSM weight parameters
+        Ab, Bb = self.discretize()
         ### DEBUG ###
         # Run the SSM
         if not decode: # CNN mode
-            Kernels = self.K_conv(self.A.weight, self.B.weight, input.size(1))
+            Kernels = self.K_conv(Ab, Bb, input.size(1))
             batch_size = input.size(0)
             output = []
             # Loop over batch
@@ -411,11 +415,13 @@ class SSM(torch.nn.Module):
             # Loop through time
             for i in range(seq_len):
                 # `hidden` is just the most recent state
-                hidden = self.recurrence(input[:, i, :], hidden) # (batch_size, hidden_size)
+                # hidden = self.recurrence(input[:, i, :], hidden) # (batch_size, hidden_size)
+                hidden = self.recurrence(input[:, i, :], hidden, Ab, Bb)
                 output.append(hidden)
             # Stack together output from all time steps
             output = torch.stack(output, dim=1)  # (batch_size, seq_len, hidden_size)
         return output, hidden
+
 
 class CTRNN(torch.nn.Module):
     """Continuous-time RNN.
@@ -438,7 +444,8 @@ class CTRNN(torch.nn.Module):
         super().__init__()
         self.input_size = input_size
         self.hidden_size = hidden_size
-        self.register_parameter(name="alpha", param=torch.nn.Parameter(torch.ones(1, hidden_size)))
+        # self.register_parameter(name="alpha", param=torch.nn.Parameter(torch.ones(1, hidden_size)))
+        self.register_parameter(name="alpha", param=torch.nn.Parameter(torch.ones(hidden_size)))
         self.input2h = torch.nn.Linear(input_size, hidden_size)
         self.h2h = torch.nn.Linear(hidden_size, hidden_size)
 
@@ -700,7 +707,7 @@ class Model(torch.nn.Module):
         # Get input shapes
         batch_size, _, input_size = neural_sequence.shape
         assert (
-            input_size == token_matrix.shape[-1]
+            input_size == token_matrix.size(-1)
         ), "Expected `token_matrix` to have same input size as `neural_sequence`."
         # Set feature_mask to all True if it is None
         if feature_mask is None:
@@ -771,13 +778,13 @@ class Model(torch.nn.Module):
                 device=neural_sequence.device,
             )
         assert (
-            feature_mask.ndim == 2 and feature_mask.shape[-1] == input_size
+            feature_mask.ndim == 2 and feature_mask.size(-1) == input_size
         ), "`feature_mask` must have shape (batch_size, input_size)"
         assert feature_mask.sum().item() > 0, "`feature_mask` cannot be all False."
         if token_matrix is None:
             token_matrix = self.neural_embedding
         assert (
-            token_matrix.ndim == 2 and token_matrix.shape[-1] == input_size
+            token_matrix.ndim == 2 and token_matrix.size(-1) == input_size
         ), "`token_matrix` must have shape (num_tokens, input_size)"
         # Move token_matrix to same device as neural_sequence
         token_matrix = token_matrix.to(neural_sequence.device)
@@ -935,7 +942,7 @@ class Model(torch.nn.Module):
             """
             # Default mask to all True if not provided
             if mask is None:
-                mask = torch.ones(target.shape[0], target.shape[-1], dtype=torch.bool).to(
+                mask = torch.ones(target.size(0), target.size(-1), dtype=torch.bool).to(
                     target.device
                 )
             # Expand feature mask along temporal dimension
@@ -984,7 +991,7 @@ class Model(torch.nn.Module):
             """
             # Default mask to all True if not provided
             if mask is None:
-                mask = torch.ones(target.shape[0], target.shape[-1], dtype=torch.bool).to(
+                mask = torch.ones(target.size(0), target.size(-1), dtype=torch.bool).to(
                     target.device
                 )
             # Flatten output logits along batch x time dimensions
@@ -1073,8 +1080,8 @@ class Model(torch.nn.Module):
             self.hidden = self.init_hidden(input_cond.shape)
             # Set hidden state of internal model
             self.inner_hidden_model.set_hidden(self.hidden)
-            # Transform the latent
-            predictions = self.inner_hidden_model(input_cond)  # (batch_size, seq_len, hidden_size)
+            # Transform the latent and add a skip connection
+            predictions = input_cond + self.inner_hidden_model(input_cond)  # (batch_size, seq_len, hidden_size)
             # Get the last predicted value
             input_next = predictions[:, [-1], :]  # (batch_size, 1, hidden_size)
             # Append the prediction to the the running sequence and continue
@@ -1466,9 +1473,10 @@ class NeuralTransformer(Model):
     def init_hidden(self, input_shape=None):
         return None
 
-class NetworkSSM(Model):
+class HippoSSM(Model):
     """
-    A model of the C. elegans nervous system using a state-space model (SSM) backbone.
+    A model of the C. elegans nervous system using a state-space model (SSM) backbone
+    that utilizes the HiPPo matrix for long-term sequence modeling.
     """
 
     def __init__(
@@ -1483,7 +1491,7 @@ class NetworkSSM(Model):
         kwargs["positional_encoding"] = False
         kwargs["normalization"] = 'rms_norm'
         # Initialize super class
-        super(NetworkSSM, self).__init__(
+        super(HippoSSM, self).__init__(
             input_size,
             hidden_size,
             loss,
