@@ -292,7 +292,7 @@ class SSM(torch.nn.Module):
     Parameters:
         input_size: Number of input neurons
         hidden_size: Number of hidden neurons
-
+    
     Inputs:
         input: tensor of shape (seq_len, batch, input_size)
         hidden: tensor of shape (batch, hidden_size), initial hidden activity
@@ -303,24 +303,24 @@ class SSM(torch.nn.Module):
         hidden: tensor of shape (batch, hidden_size), final hidden activity
     """
 
-    def __init__(self, input_size, hidden_size):
+    def __init__(self, input_size, hidden_size, decode=False):
         super().__init__()
         self.input_size = input_size
         self.hidden_size = hidden_size
         # SSM parameters
-        step = torch.ones(1, hidden_size)
-        A = self.make_HiPPO(self.hidden_size)
-        B = torch.randn(self.hidden_size, self.input_size)
-        self.register_buffer(name="A", tensor=A) # not trained
-        self.register_parameter(name="B", param=torch.nn.Parameter(B))
-        self.register_parameter(name="step", param=torch.nn.Parameter(step))
+        self.A = torch.nn.Linear(self.hidden_size, self.hidden_size, bias=False)
+        self.A.weight = torch.nn.Parameter(self.make_HiPPO(self.hidden_size), requires_grad=False)
+        self.B = torch.nn.Linear(self.input_size, self.hidden_size, bias=False)
+        self.step = torch.nn.Parameter(torch.ones(1, hidden_size))
         
     def discretize(self):
-        I = torch.eye(self.A.shape[0])
-        BL = torch.linalg.inv(I - (self.step / 2.0) * self.A)
-        Ab = BL @ (I + (self.step / 2.0) * self.A)
-        Bb = (BL * self.step) @ self.B
-        return Ab, Bb
+        I = torch.eye(self.hidden_size)
+        BL = torch.linalg.inv(I - (self.step / 2.0) * self.A.weight)
+        Ab = BL @ (I + (self.step / 2.0) * self.A.weight)
+        Bb = (BL * self.step) @ self.B.weight
+        self.A.weight.data = Ab
+        self.B.weight.data = Bb
+        return None
 
     def make_HiPPO(self, N):
         P = torch.sqrt(1 + 2 * torch.arange(N))
@@ -339,59 +339,83 @@ class SSM(torch.nn.Module):
         Run network for one time step.
 
         Inputs:
-            input: tensor of shape (batch, input_size)
-            hidden: tensor of shape (batch, hidden_size)
+            input: tensor of shape (batch_size, input_size)
+            hidden: tensor of shape (batch_size, hidden_size)
 
         Outputs:
-            h_new: tensor of shape (batch, hidden_size),
+            h_new: tensor of shape (batch_size, hidden_size),
                 network activity at the next time step
         """
-        A, B = self.discretize()
-        h_new = A @ hidden + B @ input 
+        h_new = self.A(hidden) + self.B(input)
         return h_new
 
-    def forward(self, input, hidden=None):
+    def forward(self, input, hidden=None, decode=False):
         """
         Propagate input through the network. NOTE: Because we use
-        batch_first=True, input has shape (batch, seq_len, input_size).
+        batch_first=True, input has shape (batch_size, seq_len, input_size).
+
+        decode: Whether to use recurrence (True) or convolution (False) to propagate input.
         """
         # If hidden activity is not provided, initialize it
         if hidden is None:
             hidden = self.init_hidden(input.shape)
-        # Loop through time
-        output = []
-        steps = range(input.size(1))
-        for i in steps:
-            # `hidden` is just the most recent state
-            hidden = self.recurrence(input[:, i, :], hidden) 
-            output.append(hidden)
-        # Stack together output from all time steps
-        output = torch.stack(output, dim=1)  # (batch, seq_len, hidden_size)
+        # Discretize the SSM parameters
+        self.discretize()
+        ### DEBUG ###
+        # Run the SSM
+        if not decode: # CNN mode
+            Kernels = self.K_conv(self.A.weight, self.B.weight, input.size(1))
+            batch_size = input.size(0)
+            output = []
+            # Loop over batch
+            for b in range(batch_size):
+                out = self.causal_convolution(input[b], Kernels) # (seq_len, hidden_size)
+                output.append(out)
+            # Stack together output from all batch elements
+            output = torch.stack(output, dim=0) # (batch_size, seq_len, hidden_size)
+        ### DEBUG ###
+        else: # RNN mode
+            seq_len = input.size(1)
+            output = []
+            # Loop through time
+            for i in range(seq_len):
+                # `hidden` is just the most recent state
+                hidden = self.recurrence(input[:, i, :], hidden) # (batch_size, hidden_size)
+                output.append(hidden)
+            # Stack together output from all time steps
+            output = torch.stack(output, dim=1)  # (batch_size, seq_len, hidden_size)
         return output, hidden
     
-    def causal_convolution(u, K):
-        assert K.ndim == u.ndim and K.shape[1] == u.shape[1], "Signals do not have the same shapes."
-        return fftconvolve(u, K, mode="full")
+    def causal_convolution(self, u, Kernels):
+        """
+        u is the input tensor with shape (seq_len, input_size).
+        Kernels is hidden_size independent kernels of shape (seq_len, input_size).
+        ouputs should be a tensor with shape (seq_len, hidden_size).
+        """
+        assert Kernels.shape[0] == self.hidden_size and Kernels.shape[-1] == self.input_size, "Kernels do not have the right shape."
+        seq_len = u.shape[0]
+        outputs = []
+        for K in Kernels: # O(hidden_size) operations
+            u_padded = torch.nn.functional.pad(u, (0, 0, 0, K.shape[0]))
+            K_padded = torch.nn.functional.pad(K, (0, 0, 0, seq_len))
+            ud = torch.fft.rfft(u_padded, dim=0) # (seq_len, input_size)
+            Kd = torch.fft.rfft(K_padded, dim=0) # (seq_len, input_size)
+            out = torch.fft.irfft(ud * Kd, dim=0)[:seq_len].sum(dim=-1) # (seq_len,)
+            outputs.append(out) # (hidden_size, seq_len)
+        outputs = torch.stack(outputs).t() # (seq_len, hidden_size)
+        return outputs
     
-    def K_conv(self, L):
-        """L is the sequence length."""
-        Ab, Bb = self.discretize()
-        K = torch.tensor([(torch.linalg.matrix_power(Ab, l) @ Bb).reshape() for l in range(L)])
-        return K
+    def K_conv(self, Ab, Bb, L):
+        """
+        L is the sequence length.
+        Each element of Kernels is a tensor of shape (hidden_size, input_size).
+        We create an independent kernel for each hidden dimension.
+        So Kernels should have shape (hidden_size, L, input_size).
+        """
+        assert Ab.shape == (self.hidden_size, self.hidden_size) and Bb.shape == (self.hidden_size, self.input_size), "SSM parameters are not of the right shape."
+        Kernels = torch.stack([(torch.matrix_power(Ab, l) @ Bb) for l in range(L)]).permute((1,0,-1))
+        return Kernels
     
-    # def test_cnn_is_rnn(N=4, L=16, step=1.0 / 16):
-    #     ssm = random_SSM(rng, N)
-    #     u = jax.random.uniform(rng, (L,))
-    #     jax.random.split(rng, 3)
-    #     # RNN
-    #     rec = run_SSM(*ssm, u)
-
-    #     # CNN
-    #     ssmb = discretize(*ssm, step=step)
-    #     conv = causal_convolution(u, K_conv(*ssmb, L))
-
-    #     # Check
-        # assert np.allclose(rec.ravel(), conv.ravel())
     
 class CTRNN(torch.nn.Module):
     """Continuous-time RNN.
