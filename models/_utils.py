@@ -1327,7 +1327,7 @@ class FeatureFFNN(Model):
     ):
         # Specify positional encoding and normalization
         kwargs["positional_encoding"] = False
-        kwargs["normalization"] = "rms_norm"
+        kwargs["normalization"] = "layer_norm"
         # Initialize super class
         super(FeatureFFNN, self).__init__(
             input_size,
@@ -1504,7 +1504,7 @@ class HippoSSM(Model):
     ):
         # Specify positional encoding and normalization
         kwargs["positional_encoding"] = False
-        kwargs["normalization"] = "rms_norm"
+        kwargs["normalization"] = "layer_norm"
         # Initialize super class
         super(HippoSSM, self).__init__(
             input_size,
@@ -1556,7 +1556,7 @@ class NetworkCTRNN(Model):
     ):
         # Specify positional encoding and normalization
         kwargs["positional_encoding"] = False
-        kwargs["normalization"] = "rms_norm"
+        kwargs["normalization"] = "layer_norm"
         # Initialize super class
         super(NetworkCTRNN, self).__init__(
             input_size,
@@ -1606,7 +1606,7 @@ class LiquidCfC(Model):
     ):
         # Specify positional encoding and normalization
         kwargs["positional_encoding"] = False
-        kwargs["normalization"] = "rms_norm"
+        kwargs["normalization"] = "layer_norm"
         # Initialize super class
         super(LiquidCfC, self).__init__(
             input_size,
@@ -1625,7 +1625,7 @@ class LiquidCfC(Model):
         self.hidden_hidden = CfC(
             input_size=self.hidden_size,
             units=self.hidden_size,
-            activation="relu",
+            # activation="relu", # DEBUG: default is "lecun_tanh"
         )
         # Instantiate internal hidden model (i.e. the "core")
         self.inner_hidden_model = InnerHiddenModel(
@@ -1673,7 +1673,7 @@ class NetworkLSTM(Model):
     ):
         # Specify positional encoding and normalization
         kwargs["positional_encoding"] = False
-        kwargs["normalization"] = "rms_norm"
+        kwargs["normalization"] = "layer_norm"
         # Initialize super class
         super(NetworkLSTM, self).__init__(
             input_size,

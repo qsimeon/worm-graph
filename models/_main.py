@@ -22,6 +22,7 @@ def get_model(model_config: DictConfig, verbose=True) -> torch.nn.Module:
     PureAttention : class in models/_utils.py
     NeuralTransformer : class in models/_utils.py
     NetworkLSTM : class in models/_utils.py
+    HippoSSM : class in models/_utils.py
     NetworkCTRNN : class in models/_utils.py
     LiquidCfC : class in models/_utils.py
     FeatureFFNN : class in models/_utils.py
@@ -75,6 +76,8 @@ def get_model(model_config: DictConfig, verbose=True) -> torch.nn.Module:
             model = NeuralTransformer(**args)
         elif model_config.type == "NetworkLSTM":
             model = NetworkLSTM(**args)
+        elif model_config.type == "HippoSSM":
+            model = HippoSSM(**args)
         elif model_config.type == "NetworkCTRNN":
             model = NetworkCTRNN(**args)
         elif model_config.type == "LiquidCfC":

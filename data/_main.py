@@ -19,7 +19,6 @@ def get_datasets(dataset_config: DictConfig, save=True):
         - use_these_datasets (str or None): Directory containing train and validation datasets.
             If provided, datasets will be loaded from this directory if they exist.
             If not provided or datasets don't exist in the directory, they will be generated using the other parameters.
-
         - experimental_datasets: Path to the experimental datasets.
         - num_named_neurons (int or None): Number of named neurons to include or None to include all.
         - num_worms (int or None): Number of worms to include or None to include all.
