@@ -199,7 +199,7 @@ class CausalTransformer(torch.nn.Module):
     Sets `is_causal=True` in forward method of TransformerEncoderLayer.
     """
 
-    def __init__(self, d_model, nhead, dim_feedforward, dropout):
+    def __init__(self, d_model, nhead, dim_feedforward, dropout=0.1):
         super().__init__()
         self.num_layers = 1  # single layer
         self.is_causal = True  # causal attention
@@ -254,7 +254,7 @@ class SelfAttention(torch.nn.Module):
 
     """
 
-    def __init__(self, embed_dim, num_heads, dropout):
+    def __init__(self, embed_dim, num_heads, dropout=0.1):
         super().__init__()
         self.attn = torch.nn.MultiheadAttention(
             embed_dim,
@@ -292,7 +292,7 @@ class SSM(torch.nn.Module):
     Parameters:
         input_size: Number of input neurons
         hidden_size: Number of hidden neurons
-    
+
     Inputs:
         input: tensor of shape (seq_len, batch, input_size)
         hidden: tensor of shape (batch, hidden_size), initial hidden activity
@@ -303,16 +303,17 @@ class SSM(torch.nn.Module):
         hidden: tensor of shape (batch, hidden_size), final hidden activity
     """
 
-    def __init__(self, input_size, hidden_size):
+    def __init__(self, input_size, hidden_size, decode=False):
         super().__init__()
         self.input_size = input_size
         self.hidden_size = hidden_size
+        self.decode = decode
         # SSM parameters
         self.A = torch.nn.Linear(self.hidden_size, self.hidden_size, bias=False)
         self.A.weight = torch.nn.Parameter(self.make_HiPPO(self.hidden_size), requires_grad=False)
         self.B = torch.nn.Linear(self.input_size, self.hidden_size, bias=False)
         self.register_parameter(name="step", param=torch.nn.Parameter(torch.ones(hidden_size)))
-        
+
     def discretize(self):
         I = torch.eye(self.hidden_size, device=self.B.weight.device, dtype=self.B.weight.dtype)
         step_half_A = (self.step / 2.0) * self.A.weight
@@ -321,7 +322,6 @@ class SSM(torch.nn.Module):
         Bb = (BL * self.step.unsqueeze(0)) @ self.B.weight
         # Instead of assigning the values directly, return them and use them in forward pass
         return Ab, Bb
-
 
     def make_HiPPO(self, N):
         P = torch.sqrt(1 + 2 * torch.arange(N))
@@ -349,17 +349,22 @@ class SSM(torch.nn.Module):
         """
         h_new = A @ hidden.unsqueeze(-1) + B @ input.unsqueeze(-1)
         return h_new.squeeze(-1)
-    
+
     def K_conv(self, Ab, Bb, L):
         """Computes the kernels for the convolutional mode of the SSM.
         Ab and Bb are the discretized SSM parameter matrices. L is the sequence length.
-        
+
         We create an independent kernel for each state dimension.
         Each element of Kernels is a tensor of shape (hidden_size, input_size).
         So Kernels should have shape (hidden_size, L, input_size).
         """
-        assert Ab.shape == (self.hidden_size, self.hidden_size) and Bb.shape == (self.hidden_size, self.input_size), "SSM parameters are not of the right shape."
-        Kernels = torch.stack([(torch.matrix_power(Ab, l) @ Bb) for l in range(L)]).permute((1,0,-1))
+        assert Ab.shape == (self.hidden_size, self.hidden_size) and Bb.shape == (
+            self.hidden_size,
+            self.input_size,
+        ), "SSM parameters are not of the right shape."
+        Kernels = torch.stack([(torch.matrix_power(Ab, l) @ Bb) for l in range(L)]).permute(
+            (1, 0, -1)
+        )
         return Kernels
 
     def causal_convolution(self, u, Kernels):
@@ -369,20 +374,25 @@ class SSM(torch.nn.Module):
         outputs should be a tensor with shape (seq_len, hidden_size).
         """
         seq_len = u.size(0)
-        assert Kernels.size(0) == self.hidden_size and Kernels.size(-1) == self.input_size, "`Kernels` should be a tensor w/ shape (hidden_size, seq_len, input_size)"
-        assert Kernels.size(1) == seq_len, "The kernels and input do not have the same sequence length."
+        assert (
+            Kernels.size(0) == self.hidden_size and Kernels.size(-1) == self.input_size
+        ), "`Kernels` should be a tensor w/ shape (hidden_size, seq_len, input_size)"
+        assert (
+            Kernels.size(1) == seq_len
+        ), "The kernels and input do not have the same sequence length."
         outputs = []
-        for K in Kernels: # O(hidden_size) operations
-            # print(f" u: {u.shape} \n K: {K.shape} \n\n") # DEBUG
-            ud = torch.fft.rfft(u.float(), dim=0) # (seq_len, input_size)
-            Kd = torch.fft.rfft(K.float(), dim=0) # (seq_len, input_size)
-            out = torch.fft.irfft(ud * Kd, dim=0)
-            out = out[:seq_len].sum(dim=-1) # (seq_len,)
-            outputs.append(out) # (hidden_size, seq_len)
-        outputs = torch.stack(outputs).t() # (seq_len, hidden_size)
+        for K in Kernels:  # O(hidden_size) operations
+            ud = torch.fft.rfft(u.float(), dim=0)  # (seq_len, input_size)
+            Kd = torch.fft.rfft(K.float(), dim=0)  # (seq_len, input_size)
+            out = torch.fft.irfft(ud * Kd, n=seq_len, dim=0).sum(dim=-1)  # (seq_len,)
+            outputs.append(out)  # (hidden_size, seq_len)
+        outputs = torch.stack(outputs).t()  # (seq_len, hidden_size)
         return outputs
 
-    def forward(self, input, hidden=None, decode=False):
+    def batch_causal_convolution(self, input, Kernels):
+        return torch.vmap(self.causal_convolution, in_dims=(0, None), out_dims=0)(input, Kernels)
+
+    def forward(self, input, hidden=None):
         """
         Propagate input through the network. NOTE: Because we use
         batch_first=True, input has shape (batch_size, seq_len, input_size).
@@ -392,30 +402,28 @@ class SSM(torch.nn.Module):
         # If hidden activity is not provided, initialize it
         if hidden is None:
             hidden = self.init_hidden(input.shape)
-        # # Discretize the SSM parameters
-        # self.discretize()
-        # Get the discretized SSM weight parameters
+        # Get the discretized SSM parameters
         Ab, Bb = self.discretize()
-        ### DEBUG ###
         # Run the SSM
-        if not decode: # CNN mode
+        if not self.decode:  # CNN mode
             Kernels = self.K_conv(Ab, Bb, input.size(1))
-            batch_size = input.size(0)
-            output = []
-            # Loop over batch
-            for b in range(batch_size):
-                out = self.causal_convolution(input[b], Kernels) # (seq_len, hidden_size)
-                output.append(out)
-            # Stack together output from all batch elements
-            output = torch.stack(output, dim=0) # (batch_size, seq_len, hidden_size)
-        ### DEBUG ###
-        else: # RNN mode
+            # ### DEBUG ###
+            # batch_size = input.size(0)
+            # output = []
+            # # Loop over batch
+            # for b in range(batch_size):
+            #     out = self.causal_convolution(input[b], Kernels) # (seq_len, hidden_size)
+            #     output.append(out)
+            # # Stack together output from all batch elements
+            # output = torch.stack(output, dim=0) # (batch_size, seq_len, hidden_size)
+            # ### DEBUG ###
+            output = self.batch_causal_convolution(input, Kernels)
+        else:  # RNN mode
             seq_len = input.size(1)
             output = []
             # Loop through time
             for i in range(seq_len):
                 # `hidden` is just the most recent state
-                # hidden = self.recurrence(input[:, i, :], hidden) # (batch_size, hidden_size)
                 hidden = self.recurrence(input[:, i, :], hidden, Ab, Bb)
                 output.append(hidden)
             # Stack together output from all time steps
@@ -554,7 +562,7 @@ class Model(torch.nn.Module):
         version_2: bool = VERSION_2,
         num_tokens: int = NUM_TOKENS,
         # Additional keyword arguments
-        normalization: Union[str, None] = None, # 'rms_norm', 'layer_norm'
+        normalization: Union[str, None] = None,  # 'rms_norm', 'layer_norm'
         positional_encoding: Union[bool, None] = False,
     ):
         """
@@ -598,10 +606,10 @@ class Model(torch.nn.Module):
         else:
             self.positional_encoding = self.identity
         # Optional normalization layer
-        if normalization == 'rms_norm':
-            self.normalization = RMSNorm(self.hidden_size) 
-        elif normalization == 'layer_norm':
-            self.normalization = torch.nn.LayerNorm(self.hidden_size, elementwise_affine=True)  
+        if normalization == "rms_norm":
+            self.normalization = RMSNorm(self.hidden_size)
+        elif normalization == "layer_norm":
+            self.normalization = torch.nn.LayerNorm(self.hidden_size, elementwise_affine=True)
         else:
             self.normalization = self.identity
         # Input to hidden transformation block - placeholder
@@ -706,8 +714,8 @@ class Model(torch.nn.Module):
         """
         # Get input shapes
         batch_size, _, input_size = neural_sequence.shape
-        assert (
-            input_size == token_matrix.size(-1)
+        assert input_size == token_matrix.size(
+            -1
         ), "Expected `token_matrix` to have same input size as `neural_sequence`."
         # Set feature_mask to all True if it is None
         if feature_mask is None:
@@ -876,7 +884,9 @@ class Model(torch.nn.Module):
         # Transform the input into a latent
         latent_out = self.input_hidden(input_activity)  # (batch_size, seq_len, hidden_size)
         # Transform the latent and add a skip connection
-        hidden_out = latent_out + self.inner_hidden_model(latent_out)  # (batch_size, seq_len, hidden_size)
+        hidden_out = latent_out + self.inner_hidden_model(
+            latent_out
+        )  # (batch_size, seq_len, hidden_size)
         # Perform a linear readout to get the output
         output = self.linear_readout(hidden_out)  # (batch_size, seq_len, input_size)
         # Return output neural data
@@ -907,7 +917,9 @@ class Model(torch.nn.Module):
         # Embed the tokens and then transform to a latent
         latent_out = self.input_hidden(input_tokens)  # (batch_size, seq_len, hidden_size)
         # Transform the latent and add a skip connection
-        hidden_out = latent_out + self.inner_hidden_model(latent_out)  # (batch_size, seq_len, hidden_size)
+        hidden_out = latent_out + self.inner_hidden_model(
+            latent_out
+        )  # (batch_size, seq_len, hidden_size)
         # Perform a linear readout to get the output
         output_logits = self.linear_readout(hidden_out)  # (batch_size, seq_len, num_tokens)
         # Return output token logits
@@ -1081,7 +1093,9 @@ class Model(torch.nn.Module):
             # Set hidden state of internal model
             self.inner_hidden_model.set_hidden(self.hidden)
             # Transform the latent and add a skip connection
-            predictions = input_cond + self.inner_hidden_model(input_cond)  # (batch_size, seq_len, hidden_size)
+            predictions = input_cond + self.inner_hidden_model(
+                input_cond
+            )  # (batch_size, seq_len, hidden_size)
             # Get the last predicted value
             input_next = predictions[:, [-1], :]  # (batch_size, 1, hidden_size)
             # Append the prediction to the the running sequence and continue
@@ -1218,7 +1232,7 @@ class NaivePredictor(Model):
                 "Switching to version_1."
             )
         kwargs["version_2"] = False
-        # Specify positional encoding and normalization 
+        # Specify positional encoding and normalization
         kwargs["positional_encoding"] = False
         kwargs["normalization"] = None
         # Initialize super class
@@ -1263,7 +1277,7 @@ class LinearRegression(Model):
         l1_reg_param=0.0,
         **kwargs,
     ):
-        # Specify positional encoding and normalization 
+        # Specify positional encoding and normalization
         kwargs["positional_encoding"] = False
         kwargs["normalization"] = None
         # Initialize super class
@@ -1278,7 +1292,7 @@ class LinearRegression(Model):
         self.input_hidden = torch.nn.Sequential(
             self.latent_embedding,
             self.positional_encoding,
-            self.normalization,   
+            self.normalization,
         )
         # Hidden to hidden transformation
         self.hidden_hidden = torch.nn.Identity()
@@ -1311,9 +1325,9 @@ class FeatureFFNN(Model):
         l1_reg_param: float = 0.0,
         **kwargs,
     ):
-        # Specify positional encoding and normalization 
+        # Specify positional encoding and normalization
         kwargs["positional_encoding"] = False
-        kwargs["normalization"] = 'rms_norm'
+        kwargs["normalization"] = "rms_norm"
         # Initialize super class
         super(FeatureFFNN, self).__init__(
             input_size,
@@ -1328,7 +1342,7 @@ class FeatureFFNN(Model):
         self.input_hidden = torch.nn.Sequential(
             self.latent_embedding,
             self.positional_encoding,
-            self.normalization,   
+            self.normalization,
         )
         # Hidden to hidden transformation: FeedForward layer
         self.hidden_hidden = FeedForward(
@@ -1366,7 +1380,7 @@ class PureAttention(Model):
             hidden_size = hidden_size + 1
         else:
             logger.info(f"Using hidden_size: {hidden_size}.")
-        # Specify positional encoding and normalization 
+        # Specify positional encoding and normalization
         kwargs["positional_encoding"] = True
         kwargs["normalization"] = None
         # Initialize super class
@@ -1381,15 +1395,15 @@ class PureAttention(Model):
         ### DEBUG ###
         # NOTE: number of attention heads must be divisor of `hidden_size`
         # self.num_heads = max([i for i in range(1, 9) if hidden_size % i == 0])
-        self.num_heads = 1 
-        logger.info(f"Number of attention heads: {self.num_heads}.") # DEBUG
+        self.num_heads = 1
+        logger.info(f"Number of attention heads: {self.num_heads}.")  # DEBUG
         ### DEBUG ###
         self.dropout = 0.1  # dropout rate
         # Input to hidden transformation
         self.input_hidden = torch.nn.Sequential(
             self.latent_embedding,
             self.positional_encoding,
-            self.normalization,  
+            self.normalization,
         )
         # Hidden to hidden transformation: Multihead Attention layer
         self.hidden_hidden = SelfAttention(
@@ -1432,7 +1446,7 @@ class NeuralTransformer(Model):
             hidden_size = hidden_size + 1
         else:
             logger.info(f"Using hidden_size: {hidden_size}.")
-        # Specify positional encoding and normalization 
+        # Specify positional encoding and normalization
         kwargs["positional_encoding"] = True
         kwargs["normalization"] = None
         # Initialize super class
@@ -1447,15 +1461,15 @@ class NeuralTransformer(Model):
         ### DEBUG ###
         # NOTE: number of attention heads must be divisor of `hidden_size`
         # self.num_heads = max([i for i in range(1, 9) if hidden_size % i == 0])
-        self.num_heads = 1 
-        logger.info(f"Number of attention heads: {self.num_heads}.") # DEBUG
+        self.num_heads = 1
+        logger.info(f"Number of attention heads: {self.num_heads}.")  # DEBUG
         ### DEBUG ###
         self.dropout = 0.1  # dropout rate
         # Input to hidden transformation
         self.input_hidden = torch.nn.Sequential(
             self.latent_embedding,
             self.positional_encoding,
-            self.normalization,  
+            self.normalization,
         )
         # Hidden to hidden transformation: TransformerEncoderLayer
         self.hidden_hidden = CausalTransformer(
@@ -1473,6 +1487,7 @@ class NeuralTransformer(Model):
     def init_hidden(self, input_shape=None):
         return None
 
+
 class HippoSSM(Model):
     """
     A model of the C. elegans nervous system using a state-space model (SSM) backbone
@@ -1487,9 +1502,9 @@ class HippoSSM(Model):
         l1_reg_param: float = 0.0,
         **kwargs,
     ):
-        # Specify positional encoding and normalization 
+        # Specify positional encoding and normalization
         kwargs["positional_encoding"] = False
-        kwargs["normalization"] = 'rms_norm'
+        kwargs["normalization"] = "rms_norm"
         # Initialize super class
         super(HippoSSM, self).__init__(
             input_size,
@@ -1498,16 +1513,19 @@ class HippoSSM(Model):
             l1_reg_param,
             **kwargs,
         )
+        # Special parameters for this model
+        self.decode = False  # convolution (True) or recurrence (False) mode of SSM
         # Input to hidden transformation
         self.input_hidden = torch.nn.Sequential(
             self.latent_embedding,
             self.positional_encoding,
-            self.normalization,  
+            self.normalization,
         )
         # Hidden to hidden transformation: State Space Model (SSM) layer
         self.hidden_hidden = SSM(
             input_size=self.hidden_size,
             hidden_size=self.hidden_size,
+            decode=self.decode,
         )
         # Instantiate internal hidden model (i.e. the "core")
         self.inner_hidden_model = InnerHiddenModel(
@@ -1520,6 +1538,7 @@ class HippoSSM(Model):
         batch_size = input_shape[0]  # because batch_first=True
         hidden = torch.zeros(batch_size, self.hidden_size).to(device)
         return hidden
+
 
 class NetworkCTRNN(Model):
     """
@@ -1535,9 +1554,9 @@ class NetworkCTRNN(Model):
         l1_reg_param: float = 0.0,
         **kwargs,
     ):
-        # Specify positional encoding and normalization 
+        # Specify positional encoding and normalization
         kwargs["positional_encoding"] = False
-        kwargs["normalization"] = 'rms_norm'
+        kwargs["normalization"] = "rms_norm"
         # Initialize super class
         super(NetworkCTRNN, self).__init__(
             input_size,
@@ -1550,7 +1569,7 @@ class NetworkCTRNN(Model):
         self.input_hidden = torch.nn.Sequential(
             self.latent_embedding,
             self.positional_encoding,
-            self.normalization,  
+            self.normalization,
         )
         # Hidden to hidden transformation: Continuous time RNN (CTRNN) layer
         self.hidden_hidden = CTRNN(
@@ -1585,9 +1604,9 @@ class LiquidCfC(Model):
         l1_reg_param: float = 0.0,
         **kwargs,
     ):
-        # Specify positional encoding and normalization 
+        # Specify positional encoding and normalization
         kwargs["positional_encoding"] = False
-        kwargs["normalization"] = 'rms_norm'
+        kwargs["normalization"] = "rms_norm"
         # Initialize super class
         super(LiquidCfC, self).__init__(
             input_size,
@@ -1600,7 +1619,7 @@ class LiquidCfC(Model):
         self.input_hidden = torch.nn.Sequential(
             self.latent_embedding,
             self.positional_encoding,
-            self.normalization,  
+            self.normalization,
         )
         # Hidden to hidden transformation: Closed-form continuous-time (CfC) layer
         self.hidden_hidden = CfC(
@@ -1652,9 +1671,9 @@ class NetworkLSTM(Model):
         l1_reg_param: float = 0.0,
         **kwargs,
     ):
-        # Specify positional encoding and normalization 
+        # Specify positional encoding and normalization
         kwargs["positional_encoding"] = False
-        kwargs["normalization"] = 'rms_norm'
+        kwargs["normalization"] = "rms_norm"
         # Initialize super class
         super(NetworkLSTM, self).__init__(
             input_size,
@@ -1667,7 +1686,7 @@ class NetworkLSTM(Model):
         self.input_hidden = torch.nn.Sequential(
             self.latent_embedding,
             self.positional_encoding,
-            self.normalization,  
+            self.normalization,
         )
         # Hidden to hidden transformation: Long-short term memory (LSTM) layer
         self.hidden_hidden = torch.nn.LSTM(
