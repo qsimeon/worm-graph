@@ -12,7 +12,7 @@ def analyse_run(analysis_config: DictConfig):
     # Analyse validation loss across datasets
     loss_per_dataset(
         log_dir=log_dir,
-        experimental_datasets=analysis_config.validation.experimental_datasets,
+        source_datasets=analysis_config.validation.source_datasets,
         mode="validation",
     )
 

@@ -1064,70 +1064,26 @@ class Model(torch.nn.Module):
             return self.generate_v2(input, mask, num_new_timesteps, context_window)
         # Set model to evaluation mode
         self.eval()
-
-        # # Detach and copy the input
-        # input_copy = input.detach().clone()
-
-        ### DEBUG ###
-        # TODO: Do generation in the latent space.
-        # Detach and copy the input and convert to dtype of the model
+        # Detach and copy input and convert to dtype of model
         input_copy = input.detach().clone().to(dtype=next(self.parameters()).dtype)
-        # Multiply input by the mask (expanded to match input shape)
-        input_copy = self.identity(
-            input_copy * mask.unsqueeze(1).expand_as(input)
-        )  # (batch_size, seq_len, input_size)
-        # Transform the input into a latent
-        input_copy = self.input_hidden(input_copy)  # (batch_size, seq_len, hidden_size)
-        ### DEBUG ###
-
         # Loop through time
         for _ in range(num_new_timesteps):
             # If the sequence context is growing too long we must crop it
             input_cond = input_copy[
                 :, -context_window:, :
             ].detach()  # (batch_size, context_window, neurons)
-
-            ### DEBUG ###
-            # Initialize hidden state
-            self.hidden = self.init_hidden(input_cond.shape)
-            # Set hidden state of internal model
-            self.inner_hidden_model.set_hidden(self.hidden)
-            # Transform the latent and add a skip connection
-            predictions = input_cond + self.inner_hidden_model(
-                input_cond
-            )  # (batch_size, seq_len, hidden_size)
+            # Forward the model to get the predictions
+            predictions = self(input_cond, mask)  # (batch_size, context_window, neurons)
             # Get the last predicted value
-            input_next = predictions[:, [-1], :]  # (batch_size, 1, hidden_size)
-            # Append the prediction to the the running sequence and continue
+            input_next = predictions[:, [-1], :]  # (batch_size, 1, neurons)
+            # Append the prediction to the running sequence and continue
             input_copy = torch.cat(
                 (input_copy, input_next), dim=1
             )  # generating values autoregressively
-            ### DEBUG ###
-
-            # # Forward the model to get the predictions
-            # predictions = self(input_cond, mask)  # (batch_size, context_window, neurons)
-            # # Get the last predicted value
-            # input_next = predictions[:, [-1], :]  # (batch_size, 1, neurons)
-            # # TODO: Implement adaptive normalization to avoid generations that blow up.
-            # # The current clamping is just a quick fix to prevent exploding values.
-            # input_next = torch.clamp(input_next, min=input_cond.min(), max=input_cond.max())
-            # # Append the prediction to the the running sequence and continue
-            # input_copy = torch.cat(
-            #     (input_copy, input_next), dim=1
-            # )  # generating values autoregressively
-
-        # # Get only the newly generated time steps
-        # generated_values = input_copy[
-        #     :, -num_new_timesteps:, :
-        # ].detach()  # (batch_size, num_new_timesteps, input_size)
-
-        ### DEBUG ###
         # Get only the newly generated time steps
-        generated_values = self.linear_readout(
-            input_copy[:, -num_new_timesteps:, :]
-        ).detach()  # (batch_size, num_new_timesteps, input_size)
-        ### DEBUG ###
-
+        generated_values = input_copy[
+            :, -num_new_timesteps:, :
+        ].detach()  # (batch_size, num_new_timesteps, input_size)
         # Return the generations
         return generated_values
 

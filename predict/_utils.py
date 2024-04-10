@@ -7,7 +7,7 @@ logger = logging.getLogger(__name__)
 def model_predict(
     log_dir: str,
     model: torch.nn.Module,
-    experimental_datasets: dict,
+    source_datasets: dict,
     context_window: int,
 ):
     """
@@ -27,8 +27,8 @@ def model_predict(
         Number of time steps to use as context for the predictions.
     """
     # Convert DictConfig to dict
-    if isinstance(experimental_datasets, DictConfig):
-        experimental_datasets = OmegaConf.to_object(experimental_datasets)
+    if isinstance(source_datasets, DictConfig):
+        source_datasets = OmegaConf.to_object(source_datasets)
     # Retrieve information from training
     train_dataset_info = pd.read_csv(
         os.path.join(log_dir, "dataset", "train_dataset_info.csv"),
@@ -43,7 +43,7 @@ def model_predict(
     key_data = "smooth_" + key_data if smooth_data else key_data
     # Load the combined dataset
     combined_dataset, dataset_info = create_combined_dataset(
-        experimental_datasets=experimental_datasets,
+        source_datasets=source_datasets,
         num_named_neurons=None,  # use all available neurons
     )
     # Put model on device

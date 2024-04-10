@@ -10,7 +10,7 @@ hydra:
   sweeper:
       params:
         experiment.seed: range(1) # assign each repetition of the experiment a distinct random seed
-        submodule.model.type: NaivePredictor, LinearRegression, FeatureFFNN, NetworkLSTM, NetworkCTRNN, LiquidCfC, PureAttention, NeuralTransformer
+        submodule.model.type: HippoSSM #NaivePredictor, LinearRegression, FeatureFFNN, NetworkLSTM, HippoSSM, NetworkCTRNN, LiquidCfC, PureAttention, NeuralTransformer
 
 # The submodule parameters set below will be used only if RUN mode is used. 
 # Otherwise, it uses the default parameters imported from the other config files in the submodule directory.
@@ -24,7 +24,7 @@ submodule:
 
     save_datasets: false
 
-    experimental_datasets:
+    source_datasets:
       Sines0000: null
       Lorenz0000: null
       WhiteNoise0000: null
@@ -43,7 +43,6 @@ submodule:
     num_named_neurons: null
     num_train_samples: 32
     num_val_samples: 32
-    # Set to the same value as submodule.predict.context_window
     seq_len: null
     reverse: false
     use_residual: false
@@ -63,18 +62,18 @@ submodule:
   train:
     optimizer: AdamW
     lr: 0.001
-    epochs: 500 
-    save_freq: 500
+    epochs: 10 
+    save_freq: 5
     batch_size: 128
     shuffle: true
     reverse: false
     early_stopping:
       delta: 0
-      patience: 100
+      patience: 5
 
   predict:
     # Choose the worms that you want to predict 
-    experimental_datasets:
+    source_datasets:
       Sines0000: null
       Lorenz0000: null
       WhiteNoise0000: null
@@ -87,6 +86,7 @@ submodule:
       Kaplan2020: worm0
       Yemini2021: worm0
       Uzel2022: worm0
+      Lin2023: worm0
       Flavell2023: worm1 # something is wrong with worm0 in Flavell2023
       Leifer2023: worm0
     # Number of time steps to generate 
@@ -104,7 +104,7 @@ submodule:
       # <int> = use this number of (randomly picked) worms from the dataset
       # <str> = analyze the worm with this particular wormID 
       # <list> = analyze the worms with wormIDs in the list
-      experimental_datasets:
+      source_datasets:
         Sines0000: null
         Lorenz0000: null
         WhiteNoise0000: null
@@ -116,6 +116,7 @@ submodule:
         Kaplan2020: 1
         Yemini2021: 1
         Uzel2022: 1
+        Lin2023: 1
         Flavell2023: 1
         Leifer2023: 1
 
@@ -126,10 +127,10 @@ submodule:
       neurons_to_plot: 1
 
 experiment:
-  # What parameter you are experimenting with (key)
+  # key: What parameter are you experimenting with?
   # Options: num_worms, num_time_steps, num_named_neurons, time_steps_per_neuron,
   #          num_samples, hidden_size, batch_size, seq_len, learn_rate, dataset,
-  #          dataset, model, optimizer, loss, experiment_seed,
+  #          dataset, model_type, optimizer, loss, experiment_seed,
   #          time_last_epoch, num_parameters, computation_flops,
   key: model_type
   name: default_multirun

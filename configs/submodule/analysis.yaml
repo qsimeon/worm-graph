@@ -9,7 +9,7 @@ analysis:
     # <int> = use this number of (randomly picked) worms from the dataset
     # <str> = analyze the worm with this particular wormID 
     # <list> = analyze the worms with wormIDs in the list
-    experimental_datasets:
+    source_datasets:
       # Sines0000: all
       # Lorenz0000: all
       # WhiteNoise0000: all

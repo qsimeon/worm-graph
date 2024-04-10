@@ -29,7 +29,7 @@ def make_predictions(
     else:
         log_dir = predict_config.predict_this_log_dir
     # Get which datasets to predict
-    experimental_datasets = predict_config.experimental_datasets
+    source_datasets = predict_config.source_datasets
     # Set the context window if None
     context_window = predict_config.context_window
     if context_window is None:
@@ -44,7 +44,7 @@ def make_predictions(
     model_predict(
         log_dir=log_dir,
         model=model,
-        experimental_datasets=experimental_datasets,
+        source_datasets=source_datasets,
         context_window=context_window,
     )
     return None
