@@ -239,7 +239,7 @@ def load_reference(group_by: Union[str, None] = None) -> Dict[str, str]:
 
 def loss_per_dataset(
     log_dir: str,
-    experimental_datasets: dict,
+    source_datasets: dict,
     mode: Literal["train", "validation"] = "validation",
 ) -> None:
     """Uses the last model checkpoint in `log_dir` to evaluate the loss on
@@ -251,7 +251,7 @@ def loss_per_dataset(
     ----------
     log_dir : str
         The directory where the model checkpoint and the dataset information are stored.
-    experimental_datasets : dict
+    source_datasets : dict
         A dictionary mapping the names of the experimental datasets to worms to select.
     mode : str, optional
         The mode to evaluate the loss. Either "train" or "validation". Default is "validation".
@@ -261,8 +261,8 @@ def loss_per_dataset(
     None
     """
     # Convert DictConfig to dict
-    if isinstance(experimental_datasets, DictConfig):
-        experimental_datasets = OmegaConf.to_object(experimental_datasets)
+    if isinstance(source_datasets, DictConfig):
+        source_datasets = OmegaConf.to_object(source_datasets)
 
     logger.info(f"Analyzing {mode} loss per dataset...")
 
@@ -294,7 +294,7 @@ def loss_per_dataset(
     model.to(DEVICE)
     criterion = model.loss_fn()
 
-    for source_dataset, worms_to_use in experimental_datasets.items():
+    for source_dataset, worms_to_use in source_datasets.items():
         # Skip some datasets
         if worms_to_use is None:
             continue
@@ -306,7 +306,7 @@ def loss_per_dataset(
 
         # Create dataset
         combined_dataset, _ = create_combined_dataset(
-            experimental_datasets={source_dataset: worms_to_use},
+            source_datasets={source_dataset: worms_to_use},
             num_named_neurons=None,  # use all available neurons
         )
         train_dataset, val_dataset, _ = split_combined_dataset(

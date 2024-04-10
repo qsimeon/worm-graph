@@ -49,9 +49,9 @@ hydra:
     cpus_per_task: 4  # Number of CPU cores per task
     gpus_per_node: null  # Number of GPUs per node (NOTE: Don't use with gres.)
     tasks_per_node: 1  # Number of tasks to run on each node
-    mem_gb: 40  # Memory required per node in GB
+    mem_gb: 64  # Memory required per node in GB (NOTE: Only powers of 2.)
     nodes: 1  # Number of nodes to use
-    partition: yanglab #use-everything #yanglab # Partition to submit to
+    partition: use-everything #yanglab # Partition to submit to
     qos: null  # Quality of Service level
     comment: null  # Comment to pass to the job
     constraint: high-capacity #any-A100 # Constraint specification
@@ -66,8 +66,8 @@ hydra:
     max_num_timeout: 0  # Maximum number of timeouts
     additional_parameters: {}  # Additional parameters for Slurm
     array_parallelism: 256  # Max number of simultaneous jobs
-    setup:
-      - cd /om2/user/qsimeon/worm-graph
+    # setup:
+    #   - cd /om2/user/qsimeon/worm-graph
 
 # ============================ Pipeline Config ============================
 

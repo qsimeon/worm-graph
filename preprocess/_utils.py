@@ -1183,14 +1183,6 @@ class BasePreprocessor:
                 time_in_seconds, smooth_residual_calcium, upsample
             )
             resampled_dt = np.diff(resampled_time_in_seconds, axis=0, prepend=0.0)  # vector
-            # ### DEBUG ###
-            # logger.info(f"DEBUG Before reshaping")
-            # logger.info(f"resampled_dt: {resampled_dt.shape} \n\t {resampled_dt.squeeze()}")
-            # logger.info(
-            #     f"resampled_time_in_seconds: {resampled_time_in_seconds.shape} \n\t {np.diff(resampled_time_in_seconds, axis=0, prepend=0.0).squeeze()}"
-            # )
-            # logger.info(f"resampled_smooth_calcium_data: {resampled_smooth_calcium_data.shape}")
-            # ### DEBUG ###
             resampled_median_dt = np.median(resampled_dt[1:]).item()  # scalar
             assert np.isclose(
                 self.resample_dt, resampled_median_dt, atol=0.01
@@ -1630,18 +1622,6 @@ class Uzel2022Preprocessor(BasePreprocessor):
         # Reshape calcium data
         for worm in preprocessed_data.keys():
             preprocessed_data[worm] = reshape_calcium_data(preprocessed_data[worm])
-            # ### DEBUG ###
-            # logger.info(f"DEBUG After reshaping")
-            # logger.info(
-            #     f"resampled_dt: {preprocessed_data[worm]['dt'].shape} \n\t {preprocessed_data[worm]['dt'].squeeze()}"
-            # )
-            # logger.info(
-            #     f"resampled_time_in_seconds: {preprocessed_data[worm]['time_in_seconds'].shape} \n\t {np.diff(preprocessed_data[worm]['time_in_seconds'], axis=0, prepend=0.0).squeeze()}"
-            # )
-            # logger.info(
-            #     f"resampled_smooth_calcium_data: {preprocessed_data[worm]['smooth_calcium_data'].shape}"
-            # )
-            # ### DEBUG ###
         # Save data
         self.save_data(preprocessed_data)
         logger.info(f"Finished processing {self.source_dataset}.")

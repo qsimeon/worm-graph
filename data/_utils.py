@@ -678,14 +678,14 @@ def select_desired_worms(multi_worm_dataset, worms):
 
 
 def create_combined_dataset(
-    experimental_datasets: dict,
+    source_datasets: dict,
     num_named_neurons: Union[None, int] = None,
 ):
     """Returns a dict with the worm data of all requested datasets.
 
     Parameters
     ----------
-    experimental_datasets : dict
+    source_datasets : dict
         A dictionary mapping the names of the experimental datasets to worms to select.
     num_named_neurons : int or None
         The number of named neurons to select. If None, all available neurons are selected.
@@ -719,13 +719,13 @@ def create_combined_dataset(
         'smooth_residual_calcium', 'time_in_seconds', 'worm'.
     """
     # Convert DictConfig to dict
-    if isinstance(experimental_datasets, DictConfig):
-        experimental_datasets = OmegaConf.to_object(experimental_datasets)
+    if isinstance(source_datasets, DictConfig):
+        source_datasets = OmegaConf.to_object(source_datasets)
 
     # Load the dataset(s)
     combined_dataset = dict()
 
-    for dataset_name, worms in experimental_datasets.items():
+    for dataset_name, worms in source_datasets.items():
         # Skip if no worms requested for this dataset
         if worms is None or worms == 0:
             logger.info(f"Skipping all worms from {dataset_name} dataset.")

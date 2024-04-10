@@ -19,8 +19,7 @@ def get_datasets(dataset_config: DictConfig, save=True):
         - use_these_datasets (str or None): Directory containing train and validation datasets.
             If provided, datasets will be loaded from this directory if they exist.
             If not provided or datasets don't exist in the directory, they will be generated using the other parameters.
-
-        - experimental_datasets: Path to the experimental datasets.
+        - source_datasets: Path to the experimental datasets.
         - num_named_neurons (int or None): Number of named neurons to include or None to include all.
         - num_worms (int or None): Number of worms to include or None to include all.
         - num_train_samples (int): Number of training samples per worm.
@@ -41,7 +40,7 @@ def get_datasets(dataset_config: DictConfig, save=True):
         - val_dataset (torch.Tensor): The validation dataset.
     """
     # Parse out parameters from the config
-    experimental_datasets = dataset_config.experimental_datasets
+    source_datasets = dataset_config.source_datasets
     num_named_neurons = dataset_config.num_named_neurons
     num_train_samples = dataset_config.num_train_samples
     num_val_samples = dataset_config.num_val_samples
@@ -153,7 +152,7 @@ def get_datasets(dataset_config: DictConfig, save=True):
             else:
                 logger.info("Creating combined dataset from experimental datasets")
                 combined_dataset, dataset_info = create_combined_dataset(
-                    experimental_datasets, num_named_neurons
+                    source_datasets, num_named_neurons
                 )
                 # Use largest seq_len that produce num. unique samples from shortest dataset
                 if seq_len is None:
@@ -246,7 +245,7 @@ def get_datasets(dataset_config: DictConfig, save=True):
         # Create the datasets using the experimental datasets
         logger.info("Creating validation and train datasets from experimental datasets")
         combined_dataset, dataset_info = create_combined_dataset(
-            experimental_datasets, num_named_neurons
+            source_datasets, num_named_neurons
         )
         # Use largest seq_len that produce num. unique samples from shortest dataset
         if seq_len is None:

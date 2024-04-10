@@ -15,7 +15,7 @@ hydra:
   sweeper:
     params:
       experiment.seed: 1 #0,1
-      submodule.dataset.experimental_datasets: choice({Kato2015:all, Nichols2017:null, Skora2018:null, Uzel2022:null, Yemini2021:null, Kaplan2020:null, Flavell2023:null, Leifer2023:null},{Kato2015:null, Nichols2017:all, Skora2018:null, Uzel2022:null, Yemini2021:null, Kaplan2020:null, Flavell2023:null, Leifer2023:null},{Kato2015:null, Nichols2017:null, Skora2018:all, Uzel2022:null, Yemini2021:null, Kaplan2020:null, Flavell2023:null, Leifer2023:null},{Kato2015:null, Nichols2017:null, Skora2018:null, Uzel2022:all, Yemini2021:null, Kaplan2020:null, Flavell2023:null, Leifer2023:null},{Kato2015:null, Nichols2017:null, Skora2018:null, Uzel2022:null, Yemini2021:all, Kaplan2020:null, Flavell2023:null, Leifer2023:null},{Kato2015:null, Nichols2017:null, Skora2018:null, Uzel2022:null, Yemini2021:null, Kaplan2020:all, Flavell2023:null, Leifer2023:null},{Kato2015:null, Nichols2017:null, Skora2018:null, Uzel2022:null, Yemini2021:null, Kaplan2020:null, Flavell2023:all, Leifer2023:null},{Kato2015:null, Nichols2017:null, Skora2018:null, Uzel2022:null, Yemini2021:null, Kaplan2020:null, Flavell2023:null, Leifer2023:all})
+      submodule.dataset.source_datasets: choice({Kato2015:all, Nichols2017:null, Skora2018:null, Uzel2022:null, Yemini2021:null, Kaplan2020:null, Flavell2023:null, Leifer2023:null},{Kato2015:null, Nichols2017:all, Skora2018:null, Uzel2022:null, Yemini2021:null, Kaplan2020:null, Flavell2023:null, Leifer2023:null},{Kato2015:null, Nichols2017:null, Skora2018:all, Uzel2022:null, Yemini2021:null, Kaplan2020:null, Flavell2023:null, Leifer2023:null},{Kato2015:null, Nichols2017:null, Skora2018:null, Uzel2022:all, Yemini2021:null, Kaplan2020:null, Flavell2023:null, Leifer2023:null},{Kato2015:null, Nichols2017:null, Skora2018:null, Uzel2022:null, Yemini2021:all, Kaplan2020:null, Flavell2023:null, Leifer2023:null},{Kato2015:null, Nichols2017:null, Skora2018:null, Uzel2022:null, Yemini2021:null, Kaplan2020:all, Flavell2023:null, Leifer2023:null},{Kato2015:null, Nichols2017:null, Skora2018:null, Uzel2022:null, Yemini2021:null, Kaplan2020:null, Flavell2023:all, Leifer2023:null},{Kato2015:null, Nichols2017:null, Skora2018:null, Uzel2022:null, Yemini2021:null, Kaplan2020:null, Flavell2023:null, Leifer2023:all})
           # {Kato2015:all, Nichols2017:null, Skora2018:null, Uzel2022:null, Yemini2021:null, Kaplan2020:null, Flavell2023:null, Leifer2023:null}, # Kato dataset
           # {Kato2015:null, Nichols2017:all, Skora2018:null, Uzel2022:null, Yemini2021:null, Kaplan2020:null, Flavell2023:null, Leifer2023:null}, # Nichols dataset
           # {Kato2015:null, Nichols2017:null, Skora2018:all, Uzel2022:null, Yemini2021:null, Kaplan2020:null, Flavell2023:null, Leifer2023:null}, # Skora dataset
@@ -45,7 +45,7 @@ submodule:
     save_datasets: false
 
     # This gets overwritten by the sweeper
-    experimental_datasets:
+    source_datasets:
       Kato2015: null
       Nichols2017: null
       Skora2018: null
@@ -66,7 +66,7 @@ submodule:
 
   predict:
     # Choose the worms that you want to predict
-    experimental_datasets:
+    source_datasets:
       Kato2015: worm0
       Nichols2017: worm0
       Skora2018: worm0
@@ -83,7 +83,7 @@ submodule:
     analyse_this_log_dir: null
     # Validate final model using all worms from each experimental dataset
     validation:
-      experimental_datasets:
+      source_datasets:
         Kato2015: all
         Nichols2017: all
         Skora2018: all

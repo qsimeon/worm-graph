@@ -790,7 +790,7 @@ def experiment_parameter(exp_dir, key):
         pipeline_info = OmegaConf.load(os.path.join(exp_dir, "pipeline_info.yaml"))
         value = [
             k
-            for k, v in pipeline_info.submodule.dataset.experimental_datasets.items()
+            for k, v in pipeline_info.submodule.dataset.source_datasets.items()
             if v is not None
         ]
         value = "_".join(sorted(value))

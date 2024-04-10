@@ -16,25 +16,25 @@ hydra:
     params:
       experiment.seed: 4
       # NOTE: LinearRegression is a shallow model (i.e. no hidden layers)
-      submodule.dataset.experimental_datasets: choice({RandWalk0000:all})
-      submodule.predict.experimental_datasets: choice({RandWalk0000:[worm0, worm1]})
-      submodule.analysis.validation.experimental_datasets: choice({RandWalk0000:all})
+      submodule.dataset.source_datasets: choice({RandWalk0000:all})
+      submodule.predict.source_datasets: choice({RandWalk0000:[worm0, worm1]})
+      submodule.analysis.validation.source_datasets: choice({RandWalk0000:all})
       # ###############################################################################################
-      ### submodule.dataset.experimental_datasets ###
+      ### submodule.dataset.source_datasets ###
       # seed 1: choice({Sines0000:all})
       # seed 2: choice({Lorenz0000:all})
       # seed 3: choice({WhiteNoise0000:all})
       # seed 4: choice({RandWalk0000:all})
       # seed 5: choice({VanDerPol0000:all})
       # seed 6: choice({Shakespeare0000:all})
-      ### submodule.predict.experimental_datasets ###
+      ### submodule.predict.source_datasets ###
       # seed 1: choice({Sines0000:[worm0, worm1]})
       # seed 2: choice({Lorenz0000:[worm0, worm1]})
       # seed 3: choice({WhiteNoise0000:[worm0, worm1]})
       # seed 4: choice({RandWalk0000:[worm0, worm1]})
       # seed 5: choice({VanDerPol0000:[worm0, worm1]})
       # seed 6: choice({Shakespeare0000:[worm0, worm1]})
-      ### submodule.analysis.validation.experimental_datasets ###
+      ### submodule.analysis.validation.source_datasets ###
       # seed 1: choice({Sines0000:all})
       # seed 2: choice({Lorenz0000:all})
       # seed 3: choice({WhiteNoise0000:all})
@@ -59,7 +59,7 @@ submodule:
 
     save_datasets: false
 
-    experimental_datasets:
+    source_datasets:
       # This gets overwritten by the sweeper
       Sines0000: null
       Lorenz0000: null
@@ -92,7 +92,7 @@ submodule:
   predict:
     predict_this_log_dir: null
     # This gets overwritten by the sweeper
-    experimental_datasets:
+    source_datasets:
       Sines0000: null
       Lorenz0000: null
       WhiteNoise0000: null
@@ -117,7 +117,7 @@ submodule:
     analyse_this_log_dir: null
     validation:
       # This gets overwritten by the sweeper
-      experimental_datasets:
+      source_datasets:
         Sines0000: null
         Lorenz0000: null
         WhiteNoise0000: null

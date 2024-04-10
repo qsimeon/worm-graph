@@ -1,7 +1,7 @@
 # Make the train and validation dataset from scratch.
 dataset:
   # Path to a directory containing the datasets to be used.
-  # If null, create a new dataset in the logs/dataset directory using the experimental_datasets.
+  # If null, create a new dataset in the logs/dataset directory using the source_datasets.
   # If not null, and the directory contains train and validation datasets, use them directly.
   # If not null, and the directory contains only the combined dataset, create both train and validation dataset from it.
   # If not null, and the directory contains a combined dataset plus one of the train or validation dataset, create the missing dataset using the combined dataset.
@@ -19,7 +19,7 @@ dataset:
   # <int> = use this number of (randomly picked) worms from the dataset
   # <str> = use this wormID particular worm in the dataset
   # <list> = use the worms with wormIDs in the list
-  experimental_datasets:
+  source_datasets:
     # Sines0000: null
     # Lorenz0000: null
     # WhiteNoise0000: null
