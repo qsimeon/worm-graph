@@ -64,7 +64,7 @@ submodule:
     lr: 0.001
     epochs: 10 
     save_freq: 5
-    batch_size: 128
+    batch_size: 256
     shuffle: true
     reverse: false
     early_stopping:
