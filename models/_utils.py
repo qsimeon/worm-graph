@@ -162,7 +162,7 @@ class PositionalEncoding(torch.nn.Module):
     def __init__(
         self,
         d_model: int,
-        max_len: int = BLOCK_SIZE,
+        max_len: int = 100*BLOCK_SIZE,
         dropout: float = 0.1,
     ):
         super().__init__()
@@ -651,6 +651,9 @@ class Model(torch.nn.Module):
             # the 0-indexed bin will be used for unmasked values.
             bin_edges = torch.tensor(norm.ppf(torch.linspace(0, 1, self.num_tokens)))
             self.register_buffer("bin_edges", bin_edges)
+            # Define a vector of EMA decay values for updating the neural embedding
+            ema_decay = torch.ones(self.hidden_size) * 0.5
+            self.register_buffer("ema_decay", ema_decay) 
             # Modify embedding layer to be a lookup table
             self.latent_embedding = torch.nn.Embedding(
                 num_embeddings=self.num_tokens, embedding_dim=self.hidden_size
@@ -796,10 +799,6 @@ class Model(torch.nn.Module):
         ), "`token_matrix` must have shape (num_tokens, input_size)"
         # Move token_matrix to same device as neural_sequence
         token_matrix = token_matrix.to(neural_sequence.device)
-        # Get shapes from the token_matrix
-        # NOTE: We could use the attributes self.num_tokens and self.input_size of the model;
-        # but getting the sizes this way allows us to use this method as a standalone function.
-        num_tokens, _ = token_matrix.shape
         # PART 1: Tokenize the neural data
         # Calculate distances between neural data and embedding vectors
         distances = self.calculate_distances(
@@ -821,17 +820,28 @@ class Model(torch.nn.Module):
         masked_input_positions = feature_mask.nonzero(
             as_tuple=False
         )  # (<= batch_size * input_size, 2)
+        ### DEBUG ###
+        print(f"masked_input_positions: {masked_input_positions.shape}\n") # DEBUG 
+        flag = True  # DEBUG
+        ### DEBUG ###
         # Get unique values and their counts in batch dimension (first column)
         _, counts = torch.unique(masked_input_positions[:, 0], return_counts=True)
         # Split the tensor into groups based on the batch dimension
         batch_groups = torch.split(masked_input_positions, counts.tolist())
-        # For each batch index update the neural embedding only using observed tokens and maksed features
+        # For each batch index update the neural embedding only using observed tokens and masked features
         for group in batch_groups:  # time ~ bigO(batch_size)
             batch_idx = group[:, 0].unique().item()
             observed_inputs = group[:, 1]
+            ### DEBUG ###
+            if flag:  # DEBUG
+                print(f"group: {group.shape}\n") # DEBUG 
+                print(f"observed_inputs: {observed_inputs.shape}\n") # DEBUG 
+                flag = False # DEBUG
+            ### DEBUG ###
             batch_tokens = token_sequence[batch_idx]  # (seq_len, )
             batch_inputs = neural_sequence[batch_idx]  # (seq_len, input_size)
             for token in batch_tokens.unique():
+                decay = self.ema_decay[observed_inputs]
                 OLD = self.neural_embedding[token, observed_inputs]
                 NEW = batch_inputs[batch_tokens == token].mean(dim=0)[observed_inputs]
                 self.neural_embedding[token, observed_inputs] = decay * OLD + (1 - decay) * NEW

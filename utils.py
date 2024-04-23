@@ -35,7 +35,7 @@ BLOCK_SIZE = 200  # maximum attention block size to use for Transformers
 
 VERSION_2 = False  # whether to use version 2 of the models (tokenizes neural data)
 
-NUM_TOKENS = 128  # number of tokens in the neural vocabulary if using version 2
+NUM_TOKENS = 256  # number of tokens in the neural vocabulary if using version 2
 
 WORLD_SIZE = torch.cuda.device_count()
 
