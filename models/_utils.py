@@ -162,7 +162,7 @@ class PositionalEncoding(torch.nn.Module):
     def __init__(
         self,
         d_model: int,
-        max_len: int = 100*BLOCK_SIZE,
+        max_len: int = 10 * BLOCK_SIZE,
         dropout: float = 0.1,
     ):
         super().__init__()
@@ -407,16 +407,6 @@ class SSM(torch.nn.Module):
         # Run the SSM
         if not self.decode:  # CNN mode
             Kernels = self.K_conv(Ab, Bb, input.size(1))
-            # ### DEBUG ###
-            # batch_size = input.size(0)
-            # output = []
-            # # Loop over batch
-            # for b in range(batch_size):
-            #     out = self.causal_convolution(input[b], Kernels) # (seq_len, hidden_size)
-            #     output.append(out)
-            # # Stack together output from all batch elements
-            # output = torch.stack(output, dim=0) # (batch_size, seq_len, hidden_size)
-            # ### DEBUG ###
             output = self.batch_causal_convolution(input, Kernels)
         else:  # RNN mode
             seq_len = input.size(1)
@@ -452,7 +442,6 @@ class CTRNN(torch.nn.Module):
         super().__init__()
         self.input_size = input_size
         self.hidden_size = hidden_size
-        # self.register_parameter(name="alpha", param=torch.nn.Parameter(torch.ones(1, hidden_size)))
         self.register_parameter(name="alpha", param=torch.nn.Parameter(torch.ones(hidden_size)))
         self.input2h = torch.nn.Linear(input_size, hidden_size)
         self.h2h = torch.nn.Linear(hidden_size, hidden_size)
@@ -651,9 +640,9 @@ class Model(torch.nn.Module):
             # the 0-indexed bin will be used for unmasked values.
             bin_edges = torch.tensor(norm.ppf(torch.linspace(0, 1, self.num_tokens)))
             self.register_buffer("bin_edges", bin_edges)
-            # Define a vector of EMA decay values for updating the neural embedding
-            ema_decay = torch.ones(self.hidden_size) * 0.5
-            self.register_buffer("ema_decay", ema_decay) 
+            # Define a vector of EMA decay values used to update the neural embedding
+            ema_decay = torch.ones(self.input_size) * 0.5
+            self.register_buffer("ema_decay", ema_decay)
             # Modify embedding layer to be a lookup table
             self.latent_embedding = torch.nn.Embedding(
                 num_embeddings=self.num_tokens, embedding_dim=self.hidden_size
@@ -769,10 +758,10 @@ class Model(torch.nn.Module):
         as the dimensionality of the neural data (i.e. `input_size` or `num_channels`).
 
         Args:
-            neural_sequence: tensor of shape (batch_size, seq_len, input_size)
-            feature_mask: tensor of shape (batch_size, input_size)
-            token_matrix: tensor of shape (num_tokens, input_size)
-            decay: float EMA decay factor for updating the neural embedding
+            neural_sequence: tensor with shape (batch_size, seq_len, input_size)
+            feature_mask: tensor with shape (batch_size, input_size)
+            token_matrix: (optional) tensor with shape (num_tokens, input_size)
+            decay: (optional) float EMA decay factor for updating the neural embedding
         Output:
             token_sequence: tensor of shape (batch_size, seq_len)
         """
@@ -790,13 +779,13 @@ class Model(torch.nn.Module):
             )
         assert (
             feature_mask.ndim == 2 and feature_mask.size(-1) == input_size
-        ), "`feature_mask` must have shape (batch_size, input_size)"
+        ), "`feature_mask` must have shape `(batch_size, input_size)`"
         assert feature_mask.sum().item() > 0, "`feature_mask` cannot be all False."
         if token_matrix is None:
             token_matrix = self.neural_embedding
         assert (
             token_matrix.ndim == 2 and token_matrix.size(-1) == input_size
-        ), "`token_matrix` must have shape (num_tokens, input_size)"
+        ), "`token_matrix` must have shape `(num_tokens, input_size)`"
         # Move token_matrix to same device as neural_sequence
         token_matrix = token_matrix.to(neural_sequence.device)
         # PART 1: Tokenize the neural data
@@ -816,35 +805,25 @@ class Model(torch.nn.Module):
         # PART 2: Update `self.neural_embedding`
         ### >>> SLOW but CORRECT, NEW Implementation >>> ###
         # NOTE: Updates positions in `self.neural_embedding` that correspond to observed tokens and masked inputs.
-        # Get positions of masked/observed input features
+        # Get positions of masked input features (i.e. the observed/measured neurons)
         masked_input_positions = feature_mask.nonzero(
             as_tuple=False
         )  # (<= batch_size * input_size, 2)
-        ### DEBUG ###
-        print(f"masked_input_positions: {masked_input_positions.shape}\n") # DEBUG 
-        flag = True  # DEBUG
-        ### DEBUG ###
         # Get unique values and their counts in batch dimension (first column)
         _, counts = torch.unique(masked_input_positions[:, 0], return_counts=True)
         # Split the tensor into groups based on the batch dimension
         batch_groups = torch.split(masked_input_positions, counts.tolist())
         # For each batch index update the neural embedding only using observed tokens and masked features
         for group in batch_groups:  # time ~ bigO(batch_size)
-            batch_idx = group[:, 0].unique().item()
-            observed_inputs = group[:, 1]
-            ### DEBUG ###
-            if flag:  # DEBUG
-                print(f"group: {group.shape}\n") # DEBUG 
-                print(f"observed_inputs: {observed_inputs.shape}\n") # DEBUG 
-                flag = False # DEBUG
-            ### DEBUG ###
+            batch_idx = group[:, 0].unique().item() # (1, )
+            observed_inputs = group[:, 1] # (<= batch_size * input_size, )
             batch_tokens = token_sequence[batch_idx]  # (seq_len, )
             batch_inputs = neural_sequence[batch_idx]  # (seq_len, input_size)
             for token in batch_tokens.unique():
-                decay = self.ema_decay[observed_inputs]
-                OLD = self.neural_embedding[token, observed_inputs]
-                NEW = batch_inputs[batch_tokens == token].mean(dim=0)[observed_inputs]
-                self.neural_embedding[token, observed_inputs] = decay * OLD + (1 - decay) * NEW
+                decay = self.ema_decay[observed_inputs] # (input_size, )
+                OLD = self.neural_embedding[token, observed_inputs] # (input_size, )
+                NEW = batch_inputs[batch_tokens == token].mean(dim=0)[observed_inputs] # (input_size, )
+                self.neural_embedding[token, observed_inputs] = decay * OLD + (1 - decay) * NEW # (input_size, )
         ### <<< SLOW but CORRECT, NEW Implementation <<< ###
         # Return the tokenized sequence
         return token_sequence
@@ -1021,13 +1000,20 @@ class Model(torch.nn.Module):
                 -1, self.num_tokens
             )  # (batch_size, seq_len, num_tokens) -> (batch_size * seq_len, num_tokens)
             # Convert target from neural vector sequence to token sequence.
-            # NOTE: torch.no_grad() prevents `self.neural_embedding` from being updated based on targets.
-            with torch.no_grad():
-                target = self.tokenize_neural_data(
-                    neural_sequence=target,
-                    feature_mask=mask,
-                )
-                target = target.view(-1)  # (batch_size, seq_len) -> (batch_size * seq_len)
+            # # NOTE: torch.no_grad() prevents `self.neural_embedding` from being updated based on targets.
+            # with torch.no_grad():
+            #     target = self.tokenize_neural_data(
+            #         neural_sequence=target,
+            #         feature_mask=mask,
+            #     )
+            #     target = target.view(-1)  # (batch_size, seq_len) -> (batch_size * seq_len)
+            ### DEBUG ###
+            target = self.tokenize_neural_data(
+                neural_sequence=target,
+                feature_mask=mask,
+            )
+            target = target.view(-1)  # (batch_size, seq_len) -> (batch_size * seq_len)
+            ### DEBUG ###
             # Calculate cross entropy loss from predicted token logits and target tokens.
             ce_loss = torch.nn.CrossEntropyLoss(reduction="mean", **kwargs)(output, target)
             # Calculate the total loss
