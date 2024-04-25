@@ -62,7 +62,7 @@ class NeuralActivityDataset(torch.utils.data.Dataset):
         A vector of the time (in seconds) corresponding to the time
         axis (axis=0) of the `data` tensor.
     neurons_mask : torch.Tensor
-        Index of neuron(s) to return data for, defaults to returnin 
+        Index of neuron(s) to return data for, defaults to returnin
         data for all neurons if `neurons_mask=Non`e.
     wormID : str
         ID of the worm.

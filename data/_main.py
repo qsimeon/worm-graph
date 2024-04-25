@@ -244,9 +244,7 @@ def get_datasets(dataset_config: DictConfig, save=True):
     else:
         # Create the datasets using the experimental datasets
         logger.info("Creating validation and train datasets from experimental datasets")
-        combined_dataset, dataset_info = create_combined_dataset(
-            source_datasets, num_named_neurons
-        )
+        combined_dataset, dataset_info = create_combined_dataset(source_datasets, num_named_neurons)
         # Use largest seq_len that produce num. unique samples from shortest dataset
         if seq_len is None:
             max_num_samples = max(num_train_samples, num_val_samples)

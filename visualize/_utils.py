@@ -789,9 +789,7 @@ def experiment_parameter(exp_dir, key):
         # The name(s) of the dataset(s) used for training
         pipeline_info = OmegaConf.load(os.path.join(exp_dir, "pipeline_info.yaml"))
         value = [
-            k
-            for k, v in pipeline_info.submodule.dataset.source_datasets.items()
-            if v is not None
+            k for k, v in pipeline_info.submodule.dataset.source_datasets.items() if v is not None
         ]
         value = "_".join(sorted(value))
         title = "Dataset(s) used for training"

@@ -815,15 +815,19 @@ class Model(torch.nn.Module):
         batch_groups = torch.split(masked_input_positions, counts.tolist())
         # For each batch index update the neural embedding only using observed tokens and masked features
         for group in batch_groups:  # time ~ bigO(batch_size)
-            batch_idx = group[:, 0].unique().item() # (1, )
-            observed_inputs = group[:, 1] # (<= batch_size * input_size, )
+            batch_idx = group[:, 0].unique().item()  # (1, )
+            observed_inputs = group[:, 1]  # (<= batch_size * input_size, )
             batch_tokens = token_sequence[batch_idx]  # (seq_len, )
             batch_inputs = neural_sequence[batch_idx]  # (seq_len, input_size)
             for token in batch_tokens.unique():
-                decay = self.ema_decay[observed_inputs] # (input_size, )
-                OLD = self.neural_embedding[token, observed_inputs] # (input_size, )
-                NEW = batch_inputs[batch_tokens == token].mean(dim=0)[observed_inputs] # (input_size, )
-                self.neural_embedding[token, observed_inputs] = decay * OLD + (1 - decay) * NEW # (input_size, )
+                decay = self.ema_decay[observed_inputs]  # (input_size, )
+                OLD = self.neural_embedding[token, observed_inputs]  # (input_size, )
+                NEW = batch_inputs[batch_tokens == token].mean(dim=0)[
+                    observed_inputs
+                ]  # (input_size, )
+                self.neural_embedding[token, observed_inputs] = (
+                    decay * OLD + (1 - decay) * NEW
+                )  # (input_size, )
         ### <<< SLOW but CORRECT, NEW Implementation <<< ###
         # Return the tokenized sequence
         return token_sequence
@@ -1000,20 +1004,11 @@ class Model(torch.nn.Module):
                 -1, self.num_tokens
             )  # (batch_size, seq_len, num_tokens) -> (batch_size * seq_len, num_tokens)
             # Convert target from neural vector sequence to token sequence.
-            # # NOTE: torch.no_grad() prevents `self.neural_embedding` from being updated based on targets.
-            # with torch.no_grad():
-            #     target = self.tokenize_neural_data(
-            #         neural_sequence=target,
-            #         feature_mask=mask,
-            #     )
-            #     target = target.view(-1)  # (batch_size, seq_len) -> (batch_size * seq_len)
-            ### DEBUG ###
             target = self.tokenize_neural_data(
                 neural_sequence=target,
                 feature_mask=mask,
             )
             target = target.view(-1)  # (batch_size, seq_len) -> (batch_size * seq_len)
-            ### DEBUG ###
             # Calculate cross entropy loss from predicted token logits and target tokens.
             ce_loss = torch.nn.CrossEntropyLoss(reduction="mean", **kwargs)(output, target)
             # Calculate the total loss
