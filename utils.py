@@ -91,7 +91,8 @@ SYNTHETIC_DATASETS = {  # Datasets created with the `CreateSyntheticDataset.ipyn
     "WhiteNoise0000",
     "RandWalk0000",
     "VanDerPol0000",
-    "Shakespeare0000",
+    "Wikitext0000",
+    "Recurrent0000",
 }
 
 # List of all 302 hermaphrodite neurons

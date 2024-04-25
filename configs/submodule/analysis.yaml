@@ -15,7 +15,7 @@ analysis:
       # WhiteNoise0000: all
       # RandWalk0000: all
       # VanDerPol0000: all
-      # Shakespeare0000: all
+      # Wikitext0000: all
       Kato2015: 1
       Nichols2017: 1
       Skora2018: 1

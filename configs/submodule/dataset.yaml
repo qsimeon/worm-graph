@@ -25,7 +25,7 @@ dataset:
     # WhiteNoise0000: null
     # RandWalk0000: null
     # VanDerPol0000: null
-    # Shakespeare0000: null
+    # Wikitext0000: null
     Kato2015: all
     Nichols2017: all
     Skora2018: all
