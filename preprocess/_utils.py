@@ -465,11 +465,11 @@ def smooth_data_preprocess(calcium_data, time_in_seconds, smooth_method, **kwarg
         )
     elif str(smooth_method).lower() == "ma":
         smooth_ca_data = moving_average_smooth(
-            calcium_data, time_in_seconds, window_size=kwargs.get("window_size", 21)
+            calcium_data, time_in_seconds, window_size=kwargs.get("window_size", 15)
         )
     elif str(smooth_method).lower() == "es":
         smooth_ca_data = exponential_kernel_smooth(
-            calcium_data, time_in_seconds, alpha=kwargs.get("alpha", 0.1)
+            calcium_data, time_in_seconds, alpha=kwargs.get("alpha", 0.5)
         )
     else:
         raise TypeError("See `configs/submodule/preprocess.yaml` for viable smooth methods.")
