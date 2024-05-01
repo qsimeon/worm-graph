@@ -103,8 +103,14 @@ cd setup
 * Please ensure to carry out this step, otherwise you may encounter `ModuleNotFoundError` later on.
 
 * You can check if the environment was successfully installed by running `conda env list` or `conda info --envs`. 
+    
+* Always activate the environment before starting your work on the project by running `conda activate worm-graph`.
 
-**Important Reminder:** Always activate the environment before starting your work on the project by running `conda activate worm-graph`.
+* To use the OpenAI text embeddings, add your API key to the `.env` file. The file `worm-graph/.env` should look like this:
+    ```
+    # Once you add your API key below, make sure to not share it with anyone! The API key should remain private.
+    OPENAI_API_KEY=abc123 # replace with your personal API key
+    ```
 
 
 ## Getting Started
