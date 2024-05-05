@@ -21,3 +21,4 @@ from matplotlib.colors import Normalize
 from omegaconf import OmegaConf, DictConfig
 from utils import DEVICE, ROOT_DIR, NEURONS_302
 from sklearn.preprocessing import StandardScaler
+from statsmodels.graphics.tsaplots import plot_acf, plot_pacf

@@ -55,7 +55,7 @@ submodule:
     input_size: 302
     hidden_size: 256
     loss: MSE
-    l1_reg_param: 0.0
+    l1_norm_reg_param: 0.0
     use_this_pretrained_model: null
 
   # Train model

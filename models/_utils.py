@@ -91,7 +91,7 @@ def load_model_checkpoint(checkpoint_path):
     input_size = checkpoint["input_size"]
     hidden_size = checkpoint["hidden_size"]
     loss_name = checkpoint["loss_name"]
-    l1_reg_param = checkpoint["l1_reg_param"]
+    l1_norm_reg_param = checkpoint["l1_norm_reg_param"]
     # New attributes for version 2
     version_2 = checkpoint.get("version_2", VERSION_2)
     num_tokens = checkpoint.get("num_tokens", NUM_TOKENS)
@@ -100,7 +100,7 @@ def load_model_checkpoint(checkpoint_path):
         input_size,
         hidden_size,
         loss=loss_name,
-        l1_reg_param=l1_reg_param,
+        l1_norm_reg_param=l1_norm_reg_param,
         version_2=version_2,
         num_tokens=num_tokens,
     ).to(DEVICE)
@@ -538,7 +538,7 @@ class Model(torch.nn.Module):
         4. The core of all models is called `self.hidden_hidden` and it is
             comprised of a single hidden layer of an architecture of choice.
         7. Getter methods for the input size and hidden size called
-        `get_input_size`, `get_hidden_size`, `get_loss_name`, and `get_l1_reg_param`.
+        `get_input_size`, `get_hidden_size`, `get_loss_name`, and `get_l1_norm_reg_param`.
     """
 
     def __init__(
@@ -546,7 +546,7 @@ class Model(torch.nn.Module):
         input_size: int,
         hidden_size: Union[int, None],
         loss: Union[Callable, None] = None,
-        l1_reg_param: float = 0.0,
+        l1_norm_reg_param: float = 0.0,
         # New attributes for version 2
         version_2: bool = VERSION_2,
         num_tokens: int = NUM_TOKENS,
@@ -559,8 +559,8 @@ class Model(torch.nn.Module):
         """
         super(Model, self).__init__()
         assert (
-            isinstance(l1_reg_param, float) and 0.0 <= l1_reg_param <= 1.0
-        ), "The regularization parameter `l1_reg_param` must be a float between 0.0 and 1.0."
+            isinstance(l1_norm_reg_param, float) and 0.0 <= l1_norm_reg_param <= 1.0
+        ), "The regularization parameter `l1_norm_reg_param` must be a float between 0.0 and 1.0."
         # Loss function
         if (loss is None) or (str(loss).lower() == "l1"):
             self.loss = torch.nn.L1Loss
@@ -579,7 +579,7 @@ class Model(torch.nn.Module):
         self.output_size = input_size  # Number of neurons (302)
         # NOTE: The output_size is same as the input_size because the model is a self-supervised autoencoder.
         self.hidden_size = hidden_size if hidden_size is not None else input_size
-        self.l1_reg_param = l1_reg_param
+        self.l1_norm_reg_param = l1_norm_reg_param
         # Initialize hidden state
         self._init_hidden()
         # Identity layer - used if needed
@@ -686,8 +686,8 @@ class Model(torch.nn.Module):
     def get_loss_name(self):
         return self.loss_name
 
-    def get_l1_reg_param(self):
-        return self.l1_reg_param
+    def get_l1_norm_reg_param(self):
+        return self.l1_norm_reg_param
 
     @torch.autocast(
         device_type=DEVICE.type, dtype=torch.half if "cuda" in DEVICE.type else torch.bfloat16
@@ -965,12 +965,12 @@ class Model(torch.nn.Module):
             recon_loss = masked_recon_loss[expanded_mask].sum() / norm_factor
             # L1 regularization term
             l1_loss = 0.0
-            if self.l1_reg_param > 0.0:
+            if self.l1_norm_reg_param > 0.0:
                 # Calculate L1 regularization term for all weights
                 for param in self.parameters():
                     l1_loss += torch.abs(param).mean()
             # Add the L1 penality to the original loss
-            reg_loss = self.l1_reg_param * l1_loss
+            reg_loss = self.l1_norm_reg_param * l1_loss
             total_loss = recon_loss + reg_loss
             # Return loss
             return total_loss
@@ -1168,7 +1168,7 @@ class NaivePredictor(Model):
         input_size: int,
         hidden_size: Union[int, None] = None,  # unused in this model
         loss: Union[Callable, None] = None,
-        l1_reg_param=0.0,
+        l1_norm_reg_param=0.0,
         **kwargs,
     ):
         # NaivePredictor does not work with version_2
@@ -1187,7 +1187,7 @@ class NaivePredictor(Model):
             input_size,
             None,  # hidden_size
             loss,
-            l1_reg_param,
+            l1_norm_reg_param,
             **kwargs,
         )
         # Input to hidden transformation
@@ -1221,7 +1221,7 @@ class LinearRegression(Model):
         input_size: int,
         hidden_size: Union[int, None] = None,  # unused in this model
         loss: Union[Callable, None] = None,
-        l1_reg_param=0.0,
+        l1_norm_reg_param=0.0,
         **kwargs,
     ):
         # Specify positional encoding and normalization
@@ -1232,7 +1232,7 @@ class LinearRegression(Model):
             input_size,
             None,  # hidden_size
             loss,
-            l1_reg_param,
+            l1_norm_reg_param,
             **kwargs,
         )
         # Input to hidden transformation
@@ -1269,7 +1269,7 @@ class FeatureFFNN(Model):
         input_size: int,
         hidden_size: Union[int, None] = None,
         loss: Union[Callable, None] = None,
-        l1_reg_param: float = 0.0,
+        l1_norm_reg_param: float = 0.0,
         **kwargs,
     ):
         # Specify positional encoding and normalization
@@ -1280,7 +1280,7 @@ class FeatureFFNN(Model):
             input_size,
             hidden_size,
             loss,
-            l1_reg_param,
+            l1_norm_reg_param,
             **kwargs,
         )
         # Special parameters for this model
@@ -1318,7 +1318,7 @@ class PureAttention(Model):
         input_size: int,
         hidden_size: Union[int, None] = None,
         loss: Union[Callable, None] = None,
-        l1_reg_param: float = 0.0,
+        l1_norm_reg_param: float = 0.0,
         **kwargs,
     ):
         # NOTE: Attention only works with even `embed_dim`
@@ -1335,7 +1335,7 @@ class PureAttention(Model):
             input_size,
             hidden_size,
             loss,
-            l1_reg_param,
+            l1_norm_reg_param,
             **kwargs,
         )
         # Special parameters for this model
@@ -1384,7 +1384,7 @@ class NeuralTransformer(Model):
         input_size: int,
         hidden_size: Union[int, None] = None,
         loss: Union[Callable, None] = None,
-        l1_reg_param: float = 0.0,
+        l1_norm_reg_param: float = 0.0,
         **kwargs,
     ):
         # NOTE: Transformer only works with even `d_model`
@@ -1401,7 +1401,7 @@ class NeuralTransformer(Model):
             input_size,
             hidden_size,
             loss,
-            l1_reg_param,
+            l1_norm_reg_param,
             **kwargs,
         )
         # Special parameters for this model
@@ -1446,7 +1446,7 @@ class HippoSSM(Model):
         input_size: int,
         hidden_size: Union[int, None] = None,
         loss: Union[Callable, None] = None,
-        l1_reg_param: float = 0.0,
+        l1_norm_reg_param: float = 0.0,
         **kwargs,
     ):
         # Specify positional encoding and normalization
@@ -1457,7 +1457,7 @@ class HippoSSM(Model):
             input_size,
             hidden_size,
             loss,
-            l1_reg_param,
+            l1_norm_reg_param,
             **kwargs,
         )
         # Special parameters for this model
@@ -1498,7 +1498,7 @@ class NetworkCTRNN(Model):
         input_size: int,
         hidden_size: Union[int, None] = None,
         loss: Union[Callable, None] = None,
-        l1_reg_param: float = 0.0,
+        l1_norm_reg_param: float = 0.0,
         **kwargs,
     ):
         # Specify positional encoding and normalization
@@ -1509,7 +1509,7 @@ class NetworkCTRNN(Model):
             input_size,
             hidden_size,
             loss,
-            l1_reg_param,
+            l1_norm_reg_param,
             **kwargs,
         )
         # Input to hidden transformation
@@ -1548,7 +1548,7 @@ class LiquidCfC(Model):
         input_size: int,
         hidden_size: Union[int, None] = None,
         loss: Union[Callable, None] = None,
-        l1_reg_param: float = 0.0,
+        l1_norm_reg_param: float = 0.0,
         **kwargs,
     ):
         # Specify positional encoding and normalization
@@ -1559,7 +1559,7 @@ class LiquidCfC(Model):
             input_size,
             hidden_size,
             loss,
-            l1_reg_param,
+            l1_norm_reg_param,
             **kwargs,
         )
         # Input to hidden transformation
@@ -1615,7 +1615,7 @@ class NetworkLSTM(Model):
         input_size: int,
         hidden_size: Union[int, None] = None,
         loss: Union[Callable, None] = None,
-        l1_reg_param: float = 0.0,
+        l1_norm_reg_param: float = 0.0,
         **kwargs,
     ):
         # Specify positional encoding and normalization
@@ -1626,7 +1626,7 @@ class NetworkLSTM(Model):
             input_size,
             hidden_size,
             loss,
-            l1_reg_param,
+            l1_norm_reg_param,
             **kwargs,
         )
         # Input to hidden transformation

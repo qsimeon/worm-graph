@@ -132,6 +132,105 @@ def draw_connectome(network, pos=None, labels=None, plt_title="C. elegans connec
     plt.show()
 
 
+def time_delay_embedding(x, delay, dimension):
+    """
+    Constructs a time-delay embedding matrix from time series data.
+
+    Parameters:
+    - x: Time series data as a 1D numpy array.
+    - delay: The delay tau between time series elements in the embedding.
+    - dimension: The embedding dimension m.
+
+    Returns:
+    - The time-delay embedded data as a 2D numpy array.
+
+    Time delay embedding is a technique used in the analysis of dynamical systems, particularly in the context 
+    of reconstructing the phase space of a system from a series of observations over time. 
+    This technique is based on Takens' Embedding Theorem, which states that the dynamics of a system can be 
+    reconstructed from the time series of a single observable of the system, under certain conditions.
+    Here are some key points about time delay embedding:
+        - Time Delay, $τ$ (tau): This is the time interval between successive observations in the reconstructed phase space. 
+                                Choosing an appropriate $τ$ is crucial; too short a delay may lead to redundant information, 
+                                while too long a delay may lose the dynamics of interest.
+        - Embedding Dimension, $m$: This represents the number of delayed observations used to reconstruct the phase space. 
+                                    It should be high enough to unfold the dynamics, but not too high to avoid overcomplicating the model.
+        - Phase Space Reconstruction: By plotting the time-delayed copies of the time series against each other, one can reconstruct the phase space, 
+                                    which can reveal underlying dynamical properties like attractors or limit cycles.
+        - Mutual Information: To empirically choose the right $τ$, one common method is to calculate the mutual information between the time series and 
+                            its delayed version, and select $τ$ at the first minimum of the mutual information function.
+        - False Nearest Neighbors (FNN): The method of False Nearest Neighbors can help determine a suitable embedding dimension $m$ by identifying when 
+                                        points that appear to be neighbors in lower-dimensional space are no longer neighbors in higher dimensions.
+    """
+    n = len(x)
+    if n < (dimension - 1) * delay + 1:
+        raise ValueError("Time series data is too short for the given delay and dimension.")
+    m = n - (dimension - 1) * delay
+    embedded_data = np.empty((m, dimension))
+    for i in range(m):
+        for j in range(dimension):
+            embedded_data[i, j] = x[i + j * delay]
+    return embedded_data
+
+
+def plot_autocorrelation_and_pacf(X, neurons):
+    """
+    Plot the autocorrelation and partial autocorrelation for each neuron's trajectory.
+
+    Parameters:
+    - X: A 2D numpy array of shape (max_timesteps, num_neurons) containing the neural trajectory data.
+    - neurons: A list or array containing the neuron identifiers.
+
+    Returns:
+    - None: The function creates and displays a plot.
+   
+    Autocorrelation Function (ACF):
+        - This is a correlation of a signal with a delayed copy of itself as a function of delay.
+        - The autocorrelation plot (or ACF plot) displays the correlation between the time series and its lagged values.
+        - The y-axis shows the autocorrelation coefficient, which ranges from -1 to 1. A value of 1 indicates perfect positive correlation, while -1 indicates perfect negative correlation.
+        - The x-axis represents the lag at which the autocorrelation is computed. For example, at lag 1, you're comparing the series with itself one time step back.
+        - The ACF considers the combined effect of all previous time points up to the lagged time point being calculated. It doesn't isolate the correlation at each lag.
+        - The ACF is used to identify the order of the MA part (q) by finding the lag after which the ACF cuts off.
+    """
+    # Number of neurons
+    num_neurons = X.shape[1]
+
+    # Create a figure and an array of subplots with 2 columns
+    fig, axes = plt.subplots(nrows=num_neurons, ncols=2, figsize=(10, 2 * num_neurons))
+
+    # Set a suptitle for the entire figure
+    fig.suptitle("Autocorrelation and Partial Autocorrelation for Neurons")
+
+    # Iterate over the number of neurons to create individual plots
+    for i in range(num_neurons):
+        # Plot ACF on the left column (0th index)
+        ax_left = axes[i, 0] if num_neurons > 1 else axes[0]
+        plot_acf(X[:, i], ax=ax_left, use_vlines=False, marker="v", linestyle="--")
+        ax_left.set_title(f"Neuron {neurons[i]} ACF")
+
+        # Plot PACF on the right column (1st index)
+        ax_right = axes[i, 1] if num_neurons > 1 else axes[1]
+        plot_pacf(X[:, i], ax=ax_right, use_vlines=False, marker="*", linestyle="--")
+        ax_right.set_title(f"Neuron {neurons[i]} PACF")
+        ax_right.set_ylabel("")  # Clear the y-axis label to prevent clutter
+
+        # Adjust y-axis limits so there is some white space around -1 and 1
+        ax_left.set_ylim(-1.1, 1.1)
+        ax_right.set_ylim(-1.1, 1.1)
+
+        # Only the bottom plots need x-axis labels
+        if i < num_neurons - 1:
+            ax_left.set_xlabel("")
+            ax_right.set_xlabel("")
+        else:
+            ax_left.set_xlabel("Lag")
+            ax_right.set_xlabel("Lag")
+
+    # Adjust the layout to not overlap plots
+    plt.tight_layout(rect=[0, 0.03, 1, 0.95])
+
+    # Show the plots
+    plt.show()
+
 def plot_frequency_distribution(data, ax, title, dt=0.5):
     """Plots the frequency distribution of a signal.
 
