@@ -14,4 +14,5 @@ from scipy.signal import fftconvolve
 from torch_geometric.data import Data
 from omegaconf import DictConfig, OmegaConf
 from einops import rearrange, repeat, einsum
+from torch_geometric.utils import to_dense_adj
 from utils import DEVICE, ROOT_DIR, BLOCK_SIZE, NUM_TOKENS, VERSION_2

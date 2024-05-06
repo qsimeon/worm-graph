@@ -145,8 +145,12 @@ def train_model(
             # Reset / zero-out gradients
             optimizer.zero_grad()
             # Forward pass. Models are sequence-to-sequence.
-            y_pred = model(X_train, mask_train)
-            train_loss = criterion(output=y_pred, target=Y_train, mask=mask_train)
+            Y_pred = model(X_train, mask_train)
+            ### DEBUG ###
+            # Compute OLS estimate of model weights (best linear approximation)
+            model.compute_ols_weights(model_in=X_train, model_out=Y_pred, mask=mask_train)
+            ### DEBUG ###
+            train_loss = criterion(output=Y_pred, target=Y_train, mask=mask_train)
             # Backpropagation.
             if epoch > 0:  # skip first epoch to get tabula rasa loss
                 # Check if the computed loss requires gradient (e.g. the NaivePredictor model does not)
@@ -188,8 +192,8 @@ def train_model(
                     Y_base = X_val  # neural activity `[batch_size, seq_len, input_size]`
                     val_baseline = criterion(output=Y_base, target=Y_val, mask=mask_val)
                 # Forward pass. Models are sequence-to-sequence.
-                y_pred = model(X_val, mask_val)
-                val_loss = criterion(output=y_pred, target=Y_val, mask=mask_val)
+                Y_pred = model(X_val, mask_val)
+                val_loss = criterion(output=Y_pred, target=Y_val, mask=mask_val)
                 # Update running losses
                 val_running_base_loss += val_baseline.item()
                 val_running_loss += val_loss.item()

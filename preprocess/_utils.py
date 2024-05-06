@@ -84,7 +84,7 @@ def pickle_neural_data(
             os.unlink(zip_path)
     # (re)-Pickle all the datasets ... OR
     if source_dataset is None or source_dataset.lower() == "all":
-        for source in VALID_DATASETS:
+        for source in EXPERIMENT_DATASETS:
             logger.info(f"Start processing {source}.")
             try:
                 # Instantiate the relevant preprocessor class
@@ -104,9 +104,9 @@ def pickle_neural_data(
     # ... (re)-Pickle a single dataset
     else:
         assert (
-            source_dataset in VALID_DATASETS
+            source_dataset in EXPERIMENT_DATASETS
         ), "Invalid source dataset requested! Please pick one from:\n{}".format(
-            list(VALID_DATASETS)
+            list(EXPERIMENT_DATASETS)
         )
         logger.info(f"Start processing {source_dataset}.")
         try:

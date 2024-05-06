@@ -19,7 +19,7 @@ warnings.filterwarnings(action="ignore")
 torch.multiprocessing.set_start_method("spawn", force=True)
 
 # Set some environment variables
-os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "max_split_size_mb:32"
+os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "max_split_size_mb:128"
 os.environ["CUDA_LAUNCH_BLOCKING"] = "1"
 os.environ["HYDRA_FULL_ERROR"] = "1"
 os.environ["MASTER_ADDR"] = "localhost"
@@ -73,7 +73,7 @@ else:
     DEVICE = torch.device("cpu")
 
 # Set real C. elegans datasets we have processed
-VALID_DATASETS = {
+EXPERIMENT_DATASETS = {
     "Leifer2023",  # Different type of dataset: stimulus-response.
     "Lin2023",
     "Flavell2023",  # TODO: Something is wrong with worm0 always in this dataset. Why?

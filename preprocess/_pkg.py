@@ -36,5 +36,5 @@ from utils import (
     NEURONS_302,
     RAW_DATA_URL,
     RAW_DATA_DIR,
-    VALID_DATASETS,
+    EXPERIMENT_DATASETS,
 )

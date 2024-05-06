@@ -585,14 +585,8 @@ class Model(torch.nn.Module):
         self.hidden_size = hidden_size if hidden_size is not None else input_size
         self.l1_norm_reg_param = l1_norm_reg_param
         self.connectome_reg_param = connectome_reg_param
-        ### DEBUG ###
         # Load the connectome graph
-        graph_tensors = torch.load(
-            os.path.join(ROOT_DIR, "data", "processed", "connectome", "graph_tensors.pt")
-        )
-        self.connectome = Data(**graph_tensors)
-        assert self.connectome == self.input_size, "Input size must match number of nodes in connectome."
-        ### DEBUG ###
+        self.load_connectome()
         # Initialize hidden state
         self._init_hidden()
         # Identity layer - used if needed
@@ -668,7 +662,7 @@ class Model(torch.nn.Module):
             self.forward = self.forward_v2
             self.loss_fn = self.loss_fn_v2
             self.generate = self.generate_v2
-
+    
     # Initialization functions for setting hidden states and weights.
     def _init_hidden(self):
         self.hidden = None
@@ -704,6 +698,36 @@ class Model(torch.nn.Module):
     
     def get_connectome_reg_param(self):
         return self.connectome_reg_param
+    
+    ### DEBUG ###
+    def load_connectome(self):
+        """
+        Loads the connectome from a pre-saved graph and makes it an attribute of the model.
+        """
+        graph_tensors = torch.load(
+            os.path.join(ROOT_DIR, "data", "processed", "connectome", "graph_tensors.pt")
+        )
+        connectome = Data(**graph_tensors)
+        assert connectome.num_nodes == self.input_size, "Input size must match number of nodes in connectome."
+        elec_weights = to_dense_adj(edge_index=connectome.edge_index, 
+                                         edge_attr=connectome.edge_attr[:,0]).squeeze(0)
+        self.register_buffer("elec_weights", elec_weights)
+        chem_weights = to_dense_adj(edge_index=connectome.edge_index, edge_attr=connectome.edge_attr[:,1]).squeeze(0)
+        self.register_buffer("chem_weights", chem_weights)
+        return None
+    
+    
+    def compute_ols_weights(self, X, Y):
+        """
+        A helper function that computes the best linear approximation of the 
+        model weights using ordinary least squares (OLS) regression.
+        """
+        # Compute the OLS weights
+        with torch.no_grad():
+            ols_weights = torch.linalg.lstsq(X, Y).solution
+        self.ols_weights = ols_weights
+        return None
+     ### DEBUG ###
 
     @torch.autocast(
         device_type=DEVICE.type, dtype=torch.half if "cuda" in DEVICE.type else torch.bfloat16
@@ -933,16 +957,6 @@ class Model(torch.nn.Module):
         output_logits = self.linear_readout(hidden_out)  # (batch_size, seq_len, num_tokens)
         # Return output token logits
         return output_logits
-
-    def compute_ols_weights(self, X, Y):
-        """
-        A helper function that computes the best linear approximation of the 
-        model weights using ordinary least squares (OLS) regression.
-        """
-        # Compute the OLS weights
-        ols_weights = torch.linalg.lstsq(X, Y).solution
-        self.ols_weights = ols_weights
-        return None
     
     @torch.autocast(
         device_type=DEVICE.type, dtype=torch.half if "cuda" in DEVICE.type else torch.bfloat16
@@ -991,6 +1005,7 @@ class Model(torch.nn.Module):
             recon_loss = masked_recon_loss[expanded_mask].sum() / norm_factor
             # L1 regularization term
             l1_loss = 0.0
+            l1_reg_loss = 0.0
             if self.l1_norm_reg_param > 0.0:
                 # Calculate L1 regularization term for all weights
                 for param in self.parameters():
@@ -999,9 +1014,10 @@ class Model(torch.nn.Module):
             ### DEBUG ###
             # Connectome regularization term
             connectome_loss = 0.0
+            connectome_reg_loss = 0.0
             if self.connectome_reg_param > 0.0:
                 # Calculate the connectome regularization term
-                connectome_loss = torch.norm(self.ols_weights - self.connectome, ord="fro")
+                connectome_loss = torch.norm(self.ols_weights**2 - self.chem_weights, ord="fro")/2 + torch.norm(self.ols_weights**2 - self.elec_weights, ord="fro")/2
                 connectome_reg_loss = self.connectome_reg_param * connectome_loss
             ### DEBUG ###
             # Add the L1 and connectome penalties to the original loss
@@ -1024,9 +1040,9 @@ class Model(torch.nn.Module):
         def loss(output, target, mask=None, **kwargs):
             """
             Args:
-                output: tensor w/ shape ``[batch_size, seq_len, num_tokens]``
-                target: tensor w/ shape ``[batch_size, seq_len, input_size]``
-                mask: tensor w/ shape ``[batch_size, input_size]``
+                output: tensor w/ shape `[batch_size, seq_len, num_tokens]`
+                target: tensor w/ shape `[batch_size, seq_len, input_size]`
+                mask: tensor w/ shape `[batch_size, input_size]``
             """
             # Default mask to all True if not provided
             if mask is None:

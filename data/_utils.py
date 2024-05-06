@@ -34,10 +34,10 @@ def load_dataset(name):
      -------
      The loaded dataset.
     """
-    assert (name in VALID_DATASETS) or (
+    assert (name in EXPERIMENT_DATASETS) or (
         name in SYNTHETIC_DATASETS
     ), "Unrecognized dataset! Please pick one from:\n{}".format(
-        list(VALID_DATASETS | SYNTHETIC_DATASETS)
+        list(EXPERIMENT_DATASETS | SYNTHETIC_DATASETS)
     )
     # ensure the data has been preprocessed
     file = os.path.join(ROOT_DIR, "data", "processed", "neural", f"{name}.pickle")
