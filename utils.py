@@ -31,7 +31,7 @@ USER = "qsimeon"  # OpenMind/computing cluster username
 
 NUM_NEURONS = 302  # number of neurons in the model organism
 
-BLOCK_SIZE = 200  # maximum attention block size to use for Transformers
+BLOCK_SIZE = 512  # maximum attention block size to use for Transformers
 
 VERSION_2 = False  # whether to use version 2 of the models (tokenizes neural data)
 
@@ -107,7 +107,8 @@ if os.path.exists(RAW_DATA_DIR):
     )
 else:
     # fmt: off
-    NEURONS_302 = [ # TODO: Cite source of this list.
+    NEURONS_302 = [ # References: (1) https://www.wormatlas.org/neurons/Individual%20Neurons/Neuronframeset.html 
+                                # (2) https://www.wormatlas.org/NeuronNames.htm
             "ADAL", "ADAR", "ADEL", "ADER", "ADFL", "ADFR", "ADLL", "ADLR", "AFDL", "AFDR",
             "AIAL", "AIAR", "AIBL", "AIBR", "AIML", "AIMR", "AINL", "AINR", "AIYL", "AIYR",
             "AIZL", "AIZR", "ALA", "ALML", "ALMR", "ALNL", "ALNR", "AQR", "AS1", "AS10",

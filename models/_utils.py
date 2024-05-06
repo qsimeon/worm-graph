@@ -162,7 +162,7 @@ class PositionalEncoding(torch.nn.Module):
     def __init__(
         self,
         d_model: int,
-        max_len: int = 10 * BLOCK_SIZE,
+        max_len: int = BLOCK_SIZE,
         dropout: float = 0.1,
     ):
         super().__init__()
@@ -547,6 +547,7 @@ class Model(torch.nn.Module):
         hidden_size: Union[int, None],
         loss: Union[Callable, None] = None,
         l1_norm_reg_param: float = 0.0,
+        connectome_reg_param: float = 0.0,
         # New attributes for version 2
         version_2: bool = VERSION_2,
         num_tokens: int = NUM_TOKENS,
@@ -560,7 +561,10 @@ class Model(torch.nn.Module):
         super(Model, self).__init__()
         assert (
             isinstance(l1_norm_reg_param, float) and 0.0 <= l1_norm_reg_param <= 1.0
-        ), "The regularization parameter `l1_norm_reg_param` must be a float between 0.0 and 1.0."
+        ), "The regularization parameter `l1_norm_reg_param` must be a float between 0 and 1."
+        assert (
+            isinstance(connectome_reg_param, float) and 0.0 <= connectome_reg_param <= 1.0
+        ), "The regularization parameter `connectome_reg_param` must be a float between 0 and 1."
         # Loss function
         if (loss is None) or (str(loss).lower() == "l1"):
             self.loss = torch.nn.L1Loss
@@ -580,6 +584,15 @@ class Model(torch.nn.Module):
         # NOTE: The output_size is same as the input_size because the model is a self-supervised autoencoder.
         self.hidden_size = hidden_size if hidden_size is not None else input_size
         self.l1_norm_reg_param = l1_norm_reg_param
+        self.connectome_reg_param = connectome_reg_param
+        ### DEBUG ###
+        # Load the connectome graph
+        graph_tensors = torch.load(
+            os.path.join(ROOT_DIR, "data", "processed", "connectome", "graph_tensors.pt")
+        )
+        self.connectome = Data(**graph_tensors)
+        assert self.connectome == self.input_size, "Input size must match number of nodes in connectome."
+        ### DEBUG ###
         # Initialize hidden state
         self._init_hidden()
         # Identity layer - used if needed
@@ -688,6 +701,9 @@ class Model(torch.nn.Module):
 
     def get_l1_norm_reg_param(self):
         return self.l1_norm_reg_param
+    
+    def get_connectome_reg_param(self):
+        return self.connectome_reg_param
 
     @torch.autocast(
         device_type=DEVICE.type, dtype=torch.half if "cuda" in DEVICE.type else torch.bfloat16
@@ -918,6 +934,16 @@ class Model(torch.nn.Module):
         # Return output token logits
         return output_logits
 
+    def compute_ols_weights(self, X, Y):
+        """
+        A helper function that computes the best linear approximation of the 
+        model weights using ordinary least squares (OLS) regression.
+        """
+        # Compute the OLS weights
+        ols_weights = torch.linalg.lstsq(X, Y).solution
+        self.ols_weights = ols_weights
+        return None
+    
     @torch.autocast(
         device_type=DEVICE.type, dtype=torch.half if "cuda" in DEVICE.type else torch.bfloat16
     )
@@ -969,9 +995,17 @@ class Model(torch.nn.Module):
                 # Calculate L1 regularization term for all weights
                 for param in self.parameters():
                     l1_loss += torch.abs(param).mean()
-            # Add the L1 penality to the original loss
-            reg_loss = self.l1_norm_reg_param * l1_loss
-            total_loss = recon_loss + reg_loss
+                l1_reg_loss = self.l1_norm_reg_param * l1_loss
+            ### DEBUG ###
+            # Connectome regularization term
+            connectome_loss = 0.0
+            if self.connectome_reg_param > 0.0:
+                # Calculate the connectome regularization term
+                connectome_loss = torch.norm(self.ols_weights - self.connectome, ord="fro")
+                connectome_reg_loss = self.connectome_reg_param * connectome_loss
+            ### DEBUG ###
+            # Add the L1 and connectome penalties to the original loss
+            total_loss = recon_loss + l1_reg_loss + connectome_reg_loss
             # Return loss
             return total_loss
 
@@ -1017,7 +1051,6 @@ class Model(torch.nn.Module):
             return total_loss
 
         return loss
-
     ### <<< DEBUG: Different loss function needed for new token mode <<< ###
 
     @torch.no_grad()
@@ -1137,7 +1170,6 @@ class Model(torch.nn.Module):
         ]  # (batch_size, num_new_timesteps, input_size)
         # Return the generations
         return generated_values
-
     ### <<< DEBUG: Different generate method needed for new token mode <<< ###
 
     def sample(self, num_new_timesteps: int):
@@ -1270,6 +1302,7 @@ class FeatureFFNN(Model):
         hidden_size: Union[int, None] = None,
         loss: Union[Callable, None] = None,
         l1_norm_reg_param: float = 0.0,
+        connectome_reg_param: float = 0.0,
         **kwargs,
     ):
         # Specify positional encoding and normalization
@@ -1319,6 +1352,7 @@ class PureAttention(Model):
         hidden_size: Union[int, None] = None,
         loss: Union[Callable, None] = None,
         l1_norm_reg_param: float = 0.0,
+        connectome_reg_param: float = 0.0,
         **kwargs,
     ):
         # NOTE: Attention only works with even `embed_dim`
@@ -1385,6 +1419,7 @@ class NeuralTransformer(Model):
         hidden_size: Union[int, None] = None,
         loss: Union[Callable, None] = None,
         l1_norm_reg_param: float = 0.0,
+        connectome_reg_param: float = 0.0,
         **kwargs,
     ):
         # NOTE: Transformer only works with even `d_model`
@@ -1447,6 +1482,7 @@ class HippoSSM(Model):
         hidden_size: Union[int, None] = None,
         loss: Union[Callable, None] = None,
         l1_norm_reg_param: float = 0.0,
+        connectome_reg_param: float = 0.0,
         **kwargs,
     ):
         # Specify positional encoding and normalization
@@ -1499,6 +1535,7 @@ class NetworkCTRNN(Model):
         hidden_size: Union[int, None] = None,
         loss: Union[Callable, None] = None,
         l1_norm_reg_param: float = 0.0,
+        connectome_reg_param: float = 0.0,
         **kwargs,
     ):
         # Specify positional encoding and normalization
@@ -1549,6 +1586,7 @@ class LiquidCfC(Model):
         hidden_size: Union[int, None] = None,
         loss: Union[Callable, None] = None,
         l1_norm_reg_param: float = 0.0,
+        connectome_reg_param: float = 0.0,
         **kwargs,
     ):
         # Specify positional encoding and normalization
@@ -1616,6 +1654,7 @@ class NetworkLSTM(Model):
         hidden_size: Union[int, None] = None,
         loss: Union[Callable, None] = None,
         l1_norm_reg_param: float = 0.0,
+        connectome_reg_param: float = 0.0,
         **kwargs,
     ):
         # Specify positional encoding and normalization

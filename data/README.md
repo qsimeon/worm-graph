@@ -24,3 +24,8 @@ Note: Make sure to have the required dataset files in the appropriate directorie
 ## Customization
 
 The submodule is designed to be easily customizable. You can modify the `_main.py` script to customize the data loading process or add additional functionality. The `_utils.py` file contains utility functions and classes that can be modified as per your requirements.
+
+## Notes
+
+https://www.wormatlas.org/neurons/Individual%20Neurons/Neuronframeset.html 
+The total counts of both electrical and chemical synapses are likely to be substantially higher than what was reported in the Mind of a Worm. These synapses are also being given “weights” based on how many thin sections in which each category of contact has been seen (pers pomm. Cook, Emmons, Hall et al., 2015).

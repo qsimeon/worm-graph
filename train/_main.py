@@ -76,12 +76,12 @@ def train_model(
         min_delta=train_config.early_stopping.delta,
     )
     # Loss metrics
-    # TRAINING
+    # Training
     train_running_base_loss = 0
     train_running_loss = 0
     train_epoch_loss = []
     train_epoch_baseline = []
-    # VALIDATION
+    # Validation
     val_running_base_loss = 0
     val_running_loss = 0
     val_epoch_loss = []
@@ -140,7 +140,7 @@ def train_model(
             if model.version_2:
                 train_baseline = torch.tensor(0.0)
             else:
-                Y_base = X_train  # neural activity ``[batch_size, seq_len, input_size]``
+                Y_base = X_train  # neural activity `[batch_size, seq_len, input_size]`
                 train_baseline = criterion(output=Y_base, target=Y_train, mask=mask_train)
             # Reset / zero-out gradients
             optimizer.zero_grad()
@@ -185,7 +185,7 @@ def train_model(
                 if model.version_2:
                     val_baseline = torch.tensor(0.0)
                 else:
-                    Y_base = X_val  # neural activity ``[batch_size, seq_len, input_size]``
+                    Y_base = X_val  # neural activity `[batch_size, seq_len, input_size]`
                     val_baseline = criterion(output=Y_base, target=Y_val, mask=mask_val)
                 # Forward pass. Models are sequence-to-sequence.
                 y_pred = model(X_val, mask_val)
