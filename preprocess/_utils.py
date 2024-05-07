@@ -57,8 +57,7 @@ def pickle_neural_data(
     processed_path = os.path.join(ROOT_DIR, "data/processed/neural")
     if not os.path.exists(processed_path):
         os.makedirs(processed_path, exist_ok=True)
-    # If .zip not found in the root directory, download the curated
-    # open-source worm datasets from the host server
+    # If .zip not found in the root directory, download the curated open-source worm datasets 
     if not os.path.exists(source_path):
         download_url(url=url, folder=ROOT_DIR, filename=zipfile)
         # Extract all the datasets ... OR
@@ -127,6 +126,20 @@ def pickle_neural_data(
         shutil.rmtree(source_path)
     return None
 
+### DEBUG ###
+def get_presaved_datasets(url, file):
+    """
+    Download and unzip presaved data splits (commonly requested data patterns).
+    Deletes the zip file once the dataset has been extracted to the data folder.
+    """
+    presave_url = url
+    presave_file = file 
+    presave_path = os.path.join(ROOT_DIR, presave_file)
+    data_path = os.path.join(ROOT_DIR, "data")
+    download_url(url=presave_url, folder=ROOT_DIR, filename=presave_file)
+    extract_zip(presave_path, folder=data_path, delete_zip=True)
+    return None
+### DEBUG ###
 
 def preprocess_connectome(raw_dir, raw_files, which_pub="cook"):
     """Convert the raw connectome data to a graph tensor.
@@ -135,7 +148,7 @@ def preprocess_connectome(raw_dir, raw_files, which_pub="cook"):
     synapses and gap junctions, into a format suitable for use in machine
     learning or graph analysis. It reads the raw data in .csv format,
     processes it to extract relevant information, and creates graph
-    tensors that represent the C. elegans connectome. The resulting
+    tensors that represent the _C. elegans_ connectome. The resulting
     graph tensors are saved in the 'data/processed/connectome' folder
     as 'graph_tensors.pt'.
 
@@ -332,16 +345,18 @@ def preprocess_connectome(raw_dir, raw_files, which_pub="cook"):
     return None
 
 
-def extract_zip(path: str, folder: str, log: bool = True, delete_zip: bool = True):
+def extract_zip(path: str, folder: str = None, log: bool = True, delete_zip: bool = True):
     """
     Extracts a zip archive to a specific folder while ignoring the __MACOSX directory.
 
     Args:
         path (str): The path to the zip archive.
-        folder (str): The folder where the files will be extracted to.
+        folder (str, optional): The folder where the files will be extracted to. Default to the parent of `path`.
         log (bool, optional): If False, will not print anything to the console. Default is True.
         delete_zip (bool, optional): If True, will delete the zip archive after extraction. Default is True.
     """
+    if folder is None:
+        folder = os.path.dirname(path)
     if log:
         print(f"Extracting {path}...")
     with zipfile.ZipFile(path, "r") as zip_ref:

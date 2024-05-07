@@ -6,7 +6,7 @@ def process_data(preprocess_config: DictConfig) -> None:
 
     This function preprocesses raw neural and connectome data to be used
     in downstream modeling and analysis tasks. It checks if the neural
-    data and connectome data have been processed already; if not, it calls
+    data and connectome data have been processed already. If not, it calls
     the appropriate functions to process and save them in the specified format.
 
     Params
@@ -17,7 +17,6 @@ def process_data(preprocess_config: DictConfig) -> None:
     Calls
     -----
     pickle_neural_data : function in preprocess/_utils.py
-        Preprocess and convert neural data to .pickle format.
     preprocess_connectome : function in preprocess/_utils.py
     """
     # Init logger
@@ -31,8 +30,8 @@ def process_data(preprocess_config: DictConfig) -> None:
             sigma=preprocess_config.smooth.sigma,
         )
         pickle_neural_data(
-            url=preprocess_config.url,
-            zipfile=preprocess_config.zipfile,
+            url=preprocess_config.opensource_url,
+            zipfile=preprocess_config.opensource_zipfile,
             source_dataset=preprocess_config.source_dataset,
             smooth_method=preprocess_config.smooth.method,
             resample_dt=preprocess_config.resample_dt,
@@ -43,6 +42,12 @@ def process_data(preprocess_config: DictConfig) -> None:
         logger.info("Finished preprocessing neural data.")
     else:
         logger.info("Neural data already preprocessed.")
+    # Extract presaved commonly use dataset split patterns
+    ### DEBUG ###
+    logger.info("Extracting presaved datasets.")
+    get_presaved_datasets(url=preprocess_config.presave_url, file=preprocess_config.presave_file)
+    logger.info("Done extracting presaved datasets.")
+    ### DEBUG ###
     # Preprocess the connectome data if not already done
     if not os.path.exists(os.path.join(ROOT_DIR, "data/processed/connectome/graph_tensors.pt")):
         logger.info("Preprocessing C. elegans connectome...")

@@ -17,8 +17,6 @@ setup/requirements_pip.txt
 setup/requirements_conda.txt
 
 # Large files
-data/worm_data*
-models/*.pt
 opensource_data.zip
 opensource_data/
 raw_data.zip
@@ -37,12 +35,6 @@ raw_data/
 
 # Logs
 logs/
-
-# ICLR Results
-analysis/iclr2024/results
-data/combined_*
-data/train_*
-data/validation_*
 
 # C extensions
 *.so
@@ -174,9 +166,13 @@ dmypy.json
 *.zip
 
 # Custom
+*.pickle
 .env
 API_KEY.txt
 gui/
+data/*AllExperimental
 data/datasets/*
-data/worm_data_short.*
+data/worm_data*
+data/processed/neural/.processed
 data/processed/connectome/graph_tensors.pt
+models/*.pt

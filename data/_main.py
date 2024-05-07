@@ -50,10 +50,8 @@ def get_datasets(dataset_config: DictConfig, save=True):
     smooth_data = dataset_config.smooth_data
     train_split_first = dataset_config.train_split_first
     train_split_ratio = dataset_config.train_split_ratio
+    # Some common dataset patterns were presaved for efficiency
     ### DEBUG ###
-    # Unzip presaved common dataset patterns
-    # data/combined_AllExperimental/val_dataset_info.csv data/combined_AllExperimental/val_dataset.pt
-    # Some common dataset patterns are presaved to save time
     all_experiment = all([(dataset in source_datasets and source_datasets[dataset]=='all') for dataset in EXPERIMENT_DATASETS])
     if all_experiment:
         dataset_config.use_these_datasets.path = os.path.join(ROOT_DIR, "data", "combined_AllExperimental")
@@ -165,28 +163,28 @@ def get_datasets(dataset_config: DictConfig, save=True):
                 combined_dataset, dataset_info = create_combined_dataset(
                     source_datasets, num_named_neurons
                 )
-                # Use largest seq_len that produce num. unique samples from shortest dataset
-                if seq_len is None:
-                    max_num_samples = max(num_train_samples, num_val_samples)
-                    min_timesteps = min(
-                        dataset["max_timesteps"] for _, dataset in combined_dataset.items()
-                    )
-                    seq_len = (min_timesteps // 2) - max_num_samples - 1
-                logger.info(f"Chosen sequence length: {min_timesteps}\n")  # DEBUG
-                # Split the combined dataset into train and validation datasets
-                created_train_dataset, created_val_dataset, dataset_info_split = (
-                    split_combined_dataset(
-                        combined_dataset,
-                        num_train_samples,
-                        num_val_samples,
-                        seq_len,
-                        reverse,
-                        use_residual,
-                        smooth_data,
-                        train_split_first,
-                        train_split_ratio,
-                    )
+            # Use largest `seq_len` that produces required unique samples from shortest dataset
+            if seq_len is None:
+                max_num_samples = max(num_train_samples, num_val_samples)
+                min_timesteps = min(
+                    dataset["max_timesteps"] for _, dataset in combined_dataset.items()
                 )
+                seq_len = (min_timesteps // 2) - max_num_samples - 1
+            logger.info(f"Chosen sequence length: {min_timesteps}\n")  # DEBUG
+            # Split the combined dataset into train and validation datasets
+            created_train_dataset, created_val_dataset, dataset_info_split = (
+                split_combined_dataset(
+                    combined_dataset,
+                    num_train_samples,
+                    num_val_samples,
+                    seq_len,
+                    reverse,
+                    use_residual,
+                    smooth_data,
+                    train_split_first,
+                    train_split_ratio,
+                )
+            )
             if created_train_dataset is None:
                 raise ValueError(
                     f"Error creating training set. No sequences of length {seq_len} could be sampled."

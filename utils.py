@@ -11,6 +11,7 @@ import torch.multiprocessing
 
 # Configure logger
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
+logging.basicConfig(level=logging.DEBUG)
 
 # Ignore all warnings
 warnings.filterwarnings(action="ignore")
