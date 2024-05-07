@@ -136,11 +136,13 @@ def train_model(
             X_train = X_train.to(rank)
             Y_train = Y_train.to(rank)
             mask_train = mask_train.to(rank)
+            print(f"DEBUG X_train: {X_train.shape}, Y_train: {Y_train.shape}, mask_train: {mask_train.shape}\n")
             # Baseline model/naive predictor: predict that the next time step is the same as the current one.
             if model.version_2:
                 train_baseline = torch.tensor(0.0)
             else:
                 Y_base = X_train  # neural activity `[batch_size, seq_len, input_size]`
+                 # TODO: Fix out of memory memory issue from expanding mask in loss!
                 train_baseline = criterion(output=Y_base, target=Y_train, mask=mask_train)
             # Reset / zero-out gradients
             optimizer.zero_grad()
@@ -148,7 +150,7 @@ def train_model(
             Y_pred = model(X_train, mask_train)
             ### DEBUG ###
             # Compute OLS estimate of model weights (best linear approximation)
-            model.compute_ols_weights(model_in=X_train, model_out=Y_pred, mask=mask_train)
+            model.compute_ols_weights(model_in=X_train, model_out=Y_pred)
             ### DEBUG ###
             train_loss = criterion(output=Y_pred, target=Y_train, mask=mask_train)
             # Backpropagation.
@@ -283,13 +285,17 @@ if __name__ == "__main__":
     os.chdir(log_dir)
     # Dataset
     train_dataset, val_dataset = get_datasets(dataset_config.dataset)
+    logger.info(f"DEBUG: Got dataset just fine: {type(train_dataset)}, {type(val_dataset)}\n\n")
     # Get the model
     model = get_model(model_config.model)
+    logger.info(f"DEBUG: Got model just fine: {type(model)}\n\n")
     # Train the model
+    logger.info(f"DEBUG: Start training ...\n\n")
     model, metric = train_model(
         train_config=train_config.train,
         model=model,
         train_dataset=train_dataset,
         val_dataset=val_dataset,
     )
+    logger.info(f"DEBUG: Finish training !!!\n")
     print(f"Final metric: \t {metric}\n")

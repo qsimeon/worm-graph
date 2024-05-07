@@ -2,9 +2,10 @@
 train:
   optimizer: AdamW # options: Adam, AdamW, Adadelta, Adagrad, RMSprop, SGD
   lr: 0.001
-  epochs: 10 
+  epochs: 1 #10 
   save_freq: 5
-  batch_size: 128 
+  # Batch size may need to be adjusted based on how big the dataset is
+  batch_size: 16 #64
   shuffle: true
 
   early_stopping:

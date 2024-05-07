@@ -717,15 +717,16 @@ class Model(torch.nn.Module):
         return None
     
     
-    def compute_ols_weights(self, X, Y):
+    def compute_ols_weights(self, model_in, model_out):
         """
         A helper function that computes the best linear approximation of the 
         model weights using ordinary least squares (OLS) regression.
         """
+        dtype, device = model_out.dtype, model_out.device
         # Compute the OLS weights
-        with torch.no_grad():
-            ols_weights = torch.linalg.lstsq(X, Y).solution
-        self.ols_weights = ols_weights
+        X, Y = model_in.double(), model_out.double()
+        ols_weights = torch.linalg.lstsq(X, Y).solution
+        self.ols_weights = ols_weights.to(dtype).to(device)
         return None
      ### DEBUG ###
 
@@ -990,9 +991,14 @@ class Model(torch.nn.Module):
                 mask = torch.ones(target.size(0), target.size(-1), dtype=torch.bool).to(
                     target.device
                 )
+            print(f"DEBUG INSIDE loss_fn > loss\n")
+            print(f"\t output size: {output.element_size(), output.nelement()} \t {output.element_size() * output.nelement()} bytes\n")
+            print(f"\t target size: {target.element_size(), target.nelement()} \t {target.element_size() * output.nelement()} bytes\n")
+            print(f"\t mask size: {mask.element_size(), mask.nelement()} \t {mask.element_size() * mask.nelement()} bytes\n")
+            # TODO: Is expannsion really necessary or can one use broadcasting: `output * mask.unsqueeze(1)`
             # Expand feature mask along temporal dimension
             expanded_mask = mask.unsqueeze(1).expand_as(
-                output
+                output # NOTE: This takes up a lot of space on GPU!
             )  # temporally invariant & feature equivariant
             # Mask the invalid positions in `output` and `target`
             masked_output = output * expanded_mask.float()
@@ -1003,6 +1009,7 @@ class Model(torch.nn.Module):
             norm_factor = masked_recon_loss[expanded_mask].size(dim=0)
             # Calculate next time step prediction loss w/out regularization
             recon_loss = masked_recon_loss[expanded_mask].sum() / norm_factor
+            ### DEBUG ###
             # L1 regularization term
             l1_loss = 0.0
             l1_reg_loss = 0.0
@@ -1011,7 +1018,6 @@ class Model(torch.nn.Module):
                 for param in self.parameters():
                     l1_loss += torch.abs(param).mean()
                 l1_reg_loss = self.l1_norm_reg_param * l1_loss
-            ### DEBUG ###
             # Connectome regularization term
             connectome_loss = 0.0
             connectome_reg_loss = 0.0
@@ -1019,9 +1025,9 @@ class Model(torch.nn.Module):
                 # Calculate the connectome regularization term
                 connectome_loss = torch.norm(self.ols_weights**2 - self.chem_weights, ord="fro")/2 + torch.norm(self.ols_weights**2 - self.elec_weights, ord="fro")/2
                 connectome_reg_loss = self.connectome_reg_param * connectome_loss
-            ### DEBUG ###
             # Add the L1 and connectome penalties to the original loss
             total_loss = recon_loss + l1_reg_loss + connectome_reg_loss
+            ### DEBUG ###
             # Return loss
             return total_loss
 
@@ -1035,6 +1041,9 @@ class Model(torch.nn.Module):
         """
         Special loss function for the newer version (version_2) of the models based
         on how loss is calculated in Transformers which operate on tokenized data.
+        NOTE: Version 2 of the models cannot apply the connectome matching regularization 
+            term that is available to Version 1 models because it Version 2 models
+            input and output on tokens instead of neural states.
         """
 
         def loss(output, target, mask=None, **kwargs):
@@ -1061,8 +1070,18 @@ class Model(torch.nn.Module):
             target = target.view(-1)  # (batch_size, seq_len) -> (batch_size * seq_len)
             # Calculate cross entropy loss from predicted token logits and target tokens.
             ce_loss = torch.nn.CrossEntropyLoss(reduction="mean", **kwargs)(output, target)
-            # Calculate the total loss
-            total_loss = ce_loss
+            ### DEBUG ###
+            # L1 regularization term
+            l1_loss = 0.0
+            l1_reg_loss = 0.0
+            if self.l1_norm_reg_param > 0.0:
+                # Calculate L1 regularization term for all weights
+                for param in self.parameters():
+                    l1_loss += torch.abs(param).mean()
+                l1_reg_loss = self.l1_norm_reg_param * l1_loss
+            # Add the L1 penalty to the original loss
+            total_loss = ce_loss + l1_reg_loss 
+            ### DEBUG ###
             # Return loss
             return total_loss
 
