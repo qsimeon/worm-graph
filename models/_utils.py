@@ -92,6 +92,7 @@ def load_model_checkpoint(checkpoint_path):
     hidden_size = checkpoint["hidden_size"]
     loss_name = checkpoint["loss_name"]
     l1_norm_reg_param = checkpoint["l1_norm_reg_param"]
+    connectome_reg_param = checkpoint["connectome_reg_param"]
     # New attributes for version 2
     version_2 = checkpoint.get("version_2", VERSION_2)
     num_tokens = checkpoint.get("num_tokens", NUM_TOKENS)
@@ -101,6 +102,7 @@ def load_model_checkpoint(checkpoint_path):
         hidden_size,
         loss=loss_name,
         l1_norm_reg_param=l1_norm_reg_param,
+        connectome_reg_param=connectome_reg_param,
         version_2=version_2,
         num_tokens=num_tokens,
     ).to(DEVICE)
@@ -552,6 +554,7 @@ class Model(torch.nn.Module):
         version_2: bool = VERSION_2,
         num_tokens: int = NUM_TOKENS,
         # Additional keyword arguments
+        # TODO: Need to add these to checkpoints.
         normalization: Union[str, None] = None,  # 'rms_norm', 'layer_norm'
         positional_encoding: Union[bool, None] = False,
     ):
@@ -727,21 +730,20 @@ class Model(torch.nn.Module):
         """
         A helper function that computes the best linear approximation of  
         the model weights using ordinary least squares (OLS) regression.
+        NOTE: We tried using `torch.linalg.lstsq(A, B)` as recommended but 
+                its solution contained nans.
         """
-        # A, B = model_in.float(), model_out.float() # DEBUG
-        A, B = model_in, model_out
-        print(f"DEBUG compute_ols_weights \n")
-        # NOTE: We tried to use `torch.linalg.lstsq(A, B)` as recommended but its solution contained nans.
+        A, B = model_in.float(), model_out.float() 
+        # print(f"DEBUG compute_ols_weights \n")
+        # NOTE: We tried using `torch.linalg.lstsq(A, B)` as recommended but its solution contained nans.
         ols_weights = torch.linalg.pinv(A) @ B
-        print(f"\t (0) compute_ols_weights: {ols_weights.shape, ols_weights.dtype, ols_weights.requires_grad,ols_weights.min(), ols_weights.max()}\n")
+        # print(f"\t (0) compute_ols_weights: {ols_weights.shape, ols_weights.dtype, ols_weights.requires_grad,ols_weights.min(), ols_weights.max()}\n") # DEBUG
         if torch.isnan(ols_weights).any():
-            print("NaNs\n")
             ols_weights = torch.nan_to_num(ols_weights, nan=0.0) # replace nans with 0
-        print(f"\t (1) compute_ols_weights: {ols_weights.shape, ols_weights.dtype, ols_weights.requires_grad,ols_weights.min(), ols_weights.max()}\n")
+        # print(f"\t (1) compute_ols_weights: {ols_weights.shape, ols_weights.dtype, ols_weights.requires_grad,ols_weights.min(), ols_weights.max()}\n") # DEBUG
         if ols_weights.ndim == 3:
-            print("batched\n")
             ols_weights = torch.nanmean(ols_weights, dim=0) # average over batch
-        print(f"\t (2) compute_ols_weights: {ols_weights.shape, ols_weights.dtype, ols_weights.requires_grad, ols_weights.min(), ols_weights.max()}\n")
+        # print(f"\t (2) compute_ols_weights: {ols_weights.shape, ols_weights.dtype, ols_weights.requires_grad, ols_weights.min(), ols_weights.max()}\n") # DEBUG
         self.register_buffer("ols_weights", ols_weights)
         return None
      ### DEBUG ###
@@ -992,7 +994,7 @@ class Model(torch.nn.Module):
         generalization by encouraging the model to use only the most important features. The
         L1 penalty is the sum of the absolute values of the weights.
         """
-        # Route to the appropriate loss_fn method
+        # Route to the appropriate `loss_fn` method
         if self.version_2:
             return self.loss_fn_v2()
 
@@ -1011,14 +1013,11 @@ class Model(torch.nn.Module):
                 mask = torch.ones(target.size(0), target.size(-1), dtype=torch.bool).to(
                     target.device
                 )
-
             # No need to expand mask; use broadcasting to apply the mask
             masked_output = output * mask.unsqueeze(1)  # mask.unsqueeze(1) has shape [batch_size, 1, input_size]
             masked_target = target * mask.unsqueeze(1)
-
             # Compute the reconstruction loss without reduction
             masked_recon_loss = self.loss(reduction="none", **kwargs)(masked_output, masked_target).float()
-
             # Use the mask to create a boolean array that considers only the relevant dimensions for summing the loss
             valid_data_mask = mask.unsqueeze(1).expand_as(output).bool()  # for use in indexing without storing expanded tensor
             # Normalize the loss by the total number of valid data points
@@ -1039,7 +1038,10 @@ class Model(torch.nn.Module):
             connectome_reg_loss = 0.0
             if self.connectome_reg_param > 0.0:
                 # Calculate the connectome regularization term
-                connectome_loss = torch.norm(self.ols_weights**2 - self.chem_weights, ord="fro")/2 + torch.norm(self.ols_weights**2 - self.elec_weights, ord="fro")/2
+                CHEM = torch.norm(self.ols_weights**2 - self.chem_weights, p="fro")/2
+                ELEC = torch.norm(self.ols_weights**2 - self.elec_weights, p="fro")/2
+                # NOTE: Squared OLS weights because connectome weights non-negative
+                connectome_loss = CHEM + ELEC 
                 connectome_reg_loss = self.connectome_reg_param * connectome_loss
             # Add the L1 and connectome penalties to the original loss
             total_loss = recon_loss + l1_reg_loss + connectome_reg_loss
@@ -1085,7 +1087,6 @@ class Model(torch.nn.Module):
             target = target.view(-1)  # (batch_size, seq_len) -> (batch_size * seq_len)
             # Calculate cross entropy loss from predicted token logits and target tokens.
             ce_loss = torch.nn.CrossEntropyLoss(reduction="mean", **kwargs)(output, target)
-            ### DEBUG ###
             # L1 regularization term
             l1_loss = 0.0
             l1_reg_loss = 0.0
@@ -1096,10 +1097,10 @@ class Model(torch.nn.Module):
                 l1_reg_loss = self.l1_norm_reg_param * l1_loss
             # Add the L1 penalty to the original loss
             total_loss = ce_loss + l1_reg_loss 
-            ### DEBUG ###
+            # NOTE: Version 2 models do not have the connectome regularization term.
             # Return loss
             return total_loss
-
+        # Return the inner custom loss function
         return loss
     ### <<< DEBUG: Different loss function needed for new token mode <<< ###
 
@@ -1364,6 +1365,7 @@ class FeatureFFNN(Model):
             hidden_size,
             loss,
             l1_norm_reg_param,
+            connectome_reg_param,
             **kwargs,
         )
         # Special parameters for this model
@@ -1420,6 +1422,7 @@ class PureAttention(Model):
             hidden_size,
             loss,
             l1_norm_reg_param,
+            connectome_reg_param,
             **kwargs,
         )
         # Special parameters for this model
@@ -1487,6 +1490,7 @@ class NeuralTransformer(Model):
             hidden_size,
             loss,
             l1_norm_reg_param,
+            connectome_reg_param,
             **kwargs,
         )
         # Special parameters for this model
@@ -1544,6 +1548,7 @@ class HippoSSM(Model):
             hidden_size,
             loss,
             l1_norm_reg_param,
+            connectome_reg_param,
             **kwargs,
         )
         # Special parameters for this model
@@ -1597,6 +1602,7 @@ class NetworkCTRNN(Model):
             hidden_size,
             loss,
             l1_norm_reg_param,
+            connectome_reg_param,
             **kwargs,
         )
         # Input to hidden transformation
@@ -1648,6 +1654,7 @@ class LiquidCfC(Model):
             hidden_size,
             loss,
             l1_norm_reg_param,
+            connectome_reg_param,
             **kwargs,
         )
         # Input to hidden transformation
@@ -1716,6 +1723,7 @@ class NetworkLSTM(Model):
             hidden_size,
             loss,
             l1_norm_reg_param,
+            connectome_reg_param,
             **kwargs,
         )
         # Input to hidden transformation

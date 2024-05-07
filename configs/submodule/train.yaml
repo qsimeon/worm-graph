@@ -5,7 +5,7 @@ train:
   epochs: 1 #10 
   save_freq: 5
   # Batch size may need to be adjusted based on how big the dataset is
-  batch_size: 64
+  batch_size: 128
   shuffle: true
 
   early_stopping:
