@@ -24,10 +24,10 @@ class EarlyStopping:
             return True
 
         if self.best_model is None:
-            self.best_model = copy.deepcopy(model)
+            self.best_model = model 
         if self.best_loss is None:
             self.best_loss = val_loss
-            self.best_model = copy.deepcopy(model)
+            self.best_model = model 
         elif self.best_loss - val_loss > self.min_delta:
             self.best_loss = val_loss
             self.counter = 0

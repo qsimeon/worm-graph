@@ -118,7 +118,7 @@ def train_model(
         # pin_memory="cuda" in DEVICE.type,  # DEBUG
     )
     # Start training
-    logger.info("Starting training loop...")
+    logger.info("Starting training loop ...")
     pbar = tqdm(
         range(epochs + 1),  # +1 because we don't step() the first epoch
         position=0,
@@ -136,29 +136,26 @@ def train_model(
             X_train = X_train.to(rank)
             Y_train = Y_train.to(rank)
             mask_train = mask_train.to(rank)
-            print(f"DEBUG X_train: {X_train.shape}, Y_train: {Y_train.shape}, mask_train: {mask_train.shape}\n")
             # Baseline model/naive predictor: predict that the next time step is the same as the current one.
             if model.version_2:
                 train_baseline = torch.tensor(0.0)
             else:
                 Y_base = X_train  # neural activity `[batch_size, seq_len, input_size]`
-                 # TODO: Fix out of memory memory issue from expanding mask in loss!
+                 # TODO: Fix out of memory issue from expanding mask in loss!
                 train_baseline = criterion(output=Y_base, target=Y_train, mask=mask_train)
+                train_baseline = scaler.scale(train_baseline)
             # Reset / zero-out gradients
             optimizer.zero_grad()
             # Forward pass. Models are sequence-to-sequence.
             Y_pred = model(X_train, mask_train)
-            ### DEBUG ###
-            # Compute OLS estimate of model weights (best linear approximation)
-            model.compute_ols_weights(model_in=X_train, model_out=Y_pred)
-            ### DEBUG ###
             train_loss = criterion(output=Y_pred, target=Y_train, mask=mask_train)
+            train_loss = scaler.scale(train_loss)
             # Backpropagation.
             if epoch > 0:  # skip first epoch to get tabula rasa loss
                 # Check if the computed loss requires gradient (e.g. the NaivePredictor model does not)
                 if train_loss.requires_grad:
                     # Backward pass
-                    scaler.scale(train_loss).backward()
+                    train_loss.backward()
                     # Update model weights
                     scaler.step(optimizer)
                     # Update the grad scaler
@@ -193,9 +190,11 @@ def train_model(
                 else:
                     Y_base = X_val  # neural activity `[batch_size, seq_len, input_size]`
                     val_baseline = criterion(output=Y_base, target=Y_val, mask=mask_val)
+                    val_baseline = scaler.scale(val_baseline)
                 # Forward pass. Models are sequence-to-sequence.
                 Y_pred = model(X_val, mask_val)
                 val_loss = criterion(output=Y_pred, target=Y_val, mask=mask_val)
+                val_loss = scaler.scale(val_loss)
                 # Update running losses
                 val_running_base_loss += val_baseline.item()
                 val_running_loss += val_loss.item()
@@ -285,17 +284,17 @@ if __name__ == "__main__":
     os.chdir(log_dir)
     # Dataset
     train_dataset, val_dataset = get_datasets(dataset_config.dataset)
-    logger.info(f"DEBUG: Got dataset just fine: {type(train_dataset)}, {type(val_dataset)}\n\n")
+    logger.info(f"DEBUG: Got dataset: {type(train_dataset)}, {type(val_dataset)}\n\n") # DEBUG
     # Get the model
     model = get_model(model_config.model)
-    logger.info(f"DEBUG: Got model just fine: {type(model)}\n\n")
+    logger.info(f"DEBUG: Got model: {type(model)}\n\n")
     # Train the model
-    logger.info(f"DEBUG: Start training ...\n\n")
+    logger.info(f"DEBUG: Start training ...\n\n") # DEBUG
     model, metric = train_model(
         train_config=train_config.train,
         model=model,
         train_dataset=train_dataset,
         val_dataset=val_dataset,
     )
-    logger.info(f"DEBUG: Finish training !!!\n")
+    logger.info(f"DEBUG: Finish training !!!\n\n") # DEBUG
     print(f"Final metric: \t {metric}\n")

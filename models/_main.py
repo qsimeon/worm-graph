@@ -69,6 +69,7 @@ def get_model(model_config: DictConfig, verbose=True) -> torch.nn.Module:
             hidden_size=model_config.hidden_size,
             loss=model_config.loss,
             l1_norm_reg_param=model_config.l1_norm_reg_param,
+            connectome_reg_param=model_config.connectome_reg_param,
         )
         if model_config.type == "PureAttention":
             model = PureAttention(**args)

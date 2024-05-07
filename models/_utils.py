@@ -627,6 +627,8 @@ class Model(torch.nn.Module):
         )
         # Linear readout
         self.linear_readout = torch.nn.Linear(self.hidden_size, self.output_size)
+        # Initialize weights
+        self._init_weights()
         # Model version_2 tokenizes neural data either as a 1-D sequence
         self.version_2 = version_2
         self.num_tokens = num_tokens
@@ -675,11 +677,16 @@ class Model(torch.nn.Module):
         torch.nn.init.xavier_uniform_(self.linear_readout.weight)
         # Initialize the embedding weights
         torch.nn.init.normal_(self.latent_embedding.weight)
+        # Initilaize the best linear approixiation of model weights
+        self.compute_ols_weights(model_in=torch.eye(self.input_size), 
+                                 model_out=torch.eye(self.input_size))
         return None
 
+    @abstractmethod
     def init_hidden(self, input_shape=None):
         """
-        Enforce the all models have a `init_hidden` method which initilaizes the hidden state of the "core".
+        Enforce that all models have an `init_hidden` method which initializes the hidden state of the "core".
+        This function must be overridden in subclasses with the specified argument 'input_shape'.
         """
         raise NotImplementedError()
 
@@ -716,17 +723,26 @@ class Model(torch.nn.Module):
         self.register_buffer("chem_weights", chem_weights)
         return None
     
-    
     def compute_ols_weights(self, model_in, model_out):
         """
-        A helper function that computes the best linear approximation of the 
-        model weights using ordinary least squares (OLS) regression.
+        A helper function that computes the best linear approximation of  
+        the model weights using ordinary least squares (OLS) regression.
         """
-        dtype, device = model_out.dtype, model_out.device
-        # Compute the OLS weights
-        X, Y = model_in.double(), model_out.double()
-        ols_weights = torch.linalg.lstsq(X, Y).solution
-        self.ols_weights = ols_weights.to(dtype).to(device)
+        # A, B = model_in.float(), model_out.float() # DEBUG
+        A, B = model_in, model_out
+        print(f"DEBUG compute_ols_weights \n")
+        # NOTE: We tried to use `torch.linalg.lstsq(A, B)` as recommended but its solution contained nans.
+        ols_weights = torch.linalg.pinv(A) @ B
+        print(f"\t (0) compute_ols_weights: {ols_weights.shape, ols_weights.dtype, ols_weights.requires_grad,ols_weights.min(), ols_weights.max()}\n")
+        if torch.isnan(ols_weights).any():
+            print("NaNs\n")
+            ols_weights = torch.nan_to_num(ols_weights, nan=0.0) # replace nans with 0
+        print(f"\t (1) compute_ols_weights: {ols_weights.shape, ols_weights.dtype, ols_weights.requires_grad,ols_weights.min(), ols_weights.max()}\n")
+        if ols_weights.ndim == 3:
+            print("batched\n")
+            ols_weights = torch.nanmean(ols_weights, dim=0) # average over batch
+        print(f"\t (2) compute_ols_weights: {ols_weights.shape, ols_weights.dtype, ols_weights.requires_grad, ols_weights.min(), ols_weights.max()}\n")
+        self.register_buffer("ols_weights", ols_weights)
         return None
      ### DEBUG ###
 
@@ -924,6 +940,10 @@ class Model(torch.nn.Module):
         # Perform a linear readout to get the output
         output = self.linear_readout(hidden_out)  # (batch_size, seq_len, input_size)
         # Return output neural data
+        ### DEBUG ###
+        # Compute best linear approxmation of model weights using OLS estimate
+        self.compute_ols_weights(model_in=input_activity, model_out=output)
+        ### DEBUG ###
         return output
 
     @torch.autocast(
@@ -991,25 +1011,21 @@ class Model(torch.nn.Module):
                 mask = torch.ones(target.size(0), target.size(-1), dtype=torch.bool).to(
                     target.device
                 )
-            print(f"DEBUG INSIDE loss_fn > loss\n")
-            print(f"\t output size: {output.element_size(), output.nelement()} \t {output.element_size() * output.nelement()} bytes\n")
-            print(f"\t target size: {target.element_size(), target.nelement()} \t {target.element_size() * output.nelement()} bytes\n")
-            print(f"\t mask size: {mask.element_size(), mask.nelement()} \t {mask.element_size() * mask.nelement()} bytes\n")
-            # TODO: Is expannsion really necessary or can one use broadcasting: `output * mask.unsqueeze(1)`
-            # Expand feature mask along temporal dimension
-            expanded_mask = mask.unsqueeze(1).expand_as(
-                output # NOTE: This takes up a lot of space on GPU!
-            )  # temporally invariant & feature equivariant
-            # Mask the invalid positions in `output` and `target`
-            masked_output = output * expanded_mask.float()
-            masked_target = target * expanded_mask.float()
+
+            # No need to expand mask; use broadcasting to apply the mask
+            masked_output = output * mask.unsqueeze(1)  # mask.unsqueeze(1) has shape [batch_size, 1, input_size]
+            masked_target = target * mask.unsqueeze(1)
+
             # Compute the reconstruction loss without reduction
-            masked_recon_loss = self.loss(reduction="none", **kwargs)(masked_output, masked_target)
-            # Normalize the loss by the total number of data points
-            norm_factor = masked_recon_loss[expanded_mask].size(dim=0)
-            # Calculate next time step prediction loss w/out regularization
-            recon_loss = masked_recon_loss[expanded_mask].sum() / norm_factor
-            ### DEBUG ###
+            masked_recon_loss = self.loss(reduction="none", **kwargs)(masked_output, masked_target).float()
+
+            # Use the mask to create a boolean array that considers only the relevant dimensions for summing the loss
+            valid_data_mask = mask.unsqueeze(1).expand_as(output).bool()  # for use in indexing without storing expanded tensor
+            # Normalize the loss by the total number of valid data points
+            norm_factor = valid_data_mask.sum()
+            mrlv = masked_recon_loss[valid_data_mask]
+            numerator = mrlv.sum() 
+            recon_loss = numerator / norm_factor
             # L1 regularization term
             l1_loss = 0.0
             l1_reg_loss = 0.0
@@ -1027,10 +1043,9 @@ class Model(torch.nn.Module):
                 connectome_reg_loss = self.connectome_reg_param * connectome_loss
             # Add the L1 and connectome penalties to the original loss
             total_loss = recon_loss + l1_reg_loss + connectome_reg_loss
-            ### DEBUG ###
             # Return loss
             return total_loss
-
+        # Return the inner custom loss function 
         return loss
 
     ### >>> DEBUG: Different loss function needed for new token mode >>> ###
