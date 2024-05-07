@@ -11,6 +11,7 @@ import torch.multiprocessing
 
 # Configure logger
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
+logging.basicConfig(level=logging.DEBUG)
 
 # Ignore all warnings
 warnings.filterwarnings(action="ignore")
@@ -19,7 +20,7 @@ warnings.filterwarnings(action="ignore")
 torch.multiprocessing.set_start_method("spawn", force=True)
 
 # Set some environment variables
-os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "max_split_size_mb:32"
+os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "max_split_size_mb:128"
 os.environ["CUDA_LAUNCH_BLOCKING"] = "1"
 os.environ["HYDRA_FULL_ERROR"] = "1"
 os.environ["MASTER_ADDR"] = "localhost"
@@ -31,11 +32,11 @@ USER = "qsimeon"  # OpenMind/computing cluster username
 
 NUM_NEURONS = 302  # number of neurons in the model organism
 
-BLOCK_SIZE = 200  # maximum attention block size to use for Transformers
+BLOCK_SIZE = 512  # maximum attention block size to use for Transformers
 
 VERSION_2 = False  # whether to use version 2 of the models (tokenizes neural data)
 
-NUM_TOKENS = 128  # number of tokens in the neural vocabulary if using version 2
+NUM_TOKENS = 256  # number of tokens in the neural vocabulary if using version 2
 
 WORLD_SIZE = torch.cuda.device_count()
 
@@ -73,7 +74,7 @@ else:
     DEVICE = torch.device("cpu")
 
 # Set real C. elegans datasets we have processed
-VALID_DATASETS = {
+EXPERIMENT_DATASETS = {
     "Leifer2023",  # Different type of dataset: stimulus-response.
     "Lin2023",
     "Flavell2023",  # TODO: Something is wrong with worm0 always in this dataset. Why?
@@ -91,7 +92,8 @@ SYNTHETIC_DATASETS = {  # Datasets created with the `CreateSyntheticDataset.ipyn
     "WhiteNoise0000",
     "RandWalk0000",
     "VanDerPol0000",
-    "Shakespeare0000",
+    "Wikitext0000",
+    "Recurrent0000",
 }
 
 # List of all 302 hermaphrodite neurons
@@ -106,7 +108,8 @@ if os.path.exists(RAW_DATA_DIR):
     )
 else:
     # fmt: off
-    NEURONS_302 = [ # TODO: Cite source of this list.
+    NEURONS_302 = [ # References: (1) https://www.wormatlas.org/neurons/Individual%20Neurons/Neuronframeset.html 
+                                # (2) https://www.wormatlas.org/NeuronNames.htm
             "ADAL", "ADAR", "ADEL", "ADER", "ADFL", "ADFR", "ADLL", "ADLR", "AFDL", "AFDR",
             "AIAL", "AIAR", "AIBL", "AIBR", "AIML", "AIMR", "AINL", "AINR", "AIYL", "AIYR",
             "AIZL", "AIZR", "ALA", "ALML", "ALMR", "ALNL", "ALNR", "AQR", "AS1", "AS10",

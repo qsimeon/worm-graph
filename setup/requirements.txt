@@ -17,6 +17,7 @@ networkx
 notebook
 numpy
 omegaconf
+openai # uses pip
 pandas
 pytest
 requests
@@ -24,6 +25,7 @@ scikit-learn
 scipy
 seaborn
 statsmodels
+tiktoken # uses pip
 tokenizers
 tqdm
 transformers 

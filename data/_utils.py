@@ -27,16 +27,17 @@ def load_dataset(name):
 
     name = {Kato2015, Nichols2017, Nguyen2017, Skora2018,
              Kaplan2020, Uzel2022, Flavell2023, Leifer2023}
-            | {Lorenz000, Sines0000, RandWalk0000, VanDerPol0000, WhiteNoise0000}
+            | {Lorenz000, Sines0000, RandWalk0000, VanDerPol0000,
+                WhiteNoise0000, Wikitext0000, Recurrent0000}
 
      Returns
      -------
      The loaded dataset.
     """
-    assert (name in VALID_DATASETS) or (
+    assert (name in EXPERIMENT_DATASETS) or (
         name in SYNTHETIC_DATASETS
     ), "Unrecognized dataset! Please pick one from:\n{}".format(
-        list(VALID_DATASETS | SYNTHETIC_DATASETS)
+        list(EXPERIMENT_DATASETS | SYNTHETIC_DATASETS)
     )
     # ensure the data has been preprocessed
     file = os.path.join(ROOT_DIR, "data", "processed", "neural", f"{name}.pickle")
@@ -62,8 +63,8 @@ class NeuralActivityDataset(torch.utils.data.Dataset):
         A vector of the time (in seconds) corresponding to the time
         axis (axis=0) of the `data` tensor.
     neurons_mask : torch.Tensor
-        Index of neuron(s) to return data for. Returns data for all
-        neurons if None.
+        Index of neuron(s) to return data for, defaults to returnin
+        data for all neurons if `neurons_mask=Non`e.
     wormID : str
         ID of the worm.
     worm_dataset : str
@@ -162,7 +163,7 @@ class NeuralActivityDataset(torch.utils.data.Dataset):
         self.unique_time_steps = set()
 
         self.data = data
-        self.neurons_mask = neurons_mask
+        self.neurons_mask = neurons_mask * 1
         self.num_samples = num_samples
         self.data_samples = self.__data_generator()
 
@@ -191,12 +192,6 @@ class NeuralActivityDataset(torch.utils.data.Dataset):
             The data sample at the given index.
         """
         data = self.data_samples[index]
-        # ### DEBUG ###
-        # process = psutil.Process()
-        # logger.info(
-        #     f"DEBUG Worker PID: {process.pid}, Memory Usage: {process.memory_info().rss / (1024 ** 3)} GB"
-        # )
-        # ### DEBUG ###
         return data
 
     def parfor_func(self, start):

@@ -55,7 +55,7 @@ submodule:
     input_size: 302
     hidden_size: 256
     loss: MSE
-    l1_reg_param: 0.0
+    l1_norm_reg_param: 0.0
     use_this_pretrained_model: null
 
   # Train model
@@ -64,7 +64,7 @@ submodule:
     lr: 0.001
     epochs: 10 
     save_freq: 5
-    batch_size: 128
+    batch_size: 256
     shuffle: true
     reverse: false
     early_stopping:
@@ -79,7 +79,7 @@ submodule:
       WhiteNoise0000: null
       RandWalk0000: null
       VanDerPol0000: null
-      Shakespeare0000: null
+      Wikitext0000: null
       Kato2015: worm0
       Nichols2017: worm0
       Skora2018: worm0

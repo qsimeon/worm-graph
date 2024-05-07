@@ -13,15 +13,15 @@ hydra:
     cpus_per_task: 1  # Number of CPU cores per task
     gpus_per_node: null  # Number of GPUs per node (NOTE: Don't use with gres.)
     tasks_per_node: 1  # Number of tasks to run on each node
-    mem_gb: 40  # Memory required per node in GB
+    mem_gb: 80  # Memory required per node in GB
     nodes: 1  # Number of nodes to use
     name: ${hydra.job.name}  # Name of the job
     partition: use-everything # yanglab # Partition to submit to
-    qos: null  # Quality of Service level
+    qos: null  # Quality of service level
     comment: null  # Comment to pass to the job
-    constraint: high-capacity  # Constraint specification
+    constraint: high-capacity #any-a100 # Constraint specification
     exclude: dgx001, dgx002, node031, node034, node055  # Hosts to exclude
-    gres: gpu:1  # Generic resources to request
+    gres: gpu:1 #gpu:a100:1 # Generic resources to request
     cpus_per_gpu: null  # Number of CPUs per GPU
     gpus_per_task: null  # Number of GPUs per task
     mem_per_gpu: null  # Memory per GPU

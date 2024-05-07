@@ -91,7 +91,7 @@ def load_model_checkpoint(checkpoint_path):
     input_size = checkpoint["input_size"]
     hidden_size = checkpoint["hidden_size"]
     loss_name = checkpoint["loss_name"]
-    l1_reg_param = checkpoint["l1_reg_param"]
+    l1_norm_reg_param = checkpoint["l1_norm_reg_param"]
     # New attributes for version 2
     version_2 = checkpoint.get("version_2", VERSION_2)
     num_tokens = checkpoint.get("num_tokens", NUM_TOKENS)
@@ -100,7 +100,7 @@ def load_model_checkpoint(checkpoint_path):
         input_size,
         hidden_size,
         loss=loss_name,
-        l1_reg_param=l1_reg_param,
+        l1_norm_reg_param=l1_norm_reg_param,
         version_2=version_2,
         num_tokens=num_tokens,
     ).to(DEVICE)
@@ -407,16 +407,6 @@ class SSM(torch.nn.Module):
         # Run the SSM
         if not self.decode:  # CNN mode
             Kernels = self.K_conv(Ab, Bb, input.size(1))
-            # ### DEBUG ###
-            # batch_size = input.size(0)
-            # output = []
-            # # Loop over batch
-            # for b in range(batch_size):
-            #     out = self.causal_convolution(input[b], Kernels) # (seq_len, hidden_size)
-            #     output.append(out)
-            # # Stack together output from all batch elements
-            # output = torch.stack(output, dim=0) # (batch_size, seq_len, hidden_size)
-            # ### DEBUG ###
             output = self.batch_causal_convolution(input, Kernels)
         else:  # RNN mode
             seq_len = input.size(1)
@@ -452,7 +442,6 @@ class CTRNN(torch.nn.Module):
         super().__init__()
         self.input_size = input_size
         self.hidden_size = hidden_size
-        # self.register_parameter(name="alpha", param=torch.nn.Parameter(torch.ones(1, hidden_size)))
         self.register_parameter(name="alpha", param=torch.nn.Parameter(torch.ones(hidden_size)))
         self.input2h = torch.nn.Linear(input_size, hidden_size)
         self.h2h = torch.nn.Linear(hidden_size, hidden_size)
@@ -549,7 +538,7 @@ class Model(torch.nn.Module):
         4. The core of all models is called `self.hidden_hidden` and it is
             comprised of a single hidden layer of an architecture of choice.
         7. Getter methods for the input size and hidden size called
-        `get_input_size`, `get_hidden_size`, `get_loss_name`, and `get_l1_reg_param`.
+        `get_input_size`, `get_hidden_size`, `get_loss_name`, and `get_l1_norm_reg_param`.
     """
 
     def __init__(
@@ -557,7 +546,8 @@ class Model(torch.nn.Module):
         input_size: int,
         hidden_size: Union[int, None],
         loss: Union[Callable, None] = None,
-        l1_reg_param: float = 0.0,
+        l1_norm_reg_param: float = 0.0,
+        connectome_reg_param: float = 0.0,
         # New attributes for version 2
         version_2: bool = VERSION_2,
         num_tokens: int = NUM_TOKENS,
@@ -570,8 +560,11 @@ class Model(torch.nn.Module):
         """
         super(Model, self).__init__()
         assert (
-            isinstance(l1_reg_param, float) and 0.0 <= l1_reg_param <= 1.0
-        ), "The regularization parameter `l1_reg_param` must be a float between 0.0 and 1.0."
+            isinstance(l1_norm_reg_param, float) and 0.0 <= l1_norm_reg_param <= 1.0
+        ), "The regularization parameter `l1_norm_reg_param` must be a float between 0 and 1."
+        assert (
+            isinstance(connectome_reg_param, float) and 0.0 <= connectome_reg_param <= 1.0
+        ), "The regularization parameter `connectome_reg_param` must be a float between 0 and 1."
         # Loss function
         if (loss is None) or (str(loss).lower() == "l1"):
             self.loss = torch.nn.L1Loss
@@ -590,7 +583,10 @@ class Model(torch.nn.Module):
         self.output_size = input_size  # Number of neurons (302)
         # NOTE: The output_size is same as the input_size because the model is a self-supervised autoencoder.
         self.hidden_size = hidden_size if hidden_size is not None else input_size
-        self.l1_reg_param = l1_reg_param
+        self.l1_norm_reg_param = l1_norm_reg_param
+        self.connectome_reg_param = connectome_reg_param
+        # Load the connectome graph
+        self.load_connectome()
         # Initialize hidden state
         self._init_hidden()
         # Identity layer - used if needed
@@ -651,6 +647,9 @@ class Model(torch.nn.Module):
             # the 0-indexed bin will be used for unmasked values.
             bin_edges = torch.tensor(norm.ppf(torch.linspace(0, 1, self.num_tokens)))
             self.register_buffer("bin_edges", bin_edges)
+            # Define a vector of EMA decay values used to update the neural embedding
+            ema_decay = torch.ones(self.input_size) * 0.5
+            self.register_buffer("ema_decay", ema_decay)
             # Modify embedding layer to be a lookup table
             self.latent_embedding = torch.nn.Embedding(
                 num_embeddings=self.num_tokens, embedding_dim=self.hidden_size
@@ -663,7 +662,7 @@ class Model(torch.nn.Module):
             self.forward = self.forward_v2
             self.loss_fn = self.loss_fn_v2
             self.generate = self.generate_v2
-
+    
     # Initialization functions for setting hidden states and weights.
     def _init_hidden(self):
         self.hidden = None
@@ -694,8 +693,41 @@ class Model(torch.nn.Module):
     def get_loss_name(self):
         return self.loss_name
 
-    def get_l1_reg_param(self):
-        return self.l1_reg_param
+    def get_l1_norm_reg_param(self):
+        return self.l1_norm_reg_param
+    
+    def get_connectome_reg_param(self):
+        return self.connectome_reg_param
+    
+    ### DEBUG ###
+    def load_connectome(self):
+        """
+        Loads the connectome from a pre-saved graph and makes it an attribute of the model.
+        """
+        graph_tensors = torch.load(
+            os.path.join(ROOT_DIR, "data", "processed", "connectome", "graph_tensors.pt")
+        )
+        connectome = Data(**graph_tensors)
+        assert connectome.num_nodes == self.input_size, "Input size must match number of nodes in connectome."
+        elec_weights = to_dense_adj(edge_index=connectome.edge_index, 
+                                         edge_attr=connectome.edge_attr[:,0]).squeeze(0)
+        self.register_buffer("elec_weights", elec_weights)
+        chem_weights = to_dense_adj(edge_index=connectome.edge_index, edge_attr=connectome.edge_attr[:,1]).squeeze(0)
+        self.register_buffer("chem_weights", chem_weights)
+        return None
+    
+    
+    def compute_ols_weights(self, X, Y):
+        """
+        A helper function that computes the best linear approximation of the 
+        model weights using ordinary least squares (OLS) regression.
+        """
+        # Compute the OLS weights
+        with torch.no_grad():
+            ols_weights = torch.linalg.lstsq(X, Y).solution
+        self.ols_weights = ols_weights
+        return None
+     ### DEBUG ###
 
     @torch.autocast(
         device_type=DEVICE.type, dtype=torch.half if "cuda" in DEVICE.type else torch.bfloat16
@@ -766,10 +798,10 @@ class Model(torch.nn.Module):
         as the dimensionality of the neural data (i.e. `input_size` or `num_channels`).
 
         Args:
-            neural_sequence: tensor of shape (batch_size, seq_len, input_size)
-            feature_mask: tensor of shape (batch_size, input_size)
-            token_matrix: tensor of shape (num_tokens, input_size)
-            decay: float EMA decay factor for updating the neural embedding
+            neural_sequence: tensor with shape (batch_size, seq_len, input_size)
+            feature_mask: tensor with shape (batch_size, input_size)
+            token_matrix: (optional) tensor with shape (num_tokens, input_size)
+            decay: (optional) float EMA decay factor for updating the neural embedding
         Output:
             token_sequence: tensor of shape (batch_size, seq_len)
         """
@@ -787,19 +819,15 @@ class Model(torch.nn.Module):
             )
         assert (
             feature_mask.ndim == 2 and feature_mask.size(-1) == input_size
-        ), "`feature_mask` must have shape (batch_size, input_size)"
+        ), "`feature_mask` must have shape `(batch_size, input_size)`"
         assert feature_mask.sum().item() > 0, "`feature_mask` cannot be all False."
         if token_matrix is None:
             token_matrix = self.neural_embedding
         assert (
             token_matrix.ndim == 2 and token_matrix.size(-1) == input_size
-        ), "`token_matrix` must have shape (num_tokens, input_size)"
+        ), "`token_matrix` must have shape `(num_tokens, input_size)`"
         # Move token_matrix to same device as neural_sequence
         token_matrix = token_matrix.to(neural_sequence.device)
-        # Get shapes from the token_matrix
-        # NOTE: We could use the attributes self.num_tokens and self.input_size of the model;
-        # but getting the sizes this way allows us to use this method as a standalone function.
-        num_tokens, _ = token_matrix.shape
         # PART 1: Tokenize the neural data
         # Calculate distances between neural data and embedding vectors
         distances = self.calculate_distances(
@@ -817,7 +845,7 @@ class Model(torch.nn.Module):
         # PART 2: Update `self.neural_embedding`
         ### >>> SLOW but CORRECT, NEW Implementation >>> ###
         # NOTE: Updates positions in `self.neural_embedding` that correspond to observed tokens and masked inputs.
-        # Get positions of masked/observed input features
+        # Get positions of masked input features (i.e. the observed/measured neurons)
         masked_input_positions = feature_mask.nonzero(
             as_tuple=False
         )  # (<= batch_size * input_size, 2)
@@ -825,16 +853,21 @@ class Model(torch.nn.Module):
         _, counts = torch.unique(masked_input_positions[:, 0], return_counts=True)
         # Split the tensor into groups based on the batch dimension
         batch_groups = torch.split(masked_input_positions, counts.tolist())
-        # For each batch index update the neural embedding only using observed tokens and maksed features
+        # For each batch index update the neural embedding only using observed tokens and masked features
         for group in batch_groups:  # time ~ bigO(batch_size)
-            batch_idx = group[:, 0].unique().item()
-            observed_inputs = group[:, 1]
+            batch_idx = group[:, 0].unique().item()  # (1, )
+            observed_inputs = group[:, 1]  # (<= batch_size * input_size, )
             batch_tokens = token_sequence[batch_idx]  # (seq_len, )
             batch_inputs = neural_sequence[batch_idx]  # (seq_len, input_size)
             for token in batch_tokens.unique():
-                OLD = self.neural_embedding[token, observed_inputs]
-                NEW = batch_inputs[batch_tokens == token].mean(dim=0)[observed_inputs]
-                self.neural_embedding[token, observed_inputs] = decay * OLD + (1 - decay) * NEW
+                decay = self.ema_decay[observed_inputs]  # (input_size, )
+                OLD = self.neural_embedding[token, observed_inputs]  # (input_size, )
+                NEW = batch_inputs[batch_tokens == token].mean(dim=0)[
+                    observed_inputs
+                ]  # (input_size, )
+                self.neural_embedding[token, observed_inputs] = (
+                    decay * OLD + (1 - decay) * NEW
+                )  # (input_size, )
         ### <<< SLOW but CORRECT, NEW Implementation <<< ###
         # Return the tokenized sequence
         return token_sequence
@@ -924,7 +957,7 @@ class Model(torch.nn.Module):
         output_logits = self.linear_readout(hidden_out)  # (batch_size, seq_len, num_tokens)
         # Return output token logits
         return output_logits
-
+    
     @torch.autocast(
         device_type=DEVICE.type, dtype=torch.half if "cuda" in DEVICE.type else torch.bfloat16
     )
@@ -972,13 +1005,23 @@ class Model(torch.nn.Module):
             recon_loss = masked_recon_loss[expanded_mask].sum() / norm_factor
             # L1 regularization term
             l1_loss = 0.0
-            if self.l1_reg_param > 0.0:
+            l1_reg_loss = 0.0
+            if self.l1_norm_reg_param > 0.0:
                 # Calculate L1 regularization term for all weights
                 for param in self.parameters():
                     l1_loss += torch.abs(param).mean()
-            # Add the L1 penality to the original loss
-            reg_loss = self.l1_reg_param * l1_loss
-            total_loss = recon_loss + reg_loss
+                l1_reg_loss = self.l1_norm_reg_param * l1_loss
+            ### DEBUG ###
+            # Connectome regularization term
+            connectome_loss = 0.0
+            connectome_reg_loss = 0.0
+            if self.connectome_reg_param > 0.0:
+                # Calculate the connectome regularization term
+                connectome_loss = torch.norm(self.ols_weights**2 - self.chem_weights, ord="fro")/2 + torch.norm(self.ols_weights**2 - self.elec_weights, ord="fro")/2
+                connectome_reg_loss = self.connectome_reg_param * connectome_loss
+            ### DEBUG ###
+            # Add the L1 and connectome penalties to the original loss
+            total_loss = recon_loss + l1_reg_loss + connectome_reg_loss
             # Return loss
             return total_loss
 
@@ -997,9 +1040,9 @@ class Model(torch.nn.Module):
         def loss(output, target, mask=None, **kwargs):
             """
             Args:
-                output: tensor w/ shape ``[batch_size, seq_len, num_tokens]``
-                target: tensor w/ shape ``[batch_size, seq_len, input_size]``
-                mask: tensor w/ shape ``[batch_size, input_size]``
+                output: tensor w/ shape `[batch_size, seq_len, num_tokens]`
+                target: tensor w/ shape `[batch_size, seq_len, input_size]`
+                mask: tensor w/ shape `[batch_size, input_size]``
             """
             # Default mask to all True if not provided
             if mask is None:
@@ -1011,13 +1054,11 @@ class Model(torch.nn.Module):
                 -1, self.num_tokens
             )  # (batch_size, seq_len, num_tokens) -> (batch_size * seq_len, num_tokens)
             # Convert target from neural vector sequence to token sequence.
-            # NOTE: torch.no_grad() prevents `self.neural_embedding` from being updated based on targets.
-            with torch.no_grad():
-                target = self.tokenize_neural_data(
-                    neural_sequence=target,
-                    feature_mask=mask,
-                )
-                target = target.view(-1)  # (batch_size, seq_len) -> (batch_size * seq_len)
+            target = self.tokenize_neural_data(
+                neural_sequence=target,
+                feature_mask=mask,
+            )
+            target = target.view(-1)  # (batch_size, seq_len) -> (batch_size * seq_len)
             # Calculate cross entropy loss from predicted token logits and target tokens.
             ce_loss = torch.nn.CrossEntropyLoss(reduction="mean", **kwargs)(output, target)
             # Calculate the total loss
@@ -1026,7 +1067,6 @@ class Model(torch.nn.Module):
             return total_loss
 
         return loss
-
     ### <<< DEBUG: Different loss function needed for new token mode <<< ###
 
     @torch.no_grad()
@@ -1146,7 +1186,6 @@ class Model(torch.nn.Module):
         ]  # (batch_size, num_new_timesteps, input_size)
         # Return the generations
         return generated_values
-
     ### <<< DEBUG: Different generate method needed for new token mode <<< ###
 
     def sample(self, num_new_timesteps: int):
@@ -1177,7 +1216,7 @@ class NaivePredictor(Model):
         input_size: int,
         hidden_size: Union[int, None] = None,  # unused in this model
         loss: Union[Callable, None] = None,
-        l1_reg_param=0.0,
+        l1_norm_reg_param=0.0,
         **kwargs,
     ):
         # NaivePredictor does not work with version_2
@@ -1196,7 +1235,7 @@ class NaivePredictor(Model):
             input_size,
             None,  # hidden_size
             loss,
-            l1_reg_param,
+            l1_norm_reg_param,
             **kwargs,
         )
         # Input to hidden transformation
@@ -1230,7 +1269,7 @@ class LinearRegression(Model):
         input_size: int,
         hidden_size: Union[int, None] = None,  # unused in this model
         loss: Union[Callable, None] = None,
-        l1_reg_param=0.0,
+        l1_norm_reg_param=0.0,
         **kwargs,
     ):
         # Specify positional encoding and normalization
@@ -1241,7 +1280,7 @@ class LinearRegression(Model):
             input_size,
             None,  # hidden_size
             loss,
-            l1_reg_param,
+            l1_norm_reg_param,
             **kwargs,
         )
         # Input to hidden transformation
@@ -1278,7 +1317,8 @@ class FeatureFFNN(Model):
         input_size: int,
         hidden_size: Union[int, None] = None,
         loss: Union[Callable, None] = None,
-        l1_reg_param: float = 0.0,
+        l1_norm_reg_param: float = 0.0,
+        connectome_reg_param: float = 0.0,
         **kwargs,
     ):
         # Specify positional encoding and normalization
@@ -1289,7 +1329,7 @@ class FeatureFFNN(Model):
             input_size,
             hidden_size,
             loss,
-            l1_reg_param,
+            l1_norm_reg_param,
             **kwargs,
         )
         # Special parameters for this model
@@ -1327,7 +1367,8 @@ class PureAttention(Model):
         input_size: int,
         hidden_size: Union[int, None] = None,
         loss: Union[Callable, None] = None,
-        l1_reg_param: float = 0.0,
+        l1_norm_reg_param: float = 0.0,
+        connectome_reg_param: float = 0.0,
         **kwargs,
     ):
         # NOTE: Attention only works with even `embed_dim`
@@ -1344,7 +1385,7 @@ class PureAttention(Model):
             input_size,
             hidden_size,
             loss,
-            l1_reg_param,
+            l1_norm_reg_param,
             **kwargs,
         )
         # Special parameters for this model
@@ -1393,7 +1434,8 @@ class NeuralTransformer(Model):
         input_size: int,
         hidden_size: Union[int, None] = None,
         loss: Union[Callable, None] = None,
-        l1_reg_param: float = 0.0,
+        l1_norm_reg_param: float = 0.0,
+        connectome_reg_param: float = 0.0,
         **kwargs,
     ):
         # NOTE: Transformer only works with even `d_model`
@@ -1410,7 +1452,7 @@ class NeuralTransformer(Model):
             input_size,
             hidden_size,
             loss,
-            l1_reg_param,
+            l1_norm_reg_param,
             **kwargs,
         )
         # Special parameters for this model
@@ -1455,7 +1497,8 @@ class HippoSSM(Model):
         input_size: int,
         hidden_size: Union[int, None] = None,
         loss: Union[Callable, None] = None,
-        l1_reg_param: float = 0.0,
+        l1_norm_reg_param: float = 0.0,
+        connectome_reg_param: float = 0.0,
         **kwargs,
     ):
         # Specify positional encoding and normalization
@@ -1466,7 +1509,7 @@ class HippoSSM(Model):
             input_size,
             hidden_size,
             loss,
-            l1_reg_param,
+            l1_norm_reg_param,
             **kwargs,
         )
         # Special parameters for this model
@@ -1507,7 +1550,8 @@ class NetworkCTRNN(Model):
         input_size: int,
         hidden_size: Union[int, None] = None,
         loss: Union[Callable, None] = None,
-        l1_reg_param: float = 0.0,
+        l1_norm_reg_param: float = 0.0,
+        connectome_reg_param: float = 0.0,
         **kwargs,
     ):
         # Specify positional encoding and normalization
@@ -1518,7 +1562,7 @@ class NetworkCTRNN(Model):
             input_size,
             hidden_size,
             loss,
-            l1_reg_param,
+            l1_norm_reg_param,
             **kwargs,
         )
         # Input to hidden transformation
@@ -1557,7 +1601,8 @@ class LiquidCfC(Model):
         input_size: int,
         hidden_size: Union[int, None] = None,
         loss: Union[Callable, None] = None,
-        l1_reg_param: float = 0.0,
+        l1_norm_reg_param: float = 0.0,
+        connectome_reg_param: float = 0.0,
         **kwargs,
     ):
         # Specify positional encoding and normalization
@@ -1568,7 +1613,7 @@ class LiquidCfC(Model):
             input_size,
             hidden_size,
             loss,
-            l1_reg_param,
+            l1_norm_reg_param,
             **kwargs,
         )
         # Input to hidden transformation
@@ -1624,7 +1669,8 @@ class NetworkLSTM(Model):
         input_size: int,
         hidden_size: Union[int, None] = None,
         loss: Union[Callable, None] = None,
-        l1_reg_param: float = 0.0,
+        l1_norm_reg_param: float = 0.0,
+        connectome_reg_param: float = 0.0,
         **kwargs,
     ):
         # Specify positional encoding and normalization
@@ -1635,7 +1681,7 @@ class NetworkLSTM(Model):
             input_size,
             hidden_size,
             loss,
-            l1_reg_param,
+            l1_norm_reg_param,
             **kwargs,
         )
         # Input to hidden transformation

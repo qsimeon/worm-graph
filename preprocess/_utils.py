@@ -57,8 +57,7 @@ def pickle_neural_data(
     processed_path = os.path.join(ROOT_DIR, "data/processed/neural")
     if not os.path.exists(processed_path):
         os.makedirs(processed_path, exist_ok=True)
-    # If .zip not found in the root directory, download the curated
-    # open-source worm datasets from the host server
+    # If .zip not found in the root directory, download the curated open-source worm datasets 
     if not os.path.exists(source_path):
         download_url(url=url, folder=ROOT_DIR, filename=zipfile)
         # Extract all the datasets ... OR
@@ -84,7 +83,7 @@ def pickle_neural_data(
             os.unlink(zip_path)
     # (re)-Pickle all the datasets ... OR
     if source_dataset is None or source_dataset.lower() == "all":
-        for source in VALID_DATASETS:
+        for source in EXPERIMENT_DATASETS:
             logger.info(f"Start processing {source}.")
             try:
                 # Instantiate the relevant preprocessor class
@@ -104,9 +103,9 @@ def pickle_neural_data(
     # ... (re)-Pickle a single dataset
     else:
         assert (
-            source_dataset in VALID_DATASETS
+            source_dataset in EXPERIMENT_DATASETS
         ), "Invalid source dataset requested! Please pick one from:\n{}".format(
-            list(VALID_DATASETS)
+            list(EXPERIMENT_DATASETS)
         )
         logger.info(f"Start processing {source_dataset}.")
         try:
@@ -127,15 +126,29 @@ def pickle_neural_data(
         shutil.rmtree(source_path)
     return None
 
+### DEBUG ###
+def get_presaved_datasets(url, file):
+    """
+    Download and unzip presaved data splits (commonly requested data patterns).
+    Deletes the zip file once the dataset has been extracted to the data folder.
+    """
+    presave_url = url
+    presave_file = file 
+    presave_path = os.path.join(ROOT_DIR, presave_file)
+    data_path = os.path.join(ROOT_DIR, "data")
+    download_url(url=presave_url, folder=ROOT_DIR, filename=presave_file)
+    extract_zip(presave_path, folder=data_path, delete_zip=True)
+    return None
+### DEBUG ###
 
-def preprocess_connectome(raw_dir, raw_files):
+def preprocess_connectome(raw_dir, raw_files, which_pub="cook"):
     """Convert the raw connectome data to a graph tensor.
 
     This function processes raw connectome data, which includes chemical
     synapses and gap junctions, into a format suitable for use in machine
     learning or graph analysis. It reads the raw data in .csv format,
     processes it to extract relevant information, and creates graph
-    tensors that represent the C. elegans connectome. The resulting
+    tensors that represent the _C. elegans_ connectome. The resulting
     graph tensors are saved in the 'data/processed/connectome' folder
     as 'graph_tensors.pt'.
 
@@ -145,6 +158,9 @@ def preprocess_connectome(raw_dir, raw_files):
         Directory with raw connectome data
     raw_files : list
         Contain the names of the raw connectome data to preprocess
+    which_pub : str
+        The name of the connectome to preprocess. Options named according
+        the published connectomes. Default is 'cook' for Cook et al., 2019.
 
     Returns
     -------
@@ -176,23 +192,23 @@ def preprocess_connectome(raw_dir, raw_files):
         )
     # Check that all the necessary raw files were extracted
     assert all([os.path.exists(os.path.join(raw_dir, rf)) for rf in raw_files])
-    # List of names of all C. elegans neurons
+    # Names of all 302 C. elegans hermaphrodite neurons
     neurons_all = set(NEURONS_302)
-    # Chemical synapses
+    # Chemical synapses nodes and edges
     GHermChem_Edges = pd.read_csv(os.path.join(raw_dir, "GHermChem_Edges.csv"))  # edges
     GHermChem_Nodes = pd.read_csv(os.path.join(raw_dir, "GHermChem_Nodes.csv"))  # nodes
-    # Gap junctions
+    # Gap junctions nodes and edges
     GHermElec_Sym_Edges = pd.read_csv(os.path.join(raw_dir, "GHermElec_Sym_Edges.csv"))  # edges
     GHermElec_Sym_Nodes = pd.read_csv(os.path.join(raw_dir, "GHermElec_Sym_Nodes.csv"))  # nodes
-    # Neurons involved in gap junctions
+    # Neurons (i.e. nodes) in gap junctions
     df = GHermElec_Sym_Nodes
-    df["Name"] = [v.replace("0", "") if not v.endswith("0") else v for v in df["Name"]]
-    Ggap_nodes = df[df["Name"].isin(neurons_all)].sort_values(by=["Name"]).reset_index()
-    # Neurons involved in chemical synapses
+    df["Name"] = [v.replace("0", "") if not v.endswith("0") else v for v in df["Name"]] # standard naming
+    Ggap_nodes = df[df["Name"].isin(neurons_all)].sort_values(by=["Name"]).reset_index()  # filter out non-neurons
+    # Neurons (i.e. nodes) in chemical synapses
     df = GHermChem_Nodes
-    df["Name"] = [v.replace("0", "") if not v.endswith("0") else v for v in df["Name"]]
-    Gsyn_nodes = df[df["Name"].isin(neurons_all)].sort_values(by=["Name"]).reset_index()
-    # Gap junctions
+    df["Name"] = [v.replace("0", "") if not v.endswith("0") else v for v in df["Name"]] # standard naming
+    Gsyn_nodes = df[df["Name"].isin(neurons_all)].sort_values(by=["Name"]).reset_index() # filter out non-neurons
+    # Gap junctions edges
     df = GHermElec_Sym_Edges
     df["EndNodes_1"] = [v.replace("0", "") if not v.endswith("0") else v for v in df["EndNodes_1"]]
     df["EndNodes_2"] = [v.replace("0", "") if not v.endswith("0") else v for v in df["EndNodes_2"]]
@@ -203,7 +219,7 @@ def preprocess_connectome(raw_dir, raw_files):
         and df.iloc[i]["EndNodes_2"] in set(Ggap_nodes.Name)
     ]  # indices
     Ggap_edges = df.iloc[inds].reset_index(drop=True)
-    # Chemical synapses
+    # Chemical synapses edges
     df = GHermChem_Edges
     df["EndNodes_1"] = [v.replace("0", "") if not v.endswith("0") else v for v in df["EndNodes_1"]]
     df["EndNodes_2"] = [v.replace("0", "") if not v.endswith("0") else v for v in df["EndNodes_2"]]
@@ -231,13 +247,13 @@ def preprocess_connectome(raw_dir, raw_files):
     gsyn_edge_index = gsyn_edge_index.T  # [2, num_edges]
     # Number of edge attributes
     num_edge_features = 2
-    # The edged feature (edge_attr) for gap junctions
+    # The edge feature (edge_attr) for gap junctions
     num_edges = len(Ggap_edges)
     ggap_edge_attr = torch.empty(
         num_edges, num_edge_features, dtype=torch.float
     )  # [num_edges, num_edge_features]
     for i, weight in enumerate(Ggap_edges.Weight.values):
-        # Electrical synapse encoded as [1,0]
+        # Electrical synapse encoded as [1, 0]
         ggap_edge_attr[i, :] = torch.tensor([weight, 0], dtype=torch.float)
     # The edge feature (edge_attr) for chemical synapses
     num_edges = len(Gsyn_edges)
@@ -245,13 +261,12 @@ def preprocess_connectome(raw_dir, raw_files):
         num_edges, num_edge_features, dtype=torch.float
     )  # [num_edges, num_edge_features]
     for i, weight in enumerate(Gsyn_edges.Weight.values):
-        # Chemical synapse encoded as [0,1]
+        # Chemical synapse encoded as [0, 1]
         gsyn_edge_attr[i, :] = torch.tensor([0, weight], dtype=torch.float)
     # The node feature matrix (data.x)
     num_nodes = len(Gsyn_nodes)
-    num_node_features = 1024
-    # Generate random data
-    # TODO: Inject real data instead!
+    num_node_features = BLOCK_SIZE
+    # Instantiate node features with ranodom data
     x = torch.randn(
         num_nodes, num_node_features, dtype=torch.float
     )  # [num_nodes, num_node_features]
@@ -264,20 +279,30 @@ def preprocess_connectome(raw_dir, raw_files):
     codes = np.unique(y)
     types = np.unique(Gsyn_nodes.Group.values)
     node_type = dict(zip(codes, types))
+    # Normalize outgoing gap junction weights to sum to 1 
+    ggap_weights = to_dense_adj(edge_index=ggap_edge_index, edge_attr=ggap_edge_attr[:,0]).squeeze(0)
+    ggap_weights = ggap_weights / torch.clamp(ggap_weights.sum(dim=1, keepdim=True), min=1)
+    ggap_edge_index, ggap_edge_attr = dense_to_sparse(ggap_weights)
+    ggap_edge_attr = torch.stack((ggap_edge_attr, torch.zeros_like(ggap_edge_attr))).T
+    # Normalize outgoing chemical synapse weights to sum to 1 
+    gsyn_weights = to_dense_adj(edge_index=gsyn_edge_index, edge_attr=gsyn_edge_attr[:,1]).squeeze(0)
+    gsyn_weights = gsyn_weights / torch.clamp(gsyn_weights.sum(dim=1, keepdim=True), min=1)
+    gsyn_edge_index, gsyn_edge_attr = dense_to_sparse(gsyn_weights)
+    gsyn_edge_attr = torch.stack((torch.zeros_like(gsyn_edge_attr), gsyn_edge_attr)).T
     # Graph for electrical connectivity uses `torch_geometric.Data` object
     electrical_graph = Data(x=x, edge_index=ggap_edge_index, edge_attr=ggap_edge_attr, y=y)
     # Graph for chemical connectivity uses `torch_geometric.Data` object
     chemical_graph = Data(x=x, edge_index=gsyn_edge_index, edge_attr=gsyn_edge_attr, y=y)
     # Merge electrical and chemical graphs into a single connectome graph
-    edge_index = torch.hstack((electrical_graph.edge_index, chemical_graph.edge_index))
-    edge_attr = torch.vstack((electrical_graph.edge_attr, chemical_graph.edge_attr))
-    edge_index, edge_attr = coalesce(
-        edge_index, edge_attr, reduce="add"
-    )  # features = [elec_wt, chem_wt]
     assert all(chemical_graph.y == electrical_graph.y), "Node labels not matched!"
     x = chemical_graph.x
     y = chemical_graph.y
-    # Basic attributes of PyG Data object
+    edge_index = torch.hstack((electrical_graph.edge_index, chemical_graph.edge_index))
+    edge_attr = torch.vstack((electrical_graph.edge_attr, chemical_graph.edge_attr))
+    edge_index, edge_attr = coalesce(
+        edge_index=edge_index, edge_attr=edge_attr, reduce="sum"
+    )  # features = [elec_wt, chem_wt]
+    # Create a combined connectome with basic attributes of PyG Data object
     graph = Data(x=x, edge_index=edge_index, edge_attr=edge_attr, y=y)
     # Some additional attributes to the graph
     neurons_all = list(idx_to_neuron.values())
@@ -320,16 +345,18 @@ def preprocess_connectome(raw_dir, raw_files):
     return None
 
 
-def extract_zip(path: str, folder: str, log: bool = True, delete_zip: bool = True):
+def extract_zip(path: str, folder: str = None, log: bool = True, delete_zip: bool = True):
     """
     Extracts a zip archive to a specific folder while ignoring the __MACOSX directory.
 
     Args:
         path (str): The path to the zip archive.
-        folder (str): The folder where the files will be extracted to.
+        folder (str, optional): The folder where the files will be extracted to. Default to the parent of `path`.
         log (bool, optional): If False, will not print anything to the console. Default is True.
         delete_zip (bool, optional): If True, will delete the zip archive after extraction. Default is True.
     """
+    if folder is None:
+        folder = os.path.dirname(path)
     if log:
         print(f"Extracting {path}...")
     with zipfile.ZipFile(path, "r") as zip_ref:
@@ -465,11 +492,11 @@ def smooth_data_preprocess(calcium_data, time_in_seconds, smooth_method, **kwarg
         )
     elif str(smooth_method).lower() == "ma":
         smooth_ca_data = moving_average_smooth(
-            calcium_data, time_in_seconds, window_size=kwargs.get("window_size", 21)
+            calcium_data, time_in_seconds, window_size=kwargs.get("window_size", 15)
         )
     elif str(smooth_method).lower() == "es":
         smooth_ca_data = exponential_kernel_smooth(
-            calcium_data, time_in_seconds, alpha=kwargs.get("alpha", 0.1)
+            calcium_data, time_in_seconds, alpha=kwargs.get("alpha", 0.5)
         )
     else:
         raise TypeError("See `configs/submodule/preprocess.yaml` for viable smooth methods.")
@@ -747,7 +774,6 @@ class CalciumDataReshaper:
         self.smooth_calcium_data = self.worm_dataset["smooth_calcium_data"]
         self.residual_calcium = self.worm_dataset["residual_calcium"]
         self.smooth_residual_calcium = self.worm_dataset["smooth_residual_calcium"]
-        self.num_unknown_neurons = self.worm_dataset["num_unknown_neurons"]
         self.neuron_to_idx = self.worm_dataset["neuron_to_idx"]
         self.idx_to_neuron = self.worm_dataset["idx_to_neuron"]
         self.extra_info = self.worm_dataset.get("extra_info", dict())

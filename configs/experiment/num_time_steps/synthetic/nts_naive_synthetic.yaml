@@ -24,28 +24,28 @@ hydra:
       # seed 3: choice(/om2/user/qsimeon/worm-graph/data/validation_WhiteNoise0000)
       # seed 4: choice(/om2/user/qsimeon/worm-graph/data/validation_RandWalk0000)
       # seed 5: choice(/om2/user/qsimeon/worm-graph/data/validation_VanDerPol0000)
-      # seed 6: choice(/om2/user/qsimeon/worm-graph/data/validation_Shakespeare0000)
+      # seed 6: choice(/om2/user/qsimeon/worm-graph/data/validation_Wikitext0000)
       ### submodule.dataset.source_datasets ###
       # seed 1: choice({Sines0000:10},{Sines0000:11},{Sines0000:13},{Sines0000:16},{Sines0000:18},{Sines0000:21},{Sines0000:25},{Sines0000:30},{Sines0000:35},{Sines0000:41},{Sines0000:48},{Sines0000:56},{Sines0000:66},{Sines0000:77},{Sines0000:90},{Sines0000:106},{Sines0000:124},{Sines0000:145},{Sines0000:170},{Sines0000:199})
       # seed 2: choice({Lorenz0000:10},{Lorenz0000:11},{Lorenz0000:13},{Lorenz0000:16},{Lorenz0000:18},{Lorenz0000:21},{Lorenz0000:25},{Lorenz0000:30},{Lorenz0000:35},{Lorenz0000:41},{Lorenz0000:48},{Lorenz0000:56},{Lorenz0000:66},{Lorenz0000:77},{Lorenz0000:90},{Lorenz0000:106},{Lorenz0000:124},{Lorenz0000:145},{Lorenz0000:170},{Lorenz0000:199})
       # seed 3: choice({WhiteNoise0000:10},{WhiteNoise0000:11},{WhiteNoise0000:13},{WhiteNoise0000:16},{WhiteNoise0000:18},{WhiteNoise0000:21},{WhiteNoise0000:25},{WhiteNoise0000:30},{WhiteNoise0000:35},{WhiteNoise0000:41},{WhiteNoise0000:48},{WhiteNoise0000:56},{WhiteNoise0000:66},{WhiteNoise0000:77},{WhiteNoise0000:90},{WhiteNoise0000:106},{WhiteNoise0000:124},{WhiteNoise0000:145},{WhiteNoise0000:170},{WhiteNoise0000:199})
       # seed 4: choice({RandWalk0000:10},{RandWalk0000:11},{RandWalk0000:13},{RandWalk0000:16},{RandWalk0000:18},{RandWalk0000:21},{RandWalk0000:25},{RandWalk0000:30},{RandWalk0000:35},{RandWalk0000:41},{RandWalk0000:48},{RandWalk0000:56},{RandWalk0000:66},{RandWalk0000:77},{RandWalk0000:90},{RandWalk0000:106},{RandWalk0000:124},{RandWalk0000:145},{RandWalk0000:170},{RandWalk0000:199})
       # seed 5: choice({VanDerPol0000:10},{VanDerPol0000:11},{VanDerPol0000:13},{VanDerPol0000:16},{VanDerPol0000:18},{VanDerPol0000:21},{VanDerPol0000:25},{VanDerPol0000:30},{VanDerPol0000:35},{VanDerPol0000:41},{VanDerPol0000:48},{VanDerPol0000:56},{VanDerPol0000:66},{VanDerPol0000:77},{VanDerPol0000:90},{VanDerPol0000:106},{VanDerPol0000:124},{VanDerPol0000:145},{VanDerPol0000:170},{VanDerPol0000:199}) 
-      # seed 6: choice({Shakespeare0000:10},{Shakespeare0000:11},{Shakespeare0000:13},{Shakespeare0000:16},{Shakespeare0000:18},{Shakespeare0000:21},{Shakespeare0000:25},{Shakespeare0000:30},{Shakespeare0000:35},{Shakespeare0000:41},{Shakespeare0000:48},{Shakespeare0000:56},{Shakespeare0000:66},{Shakespeare0000:77},{Shakespeare0000:90},{Shakespeare0000:106},{Shakespeare0000:124},{Shakespeare0000:145},{Shakespeare0000:170},{Shakespeare0000:199})
+      # seed 6: choice({Wikitext0000:10},{Wikitext0000:11},{Wikitext0000:13},{Wikitext0000:16},{Wikitext0000:18},{Wikitext0000:21},{Wikitext0000:25},{Wikitext0000:30},{Wikitext0000:35},{Wikitext0000:41},{Wikitext0000:48},{Wikitext0000:56},{Wikitext0000:66},{Wikitext0000:77},{Wikitext0000:90},{Wikitext0000:106},{Wikitext0000:124},{Wikitext0000:145},{Wikitext0000:170},{Wikitext0000:199})
       ### submodule.predict.source_datasets ###
       # seed 1: choice({Sines0000:[worm0, worm1]})
       # seed 2: choice({Lorenz0000:[worm0, worm1]})
       # seed 3: choice({WhiteNoise0000:[worm0, worm1]})
       # seed 4: choice({RandWalk0000:[worm0, worm1]})
       # seed 5: choice({VanDerPol0000:[worm0, worm1]})
-      # seed 6: choice({Shakespeare0000:[worm0, worm1]})
+      # seed 6: choice({Wikitext0000:[worm0, worm1]})
       ### submodule.analysis.validation.source_datasets ###
       # seed 1: choice({Sines0000:all})
       # seed 2: choice({Lorenz0000:all})
       # seed 3: choice({WhiteNoise0000:all})
       # seed 4: choice({RandWalk0000:all})
       # seed 5: choice({VanDerPol0000:all})
-      # seed 6: choice({Shakespeare0000:all})
+      # seed 6: choice({Wikitext0000:all})
 
 submodule:
 
@@ -70,7 +70,7 @@ submodule:
       WhiteNoise0000: null
       RandWalk0000: null
       VanDerPol0000: null
-      Shakespeare0000: null
+      Wikitext0000: null
       Kato2015: null
       Nichols2017: null
       Skora2018: null
@@ -101,7 +101,7 @@ submodule:
       WhiteNoise0000: null
       RandWalk0000: null
       VanDerPol0000: null
-      Shakespeare0000: null
+      Wikitext0000: null
       Kato2015: null
       Nichols2017: null
       Skora2018: null
@@ -125,7 +125,7 @@ submodule:
         WhiteNoise0000: null
         RandWalk0000: null
         VanDerPol0000: null
-        Shakespeare0000: null
+        Wikitext0000: null
         Kato2015: null
         Nichols2017: null
         Skora2018: null
