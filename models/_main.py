@@ -42,28 +42,7 @@ def get_model(model_config: DictConfig, verbose=True) -> torch.nn.Module:
     if model_config.use_this_pretrained_model:
         PATH = os.path.join(ROOT_DIR, model_config.use_this_pretrained_model)
         checkpoint = torch.load(PATH, map_location=DEVICE)
-        
-        ### DEBUG ###
-        # model_name = checkpoint["model_name"]
-        # input_size = checkpoint["input_size"]
-        # hidden_size = checkpoint["hidden_size"]
-        # loss_name = checkpoint["loss_name"]
-        # l1_norm_reg_param = checkpoint["l1_norm_reg_param"]
-        # connectome_reg_param = checkpoint["connectome_reg_param"]
-        # version_2 = checkpoint["version_2"]
-        # num_tokens = checkpoint["num_tokens"]
-        # model_state_dict = checkpoint["model_state_dict"]
-        # model = eval(model_name)(
-        #     input_size,
-        #     hidden_size,
-        #     loss=loss_name,
-        #     l1_norm_reg_param=l1_norm_reg_param,
-        #     connectome_reg_param=connectome_reg_param,
-        #     version_2=version_2,
-        #     num_tokens=num_tokens,
-        # )
-        # model.load_state_dict(model_state_dict)
-        ### DEBUG ###
+        # Load the model from the checkpoint
         model = load_model_checkpoint(checkpoint)
 
         if verbose:

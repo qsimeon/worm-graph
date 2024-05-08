@@ -143,19 +143,17 @@ def train_model(
                 Y_base = X_train  # neural activity `[batch_size, seq_len, input_size]`
                  # TODO: Fix out of memory issue from expanding mask in loss!
                 train_baseline = criterion(output=Y_base, target=Y_train, mask=mask_train)
-                train_baseline = scaler.scale(train_baseline)
             # Reset / zero-out gradients
             optimizer.zero_grad()
             # Forward pass. Models are sequence-to-sequence.
             Y_pred = model(X_train, mask_train)
             train_loss = criterion(output=Y_pred, target=Y_train, mask=mask_train)
-            train_loss = scaler.scale(train_loss)
             # Backpropagation.
             if epoch > 0:  # skip first epoch to get tabula rasa loss
                 # Check if the computed loss requires gradient (e.g. the NaivePredictor model does not)
                 if train_loss.requires_grad:
                     # Backward pass
-                    train_loss.backward()
+                    scaler.scale(train_loss).backward()
                     # Update model weights
                     scaler.step(optimizer)
                     # Update the grad scaler
@@ -190,11 +188,9 @@ def train_model(
                 else:
                     Y_base = X_val  # neural activity `[batch_size, seq_len, input_size]`
                     val_baseline = criterion(output=Y_base, target=Y_val, mask=mask_val)
-                    val_baseline = scaler.scale(val_baseline)
                 # Forward pass. Models are sequence-to-sequence.
                 Y_pred = model(X_val, mask_val)
                 val_loss = criterion(output=Y_pred, target=Y_val, mask=mask_val)
-                val_loss = scaler.scale(val_loss)
                 # Update running losses
                 val_running_base_loss += val_baseline.item()
                 val_running_loss += val_loss.item()
@@ -289,12 +285,12 @@ if __name__ == "__main__":
     model = get_model(model_config.model)
     logger.info(f"DEBUG: Got model: {type(model)}\n\n")
     # Train the model
-    logger.info(f"DEBUG: Start training ...\n\n") # DEBUG
+    logger.info(f"DEBUG: Start training...\n\n") # DEBUG
     model, metric = train_model(
         train_config=train_config.train,
         model=model,
         train_dataset=train_dataset,
         val_dataset=val_dataset,
     )
-    logger.info(f"DEBUG: Finish training !!!\n\n") # DEBUG
+    logger.info(f"DEBUG: Finish training!\n\n") # DEBUG
     print(f"Final metric: \t {metric}\n")
