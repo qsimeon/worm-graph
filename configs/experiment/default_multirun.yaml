@@ -41,8 +41,8 @@ submodule:
       Leifer2023: all
 
     num_named_neurons: null
-    num_train_samples: 32
-    num_val_samples: 32
+    num_train_samples: 16
+    num_val_samples: 16
     seq_len: null
     reverse: false
     use_residual: false

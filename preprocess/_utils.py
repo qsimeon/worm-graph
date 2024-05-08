@@ -132,11 +132,11 @@ def get_presaved_datasets(url, file):
     Download and unzip presaved data splits (commonly requested data patterns).
     Deletes the zip file once the dataset has been extracted to the data folder.
     """
-    presave_url = url
-    presave_file = file 
-    presave_path = os.path.join(ROOT_DIR, presave_file)
+    presaved_url = url
+    presaved_file = file 
+    presave_path = os.path.join(ROOT_DIR, presaved_file)
     data_path = os.path.join(ROOT_DIR, "data")
-    download_url(url=presave_url, folder=ROOT_DIR, filename=presave_file)
+    download_url(url=presaved_url, folder=ROOT_DIR, filename=presaved_file)
     extract_zip(presave_path, folder=data_path, delete_zip=True)
     return None
 ### DEBUG ###

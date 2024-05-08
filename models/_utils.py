@@ -1446,12 +1446,14 @@ class PureAttention(Model):
             **kwargs,
         )
         # Special parameters for this model
+
         ### DEBUG ###
-        # NOTE: number of attention heads must be divisor of `hidden_size`
+        # NOTE: Number of attention heads must be divisor of `hidden_size`
         # self.num_heads = max([i for i in range(1, 9) if hidden_size % i == 0])
         self.num_heads = 1
-        logger.info(f"Number of attention heads: {self.num_heads}.")  # DEBUG
+        logger.info(f"DEBUG Number of attention heads: {self.num_heads}.")  # DEBUG
         ### DEBUG ###
+
         self.dropout = 0.1  # dropout rate
         # Input to hidden transformation
         self.input_hidden = torch.nn.Sequential(
@@ -1514,12 +1516,14 @@ class NeuralTransformer(Model):
             **kwargs,
         )
         # Special parameters for this model
+
         ### DEBUG ###
-        # NOTE: number of attention heads must be divisor of `hidden_size`
+        # NOTE: Number of attention heads must be divisor of `hidden_size`
         # self.num_heads = max([i for i in range(1, 9) if hidden_size % i == 0])
         self.num_heads = 1
-        logger.info(f"Number of attention heads: {self.num_heads}.")  # DEBUG
+        logger.info(f"DEBUG Number of attention heads: {self.num_heads}.")  # DEBUG
         ### DEBUG ###
+
         self.dropout = 0.1  # dropout rate
         # Input to hidden transformation
         self.input_hidden = torch.nn.Sequential(
