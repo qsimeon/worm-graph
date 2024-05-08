@@ -56,7 +56,12 @@ def get_datasets(dataset_config: DictConfig, save=True):
     if all_experiment:
         logger.info(f"Requested dataset pattern matched the presaved `combined_AllExperimental` dataset.\n"
                     f"Setting `use_these_datasets.path ` to that directory and loading in that dataset.")
-        dataset_config.use_these_datasets.path = os.path.join(ROOT_DIR, "data", "combined_AllExperimental")
+        presave_path = os.path.join(ROOT_DIR, "data", "combined_AllExperimental")
+        # Check if the directory exists and is not empty
+        if os.path.isdir(presave_path) and os.listdir(presave_path):
+            dataset_config.use_these_datasets.path = presave_path
+        else:
+            logger.info(f"Directory {presave_path} does not exist or is empty. Creating the dataset from source datasets.")
     # TODO: Write other dataset patterns here.
     ### DEBUG ###
     # Initialize datasets

@@ -630,8 +630,6 @@ class Model(torch.nn.Module):
         )
         # Linear readout
         self.linear_readout = torch.nn.Linear(self.hidden_size, self.output_size)
-        # Initialize weights
-        self._init_weights()
         # Model version_2 tokenizes neural data either as a 1-D sequence
         self.version_2 = version_2
         self.num_tokens = num_tokens
@@ -661,12 +659,12 @@ class Model(torch.nn.Module):
             )  # embedding lookup table (learned)
             # Adjust linear readout to output token logits
             self.linear_readout = torch.nn.Linear(self.hidden_size, self.num_tokens)
-            # Initialize weights
-            self._init_weights()
             # Alias methods to new versions
             self.forward = self.forward_v2
             self.loss_fn = self.loss_fn_v2
             self.generate = self.generate_v2
+        # Initialize weights
+        self._init_weights()
     
     # Initialization functions for setting hidden states and weights.
     def _init_hidden(self):
@@ -680,9 +678,8 @@ class Model(torch.nn.Module):
         torch.nn.init.xavier_uniform_(self.linear_readout.weight)
         # Initialize the embedding weights
         torch.nn.init.normal_(self.latent_embedding.weight)
-        # Initilaize the best linear approixiation of model weights
-        self.compute_ols_weights(model_in=torch.eye(self.input_size), 
-                                 model_out=torch.eye(self.input_size))
+        # Initialize the best linear approximation of model weights
+        self.register_parameter("ols_weights", torch.nn.Parameter(torch.eye(self.input_size)))
         return None
 
     @abstractmethod
@@ -713,6 +710,7 @@ class Model(torch.nn.Module):
     def load_connectome(self):
         """
         Loads the connectome from a pre-saved graph and makes it an attribute of the model.
+        Distinguishes between the electrical and chemical weight matrices in the connectome.
         """
         graph_tensors = torch.load(
             os.path.join(ROOT_DIR, "data", "processed", "connectome", "graph_tensors.pt")
@@ -733,18 +731,19 @@ class Model(torch.nn.Module):
         NOTE: We tried using `torch.linalg.lstsq(A, B)` as recommended but 
                 its solution contained nans.
         """
-        A, B = model_in.float(), model_out.float() 
-        # print(f"DEBUG compute_ols_weights \n")
-        # NOTE: We tried using `torch.linalg.lstsq(A, B)` as recommended but its solution contained nans.
-        ols_weights = torch.linalg.pinv(A) @ B
-        # print(f"\t (0) compute_ols_weights: {ols_weights.shape, ols_weights.dtype, ols_weights.requires_grad,ols_weights.min(), ols_weights.max()}\n") # DEBUG
-        if torch.isnan(ols_weights).any():
-            ols_weights = torch.nan_to_num(ols_weights, nan=0.0) # replace nans with 0
-        # print(f"\t (1) compute_ols_weights: {ols_weights.shape, ols_weights.dtype, ols_weights.requires_grad,ols_weights.min(), ols_weights.max()}\n") # DEBUG
-        if ols_weights.ndim == 3:
-            ols_weights = torch.nanmean(ols_weights, dim=0) # average over batch
-        # print(f"\t (2) compute_ols_weights: {ols_weights.shape, ols_weights.dtype, ols_weights.requires_grad, ols_weights.min(), ols_weights.max()}\n") # DEBUG
-        self.register_buffer("ols_weights", ols_weights)
+        # Don't bother doing this time-intensive computation if not going to be used
+        if self.connectome_reg_param == 0.0 or self.version_2:
+            ols_weights = torch.eye(self.input_size)
+        else:
+            A, B = model_in.float(), model_out.float() 
+            # NOTE: We tried using `torch.linalg.lstsq(A, B)` as recommended but its solution contained nans.
+            ols_weights = torch.linalg.pinv(A) @ B
+            if torch.isnan(ols_weights).any():
+                ols_weights = torch.nan_to_num(ols_weights, nan=0.0) # replace nans with 0
+            if ols_weights.ndim == 3:
+                ols_weights = torch.nanmean(ols_weights, dim=0) # average over batch
+        # Save the current best linear approximation of the weights an attribute of the model
+        self.register_parameter("ols_weights", torch.nn.Parameter(ols_weights))
         return None
      ### DEBUG ###
 
@@ -944,7 +943,10 @@ class Model(torch.nn.Module):
         # Return output neural data
         ### DEBUG ###
         # Compute best linear approxmation of model weights using OLS estimate
-        self.compute_ols_weights(model_in=input_activity, model_out=output)
+        if torch.is_grad_enabled():
+            if self.ols_weights.grad is not None:
+                self.ols_weights.grad.zero_()
+            self.compute_ols_weights(model_in=input_activity, model_out=output)
         ### DEBUG ###
         return output
 
@@ -1032,16 +1034,35 @@ class Model(torch.nn.Module):
                 # Calculate L1 regularization term for all weights
                 for param in self.parameters():
                     l1_loss += torch.abs(param).mean()
+
+                # ### DEBUG ###
+                # # NOTE: This check passes.
+                # print(f"DEBUG loss_fn.loss \n") # DEBUG
+                # param = param
+                # print(f"\t param: {param.shape}\n") # DEBUG
+                # l1_grad = gradcheck(lambda x: torch.abs(x).mean(), param) # DEBUG
+                # print(f"\t valid gradient for L1? : {l1_grad}\n") # DEBUG
+                # ### DEBUG ###
+
                 l1_reg_loss = self.l1_norm_reg_param * l1_loss
             # Connectome regularization term
             connectome_loss = 0.0
             connectome_reg_loss = 0.0
             if self.connectome_reg_param > 0.0:
+
+                # ### DEBUG ###
+                # # NOTE: This check fails.
+                # print(f"DEBUG loss_fn.loss \n") # DEBUG
+                # param = self.ols_weights**2 - (self.chem_weights + self.elec_weights)
+                # print(f"\t param: {param.shape}\n") # DEBUG
+                # ols_grad = gradcheck(lambda x: torch.norm(x, p="fro"), param) # DEBUG
+                # print(f"\t valid gradient for OLS? : {ols_grad}\n") # DEBUG
+                # ### DEBUG ###
+
                 # Calculate the connectome regularization term
-                CHEM = torch.norm(self.ols_weights**2 - self.chem_weights, p="fro")/2
-                ELEC = torch.norm(self.ols_weights**2 - self.elec_weights, p="fro")/2
-                # NOTE: Squared OLS weights because connectome weights non-negative
-                connectome_loss = CHEM + ELEC 
+                # NOTE: Square OLS weights because the connectome weights are non-negative
+                param = torch.square(self.ols_weights) - (self.chem_weights + self.elec_weights)
+                connectome_loss = torch.norm(param, p="fro")
                 connectome_reg_loss = self.connectome_reg_param * connectome_loss
             # Add the L1 and connectome penalties to the original loss
             total_loss = recon_loss + l1_reg_loss + connectome_reg_loss
@@ -1131,8 +1152,7 @@ class Model(torch.nn.Module):
 
         Returns
         -------
-        generated_tensor : torch.Tensor
-            Generated data with shape (num_new_timesteps, neurons)
+        torch.Tensor : Generated data with shape (batch_size, num_new_timesteps, neurons)
         """
         # Route to the appropriate generate method
         if self.version_2:
@@ -1176,10 +1196,10 @@ class Model(torch.nn.Module):
         """
         Special generate method for the newer version (version_2) of the models based on how
         generation is done in Transformers. In the newer version (version_2), models take neural
-        data as input and outputs token logits. Therefore, we must convert the token logits back to
+        data as input and output token logits. Therefore, we must convert the token logits back to
         neural data to be fed back into the model. We sample from the distribution over the predicted
-        next token, retrieve the mean neural data value(s) corresponding to that token, append
-        the neural data value(s) to the running neural data sequence, then repeat this process.
+        next token, retrieve the mean neural state vector corresponding to that token, append that
+        neural data state vector to the running neural data sequence, then repeat this process.
         """
         # Set model to evaluation mode
         self.eval()
@@ -1526,7 +1546,7 @@ class NeuralTransformer(Model):
 
 class HippoSSM(Model):
     """
-    A model of the C. elegans nervous system using a state-space model (SSM) backbone
+    A model of the _C. elegans_ nervous system using a state-space model (SSM) backbone
     that utilizes the HiPPo matrix for long-term sequence modeling.
     """
 

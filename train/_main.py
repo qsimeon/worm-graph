@@ -125,13 +125,18 @@ def train_model(
         leave=True,  # position at top and remove when done
         dynamic_ncols=True,  # adjust width to terminal window size
     )
+    # ### DEBUG ###
+    # # NOTE: This throws `RuntimeError: Function 'AbsBackward0' returned nan values in its 0th output.` 
+    # # when L1 regularization is added, indicating that some gradients not computed correctly there.
+    # torch.autograd.set_detect_anomaly(True, check_nan=True) # for debugging
+    # ### DEBUG ###
     # Iterate over epochs
     for epoch in pbar:
         # ============================ Train loop ============================
         model.train()
         # Measure the time for an epoch
         start_time = time.perf_counter()
-        # TRAINING
+        # Training
         for batch_idx, (X_train, Y_train, mask_train, _) in enumerate(train_loader):
             X_train = X_train.to(rank)
             Y_train = Y_train.to(rank)
@@ -141,7 +146,6 @@ def train_model(
                 train_baseline = torch.tensor(0.0)
             else:
                 Y_base = X_train  # neural activity `[batch_size, seq_len, input_size]`
-                 # TODO: Fix out of memory issue from expanding mask in loss!
                 train_baseline = criterion(output=Y_base, target=Y_train, mask=mask_train)
             # Reset / zero-out gradients
             optimizer.zero_grad()
@@ -149,7 +153,7 @@ def train_model(
             Y_pred = model(X_train, mask_train)
             train_loss = criterion(output=Y_pred, target=Y_train, mask=mask_train)
             # Backpropagation.
-            if epoch > 0:  # skip first epoch to get tabula rasa loss
+            if epoch >= 0:  # skip first epoch to get tabula rasa loss
                 # Check if the computed loss requires gradient (e.g. the NaivePredictor model does not)
                 if train_loss.requires_grad:
                     # Backward pass
@@ -177,7 +181,7 @@ def train_model(
         # ============================ Validation loop ============================
         model.eval()
         with torch.no_grad():
-            # VALIDATON
+            # Validation
             for batch_idx, (X_val, Y_val, mask_val, _) in enumerate(val_loader):
                 X_val = X_val.to(rank)
                 Y_val = Y_val.to(rank)
@@ -280,17 +284,13 @@ if __name__ == "__main__":
     os.chdir(log_dir)
     # Dataset
     train_dataset, val_dataset = get_datasets(dataset_config.dataset)
-    logger.info(f"DEBUG: Got dataset: {type(train_dataset)}, {type(val_dataset)}\n\n") # DEBUG
     # Get the model
     model = get_model(model_config.model)
-    logger.info(f"DEBUG: Got model: {type(model)}\n\n")
     # Train the model
-    logger.info(f"DEBUG: Start training...\n\n") # DEBUG
     model, metric = train_model(
         train_config=train_config.train,
         model=model,
         train_dataset=train_dataset,
         val_dataset=val_dataset,
     )
-    logger.info(f"DEBUG: Finish training!\n\n") # DEBUG
     print(f"Final metric: \t {metric}\n")
