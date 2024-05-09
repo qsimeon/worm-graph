@@ -261,7 +261,7 @@ def plot_dataset_info(log_dir):
     )
     neurons_train = df_train["neurons"]
     # Flatten the list of lists into a single list of neurons
-    flattened_neurons_train = [neuron for sublist in neurons_train for neuron in sublist]
+    flattened_neurons_train = [neuron for sublist in neurons_train for neuron in sublist] 
     # Now use np.unique on this flattened list
     unique_neurons_train, neuron_counts_train = np.unique(
         flattened_neurons_train, return_counts=True
@@ -297,15 +297,15 @@ def plot_dataset_info(log_dir):
     # Plot histogram using sns
     fig, ax = plt.subplots(2, 1, figsize=(10, 8))
     sns.set_style("whitegrid")
-    sns.set_palette("tab10")
     # Train dataset plot
-    sns.barplot(x="Neuron", y="Count", data=df_train_plot, ax=ax[0], errorbar=None)
-    ax[0].set_xticklabels(ax[0].get_xticklabels(), rotation=45, ha="right")
+    sns.barplot(x="Neuron", y="Count", hue="Neuron", data=df_train_plot, ax=ax[0], errorbar=None)
+    # Adjust x-axis ticks
+    ax[0].xaxis.set_major_locator(ticker.MultipleLocator(10))  # Show every 10th label
+    ax[0].set_xticklabels(ax[0].get_xticklabels(), rotation=45, ha="right")  # Rotate labels for better visibility
     ax[0].set_ylabel("Count", fontsize=12)
     ax[0].set_xlabel("Neuron", fontsize=12)
     ax[0].set_title("Neuron count of Train Dataset", fontsize=14)
-    ax[0].xaxis.set_major_locator(ticker.MultipleLocator(10))
-    ax[0].xaxis.set_minor_locator(ticker.MultipleLocator(1))
+    # Add metadata text
     metadata_train_text = (
         "Datasets used: {}\nTotal number of worms: {}\nNumber of unique neurons: {}".format(
             ", ".join(train_exp_datasets),
@@ -314,22 +314,18 @@ def plot_dataset_info(log_dir):
         )
     )
     ax[0].text(
-        0.02,
-        0.95,
-        metadata_train_text,
-        transform=ax[0].transAxes,
-        fontsize=10,
-        verticalalignment="top",
-        bbox=dict(boxstyle="round, pad=1", facecolor="white", edgecolor="black", alpha=0.5),
+        0.02, 0.95, metadata_train_text, transform=ax[0].transAxes,
+        fontsize=10, verticalalignment="top", bbox=dict(boxstyle="round, pad=1", facecolor="white", edgecolor="black", alpha=0.5)
     )
     # Validation dataset plot
-    sns.barplot(x="Neuron", y="Count", data=df_val_plot, ax=ax[1], errorbar=None)
-    ax[1].set_xticklabels(ax[1].get_xticklabels(), rotation=45, ha="right")
+    sns.barplot(x="Neuron", y="Count", hue="Neuron", data=df_val_plot, ax=ax[1], errorbar=None)
+    # Adjust x-axis ticks
+    ax[1].xaxis.set_major_locator(ticker.MultipleLocator(10))  # Show every 10th label
+    ax[1].set_xticklabels(ax[1].get_xticklabels(), rotation=45, ha="right")  # Rotate labels for better visibility
     ax[1].set_ylabel("Count", fontsize=12)
     ax[1].set_xlabel("Neuron", fontsize=12)
     ax[1].set_title("Neuron count of Validation Dataset", fontsize=14)
-    ax[1].xaxis.set_major_locator(ticker.MultipleLocator(10))
-    ax[1].xaxis.set_minor_locator(ticker.MultipleLocator(1))
+    # Add metadata text
     metadata_val_text = (
         "Datasets used: {}\nTotal number of worms: {}\nNumber of unique neurons: {}".format(
             ", ".join(val_exp_datasets),
@@ -1568,12 +1564,10 @@ def plot_experiment_loss_per_dataset(exp_log_dir, exp_key, exp_plot_dir=None, mo
                     source_dataset
                 )
             )
-            logger.error(f"The error that occurred: {e}")
-            # # This will print the full traceback
-            # logger.error(traceback.format_exc())
             # Logging just the exception type and message
-            err_msg = f"{e.__class__.__name__}: {e}"
-            logger.error(err_msg)
+            logger.error(f"\t {e.__class__.__name__}: {e}")
+            # # Alternatively, logging the full traceback
+            # logger.error(traceback.format_exc())
             pass
 
     # Set axis labels and title

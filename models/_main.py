@@ -40,26 +40,15 @@ def get_model(model_config: DictConfig, verbose=True) -> torch.nn.Module:
 
     # If a checkpoint is given (not None), load a saved model
     if model_config.use_this_pretrained_model:
-        PATH = os.path.join(ROOT_DIR, model_config.use_this_pretrained_model)
-        checkpoint = torch.load(PATH, map_location=DEVICE)
-        model_name = checkpoint["model_name"]
-        input_size = checkpoint["input_size"]
-        hidden_size = checkpoint["hidden_size"]
-        loss_name = checkpoint["loss_name"]
-        l1_norm_reg_param = checkpoint["l1_norm_reg_param"]
-        model_state_dict = checkpoint["model_state_dict"]
-        model = eval(model_name)(
-            input_size,
-            hidden_size,
-            loss=loss_name,
-            l1_norm_reg_param=l1_norm_reg_param,
-        )
-        model.load_state_dict(model_state_dict)
+        # Load the model from the checkpoint path
+        checkpoint_path = os.path.join(ROOT_DIR, model_config.use_this_pretrained_model)
+        model = load_model_checkpoint(checkpoint_path)
+        # Some logging of checkpoint and model information
         if verbose:
             logger.info(
-                "Loading model from checkpoint: {}".format(model_config.use_this_pretrained_model)
+                "Loaded model from checkpoint: {}".format(model_config.use_this_pretrained_model)
             )
-            logger.info(f"Hidden size: {hidden_size}")
+            logger.info(f"Hidden size: {model.get_hidden_size()}")
 
     # Otherwise, instantiate a new model
     else:
@@ -69,6 +58,7 @@ def get_model(model_config: DictConfig, verbose=True) -> torch.nn.Module:
             hidden_size=model_config.hidden_size,
             loss=model_config.loss,
             l1_norm_reg_param=model_config.l1_norm_reg_param,
+            connectome_reg_param=model_config.connectome_reg_param,
         )
         if model_config.type == "PureAttention":
             model = PureAttention(**args)

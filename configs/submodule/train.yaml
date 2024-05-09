@@ -2,13 +2,15 @@
 train:
   optimizer: AdamW # options: Adam, AdamW, Adadelta, Adagrad, RMSprop, SGD
   lr: 0.001
-  epochs: 10 
-  save_freq: 5
-  batch_size: 128 
+  epochs: 2 #100 
+  # How often to save the model
+  save_freq: 100 
+  # Batch size may need to be adjusted based on how big the dataset is
+  batch_size: 64
   shuffle: true
 
   early_stopping:
     # Minimum change in validation loss to be considered an improvement
-    delta: 0
+    delta: 0 
     # Number of epochs to wait for improvement before stopping
-    patience: 5
+    patience: 50

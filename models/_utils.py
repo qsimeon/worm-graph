@@ -92,6 +92,7 @@ def load_model_checkpoint(checkpoint_path):
     hidden_size = checkpoint["hidden_size"]
     loss_name = checkpoint["loss_name"]
     l1_norm_reg_param = checkpoint["l1_norm_reg_param"]
+    connectome_reg_param = checkpoint["connectome_reg_param"]
     # New attributes for version 2
     version_2 = checkpoint.get("version_2", VERSION_2)
     num_tokens = checkpoint.get("num_tokens", NUM_TOKENS)
@@ -101,6 +102,7 @@ def load_model_checkpoint(checkpoint_path):
         hidden_size,
         loss=loss_name,
         l1_norm_reg_param=l1_norm_reg_param,
+        connectome_reg_param=connectome_reg_param,
         version_2=version_2,
         num_tokens=num_tokens,
     ).to(DEVICE)
@@ -347,6 +349,9 @@ class SSM(torch.nn.Module):
             h_new: tensor of shape (batch_size, hidden_size),
                 network activity at the next time step
         """
+        # Move hidden state to the same device as input
+        hidden = hidden.to(input.device)
+        # Perform the recurrence update
         h_new = A @ hidden.unsqueeze(-1) + B @ input.unsqueeze(-1)
         return h_new.squeeze(-1)
 
@@ -464,8 +469,11 @@ class CTRNN(torch.nn.Module):
             h_new: tensor of shape (batch, hidden_size),
                 network activity at the next time step
         """
+        # Move hidden state to the same device as input
+        hidden = hidden.to(input.device)
+        # Perform the recurrence update
         h_new = torch.relu(self.input2h(input) + self.h2h(hidden))
-        # the sigmoid contrains alpha such that 0 <= alpha <=1
+        # The sigmoid contrains alpha such that 0 <= alpha <=1
         h_new = hidden * (1 - self.alpha.sigmoid()) + h_new * self.alpha.sigmoid()
         return h_new
 
@@ -477,6 +485,8 @@ class CTRNN(torch.nn.Module):
         # If hidden activity is not provided, initialize it
         if hidden is None:
             hidden = self.init_hidden(input.shape)
+        else:
+            hidden = hidden.to(input.device)
         # Loop through time
         output = []
         steps = range(input.size(1))
@@ -552,6 +562,7 @@ class Model(torch.nn.Module):
         version_2: bool = VERSION_2,
         num_tokens: int = NUM_TOKENS,
         # Additional keyword arguments
+        # TODO: Need to add these to checkpoints.
         normalization: Union[str, None] = None,  # 'rms_norm', 'layer_norm'
         positional_encoding: Union[bool, None] = False,
     ):
@@ -656,12 +667,12 @@ class Model(torch.nn.Module):
             )  # embedding lookup table (learned)
             # Adjust linear readout to output token logits
             self.linear_readout = torch.nn.Linear(self.hidden_size, self.num_tokens)
-            # Initialize weights
-            self._init_weights()
             # Alias methods to new versions
             self.forward = self.forward_v2
             self.loss_fn = self.loss_fn_v2
             self.generate = self.generate_v2
+        # Initialize weights
+        self._init_weights()
     
     # Initialization functions for setting hidden states and weights.
     def _init_hidden(self):
@@ -675,11 +686,15 @@ class Model(torch.nn.Module):
         torch.nn.init.xavier_uniform_(self.linear_readout.weight)
         # Initialize the embedding weights
         torch.nn.init.normal_(self.latent_embedding.weight)
+        # Initialize the best linear approximation of model weights
+        self.register_parameter("ols_weights", torch.nn.Parameter(torch.eye(self.input_size)))
         return None
 
+    @abstractmethod
     def init_hidden(self, input_shape=None):
         """
-        Enforce the all models have a `init_hidden` method which initilaizes the hidden state of the "core".
+        Enforce that all models have an `init_hidden` method which initializes the hidden state of the "core".
+        This function must be overridden in subclasses with the specified argument 'input_shape'.
         """
         raise NotImplementedError()
 
@@ -698,36 +713,6 @@ class Model(torch.nn.Module):
     
     def get_connectome_reg_param(self):
         return self.connectome_reg_param
-    
-    ### DEBUG ###
-    def load_connectome(self):
-        """
-        Loads the connectome from a pre-saved graph and makes it an attribute of the model.
-        """
-        graph_tensors = torch.load(
-            os.path.join(ROOT_DIR, "data", "processed", "connectome", "graph_tensors.pt")
-        )
-        connectome = Data(**graph_tensors)
-        assert connectome.num_nodes == self.input_size, "Input size must match number of nodes in connectome."
-        elec_weights = to_dense_adj(edge_index=connectome.edge_index, 
-                                         edge_attr=connectome.edge_attr[:,0]).squeeze(0)
-        self.register_buffer("elec_weights", elec_weights)
-        chem_weights = to_dense_adj(edge_index=connectome.edge_index, edge_attr=connectome.edge_attr[:,1]).squeeze(0)
-        self.register_buffer("chem_weights", chem_weights)
-        return None
-    
-    
-    def compute_ols_weights(self, X, Y):
-        """
-        A helper function that computes the best linear approximation of the 
-        model weights using ordinary least squares (OLS) regression.
-        """
-        # Compute the OLS weights
-        with torch.no_grad():
-            ols_weights = torch.linalg.lstsq(X, Y).solution
-        self.ols_weights = ols_weights
-        return None
-     ### DEBUG ###
 
     @torch.autocast(
         device_type=DEVICE.type, dtype=torch.half if "cuda" in DEVICE.type else torch.bfloat16
@@ -889,6 +874,50 @@ class Model(torch.nn.Module):
         it = bool_arr.argmax(dim=-1) + 1
         return it
 
+    ### DEBUG ###
+    def load_connectome(self):
+        """
+        Loads the connectome from a pre-saved graph and makes it an attribute of the model.
+        Distinguishes between the electrical and chemical weight matrices in the connectome.
+        """
+        graph_tensors = torch.load(
+            os.path.join(ROOT_DIR, "data", "processed", "connectome", "graph_tensors.pt")
+        )
+        connectome = Data(**graph_tensors)
+        assert connectome.num_nodes == self.input_size, "Input size must match number of nodes in connectome."
+        elec_weights = to_dense_adj(edge_index=connectome.edge_index, 
+                                         edge_attr=connectome.edge_attr[:,0]).squeeze(0)
+        self.register_buffer("elec_weights", elec_weights)
+        chem_weights = to_dense_adj(edge_index=connectome.edge_index, edge_attr=connectome.edge_attr[:,1]).squeeze(0)
+        self.register_buffer("chem_weights", chem_weights)
+        return None
+    
+    def compute_ols_weights(self, model_in, model_out):
+        """
+        A helper function that computes the best linear approximation of  
+        the model weights using ordinary least squares (OLS) regression.
+        NOTE: We tried using `torch.linalg.lstsq(A, B)` as recommended but 
+                its solution contained nans.
+        """
+        # Don't bother doing this time-intensive computation if not going to be used
+        if self.connectome_reg_param == 0.0 or self.version_2:
+            ols_tensor = torch.eye(self.input_size)
+        # Don't compute/update the OLS if in inference mode
+        elif not torch.is_grad_enabled():
+            ols_tensor = self.ols_weights.data
+        else:
+            A, B = model_in.float(), model_out.float() 
+            # NOTE: We tried using `torch.linalg.lstsq(A, B)` as recommended but its solution contained nans.
+            ols_tensor = torch.linalg.pinv(A) @ B
+            if torch.isnan(ols_tensor).any():
+                ols_tensor = torch.nan_to_num(ols_tensor, nan=0.0) # replace nans with 0
+            if ols_tensor.ndim == 3:
+                ols_tensor = torch.nanmean(ols_tensor, dim=0) # average over batch
+        # Save the current best linear approximation of the model's weights
+        self.register_parameter("ols_weights", torch.nn.Parameter(ols_tensor))
+        return None
+     ### DEBUG ###
+
     @torch.autocast(
         device_type=DEVICE.type, dtype=torch.half if "cuda" in DEVICE.type else torch.bfloat16
     )
@@ -923,6 +952,10 @@ class Model(torch.nn.Module):
         # Perform a linear readout to get the output
         output = self.linear_readout(hidden_out)  # (batch_size, seq_len, input_size)
         # Return output neural data
+        ### DEBUG ###
+        # Compute best linear approxmation of model weights using OLS estimate
+        self.compute_ols_weights(model_in=input_activity, model_out=output)
+        ### DEBUG ###
         return output
 
     @torch.autocast(
@@ -971,7 +1004,7 @@ class Model(torch.nn.Module):
         generalization by encouraging the model to use only the most important features. The
         L1 penalty is the sum of the absolute values of the weights.
         """
-        # Route to the appropriate loss_fn method
+        # Route to the appropriate `loss_fn` method
         if self.version_2:
             return self.loss_fn_v2()
 
@@ -990,19 +1023,18 @@ class Model(torch.nn.Module):
                 mask = torch.ones(target.size(0), target.size(-1), dtype=torch.bool).to(
                     target.device
                 )
-            # Expand feature mask along temporal dimension
-            expanded_mask = mask.unsqueeze(1).expand_as(
-                output
-            )  # temporally invariant & feature equivariant
-            # Mask the invalid positions in `output` and `target`
-            masked_output = output * expanded_mask.float()
-            masked_target = target * expanded_mask.float()
+            # No need to expand mask; use broadcasting to apply the mask
+            masked_output = output * mask.unsqueeze(1)  # mask.unsqueeze(1) has shape [batch_size, 1, input_size]
+            masked_target = target * mask.unsqueeze(1)
             # Compute the reconstruction loss without reduction
-            masked_recon_loss = self.loss(reduction="none", **kwargs)(masked_output, masked_target)
-            # Normalize the loss by the total number of data points
-            norm_factor = masked_recon_loss[expanded_mask].size(dim=0)
-            # Calculate next time step prediction loss w/out regularization
-            recon_loss = masked_recon_loss[expanded_mask].sum() / norm_factor
+            masked_recon_loss = self.loss(reduction="none", **kwargs)(masked_output, masked_target).float()
+            # Use the mask to create a boolean array that considers only the relevant dimensions for summing the loss
+            valid_data_mask = mask.unsqueeze(1).expand_as(output).bool()  # for use in indexing without storing expanded tensor
+            # Normalize the loss by the total number of valid data points
+            norm_factor = valid_data_mask.sum()
+            mrlv = masked_recon_loss[valid_data_mask]
+            numerator = mrlv.sum() 
+            recon_loss = numerator / norm_factor
             # L1 regularization term
             l1_loss = 0.0
             l1_reg_loss = 0.0
@@ -1010,21 +1042,41 @@ class Model(torch.nn.Module):
                 # Calculate L1 regularization term for all weights
                 for param in self.parameters():
                     l1_loss += torch.abs(param).mean()
+
+                # ### DEBUG ###
+                # # NOTE: This check passes.
+                # print(f"DEBUG loss_fn.loss \n") # DEBUG
+                # param = param
+                # print(f"\t param: {param.shape}\n") # DEBUG
+                # l1_grad = gradcheck(lambda x: torch.abs(x).mean(), param) # DEBUG
+                # print(f"\t valid gradient for L1? : {l1_grad}\n") # DEBUG
+                # ### DEBUG ###
+
                 l1_reg_loss = self.l1_norm_reg_param * l1_loss
-            ### DEBUG ###
             # Connectome regularization term
             connectome_loss = 0.0
             connectome_reg_loss = 0.0
             if self.connectome_reg_param > 0.0:
+
+                # ### DEBUG ###
+                # # NOTE: This check fails.
+                # print(f"DEBUG loss_fn.loss \n") # DEBUG
+                # param = self.ols_weights**2 - (self.chem_weights + self.elec_weights)
+                # print(f"\t param: {param.shape}\n") # DEBUG
+                # ols_grad = gradcheck(lambda x: torch.norm(x, p="fro"), param) # DEBUG
+                # print(f"\t valid gradient for OLS? : {ols_grad}\n") # DEBUG
+                # ### DEBUG ###
+
                 # Calculate the connectome regularization term
-                connectome_loss = torch.norm(self.ols_weights**2 - self.chem_weights, ord="fro")/2 + torch.norm(self.ols_weights**2 - self.elec_weights, ord="fro")/2
+                # NOTE: Squared OLS weights because the connectome weights are non-negative
+                param = torch.square(self.ols_weights) - (self.chem_weights + self.elec_weights)
+                connectome_loss = torch.norm(param, p="fro")
                 connectome_reg_loss = self.connectome_reg_param * connectome_loss
-            ### DEBUG ###
             # Add the L1 and connectome penalties to the original loss
             total_loss = recon_loss + l1_reg_loss + connectome_reg_loss
             # Return loss
             return total_loss
-
+        # Return the inner custom loss function 
         return loss
 
     ### >>> DEBUG: Different loss function needed for new token mode >>> ###
@@ -1035,6 +1087,9 @@ class Model(torch.nn.Module):
         """
         Special loss function for the newer version (version_2) of the models based
         on how loss is calculated in Transformers which operate on tokenized data.
+        NOTE: Version 2 of the models cannot apply the connectome matching regularization 
+            term that is available to Version 1 models because it Version 2 models
+            input and output on tokens instead of neural states.
         """
 
         def loss(output, target, mask=None, **kwargs):
@@ -1061,11 +1116,20 @@ class Model(torch.nn.Module):
             target = target.view(-1)  # (batch_size, seq_len) -> (batch_size * seq_len)
             # Calculate cross entropy loss from predicted token logits and target tokens.
             ce_loss = torch.nn.CrossEntropyLoss(reduction="mean", **kwargs)(output, target)
-            # Calculate the total loss
-            total_loss = ce_loss
+            # L1 regularization term
+            l1_loss = 0.0
+            l1_reg_loss = 0.0
+            if self.l1_norm_reg_param > 0.0:
+                # Calculate L1 regularization term for all weights
+                for param in self.parameters():
+                    l1_loss += torch.abs(param).mean()
+                l1_reg_loss = self.l1_norm_reg_param * l1_loss
+            # Add the L1 penalty to the original loss
+            total_loss = ce_loss + l1_reg_loss 
+            # NOTE: Version 2 models do not have the connectome regularization term.
             # Return loss
             return total_loss
-
+        # Return the inner custom loss function
         return loss
     ### <<< DEBUG: Different loss function needed for new token mode <<< ###
 
@@ -1096,8 +1160,7 @@ class Model(torch.nn.Module):
 
         Returns
         -------
-        generated_tensor : torch.Tensor
-            Generated data with shape (num_new_timesteps, neurons)
+        torch.Tensor : Generated data with shape (batch_size, num_new_timesteps, neurons)
         """
         # Route to the appropriate generate method
         if self.version_2:
@@ -1141,10 +1204,10 @@ class Model(torch.nn.Module):
         """
         Special generate method for the newer version (version_2) of the models based on how
         generation is done in Transformers. In the newer version (version_2), models take neural
-        data as input and outputs token logits. Therefore, we must convert the token logits back to
+        data as input and output token logits. Therefore, we must convert the token logits back to
         neural data to be fed back into the model. We sample from the distribution over the predicted
-        next token, retrieve the mean neural data value(s) corresponding to that token, append
-        the neural data value(s) to the running neural data sequence, then repeat this process.
+        next token, retrieve the mean neural state vector corresponding to that token, append that
+        neural data state vector to the running neural data sequence, then repeat this process.
         """
         # Set model to evaluation mode
         self.eval()
@@ -1330,6 +1393,7 @@ class FeatureFFNN(Model):
             hidden_size,
             loss,
             l1_norm_reg_param,
+            connectome_reg_param,
             **kwargs,
         )
         # Special parameters for this model
@@ -1386,15 +1450,18 @@ class PureAttention(Model):
             hidden_size,
             loss,
             l1_norm_reg_param,
+            connectome_reg_param,
             **kwargs,
         )
         # Special parameters for this model
+
         ### DEBUG ###
-        # NOTE: number of attention heads must be divisor of `hidden_size`
+        # NOTE: Number of attention heads must be divisor of `hidden_size`
         # self.num_heads = max([i for i in range(1, 9) if hidden_size % i == 0])
         self.num_heads = 1
-        logger.info(f"Number of attention heads: {self.num_heads}.")  # DEBUG
+        logger.info(f"DEBUG Number of attention heads: {self.num_heads}.")  # DEBUG
         ### DEBUG ###
+
         self.dropout = 0.1  # dropout rate
         # Input to hidden transformation
         self.input_hidden = torch.nn.Sequential(
@@ -1453,15 +1520,18 @@ class NeuralTransformer(Model):
             hidden_size,
             loss,
             l1_norm_reg_param,
+            connectome_reg_param,
             **kwargs,
         )
         # Special parameters for this model
+
         ### DEBUG ###
-        # NOTE: number of attention heads must be divisor of `hidden_size`
+        # NOTE: Number of attention heads must be divisor of `hidden_size`
         # self.num_heads = max([i for i in range(1, 9) if hidden_size % i == 0])
         self.num_heads = 1
-        logger.info(f"Number of attention heads: {self.num_heads}.")  # DEBUG
+        logger.info(f"DEBUG Number of attention heads: {self.num_heads}.")  # DEBUG
         ### DEBUG ###
+
         self.dropout = 0.1  # dropout rate
         # Input to hidden transformation
         self.input_hidden = torch.nn.Sequential(
@@ -1488,7 +1558,7 @@ class NeuralTransformer(Model):
 
 class HippoSSM(Model):
     """
-    A model of the C. elegans nervous system using a state-space model (SSM) backbone
+    A model of the _C. elegans_ nervous system using a state-space model (SSM) backbone
     that utilizes the HiPPo matrix for long-term sequence modeling.
     """
 
@@ -1510,6 +1580,7 @@ class HippoSSM(Model):
             hidden_size,
             loss,
             l1_norm_reg_param,
+            connectome_reg_param,
             **kwargs,
         )
         # Special parameters for this model
@@ -1563,6 +1634,7 @@ class NetworkCTRNN(Model):
             hidden_size,
             loss,
             l1_norm_reg_param,
+            connectome_reg_param,
             **kwargs,
         )
         # Input to hidden transformation
@@ -1614,6 +1686,7 @@ class LiquidCfC(Model):
             hidden_size,
             loss,
             l1_norm_reg_param,
+            connectome_reg_param,
             **kwargs,
         )
         # Input to hidden transformation
@@ -1682,6 +1755,7 @@ class NetworkLSTM(Model):
             hidden_size,
             loss,
             l1_norm_reg_param,
+            connectome_reg_param,
             **kwargs,
         )
         # Input to hidden transformation

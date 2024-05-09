@@ -7,10 +7,11 @@ hydra:
   # The sweeper params will be used only when MULTIRUN mode is used.
   # Uses the submodule parameters if in RUN mode.
   mode: MULTIRUN
+  verbose: true
   sweeper:
       params:
-        experiment.seed: range(1) # assign each repetition of the experiment a distinct random seed
-        submodule.model.type: HippoSSM #NaivePredictor, LinearRegression, FeatureFFNN, NetworkLSTM, HippoSSM, NetworkCTRNN, LiquidCfC, PureAttention, NeuralTransformer
+        experiment.seed: 0 # assign each repetition of the experiment a distinct random seed
+        submodule.model.type: NaivePredictor, LinearRegression, FeatureFFNN, NetworkLSTM, HippoSSM, NetworkCTRNN, LiquidCfC, PureAttention, NeuralTransformer
 
 # The submodule parameters set below will be used only if RUN mode is used. 
 # Otherwise, it uses the default parameters imported from the other config files in the submodule directory.
@@ -25,11 +26,14 @@ submodule:
     save_datasets: false
 
     source_datasets:
+      # Synthetic datasets
       Sines0000: null
       Lorenz0000: null
       WhiteNoise0000: null
       RandWalk0000: null
       VanDerPol0000: null
+      Recurrent0000: null
+      # Experimental datasets
       Kato2015: all
       Nichols2017: all
       Skora2018: all
@@ -41,8 +45,8 @@ submodule:
       Leifer2023: all
 
     num_named_neurons: null
-    num_train_samples: 32
-    num_val_samples: 32
+    num_train_samples: 16
+    num_val_samples: 16
     seq_len: null
     reverse: false
     use_residual: false
@@ -56,30 +60,33 @@ submodule:
     hidden_size: 256
     loss: MSE
     l1_norm_reg_param: 0.0
+    connectomereg_param: 0.0
     use_this_pretrained_model: null
 
   # Train model
   train:
     optimizer: AdamW
     lr: 0.001
-    epochs: 10 
-    save_freq: 5
-    batch_size: 256
+    epochs: 100 
+    save_freq: 100
+    batch_size: 64
     shuffle: true
-    reverse: false
     early_stopping:
       delta: 0
-      patience: 5
+      patience: 50
 
   predict:
     # Choose the worms that you want to predict 
     source_datasets:
+      # Synthetic datasets
       Sines0000: null
       Lorenz0000: null
       WhiteNoise0000: null
       RandWalk0000: null
       VanDerPol0000: null
       Wikitext0000: null
+      Recurrent0000: null
+      # Experimental datasets
       Kato2015: worm0
       Nichols2017: worm0
       Skora2018: worm0
@@ -92,7 +99,8 @@ submodule:
     # Number of time steps to generate 
     # null = generate all remaining time steps (max_timesteps - context_window)
     num_new_timesteps: null 
-    # Set to the same value as submodule.dataset.seq_len
+    # Set to integer value that is the same as that used for submodule.dataset.seq_len 
+    # null = use the maximum context block size set in utils.py
     context_window: null
 
   analysis:
@@ -105,11 +113,15 @@ submodule:
       # <str> = analyze the worm with this particular wormID 
       # <list> = analyze the worms with wormIDs in the list
       source_datasets:
+        # Synthetic datasets
         Sines0000: null
         Lorenz0000: null
         WhiteNoise0000: null
         RandWalk0000: null
         VanDerPol0000: null
+        Wikitext0000: null
+        Recurrent0000: null
+        # Experimental datasets
         Kato2015: 1
         Nichols2017: 1
         Skora2018: 1

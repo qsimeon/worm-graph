@@ -22,19 +22,17 @@ class EarlyStopping:
         if val_loss is None or math.isnan(val_loss):
             logger.info("Validation loss is not a valid number (NaN).")
             return True
-
         if self.best_model is None:
-            self.best_model = copy.deepcopy(model)
+            self.best_model = model #copy.deepcopy(model)
         if self.best_loss is None:
             self.best_loss = val_loss
-            self.best_model = copy.deepcopy(model)
+            self.best_model = model #copy.deepcopy(model)
         elif self.best_loss - val_loss > self.min_delta:
             self.best_loss = val_loss
             self.counter = 0
             self.best_model.load_state_dict(model.state_dict())
         elif self.best_loss - val_loss < self.min_delta:
             self.counter += 1
-
         if self.counter >= self.patience:
             return True
         return False
@@ -64,6 +62,7 @@ def save_model_checkpoint(model, checkpoint_path, other_info=dict()):
         "hidden_size": model.get_hidden_size(),
         "loss_name": model.get_loss_name(),
         "l1_norm_reg_param": model.get_l1_norm_reg_param(),
+        "connectome_reg_param": model.get_connectome_reg_param(),
         # New attributes for version 2
         "version_2": model.version_2,
         "num_tokens": model.num_tokens if model.version_2 else None,

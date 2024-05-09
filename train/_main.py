@@ -75,7 +75,7 @@ def train_model(
         ),
         min_delta=train_config.early_stopping.delta,
     )
-    # Loss metrics
+    # Loss metrics to be stored
     # Training
     train_running_base_loss = 0
     train_running_loss = 0
@@ -118,20 +118,25 @@ def train_model(
         # pin_memory="cuda" in DEVICE.type,  # DEBUG
     )
     # Start training
-    logger.info("Starting training loop...")
+    logger.info("Starting training loop ...")
     pbar = tqdm(
         range(epochs + 1),  # +1 because we don't step() the first epoch
         position=0,
         leave=True,  # position at top and remove when done
         dynamic_ncols=True,  # adjust width to terminal window size
     )
+    # ### DEBUG ###
+    # # NOTE: This throws `RuntimeError: Function 'AbsBackward0' returned nan values in its 0th output.` 
+    # # when L1 regularization is added, indicating that some gradients not computed correctly there.
+    # torch.autograd.set_detect_anomaly(True, check_nan=True) # for debugging
+    # ### DEBUG ###
     # Iterate over epochs
     for epoch in pbar:
         # ============================ Train loop ============================
         model.train()
         # Measure the time for an epoch
         start_time = time.perf_counter()
-        # TRAINING
+        # Training
         for batch_idx, (X_train, Y_train, mask_train, _) in enumerate(train_loader):
             X_train = X_train.to(rank)
             Y_train = Y_train.to(rank)
@@ -146,10 +151,6 @@ def train_model(
             optimizer.zero_grad()
             # Forward pass. Models are sequence-to-sequence.
             Y_pred = model(X_train, mask_train)
-            ### DEBUG ###
-            # Compute OLS estimate of model weights (best linear approximation)
-            model.compute_ols_weights(model_in=X_train, model_out=Y_pred, mask=mask_train)
-            ### DEBUG ###
             train_loss = criterion(output=Y_pred, target=Y_train, mask=mask_train)
             # Backpropagation.
             if epoch > 0:  # skip first epoch to get tabula rasa loss
@@ -164,7 +165,7 @@ def train_model(
             # Calculate total FLOP only at the first epoch and batch
             elif batch_idx == 0:
                 # TODO: Find way to compute FLOP using Pytorch Profiler
-                computation_flops = 0
+                computation_flops = 0 # currently unused and thus set to 0
             # Update running metrics
             train_running_base_loss += train_baseline.item()
             train_running_loss += train_loss.item()
@@ -180,7 +181,7 @@ def train_model(
         # ============================ Validation loop ============================
         model.eval()
         with torch.no_grad():
-            # VALIDATON
+            # Validation
             for batch_idx, (X_val, Y_val, mask_val, _) in enumerate(val_loader):
                 X_val = X_val.to(rank)
                 Y_val = Y_val.to(rank)
@@ -220,7 +221,7 @@ def train_model(
             )
         # Early stopping
         if early_stopper(model, val_epoch_loss[-1]):  # on validation loss
-            logger.info("Early stopping triggered (epoch {}).".format(epoch))
+            logger.info("Early stopping triggered (epoch: {} \t loss: {}).".format(epoch, val_epoch_loss[-1]))
             break
         # Print training progress metrics if in verbose mode
         if verbose:

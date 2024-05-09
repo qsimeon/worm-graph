@@ -12,7 +12,7 @@ dataset:
     num_worms: null # options: null or <int>.
 
   # Whether to save the datasets in the logs/dataset directory.
-  save_datasets: true
+  save_datasets: false
 
   # null = don't use this dataset
   # all = use all the worms in the dataset
@@ -20,12 +20,15 @@ dataset:
   # <str> = use this wormID particular worm in the dataset
   # <list> = use the worms with wormIDs in the list
   source_datasets:
+    # # Synthetic datasets
     # Sines0000: null
     # Lorenz0000: null
     # WhiteNoise0000: null
     # RandWalk0000: null
     # VanDerPol0000: null
     # Wikitext0000: null
+    # Recurrent0000: null
+    # # Experimental datasets
     Kato2015: all
     Nichols2017: all
     Skora2018: all
@@ -40,8 +43,8 @@ dataset:
   num_named_neurons: null # number of neurons to train the model with (positive integer or null)
   # If null, use the maximum sequence length that can give the requested number of unique samples from the shortest dataset
   seq_len: null # length of the sampled neural activity sequences
-  num_train_samples: 32 # number of length seq_len samples to draw from the training set per worm
-  num_val_samples: 32 # number of length seq_len samples to draw from the validation set per worm
+  num_train_samples: 16 # number of length seq_len samples to draw from the training set per worm
+  num_val_samples: 16 # number of length seq_len samples to draw from the validation set per worm
   reverse: false # whether to sample sequences in reverse order
   use_residual: false # whether to use the residual (i.e first difference) of the neural activity
   smooth_data: true # whether to use the smoothed the neural activity

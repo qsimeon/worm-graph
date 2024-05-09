@@ -6,6 +6,7 @@ defaults:
 hydra:
   # Uses the submodule parameters if in RUN mode.
   mode: RUN
+  verbose: true
 
 experiment:
   key: null # what parameter are you experimenting with?
