@@ -12,7 +12,7 @@ dataset:
     num_worms: null # options: null or <int>.
 
   # Whether to save the datasets in the logs/dataset directory.
-  save_datasets: true
+  save_datasets: false
 
   # null = don't use this dataset
   # all = use all the worms in the dataset
@@ -20,6 +20,7 @@ dataset:
   # <str> = use this wormID particular worm in the dataset
   # <list> = use the worms with wormIDs in the list
   source_datasets:
+    # # Synthetic datasets
     # Sines0000: null
     # Lorenz0000: null
     # WhiteNoise0000: null
@@ -27,6 +28,7 @@ dataset:
     # VanDerPol0000: null
     # Wikitext0000: null
     # Recurrent0000: null
+    # # Experimental datasets
     Kato2015: all
     Nichols2017: all
     Skora2018: all

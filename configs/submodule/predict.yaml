@@ -15,6 +15,7 @@ predict:
     # RandWalk0000: [worm0, worm1]
     # VanDerPol0000: [worm0, worm1]
     # Wikitext0000: [worm0, worm1]
+    # Recurrent0000: [worm0, worm1]
     Kato2015: worm0
     Nichols2017: worm0
     Skora2018: worm0

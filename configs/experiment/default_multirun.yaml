@@ -11,7 +11,7 @@ hydra:
   sweeper:
       params:
         experiment.seed: 0 # assign each repetition of the experiment a distinct random seed
-        submodule.model.type: HippoSSM #NaivePredictor, LinearRegression, FeatureFFNN, NetworkLSTM, HippoSSM, NetworkCTRNN, LiquidCfC, PureAttention, NeuralTransformer
+        submodule.model.type: NaivePredictor, LinearRegression, FeatureFFNN, NetworkLSTM, HippoSSM, NetworkCTRNN, LiquidCfC, PureAttention, NeuralTransformer
 
 # The submodule parameters set below will be used only if RUN mode is used. 
 # Otherwise, it uses the default parameters imported from the other config files in the submodule directory.
@@ -26,11 +26,14 @@ submodule:
     save_datasets: false
 
     source_datasets:
+      # Synthetic datasets
       Sines0000: null
       Lorenz0000: null
       WhiteNoise0000: null
       RandWalk0000: null
       VanDerPol0000: null
+      Recurrent0000: null
+      # Experimental datasets
       Kato2015: all
       Nichols2017: all
       Skora2018: all
@@ -75,6 +78,7 @@ submodule:
   predict:
     # Choose the worms that you want to predict 
     source_datasets:
+      # Synthetic datasets
       Sines0000: null
       Lorenz0000: null
       WhiteNoise0000: null
@@ -82,6 +86,7 @@ submodule:
       VanDerPol0000: null
       Wikitext0000: null
       Recurrent0000: null
+      # Experimental datasets
       Kato2015: worm0
       Nichols2017: worm0
       Skora2018: worm0
@@ -108,6 +113,7 @@ submodule:
       # <str> = analyze the worm with this particular wormID 
       # <list> = analyze the worms with wormIDs in the list
       source_datasets:
+        # Synthetic datasets
         Sines0000: null
         Lorenz0000: null
         WhiteNoise0000: null
@@ -115,6 +121,7 @@ submodule:
         VanDerPol0000: null
         Wikitext0000: null
         Recurrent0000: null
+        # Experimental datasets
         Kato2015: 1
         Nichols2017: 1
         Skora2018: 1

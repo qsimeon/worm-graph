@@ -906,22 +906,7 @@ class Model(torch.nn.Module):
             if ols_tensor.ndim == 3:
                 ols_tensor = torch.nanmean(ols_tensor, dim=0) # average over batch
         # Save the current best linear approximation of the model's weights
-        
-        ### DEBUG ###
-        # self.register_parameter("ols_weights", torch.nn.Parameter(ols_weights))
-        print(f"DEBUG compute_ols_weights \n")
-        print(f"\t ols_tensor.data: {ols_tensor.data} \n")
-        print(f"\t ols_tensor.grad: {ols_tensor.grad} \n") 
-        print()
-        print(f"\t (before) self.ols_weights.data: {self.ols_weights.data} \n")
-        print(f"\t (before) self.ols_weights.grad: {self.ols_weights.grad} \n") 
-        self.ols_weights.data = ols_tensor.data # DEBUG: Do we also need to set grad explicitly?
-        self.ols_weights.grad = ols_tensor.grad # DEBUG: Do we also need to set grad explicitly?
-        print(f"\t (after) self.ols_weights.data: {self.ols_weights.data} \n")
-        print(f"\t (after) self.ols_weights.grad: {self.ols_weights.grad} \n") 
-        # self.ols_weights.grad = ols.weights.grad # DEBUG
-        ### DEBUG ###
-
+        self.register_parameter("ols_weights", torch.nn.Parameter(ols_tensor))
         return None
      ### DEBUG ###
 

@@ -40,14 +40,13 @@ def get_model(model_config: DictConfig, verbose=True) -> torch.nn.Module:
 
     # If a checkpoint is given (not None), load a saved model
     if model_config.use_this_pretrained_model:
-        PATH = os.path.join(ROOT_DIR, model_config.use_this_pretrained_model)
-        checkpoint = torch.load(PATH, map_location=DEVICE)
-        # Load the model from the checkpoint
-        model = load_model_checkpoint(checkpoint)
-
+        # Load the model from the checkpoint path
+        checkpoint_path = os.path.join(ROOT_DIR, model_config.use_this_pretrained_model)
+        model = load_model_checkpoint(checkpoint_path)
+        # Some logging of checkpoint and model information
         if verbose:
             logger.info(
-                "Loading model from checkpoint: {}".format(model_config.use_this_pretrained_model)
+                "Loaded model from checkpoint: {}".format(model_config.use_this_pretrained_model)
             )
             logger.info(f"Hidden size: {model.get_hidden_size()}")
 

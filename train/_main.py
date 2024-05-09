@@ -75,7 +75,7 @@ def train_model(
         ),
         min_delta=train_config.early_stopping.delta,
     )
-    # Loss metrics
+    # Loss metrics to be stored
     # Training
     train_running_base_loss = 0
     train_running_loss = 0
@@ -221,7 +221,7 @@ def train_model(
             )
         # Early stopping
         if early_stopper(model, val_epoch_loss[-1]):  # on validation loss
-            logger.info("Early stopping triggered (epoch {}).".format(epoch))
+            logger.info("Early stopping triggered (epoch: {} \t loss: {}).".format(epoch, val_epoch_loss[-1]))
             break
         # Print training progress metrics if in verbose mode
         if verbose:
