@@ -1568,12 +1568,10 @@ def plot_experiment_loss_per_dataset(exp_log_dir, exp_key, exp_plot_dir=None, mo
                     source_dataset
                 )
             )
-            logger.error(f"The error that occurred: {e}")
-            # # This will print the full traceback
-            # logger.error(traceback.format_exc())
             # Logging just the exception type and message
-            err_msg = f"{e.__class__.__name__}: {e}"
-            logger.error(err_msg)
+            logger.error(f"\t {e.__class__.__name__}: {e}")
+            # # Alternatively, logging the full traceback
+            # logger.error(traceback.format_exc())
             pass
 
     # Set axis labels and title

@@ -68,9 +68,12 @@ if torch.backends.mps.is_available():
 elif torch.cuda.is_available():
     print("CUDA device found.")
     DEVICE = torch.device("cuda")
+    gpu_props = torch.cuda.get_device_properties(DEVICE)
+    print(f"\t GPU: {gpu_props.name}")
 else:
     print("Defaulting to CPU.")
     DEVICE = torch.device("cpu")
+
 
 # Set real C. elegans datasets we have processed
 EXPERIMENT_DATASETS = {
@@ -107,8 +110,9 @@ if os.path.exists(RAW_DATA_DIR):
     )
 else:
     # fmt: off
-    NEURONS_302 = [ # References: (1) https://www.wormatlas.org/neurons/Individual%20Neurons/Neuronframeset.html 
-                                # (2) https://www.wormatlas.org/NeuronNames.htm
+    NEURONS_302 = [ 
+            # References: (1) https://www.wormatlas.org/neurons/Individual%20Neurons/Neuronframeset.html 
+            #             (2) https://www.wormatlas.org/NeuronNames.htm
             "ADAL", "ADAR", "ADEL", "ADER", "ADFL", "ADFR", "ADLL", "ADLR", "AFDL", "AFDR",
             "AIAL", "AIAR", "AIBL", "AIBR", "AIML", "AIMR", "AINL", "AINR", "AIYL", "AIYR",
             "AIZL", "AIZR", "ALA", "ALML", "ALMR", "ALNL", "ALNR", "AQR", "AS1", "AS10",
