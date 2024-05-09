@@ -153,7 +153,7 @@ def train_model(
             Y_pred = model(X_train, mask_train)
             train_loss = criterion(output=Y_pred, target=Y_train, mask=mask_train)
             # Backpropagation.
-            if epoch >= 0:  # skip first epoch to get tabula rasa loss
+            if epoch > 0:  # skip first epoch to get tabula rasa loss
                 # Check if the computed loss requires gradient (e.g. the NaivePredictor model does not)
                 if train_loss.requires_grad:
                     # Backward pass
@@ -165,7 +165,7 @@ def train_model(
             # Calculate total FLOP only at the first epoch and batch
             elif batch_idx == 0:
                 # TODO: Find way to compute FLOP using Pytorch Profiler
-                computation_flops = 0
+                computation_flops = 0 # currently unused and thus set to 0
             # Update running metrics
             train_running_base_loss += train_baseline.item()
             train_running_loss += train_loss.item()

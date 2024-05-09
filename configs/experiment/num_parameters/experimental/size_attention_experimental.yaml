@@ -38,12 +38,15 @@ submodule:
 
     source_datasets:
       # This gets overwritten by the sweeper
+      # Synthetic datasets
       Sines0000: null
       Lorenz0000: null
       WhiteNoise0000: null
       RandWalk0000: null
       VanDerPol0000: null
       Wikitext0000: null
+      Recurrent0000: null
+      # Experimental datasets
       Kato2015: null
       Nichols2017: null
       Skora2018: null
@@ -70,12 +73,15 @@ submodule:
     predict_this_log_dir: null
     # This gets overwritten by the sweeper
     source_datasets:
+      # Synthetic datasets
       Sines0000: null
       Lorenz0000: null
       WhiteNoise0000: null
       RandWalk0000: null
       VanDerPol0000: null
       Wikitext0000: null
+      Recurrent0000: null
+      # Experimental datasets
       Kato2015: null
       Nichols2017: null
       Skora2018: null
@@ -85,6 +91,7 @@ submodule:
       Lin2023: null
       Flavell2023: null
       Leifer2023: null
+
     # Number of time steps to generate
     num_new_timesteps: null
     # Set to the same value as submodule.dataset.seq_len
@@ -95,12 +102,15 @@ submodule:
     validation:
       # This gets overwritten by the sweeper
       source_datasets:
+        # Synthetic datasets
         Sines0000: null
         Lorenz0000: null
         WhiteNoise0000: null
         RandWalk0000: null
         VanDerPol0000: null
         Wikitext0000: null
+        Recurrent0000: null
+        # Experimental datasets
         Kato2015: null
         Nichols2017: null
         Skora2018: null

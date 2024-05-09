@@ -705,47 +705,6 @@ class Model(torch.nn.Module):
     
     def get_connectome_reg_param(self):
         return self.connectome_reg_param
-    
-    ### DEBUG ###
-    def load_connectome(self):
-        """
-        Loads the connectome from a pre-saved graph and makes it an attribute of the model.
-        Distinguishes between the electrical and chemical weight matrices in the connectome.
-        """
-        graph_tensors = torch.load(
-            os.path.join(ROOT_DIR, "data", "processed", "connectome", "graph_tensors.pt")
-        )
-        connectome = Data(**graph_tensors)
-        assert connectome.num_nodes == self.input_size, "Input size must match number of nodes in connectome."
-        elec_weights = to_dense_adj(edge_index=connectome.edge_index, 
-                                         edge_attr=connectome.edge_attr[:,0]).squeeze(0)
-        self.register_buffer("elec_weights", elec_weights)
-        chem_weights = to_dense_adj(edge_index=connectome.edge_index, edge_attr=connectome.edge_attr[:,1]).squeeze(0)
-        self.register_buffer("chem_weights", chem_weights)
-        return None
-    
-    def compute_ols_weights(self, model_in, model_out):
-        """
-        A helper function that computes the best linear approximation of  
-        the model weights using ordinary least squares (OLS) regression.
-        NOTE: We tried using `torch.linalg.lstsq(A, B)` as recommended but 
-                its solution contained nans.
-        """
-        # Don't bother doing this time-intensive computation if not going to be used
-        if self.connectome_reg_param == 0.0 or self.version_2:
-            ols_weights = torch.eye(self.input_size)
-        else:
-            A, B = model_in.float(), model_out.float() 
-            # NOTE: We tried using `torch.linalg.lstsq(A, B)` as recommended but its solution contained nans.
-            ols_weights = torch.linalg.pinv(A) @ B
-            if torch.isnan(ols_weights).any():
-                ols_weights = torch.nan_to_num(ols_weights, nan=0.0) # replace nans with 0
-            if ols_weights.ndim == 3:
-                ols_weights = torch.nanmean(ols_weights, dim=0) # average over batch
-        # Save the current best linear approximation of the weights an attribute of the model
-        self.register_parameter("ols_weights", torch.nn.Parameter(ols_weights))
-        return None
-     ### DEBUG ###
 
     @torch.autocast(
         device_type=DEVICE.type, dtype=torch.half if "cuda" in DEVICE.type else torch.bfloat16
@@ -907,6 +866,65 @@ class Model(torch.nn.Module):
         it = bool_arr.argmax(dim=-1) + 1
         return it
 
+    ### DEBUG ###
+    def load_connectome(self):
+        """
+        Loads the connectome from a pre-saved graph and makes it an attribute of the model.
+        Distinguishes between the electrical and chemical weight matrices in the connectome.
+        """
+        graph_tensors = torch.load(
+            os.path.join(ROOT_DIR, "data", "processed", "connectome", "graph_tensors.pt")
+        )
+        connectome = Data(**graph_tensors)
+        assert connectome.num_nodes == self.input_size, "Input size must match number of nodes in connectome."
+        elec_weights = to_dense_adj(edge_index=connectome.edge_index, 
+                                         edge_attr=connectome.edge_attr[:,0]).squeeze(0)
+        self.register_buffer("elec_weights", elec_weights)
+        chem_weights = to_dense_adj(edge_index=connectome.edge_index, edge_attr=connectome.edge_attr[:,1]).squeeze(0)
+        self.register_buffer("chem_weights", chem_weights)
+        return None
+    
+    def compute_ols_weights(self, model_in, model_out):
+        """
+        A helper function that computes the best linear approximation of  
+        the model weights using ordinary least squares (OLS) regression.
+        NOTE: We tried using `torch.linalg.lstsq(A, B)` as recommended but 
+                its solution contained nans.
+        """
+        # Don't bother doing this time-intensive computation if not going to be used
+        if self.connectome_reg_param == 0.0 or self.version_2:
+            ols_tensor = torch.eye(self.input_size)
+        # Don't compute/update the OLS if in inference mode
+        elif not torch.is_grad_enabled():
+            ols_tensor = self.ols_weights.data
+        else:
+            A, B = model_in.float(), model_out.float() 
+            # NOTE: We tried using `torch.linalg.lstsq(A, B)` as recommended but its solution contained nans.
+            ols_tensor = torch.linalg.pinv(A) @ B
+            if torch.isnan(ols_tensor).any():
+                ols_tensor = torch.nan_to_num(ols_tensor, nan=0.0) # replace nans with 0
+            if ols_tensor.ndim == 3:
+                ols_tensor = torch.nanmean(ols_tensor, dim=0) # average over batch
+        # Save the current best linear approximation of the model's weights
+        
+        ### DEBUG ###
+        # self.register_parameter("ols_weights", torch.nn.Parameter(ols_weights))
+        print(f"DEBUG compute_ols_weights \n")
+        print(f"\t ols_tensor.data: {ols_tensor.data} \n")
+        print(f"\t ols_tensor.grad: {ols_tensor.grad} \n") 
+        print()
+        print(f"\t (before) self.ols_weights.data: {self.ols_weights.data} \n")
+        print(f"\t (before) self.ols_weights.grad: {self.ols_weights.grad} \n") 
+        self.ols_weights.data = ols_tensor.data # DEBUG: Do we also need to set grad explicitly?
+        self.ols_weights.grad = ols_tensor.grad # DEBUG: Do we also need to set grad explicitly?
+        print(f"\t (after) self.ols_weights.data: {self.ols_weights.data} \n")
+        print(f"\t (after) self.ols_weights.grad: {self.ols_weights.grad} \n") 
+        # self.ols_weights.grad = ols.weights.grad # DEBUG
+        ### DEBUG ###
+
+        return None
+     ### DEBUG ###
+
     @torch.autocast(
         device_type=DEVICE.type, dtype=torch.half if "cuda" in DEVICE.type else torch.bfloat16
     )
@@ -943,10 +961,7 @@ class Model(torch.nn.Module):
         # Return output neural data
         ### DEBUG ###
         # Compute best linear approxmation of model weights using OLS estimate
-        if torch.is_grad_enabled():
-            if self.ols_weights.grad is not None:
-                self.ols_weights.grad.zero_()
-            self.compute_ols_weights(model_in=input_activity, model_out=output)
+        self.compute_ols_weights(model_in=input_activity, model_out=output)
         ### DEBUG ###
         return output
 
@@ -1060,7 +1075,7 @@ class Model(torch.nn.Module):
                 # ### DEBUG ###
 
                 # Calculate the connectome regularization term
-                # NOTE: Square OLS weights because the connectome weights are non-negative
+                # NOTE: Squared OLS weights because the connectome weights are non-negative
                 param = torch.square(self.ols_weights) - (self.chem_weights + self.elec_weights)
                 connectome_loss = torch.norm(param, p="fro")
                 connectome_reg_loss = self.connectome_reg_param * connectome_loss

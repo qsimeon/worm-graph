@@ -1,6 +1,5 @@
 from pkg import *
 
-
 @hydra.main(version_base=None, config_path="configs", config_name="pipeline")
 def pipeline(cfg: DictConfig) -> None:
     """Main custom pipeline."""
@@ -94,7 +93,7 @@ def pipeline(cfg: DictConfig) -> None:
         analyse_run(
             analysis_config=cfg.submodule.analysis,
         )
-    # VISUALIZATION
+    # VISUALIZE
     if "visualize" in cfg.submodule:
         # Plot figures for the experiment
         plot_figures(

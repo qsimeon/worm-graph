@@ -18,6 +18,7 @@ hydra:
   #               runs the jobs serially. If in the cluster, multi-run
   #               submits the jobs in parallel.
   mode: MULTIRUN
+  verbose: true
 
   # Hydra job:
   #   - chdir: Change the working directory to the log directory.

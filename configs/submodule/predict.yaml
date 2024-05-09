@@ -30,5 +30,5 @@ predict:
   num_new_timesteps: null
   
   # Set to integer value that is the same as that used for submodule.dataset.seq_len 
-  # If null, use the maximum context block size set in utils.py
+  # null = use the maximum context block size set in utils.py
   context_window: null
