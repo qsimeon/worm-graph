@@ -42,7 +42,9 @@ def process_data(preprocess_config: DictConfig) -> None:
         ### DEBUG ###
         # Extract presaved commonly use dataset split patterns
         logger.info("Extracting presaved datasets.")
-        get_presaved_datasets(url=preprocess_config.presaved_url, file=preprocess_config.presaved_file)
+        get_presaved_datasets(
+            url=preprocess_config.presaved_url, file=preprocess_config.presaved_file
+        )
         logger.info("Done extracting presaved datasets.")
         ### DEBUG ###
         logger.info("Finished preprocessing neural data.")

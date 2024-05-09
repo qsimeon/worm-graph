@@ -53,16 +53,25 @@ def get_datasets(dataset_config: DictConfig, save=True):
     save = dataset_config.save_datasets or save
     ### DEBUG ###
     # Some common dataset patterns were presaved for efficiency
-    all_experiment = all([(dataset in source_datasets and source_datasets[dataset]=='all') for dataset in EXPERIMENT_DATASETS])
+    all_experiment = all(
+        [
+            (dataset in source_datasets and source_datasets[dataset] == "all")
+            for dataset in EXPERIMENT_DATASETS
+        ]
+    )
     if all_experiment:
-        logger.info(f"Requested dataset pattern matched the presaved `combined_AllExperimental` dataset.\n"
-                    f"Setting `use_these_datasets.path ` to that directory and loading in that dataset.")
+        logger.info(
+            f"Requested dataset pattern matched the presaved `combined_AllExperimental` dataset.\n"
+            f"Setting `use_these_datasets.path ` to that directory and loading in that dataset."
+        )
         presave_path = os.path.join(ROOT_DIR, "data", "combined_AllExperimental")
         # Check if the directory exists and is not empty
         if os.path.isdir(presave_path) and os.listdir(presave_path):
             dataset_config.use_these_datasets.path = presave_path
         else:
-            logger.info(f"Directory {presave_path} does not exist or is empty. Creating the dataset from source datasets.")
+            logger.info(
+                f"Directory {presave_path} does not exist or is empty. Creating the dataset from source datasets."
+            )
     # TODO: Write other dataset patterns here.
     ### DEBUG ###
     # Initialize datasets
@@ -178,18 +187,16 @@ def get_datasets(dataset_config: DictConfig, save=True):
                 seq_len = (min_timesteps // 2) - max_num_samples - 1
             logger.info(f"Chosen sequence length: {seq_len}\n")  # DEBUG
             # Split the combined dataset into train and validation datasets
-            created_train_dataset, created_val_dataset, dataset_info_split = (
-                split_combined_dataset(
-                    combined_dataset,
-                    num_train_samples,
-                    num_val_samples,
-                    seq_len,
-                    reverse,
-                    use_residual,
-                    smooth_data,
-                    train_split_first,
-                    train_split_ratio,
-                )
+            created_train_dataset, created_val_dataset, dataset_info_split = split_combined_dataset(
+                combined_dataset,
+                num_train_samples,
+                num_val_samples,
+                seq_len,
+                reverse,
+                use_residual,
+                smooth_data,
+                train_split_first,
+                train_split_ratio,
             )
             if created_train_dataset is None:
                 raise ValueError(
@@ -241,16 +248,16 @@ def get_datasets(dataset_config: DictConfig, save=True):
             if not val_dataset_exists:
                 val_dataset = created_val_dataset
                 dataset_info_val = created_dataset_info_val
-            # Save the dataset .pt files 
+            # Save the dataset .pt files
             if save:
                 torch.save(train_dataset, os.path.join(log_dir, "dataset", f"train_dataset.pt"))
                 torch.save(val_dataset, os.path.join(log_dir, "dataset", f"val_dataset.pt"))
             # Save the dataset splot information regardless
             # => train and val. datasets contain the same neurons, but with different time steps and other information
             dataset_info_train.to_csv(
-            os.path.join(log_dir, "dataset", f"train_dataset_info.csv"),
-            index=True,
-            header=True,
+                os.path.join(log_dir, "dataset", f"train_dataset_info.csv"),
+                index=True,
+                header=True,
             )
             dataset_info_val.to_csv(
                 os.path.join(log_dir, "dataset", f"val_dataset_info.csv"),
@@ -265,7 +272,9 @@ def get_datasets(dataset_config: DictConfig, save=True):
         # Use largest seq_len that produce num. unique samples from shortest dataset
         if seq_len is None:
             max_num_samples = max(num_train_samples, num_val_samples)
-            min_timesteps = min((dataset["max_timesteps"] for _, dataset in combined_dataset.items()))
+            min_timesteps = min(
+                (dataset["max_timesteps"] for _, dataset in combined_dataset.items())
+            )
             seq_len = (min_timesteps // 2) - max_num_samples - 1
         logger.info(f"Chosen sequence length: {seq_len}\n.")  # DEBUG
         # Split the combined dataset into train and validation datasets
@@ -326,7 +335,7 @@ def get_datasets(dataset_config: DictConfig, save=True):
         # Delete the combined dataset column after merging (since it is not necessary anymore)
         dataset_info_train.drop(columns=["combined_dataset_index"], inplace=True)
         dataset_info_val.drop(columns=["combined_dataset_index"], inplace=True)
-        # Save the dataset .pt files 
+        # Save the dataset .pt files
         if save:
             torch.save(train_dataset, os.path.join(log_dir, "dataset", f"train_dataset.pt"))
             torch.save(val_dataset, os.path.join(log_dir, "dataset", f"val_dataset.pt"))

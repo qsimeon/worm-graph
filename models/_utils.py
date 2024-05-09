@@ -673,7 +673,7 @@ class Model(torch.nn.Module):
             self.generate = self.generate_v2
         # Initialize weights
         self._init_weights()
-    
+
     # Initialization functions for setting hidden states and weights.
     def _init_hidden(self):
         self.hidden = None
@@ -710,7 +710,7 @@ class Model(torch.nn.Module):
 
     def get_l1_norm_reg_param(self):
         return self.l1_norm_reg_param
-    
+
     def get_connectome_reg_param(self):
         return self.connectome_reg_param
 
@@ -884,19 +884,24 @@ class Model(torch.nn.Module):
             os.path.join(ROOT_DIR, "data", "processed", "connectome", "graph_tensors.pt")
         )
         connectome = Data(**graph_tensors)
-        assert connectome.num_nodes == self.input_size, "Input size must match number of nodes in connectome."
-        elec_weights = to_dense_adj(edge_index=connectome.edge_index, 
-                                         edge_attr=connectome.edge_attr[:,0]).squeeze(0)
+        assert (
+            connectome.num_nodes == self.input_size
+        ), "Input size must match number of nodes in connectome."
+        elec_weights = to_dense_adj(
+            edge_index=connectome.edge_index, edge_attr=connectome.edge_attr[:, 0]
+        ).squeeze(0)
         self.register_buffer("elec_weights", elec_weights)
-        chem_weights = to_dense_adj(edge_index=connectome.edge_index, edge_attr=connectome.edge_attr[:,1]).squeeze(0)
+        chem_weights = to_dense_adj(
+            edge_index=connectome.edge_index, edge_attr=connectome.edge_attr[:, 1]
+        ).squeeze(0)
         self.register_buffer("chem_weights", chem_weights)
         return None
-    
+
     def compute_ols_weights(self, model_in, model_out):
         """
-        A helper function that computes the best linear approximation of  
+        A helper function that computes the best linear approximation of
         the model weights using ordinary least squares (OLS) regression.
-        NOTE: We tried using `torch.linalg.lstsq(A, B)` as recommended but 
+        NOTE: We tried using `torch.linalg.lstsq(A, B)` as recommended but
                 its solution contained nans.
         """
         # Don't bother doing this time-intensive computation if not going to be used
@@ -906,17 +911,18 @@ class Model(torch.nn.Module):
         elif not torch.is_grad_enabled():
             ols_tensor = self.ols_weights.data
         else:
-            A, B = model_in.float(), model_out.float() 
+            A, B = model_in.float(), model_out.float()
             # NOTE: We tried using `torch.linalg.lstsq(A, B)` as recommended but its solution contained nans.
             ols_tensor = torch.linalg.pinv(A) @ B
             if torch.isnan(ols_tensor).any():
-                ols_tensor = torch.nan_to_num(ols_tensor, nan=0.0) # replace nans with 0
+                ols_tensor = torch.nan_to_num(ols_tensor, nan=0.0)  # replace nans with 0
             if ols_tensor.ndim == 3:
-                ols_tensor = torch.nanmean(ols_tensor, dim=0) # average over batch
+                ols_tensor = torch.nanmean(ols_tensor, dim=0)  # average over batch
         # Save the current best linear approximation of the model's weights
         self.register_parameter("ols_weights", torch.nn.Parameter(ols_tensor))
         return None
-     ### DEBUG ###
+
+    ### DEBUG ###
 
     @torch.autocast(
         device_type=DEVICE.type, dtype=torch.half if "cuda" in DEVICE.type else torch.bfloat16
@@ -990,7 +996,7 @@ class Model(torch.nn.Module):
         output_logits = self.linear_readout(hidden_out)  # (batch_size, seq_len, num_tokens)
         # Return output token logits
         return output_logits
-    
+
     @torch.autocast(
         device_type=DEVICE.type, dtype=torch.half if "cuda" in DEVICE.type else torch.bfloat16
     )
@@ -1024,16 +1030,22 @@ class Model(torch.nn.Module):
                     target.device
                 )
             # No need to expand mask; use broadcasting to apply the mask
-            masked_output = output * mask.unsqueeze(1)  # mask.unsqueeze(1) has shape [batch_size, 1, input_size]
+            masked_output = output * mask.unsqueeze(
+                1
+            )  # mask.unsqueeze(1) has shape [batch_size, 1, input_size]
             masked_target = target * mask.unsqueeze(1)
             # Compute the reconstruction loss without reduction
-            masked_recon_loss = self.loss(reduction="none", **kwargs)(masked_output, masked_target).float()
+            masked_recon_loss = self.loss(reduction="none", **kwargs)(
+                masked_output, masked_target
+            ).float()
             # Use the mask to create a boolean array that considers only the relevant dimensions for summing the loss
-            valid_data_mask = mask.unsqueeze(1).expand_as(output).bool()  # for use in indexing without storing expanded tensor
+            valid_data_mask = (
+                mask.unsqueeze(1).expand_as(output).bool()
+            )  # for use in indexing without storing expanded tensor
             # Normalize the loss by the total number of valid data points
             norm_factor = valid_data_mask.sum()
             mrlv = masked_recon_loss[valid_data_mask]
-            numerator = mrlv.sum() 
+            numerator = mrlv.sum()
             recon_loss = numerator / norm_factor
             # L1 regularization term
             l1_loss = 0.0
@@ -1076,7 +1088,8 @@ class Model(torch.nn.Module):
             total_loss = recon_loss + l1_reg_loss + connectome_reg_loss
             # Return loss
             return total_loss
-        # Return the inner custom loss function 
+
+        # Return the inner custom loss function
         return loss
 
     ### >>> DEBUG: Different loss function needed for new token mode >>> ###
@@ -1087,7 +1100,7 @@ class Model(torch.nn.Module):
         """
         Special loss function for the newer version (version_2) of the models based
         on how loss is calculated in Transformers which operate on tokenized data.
-        NOTE: Version 2 of the models cannot apply the connectome matching regularization 
+        NOTE: Version 2 of the models cannot apply the connectome matching regularization
             term that is available to Version 1 models because it Version 2 models
             input and output on tokens instead of neural states.
         """
@@ -1125,12 +1138,14 @@ class Model(torch.nn.Module):
                     l1_loss += torch.abs(param).mean()
                 l1_reg_loss = self.l1_norm_reg_param * l1_loss
             # Add the L1 penalty to the original loss
-            total_loss = ce_loss + l1_reg_loss 
+            total_loss = ce_loss + l1_reg_loss
             # NOTE: Version 2 models do not have the connectome regularization term.
             # Return loss
             return total_loss
+
         # Return the inner custom loss function
         return loss
+
     ### <<< DEBUG: Different loss function needed for new token mode <<< ###
 
     @torch.no_grad()
@@ -1249,6 +1264,7 @@ class Model(torch.nn.Module):
         ]  # (batch_size, num_new_timesteps, input_size)
         # Return the generations
         return generated_values
+
     ### <<< DEBUG: Different generate method needed for new token mode <<< ###
 
     def sample(self, num_new_timesteps: int):

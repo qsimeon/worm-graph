@@ -1,5 +1,6 @@
 from pkg import *
 
+
 @hydra.main(version_base=None, config_path="configs", config_name="pipeline")
 def pipeline(cfg: DictConfig) -> None:
     """Main custom pipeline."""

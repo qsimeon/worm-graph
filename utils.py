@@ -61,6 +61,7 @@ RAW_DATA_DIR = os.path.join(ROOT_DIR, "data", "raw")
 
 LOGS_DIR = os.path.join(ROOT_DIR, "logs")
 
+
 # Method for initializing the global computing device
 def init_device():
     """
@@ -78,6 +79,7 @@ def init_device():
         print("Defaulting to CPU.")
         device = torch.device("cpu")
     return device
+
 
 # Get GPU if available
 DEVICE = init_device()
@@ -167,4 +169,3 @@ def init_random_seeds(seed=0):
         torch.cuda.manual_seed_all(seed)
         torch.backends.cudnn.deterministic = True
     return None
-

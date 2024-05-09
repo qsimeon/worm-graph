@@ -57,7 +57,7 @@ def pickle_neural_data(
     processed_path = os.path.join(ROOT_DIR, "data/processed/neural")
     if not os.path.exists(processed_path):
         os.makedirs(processed_path, exist_ok=True)
-    # If .zip not found in the root directory, download the curated open-source worm datasets 
+    # If .zip not found in the root directory, download the curated open-source worm datasets
     if not os.path.exists(source_path):
         download_url(url=url, folder=ROOT_DIR, filename=zipfile)
         # Extract all the datasets ... OR
@@ -126,6 +126,7 @@ def pickle_neural_data(
         shutil.rmtree(source_path)
     return None
 
+
 ### DEBUG ###
 def get_presaved_datasets(url, file):
     """
@@ -133,13 +134,16 @@ def get_presaved_datasets(url, file):
     Deletes the zip file once the dataset has been extracted to the data folder.
     """
     presaved_url = url
-    presaved_file = file 
+    presaved_file = file
     presave_path = os.path.join(ROOT_DIR, presaved_file)
     data_path = os.path.join(ROOT_DIR, "data")
     download_url(url=presaved_url, folder=ROOT_DIR, filename=presaved_file)
     extract_zip(presave_path, folder=data_path, delete_zip=True)
     return None
+
+
 ### DEBUG ###
+
 
 def preprocess_connectome(raw_dir, raw_files, which_pub="cook"):
     """Convert the raw connectome data to a graph tensor.
@@ -202,12 +206,20 @@ def preprocess_connectome(raw_dir, raw_files, which_pub="cook"):
     GHermElec_Sym_Nodes = pd.read_csv(os.path.join(raw_dir, "GHermElec_Sym_Nodes.csv"))  # nodes
     # Neurons (i.e. nodes) in gap junctions
     df = GHermElec_Sym_Nodes
-    df["Name"] = [v.replace("0", "") if not v.endswith("0") else v for v in df["Name"]] # standard naming
-    Ggap_nodes = df[df["Name"].isin(neurons_all)].sort_values(by=["Name"]).reset_index()  # filter out non-neurons
+    df["Name"] = [
+        v.replace("0", "") if not v.endswith("0") else v for v in df["Name"]
+    ]  # standard naming
+    Ggap_nodes = (
+        df[df["Name"].isin(neurons_all)].sort_values(by=["Name"]).reset_index()
+    )  # filter out non-neurons
     # Neurons (i.e. nodes) in chemical synapses
     df = GHermChem_Nodes
-    df["Name"] = [v.replace("0", "") if not v.endswith("0") else v for v in df["Name"]] # standard naming
-    Gsyn_nodes = df[df["Name"].isin(neurons_all)].sort_values(by=["Name"]).reset_index() # filter out non-neurons
+    df["Name"] = [
+        v.replace("0", "") if not v.endswith("0") else v for v in df["Name"]
+    ]  # standard naming
+    Gsyn_nodes = (
+        df[df["Name"].isin(neurons_all)].sort_values(by=["Name"]).reset_index()
+    )  # filter out non-neurons
     # Gap junctions edges
     df = GHermElec_Sym_Edges
     df["EndNodes_1"] = [v.replace("0", "") if not v.endswith("0") else v for v in df["EndNodes_1"]]
@@ -279,13 +291,17 @@ def preprocess_connectome(raw_dir, raw_files, which_pub="cook"):
     codes = np.unique(y)
     types = np.unique(Gsyn_nodes.Group.values)
     node_type = dict(zip(codes, types))
-    # Normalize outgoing gap junction weights to sum to 1 
-    ggap_weights = to_dense_adj(edge_index=ggap_edge_index, edge_attr=ggap_edge_attr[:,0]).squeeze(0)
+    # Normalize outgoing gap junction weights to sum to 1
+    ggap_weights = to_dense_adj(edge_index=ggap_edge_index, edge_attr=ggap_edge_attr[:, 0]).squeeze(
+        0
+    )
     ggap_weights = ggap_weights / torch.clamp(ggap_weights.sum(dim=1, keepdim=True), min=1)
     ggap_edge_index, ggap_edge_attr = dense_to_sparse(ggap_weights)
     ggap_edge_attr = torch.stack((ggap_edge_attr, torch.zeros_like(ggap_edge_attr))).T
-    # Normalize outgoing chemical synapse weights to sum to 1 
-    gsyn_weights = to_dense_adj(edge_index=gsyn_edge_index, edge_attr=gsyn_edge_attr[:,1]).squeeze(0)
+    # Normalize outgoing chemical synapse weights to sum to 1
+    gsyn_weights = to_dense_adj(edge_index=gsyn_edge_index, edge_attr=gsyn_edge_attr[:, 1]).squeeze(
+        0
+    )
     gsyn_weights = gsyn_weights / torch.clamp(gsyn_weights.sum(dim=1, keepdim=True), min=1)
     gsyn_edge_index, gsyn_edge_attr = dense_to_sparse(gsyn_weights)
     gsyn_edge_attr = torch.stack((torch.zeros_like(gsyn_edge_attr), gsyn_edge_attr)).T

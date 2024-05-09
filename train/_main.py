@@ -126,7 +126,7 @@ def train_model(
         dynamic_ncols=True,  # adjust width to terminal window size
     )
     # ### DEBUG ###
-    # # NOTE: This throws `RuntimeError: Function 'AbsBackward0' returned nan values in its 0th output.` 
+    # # NOTE: This throws `RuntimeError: Function 'AbsBackward0' returned nan values in its 0th output.`
     # # when L1 regularization is added, indicating that some gradients not computed correctly there.
     # torch.autograd.set_detect_anomaly(True, check_nan=True) # for debugging
     # ### DEBUG ###
@@ -165,7 +165,7 @@ def train_model(
             # Calculate total FLOP only at the first epoch and batch
             elif batch_idx == 0:
                 # TODO: Find way to compute FLOP using Pytorch Profiler
-                computation_flops = 0 # currently unused and thus set to 0
+                computation_flops = 0  # currently unused and thus set to 0
             # Update running metrics
             train_running_base_loss += train_baseline.item()
             train_running_loss += train_loss.item()
@@ -221,7 +221,11 @@ def train_model(
             )
         # Early stopping
         if early_stopper(model, val_epoch_loss[-1]):  # on validation loss
-            logger.info("Early stopping triggered (epoch: {} \t loss: {}).".format(epoch, val_epoch_loss[-1]))
+            logger.info(
+                "Early stopping triggered (epoch: {} \t loss: {}).".format(
+                    epoch, val_epoch_loss[-1]
+                )
+            )
             break
         # Print training progress metrics if in verbose mode
         if verbose:
