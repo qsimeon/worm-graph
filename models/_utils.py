@@ -349,6 +349,9 @@ class SSM(torch.nn.Module):
             h_new: tensor of shape (batch_size, hidden_size),
                 network activity at the next time step
         """
+        # Move hidden state to the same device as input
+        hidden = hidden.to(input.device)
+        # Perform the recurrence update
         h_new = A @ hidden.unsqueeze(-1) + B @ input.unsqueeze(-1)
         return h_new.squeeze(-1)
 
@@ -466,8 +469,11 @@ class CTRNN(torch.nn.Module):
             h_new: tensor of shape (batch, hidden_size),
                 network activity at the next time step
         """
+        # Move hidden state to the same device as input
+        hidden = hidden.to(input.device)
+        # Perform the recurrence update
         h_new = torch.relu(self.input2h(input) + self.h2h(hidden))
-        # the sigmoid contrains alpha such that 0 <= alpha <=1
+        # The sigmoid contrains alpha such that 0 <= alpha <=1
         h_new = hidden * (1 - self.alpha.sigmoid()) + h_new * self.alpha.sigmoid()
         return h_new
 
@@ -479,6 +485,8 @@ class CTRNN(torch.nn.Module):
         # If hidden activity is not provided, initialize it
         if hidden is None:
             hidden = self.init_hidden(input.shape)
+        else:
+            hidden = hidden.to(input.device)
         # Loop through time
         output = []
         steps = range(input.size(1))
