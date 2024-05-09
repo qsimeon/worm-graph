@@ -61,19 +61,26 @@ RAW_DATA_DIR = os.path.join(ROOT_DIR, "data", "raw")
 
 LOGS_DIR = os.path.join(ROOT_DIR, "logs")
 
-# Get GPU if available
-if torch.backends.mps.is_available():
-    print("MPS device found.")
-    DEVICE = torch.device("mps")
-elif torch.cuda.is_available():
-    print("CUDA device found.")
-    DEVICE = torch.device("cuda")
-    gpu_props = torch.cuda.get_device_properties(DEVICE)
-    print(f"\t GPU: {gpu_props.name}")
-else:
-    print("Defaulting to CPU.")
-    DEVICE = torch.device("cpu")
+# Method for initializing the global computing device
+def init_device():
+    """
+    Initialize the global computing device to be used.
+    """
+    if torch.backends.mps.is_available():
+        print("MPS device found.")
+        device = torch.device("mps")
+    elif torch.cuda.is_available():
+        print("CUDA device found.")
+        device = torch.device("cuda")
+        gpu_props = torch.cuda.get_device_properties(device)
+        print(f"\t GPU: {gpu_props.name}")
+    else:
+        print("Defaulting to CPU.")
+        device = torch.device("cpu")
+    return device
 
+# Get GPU if available
+DEVICE = init_device()
 
 # Set real C. elegans datasets we have processed
 EXPERIMENT_DATASETS = {
@@ -160,3 +167,4 @@ def init_random_seeds(seed=0):
         torch.cuda.manual_seed_all(seed)
         torch.backends.cudnn.deterministic = True
     return None
+

@@ -68,7 +68,7 @@ submodule:
     optimizer: AdamW
     lr: 0.001
     epochs: 100 
-    save_freq: 50
+    save_freq: 100
     batch_size: 64
     shuffle: true
     early_stopping:
