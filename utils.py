@@ -122,6 +122,7 @@ else:
     NEURONS_302 = [ 
             # References: (1) https://www.wormatlas.org/neurons/Individual%20Neurons/Neuronframeset.html 
             #             (2) https://www.wormatlas.org/NeuronNames.htm
+            # NOTE: As of Cook et al. (2019), the CANL and CANR are considered to be end-organs, not neurons.
             "ADAL", "ADAR", "ADEL", "ADER", "ADFL", "ADFR", "ADLL", "ADLR", "AFDL", "AFDR",
             "AIAL", "AIAR", "AIBL", "AIBR", "AIML", "AIMR", "AINL", "AINR", "AIYL", "AIYR",
             "AIZL", "AIZR", "ALA", "ALML", "ALMR", "ALNL", "ALNR", "AQR", "AS1", "AS10",

@@ -310,7 +310,7 @@ def plot_dataset_info(log_dir):
     ax[0].set_title("Neuron count of Train Dataset", fontsize=14)
     # Add metadata text
     metadata_train_text = (
-        "Datasets used: {}\nTotal number of worms: {}\nNumber of unique neurons: {}".format(
+        "Source datasets: {}\nTotal number of worms: {}\nNumber of unique neurons: {}".format(
             ", ".join(train_exp_datasets),
             len(df_train),
             len(unique_neurons_train),
@@ -337,7 +337,7 @@ def plot_dataset_info(log_dir):
     ax[1].set_title("Neuron count of Validation Dataset", fontsize=14)
     # Add metadata text
     metadata_val_text = (
-        "Datasets used: {}\nTotal number of worms: {}\nNumber of unique neurons: {}".format(
+        "Source datasets: {}\nTotal number of worms: {}\nNumber of unique neurons: {}".format(
             ", ".join(val_exp_datasets),
             len(df_val),
             len(unique_neurons_val),
@@ -1390,7 +1390,7 @@ def plot_loss_per_dataset(log_dir, mode="validation"):
     ax.legend(loc="upper right")
 
     props = dict(boxstyle="round", facecolor="white", alpha=0.5)
-    textstr = "Datasets used for training: \n{}".format(", ".join(train_dataset_names))
+    textstr = "Source datasets used for training: \n{}".format(", ".join(train_dataset_names))
     ax.text(
         0.02,
         0.95,

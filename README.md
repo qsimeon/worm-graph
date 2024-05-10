@@ -1,20 +1,31 @@
-## NOTE to Users! 
-#### [See this Wiki page if running locally (i.e. not on a SLURM cluster)](https://github.com/metaconsciousgroup/worm-graph/wiki/Pipeline-Structure#overview)
-Please change `submitit_slurm` to `submitit_local` in the file `configs/pipeline.yaml` if running on your local machine.
-
-#### Disable autocast if on cpu.
-
 # worm-graph
 
-### Simulating the _C. elegans_ whole brain with neural networks.
+Simulating the _C. elegans_ whole brain with neural networks.
+
+---
+
+### Notes to Users
+- See this [Wiki page](https://github.com/metaconsciousgroup/worm-graph/wiki/Pipeline-Structure#overview) if running locally (i.e. not on a SLURM cluster)
+
+- Please change `submitit_slurm` to `submitit_local` in the file `configs/pipeline.yaml` if running on your local machine.
+
+- Disable autocast if on cpu.
 
 ### Cite
-Simeon, Quilee, Leandro Venâncio, Michael A. Skuhersky, Aran Nayebi, Edward S. Boyden, and Guangyu Robert Yang. 2024. “Scaling Properties for Artificial Neural Network Models of a Small Nervous System.” bioRxiv. https://doi.org/10.1101/2024.02.13.580186.
+Q. Simeon, L. Venâncio, M. A. Skuhersky, A. Nayebi, E. S. Boyden and G. R. Yang, "Scaling Properties for Artificial Neural Network Models of a Small Nervous System," SoutheastCon 2024, Atlanta, GA, USA, 2024, pp. 516-524, doi: 10.1109/SoutheastCon52093.2024.10500049. 
 
-### Table of Contents
+### Abstract
+The nematode worm C. elegans provides a unique opportunity for exploring in silico data-driven models of a whole nervous system, given its transparency and well-characterized nervous system facilitating a wealth of measurement data from wet-lab experiments. This study explores the scaling properties that may govern learning the underlying neural dynamics of this small nervous system by using artificial neural network (ANN) models. We investigate the accuracy of self-supervised next time-step neural activity prediction as a function of data and models. For data scaling, we report a monotonic log-linear reduction in mean-squared error (MSE) as a function of the amount of neural activity data. For model scaling, we find MSE to be a nonlinear function of the size of the ANN models. Furthermore, we observe that the dataset and model size scaling properties are influenced by the particular choice of model architecture but not by the precise experimental source of the C. elegans neural data. Our results fall short of producing long-horizon predictive and generative models of C. elegans whole nervous system dynamics but suggest directions to achieve those. In particular our data scaling properties extrapolate that recording more neural activity data is a fruitful near-term approach to obtaining better predictive ANN models of a small nervous system.
+
+### [Hugging Face Dataset](https://huggingface.co/datasets/qsimeon/celegans_neural_data)
+
+## Table of Contents
 1. [Project Overview](#worm-graph)
-2. [Directory Structure](#directory-structure)
+2. [Folder Structure](#folder-structure)
+    - [Directory Tree](#directory-tree)
+    - [Submodule Information](#submodule-information)
 3. [Environment Setup](#environment-setup)
+    - [Recommended Bash Script](#recommended-bash-script)
 4. [Getting Started](#getting-started)
 5. [For Developers](#for-developers)
     - [File Naming Conventions](#file-naming-conventions)
@@ -24,12 +35,13 @@ Simeon, Quilee, Leandro Venâncio, Michael A. Skuhersky, Aran Nayebi, Edward S. 
 
 ## Project Overview
 
-`worm-graph` is a computational framework for modeling and simulating the neural dynamics of _Caenorhabditis elegans_ (_C. elegans_) using artificial neural networks (ANNs). The project focuses on self-supervised learning to predict future neural activity from historical data without behavioral context. It employs a range of neural network architectures such as LSTM, Transformer, and Feed-Forward networks, evaluating their performance based on mean squared error (MSE) as they scale with training data volume and model complexity.
-
-This repository serves as a platform to investigate the effects of training data size, network architecture, and model parameters on the accuracy of neural state predictions. It utilizes diverse datasets, recorded under various conditions, to ensure robustness and generalizability of the models. A key finding of this work is the logarithmic reduction in MSE with increased training data, highlighting the critical role of data volume in model performance. The research also reveals a nonlinear dependency of prediction accuracy on model size, identifying an optimal range for the number of trainable parameters.
+`worm-graph` is a computational framework for modeling and simulating the neural dynamics of _Caenorhabditis elegans_ (_C. elegans_) using artificial neural networks (ANNs). 
 
 
-## Directory Structure
+## Folder Structure
+
+### Directory Tree
+
 `tree -L 1 worm-graph`
 ```
 ├── analysis
@@ -53,7 +65,28 @@ This repository serves as a platform to investigate the effects of training data
 ├── utils.py
 └── visualize
 ```
-![image](https://github.com/metaconsciousgroup/worm-graph/assets/35947758/2ac8f61f-52f3-4ba4-91dc-dbd967a80443)
+
+### Submodule Information
+- `configs`
+    - All experiment, evaluation, etc. config files compatible with hydra for streamlined development/experimental process
+- `analysis`
+    - Different analysis notebooks to identify valuable statistics to validate predictive capabilities of model
+- `data`
+    - Dataset class implementations, notebooks for validation + synthetic data generation
+- `logs`
+    - Hydra logs for runs
+- `models`
+    - Contains all model component implementation + loading util functions, package imports, wrapper for retrieving model architecture
+- `opensource_data`
+    - Datasets compiled from different experimental open source publications.
+- `predict`
+    - Prediction utilities - loading models, package imports, prediction passthrough
+- `preprocess`
+    - Preprocess data utilities
+- `train`
+    - Utilities for early stopping, saving checkpoints. Example training script for regressing calcium neural activity + validation during training
+- `visualize`
+    - Visualization notebooks - visualizing connectome + plotting neural activity
 
 
 ## Environment Setup
@@ -67,7 +100,7 @@ cd setup
 **Note:** Installing the environment can sometimes take up to 1 hour!
 
 
-### Setting up with the bash script (recommended) 
+### Recommended Bash Script 
 
 1. Run the `env.sh` script. This will create the new `worm-graph` environment and install the required packages:
 

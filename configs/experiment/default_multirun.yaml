@@ -10,7 +10,8 @@ hydra:
   verbose: true
   sweeper:
       params:
-        experiment.seed: 0 # assign each repetition of the experiment a distinct random seed
+        # If planning multiple repetitions of the experiment, assign each repetition a distinct random seed
+        experiment.seed: 0 
         submodule.model.type: NaivePredictor, LinearRegression, FeatureFFNN, NetworkLSTM, HippoSSM, NetworkCTRNN, LiquidCfC, PureAttention, NeuralTransformer
 
 # The submodule parameters set below will be used only if RUN mode is used. 

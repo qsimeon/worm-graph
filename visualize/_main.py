@@ -63,11 +63,11 @@ def plot_experiment(visualize_config: DictConfig, exp_config: DictConfig) -> Non
             log_dir is not None
         ), "log_dir is None. Please specify a log directory to plot figures from."
 
-        # If this log is an experiment log, it contains 'exp0' directory
+        # If this log is an experiment log, it will contain a 'exp0' folder
         if "exp0" in os.listdir(log_dir):
             exp_log_dir = log_dir
         else:
-            # One directory up if inside any 'expN' directory
+            # Move one directory level up if inside any 'exp{N}' directory
             log_dir = os.path.dirname(log_dir)
             if "exp0" in os.listdir(log_dir):
                 exp_log_dir = log_dir
