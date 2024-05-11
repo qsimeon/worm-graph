@@ -11,6 +11,7 @@ from abc import abstractmethod
 from dataclasses import dataclass
 from typing import Callable, Union
 from prettytable import PrettyTable
+from collections.abc import Sequence
 from scipy.signal import fftconvolve
 from torch_geometric.data import Data
 from omegaconf import DictConfig, OmegaConf

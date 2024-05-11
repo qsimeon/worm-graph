@@ -331,9 +331,8 @@ class SSM(torch.nn.Module):
         A = torch.tril(A) - torch.diag(torch.arange(N))
         return -A
 
-    def init_hidden(self, input_shape):
-        device = next(self.parameters()).device
-        batch_size = input_shape[0]  # because batch_first=True
+    def init_hidden(self, shape, device):
+        batch_size = shape[0]  # because batch_first=True
         hidden = torch.zeros(batch_size, self.hidden_size).to(device)
         return hidden
 
@@ -349,8 +348,6 @@ class SSM(torch.nn.Module):
             h_new: tensor of shape (batch_size, hidden_size),
                 network activity at the next time step
         """
-        # Move hidden state to the same device as input
-        hidden = hidden.to(input.device)
         # Perform the recurrence update
         h_new = A @ hidden.unsqueeze(-1) + B @ input.unsqueeze(-1)
         return h_new.squeeze(-1)
@@ -406,7 +403,7 @@ class SSM(torch.nn.Module):
         """
         # If hidden activity is not provided, initialize it
         if hidden is None:
-            hidden = self.init_hidden(input.shape)
+            hidden = self.init_hidden(input.shape, input.device)
         # Get the discretized SSM parameters
         Ab, Bb = self.discretize()
         # Run the SSM
@@ -451,9 +448,8 @@ class CTRNN(torch.nn.Module):
         self.input2h = torch.nn.Linear(input_size, hidden_size)
         self.h2h = torch.nn.Linear(hidden_size, hidden_size)
 
-    def init_hidden(self, input_shape):
-        device = next(self.parameters()).device
-        batch_size = input_shape[0]  # because batch_first=True
+    def init_hidden(self, shape, device):
+        batch_size = shape[0]  # because batch_first=True
         hidden = torch.zeros(batch_size, self.hidden_size).to(device)
         return hidden
 
@@ -469,8 +465,6 @@ class CTRNN(torch.nn.Module):
             h_new: tensor of shape (batch, hidden_size),
                 network activity at the next time step
         """
-        # Move hidden state to the same device as input
-        hidden = hidden.to(input.device)
         # Perform the recurrence update
         h_new = torch.relu(self.input2h(input) + self.h2h(hidden))
         # The sigmoid contrains alpha such that 0 <= alpha <=1
@@ -484,9 +478,7 @@ class CTRNN(torch.nn.Module):
         """
         # If hidden activity is not provided, initialize it
         if hidden is None:
-            hidden = self.init_hidden(input.shape)
-        else:
-            hidden = hidden.to(input.device)
+            hidden = self.init_hidden(input.shape, input.device)
         # Loop through time
         output = []
         steps = range(input.size(1))
@@ -519,6 +511,7 @@ class InnerHiddenModel(torch.nn.Module):
         if self.hidden is None:
             x = self.hidden_hidden(x)
         else:
+            # Call forward method on input with hidden state
             x, self.hidden = self.hidden_hidden(x, self.hidden)
         return x
 
@@ -691,10 +684,10 @@ class Model(torch.nn.Module):
         return None
 
     @abstractmethod
-    def init_hidden(self, input_shape=None):
+    def init_hidden(self, shape=None, device=None):
         """
         Enforce that all models have an `init_hidden` method which initializes the hidden state of the "core".
-        This function must be overridden in subclasses with the specified argument 'input_shape'.
+        This function must be overridden in subclasses with the specified argument 'shape'.
         """
         raise NotImplementedError()
 
@@ -942,7 +935,7 @@ class Model(torch.nn.Module):
         if self.version_2:
             return self.forward_v2(input, mask)
         # Initialize hidden state
-        self.hidden = self.init_hidden(input.shape)
+        self.hidden = self.init_hidden(input.shape, input.device)
         # Set hidden state of internal model
         self.inner_hidden_model.set_hidden(self.hidden)
         # Multiply input by the mask (expanded to match input shape)
@@ -974,7 +967,7 @@ class Model(torch.nn.Module):
         doing sequence modeling to mimic the approach used in Transformers.
         """
         # Initialize hidden state
-        self.hidden = self.init_hidden(input.shape)
+        self.hidden = self.init_hidden(input.shape, input.device)
         # Set hidden state of internal model
         self.inner_hidden_model.set_hidden(self.hidden)
         # Multiply input by the mask (expanded to match input shape)
@@ -1183,7 +1176,8 @@ class Model(torch.nn.Module):
         # Set model to evaluation mode
         self.eval()
         # Detach and copy input and convert to dtype of model
-        input_copy = input.detach().clone().to(dtype=next(self.parameters()).dtype)
+        dtype = next(self.parameters()).dtype
+        input_copy = input.detach().clone().to(dtype=dtype)
         # Loop through time
         for _ in range(num_new_timesteps):
             # If the sequence context is growing too long we must crop it
@@ -1331,7 +1325,7 @@ class NaivePredictor(Model):
         # Create a dud parameter to avoid errors with the optimizer
         self._ = torch.nn.Parameter(torch.tensor(0.0))
 
-    def init_hidden(self, input_shape=None):
+    def init_hidden(self, shape=None, device=None):
         return None
 
 
@@ -1376,7 +1370,7 @@ class LinearRegression(Model):
             hidden_state=self.hidden,
         )
 
-    def init_hidden(self, input_shape=None):
+    def init_hidden(self, shape=None, device=None):
         return None
 
 
@@ -1431,7 +1425,7 @@ class FeatureFFNN(Model):
             hidden_state=self.hidden,
         )
 
-    def init_hidden(self, input_shape=None):
+    def init_hidden(self, shape=None, device=None):
         return None
 
 
@@ -1497,7 +1491,7 @@ class PureAttention(Model):
             hidden_state=self.hidden,
         )
 
-    def init_hidden(self, input_shape=None):
+    def init_hidden(self, shape=None, device=None):
         return None
 
 
@@ -1568,7 +1562,7 @@ class NeuralTransformer(Model):
             hidden_state=self.hidden,
         )
 
-    def init_hidden(self, input_shape=None):
+    def init_hidden(self, shape=None, device=None):
         return None
 
 
@@ -1619,9 +1613,8 @@ class HippoSSM(Model):
             hidden_state=self.hidden,
         )
 
-    def init_hidden(self, input_shape):
-        device = next(self.parameters()).device
-        batch_size = input_shape[0]  # because batch_first=True
+    def init_hidden(self, shape, device):
+        batch_size = shape[0]  # because batch_first=True
         hidden = torch.zeros(batch_size, self.hidden_size).to(device)
         return hidden
 
@@ -1670,9 +1663,8 @@ class NetworkCTRNN(Model):
             hidden_state=self.hidden,
         )
 
-    def init_hidden(self, input_shape):
-        device = next(self.parameters()).device
-        batch_size = input_shape[0]  # because batch_first=True
+    def init_hidden(self, shape, device):
+        batch_size = shape[0]  # because batch_first=True
         hidden = torch.zeros(batch_size, self.hidden_size).to(device)
         return hidden
 
@@ -1725,12 +1717,11 @@ class LiquidCfC(Model):
         # Initialize RNN weights
         self.init_weights()
 
-    def init_hidden(self, input_shape):
+    def init_hidden(self, shape, device):
         """
         Inititializes the hidden state of the RNN.
         """
-        device = next(self.parameters()).device
-        batch_size = input_shape[0]  # because batch_first=True
+        batch_size = shape[0]  # because batch_first=True
         hidden = torch.zeros(batch_size, self.hidden_size).to(device)
         return hidden
 
@@ -1795,12 +1786,11 @@ class NetworkLSTM(Model):
         # Initialize LSTM weights
         self.init_weights()
 
-    def init_hidden(self, input_shape):
+    def init_hidden(self, shape, device):
         """
         Inititializes the hidden and cell states of the LSTM.
         """
-        device = next(self.parameters()).device
-        batch_size = input_shape[0]  # because batch_first=True
+        batch_size = shape[0]  # because batch_first=True
         h0 = torch.zeros(1, batch_size, self.hidden_size).to(device)
         c0 = torch.zeros(1, batch_size, self.hidden_size).to(device)
         return (h0, c0)

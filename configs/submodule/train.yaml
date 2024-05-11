@@ -2,7 +2,7 @@
 train:
   optimizer: AdamW # options: Adam, AdamW, Adadelta, Adagrad, RMSprop, SGD
   lr: 0.001
-  epochs: 100 
+  epochs: 2 #100 
   # How often to save the model
   save_freq: 100 
   # Batch size may need to be adjusted based on how big the dataset is
