@@ -944,10 +944,8 @@ class Model(torch.nn.Module):
         )  # (batch_size, seq_len, input_size)
         # Transform the input into a latent
         latent_out = self.input_hidden(input_activity)  # (batch_size, seq_len, hidden_size)
-        # Transform the latent and add a skip connection
-        hidden_out = latent_out + self.inner_hidden_model(
-            latent_out
-        )  # (batch_size, seq_len, hidden_size)
+        # Transform the latent
+        hidden_out = self.inner_hidden_model(latent_out)  # (batch_size, seq_len, hidden_size)
         # Perform a linear readout to get the output
         output = self.linear_readout(hidden_out)  # (batch_size, seq_len, input_size)
         # Return output neural data
@@ -981,10 +979,8 @@ class Model(torch.nn.Module):
         )  # (batch_size, seq_len)
         # Embed the tokens and then transform to a latent
         latent_out = self.input_hidden(input_tokens)  # (batch_size, seq_len, hidden_size)
-        # Transform the latent and add a skip connection
-        hidden_out = latent_out + self.inner_hidden_model(
-            latent_out
-        )  # (batch_size, seq_len, hidden_size)
+        # Transform the latent 
+        hidden_out = self.inner_hidden_model(latent_out)  # (batch_size, seq_len, hidden_size)
         # Perform a linear readout to get the output
         output_logits = self.linear_readout(hidden_out)  # (batch_size, seq_len, num_tokens)
         # Return output token logits

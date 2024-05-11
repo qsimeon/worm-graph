@@ -17,14 +17,14 @@ hydra:
       experiment.seed: 2
       submodule.model.hidden_size: choice(8,12,16,22,30,42,58,80,110,154,214,296,412,572,794,1102,1530,2124,2950,4096) 
       # DEBUG: Did adding a large dataset of few neurons (Lin2023) throw off the models?
-      # submodule.dataset.source_datasets: choice({Kato2015:all,Nichols2017:all,Skora2018:all,Kaplan2020:all,Yemini2021:all,Uzel2022:all,Lin2023:all,Flavell2023:all,Leifer2023:all}) 
-      submodule.dataset.source_datasets: choice({Kato2015:all,Nichols2017:all,Skora2018:all,Kaplan2020:all,Yemini2021:all,Uzel2022:all,Lin2023:null,Flavell2023:all,Leifer2023:all}) 
+      submodule.dataset.source_datasets: choice({Kato2015:all,Nichols2017:all,Skora2018:all,Kaplan2020:all,Yemini2021:all,Uzel2022:all,Lin2023:all,Flavell2023:all,Leifer2023:all}) 
+      # submodule.dataset.source_datasets: choice({Kato2015:all,Nichols2017:all,Skora2018:all,Kaplan2020:all,Yemini2021:all,Uzel2022:all,Lin2023:null,Flavell2023:all,Leifer2023:all}) 
       # DEBUG: Did adding a large dataset of few neurons (Lin2023) throw off the models?
-      # submodule.predict.source_datasets: choice({Kato2015:worm0,Nichols2017:worm0,Skora2018:worm0,Kaplan2020:worm0,Yemini2021:worm0,Uzel2022:worm0,Lin2023:worm0,Flavell2023:worm1,Leifer2023:worm0})
-      submodule.predict.source_datasets: choice({Kato2015:worm0,Nichols2017:worm0,Skora2018:worm0,Kaplan2020:worm0,Yemini2021:worm0,Uzel2022:worm0,Lin2023:null,Flavell2023:worm1,Leifer2023:worm0})
+      submodule.predict.source_datasets: choice({Kato2015:worm0,Nichols2017:worm0,Skora2018:worm0,Kaplan2020:worm0,Yemini2021:worm0,Uzel2022:worm0,Lin2023:worm0,Flavell2023:worm1,Leifer2023:worm0})
+      # submodule.predict.source_datasets: choice({Kato2015:worm0,Nichols2017:worm0,Skora2018:worm0,Kaplan2020:worm0,Yemini2021:worm0,Uzel2022:worm0,Lin2023:null,Flavell2023:worm1,Leifer2023:worm0})
       # DEBUG: Did adding a large dataset of few neurons (Lin2023) throw off the models?
-      # submodule.analysis.validation.source_datasets: choice({Kato2015:all,Nichols2017:all,Skora2018:all,Kaplan2020:all,Yemini2021:all,Uzel2022:all,Lin2023:all,Flavell2023:all,Leifer2023:all})
-      submodule.analysis.validation.source_datasets: choice({Kato2015:all,Nichols2017:all,Skora2018:all,Kaplan2020:all,Yemini2021:all,Uzel2022:all,Lin2023:null,Flavell2023:all,Leifer2023:all})
+      submodule.analysis.validation.source_datasets: choice({Kato2015:all,Nichols2017:all,Skora2018:all,Kaplan2020:all,Yemini2021:all,Uzel2022:all,Lin2023:all,Flavell2023:all,Leifer2023:all})
+      # submodule.analysis.validation.source_datasets: choice({Kato2015:all,Nichols2017:all,Skora2018:all,Kaplan2020:all,Yemini2021:all,Uzel2022:all,Lin2023:null,Flavell2023:all,Leifer2023:all})
 
 submodule:
 
