@@ -17,4 +17,4 @@ from omegaconf import DictConfig, OmegaConf
 from einops import rearrange, repeat, einsum
 from torch_geometric.utils import to_dense_adj
 from torch.autograd.gradcheck import gradcheck
-from utils import DEVICE, ROOT_DIR, BLOCK_SIZE, NUM_TOKENS, VERSION_2
+from utils import DEVICE, ROOT_DIR, BLOCK_SIZE, NUM_TOKENS, NUM_NEURONS, VERSION_2

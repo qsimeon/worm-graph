@@ -21,7 +21,8 @@ class EarlyStopping:
     def __call__(self, model, val_loss):
         if val_loss is None or math.isnan(val_loss):
             logger.info("Validation loss is not a valid number (NaN).")
-            return True
+            # return True 
+            return False # DEBUG: Continuing as loss may be correted in next epoch
         if self.best_model is None:
             self.best_model = model  # copy.deepcopy(model)
         if self.best_loss is None:

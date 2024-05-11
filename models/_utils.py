@@ -1473,8 +1473,8 @@ class PureAttention(Model):
 
         ### DEBUG ###
         # NOTE: Number of attention heads must be divisor of `hidden_size`
-        # self.num_heads = max([i for i in range(1, 9) if hidden_size % i == 0])
-        self.num_heads = 1
+        self.num_heads = max([i for i in range(1, 9) if hidden_size % i == 0])
+        # self.num_heads = 1
         logger.info(f"DEBUG Number of attention heads: {self.num_heads}.")  # DEBUG
         ### DEBUG ###
 
@@ -1543,8 +1543,8 @@ class NeuralTransformer(Model):
 
         ### DEBUG ###
         # NOTE: Number of attention heads must be divisor of `hidden_size`
-        # self.num_heads = max([i for i in range(1, 9) if hidden_size % i == 0])
-        self.num_heads = 1
+        self.num_heads = max([i for i in range(1, 9) if hidden_size % i == 0])
+        # self.num_heads = 1
         logger.info(f"DEBUG Number of attention heads: {self.num_heads}.")  # DEBUG
         ### DEBUG ###
 

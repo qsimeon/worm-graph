@@ -53,6 +53,11 @@ def get_model(model_config: DictConfig, verbose=True) -> torch.nn.Module:
     # Otherwise, instantiate a new model
     else:
         assert "type" in model_config, ValueError("No model type or checkpoint path specified.")
+        ### DEBUG ###
+        # If set to null in the model config, we default to the glonbal variable `NUM_NEURONS`
+        if model_config.input_size is None:
+            model_config.input_size = NUM_NEURONS 
+        ### DEBUG ###
         args = dict(
             input_size=model_config.input_size,
             hidden_size=model_config.hidden_size,
