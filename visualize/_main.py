@@ -62,15 +62,15 @@ def plot_experiment(visualize_config: DictConfig, exp_config: DictConfig) -> Non
         ), "The requested `visualize_config.plot_this_log_dir` is None.\n\t Please specify a log directory to plot figures from."
         # Pattern to match 'exp' followed by an integer
         pattern = re.compile(r'^exp(\d+)$')
-        logger.info(f"DEBUG Before pattern matching\n") # DEBUG
-        logger.info(f"DEBUG pattern matching : {condition()}\n")
         condition = lambda: any(pattern.match(item) for item in os.listdir(log_dir))
         # If this log is an experiment log, it will contain a 'exp{N}' folder
+        logger.info(f"DEBUG pattern conditon? : {condition()}\n") # DEBUG
         if condition():
             exp_log_dir = log_dir
         else:
             # Move one directory level up if inside any 'exp{N}' directory
             log_dir = os.path.dirname(log_dir)
+            logger.info(f"DEBUG pattern conditon? : {condition()}\n") # DEBUG
             if condition():
                 exp_log_dir = log_dir
             else:

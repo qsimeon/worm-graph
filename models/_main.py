@@ -97,3 +97,4 @@ if __name__ == "__main__":
     config = OmegaConf.load("configs/submodule/model.yaml")
     print(OmegaConf.to_yaml(config), end="\n\n")
     model = get_model(config.model)
+    print(f"Got model : \n\t {model} \n")
