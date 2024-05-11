@@ -60,13 +60,16 @@ def plot_experiment(visualize_config: DictConfig, exp_config: DictConfig) -> Non
         assert (
             log_dir is not None
         ), "log_dir is None. Please specify a log directory to plot figures from."
-        # If this log is an experiment log, it will contain a 'exp0' folder
-        if "exp0" in os.listdir(log_dir):
+        # Pattern to match 'exp' followed by an integer
+        pattern = re.compile(r'^exp(\d+)$')
+        condition = lambda: any(pattern.match(item) for item in os.listdir(log_dir))
+        # If this log is an experiment log, it will contain a 'exp{N}' folder
+        if condition():
             exp_log_dir = log_dir
         else:
             # Move one directory level up if inside any 'exp{N}' directory
             log_dir = os.path.dirname(log_dir)
-            if "exp0" in os.listdir(log_dir):
+            if condition():
                 exp_log_dir = log_dir
             else:
                 logger.info(
