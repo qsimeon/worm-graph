@@ -21,6 +21,7 @@ torch.multiprocessing.set_start_method("spawn", force=True)
 # Set some environment variables
 os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "max_split_size_mb:128"
 os.environ["CUDA_LAUNCH_BLOCKING"] = "1"
+os.environ["TORCH_USE_CUDA_DSA"] = "1"
 os.environ["HYDRA_FULL_ERROR"] = "1"
 os.environ["MASTER_ADDR"] = "localhost"
 os.environ["MASTER_PORT"] = "12345"  # just a random port

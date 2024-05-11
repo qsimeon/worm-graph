@@ -1031,6 +1031,7 @@ def experiment_parameter(exp_dir, key):
         # The computation time in seconds for the last epoch
         pipeline_info = OmegaConf.load(os.path.join(exp_dir, "pipeline_info.yaml"))
         chkpt_path = os.path.join(exp_dir, "train", "checkpoints", f"model_best.pt")
+        torch.cuda.empty_cache() # free up space on GPU
         model_chkpt = torch.load(chkpt_path, map_location=DEVICE)
         value = model_chkpt["time_last_epoch"]  # TODO: Fix! should be `time_last_epoch`
         title = "Computation time of last epoch"

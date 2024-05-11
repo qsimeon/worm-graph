@@ -88,6 +88,8 @@ def pipeline(cfg: DictConfig) -> None:
             cfg.submodule.analysis.analyse_this_log_dir = log_dir
         if "visualize" in cfg.submodule:
             cfg.submodule.visualize.plot_this_log_dir = log_dir
+    # Save the pipeline config which may have been modified
+    OmegaConf.save(cfg, os.path.join(log_dir, "pipeline_info.yaml"))
     # ANALYSIS
     if "analysis" in cfg.submodule:
         # Analyze the results of the experiment
@@ -101,9 +103,8 @@ def pipeline(cfg: DictConfig) -> None:
             visualize_config=cfg.submodule.visualize,
         )
         plot_experiment(visualize_config=cfg.submodule.visualize, exp_config=cfg.experiment)
-    # Clear GPU cache and ave pipeline config which may have been modified
+    # Clear GPU cache after experiment
     torch.cuda.empty_cache()
-    OmegaConf.save(cfg, os.path.join(log_dir, "pipeline_info.yaml"))
     # Return metric for Optuna automatic hyperparameter tuning
     if "train" in cfg.submodule:
         logger.info("Experiment finished. Final metric: %s" % (metric))
