@@ -138,10 +138,6 @@ def train_model(
         start_time = time.perf_counter()
         # Training
         for batch_idx, (X_train, Y_train, mask_train, _) in enumerate(train_loader):
-            ### DEBUG ###
-            print(f"DEBUG \t NaNs in X_train? : {torch.isnan(X_train).any()}\n") # DEBUG
-            print(f"DEBUG \t Infs in X_train? : {torch.isinf(X_train).any()}\n") # DEBUG
-            ### DEBUG ###
             X_train = X_train.to(rank)
             Y_train = Y_train.to(rank)
             mask_train = mask_train.to(rank)
