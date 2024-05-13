@@ -1,4 +1,4 @@
-# NOTE: To oavoid circular imports, only import libraries essential to
+# NOTE: To avoid circular imports, only import libraries essential to
 # initializing global variables and functions used by the main.py script.
 import os
 import torch
