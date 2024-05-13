@@ -56,7 +56,7 @@ def get_model(model_config: DictConfig, verbose=True) -> torch.nn.Module:
         ### DEBUG ###
         # If set to null in the model config, we default to the glonbal variable `NUM_NEURONS`
         if model_config.input_size is None:
-            model_config.input_size = NUM_NEURONS 
+            model_config.input_size = NUM_NEURONS
         ### DEBUG ###
         args = dict(
             input_size=model_config.input_size,

@@ -948,11 +948,11 @@ class Model(torch.nn.Module):
         hidden_out = self.inner_hidden_model(latent_out)  # (batch_size, seq_len, hidden_size)
         # Perform a linear readout to get the output
         output = self.linear_readout(hidden_out)  # (batch_size, seq_len, input_size)
-        # Return output neural data
         ### DEBUG ###
         # Compute best linear approxmation of model weights using OLS estimate
         self.compute_ols_weights(model_in=input_activity, model_out=output)
         ### DEBUG ###
+        # Return the output neural data
         return output
 
     @torch.autocast(
@@ -979,7 +979,7 @@ class Model(torch.nn.Module):
         )  # (batch_size, seq_len)
         # Embed the tokens and then transform to a latent
         latent_out = self.input_hidden(input_tokens)  # (batch_size, seq_len, hidden_size)
-        # Transform the latent 
+        # Transform the latent
         hidden_out = self.inner_hidden_model(latent_out)  # (batch_size, seq_len, hidden_size)
         # Perform a linear readout to get the output
         output_logits = self.linear_readout(hidden_out)  # (batch_size, seq_len, num_tokens)
@@ -1043,31 +1043,11 @@ class Model(torch.nn.Module):
                 # Calculate L1 regularization term for all weights
                 for param in self.parameters():
                     l1_loss += torch.abs(param).mean()
-
-                # ### DEBUG ###
-                # # NOTE: This check passes.
-                # print(f"DEBUG loss_fn.loss \n") # DEBUG
-                # param = param
-                # print(f"\t param: {param.shape}\n") # DEBUG
-                # l1_grad = gradcheck(lambda x: torch.abs(x).mean(), param) # DEBUG
-                # print(f"\t valid gradient for L1? : {l1_grad}\n") # DEBUG
-                # ### DEBUG ###
-
                 l1_reg_loss = self.l1_norm_reg_param * l1_loss
             # Connectome regularization term
             connectome_loss = 0.0
             connectome_reg_loss = 0.0
             if self.connectome_reg_param > 0.0:
-
-                # ### DEBUG ###
-                # # NOTE: This check fails.
-                # print(f"DEBUG loss_fn.loss \n") # DEBUG
-                # param = self.ols_weights**2 - (self.chem_weights + self.elec_weights)
-                # print(f"\t param: {param.shape}\n") # DEBUG
-                # ols_grad = gradcheck(lambda x: torch.norm(x, p="fro"), param) # DEBUG
-                # print(f"\t valid gradient for OLS? : {ols_grad}\n") # DEBUG
-                # ### DEBUG ###
-
                 # Calculate the connectome regularization term
                 # NOTE: Squared OLS weights because the connectome weights are non-negative
                 param = torch.square(self.ols_weights) - (self.chem_weights + self.elec_weights)
@@ -1462,7 +1442,7 @@ class PureAttention(Model):
         # Special parameters for this model
         # NOTE: Number of attention heads must be divisor of `hidden_size`
         self.num_heads = max([i for i in range(1, 9) if hidden_size % i == 0])
-        logger.info(f"Number of attention heads: {self.num_heads}.") 
+        logger.info(f"Number of attention heads: {self.num_heads}.")
         self.dropout = 0.1  # dropout rate
         # Input to hidden transformation
         self.input_hidden = torch.nn.Sequential(
@@ -1527,7 +1507,7 @@ class NeuralTransformer(Model):
         # Special parameters for this model
         # NOTE: Number of attention heads must be divisor of `hidden_size`
         self.num_heads = max([i for i in range(1, 9) if hidden_size % i == 0])
-        logger.info(f"Number of attention heads: {self.num_heads}.") 
+        logger.info(f"Number of attention heads: {self.num_heads}.")
         self.dropout = 0.1  # dropout rate
         # Input to hidden transformation
         self.input_hidden = torch.nn.Sequential(

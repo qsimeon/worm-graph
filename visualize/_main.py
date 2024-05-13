@@ -61,16 +61,14 @@ def plot_experiment(visualize_config: DictConfig, exp_config: DictConfig) -> Non
             log_dir is not None
         ), "The requested `visualize_config.plot_this_log_dir` is None.\n\t Please specify a log directory to plot figures from."
         # Pattern to match 'exp' followed by an integer
-        pattern = re.compile(r'^exp(\d+)$')
+        pattern = re.compile(r"^exp(\d+)$")
         condition = lambda: any(pattern.match(item) for item in os.listdir(log_dir))
         # If this log is an experiment log, it will contain a 'exp{N}' folder
-        logger.info(f"DEBUG pattern conditon? : {condition()}\n") # DEBUG
         if condition():
             exp_log_dir = log_dir
         else:
             # Move one directory level up if inside any 'exp{N}' directory
             log_dir = os.path.dirname(log_dir)
-            logger.info(f"DEBUG pattern conditon? : {condition()}\n") # DEBUG
             if condition():
                 exp_log_dir = log_dir
             else:
@@ -78,10 +76,8 @@ def plot_experiment(visualize_config: DictConfig, exp_config: DictConfig) -> Non
                     f"Log directory {log_dir} is not an experiment log. Skipping experiment plots."
                 )
                 return None
-        ### DEBUG ###
         # Why is this failing? What is the correct `exp_log_dir`?
         logger.info(f"Accessing the experiment log directory {exp_log_dir}.")
-        ### DEBUG ###
         # Create directory to store experiment plots
         exp_plot_dir = os.path.join(exp_log_dir, "exp_plots")
         os.makedirs(exp_plot_dir, exist_ok=True)

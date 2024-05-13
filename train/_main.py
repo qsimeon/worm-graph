@@ -127,7 +127,7 @@ def train_model(
     )
     # ### DEBUG ###
     # # NOTE: This throws `RuntimeError: Function 'AbsBackward0' returned nan values in its 0th output.`
-    # # when L1 regularization is added, indicating that some gradients not computed correctly there.
+    # # when L1 regularization is added, indicating that some gradients are not computed correctly there.
     # torch.autograd.set_detect_anomaly(True, check_nan=True) # for debugging
     # ### DEBUG ###
     # Iterate over epochs
