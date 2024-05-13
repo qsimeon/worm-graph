@@ -1,4 +1,4 @@
-# All imports for models module
+# All imports for model module
 import os
 import time
 import math

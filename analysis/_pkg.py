@@ -9,7 +9,7 @@ import pandas as pd
 import sklearn.metrics as sm
 import matplotlib.pyplot as plt
 
-from models._main import get_model
+from model._main import get_model
 from utils import DEVICE, ROOT_DIR
 from visualize._utils import plot_heat_map
 from omegaconf import OmegaConf, DictConfig

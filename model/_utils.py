@@ -1,4 +1,4 @@
-from models._pkg import *
+from model._pkg import *
 
 # Init logger
 logger = logging.getLogger(__name__)
@@ -499,7 +499,7 @@ class CTRNN(torch.nn.Module):
 
 class InnerHiddenModel(torch.nn.Module):
     """
-    Inner hidden (latent) models.
+    Inner hidden (latent) model.
     """
 
     def __init__(self, hidden_hidden_model: torch.nn.Module, hidden_state=None):
@@ -529,16 +529,16 @@ class InnerHiddenModel(torch.nn.Module):
 
 class Model(torch.nn.Module):
     """
-    Super class for all models.
+    Super class for all model.
 
-    For all our models:
+    For all our model:
         1. The output `readout` will be the same shape as the input.
         2. A method called `loss_fn` that specifies the specific
             loss function to be used by the model. The default
             loss function we use is `torch.nn.MSELoss()`.
         3. A readout layer is implemented and will always be
             called `self.linear_readout`.
-        4. The core of all models is called `self.hidden_hidden` and it is
+        4. The core of all model is called `self.hidden_hidden` and it is
             comprised of a single hidden layer of an architecture of choice.
         7. Getter methods for the input size and hidden size called
         `get_input_size`, `get_hidden_size`, `get_loss_name`, and `get_l1_norm_reg_param`.
@@ -560,7 +560,7 @@ class Model(torch.nn.Module):
         positional_encoding: Union[bool, None] = False,
     ):
         """
-        Defines attributes common to all models.
+        Defines attributes common to all model.
         """
         super(Model, self).__init__()
         assert (
@@ -686,7 +686,7 @@ class Model(torch.nn.Module):
     @abstractmethod
     def init_hidden(self, shape=None, device=None):
         """
-        Enforce that all models have an `init_hidden` method which initializes the hidden state of the "core".
+        Enforce that all model have an `init_hidden` method which initializes the hidden state of the "core".
         This function must be overridden in subclasses with the specified argument 'shape'.
         """
         raise NotImplementedError()
@@ -922,7 +922,7 @@ class Model(torch.nn.Module):
     )
     def forward(self, input: torch.Tensor, mask: torch.Tensor):
         """
-        Common forward method for all models.
+        Common forward method for all model.
 
         Parameters
         ----------
@@ -960,7 +960,7 @@ class Model(torch.nn.Module):
     )
     def forward_v2(self, input: torch.Tensor, mask: torch.Tensor):
         """
-        Special forward method for the newer version (version_2) of the models
+        Special forward method for the newer version (version_2) of the model
         based on first tokenizing the high-dimensional neural data before
         doing sequence modeling to mimic the approach used in Transformers.
         """
@@ -991,7 +991,7 @@ class Model(torch.nn.Module):
     )
     def loss_fn(self):
         """
-        The loss function to be used by all the models (default versions).
+        The loss function to be used by all the model (default versions).
         This custom loss function combines a primary loss function with an additional
         L1 regularization on all model weights. This regularization term encourages the
         model to use fewer non-zero parameters, effectively making the model more sparse.
@@ -1067,10 +1067,10 @@ class Model(torch.nn.Module):
     )
     def loss_fn_v2(self):
         """
-        Special loss function for the newer version (version_2) of the models based
+        Special loss function for the newer version (version_2) of the model based
         on how loss is calculated in Transformers which operate on tokenized data.
-        NOTE: Version 2 of the models cannot apply the connectome matching regularization
-            term that is available to Version 1 models because it Version 2 models
+        NOTE: Version 2 of the model cannot apply the connectome matching regularization
+            term that is available to Version 1 model because it Version 2 model
             input and output on tokens instead of neural states.
         """
 
@@ -1108,7 +1108,7 @@ class Model(torch.nn.Module):
                 l1_reg_loss = self.l1_norm_reg_param * l1_loss
             # Add the L1 penalty to the original loss
             total_loss = ce_loss + l1_reg_loss
-            # NOTE: Version 2 models do not have the connectome regularization term.
+            # NOTE: Version 2 model do not have the connectome regularization term.
             # Return loss
             return total_loss
 
@@ -1187,8 +1187,8 @@ class Model(torch.nn.Module):
         top_k: Union[int, None] = None,
     ):
         """
-        Special generate method for the newer version (version_2) of the models based on how
-        generation is done in Transformers. In the newer version (version_2), models take neural
+        Special generate method for the newer version (version_2) of the model based on how
+        generation is done in Transformers. In the newer version (version_2), model take neural
         data as input and output token logits. Therefore, we must convert the token logits back to
         neural data to be fed back into the model. We sample from the distribution over the predicted
         next token, retrieve the mean neural state vector corresponding to that token, append that
@@ -1240,7 +1240,7 @@ class Model(torch.nn.Module):
     def sample(self, num_new_timesteps: int):
         """
         Sample spontaneous neural activity from the model.
-        TODO: Figure out how to use diffusion models to do this.
+        TODO: Figure out how to use diffusion model to do this.
         """
         pass
 
@@ -1354,7 +1354,7 @@ class FeatureFFNN(Model):
     """
     A simple nonlinear regression model.
     FFNN stands for FeedForward Neural Network.
-    Unlike the LSTM and Transformer models, this
+    Unlike the LSTM and Transformer model, this
     model has no temporal memory and can only learn
     a fixed nonlinear feature regression function that
     it applies at every time step independently.

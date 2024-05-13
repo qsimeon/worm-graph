@@ -49,7 +49,7 @@ class EarlyStopping:
 def save_model_checkpoint(model, checkpoint_path, other_info=dict()):
     """
     Saves a PyTorch model to disk. Saves everything needed to load the
-    model again using the function `models._utils.load_model_checkpoint`.
+    model again using the function `model._utils.load_model_checkpoint`.
 
     Args:
         model (nn.Module): The PyTorch model to save.

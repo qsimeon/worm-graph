@@ -15,7 +15,7 @@ Simulating the _C. elegans_ whole brain with neural networks.
 Q. Simeon, L. Venâncio, M. A. Skuhersky, A. Nayebi, E. S. Boyden and G. R. Yang, "Scaling Properties for Artificial Neural Network Models of a Small Nervous System," SoutheastCon 2024, Atlanta, GA, USA, 2024, pp. 516-524, doi: 10.1109/SoutheastCon52093.2024.10500049. 
 
 ### Abstract
-The nematode worm C. elegans provides a unique opportunity for exploring in silico data-driven models of a whole nervous system, given its transparency and well-characterized nervous system facilitating a wealth of measurement data from wet-lab experiments. This study explores the scaling properties that may govern learning the underlying neural dynamics of this small nervous system by using artificial neural network (ANN) models. We investigate the accuracy of self-supervised next time-step neural activity prediction as a function of data and models. For data scaling, we report a monotonic log-linear reduction in mean-squared error (MSE) as a function of the amount of neural activity data. For model scaling, we find MSE to be a nonlinear function of the size of the ANN models. Furthermore, we observe that the dataset and model size scaling properties are influenced by the particular choice of model architecture but not by the precise experimental source of the C. elegans neural data. Our results fall short of producing long-horizon predictive and generative models of C. elegans whole nervous system dynamics but suggest directions to achieve those. In particular our data scaling properties extrapolate that recording more neural activity data is a fruitful near-term approach to obtaining better predictive ANN models of a small nervous system.
+The nematode worm C. elegans provides a unique opportunity for exploring in silico data-driven model of a whole nervous system, given its transparency and well-characterized nervous system facilitating a wealth of measurement data from wet-lab experiments. This study explores the scaling properties that may govern learning the underlying neural dynamics of this small nervous system by using artificial neural network (ANN) model. We investigate the accuracy of self-supervised next time-step neural activity prediction as a function of data and model. For data scaling, we report a monotonic log-linear reduction in mean-squared error (MSE) as a function of the amount of neural activity data. For model scaling, we find MSE to be a nonlinear function of the size of the ANN model. Furthermore, we observe that the dataset and model size scaling properties are influenced by the particular choice of model architecture but not by the precise experimental source of the C. elegans neural data. Our results fall short of producing long-horizon predictive and generative model of C. elegans whole nervous system dynamics but suggest directions to achieve those. In particular our data scaling properties extrapolate that recording more neural activity data is a fruitful near-term approach to obtaining better predictive ANN model of a small nervous system.
 
 ### [Hugging Face Dataset](https://huggingface.co/datasets/qsimeon/celegans_neural_data)
 
@@ -51,7 +51,7 @@ The nematode worm C. elegans provides a unique opportunity for exploring in sili
 ├── LICENSE
 ├── logs
 ├── main.py
-├── models
+├── model
 ├── opensource_data
 ├── pkg.py
 ├── predict
@@ -75,12 +75,12 @@ The nematode worm C. elegans provides a unique opportunity for exploring in sili
     - Dataset class implementations, notebooks for validation + synthetic data generation
 - `logs`
     - Hydra logs for runs
-- `models`
+- `model`
     - Contains all model component implementation + loading util functions, package imports, wrapper for retrieving model architecture
 - `opensource_data`
     - Datasets compiled from different experimental open source publications.
 - `predict`
-    - Prediction utilities - loading models, package imports, prediction passthrough
+    - Prediction utilities - loading model, package imports, prediction passthrough
 - `preprocess`
     - Preprocess data utilities
 - `train`
@@ -213,7 +213,7 @@ For Jupyter notebooks, use the `CamelCase` naming style.
 
 - When in doubt about anything else style-related that's not addressed by the previous two points, reference the [Python Enhancement Protocols (PEP8)](https://peps.python.org/pep-0008/).
 
-- Always shape neural data matrices as `(time, neurons, {features})`. The braces `{}` indicate that the last `features` dimension is optional, as the `neurons` currently serve as the features for our models.
+- Always shape neural data matrices as `(time, neurons, {features})`. The braces `{}` indicate that the last `features` dimension is optional, as the `neurons` currently serve as the features for our model.
 
 
 ## Future Tasks

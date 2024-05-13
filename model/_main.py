@@ -1,4 +1,4 @@
-from models._utils import *
+from model._utils import *
 
 # Init logger
 logger = logging.getLogger(__name__)
@@ -19,15 +19,15 @@ def get_model(model_config: DictConfig, verbose=True) -> torch.nn.Module:
 
     Calls
     -----
-    PureAttention : class in models/_utils.py
-    NeuralTransformer : class in models/_utils.py
-    NetworkLSTM : class in models/_utils.py
-    HippoSSM : class in models/_utils.py
-    NetworkCTRNN : class in models/_utils.py
-    LiquidCfC : class in models/_utils.py
-    FeatureFFNN : class in models/_utils.py
-    NaivePredictor : class in models/_utils.py
-    LinearRegression: class in models/_utils.py
+    PureAttention : class in model/_utils.py
+    NeuralTransformer : class in model/_utils.py
+    NetworkLSTM : class in model/_utils.py
+    HippoSSM : class in model/_utils.py
+    NetworkCTRNN : class in model/_utils.py
+    LiquidCfC : class in model/_utils.py
+    FeatureFFNN : class in model/_utils.py
+    NaivePredictor : class in model/_utils.py
+    LinearRegression: class in model/_utils.py
         If no model type is specified, LinearRegression is used by default.
 
     Returns

@@ -175,4 +175,4 @@ data/*AllExperimental
 data/worm_data*
 data/processed/neural/.processed
 data/processed/connectome/graph_tensors.pt
-models/*.pt
+model/*.pt

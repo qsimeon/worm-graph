@@ -3,7 +3,7 @@
 #   size = model size (key: num_parameters)
 #   attention = PureAttention model
 #   experimental = experimental datasets (Kato, Nichols, Skora, Uzel, Lin, Yemini, Kaplan, Flavell, Leifer)
-# We increase gradually the hidden size of the models as a way to increase the number of parameters.
+# We increase gradually the hidden size of the model as a way to increase the number of parameters.
 defaults:
   - override /submodule: [preprocess, model, train, visualize]
   - _self_

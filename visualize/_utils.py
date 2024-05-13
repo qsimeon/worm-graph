@@ -978,7 +978,7 @@ def experiment_parameter(exp_dir, key):
         xaxis = "Batch size"
 
     if key == "seq_len":
-        # Sequence length used for training the models
+        # Sequence length used for training the model
         pipeline_info = OmegaConf.load(os.path.join(exp_dir, "pipeline_info.yaml"))
         value = pipeline_info.submodule.dataset.seq_len
         title = "Sequence length"

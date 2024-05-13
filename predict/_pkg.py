@@ -8,7 +8,7 @@ import pandas as pd
 
 from typing import Union
 from datetime import datetime
-from models._main import get_model
+from model._main import get_model
 from data._main import get_datasets
 from omegaconf import DictConfig, OmegaConf
 from utils import DEVICE, LOGS_DIR, NEURONS_302, BLOCK_SIZE

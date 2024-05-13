@@ -1,13 +1,13 @@
 # Models Submodule
 
-This submodule contains code for defining and utilizing various models for neural data analysis.
+This submodule contains code for defining and utilizing various model for neural data analysis.
 
 ## File Structure
 
 The submodule consists of the following files:
 
 - `_main.py`: Contains the main script for loading the model specified in the configuration file, with its respective hyperparameters (see the configs submodule for more details).
-- `_utils.py`: Contains the implementation of the models.
+- `_utils.py`: Contains the implementation of the model.
 - `_pkg.py`: Contains the necessary imports for the submodule.
 
 ## Usage
@@ -56,22 +56,22 @@ without any of the extra stuff from the full transformer model.
 
 - `NetworkGCN`: This is a graph neural network model of the _C. elegans_ nervous system. This model does not use a LayerNorm. The model assumes the connectome graph data to be present in a specific path and loads it.
 
-The overarching structure of these models is the same. They all contain an input-to-hidden transformation (embedding layer + activation function + LayerNorm (optional)), and a hidden-to-hidden transformation (usually a specific neural network layer or block). Also, they all have the `InnerHiddenModel` instantiated for use. 
+The overarching structure of these model is the same. They all contain an input-to-hidden transformation (embedding layer + activation function + LayerNorm (optional)), and a hidden-to-hidden transformation (usually a specific neural network layer or block). Also, they all have the `InnerHiddenModel` instantiated for use. 
 
-The structure of all of the models is based on three primary components:
+The structure of all of the model is based on three primary components:
 
 1. The _input_ to _hidden_ block
 2. The _hidden_ to _hidden_ block
 3. The _hidden_ to _output_ block
 
-The first and last blocks act as linear maps, transforming the inputs to a latent representation (the hidden part) and transforming the latent representation to outputs, respectively. These blocks remain consistent across different network architectures, effectively serving to rescale the dimensions of the inputs/outputs. The computation within the hidden states, however, can vary. For instance, in a Linear model, the _hidden_ to _hidden_ block comprises a straightforward Feed Forward Network, while in an RNN model, it includes an RNN submodule. All the models have one hidden-layer. We account for the number of hidden layers differently than is typical machine learning. Specifically, we count the number hidden layers as being the number of layers in the _hidden_ to _hidden_ block.
+The first and last blocks act as linear maps, transforming the inputs to a latent representation (the hidden part) and transforming the latent representation to outputs, respectively. These blocks remain consistent across different network architectures, effectively serving to rescale the dimensions of the inputs/outputs. The computation within the hidden states, however, can vary. For instance, in a Linear model, the _hidden_ to _hidden_ block comprises a straightforward Feed Forward Network, while in an RNN model, it includes an RNN submodule. All the model have one hidden-layer. We account for the number of hidden layers differently than is typical machine learning. Specifically, we count the number hidden layers as being the number of layers in the _hidden_ to _hidden_ block.
 
 
 ## Customization
 
-One thing to note is that the models have been designed to be flexible. The constructors allow for the setting of the input size, hidden size, the number of layers, loss functions, and regularization parameters. This design promotes reusability and modularity.
+One thing to note is that the model have been designed to be flexible. The constructors allow for the setting of the input size, hidden size, the number of layers, loss functions, and regularization parameters. This design promotes reusability and modularity.
 
-Keep in mind that not all models use all parameters (for example, the `num_layers` parameter isn't used in some models), so there might be an opportunity to refine these models further based on the specific use case or to generalize the constructor parameters in a way that's applicable to all types of models in this set.
+Keep in mind that not all model use all parameters (for example, the `num_layers` parameter isn't used in some model), so there might be an opportunity to refine these model further based on the specific use case or to generalize the constructor parameters in a way that's applicable to all types of model in this set.
 
 You can select the desired model type in the configuration file `configs/submodule/model.yaml` by specifying the `type` parameter.
 
