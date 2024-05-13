@@ -46,8 +46,8 @@ submodule:
       Leifer2023: all
 
     num_named_neurons: null
-    num_train_samples: 16
-    num_val_samples: 16
+    num_train_samples: 32
+    num_val_samples: 32
     seq_len: null
     reverse: false
     use_residual: false
@@ -70,7 +70,7 @@ submodule:
     lr: 0.001
     epochs: 100 
     save_freq: 100
-    batch_size: 64
+    batch_size: 128
     shuffle: true
     early_stopping:
       delta: 0
