@@ -5,8 +5,7 @@ logger = logging.getLogger(__name__)
 
 
 def get_datasets(dataset_config: DictConfig, save=True):
-    """
-    Retrieve or generate training and validation sets based on the provided configuration.
+    """Retrieve or generate training and validation sets based on the provided configuration.
 
     The function first checks if datasets are provided in the specified directory. If they are,
     it will load them. If not, it will generate the datasets from the requested source datasets.
@@ -365,3 +364,5 @@ if __name__ == "__main__":
     config = OmegaConf.load("configs/submodule/dataset.yaml")
     print(OmegaConf.to_yaml(config), end="\n\n")
     dataset = get_datasets(config.dataset, save=True)
+    print(f"train dataset: {type(dataset[0])}\n")
+    print(f"validation dataset: {type(dataset[1])}\n")

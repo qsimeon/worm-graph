@@ -184,15 +184,15 @@ def prediction_dataframe_parser(
     generated_activity = generated_activity.detach().cpu().numpy()
 
     # Convert each tensor into a DataFrame and add type level
-    df_context = pd.DataFrame(context_activity, columns=NEURONS_302)
+    df_context = pd.DataFrame(context_activity, columns=NEURON_LABELS)
     df_context["Type"] = "Context"
     df_context.set_index("Type", append=True, inplace=True)
 
-    df_ground_truth = pd.DataFrame(ground_truth_activity, columns=NEURONS_302)
+    df_ground_truth = pd.DataFrame(ground_truth_activity, columns=NEURON_LABELS)
     df_ground_truth["Type"] = "Ground Truth"
     df_ground_truth.set_index("Type", append=True, inplace=True)
 
-    df_ar_generated = pd.DataFrame(generated_activity, columns=NEURONS_302)
+    df_ar_generated = pd.DataFrame(generated_activity, columns=NEURON_LABELS)
     df_ar_generated["Type"] = "AR Generation"
     df_ar_generated.set_index("Type", append=True, inplace=True)
 

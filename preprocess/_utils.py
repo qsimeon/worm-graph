@@ -140,8 +140,6 @@ def get_presaved_datasets(url, file):
     download_url(url=presaved_url, folder=ROOT_DIR, filename=presaved_file)
     extract_zip(presave_path, folder=data_path, delete_zip=True)
     return None
-
-
 ### DEBUG ###
 
 
@@ -197,7 +195,7 @@ def preprocess_connectome(raw_dir, raw_files, which_pub="cook"):
     # Check that all the necessary raw files were extracted
     assert all([os.path.exists(os.path.join(raw_dir, rf)) for rf in raw_files])
     # Names of all 302 C. elegans hermaphrodite neurons
-    neurons_all = set(NEURONS_302)
+    neurons_all = set(NEURON_LABELS)
     # Chemical synapses nodes and edges
     GHermChem_Edges = pd.read_csv(os.path.join(raw_dir, "GHermChem_Edges.csv"))  # edges
     GHermChem_Nodes = pd.read_csv(os.path.join(raw_dir, "GHermChem_Nodes.csv"))  # nodes
@@ -889,7 +887,7 @@ class CalciumDataReshaper:
             self.original_dt = self.original_dt.unsqueeze(-1)
 
     def _fill_named_neurons_data(self):
-        for slot, neuron in enumerate(NEURONS_302):
+        for slot, neuron in enumerate(NEURON_LABELS):
             if neuron in self.neuron_to_idx:  # named neuron
                 idx = self.neuron_to_idx[neuron]
                 self.named_neuron_to_idx[neuron] = idx
@@ -1099,7 +1097,7 @@ class BasePreprocessor:
             for nid, name in neuron_to_idx.items()
         }
         neuron_to_idx = {
-            nid: (str(nid) if name not in set(NEURONS_302) else name)
+            nid: (str(nid) if name not in set(NEURON_LABELS) else name)
             for nid, name in neuron_to_idx.items()
         }
         neuron_to_idx = dict((v, k) for k, v in neuron_to_idx.items())
@@ -1795,17 +1793,17 @@ class Leifer2023Preprocessor(BasePreprocessor):
                 num_unnamed_neurons += 1
                 neuron_to_idx[str(j)] = j
             else:
-                if item in NEURONS_302 and item not in previous_list:
+                if item in NEURON_LABELS and item not in previous_list:
                     neuron_to_idx[item] = j
-                elif item in NEURONS_302 and item in previous_list:
+                elif item in NEURON_LABELS and item in previous_list:
                     label_list[j] = str(j)
                     num_unnamed_neurons += 1
                     neuron_to_idx[str(j)] = j
                 else:
-                    if str(item + "L") in NEURONS_302 and str(item + "L") not in previous_list:
+                    if str(item + "L") in NEURON_LABELS and str(item + "L") not in previous_list:
                         label_list[j] = str(item + "L")
                         neuron_to_idx[str(item + "L")] = j
-                    elif str(item + "R") in NEURONS_302 and str(item + "R") not in previous_list:
+                    elif str(item + "R") in NEURON_LABELS and str(item + "R") not in previous_list:
                         label_list[j] = str(item + "R")
                         neuron_to_idx[str(item + "R")] = j
                     else:
@@ -2062,7 +2060,7 @@ class Flavell2023Preprocessor(BasePreprocessor):
                         # Find potential label matches excluding ones we already have
                         possible_labels = [
                             neuron_name
-                            for neuron_name in NEURONS_302
+                            for neuron_name in NEURON_LABELS
                             if (label_split[0] in neuron_name)
                             and (label_split[-1] in neuron_name)
                             and (neuron_name not in set(neurons))
@@ -2077,7 +2075,7 @@ class Flavell2023Preprocessor(BasePreprocessor):
                         # Find potential label matches excluding ones we already have
                         possible_labels = [
                             neuron_name
-                            for neuron_name in NEURONS_302
+                            for neuron_name in NEURON_LABELS
                             if (label_split[0] in neuron_name)
                             and (label_split[-1] in neuron_name)
                             and (neuron_name not in set(neurons))

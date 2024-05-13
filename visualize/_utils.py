@@ -254,7 +254,7 @@ def plot_frequency_distribution(data, ax, title, dt=0.5):
 
 def plot_dataset_info(log_dir):
     # Map the 302 C. elgans neurons to their standard slot/index
-    neuron_slot_mapping = {neuron: slot for slot, neuron in enumerate(NEURONS_302)}
+    neuron_slot_mapping = {neuron: slot for slot, neuron in enumerate(NEURON_LABELS)}
     # Train dataset
     df_train = pd.read_csv(
         os.path.join(log_dir, "dataset", "train_dataset_info.csv"),
@@ -274,7 +274,7 @@ def plot_dataset_info(log_dir):
     # Get unique datasets
     train_exp_datasets = df_train["source_dataset"].unique().tolist()
     # Create DataFrame for train data
-    train_data = {"Neuron": NEURONS_302, "Count": standard_counts_train}
+    train_data = {"Neuron": NEURON_LABELS, "Count": standard_counts_train}
     df_train_plot = pd.DataFrame(train_data)
     # Validation dataset
     df_val = pd.read_csv(
@@ -293,7 +293,7 @@ def plot_dataset_info(log_dir):
     # Get unique datasets
     val_exp_datasets = df_val["source_dataset"].unique().tolist()
     # Create DataFrame for validation data
-    val_data = {"Neuron": NEURONS_302, "Count": standard_counts_val}
+    val_data = {"Neuron": NEURON_LABELS, "Count": standard_counts_val}
     df_val_plot = pd.DataFrame(val_data)
     # Plot histogram using sns
     fig, ax = plt.subplots(2, 1, figsize=(10, 8))

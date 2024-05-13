@@ -34,7 +34,7 @@ from utils import (
     RAW_FILES,
     BLOCK_SIZE,
     NUM_NEURONS,
-    NEURONS_302,
+    NEURON_LABELS,
     RAW_DATA_URL,
     RAW_DATA_DIR,
     EXPERIMENT_DATASETS,

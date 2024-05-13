@@ -21,7 +21,7 @@ from model._utils import print_parameters
 from omegaconf import DictConfig, OmegaConf
 from torch.utils.data import ConcatDataset, DataLoader
 from data._utils import NeuralActivityDataset, pick_worm
-from utils import WORLD_SIZE, DEVICE, LOGS_DIR, NEURONS_302
+from utils import WORLD_SIZE, DEVICE, LOGS_DIR, NEURON_LABELS
 
 ### Imports below are needed for DISTRIBUTED training
 from torch.utils.data.distributed import DistributedSampler

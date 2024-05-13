@@ -60,7 +60,6 @@ The nematode worm C. elegans provides a unique opportunity for exploring in sili
 ├── pyproject.toml
 ├── README.md
 ├── setup
-├── tests
 ├── train
 ├── utils.py
 └── visualize
