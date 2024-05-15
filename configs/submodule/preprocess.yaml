@@ -1,11 +1,11 @@
 preprocess:
-  opensource_url: https://www.dropbox.com/scl/fi/wno37yen2poinoysbfepg/opensource_data.zip?rlkey=cx8to7itbrjt72rcvrzv4ikr8&dl=1
+  opensource_url: https://www.dropbox.com/scl/fi/7sv89h78sd15da4bn3c0j/opensource_data.zip?rlkey=mcabp8wskm7nkzr2s5g9xy0ep&dl=1
   opensource_zipfile: opensource_data.zip
   presaved_url: https://www.dropbox.com/scl/fi/3lmizm5kqfj9thy2a2yzo/presaved_datasets.zip?rlkey=g5ysbc5nwhiqcj9np6aq7hqf9&dl=1
   presaved_file: presaved_datasets.zip
   cleanup: true # Whether to delete the downloaded and unzipped opensource data folder
   source_dataset: all # [Kato2015, Nichols2017, Skora2018, Kaplan2020, Yemini2021, Uzel2022, Lin2023, Flavell2023, Leifer2023] # any dataset in utils.EXPERIMENT_DATASETS
-  resample_dt: 0.666 # The time interval (in seconds) to resample the neural activity at; if null, no resampling is performed
+  resample_dt: 0.25 #0.666 # The time interval (in seconds) to resample the neural activity at; if null, no resampling is performed
   interpolate: linear # The method to use for interpolation; options: null, linear, quadratic, cubic
   smooth: 
     # NOTE: Smoothing is done using a causal filter. Smoothing is applied before resampling.

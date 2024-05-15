@@ -22,13 +22,13 @@ class EarlyStopping:
         if val_loss is None or math.isnan(val_loss) or math.isinf(val_loss):
             if self.best_model is None:
                 self.best_model = model
-            ### DEBUG ###
-            # Should we return early immediately if the validation loss is not a valid number?
-            # logger.info(f"Stopping early. Validation loss {val_loss} is not a valid number.")
-            # return True
-            ### DEBUG ####
-            logger.info(f"Validation loss {val_loss} is not a valid number.")
-            return False
+            ## DEBUG ###
+            # Return early immediately if the validation loss is not a valid number?
+            logger.info(f"Stopping early. Validation loss {val_loss} is not a valid number.")
+            return True
+            ## DEBUG ####
+            # logger.info(f"Validation loss {val_loss} is not a valid number.")
+            # return False
         if self.best_model is None:
             self.best_model = model
         if self.best_loss is None:

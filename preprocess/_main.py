@@ -50,7 +50,7 @@ def process_data(preprocess_config: DictConfig) -> None:
         logger.info("Finished preprocessing neural data.")
     else:
         logger.info("Neural data already preprocessed.")
-    
+
     # Preprocess the connectome data if not already done
     if not os.path.exists(os.path.join(ROOT_DIR, "data/processed/connectome/graph_tensors.pt")):
         logger.info("Preprocessing C. elegans connectome...")

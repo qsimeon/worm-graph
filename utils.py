@@ -90,7 +90,7 @@ else:
             "VD13", "VD2", "VD3", "VD4", "VD5", "VD6", "VD7", "VD8", "VD9"
         ]
     # fmt: on
-    
+
     # Write to a text file called "neuron_labels.txt" using pandas
     pd.DataFrame(NEURON_LABELS).to_csv(
         os.path.join(RAW_DATA_DIR, "neuron_labels.txt"), sep=" ", header=False, index=False
@@ -115,6 +115,7 @@ RAW_FILES = [  # TODO: Cite sources of these files.
 ]
 
 WORLD_SIZE = torch.cuda.device_count()
+
 
 # Method for initializing the global computing device
 def init_device():
@@ -160,6 +161,7 @@ SYNTHETIC_DATASETS = {  # Datasets created with the `CreateSyntheticDataset.ipyn
     "Wikitext0000",
     "Recurrent0000",
 }
+
 
 # Method for globally setting all random seeds
 def init_random_seeds(seed=0):
