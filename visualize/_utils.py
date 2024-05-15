@@ -671,20 +671,20 @@ def plot_pca_trajectory(log_dir, worms_to_plot=None):
                         marker="o",
                     )
 
-                    # Mark start point with black star
+                    # Mark end point of ground truth trace with black triangle
                     plt.scatter(
-                        reduced_ground_truth_data[0, 0],
-                        reduced_ground_truth_data[0, 1],
-                        color="black",
-                        marker="*",
-                        s=50,
-                    )
-                    # Mark end points with black triangle
-                    plt.scatter(
-                        reduced_ar_gen_data[-1, 0],
-                        reduced_ar_gen_data[-1, 1],
+                        reduced_ground_truth_data[-1, 0],
+                        reduced_ground_truth_data[-1, 1],
                         color="black",
                         marker="^",
+                        s=50,
+                    )
+                    # Mark start point of autoregressive trace with black star
+                    plt.scatter(
+                        reduced_ar_gen_data[0, 0],
+                        reduced_ar_gen_data[0, 1],
+                        color="black",
+                        marker="*",
                         s=50,
                     )
 
