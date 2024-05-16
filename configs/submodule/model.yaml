@@ -1,8 +1,8 @@
 # Build model from scratch
 model:
-  type: NetworkCTRNN # options: NaivePredictor, LinearRegression, FeatureFFNN, NetworkLSTM, HippoSSM, NetworkCTRNN, LiquidCfC, PureAttention, NeuralTransformer
+  type: HippoSSM # options: NaivePredictor, LinearRegression, FeatureFFNN, NetworkLSTM, HippoSSM, NetworkCTRNN, LiquidCfC, PureAttention, NeuralTransformer
   input_size: null # number of neurons in the nervous system (for hermaphrodite C. elegans this is 302 - or 300 if excluding CANL/R)
-  hidden_size: 256 # options: int > 0 (Note: not used by the LinearRegression model)
+  hidden_size: 488 # options: int > 0 (Note: not used by the LinearRegression model)
   loss: MSE # options: MSE, MASE, Huber, L1, Poisson
   l1_norm_reg_param: 0.0 #0.0001 # how much to regularize the loss by L1 norm of the model parameters; options: 0.0 <= float <= 1.0
   connectome_reg_param: 0.0 #0.001 # how much to regularize the loss by the connectome weights; options: 0.0 <= float <= 1.0

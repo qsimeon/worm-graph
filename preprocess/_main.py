@@ -39,6 +39,7 @@ def process_data(preprocess_config: DictConfig) -> None:
             cleanup=preprocess_config.cleanup,
             **kwargs,
         )
+        logger.info("Finished preprocessing neural data.")
         ### DEBUG ###
         # Extract presaved commonly use dataset split patterns
         logger.info("Extracting presaved datasets.")
@@ -47,7 +48,6 @@ def process_data(preprocess_config: DictConfig) -> None:
         )
         logger.info("Done extracting presaved datasets.")
         ### DEBUG ###
-        logger.info("Finished preprocessing neural data.")
     else:
         logger.info("Neural data already preprocessed.")
 

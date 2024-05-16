@@ -152,6 +152,10 @@ def train_model(
             # Forward pass. Models are sequence-to-sequence.
             Y_pred = model(X_train, mask_train)
             train_loss = criterion(output=Y_pred, target=Y_train, mask=mask_train)
+            ### DEBUG ###
+            if math.isnan(train_loss.item()):
+                print(f"Train loss: {train_loss.item()} | Train baseline: {train_baseline.item()}")
+            ### DEBUG ###
             # Backpropagation.
             if epoch > 0:  # skip first epoch to get tabula rasa loss
                 # Check if the computed loss requires gradient (e.g. the NaivePredictor model does not)

@@ -356,9 +356,13 @@ class SSM(torch.nn.Module):
         """Computes the kernels for the convolutional mode of the SSM.
         Ab and Bb are the discretized SSM parameter matrices. L is the sequence length.
 
-        We create an independent kernel for each state dimension.
+        We create an independent kernel for each state (i.e. hidden) dimension.
         Each element of Kernels is a tensor of shape (hidden_size, input_size).
-        So Kernels should have shape (hidden_size, L, input_size).
+        Kernels should have shape (hidden_size, L, input_size).
+
+        NOTE: Warning: this implementation is naive and unstable. In practice it will fail 
+        to work for more than very small lengths. However, we are going to replace it with 
+        S4 in Part 2, so for now we just keep it around as a placeholder.
         """
         assert Ab.shape == (self.hidden_size, self.hidden_size) and Bb.shape == (
             self.hidden_size,
@@ -367,13 +371,70 @@ class SSM(torch.nn.Module):
         Kernels = torch.stack([(torch.matrix_power(Ab, l) @ Bb) for l in range(L)]).permute(
             (1, 0, -1)
         )
-        return Kernels
+        return Kernels.real # (hidden_size, L, input_size)
+
+    # ### DEBUG ###
+    # # NOTE: This is from Sasha Rush' blog post to simplify computing the matrix power. 
+    # # I don't fully understand it yet. "To address the problem of computing powers of 𝐴, 
+    # # we introduce another technique. Instead of computing the SSM convolution filter 𝐾
+    # # directly, we introduce a generating function on its coefficients and compute evaluations of it."
+
+    # def K_gen_simple(self, Ab, Bb, L):
+    #     '''Not to be used! Naive implementation of the generating function.'''
+    #     K = self.K_conv(Ab, Bb, L) # (hidden_size, L, input_size)
+    #     def gen(z):
+    #         # Sum across the length dimenison
+    #         return torch.sum(K * (z ** torch.arange(L)), dim=1) # (hidden_size, input_size)
+    #     return gen
+    
+    # # The generating function essentially converts the SSM convolution filter from the time domain to frequency domain. 
+    # # This transformation is also called z-transform (up to a minus sign) in control engineering literature. 
+    # # Importantly, it preserves the same information, and the desired SSM convolution filter can be recovered. 
+    # # Once the z-transform of a discrete sequence known, we can obtain the filter’s discrete fourier transform from evaluations of its z-transform at the roots of unity.
+    # # Then, we can apply inverse fourier transformation, stably by applying an FFT, to recover the filter.
+
+    # def conv_from_gen(self, gen, L):
+    #     # Evaluate at roots of unity
+    #     # Generating function is (-)z-transform, so we evaluate at (-)root
+    #     Omega_L = torch.exp(-2j * torch.pi * torch.arange(L) / L)
+    #     atRoots = torch.stack([gen(omega) for omega in Omega_L]) # (L, hidden_size, input_size)
+    #     # Inverse FFT
+    #     # TODO: Is there one particular dimension we should apply the inverse FFT to?
+    #     out = torch.fft.ifft(atRoots, n=L).permute((1, 0, -1)) # (hidden_size, L, input_size)
+    #     return out.real
+    
+    # # More importantly, in the generating function we can replace the matrix power with an inverse!
+    # # And for all 𝑧 at the L-roots of unity we have 𝑧^𝐿=1 so that term is removed. 
+    # # We then pull this constant term into a new 𝐶. Critically, this function does not call K_conv.
+
+    # def K_gen_inverse(self, Ab, Bb, L):
+    #     '''Clever implementation of the generating function.
+        
+    #     We will want to replace any calls like this `K_conv(*ssm, L=L)`
+    #     with this `conv_from_gen(K_gen_inverse(*ssm, L=L), L)` instead.
+    #     '''
+    #     I = torch.eye(Ab.shape[0])
+    #     Ab_L = torch.matrix_power(Ab, L) # (hidden_size, hidden_size)
+    #     Ct = (I - Ab_L) # (hidden_size, hidden_size)
+    #     # NOTE: Bb has shape (hidden_size, input_size)
+    #     return lambda z: (Ct.conj() @ torch.linalg.inv(I - Ab * z) @ Bb) # (hidden_size, input_size)
+    
+    
+    # def K_conv_fast(self, Ab, Bb, L):
+    #     '''TODO: Replace `K_conv` with `K_conv_fast` in the forward pass.'''
+    #     Kernels =  self.conv_from_gen(self.K_gen_inverse(Ab, Bb, L), L)
+    #     return Kernels.real # (hidden_size, L, input_size)
+    # ### DEBUG ###
 
     def causal_convolution(self, u, Kernels):
-        """
-        u is the input tensor with shape (seq_len, input_size).
-        Kernels is 3D tensor with `hidden_size` independent kernels, each with shape shape (seq_len, input_size).
-        outputs should be a tensor with shape (seq_len, hidden_size).
+        """Computes the result of applying the filters `Kernels` to inputs `u` using the convolution theorem with Fast Fourier Transform (FFT).
+        
+        Parameters:
+            u: input tensor with shape (seq_len, input_size).
+            Kernels: 3D tensor with `hidden_size` independent kernels, each with shape (seq_len, input_size).
+
+        Returns:
+            outputs: tensor with shape (seq_len, hidden_size).
         """
         seq_len = u.size(0)
         assert (
@@ -386,6 +447,8 @@ class SSM(torch.nn.Module):
         for K in Kernels:  # O(hidden_size) operations
             ud = torch.fft.rfft(u.float(), dim=0)  # (seq_len, input_size)
             Kd = torch.fft.rfft(K.float(), dim=0)  # (seq_len, input_size)
+            # NOTE: This next step is very memory intensive. Scales with `seq_len` x `hidden_size`.
+            # We quickly go over the GPU memory limit when training large models (i.e large `hidden_size`).
             out = torch.fft.irfft(ud * Kd, n=seq_len, dim=0).sum(dim=-1)  # (seq_len,)
             outputs.append(out)  # (hidden_size, seq_len)
         outputs = torch.stack(outputs).t()  # (seq_len, hidden_size)
@@ -408,7 +471,13 @@ class SSM(torch.nn.Module):
         Ab, Bb = self.discretize()
         # Run the SSM
         if not self.decode:  # CNN mode
-            Kernels = self.K_conv(Ab, Bb, input.size(1))
+            # Most of the work is to build this filter (aka kernel)
+            Kernels = self.K_conv(Ab, Bb, input.size(1)) 
+            # ### DEBUG ###
+            # # TODO: Replace with the faster generating function approach
+            # Kernels = self.K_conv_fast(Ab, Bb, input.size(1))
+            # ### DEBUG  ###
+            # The actual call to the network is just this (huge) convolution
             output = self.batch_causal_convolution(input, Kernels)
         else:  # RNN mode
             seq_len = input.size(1)
