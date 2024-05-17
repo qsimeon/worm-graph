@@ -194,7 +194,8 @@ def preprocess_connectome(raw_dir, raw_files, which_pub="cook"):
         )
     # Check that all the necessary raw files were extracted
     assert all([os.path.exists(os.path.join(raw_dir, rf)) for rf in raw_files])
-    # Names of all 302 C. elegans hermaphrodite neurons
+    # Names of all C. elegans hermaphrodite neurons
+    # NOTE: Only neurons in this list will be included in the connectomes constructed here.
     neurons_all = set(NEURON_LABELS)
     # Chemical synapses nodes and edges
     GHermChem_Edges = pd.read_csv(os.path.join(raw_dir, "GHermChem_Edges.csv"))  # edges
