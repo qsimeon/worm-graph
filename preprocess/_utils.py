@@ -150,7 +150,7 @@ def preprocess_openworm():
     edge_attr = []
 
     # CANL, CANR not considered neurons in Cook et al (still include in matrix - data will be zero/null when passed to model)
-
+    
     for i in range(len(df)):
         neuron1 = df.loc[i, "Origin"]
         neuron2 = df.loc[i, "Target"]
