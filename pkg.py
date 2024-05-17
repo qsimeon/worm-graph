@@ -6,7 +6,7 @@ import hydra
 # import from utils into pkg, whereas in submodules we import from _pkg into _utils.
 from utils import *
 from datetime import datetime
-from models._main import get_model
+from model._main import get_model
 from data._main import get_datasets
 from train._main import train_model
 from analysis._main import analyse_run

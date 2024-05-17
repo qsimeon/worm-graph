@@ -2,8 +2,8 @@
 # File name: size_transformer_experimental.yaml
 #   size = model size (key: num_parameters)
 #   transformer = NeuralTransformer model
-#   experimental = experimental datasets (Kato, Nichols, Skora, Uzel, Yemini, Kaplan, Flavell, Leifer)
-# We increase gradually the hidden size of the models as a way to increase the number of parameters.
+#   experimental = experimental datasets (Kato, Nichols, Skora, Uzel, Lin, Yemini, Kaplan, Flavell, Leifer)
+# We increase gradually the hidden size of the model as a way to increase the number of parameters.
 defaults:
   - override /submodule: [preprocess, model, train, visualize]
   - _self_
@@ -15,8 +15,8 @@ hydra:
   sweeper:
     params:
       experiment.seed: 2
-      submodule.model.hidden_size: choice(8,12,16,22,30,42,58,80,110,154,214,296,412,572,794,1102,1530,2124,2950,4096)
-      submodule.dataset.source_datasets: choice({Kato2015:all,Nichols2017:all,Skora2018:all,Kaplan2020:all,Yemini2021:all,Uzel2022:all,Lin2023:all,Flavell2023:all,Leifer2023:all})
+      submodule.model.hidden_size: choice(12,16,22,30,42,60,84,120,170,240,342,488,692,986,1402,1996,2842,4044,5756,8192)
+      submodule.dataset.source_datasets: choice({Kato2015:all,Nichols2017:all,Skora2018:all,Kaplan2020:all,Yemini2021:all,Uzel2022:all,Lin2023:all,Flavell2023:all,Leifer2023:all}) 
       submodule.predict.source_datasets: choice({Kato2015:worm0,Nichols2017:worm0,Skora2018:worm0,Kaplan2020:worm0,Yemini2021:worm0,Uzel2022:worm0,Lin2023:worm0,Flavell2023:worm1,Leifer2023:worm0})
       submodule.analysis.validation.source_datasets: choice({Kato2015:all,Nichols2017:all,Skora2018:all,Kaplan2020:all,Yemini2021:all,Uzel2022:all,Lin2023:all,Flavell2023:all,Leifer2023:all})
 
@@ -58,8 +58,8 @@ submodule:
       Leifer2023: null
 
     num_named_neurons: null
-    num_train_samples: 16
-    num_val_samples: 16
+    num_train_samples: 32
+    num_val_samples: 32
     # Set to the same value as submodule.predict.context_window
     seq_len: null
     reverse: false

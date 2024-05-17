@@ -441,6 +441,7 @@ def filter_loaded_combined_dataset(combined_dataset, num_worms, num_named_neuron
     dataset_info = {
         "source_dataset": [],
         "original_median_dt": [],
+        "median_dt": [],
         "original_index": [],
         "combined_dataset_index": [],
         "neurons": [],
@@ -450,6 +451,7 @@ def filter_loaded_combined_dataset(combined_dataset, num_worms, num_named_neuron
     for worm, data in combined_dataset.items():
         dataset_info["source_dataset"].append(data["source_dataset"])
         dataset_info["original_median_dt"].append(data["original_median_dt"])
+        dataset_info["median_dt"].append(data["median_dt"])
         dataset_info["original_index"].append(data["original_worm"])
         dataset_info["combined_dataset_index"].append(worm)
         worm_neurons = [neuron for slot, neuron in data["slot_to_named_neuron"].items()]
@@ -756,6 +758,7 @@ def create_combined_dataset(
     dataset_info = {
         "source_dataset": [],
         "original_median_dt": [],
+        "median_dt": [],
         "original_index": [],
         "combined_dataset_index": [],
         "neurons": [],
@@ -765,6 +768,7 @@ def create_combined_dataset(
     for _, data in combined_dataset.items():
         dataset_info["source_dataset"].append(data["source_dataset"])
         dataset_info["original_median_dt"].append(data["original_median_dt"])
+        dataset_info["median_dt"].append(data["median_dt"])
         dataset_info["original_index"].append(data["original_worm"])
         dataset_info["combined_dataset_index"].append(data["worm"])
         worm_neurons = [neuron for _, neuron in data["slot_to_named_neuron"].items()]

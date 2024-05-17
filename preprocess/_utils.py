@@ -57,7 +57,7 @@ def pickle_neural_data(
     processed_path = os.path.join(ROOT_DIR, "data/processed/neural")
     if not os.path.exists(processed_path):
         os.makedirs(processed_path, exist_ok=True)
-    # If .zip not found in the root directory, download the curated open-source worm datasets 
+    # If .zip not found in the root directory, download the curated open-source worm datasets
     if not os.path.exists(source_path):
         download_url(url=url, folder=ROOT_DIR, filename=zipfile)
         # Extract all the datasets ... OR
@@ -126,6 +126,7 @@ def pickle_neural_data(
         shutil.rmtree(source_path)
     return None
 
+
 ### DEBUG ###
 def get_presaved_datasets(url, file):
     """
@@ -133,7 +134,7 @@ def get_presaved_datasets(url, file):
     Deletes the zip file once the dataset has been extracted to the data folder.
     """
     presaved_url = url
-    presaved_file = file 
+    presaved_file = file
     presave_path = os.path.join(ROOT_DIR, presaved_file)
     data_path = os.path.join(ROOT_DIR, "data")
     download_url(url=presaved_url, folder=ROOT_DIR, filename=presaved_file)
@@ -173,8 +174,9 @@ def preprocess_openworm():
             else:
                 edge_attr[-1][-1] = num_connections
 
-    neuron_to_idx = dict(zip(NEURONS_302, [i for i in range(len(NEURONS_302))]))
-    idx_to_neuron = dict(zip([i for i in range(len(NEURONS_302))], NEURONS_302))
+
+def preprocess_connectome(raw_dir, raw_files, which_pub="cook"):
+    """Convert the raw connectome data to a graph tensor.
 
     edge_index = torch.tensor([[neuron_to_idx[neuron1], neuron_to_idx[neuron2]] for neuron1, neuron2 in edges]).T
     node_type = {0: 'Type1', 1: 'Type2'}
@@ -475,11 +477,10 @@ def preprocess_default(raw_dir, raw_files):
 
     # Check that all the necessary raw files were extracted
     assert all([os.path.exists(os.path.join(raw_dir, rf)) for rf in raw_files])
-
-    # List of names of all C. elegans neurons
-    neurons_all = set(NEURONS_302)
-
-    # Chemical synapses
+    # Names of all C. elegans hermaphrodite neurons
+    # NOTE: Only neurons in this list will be included in the connectomes constructed here.
+    neurons_all = set(NEURON_LABELS)
+    # Chemical synapses nodes and edges
     GHermChem_Edges = pd.read_csv(os.path.join(raw_dir, "GHermChem_Edges.csv"))  # edges
     GHermChem_Nodes = pd.read_csv(os.path.join(raw_dir, "GHermChem_Nodes.csv"))  # nodes
 
@@ -489,15 +490,21 @@ def preprocess_default(raw_dir, raw_files):
 
     # Neurons involved in gap junctions
     df = GHermElec_Sym_Nodes
-    df["Name"] = [v.replace("0", "") if not v.endswith("0") else v for v in df["Name"]]
-    Ggap_nodes = df[df["Name"].isin(neurons_all)].sort_values(by=["Name"]).reset_index()
-
-    # Neurons involved in chemical synapses
+    df["Name"] = [
+        v.replace("0", "") if not v.endswith("0") else v for v in df["Name"]
+    ]  # standard naming
+    Ggap_nodes = (
+        df[df["Name"].isin(neurons_all)].sort_values(by=["Name"]).reset_index()
+    )  # filter out non-neurons
+    # Neurons (i.e. nodes) in chemical synapses
     df = GHermChem_Nodes
-    df["Name"] = [v.replace("0", "") if not v.endswith("0") else v for v in df["Name"]]
-    Gsyn_nodes = df[df["Name"].isin(neurons_all)].sort_values(by=["Name"]).reset_index()
-
-    # Gap junctions
+    df["Name"] = [
+        v.replace("0", "") if not v.endswith("0") else v for v in df["Name"]
+    ]  # standard naming
+    Gsyn_nodes = (
+        df[df["Name"].isin(neurons_all)].sort_values(by=["Name"]).reset_index()
+    )  # filter out non-neurons
+    # Gap junctions edges
     df = GHermElec_Sym_Edges
     df["EndNodes_1"] = [v.replace("0", "") if not v.endswith("0") else v for v in df["EndNodes_1"]]
     df["EndNodes_2"] = [v.replace("0", "") if not v.endswith("0") else v for v in df["EndNodes_2"]]
@@ -582,17 +589,24 @@ def preprocess_default(raw_dir, raw_files):
     codes = np.unique(y)
     types = np.unique(Gsyn_nodes.Group.values)
     node_type = dict(zip(codes, types))
-
-    # Graph for electrical connectivity
-    electrical_graph = Data(
-        x=x, edge_index=ggap_edge_index, edge_attr=ggap_edge_attr, y=y
-    )  # Data object from torch_geometric package
-
-    # Graph for chemical connectivity
-    chemical_graph = Data(
-        x=x, edge_index=gsyn_edge_index, edge_attr=gsyn_edge_attr, y=y
-    )  # Data object from torch_geometric package
-
+    # Normalize outgoing gap junction weights to sum to 1
+    ggap_weights = to_dense_adj(edge_index=ggap_edge_index, edge_attr=ggap_edge_attr[:, 0]).squeeze(
+        0
+    )
+    ggap_weights = ggap_weights / torch.clamp(ggap_weights.sum(dim=1, keepdim=True), min=1)
+    ggap_edge_index, ggap_edge_attr = dense_to_sparse(ggap_weights)
+    ggap_edge_attr = torch.stack((ggap_edge_attr, torch.zeros_like(ggap_edge_attr))).T
+    # Normalize outgoing chemical synapse weights to sum to 1
+    gsyn_weights = to_dense_adj(edge_index=gsyn_edge_index, edge_attr=gsyn_edge_attr[:, 1]).squeeze(
+        0
+    )
+    gsyn_weights = gsyn_weights / torch.clamp(gsyn_weights.sum(dim=1, keepdim=True), min=1)
+    gsyn_edge_index, gsyn_edge_attr = dense_to_sparse(gsyn_weights)
+    gsyn_edge_attr = torch.stack((torch.zeros_like(gsyn_edge_attr), gsyn_edge_attr)).T
+    # Graph for electrical connectivity uses `torch_geometric.Data` object
+    electrical_graph = Data(x=x, edge_index=ggap_edge_index, edge_attr=ggap_edge_attr, y=y)
+    # Graph for chemical connectivity uses `torch_geometric.Data` object
+    chemical_graph = Data(x=x, edge_index=gsyn_edge_index, edge_attr=gsyn_edge_attr, y=y)
     # Merge electrical and chemical graphs into a single connectome graph
     edge_index = torch.hstack((electrical_graph.edge_index, chemical_graph.edge_index))
     edge_attr = torch.vstack((electrical_graph.edge_attr, chemical_graph.edge_attr))
@@ -1229,7 +1243,7 @@ class CalciumDataReshaper:
             self.original_dt = self.original_dt.unsqueeze(-1)
 
     def _fill_named_neurons_data(self):
-        for slot, neuron in enumerate(NEURONS_302):
+        for slot, neuron in enumerate(NEURON_LABELS):
             if neuron in self.neuron_to_idx:  # named neuron
                 idx = self.neuron_to_idx[neuron]
                 self.named_neuron_to_idx[neuron] = idx
@@ -1439,7 +1453,7 @@ class BasePreprocessor:
             for nid, name in neuron_to_idx.items()
         }
         neuron_to_idx = {
-            nid: (str(nid) if name not in set(NEURONS_302) else name)
+            nid: (str(nid) if name not in set(NEURON_LABELS) else name)
             for nid, name in neuron_to_idx.items()
         }
         neuron_to_idx = dict((v, k) for k, v in neuron_to_idx.items())
@@ -2135,17 +2149,17 @@ class Leifer2023Preprocessor(BasePreprocessor):
                 num_unnamed_neurons += 1
                 neuron_to_idx[str(j)] = j
             else:
-                if item in NEURONS_302 and item not in previous_list:
+                if item in NEURON_LABELS and item not in previous_list:
                     neuron_to_idx[item] = j
-                elif item in NEURONS_302 and item in previous_list:
+                elif item in NEURON_LABELS and item in previous_list:
                     label_list[j] = str(j)
                     num_unnamed_neurons += 1
                     neuron_to_idx[str(j)] = j
                 else:
-                    if str(item + "L") in NEURONS_302 and str(item + "L") not in previous_list:
+                    if str(item + "L") in NEURON_LABELS and str(item + "L") not in previous_list:
                         label_list[j] = str(item + "L")
                         neuron_to_idx[str(item + "L")] = j
-                    elif str(item + "R") in NEURONS_302 and str(item + "R") not in previous_list:
+                    elif str(item + "R") in NEURON_LABELS and str(item + "R") not in previous_list:
                         label_list[j] = str(item + "R")
                         neuron_to_idx[str(item + "R")] = j
                     else:
@@ -2402,7 +2416,7 @@ class Flavell2023Preprocessor(BasePreprocessor):
                         # Find potential label matches excluding ones we already have
                         possible_labels = [
                             neuron_name
-                            for neuron_name in NEURONS_302
+                            for neuron_name in NEURON_LABELS
                             if (label_split[0] in neuron_name)
                             and (label_split[-1] in neuron_name)
                             and (neuron_name not in set(neurons))
@@ -2417,7 +2431,7 @@ class Flavell2023Preprocessor(BasePreprocessor):
                         # Find potential label matches excluding ones we already have
                         possible_labels = [
                             neuron_name
-                            for neuron_name in NEURONS_302
+                            for neuron_name in NEURON_LABELS
                             if (label_split[0] in neuron_name)
                             and (label_split[-1] in neuron_name)
                             and (neuron_name not in set(neurons))

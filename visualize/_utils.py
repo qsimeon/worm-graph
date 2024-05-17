@@ -144,21 +144,21 @@ def time_delay_embedding(x, delay, dimension):
     Returns:
     - The time-delay embedded data as a 2D numpy array.
 
-    Time delay embedding is a technique used in the analysis of dynamical systems, particularly in the context 
-    of reconstructing the phase space of a system from a series of observations over time. 
-    This technique is based on Takens' Embedding Theorem, which states that the dynamics of a system can be 
+    Time delay embedding is a technique used in the analysis of dynamical systems, particularly in the context
+    of reconstructing the phase space of a system from a series of observations over time.
+    This technique is based on Takens' Embedding Theorem, which states that the dynamics of a system can be
     reconstructed from the time series of a single observable of the system, under certain conditions.
     Here are some key points about time delay embedding:
-        - Time Delay, $τ$ (tau): This is the time interval between successive observations in the reconstructed phase space. 
-                                Choosing an appropriate $τ$ is crucial; too short a delay may lead to redundant information, 
+        - Time Delay, $τ$ (tau): This is the time interval between successive observations in the reconstructed phase space.
+                                Choosing an appropriate $τ$ is crucial; too short a delay may lead to redundant information,
                                 while too long a delay may lose the dynamics of interest.
-        - Embedding Dimension, $m$: This represents the number of delayed observations used to reconstruct the phase space. 
+        - Embedding Dimension, $m$: This represents the number of delayed observations used to reconstruct the phase space.
                                     It should be high enough to unfold the dynamics, but not too high to avoid overcomplicating the model.
-        - Phase Space Reconstruction: By plotting the time-delayed copies of the time series against each other, one can reconstruct the phase space, 
+        - Phase Space Reconstruction: By plotting the time-delayed copies of the time series against each other, one can reconstruct the phase space,
                                     which can reveal underlying dynamical properties like attractors or limit cycles.
-        - Mutual Information: To empirically choose the right $τ$, one common method is to calculate the mutual information between the time series and 
+        - Mutual Information: To empirically choose the right $τ$, one common method is to calculate the mutual information between the time series and
                             its delayed version, and select $τ$ at the first minimum of the mutual information function.
-        - False Nearest Neighbors (FNN): The method of False Nearest Neighbors can help determine a suitable embedding dimension $m$ by identifying when 
+        - False Nearest Neighbors (FNN): The method of False Nearest Neighbors can help determine a suitable embedding dimension $m$ by identifying when
                                         points that appear to be neighbors in lower-dimensional space are no longer neighbors in higher dimensions.
     """
     n = len(x)
@@ -182,7 +182,7 @@ def plot_autocorrelation_and_pacf(X, neurons):
 
     Returns:
     - None: The function creates and displays a plot.
-   
+
     Autocorrelation Function (ACF):
         - This is a correlation of a signal with a delayed copy of itself as a function of delay.
         - The autocorrelation plot (or ACF plot) displays the correlation between the time series and its lagged values.
@@ -231,6 +231,7 @@ def plot_autocorrelation_and_pacf(X, neurons):
     # Show the plots
     plt.show()
 
+
 def plot_frequency_distribution(data, ax, title, dt=0.5):
     """Plots the frequency distribution of a signal.
 
@@ -253,7 +254,7 @@ def plot_frequency_distribution(data, ax, title, dt=0.5):
 
 def plot_dataset_info(log_dir):
     # Map the 302 C. elgans neurons to their standard slot/index
-    neuron_slot_mapping = {neuron: slot for slot, neuron in enumerate(NEURONS_302)}
+    neuron_slot_mapping = {neuron: slot for slot, neuron in enumerate(NEURON_LABELS)}
     # Train dataset
     df_train = pd.read_csv(
         os.path.join(log_dir, "dataset", "train_dataset_info.csv"),
@@ -261,7 +262,7 @@ def plot_dataset_info(log_dir):
     )
     neurons_train = df_train["neurons"]
     # Flatten the list of lists into a single list of neurons
-    flattened_neurons_train = [neuron for sublist in neurons_train for neuron in sublist] 
+    flattened_neurons_train = [neuron for sublist in neurons_train for neuron in sublist]
     # Now use np.unique on this flattened list
     unique_neurons_train, neuron_counts_train = np.unique(
         flattened_neurons_train, return_counts=True
@@ -273,7 +274,7 @@ def plot_dataset_info(log_dir):
     # Get unique datasets
     train_exp_datasets = df_train["source_dataset"].unique().tolist()
     # Create DataFrame for train data
-    train_data = {"Neuron": NEURONS_302, "Count": standard_counts_train}
+    train_data = {"Neuron": NEURON_LABELS, "Count": standard_counts_train}
     df_train_plot = pd.DataFrame(train_data)
     # Validation dataset
     df_val = pd.read_csv(
@@ -292,7 +293,7 @@ def plot_dataset_info(log_dir):
     # Get unique datasets
     val_exp_datasets = df_val["source_dataset"].unique().tolist()
     # Create DataFrame for validation data
-    val_data = {"Neuron": NEURONS_302, "Count": standard_counts_val}
+    val_data = {"Neuron": NEURON_LABELS, "Count": standard_counts_val}
     df_val_plot = pd.DataFrame(val_data)
     # Plot histogram using sns
     fig, ax = plt.subplots(2, 1, figsize=(10, 8))
@@ -301,33 +302,42 @@ def plot_dataset_info(log_dir):
     sns.barplot(x="Neuron", y="Count", hue="Neuron", data=df_train_plot, ax=ax[0], errorbar=None)
     # Adjust x-axis ticks
     ax[0].xaxis.set_major_locator(ticker.MultipleLocator(10))  # Show every 10th label
-    ax[0].set_xticklabels(ax[0].get_xticklabels(), rotation=45, ha="right")  # Rotate labels for better visibility
+    ax[0].set_xticklabels(
+        ax[0].get_xticklabels(), rotation=45, ha="right"
+    )  # Rotate labels for better visibility
     ax[0].set_ylabel("Count", fontsize=12)
     ax[0].set_xlabel("Neuron", fontsize=12)
     ax[0].set_title("Neuron count of Train Dataset", fontsize=14)
     # Add metadata text
     metadata_train_text = (
-        "Datasets used: {}\nTotal number of worms: {}\nNumber of unique neurons: {}".format(
+        "Source datasets: {}\nTotal number of worms: {}\nNumber of unique neurons: {}".format(
             ", ".join(train_exp_datasets),
             len(df_train),
             len(unique_neurons_train),
         )
     )
     ax[0].text(
-        0.02, 0.95, metadata_train_text, transform=ax[0].transAxes,
-        fontsize=10, verticalalignment="top", bbox=dict(boxstyle="round, pad=1", facecolor="white", edgecolor="black", alpha=0.5)
+        0.02,
+        0.95,
+        metadata_train_text,
+        transform=ax[0].transAxes,
+        fontsize=10,
+        verticalalignment="top",
+        bbox=dict(boxstyle="round, pad=1", facecolor="white", edgecolor="black", alpha=0.5),
     )
     # Validation dataset plot
     sns.barplot(x="Neuron", y="Count", hue="Neuron", data=df_val_plot, ax=ax[1], errorbar=None)
     # Adjust x-axis ticks
     ax[1].xaxis.set_major_locator(ticker.MultipleLocator(10))  # Show every 10th label
-    ax[1].set_xticklabels(ax[1].get_xticklabels(), rotation=45, ha="right")  # Rotate labels for better visibility
+    ax[1].set_xticklabels(
+        ax[1].get_xticklabels(), rotation=45, ha="right"
+    )  # Rotate labels for better visibility
     ax[1].set_ylabel("Count", fontsize=12)
     ax[1].set_xlabel("Neuron", fontsize=12)
     ax[1].set_title("Neuron count of Validation Dataset", fontsize=14)
     # Add metadata text
     metadata_val_text = (
-        "Datasets used: {}\nTotal number of worms: {}\nNumber of unique neurons: {}".format(
+        "Source datasets: {}\nTotal number of worms: {}\nNumber of unique neurons: {}".format(
             ", ".join(val_exp_datasets),
             len(df_val),
             len(unique_neurons_val),
@@ -661,20 +671,20 @@ def plot_pca_trajectory(log_dir, worms_to_plot=None):
                         marker="o",
                     )
 
-                    # Mark start point with black star
+                    # Mark end point of ground truth trace with black triangle
                     plt.scatter(
-                        reduced_ground_truth_data[0, 0],
-                        reduced_ground_truth_data[0, 1],
-                        color="black",
-                        marker="*",
-                        s=50,
-                    )
-                    # Mark end points with black triangle
-                    plt.scatter(
-                        reduced_ar_gen_data[-1, 0],
-                        reduced_ar_gen_data[-1, 1],
+                        reduced_ground_truth_data[-1, 0],
+                        reduced_ground_truth_data[-1, 1],
                         color="black",
                         marker="^",
+                        s=50,
+                    )
+                    # Mark start point of autoregressive trace with black star
+                    plt.scatter(
+                        reduced_ar_gen_data[0, 0],
+                        reduced_ar_gen_data[0, 1],
+                        color="black",
+                        marker="*",
                         s=50,
                     )
 
@@ -968,7 +978,7 @@ def experiment_parameter(exp_dir, key):
         xaxis = "Batch size"
 
     if key == "seq_len":
-        # Sequence length used for training the models
+        # Sequence length used for training the model
         pipeline_info = OmegaConf.load(os.path.join(exp_dir, "pipeline_info.yaml"))
         value = pipeline_info.submodule.dataset.seq_len
         title = "Sequence length"
@@ -1380,7 +1390,7 @@ def plot_loss_per_dataset(log_dir, mode="validation"):
     ax.legend(loc="upper right")
 
     props = dict(boxstyle="round", facecolor="white", alpha=0.5)
-    textstr = "Datasets used for training: \n{}".format(", ".join(train_dataset_names))
+    textstr = "Source datasets used for training: \n{}".format(", ".join(train_dataset_names))
     ax.text(
         0.02,
         0.95,

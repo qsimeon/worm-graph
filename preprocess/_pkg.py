@@ -26,6 +26,7 @@ from scipy.ndimage import gaussian_filter1d
 from torch_geometric.data import Data, download_url
 from sklearn.preprocessing import MinMaxScaler, StandardScaler
 from torch_geometric.utils import coalesce, to_dense_adj, dense_to_sparse
+
 # Local libraries
 from utils import (
     RAW_ZIP,
@@ -33,7 +34,7 @@ from utils import (
     RAW_FILES,
     BLOCK_SIZE,
     NUM_NEURONS,
-    NEURONS_302,
+    NEURON_LABELS,
     RAW_DATA_URL,
     RAW_DATA_DIR,
     EXPERIMENT_DATASETS,

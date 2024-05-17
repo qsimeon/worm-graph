@@ -10,7 +10,7 @@ The submodule consists of the following files:
 - `_utils.py`: Contains functions for carrying out different types of data analysis.
 - `_main.py`: Contains the pipeline to execute an analysis routine.
 
-This submodule uses the `data` and `models` submodules for loading the data and defining models to analyze.
+This submodule uses the `data` and `model` submodules for loading the data and defining model to analyze.
 
 ## Usage
 

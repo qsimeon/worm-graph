@@ -355,7 +355,7 @@ def loss_per_dataset(
                     else criterion(output=y_base, target=Y, mask=mask)
                 )
 
-                # All models operate sequence-to-sequence
+                # All model operate sequence-to-sequence
                 y_pred = model(X, mask)
                 loss = criterion(output=y_pred, target=Y, mask=mask)
 

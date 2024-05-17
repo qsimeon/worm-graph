@@ -55,59 +55,54 @@ def plot_experiment(visualize_config: DictConfig, exp_config: DictConfig) -> Non
     """
     Plots the scaling laws for the worm neural activity dataset.
     """
-
     try:
         log_dir = visualize_config.plot_this_log_dir
-
         assert (
             log_dir is not None
-        ), "log_dir is None. Please specify a log directory to plot figures from."
-
-        # If this log is an experiment log, it contains 'exp0' directory
-        if "exp0" in os.listdir(log_dir):
+        ), "The requested `visualize_config.plot_this_log_dir` is None.\n\t Please specify a log directory to plot figures from."
+        # Pattern to match 'exp' followed by an integer
+        pattern = re.compile(r"^exp(\d+)$")
+        condition = lambda: any(pattern.match(item) for item in os.listdir(log_dir))
+        # If this log is an experiment log, it will contain a 'exp{N}' folder
+        if condition():
             exp_log_dir = log_dir
         else:
-            # One directory up if inside any 'expN' directory
+            # Move one directory level up if inside any 'exp{N}' directory
             log_dir = os.path.dirname(log_dir)
-            if "exp0" in os.listdir(log_dir):
+            if condition():
                 exp_log_dir = log_dir
             else:
                 logger.info(
                     f"Log directory {log_dir} is not an experiment log. Skipping experiment plots."
                 )
                 return None
-
+        # Why is this failing? What is the correct `exp_log_dir`?
+        logger.info(f"Accessing the experiment log directory {exp_log_dir}.")
         # Create directory to store experiment plots
         exp_plot_dir = os.path.join(exp_log_dir, "exp_plots")
         os.makedirs(exp_plot_dir, exist_ok=True)
-
         # Get experiment key
         pipeline_info_exp0 = OmegaConf.load(os.path.join(exp_log_dir, "exp0", "pipeline_info.yaml"))
         exp_key = pipeline_info_exp0.experiment.key
-
         value, title, xaxis = experiment_parameter(os.path.join(exp_log_dir, "exp0"), key=exp_key)
         if value is None:
             logger.info(
                 f"Experiment {exp_key} not found in {exp_log_dir}. Skipping experiment plots."
             )
             return None
-
         logger.info(f"Plotting experiment {exp_key}.")
-
         # Plot loss curves
         plot_experiment_losses(
             exp_log_dir=exp_log_dir,
             exp_key=exp_key,
             exp_plot_dir=exp_plot_dir,
         )
-
         # Plot summary statistics
         plot_experiment_summaries(
             exp_log_dir=exp_log_dir,
             exp_key=exp_key,
             exp_plot_dir=exp_plot_dir,
         )
-
         # Plot validation loss per individual dataset
         plot_experiment_loss_per_dataset(
             exp_log_dir=exp_log_dir,
@@ -115,7 +110,6 @@ def plot_experiment(visualize_config: DictConfig, exp_config: DictConfig) -> Non
             exp_plot_dir=exp_plot_dir,
             mode="validation",
         )
-
     except Exception as e:
         logger.info(f"Not all experiments are finished. Skipping for now.")
         # Logging just the exception type and message
