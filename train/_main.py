@@ -153,8 +153,10 @@ def train_model(
             Y_pred = model(X_train, mask_train)
             train_loss = criterion(output=Y_pred, target=Y_train, mask=mask_train)
             ### DEBUG ###
-            if math.isnan(train_loss.item()):
-                print(f"Train loss: {train_loss.item()} | Train baseline: {train_baseline.item()}")
+            if batch_idx == 0 and math.isnan(train_loss.item()):
+                print(
+                    f"DEBUG Train loss: {train_loss.item()} | Train baseline: {train_baseline.item()}"
+                )  # DEBUG
             ### DEBUG ###
             # Backpropagation.
             if epoch > 0:  # skip first epoch to get tabula rasa loss
