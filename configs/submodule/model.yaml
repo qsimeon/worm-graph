@@ -1,6 +1,6 @@
 # Build model from scratch
 model:
-  type: HippoSSM # options: NaivePredictor, LinearRegression, FeatureFFNN, NetworkLSTM, HippoSSM, NetworkCTRNN, LiquidCfC, PureAttention, NeuralTransformer
+  type: FeatureFFNN # options: NaivePredictor, LinearRegression, FeatureFFNN, NetworkLSTM, HippoSSM, NetworkCTRNN, LiquidCfC, PureAttention, NeuralTransformer
   input_size: null # number of neurons in the nervous system (for hermaphrodite C. elegans this is 302 - or 300 if excluding CANL/R)
   hidden_size: 256 # options: int > 0 (Note: not used by the LinearRegression model)
   loss: MSE # options: MSE, MASE, Huber, L1, Poisson

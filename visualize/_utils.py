@@ -253,7 +253,7 @@ def plot_frequency_distribution(data, ax, title, dt=0.5):
 
 
 def plot_dataset_info(log_dir):
-    # Map the 302 C. elgans neurons to their standard slot/index
+    # Map the ~300 C. elgans neurons to their standard slot/index
     neuron_slot_mapping = {neuron: slot for slot, neuron in enumerate(NEURON_LABELS)}
     # Train dataset
     df_train = pd.read_csv(
@@ -268,7 +268,7 @@ def plot_dataset_info(log_dir):
         flattened_neurons_train, return_counts=True
     )
     # Standard sorting
-    standard_counts_train = np.zeros(302, dtype=int)
+    standard_counts_train = np.zeros(NUM_NEURONS, dtype=int)
     neuron_idx = [neuron_slot_mapping[neuron] for neuron in unique_neurons_train]
     standard_counts_train[neuron_idx] = neuron_counts_train
     # Get unique datasets
@@ -287,7 +287,7 @@ def plot_dataset_info(log_dir):
     # Now use np.unique on this flattened list
     unique_neurons_val, neuron_counts_val = np.unique(flattened_neurons_val, return_counts=True)
     # Standard sorting
-    standard_counts_val = np.zeros(302, dtype=int)
+    standard_counts_val = np.zeros(NUM_NEURONS, dtype=int)
     neuron_idx_val = [neuron_slot_mapping[neuron] for neuron in unique_neurons_val]
     standard_counts_val[neuron_idx_val] = neuron_counts_val
     # Get unique datasets

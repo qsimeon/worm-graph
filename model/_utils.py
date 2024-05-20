@@ -652,8 +652,8 @@ class Model(torch.nn.Module):
         # Name of original loss function
         self.loss_name = self.loss.__name__[:-4]
         # Setup
-        self.input_size = input_size  # Number of neurons (302)
-        self.output_size = input_size  # Number of neurons (302)
+        self.input_size = input_size  # Number of neurons (NUM_NEURONS)
+        self.output_size = input_size  # Number of neurons (NUM_NEURONS)
         # NOTE: The output_size is same as the input_size because the model is a self-supervised autoencoder.
         self.hidden_size = hidden_size if hidden_size is not None else input_size
         self.l1_norm_reg_param = l1_norm_reg_param

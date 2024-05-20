@@ -57,7 +57,7 @@ submodule:
 
   # Build model from scratch
   model:
-    input_size: 302
+    input_size: null
     hidden_size: 256
     loss: MSE
     l1_norm_reg_param: 0.0
