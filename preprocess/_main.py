@@ -52,6 +52,9 @@ def process_data(preprocess_config: DictConfig) -> None:
         logger.info("Neural data already preprocessed.")
 
     # Preprocess the connectome data if not already done
+    # TODO remove after testing helper functions
+    # raw_dir = os.path.join(ROOT_DIR, "data/raw")
+    # preprocess_connectome(raw_dir=raw_dir, raw_files=RAW_FILES, pub="white_1986_jse")
     if not os.path.exists(os.path.join(ROOT_DIR, "data/processed/connectome/graph_tensors.pt")):
         logger.info("Preprocessing C. elegans connectome...")
         raw_dir = os.path.join(ROOT_DIR, "data/raw")
