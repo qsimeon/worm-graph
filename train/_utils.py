@@ -23,7 +23,7 @@ class EarlyStopping:
             if self.best_model is None:
                 self.best_model = model
             if self.best_loss is None:
-                self.best_loss = float('inf')
+                self.best_loss = float("inf")
                 self.best_model = model
             ## DEBUG ###
             # Return early immediately if the validation loss is not a valid number?

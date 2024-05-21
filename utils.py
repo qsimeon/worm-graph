@@ -43,10 +43,11 @@ RAW_DATA_DIR = os.path.join(ROOT_DIR, "data", "raw")
 LOGS_DIR = os.path.join(ROOT_DIR, "logs")
 
 # List of all hermaphrodite neuron names
-if os.path.exists(RAW_DATA_DIR):
+labels_file = os.path.join(RAW_DATA_DIR, "neuron_labels.txt")
+if os.path.exists(labels_file):
     NEURON_LABELS = sorted(
         pd.read_csv(
-            os.path.join(RAW_DATA_DIR, "neuron_labels.txt"),
+            labels_file,
             sep=" ",
             header=None,
             names=["neuron"],
@@ -57,7 +58,6 @@ else:
     NEURON_LABELS = [ 
             # References: (1) https://www.wormatlas.org/neurons/Individual%20Neurons/Neuronframeset.html 
             #             (2) https://www.wormatlas.org/NeuronNames.htm
-            # NOTE: As of Cook et al. (2019), the CANL and CANR are considered to be end-organs, not neurons.
             "ADAL", "ADAR", "ADEL", "ADER", "ADFL", "ADFR", "ADLL", "ADLR", "AFDL", "AFDR",
             "AIAL", "AIAR", "AIBL", "AIBR", "AIML", "AIMR", "AINL", "AINR", "AIYL", "AIYR",
             "AIZL", "AIZR", "ALA", "ALML", "ALMR", "ALNL", "ALNR", "AQR", "AS1", "AS10",
@@ -66,7 +66,7 @@ else:
             "AUAL", "AUAR", "AVAL", "AVAR", "AVBL", "AVBR", "AVDL", "AVDR", "AVEL", "AVER",
             "AVFL", "AVFR", "AVG", "AVHL", "AVHR", "AVJL", "AVJR", "AVKL", "AVKR", "AVL",
             "AVM", "AWAL", "AWAR", "AWBL", "AWBR", "AWCL", "AWCR", "BAGL", "BAGR", "BDUL",
-            "BDUR", "CANL", "CANR", "CEPDL", "CEPDR", "CEPVL", "CEPVR", "DA1", "DA2", "DA3",
+            "BDUR", "CEPDL", "CEPDR", "CEPVL", "CEPVR", "DA1", "DA2", "DA3",
             "DA4", "DA5", "DA6", "DA7", "DA8", "DA9", "DB1", "DB2", "DB3", "DB4", "DB5",
             "DB6", "DB7", "DD1", "DD2", "DD3", "DD4", "DD5", "DD6", "DVA", "DVB", "DVC",
             "FLPL", "FLPR", "HSNL", "HSNR", "I1L", "I1R", "I2L", "I2R", "I3", "I4", "I5",
@@ -88,12 +88,13 @@ else:
             "VA9", "VB1", "VB10", "VB11", "VB2", "VB3", "VB4", "VB5", "VB6", "VB7", "VB8",
             "VB9", "VC1", "VC2", "VC3", "VC4", "VC5", "VC6", "VD1", "VD10", "VD11", "VD12",
             "VD13", "VD2", "VD3", "VD4", "VD5", "VD6", "VD7", "VD8", "VD9"
-        ]
+        ] # "CANL", "CANR"
+    # NOTE: As of Cook et al. (2019), the CANL and CANR are considered to be end-organs, not neurons.
     # fmt: on
 
     # Write to a text file called "neuron_labels.txt" using pandas
     pd.DataFrame(NEURON_LABELS).to_csv(
-        os.path.join(RAW_DATA_DIR, "neuron_labels.txt"), sep=" ", header=False, index=False
+        labels_file, sep=" ", header=False, index=False
     )
 
 NUM_NEURONS = len(NEURON_LABELS)  # number of neurons in the model organism

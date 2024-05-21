@@ -253,7 +253,7 @@ def plot_frequency_distribution(data, ax, title, dt=0.5):
 
 
 def plot_dataset_info(log_dir):
-    # Map the 302 C. elgans neurons to their standard slot/index
+    # Map the ~300 C. elgans neurons to their standard slot/index
     neuron_slot_mapping = {neuron: slot for slot, neuron in enumerate(NEURON_LABELS)}
     # Train dataset
     df_train = pd.read_csv(
@@ -268,7 +268,7 @@ def plot_dataset_info(log_dir):
         flattened_neurons_train, return_counts=True
     )
     # Standard sorting
-    standard_counts_train = np.zeros(302, dtype=int)
+    standard_counts_train = np.zeros(NUM_NEURONS, dtype=int)
     neuron_idx = [neuron_slot_mapping[neuron] for neuron in unique_neurons_train]
     standard_counts_train[neuron_idx] = neuron_counts_train
     # Get unique datasets
@@ -287,7 +287,7 @@ def plot_dataset_info(log_dir):
     # Now use np.unique on this flattened list
     unique_neurons_val, neuron_counts_val = np.unique(flattened_neurons_val, return_counts=True)
     # Standard sorting
-    standard_counts_val = np.zeros(302, dtype=int)
+    standard_counts_val = np.zeros(NUM_NEURONS, dtype=int)
     neuron_idx_val = [neuron_slot_mapping[neuron] for neuron in unique_neurons_val]
     standard_counts_val[neuron_idx_val] = neuron_counts_val
     # Get unique datasets
@@ -1062,18 +1062,16 @@ def plot_experiment_losses(exp_log_dir, exp_key, exp_plot_dir=None):
     Plot train and validation loss curves and baseline losses for all experiments.
 
     Args:
-    - exp_log_dir (str): path to directory containing experiment logs
-    - exp_key (str): key to identify the experiment
-    - exp_plot_dir (str or None): path to directory to save the plot.
+        - exp_log_dir (str): path to directory containing experiment logs
+        - exp_key (str): key to identify the experiment
+        - exp_plot_dir (str or None): path to directory to save the plot.
 
     Returns:
-    - None
+        - None
     """
-
     # Create figure
     fig, ax = plt.subplots(1, 2, figsize=(10, 8))
     sns.set_style("whitegrid")
-
     # Store parameters, epochs and losses for plotting
     parameters = []
     epochs = []
@@ -1081,42 +1079,34 @@ def plot_experiment_losses(exp_log_dir, exp_key, exp_plot_dir=None):
     train_baselines = []
     val_losses = []
     val_baselines = []
-
     # Loop over trials/repetitions of the experiment
     for file in sorted(os.listdir(exp_log_dir), key=lambda x: x.strip("exp_")):
         # Skip if not in a trial/repetition directory
         if not file.startswith("exp") or file.startswith("exp_"):
             continue
-
         # Get experiment directory
         exp_dir = os.path.join(exp_log_dir, file)
-
         # Load train metrics if avalibale
         metrics_csv = os.path.join(exp_dir, "train", "train_metrics.csv")
         if os.path.exists(metrics_csv):
             # Get epochs and loss values
             df = pd.read_csv(metrics_csv)
-
             # Store all loss values to be plotted
             epochs.append(df["epoch"])
             train_losses.append(df["train_loss"])
             train_baselines.append(df["train_baseline"])
             val_losses.append(df["val_loss"])
             val_baselines.append(df["val_baseline"])
-
             # Get parameter values
             exp_param, exp_title, exp_xaxis = experiment_parameter(exp_dir, key=exp_key)
             parameters.append(exp_param)
-
             # Simply return if dealing with string parameters
             if isinstance(exp_param, str):
                 return fig, ax
             # TODO: Find a way to plot something with string parameters
-
         # Skip otherwise
         else:
             continue
-
     # Get indices for sorting parameters and sort all the lists
     sorted_indices = np.argsort(parameters)
     parameters = [parameters[i] for i in sorted_indices]
@@ -1125,16 +1115,13 @@ def plot_experiment_losses(exp_log_dir, exp_key, exp_plot_dir=None):
     train_baselines = [train_baselines[i] for i in sorted_indices]
     val_losses = [val_losses[i] for i in sorted_indices]
     val_baselines = [val_baselines[i] for i in sorted_indices]
-
     # Normalize the exp_param values for colormap
     norm = Normalize(vmin=min(parameters), vmax=max(parameters))
     scalar_map = cm.ScalarMappable(norm=norm, cmap=cm.YlOrRd)
-
     # Loop over parameter values and plot losses
     for i, param_val in enumerate(parameters):
         # Get color for current parameter value
         color_val = scalar_map.to_rgba(param_val)
-
         # Plot loss and baseline
         ax[0].plot(
             epochs[i],
@@ -1162,30 +1149,24 @@ def plot_experiment_losses(exp_log_dir, exp_key, exp_plot_dir=None):
             color="black",
             linestyle="--",
         )
-
     # Set x-axes to only use integer values
     ax[0].xaxis.set_major_locator(ticker.MaxNLocator(integer=True))
     ax[1].xaxis.set_major_locator(ticker.MaxNLocator(integer=True))
-
     # Set y-axes to use log-scale
     ax[0].set_yscale("log")
     ax[1].set_yscale("log")
-
     # Set loss labels
     ax[0].set_xlabel("Epoch", fontsize=12)
     ax[0].set_ylabel("Train loss", fontsize=12)
     ax[1].set_xlabel("Epoch", fontsize=12)
     ax[1].set_ylabel("Validation loss", fontsize=12)
-
     # Get handles and labels for the legend
     handles, labels = ax[0].get_legend_handles_labels()
-
     # Randomly sample a subset of handles and labels (up to 10)
     num_samples = min(10, len(handles))  # Ensure not to sample more than available
     sampled_indices = np.random.choice(len(handles), num_samples, replace=False)
     sampled_handles = [handles[i] for i in sampled_indices]
     sampled_labels = [labels[i] for i in sampled_indices]
-
     # Sort the labels and then sort handles accordingly
     sampled_labels, sampled_handles = zip(
         *sorted(
@@ -1195,22 +1176,18 @@ def plot_experiment_losses(exp_log_dir, exp_key, exp_plot_dir=None):
             ),
         )
     )
-
     # Set the legend with the sampled subset
     legend = ax[0].legend(sampled_handles, sampled_labels, fontsize=10, loc="best")
     legend.set_title(exp_xaxis)
-
     # Set loss figure title
     fig.suptitle(f"{exp_title} experiment", fontsize=14)
     plt.tight_layout()
-
     # Save or display the plot
     if exp_plot_dir:
         fig.savefig(os.path.join(exp_plot_dir, "exp_loss_curves.png"), dpi=300)
         plt.close()
     else:  # exp_plot_dir is None
         plt.show()
-
     # Return the figure and axes
     return fig, ax
 
@@ -1288,7 +1265,7 @@ def plot_experiment_summaries(exp_log_dir, exp_key, exp_plot_dir=None):
     param_range = range(len(parameters))  # numeric range for plots
 
     # Validation loss bar plot
-    axes[0].bar(param_range, val_losses, color="blue", label="Min Validation Loss")
+    axes[0].bar(param_range, val_losses, color="orange", label="Min Validation Loss")
     for baseline in val_baselines:
         axes[0].axhline(y=baseline, color="black", linestyle="--", label="Validation Baseline")
     axes[0].set_xticks(param_range)
@@ -1299,7 +1276,7 @@ def plot_experiment_summaries(exp_log_dir, exp_key, exp_plot_dir=None):
     axes[0].set_yscale("log")
 
     # Training loss bar plot
-    axes[1].bar(param_range, train_losses, color="orange", label="Min Training Loss")
+    axes[1].bar(param_range, train_losses, color="blue", label="Min Training Loss")
     for baseline in train_baselines:
         axes[1].axhline(y=baseline, color="black", linestyle="--", label="Training Baseline")
     axes[1].set_xticks(param_range)

@@ -141,6 +141,7 @@ def get_presaved_datasets(url, file):
     extract_zip(presave_path, folder=data_path, delete_zip=True)
     return None
 
+
 ### DEBUG ###
 
 def preprocess_common_tasks(raw_dir, x, y, edge_index, edge_attr):
@@ -1187,7 +1188,7 @@ def smooth_data_preprocess(calcium_data, time_in_seconds, smooth_method, **kwarg
 
 
 def reshape_calcium_data(worm_dataset):
-    """Reorganizes calcium data into a standard organized matrix with shape (max_timesteps, 302).
+    """Reorganizes calcium data into a standard organized matrix with shape (max_timesteps, NUM_NEURONS).
     Also creates neuron masks and mappings of neuron labels to indices in the data.
     Converts the data to torch tensors.
 
@@ -1431,7 +1432,7 @@ class CalciumDataReshaper:
             'idx' refers to the index of the neuron in the original dataset.
                 0 < idx < N, where N is however many neurons were recorded.
             'slot' refers to the index of the neuron in the reshaped dataset.
-                0 < slot < 302, where 302 is num. neurons in hermaphrodite C. elegans.
+                0 < slot < NUM_NEURONS, the number of neurons in hermaphrodite C. elegans.
         """
         self.worm_dataset = worm_dataset
         self.named_neuron_to_idx = dict()
