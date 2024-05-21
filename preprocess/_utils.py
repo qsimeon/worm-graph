@@ -1024,6 +1024,7 @@ def preprocess_connectome(raw_dir, raw_files, pub=None):
         preprocess_cook_2019(raw_dir)
     else:
         # preprocess_default(raw_dir, raw_files)
+        preprocess_witvliet_2020_7(raw_dir)
         pass
 
     return None
