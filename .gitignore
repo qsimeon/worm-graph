@@ -176,3 +176,7 @@ data/worm_data*
 data/processed/neural/.processed
 data/processed/connectome/graph_tensors.pt
 model/*.pt
+
+# corr figs
+corr_figs
+corr_data

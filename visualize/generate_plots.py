@@ -46,6 +46,8 @@ seperated_files = [[]]
 
 curr_set = 0
 
+datasets = ["Kato2015", "Nichols2017", "Skora2018", "Kaplan2020", "Yemini2021", "Uzel2022", "Lin2023", "Leifer2023", "Flavell2023"]
+
 for file in worm_files:
     file_set = int(file.split("_")[1])
     if file_set != curr_set:
@@ -88,14 +90,14 @@ for set_idx, files in enumerate(seperated_files):
                         plt.figure()
                         plt.ylim(-1, 1)
                         
-                        plt.title(f"Dataset {set_idx}: {neuron1}_{neuron2}")
+                        plt.title(f"Dataset {datasets[set_idx]}: {neuron1}_{neuron2}")
                         plt.xlabel("Lag")
                         plt.ylabel("Correlation Score")
                         
                         mean = np.mean(filtered_data[i*len(NEURONS_302)+j], axis=0)
                         std = np.std(filtered_data[i*len(NEURONS_302)+j], axis=0)
 
-                        plt.plot(np.arange(0, 100, 1), mean, linestyle='dashed', marker='v', alpha=1.0)
+                        plt.plot(np.arange(0, 100, 1), mean, linewidth=5.0, alpha=1.0)
 
                         for k in filtered_data[i*len(NEURONS_302)+j]:
                             plt.plot(np.arange(0, 100, 1), k, alpha=0.3)

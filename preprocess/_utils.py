@@ -142,6 +142,40 @@ def get_presaved_datasets(url, file):
     return None
 
 ### DEBUG ###
+
+def preprocess_common_tasks(raw_dir, x, y, edge_index, edge_attr):
+    idx_to_neuron = dict(zip([i for i in range(len(NEURON_LABELS))], NEURON_LABELS))
+
+    # Basic attributes of PyG Data object
+    graph = Data(x=x, edge_index=edge_index, edge_attr=edge_attr, y=y)
+
+    # Some additional attributes to the graph
+    neurons_all = list(idx_to_neuron.values())
+    df = pd.read_csv(
+        os.path.join(raw_dir, "LowResAtlasWithHighResHeadsAndTails.csv"),
+        header=None,
+        names=["neuron", "x", "y", "z"],
+    )
+    df = df[df.neuron.isin(neurons_all)]
+    valids = set(df.neuron)
+    keys = [k for k in idx_to_neuron if idx_to_neuron[k] in valids]
+    values = list(df[df.neuron.isin(valids)][["x", "z"]].values)
+
+    # Initialize position dict then replace with atlas coordinates if available
+    pos = dict(
+        zip(
+            np.arange(graph.num_nodes),
+            np.zeros(shape=(graph.num_nodes, 2), dtype=np.float32),
+        )
+    )
+    for k, v in zip(keys, values):
+        pos[k] = v
+
+    # Assign each node its global node index
+    n_id = torch.arange(graph.num_nodes)
+    
+    return pos, n_id
+
 def preprocess_openworm(raw_dir):
     df = pd.read_csv(os.path.join(raw_dir, "OpenWormConnectome.csv"))
         
@@ -181,7 +215,6 @@ def preprocess_openworm(raw_dir):
     edge_index = torch.tensor([[neuron_to_idx[neuron1], neuron_to_idx[neuron2]] for neuron1, neuron2 in edges]).T
     node_type = {0: 'Type1', 1: 'Type2'}
     num_classes = len(node_type)
-    n_id = torch.tensor([i for i in range(len(NEURON_LABELS))])
 
     # for x, y values
     # Neurons involved in chemical synapses
@@ -197,14 +230,9 @@ def preprocess_openworm(raw_dir):
     # num_classes = len(le.classes_)
     y = torch.tensor(le.transform(Gsyn_nodes.Group.values), dtype=torch.int32)
     x = torch.randn(len(NEURON_LABELS), 1024, dtype=torch.float)
-
-    temp_graph_tensors = torch.load(
-        os.path.join(ROOT_DIR, "data", "processed", "connectome", "graph_tensors.pt")
-    )
-
-    # pos = dict(zip([i for i in range(len(NEURON_LABELS))], [np.random.randn(2) for i in range(len(NEURON_LABELS))]))
-    pos = temp_graph_tensors["pos"]
+    
     edge_attr = torch.tensor(edge_attr)
+    pos, n_id = preprocess_common_tasks(raw_dir, x, y, edge_index, edge_attr)
 
     graph_tensors = {
         "edge_index": edge_index,
@@ -220,7 +248,7 @@ def preprocess_openworm(raw_dir):
 
     torch.save(
         graph_tensors,
-        os.path.join(ROOT_DIR, "data", "processed", "connectome", "open_worm_graph_tensors.pt"),
+        os.path.join(ROOT_DIR, "data", "processed", "connectome", "graph_tensors.pt"),
     )
 
 def preprocess_witvliet_2020_7(raw_dir):
@@ -261,7 +289,6 @@ def preprocess_witvliet_2020_7(raw_dir):
     edge_index = torch.tensor([[neuron_to_idx[neuron1], neuron_to_idx[neuron2]] for neuron1, neuron2 in edges]).T
     node_type = {0: 'Type1', 1: 'Type2'}
     num_classes = len(node_type)
-    n_id = torch.tensor([i for i in range(len(NEURON_LABELS))])
 
     # for x, y values
     # Neurons involved in chemical synapses
@@ -277,13 +304,9 @@ def preprocess_witvliet_2020_7(raw_dir):
     # num_classes = len(le.classes_)
     y = torch.tensor(le.transform(Gsyn_nodes.Group.values), dtype=torch.int32)
     x = torch.randn(len(NEURON_LABELS), 1024, dtype=torch.float)
-
-    temp_graph_tensors = torch.load(
-        os.path.join(ROOT_DIR, "data", "processed", "connectome", "graph_tensors.pt")
-    )
     
-    pos = temp_graph_tensors["pos"]
     edge_attr = torch.tensor(edge_attr)
+    pos, n_id = preprocess_common_tasks(raw_dir, x, y, edge_index, edge_attr)
 
     graph_tensors = {
         "edge_index": edge_index,
@@ -299,7 +322,7 @@ def preprocess_witvliet_2020_7(raw_dir):
 
     torch.save(
         graph_tensors,
-        os.path.join(ROOT_DIR, "data", "processed", "connectome", "witvliet_2020_7_graph_tensors.pt"),
+        os.path.join(ROOT_DIR, "data", "processed", "connectome", "graph_tensors.pt"),
     )
 
 def preprocess_witvliet_2020_8(raw_dir):
@@ -340,7 +363,6 @@ def preprocess_witvliet_2020_8(raw_dir):
     edge_index = torch.tensor([[neuron_to_idx[neuron1], neuron_to_idx[neuron2]] for neuron1, neuron2 in edges]).T
     node_type = {0: 'Type1', 1: 'Type2'}
     num_classes = len(node_type)
-    n_id = torch.tensor([i for i in range(len(NEURON_LABELS))])
 
     # for x, y values
     # Neurons involved in chemical synapses
@@ -356,13 +378,9 @@ def preprocess_witvliet_2020_8(raw_dir):
     # num_classes = len(le.classes_)
     y = torch.tensor(le.transform(Gsyn_nodes.Group.values), dtype=torch.int32)
     x = torch.randn(len(NEURON_LABELS), 1024, dtype=torch.float)
-
-    temp_graph_tensors = torch.load(
-        os.path.join(ROOT_DIR, "data", "processed", "connectome", "graph_tensors.pt")
-    )
     
-    pos = temp_graph_tensors["pos"]
     edge_attr = torch.tensor(edge_attr)
+    pos, n_id = preprocess_common_tasks(raw_dir, x, y, edge_index, edge_attr)
 
     graph_tensors = {
         "edge_index": edge_index,
@@ -378,7 +396,7 @@ def preprocess_witvliet_2020_8(raw_dir):
 
     torch.save(
         graph_tensors,
-        os.path.join(ROOT_DIR, "data", "processed", "connectome", "witvliet_2020_8_graph_tensors.pt"),
+        os.path.join(ROOT_DIR, "data", "processed", "connectome", "graph_tensors.pt"),
     )
 
 def preprocess_cook_2019(raw_dir):
@@ -423,7 +441,6 @@ def preprocess_cook_2019(raw_dir):
     edge_index = torch.tensor([[neuron_to_idx[neuron1], neuron_to_idx[neuron2]] for neuron1, neuron2 in edges]).T
     node_type = {0: 'Type1', 1: 'Type2'}
     num_classes = len(node_type)
-    n_id = torch.tensor([i for i in range(len(NEURON_LABELS))])
 
     # for x, y values
     # Neurons involved in chemical synapses
@@ -440,13 +457,8 @@ def preprocess_cook_2019(raw_dir):
     y = torch.tensor(le.transform(Gsyn_nodes.Group.values), dtype=torch.int32)
     x = torch.randn(len(NEURON_LABELS), 1024, dtype=torch.float)
 
-    temp_graph_tensors = torch.load(
-        os.path.join(ROOT_DIR, "data", "processed", "connectome", "graph_tensors.pt")
-    )
-
-    # pos = dict(zip([i for i in range(len(NEURON_LABELS))], [np.random.randn(2) for i in range(len(NEURON_LABELS))]))
-    pos = temp_graph_tensors["pos"]
     edge_attr = torch.tensor(edge_attr)
+    pos, n_id = preprocess_common_tasks(raw_dir, x, y, edge_index, edge_attr)
 
     graph_tensors = {
         "edge_index": edge_index,
@@ -462,7 +474,7 @@ def preprocess_cook_2019(raw_dir):
 
     torch.save(
         graph_tensors,
-        os.path.join(ROOT_DIR, "data", "processed", "connectome", "cook_2019_graph_tensors.pt"),
+        os.path.join(ROOT_DIR, "data", "processed", "connectome", "graph_tensors.pt"),
     )
 
 def preprocess_white_1986_whole(raw_dir):
@@ -502,7 +514,6 @@ def preprocess_white_1986_whole(raw_dir):
     edge_index = torch.tensor([[neuron_to_idx[neuron1], neuron_to_idx[neuron2]] for neuron1, neuron2 in edges]).T
     node_type = {0: 'Type1', 1: 'Type2'}
     num_classes = len(node_type)
-    n_id = torch.tensor([i for i in range(len(NEURON_LABELS))])
 
     # for x, y values
     # Neurons involved in chemical synapses
@@ -519,13 +530,8 @@ def preprocess_white_1986_whole(raw_dir):
     y = torch.tensor(le.transform(Gsyn_nodes.Group.values), dtype=torch.int32)
     x = torch.randn(len(NEURON_LABELS), 1024, dtype=torch.float)
 
-    temp_graph_tensors = torch.load(
-        os.path.join(ROOT_DIR, "data", "processed", "connectome", "graph_tensors.pt")
-    )
-
-    # pos = dict(zip([i for i in range(len(NEURON_LABELS))], [np.random.randn(2) for i in range(len(NEURON_LABELS))]))
-    pos = temp_graph_tensors["pos"]
     edge_attr = torch.tensor(edge_attr)
+    pos, n_id = preprocess_common_tasks(raw_dir, x, y, edge_index, edge_attr)
 
     graph_tensors = {
         "edge_index": edge_index,
@@ -541,7 +547,7 @@ def preprocess_white_1986_whole(raw_dir):
 
     torch.save(
         graph_tensors,
-        os.path.join(ROOT_DIR, "data", "processed", "connectome", "white_1986_whole_graph_tensors.pt"),
+        os.path.join(ROOT_DIR, "data", "processed", "connectome", "graph_tensors.pt"),
     )
 
 def preprocess_white_1986_n2u(raw_dir):
@@ -581,7 +587,6 @@ def preprocess_white_1986_n2u(raw_dir):
     edge_index = torch.tensor([[neuron_to_idx[neuron1], neuron_to_idx[neuron2]] for neuron1, neuron2 in edges]).T
     node_type = {0: 'Type1', 1: 'Type2'}
     num_classes = len(node_type)
-    n_id = torch.tensor([i for i in range(len(NEURON_LABELS))])
 
     # for x, y values
     # Neurons involved in chemical synapses
@@ -597,14 +602,9 @@ def preprocess_white_1986_n2u(raw_dir):
     # num_classes = len(le.classes_)
     y = torch.tensor(le.transform(Gsyn_nodes.Group.values), dtype=torch.int32)
     x = torch.randn(len(NEURON_LABELS), 1024, dtype=torch.float)
-
-    temp_graph_tensors = torch.load(
-        os.path.join(ROOT_DIR, "data", "processed", "connectome", "graph_tensors.pt")
-    )
-
-    # pos = dict(zip([i for i in range(len(NEURON_LABELS))], [np.random.randn(2) for i in range(len(NEURON_LABELS))]))
-    pos = temp_graph_tensors["pos"]
+    
     edge_attr = torch.tensor(edge_attr)
+    pos, n_id = preprocess_common_tasks(raw_dir, x, y, edge_index, edge_attr)
 
     graph_tensors = {
         "edge_index": edge_index,
@@ -620,7 +620,7 @@ def preprocess_white_1986_n2u(raw_dir):
 
     torch.save(
         graph_tensors,
-        os.path.join(ROOT_DIR, "data", "processed", "connectome", "white_1986_n2u_graph_tensors.pt"),
+        os.path.join(ROOT_DIR, "data", "processed", "connectome", "graph_tensors.pt"),
     )
 
 def preprocess_white_1986_jsh(raw_dir):
@@ -660,7 +660,6 @@ def preprocess_white_1986_jsh(raw_dir):
     edge_index = torch.tensor([[neuron_to_idx[neuron1], neuron_to_idx[neuron2]] for neuron1, neuron2 in edges]).T
     node_type = {0: 'Type1', 1: 'Type2'}
     num_classes = len(node_type)
-    n_id = torch.tensor([i for i in range(len(NEURON_LABELS))])
 
     # for x, y values
     # Neurons involved in chemical synapses
@@ -677,13 +676,8 @@ def preprocess_white_1986_jsh(raw_dir):
     y = torch.tensor(le.transform(Gsyn_nodes.Group.values), dtype=torch.int32)
     x = torch.randn(len(NEURON_LABELS), 1024, dtype=torch.float)
 
-    temp_graph_tensors = torch.load(
-        os.path.join(ROOT_DIR, "data", "processed", "connectome", "graph_tensors.pt")
-    )
-
-    # pos = dict(zip([i for i in range(len(NEURON_LABELS))], [np.random.randn(2) for i in range(len(NEURON_LABELS))]))
-    pos = temp_graph_tensors["pos"]
     edge_attr = torch.tensor(edge_attr)
+    pos, n_id = preprocess_common_tasks(raw_dir, x, y, edge_index, edge_attr)
 
     graph_tensors = {
         "edge_index": edge_index,
@@ -699,7 +693,7 @@ def preprocess_white_1986_jsh(raw_dir):
 
     torch.save(
         graph_tensors,
-        os.path.join(ROOT_DIR, "data", "processed", "connectome", "white_1986_jsh_graph_tensors.pt"),
+        os.path.join(ROOT_DIR, "data", "processed", "connectome", "graph_tensors.pt"),
     )
 
 def preprocess_white_1986_jse(raw_dir):
@@ -739,7 +733,6 @@ def preprocess_white_1986_jse(raw_dir):
     edge_index = torch.tensor([[neuron_to_idx[neuron1], neuron_to_idx[neuron2]] for neuron1, neuron2 in edges]).T
     node_type = {0: 'Type1', 1: 'Type2'}
     num_classes = len(node_type)
-    n_id = torch.tensor([i for i in range(len(NEURON_LABELS))])
 
     # for x, y values
     # Neurons involved in chemical synapses
@@ -756,13 +749,8 @@ def preprocess_white_1986_jse(raw_dir):
     y = torch.tensor(le.transform(Gsyn_nodes.Group.values), dtype=torch.int32)
     x = torch.randn(len(NEURON_LABELS), 1024, dtype=torch.float)
 
-    temp_graph_tensors = torch.load(
-        os.path.join(ROOT_DIR, "data", "processed", "connectome", "graph_tensors.pt")
-    )
-
-    # pos = dict(zip([i for i in range(len(NEURON_LABELS))], [np.random.randn(2) for i in range(len(NEURON_LABELS))]))
-    pos = temp_graph_tensors["pos"]
     edge_attr = torch.tensor(edge_attr)
+    pos, n_id = preprocess_common_tasks(raw_dir, x, y, edge_index, edge_attr)
 
     graph_tensors = {
         "edge_index": edge_index,
@@ -778,7 +766,7 @@ def preprocess_white_1986_jse(raw_dir):
 
     torch.save(
         graph_tensors,
-        os.path.join(ROOT_DIR, "data", "processed", "connectome", "white_1986_jse_graph_tensors.pt"),
+        os.path.join(ROOT_DIR, "data", "processed", "connectome", "graph_tensors.pt"),
     )
 
 def preprocess_default(raw_dir, raw_files):
@@ -1034,7 +1022,8 @@ def preprocess_connectome(raw_dir, raw_files, pub=None):
     elif pub == "cook_2019":
         preprocess_cook_2019(raw_dir)
     else:
-        preprocess_default(raw_dir, raw_files)
+        # preprocess_default(raw_dir, raw_files)
+        pass
 
     return None
 
