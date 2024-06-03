@@ -936,8 +936,8 @@ def preprocess_default(raw_dir, raw_files):
     df = df[df.neuron.isin(neurons_all)]
     valids = set(df.neuron)
     keys = [k for k in idx_to_neuron if idx_to_neuron[k] in valids]
-    values = list(df[df.neuron.isin(valids)][["x", "z"]].values)
-
+    # values = list(df[df.neuron.isin(valids)][["x", "z"]].values)
+    values = list(df[df.neuron.isin(valids)][["x", "y", "z"]].values)
     # Initialize position dict then replace with atlas coordinates if available
     pos = dict(
         zip(

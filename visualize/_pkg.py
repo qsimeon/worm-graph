@@ -18,6 +18,7 @@ from matplotlib import cm
 from datetime import datetime
 from matplotlib.lines import Line2D
 from sklearn.decomposition import PCA
+from mpl_toolkits.mplot3d import Axes3D
 from matplotlib.colors import Normalize
 from omegaconf import OmegaConf, DictConfig
 from sklearn.preprocessing import StandardScaler

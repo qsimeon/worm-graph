@@ -5,17 +5,23 @@ logger = logging.getLogger(__name__)
 logging.getLogger("matplotlib").setLevel(logging.WARNING)  # Suppress matplotlib logging
 
 
-def draw_connectome(network, pos=None, labels=None, plt_title="C. elegans connectome network"):
+def draw_connectome(network, pos=None, labels=None, plt_title="C. elegans connectome network", plot_3d=False):
     """
     Args:
       network: PyG Data object containing a C. elegans connectome graph.
-      pos: dict, mapping of node index to 2D coordinate.
+      pos: dict, mapping of node index to 2D or 3D coordinate.
       labels: dict, mapping of node index to neuron name.
+      plot_3d: bool, if True plots the graph in 3D, else in 2D.
     """
     # convert to networkx
     G = torch_geometric.utils.to_networkx(network)
     # create figure
-    plt.figure(figsize=(20, 10))
+    fig = plt.figure(figsize=(20, 10))
+    if plot_3d:
+        ax = fig.add_subplot(111, projection='3d')
+    else:
+        ax = fig.add_subplot(111)
+    
     ## nodes
     inter = [node for i, node in enumerate(G.nodes) if network.y[i] == 0.0]
     motor = [node for i, node in enumerate(G.nodes) if network.y[i] == 1.0]
@@ -23,6 +29,7 @@ def draw_connectome(network, pos=None, labels=None, plt_title="C. elegans connec
     pharynx = [node for i, node in enumerate(G.nodes) if network.y[i] == 3.0]
     sensory = [node for i, node in enumerate(G.nodes) if network.y[i] == 4.0]
     sexspec = [node for i, node in enumerate(G.nodes) if network.y[i] == 5.0]
+
     ## edges
     junctions = [
         edge for i, edge in enumerate(G.edges) if network.edge_attr[i, 0] > 0.0
@@ -33,103 +40,194 @@ def draw_connectome(network, pos=None, labels=None, plt_title="C. elegans connec
     ## edge weights
     gap_weights = [int(network.edge_attr[i, 0]) / 50 for i, edge in enumerate(G.edges)]
     chem_weights = [int(network.edge_attr[i, 1]) / 50 for i, edge in enumerate(G.edges)]
+
     ## metadata
     if pos is None:
         pos = network.pos
-    # pos = nx.kamada_kawai_layout(G)
     if labels is None:
         labels = network.idx_to_neuron
+
     options = {"edgecolors": "tab:gray", "node_size": 500, "alpha": 0.5}
-    ## draw nodes
-    nx.draw_networkx_edges(
-        G, pos, edgelist=junctions, width=gap_weights, alpha=0.5, edge_color="tab:blue"
-    )
-    nx.draw_networkx_edges(
-        G, pos, edgelist=synapses, width=chem_weights, alpha=0.5, edge_color="tab:red"
-    )
-    nx.draw_networkx_labels(G, pos, labels, font_size=6)
-    ## draw edges
-    nx.draw_networkx_nodes(G, pos, nodelist=inter, node_color="blue", **options)
-    nx.draw_networkx_nodes(G, pos, nodelist=motor, node_color="red", **options)
-    nx.draw_networkx_nodes(G, pos, nodelist=other, node_color="green", **options)
-    nx.draw_networkx_nodes(G, pos, nodelist=pharynx, node_color="yellow", **options)
-    nx.draw_networkx_nodes(G, pos, nodelist=sensory, node_color="magenta", **options)
-    nx.draw_networkx_nodes(G, pos, nodelist=sexspec, node_color="cyan", **options)
+
+    ## draw nodes and edges
+    def draw_nodes_edges(ax, pos, plot_3d):
+        if plot_3d:
+            def draw_3d_nodes(nodelist, color):
+                coords = [pos[node] for node in nodelist]
+                xs, ys, zs = zip(*coords)
+                ax.scatter(xs, ys, zs, c=color, **options)
+            
+            def draw_3d_edges(edgelist, color, weights):
+                for edge, weight in zip(edgelist, weights):
+                    xs, ys, zs = zip(pos[edge[0]], pos[edge[1]])
+                    ax.plot(xs, ys, zs, color=color, alpha=0.5, linewidth=weight)
+        else:
+            nx.draw_networkx_edges(
+                G, pos, edgelist=junctions, width=gap_weights, alpha=0.5, edge_color="tab:blue", ax=ax
+            )
+            nx.draw_networkx_edges(
+                G, pos, edgelist=synapses, width=chem_weights, alpha=0.5, edge_color="tab:red", ax=ax
+            )
+            nx.draw_networkx_labels(G, pos, labels, font_size=6, ax=ax)
+            nx.draw_networkx_nodes(G, pos, nodelist=inter, node_color="blue", ax=ax, **options)
+            nx.draw_networkx_nodes(G, pos, nodelist=motor, node_color="red", ax=ax, **options)
+            nx.draw_networkx_nodes(G, pos, nodelist=other, node_color="green", ax=ax, **options)
+            nx.draw_networkx_nodes(G, pos, nodelist=pharynx, node_color="yellow", ax=ax, **options)
+            nx.draw_networkx_nodes(G, pos, nodelist=sensory, node_color="magenta", ax=ax, **options)
+            nx.draw_networkx_nodes(G, pos, nodelist=sexspec, node_color="cyan", ax=ax, **options)
+        
+        if plot_3d:
+            draw_3d_edges(junctions, "tab:blue", gap_weights)
+            draw_3d_edges(synapses, "tab:red", chem_weights)
+            draw_3d_nodes(inter, "blue")
+            draw_3d_nodes(motor, "red")
+            draw_3d_nodes(other, "green")
+            draw_3d_nodes(pharynx, "yellow")
+            draw_3d_nodes(sensory, "magenta")
+            draw_3d_nodes(sexspec, "cyan")
+
+    draw_nodes_edges(ax, pos, plot_3d)
+
     legend_elements = [
-        Line2D(
-            [0],
-            [0],
-            marker="o",
-            color="w",
-            label="inter",
-            markerfacecolor="b",
-            alpha=0.5,
-            markersize=15,
-        ),
-        Line2D(
-            [0],
-            [0],
-            marker="o",
-            color="w",
-            label="motor",
-            markerfacecolor="r",
-            alpha=0.5,
-            markersize=15,
-        ),
-        Line2D(
-            [0],
-            [0],
-            marker="o",
-            color="w",
-            label="other",
-            markerfacecolor="g",
-            alpha=0.5,
-            markersize=15,
-        ),
-        Line2D(
-            [0],
-            [0],
-            marker="o",
-            color="w",
-            label="pharynx",
-            markerfacecolor="y",
-            alpha=0.5,
-            markersize=15,
-        ),
-        Line2D(
-            [0],
-            [0],
-            marker="o",
-            color="w",
-            label="sensory",
-            markerfacecolor="m",
-            alpha=0.5,
-            markersize=15,
-        ),
-        Line2D(
-            [0],
-            [0],
-            marker="o",
-            color="w",
-            label="sex",
-            markerfacecolor="c",
-            alpha=0.5,
-            markersize=15,
-        ),
-        Line2D(
-            [0],
-            [0],
-            color="b",
-            label="gap junction",
-            linewidth=2,
-            alpha=0.5,
-            markersize=10,
-        ),
+        Line2D([0], [0], marker="o", color="w", label="inter", markerfacecolor="b", alpha=0.5, markersize=15),
+        Line2D([0], [0], marker="o", color="w", label="motor", markerfacecolor="r", alpha=0.5, markersize=15),
+        Line2D([0], [0], marker="o", color="w", label="other", markerfacecolor="g", alpha=0.5, markersize=15),
+        Line2D([0], [0], marker="o", color="w", label="pharynx", markerfacecolor="y", alpha=0.5, markersize=15),
+        Line2D([0], [0], marker="o", color="w", label="sensory", markerfacecolor="m", alpha=0.5, markersize=15),
+        Line2D([0], [0], marker="o", color="w", label="sex", markerfacecolor="c", alpha=0.5, markersize=15),
+        Line2D([0], [0], color="b", label="gap junction", linewidth=2, alpha=0.5, markersize=10),
         Line2D([0], [0], color="r", label="synapse", linewidth=2, alpha=0.5, markersize=10),
     ]
+
     plt.title(plt_title)
     plt.legend(handles=legend_elements, loc="upper right")
     plt.show()
+
+# def draw_connectome(network, pos=None, labels=None, plt_title="C. elegans connectome network"):
+#     """
+#     Args:
+#       network: PyG Data object containing a C. elegans connectome graph.
+#       pos: dict, mapping of node index to 2D coordinate.
+#       labels: dict, mapping of node index to neuron name.
+#     """
+#     # convert to networkx
+#     G = torch_geometric.utils.to_networkx(network)
+#     # create figure
+#     plt.figure(figsize=(20, 10))
+#     ## nodes
+#     inter = [node for i, node in enumerate(G.nodes) if network.y[i] == 0.0]
+#     motor = [node for i, node in enumerate(G.nodes) if network.y[i] == 1.0]
+#     other = [node for i, node in enumerate(G.nodes) if network.y[i] == 2.0]
+#     pharynx = [node for i, node in enumerate(G.nodes) if network.y[i] == 3.0]
+#     sensory = [node for i, node in enumerate(G.nodes) if network.y[i] == 4.0]
+#     sexspec = [node for i, node in enumerate(G.nodes) if network.y[i] == 5.0]
+#     ## edges
+#     junctions = [
+#         edge for i, edge in enumerate(G.edges) if network.edge_attr[i, 0] > 0.0
+#     ]  # gap junctions/electrical synapses encoded as [1,0]
+#     synapses = [
+#         edge for i, edge in enumerate(G.edges) if network.edge_attr[i, 1] > 0.0
+#     ]  # chemical synapse encoded as [0,1]
+#     ## edge weights
+#     gap_weights = [int(network.edge_attr[i, 0]) / 50 for i, edge in enumerate(G.edges)]
+#     chem_weights = [int(network.edge_attr[i, 1]) / 50 for i, edge in enumerate(G.edges)]
+#     ## metadata
+#     if pos is None:
+#         pos = network.pos
+#     # pos = nx.kamada_kawai_layout(G)
+#     if labels is None:
+#         labels = network.idx_to_neuron
+#     options = {"edgecolors": "tab:gray", "node_size": 500, "alpha": 0.5}
+#     ## draw nodes
+#     nx.draw_networkx_edges(
+#         G, pos, edgelist=junctions, width=gap_weights, alpha=0.5, edge_color="tab:blue"
+#     )
+#     nx.draw_networkx_edges(
+#         G, pos, edgelist=synapses, width=chem_weights, alpha=0.5, edge_color="tab:red"
+#     )
+#     nx.draw_networkx_labels(G, pos, labels, font_size=6)
+#     ## draw edges
+#     nx.draw_networkx_nodes(G, pos, nodelist=inter, node_color="blue", **options)
+#     nx.draw_networkx_nodes(G, pos, nodelist=motor, node_color="red", **options)
+#     nx.draw_networkx_nodes(G, pos, nodelist=other, node_color="green", **options)
+#     nx.draw_networkx_nodes(G, pos, nodelist=pharynx, node_color="yellow", **options)
+#     nx.draw_networkx_nodes(G, pos, nodelist=sensory, node_color="magenta", **options)
+#     nx.draw_networkx_nodes(G, pos, nodelist=sexspec, node_color="cyan", **options)
+#     legend_elements = [
+#         Line2D(
+#             [0],
+#             [0],
+#             marker="o",
+#             color="w",
+#             label="inter",
+#             markerfacecolor="b",
+#             alpha=0.5,
+#             markersize=15,
+#         ),
+#         Line2D(
+#             [0],
+#             [0],
+#             marker="o",
+#             color="w",
+#             label="motor",
+#             markerfacecolor="r",
+#             alpha=0.5,
+#             markersize=15,
+#         ),
+#         Line2D(
+#             [0],
+#             [0],
+#             marker="o",
+#             color="w",
+#             label="other",
+#             markerfacecolor="g",
+#             alpha=0.5,
+#             markersize=15,
+#         ),
+#         Line2D(
+#             [0],
+#             [0],
+#             marker="o",
+#             color="w",
+#             label="pharynx",
+#             markerfacecolor="y",
+#             alpha=0.5,
+#             markersize=15,
+#         ),
+#         Line2D(
+#             [0],
+#             [0],
+#             marker="o",
+#             color="w",
+#             label="sensory",
+#             markerfacecolor="m",
+#             alpha=0.5,
+#             markersize=15,
+#         ),
+#         Line2D(
+#             [0],
+#             [0],
+#             marker="o",
+#             color="w",
+#             label="sex",
+#             markerfacecolor="c",
+#             alpha=0.5,
+#             markersize=15,
+#         ),
+#         Line2D(
+#             [0],
+#             [0],
+#             color="b",
+#             label="gap junction",
+#             linewidth=2,
+#             alpha=0.5,
+#             markersize=10,
+#         ),
+#         Line2D([0], [0], color="r", label="synapse", linewidth=2, alpha=0.5, markersize=10),
+#     ]
+#     plt.title(plt_title)
+#     plt.legend(handles=legend_elements, loc="upper right")
+#     plt.show()
 
 
 def time_delay_embedding(x, delay, dimension):
