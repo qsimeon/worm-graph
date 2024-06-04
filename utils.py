@@ -99,18 +99,25 @@ else:
 
 NUM_NEURONS = len(NEURON_LABELS)  # number of neurons in the model organism
 
-RAW_DATA_URL = "https://www.dropbox.com/scl/fi/jlrohfwjknkonu9z7lyv0/raw_data.zip?rlkey=iwon81esiws2zhio3mx54s0xi&dl=1"
+RAW_DATA_URL = "https://www.dropbox.com/scl/fi/j5q7u3detlea13ppyyp1s/raw_data.zip?rlkey=6nkbgnxifyx4tzuxx5khpztzj&dl=1"
 
 RAW_ZIP = "raw_data.zip"
 
 # Essential raw data files that must be in the raw data directory
 RAW_FILES = [  # TODO: Cite sources of these files.
-    "GHermChem.mat",
+    # "GHermChem.mat",
+    # "GHermElec_Sym.mat",
     "GHermChem_Edges.csv",
     "GHermChem_Nodes.csv",
-    "GHermElec_Sym.mat",
     "GHermElec_Sym_Edges.csv",
     "GHermElec_Sym_Nodes.csv",
+    "OpenWormConnectome.csv",
+    "white_1986_jse_processed.csv",
+    "white_1986_jsh_processed.csv",
+    "white_1986_n2u_processed.csv",
+    "white_1986_whole_processed.csv",
+    "witvliet_2020_7_processed.csv",
+    "witvliet_2020_8_processed.csv",
     "LowResAtlasWithHighResHeadsAndTails.csv",
     "neuron_labels.txt",
 ]

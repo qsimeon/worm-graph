@@ -144,644 +144,54 @@ def get_presaved_datasets(url, file):
 
 ### DEBUG ###
 
-def preprocess_common_tasks(raw_dir, x, y, edge_index, edge_attr):
+def preprocess_common_tasks(raw_dir, edge_index, edge_attr):
+
+    # Filter for only neurons in the list NEURON_LABELS 
     idx_to_neuron = dict(zip([i for i in range(len(NEURON_LABELS))], NEURON_LABELS))
+    neurons_all = set(NEURON_LABELS)
 
-    # Basic attributes of PyG Data object
-    graph = Data(x=x, edge_index=edge_index, edge_attr=edge_attr, y=y)
-
-    # Some additional attributes to the graph
-    neurons_all = list(idx_to_neuron.values())
+    # Load positions for nodes from atlas file
     df = pd.read_csv(
         os.path.join(raw_dir, "LowResAtlasWithHighResHeadsAndTails.csv"),
         header=None,
-        names=["neuron", "x", "y", "z"],
+        names=["neuron", "y", "x", "z"],
     )
     df = df[df.neuron.isin(neurons_all)]
     valids = set(df.neuron)
     keys = [k for k in idx_to_neuron if idx_to_neuron[k] in valids]
-    values = list(df[df.neuron.isin(valids)][["x", "z"]].values)
+    values = list(df[df.neuron.isin(valids)][["x", "y", "z"]].values) # 3D coords
+
+    # Basic attributes of PyG Data object
+    df = pd.read_csv(os.path.join(raw_dir, "GHermChem_Nodes.csv"))  # use this file to get neuron types
+    df["Name"] = [v.replace("0", "") if not v.endswith("0") else v for v in df["Name"]]
+    syn_nodes = df[df["Name"].isin(neurons_all)].sort_values(by=["Name"]).reset_index()
+    le = preprocessing.LabelEncoder()
+    le.fit(syn_nodes.Group.values) 
+    num_classes = len(le.classes_)
+    x = torch.empty(len(NEURON_LABELS), 1024, dtype=torch.float) # filler data
+    y = torch.tensor(le.transform(syn_nodes.Group.values), dtype=torch.int32)
+    graph = Data(x=x, edge_index=edge_index, edge_attr=edge_attr, y=y)
 
     # Initialize position dict then replace with atlas coordinates if available
     pos = dict(
         zip(
             np.arange(graph.num_nodes),
-            np.zeros(shape=(graph.num_nodes, 2), dtype=np.float32),
+            np.zeros(shape=(graph.num_nodes, 3), dtype=np.float32), # 3D coords
         )
     )
     for k, v in zip(keys, values):
         pos[k] = v
 
-    # Assign each node its global node index
+    # Other graph attributes including node types (node_type) and labels (node_label)   
     n_id = torch.arange(graph.num_nodes)
+    node_label = {k: idx_to_neuron[k] for k in keys} # names of neurons (e.g. AVAL, RIBR, VC1, etc.)
+    codes = np.unique(y)
+    types = np.unique(syn_nodes.Group.values) # Pharynx, SensoryNeurons, MotorNeurons, InterNeurons, SexSpecificCells, OtherEndOrgans, BodyWallMuscles
+    node_type = dict(zip(codes, types)) # classification of neuron (e.g. sensory, motor, interneuron, etc.)
     
-    return pos, n_id
+    return x, y, num_classes, node_type, node_label, pos, n_id
 
-def preprocess_openworm(raw_dir):
-    df = pd.read_csv(os.path.join(raw_dir, "OpenWormConnectome.csv"))
-        
-    origin = []
-    target = []
-    
-    edges = []
-    edge_attr = []
-
-    # CANL, CANR not considered neurons in Cook et al (still include in matrix - data will be zero/null when passed to model)
-    
-    for i in range(len(df)):
-        neuron1 = df.loc[i, "Origin"]
-        neuron2 = df.loc[i, "Target"]
-        
-        origin += [neuron1]
-        target += [neuron2]
-        
-        type = df.loc[i, "Type"]
-        num_connections = df.loc[i, "Number of Connections"]
-        
-        if [neuron1, neuron2] not in edges:
-            edges += [[neuron1, neuron2]]
-            if type == "GapJunction":
-                edge_attr += [[num_connections, 0]]
-            else:
-                edge_attr += [[0, num_connections]]
-        else:
-            if type == "GapJunction":
-                edge_attr[-1][0] = num_connections
-            else:
-                edge_attr[-1][-1] = num_connections
-    
-    neuron_to_idx = dict(zip(NEURON_LABELS, [i for i in range(len(NEURON_LABELS))]))
-    idx_to_neuron = dict(zip([i for i in range(len(NEURON_LABELS))], NEURON_LABELS))
-
-    edge_index = torch.tensor([[neuron_to_idx[neuron1], neuron_to_idx[neuron2]] for neuron1, neuron2 in edges]).T
-    node_type = {0: 'Type1', 1: 'Type2'}
-    num_classes = len(node_type)
-
-    # for x, y values
-    # Neurons involved in chemical synapses
-    GHermChem_Nodes = pd.read_csv(os.path.join(raw_dir, "GHermChem_Nodes.csv"))  # nodes
-    neurons_all = set(NEURON_LABELS)
-
-    df = GHermChem_Nodes
-    df["Name"] = [v.replace("0", "") if not v.endswith("0") else v for v in df["Name"]]
-    Gsyn_nodes = df[df["Name"].isin(neurons_all)].sort_values(by=["Name"]).reset_index()
-
-    le = preprocessing.LabelEncoder()
-    le.fit(Gsyn_nodes.Group.values)
-    # num_classes = len(le.classes_)
-    y = torch.tensor(le.transform(Gsyn_nodes.Group.values), dtype=torch.int32)
-    x = torch.randn(len(NEURON_LABELS), 1024, dtype=torch.float)
-    
-    edge_attr = torch.tensor(edge_attr)
-    pos, n_id = preprocess_common_tasks(raw_dir, x, y, edge_index, edge_attr)
-
-    graph_tensors = {
-        "edge_index": edge_index,
-        "edge_attr": edge_attr,
-        "pos": pos,
-        "num_classes": num_classes,
-        "x": x,
-        "y": y,
-        "idx_to_neuron": idx_to_neuron,
-        "node_type": node_type,
-        "n_id": n_id,
-    }
-
-    torch.save(
-        graph_tensors,
-        os.path.join(ROOT_DIR, "data", "processed", "connectome", "graph_tensors.pt"),
-    )
-
-def preprocess_witvliet_2020_7(raw_dir):
-    df = pd.read_csv(os.path.join(raw_dir, "witvliet_2020_7_processed.csv"))
-    
-    origin = []
-    target = []
-    
-    edges = []
-    edge_attr = []
-
-    for i in range(len(df)):
-        neuron1 = df.loc[i, "pre"]
-        neuron2 = df.loc[i, "post"]
-        
-        if neuron1 in NEURON_LABELS and neuron2 in NEURON_LABELS:
-            origin += [neuron1]
-            target += [neuron2]
-            
-            type = df.loc[i, "type"]
-            num_connections = df.loc[i, "synapses"]
-            
-            if [neuron1, neuron2] not in edges:
-                edges += [[neuron1, neuron2]]
-                if type == "electrical":
-                    edge_attr += [[num_connections, 0]]
-                else:
-                    edge_attr += [[0, num_connections]]
-            else:
-                if type == "electrical":
-                    edge_attr[-1][0] = num_connections
-                else:
-                    edge_attr[-1][-1] = num_connections
-
-    neuron_to_idx = dict(zip(NEURON_LABELS, [i for i in range(len(NEURON_LABELS))]))
-    idx_to_neuron = dict(zip([i for i in range(len(NEURON_LABELS))], NEURON_LABELS))
-
-    edge_index = torch.tensor([[neuron_to_idx[neuron1], neuron_to_idx[neuron2]] for neuron1, neuron2 in edges]).T
-    node_type = {0: 'Type1', 1: 'Type2'}
-    num_classes = len(node_type)
-
-    # for x, y values
-    # Neurons involved in chemical synapses
-    GHermChem_Nodes = pd.read_csv(os.path.join(raw_dir, "GHermChem_Nodes.csv"))  # nodes
-    neurons_all = set(NEURON_LABELS)
-
-    df = GHermChem_Nodes
-    df["Name"] = [v.replace("0", "") if not v.endswith("0") else v for v in df["Name"]]
-    Gsyn_nodes = df[df["Name"].isin(neurons_all)].sort_values(by=["Name"]).reset_index()
-
-    le = preprocessing.LabelEncoder()
-    le.fit(Gsyn_nodes.Group.values)
-    # num_classes = len(le.classes_)
-    y = torch.tensor(le.transform(Gsyn_nodes.Group.values), dtype=torch.int32)
-    x = torch.randn(len(NEURON_LABELS), 1024, dtype=torch.float)
-    
-    edge_attr = torch.tensor(edge_attr)
-    pos, n_id = preprocess_common_tasks(raw_dir, x, y, edge_index, edge_attr)
-
-    graph_tensors = {
-        "edge_index": edge_index,
-        "edge_attr": edge_attr,
-        "pos": pos,
-        "num_classes": num_classes,
-        "x": x,
-        "y": y,
-        "idx_to_neuron": idx_to_neuron,
-        "node_type": node_type,
-        "n_id": n_id,
-    }
-
-    torch.save(
-        graph_tensors,
-        os.path.join(ROOT_DIR, "data", "processed", "connectome", "graph_tensors.pt"),
-    )
-
-def preprocess_witvliet_2020_8(raw_dir):
-    df = pd.read_csv(os.path.join(raw_dir, "witvliet_2020_8_processed.csv"))
-    
-    origin = []
-    target = []
-    
-    edges = []
-    edge_attr = []
-
-    for i in range(len(df)):
-        neuron1 = df.loc[i, "pre"]
-        neuron2 = df.loc[i, "post"]
-        
-        if neuron1 in NEURON_LABELS and neuron2 in NEURON_LABELS:
-            origin += [neuron1]
-            target += [neuron2]
-            
-            type = df.loc[i, "type"]
-            num_connections = df.loc[i, "synapses"]
-            
-            if [neuron1, neuron2] not in edges:
-                edges += [[neuron1, neuron2]]
-                if type == "electrical":
-                    edge_attr += [[num_connections, 0]]
-                else:
-                    edge_attr += [[0, num_connections]]
-            else:
-                if type == "electrical":
-                    edge_attr[-1][0] = num_connections
-                else:
-                    edge_attr[-1][-1] = num_connections
-
-    neuron_to_idx = dict(zip(NEURON_LABELS, [i for i in range(len(NEURON_LABELS))]))
-    idx_to_neuron = dict(zip([i for i in range(len(NEURON_LABELS))], NEURON_LABELS))
-
-    edge_index = torch.tensor([[neuron_to_idx[neuron1], neuron_to_idx[neuron2]] for neuron1, neuron2 in edges]).T
-    node_type = {0: 'Type1', 1: 'Type2'}
-    num_classes = len(node_type)
-
-    # for x, y values
-    # Neurons involved in chemical synapses
-    GHermChem_Nodes = pd.read_csv(os.path.join(raw_dir, "GHermChem_Nodes.csv"))  # nodes
-    neurons_all = set(NEURON_LABELS)
-
-    df = GHermChem_Nodes
-    df["Name"] = [v.replace("0", "") if not v.endswith("0") else v for v in df["Name"]]
-    Gsyn_nodes = df[df["Name"].isin(neurons_all)].sort_values(by=["Name"]).reset_index()
-
-    le = preprocessing.LabelEncoder()
-    le.fit(Gsyn_nodes.Group.values)
-    # num_classes = len(le.classes_)
-    y = torch.tensor(le.transform(Gsyn_nodes.Group.values), dtype=torch.int32)
-    x = torch.randn(len(NEURON_LABELS), 1024, dtype=torch.float)
-    
-    edge_attr = torch.tensor(edge_attr)
-    pos, n_id = preprocess_common_tasks(raw_dir, x, y, edge_index, edge_attr)
-
-    graph_tensors = {
-        "edge_index": edge_index,
-        "edge_attr": edge_attr,
-        "pos": pos,
-        "num_classes": num_classes,
-        "x": x,
-        "y": y,
-        "idx_to_neuron": idx_to_neuron,
-        "node_type": node_type,
-        "n_id": n_id,
-    }
-
-    torch.save(
-        graph_tensors,
-        os.path.join(ROOT_DIR, "data", "processed", "connectome", "graph_tensors.pt"),
-    )
-
-def preprocess_cook_2019(raw_dir):
-    edges = []
-    edge_attr = []
-
-    # chemical synapse processing
-    df = pd.read_excel(os.path.join(raw_dir, "Cook2019.xlsx"), sheet_name="hermaphrodite chemical")
-
-    for i, line in enumerate(df):
-        if i > 2:
-            col_data = df.iloc[:-1, i]
-            for j, weight in enumerate(col_data):
-                if j > 1 and not pd.isna(df.iloc[j, i]):
-                    post = df.iloc[1, i]
-                    pre = df.iloc[j, 2]
-                    if pre in NEURON_LABELS and post in NEURON_LABELS:
-                        edges += [[pre, post]]
-                        edge_attr += [[0, df.iloc[j, i]]]
-
-    # gap junction processing
-    df = pd.read_excel(os.path.join(raw_dir, "Cook2019.xlsx"), sheet_name="hermaphrodite gap jn asymmetric")
-
-    for i, line in enumerate(df):
-        if i > 2:
-            col_data = df.iloc[:-1, i]
-            for j, weight in enumerate(col_data):
-                if j > 1 and not pd.isna(df.iloc[j, i]):
-                    post = df.iloc[1, i]
-                    pre = df.iloc[j, 2]
-                    if pre in NEURON_LABELS and post in NEURON_LABELS:
-                        if [pre, post] in edges:
-                            edge_idx = edges.index([pre, post])
-                            edge_attr[edge_idx][0] = df.iloc[j, i]
-                        else:
-                            edges += [[pre, post]]
-                            edge_attr += [[df.iloc[j, i], 0]]
-
-    neuron_to_idx = dict(zip(NEURON_LABELS, [i for i in range(len(NEURON_LABELS))]))
-    idx_to_neuron = dict(zip([i for i in range(len(NEURON_LABELS))], NEURON_LABELS))
-
-    edge_index = torch.tensor([[neuron_to_idx[neuron1], neuron_to_idx[neuron2]] for neuron1, neuron2 in edges]).T
-    node_type = {0: 'Type1', 1: 'Type2'}
-    num_classes = len(node_type)
-
-    # for x, y values
-    # Neurons involved in chemical synapses
-    GHermChem_Nodes = pd.read_csv(os.path.join(raw_dir, "GHermChem_Nodes.csv"))  # nodes
-    neurons_all = set(NEURON_LABELS)
-
-    df = GHermChem_Nodes
-    df["Name"] = [v.replace("0", "") if not v.endswith("0") else v for v in df["Name"]]
-    Gsyn_nodes = df[df["Name"].isin(neurons_all)].sort_values(by=["Name"]).reset_index()
-
-    le = preprocessing.LabelEncoder()
-    le.fit(Gsyn_nodes.Group.values)
-    # num_classes = len(le.classes_)
-    y = torch.tensor(le.transform(Gsyn_nodes.Group.values), dtype=torch.int32)
-    x = torch.randn(len(NEURON_LABELS), 1024, dtype=torch.float)
-
-    edge_attr = torch.tensor(edge_attr)
-    pos, n_id = preprocess_common_tasks(raw_dir, x, y, edge_index, edge_attr)
-
-    graph_tensors = {
-        "edge_index": edge_index,
-        "edge_attr": edge_attr,
-        "pos": pos,
-        "num_classes": num_classes,
-        "x": x,
-        "y": y,
-        "idx_to_neuron": idx_to_neuron,
-        "node_type": node_type,
-        "n_id": n_id,
-    }
-
-    torch.save(
-        graph_tensors,
-        os.path.join(ROOT_DIR, "data", "processed", "connectome", "graph_tensors.pt"),
-    )
-
-def preprocess_white_1986_whole(raw_dir):
-    df = pd.read_csv(os.path.join(raw_dir, "white_1986_whole_processed.csv"))
-    origin = []
-    target = []
-    edges = []
-
-    edge_attr = []
-
-    for i in range(len(df)):
-        neuron1 = df.loc[i, "pre"]
-        neuron2 = df.loc[i, "post"]
-        
-        if neuron1 in NEURON_LABELS and neuron2 in NEURON_LABELS:
-            origin += [neuron1]
-            target += [neuron2]
-            
-            type = df.loc[i, "type"]
-            num_connections = df.loc[i, "synapses"]
-            
-            if [neuron1, neuron2] not in edges:
-                edges += [[neuron1, neuron2]]
-                if type == "electrical":
-                    edge_attr += [[num_connections, 0]]
-                else:
-                    edge_attr += [[0, num_connections]]
-            else:
-                if type == "electrical":
-                    edge_attr[-1][0] = num_connections
-                else:
-                    edge_attr[-1][-1] = num_connections
-
-    neuron_to_idx = dict(zip(NEURON_LABELS, [i for i in range(len(NEURON_LABELS))]))
-    idx_to_neuron = dict(zip([i for i in range(len(NEURON_LABELS))], NEURON_LABELS))
-
-    edge_index = torch.tensor([[neuron_to_idx[neuron1], neuron_to_idx[neuron2]] for neuron1, neuron2 in edges]).T
-    node_type = {0: 'Type1', 1: 'Type2'}
-    num_classes = len(node_type)
-
-    # for x, y values
-    # Neurons involved in chemical synapses
-    GHermChem_Nodes = pd.read_csv(os.path.join(raw_dir, "GHermChem_Nodes.csv"))  # nodes
-    neurons_all = set(NEURON_LABELS)
-
-    df = GHermChem_Nodes
-    df["Name"] = [v.replace("0", "") if not v.endswith("0") else v for v in df["Name"]]
-    Gsyn_nodes = df[df["Name"].isin(neurons_all)].sort_values(by=["Name"]).reset_index()
-
-    le = preprocessing.LabelEncoder()
-    le.fit(Gsyn_nodes.Group.values)
-    # num_classes = len(le.classes_)
-    y = torch.tensor(le.transform(Gsyn_nodes.Group.values), dtype=torch.int32)
-    x = torch.randn(len(NEURON_LABELS), 1024, dtype=torch.float)
-
-    edge_attr = torch.tensor(edge_attr)
-    pos, n_id = preprocess_common_tasks(raw_dir, x, y, edge_index, edge_attr)
-
-    graph_tensors = {
-        "edge_index": edge_index,
-        "edge_attr": edge_attr,
-        "pos": pos,
-        "num_classes": num_classes,
-        "x": x,
-        "y": y,
-        "idx_to_neuron": idx_to_neuron,
-        "node_type": node_type,
-        "n_id": n_id,
-    }
-
-    torch.save(
-        graph_tensors,
-        os.path.join(ROOT_DIR, "data", "processed", "connectome", "graph_tensors.pt"),
-    )
-
-def preprocess_white_1986_n2u(raw_dir):
-    df = pd.read_csv(os.path.join(raw_dir, "white_1986_n2u_processed.csv"))
-    origin = []
-    target = []
-    edges = []
-
-    edge_attr = []
-
-    for i in range(len(df)):
-        neuron1 = df.loc[i, "pre"]
-        neuron2 = df.loc[i, "post"]
-        
-        if neuron1 in NEURON_LABELS and neuron2 in NEURON_LABELS:
-            origin += [neuron1]
-            target += [neuron2]
-            
-            type = df.loc[i, "type"]
-            num_connections = df.loc[i, "synapses"]
-            
-            if [neuron1, neuron2] not in edges:
-                edges += [[neuron1, neuron2]]
-                if type == "electrical":
-                    edge_attr += [[num_connections, 0]]
-                else:
-                    edge_attr += [[0, num_connections]]
-            else:
-                if type == "electrical":
-                    edge_attr[-1][0] = num_connections
-                else:
-                    edge_attr[-1][-1] = num_connections
-
-    neuron_to_idx = dict(zip(NEURON_LABELS, [i for i in range(len(NEURON_LABELS))]))
-    idx_to_neuron = dict(zip([i for i in range(len(NEURON_LABELS))], NEURON_LABELS))
-
-    edge_index = torch.tensor([[neuron_to_idx[neuron1], neuron_to_idx[neuron2]] for neuron1, neuron2 in edges]).T
-    node_type = {0: 'Type1', 1: 'Type2'}
-    num_classes = len(node_type)
-
-    # for x, y values
-    # Neurons involved in chemical synapses
-    GHermChem_Nodes = pd.read_csv(os.path.join(raw_dir, "GHermChem_Nodes.csv"))  # nodes
-    neurons_all = set(NEURON_LABELS)
-
-    df = GHermChem_Nodes
-    df["Name"] = [v.replace("0", "") if not v.endswith("0") else v for v in df["Name"]]
-    Gsyn_nodes = df[df["Name"].isin(neurons_all)].sort_values(by=["Name"]).reset_index()
-
-    le = preprocessing.LabelEncoder()
-    le.fit(Gsyn_nodes.Group.values)
-    # num_classes = len(le.classes_)
-    y = torch.tensor(le.transform(Gsyn_nodes.Group.values), dtype=torch.int32)
-    x = torch.randn(len(NEURON_LABELS), 1024, dtype=torch.float)
-    
-    edge_attr = torch.tensor(edge_attr)
-    pos, n_id = preprocess_common_tasks(raw_dir, x, y, edge_index, edge_attr)
-
-    graph_tensors = {
-        "edge_index": edge_index,
-        "edge_attr": edge_attr,
-        "pos": pos,
-        "num_classes": num_classes,
-        "x": x,
-        "y": y,
-        "idx_to_neuron": idx_to_neuron,
-        "node_type": node_type,
-        "n_id": n_id,
-    }
-
-    torch.save(
-        graph_tensors,
-        os.path.join(ROOT_DIR, "data", "processed", "connectome", "graph_tensors.pt"),
-    )
-
-def preprocess_white_1986_jsh(raw_dir):
-    df = pd.read_csv(os.path.join(raw_dir, "white_1986_jsh_processed.csv"))
-    origin = []
-    target = []
-    edges = []
-
-    edge_attr = []
-
-    for i in range(len(df)):
-        neuron1 = df.loc[i, "pre"]
-        neuron2 = df.loc[i, "post"]
-        
-        if neuron1 in NEURON_LABELS and neuron2 in NEURON_LABELS:
-            origin += [neuron1]
-            target += [neuron2]
-            
-            type = df.loc[i, "type"]
-            num_connections = df.loc[i, "synapses"]
-            
-            if [neuron1, neuron2] not in edges:
-                edges += [[neuron1, neuron2]]
-                if type == "electrical":
-                    edge_attr += [[num_connections, 0]]
-                else:
-                    edge_attr += [[0, num_connections]]
-            else:
-                if type == "electrical":
-                    edge_attr[-1][0] = num_connections
-                else:
-                    edge_attr[-1][-1] = num_connections
-
-    neuron_to_idx = dict(zip(NEURON_LABELS, [i for i in range(len(NEURON_LABELS))]))
-    idx_to_neuron = dict(zip([i for i in range(len(NEURON_LABELS))], NEURON_LABELS))
-
-    edge_index = torch.tensor([[neuron_to_idx[neuron1], neuron_to_idx[neuron2]] for neuron1, neuron2 in edges]).T
-    node_type = {0: 'Type1', 1: 'Type2'}
-    num_classes = len(node_type)
-
-    # for x, y values
-    # Neurons involved in chemical synapses
-    GHermChem_Nodes = pd.read_csv(os.path.join(raw_dir, "GHermChem_Nodes.csv"))  # nodes
-    neurons_all = set(NEURON_LABELS)
-
-    df = GHermChem_Nodes
-    df["Name"] = [v.replace("0", "") if not v.endswith("0") else v for v in df["Name"]]
-    Gsyn_nodes = df[df["Name"].isin(neurons_all)].sort_values(by=["Name"]).reset_index()
-
-    le = preprocessing.LabelEncoder()
-    le.fit(Gsyn_nodes.Group.values)
-    # num_classes = len(le.classes_)
-    y = torch.tensor(le.transform(Gsyn_nodes.Group.values), dtype=torch.int32)
-    x = torch.randn(len(NEURON_LABELS), 1024, dtype=torch.float)
-
-    edge_attr = torch.tensor(edge_attr)
-    pos, n_id = preprocess_common_tasks(raw_dir, x, y, edge_index, edge_attr)
-
-    graph_tensors = {
-        "edge_index": edge_index,
-        "edge_attr": edge_attr,
-        "pos": pos,
-        "num_classes": num_classes,
-        "x": x,
-        "y": y,
-        "idx_to_neuron": idx_to_neuron,
-        "node_type": node_type,
-        "n_id": n_id,
-    }
-
-    torch.save(
-        graph_tensors,
-        os.path.join(ROOT_DIR, "data", "processed", "connectome", "graph_tensors.pt"),
-    )
-
-def preprocess_white_1986_jse(raw_dir):
-    df = pd.read_csv(os.path.join(raw_dir, "white_1986_jse_processed.csv"))
-    origin = []
-    target = []
-    edges = []
-
-    edge_attr = []
-
-    for i in range(len(df)):
-        neuron1 = df.loc[i, "pre"]
-        neuron2 = df.loc[i, "post"]
-        
-        if neuron1 in NEURON_LABELS and neuron2 in NEURON_LABELS:
-            origin += [neuron1]
-            target += [neuron2]
-            
-            type = df.loc[i, "type"]
-            num_connections = df.loc[i, "synapses"]
-            
-            if [neuron1, neuron2] not in edges:
-                edges += [[neuron1, neuron2]]
-                if type == "electrical":
-                    edge_attr += [[num_connections, 0]]
-                else:
-                    edge_attr += [[0, num_connections]]
-            else:
-                if type == "electrical":
-                    edge_attr[-1][0] = num_connections
-                else:
-                    edge_attr[-1][-1] = num_connections
-
-    neuron_to_idx = dict(zip(NEURON_LABELS, [i for i in range(len(NEURON_LABELS))]))
-    idx_to_neuron = dict(zip([i for i in range(len(NEURON_LABELS))], NEURON_LABELS))
-
-    edge_index = torch.tensor([[neuron_to_idx[neuron1], neuron_to_idx[neuron2]] for neuron1, neuron2 in edges]).T
-    node_type = {0: 'Type1', 1: 'Type2'}
-    num_classes = len(node_type)
-
-    # for x, y values
-    # Neurons involved in chemical synapses
-    GHermChem_Nodes = pd.read_csv(os.path.join(raw_dir, "GHermChem_Nodes.csv"))  # nodes
-    neurons_all = set(NEURON_LABELS)
-
-    df = GHermChem_Nodes
-    df["Name"] = [v.replace("0", "") if not v.endswith("0") else v for v in df["Name"]]
-    Gsyn_nodes = df[df["Name"].isin(neurons_all)].sort_values(by=["Name"]).reset_index()
-
-    le = preprocessing.LabelEncoder()
-    le.fit(Gsyn_nodes.Group.values)
-    # num_classes = len(le.classes_)
-    y = torch.tensor(le.transform(Gsyn_nodes.Group.values), dtype=torch.int32)
-    x = torch.randn(len(NEURON_LABELS), 1024, dtype=torch.float)
-
-    edge_attr = torch.tensor(edge_attr)
-    pos, n_id = preprocess_common_tasks(raw_dir, x, y, edge_index, edge_attr)
-
-    graph_tensors = {
-        "edge_index": edge_index,
-        "edge_attr": edge_attr,
-        "pos": pos,
-        "num_classes": num_classes,
-        "x": x,
-        "y": y,
-        "idx_to_neuron": idx_to_neuron,
-        "node_type": node_type,
-        "n_id": n_id,
-    }
-
-    torch.save(
-        graph_tensors,
-        os.path.join(ROOT_DIR, "data", "processed", "connectome", "graph_tensors.pt"),
-    )
-
-def preprocess_default(raw_dir, raw_files):
-    # Check if the raw connectome data exists
-    if not os.path.exists(raw_dir):
-        download_url(url=RAW_DATA_URL, folder=ROOT_DIR, filename=RAW_ZIP)
-        extract_zip(
-            path=os.path.join(ROOT_DIR, RAW_ZIP),
-            folder=RAW_DATA_DIR,
-            delete_zip=True,
-        )
-
-    # Check that all the necessary raw files were extracted
-    assert all([os.path.exists(os.path.join(raw_dir, rf)) for rf in raw_files])
+def preprocess_default(raw_dir, save_as="graph_tensors.pt"):
     # Names of all C. elegans hermaphrodite neurons
     # NOTE: Only neurons in this list will be included in the connectomes constructed here.
     neurons_all = set(NEURON_LABELS)
@@ -878,9 +288,9 @@ def preprocess_default(raw_dir, raw_files):
     num_nodes = len(Gsyn_nodes)
     num_node_features = 1024
 
-    # Generate random data
+    # Iniatilize with filler data
     # TODO: Inject real data instead!
-    x = torch.randn(
+    x = torch.empty(
         num_nodes, num_node_features, dtype=torch.float
     )  # [num_nodes, num_node_features]
 
@@ -894,6 +304,7 @@ def preprocess_default(raw_dir, raw_files):
     codes = np.unique(y)
     types = np.unique(Gsyn_nodes.Group.values)
     node_type = dict(zip(codes, types))
+
     # Normalize outgoing gap junction weights to sum to 1
     ggap_weights = to_dense_adj(edge_index=ggap_edge_index, edge_attr=ggap_edge_attr[:, 0]).squeeze(
         0
@@ -931,18 +342,18 @@ def preprocess_default(raw_dir, raw_files):
     df = pd.read_csv(
         os.path.join(raw_dir, "LowResAtlasWithHighResHeadsAndTails.csv"),
         header=None,
-        names=["neuron", "x", "y", "z"],
+        names=["neuron", "y", "x", "z"],
     )
     df = df[df.neuron.isin(neurons_all)]
     valids = set(df.neuron)
     keys = [k for k in idx_to_neuron if idx_to_neuron[k] in valids]
-    # values = list(df[df.neuron.isin(valids)][["x", "z"]].values)
-    values = list(df[df.neuron.isin(valids)][["x", "y", "z"]].values)
+    values = list(df[df.neuron.isin(valids)][["x", "y", "z"]].values) # 3D coords
     # Initialize position dict then replace with atlas coordinates if available
     pos = dict(
         zip(
             np.arange(graph.num_nodes),
-            np.zeros(shape=(graph.num_nodes, 2), dtype=np.float32),
+            np.zeros(shape=(graph.num_nodes, 2), dtype=np.float32), # 2D coords
+            np.zeros(shape=(graph.num_nodes, 3), dtype=np.float32), # 3D coords
         )
     )
     for k, v in zip(keys, values):
@@ -950,6 +361,7 @@ def preprocess_default(raw_dir, raw_files):
 
     # Assign each node its global node index
     n_id = torch.arange(graph.num_nodes)
+    node_label = {k: idx_to_neuron[k] for k in keys} # names of neurons (e.g. AVAL, RIBR, VC1, etc.)
 
     # Save the tensors to use as raw data in the future.
     graph_tensors = {
@@ -959,18 +371,475 @@ def preprocess_default(raw_dir, raw_files):
         "num_classes": num_classes,
         "x": x,
         "y": y,
-        "idx_to_neuron": idx_to_neuron,
         "node_type": node_type,
+        "node_label": node_label,
         "n_id": n_id,
     }
 
     torch.save(
         graph_tensors,
-        os.path.join(ROOT_DIR, "data", "processed", "connectome", "graph_tensors.pt"),
+        os.path.join(ROOT_DIR, "data", "processed", "connectome", save_as),
     )
 
-# TODO only use pub to determine files
-def preprocess_connectome(raw_dir, raw_files, pub=None):
+def preprocess_openworm(raw_dir, save_as="graph_tensors_openworm.pt"):
+    df = pd.read_csv(os.path.join(raw_dir, "OpenWormConnectome.csv"))
+        
+    origin = []
+    target = []
+    
+    edges = []
+    edge_attr = []
+
+    # CANL, CANR not considered neurons in Cook et al (still include in matrix - data will be zero/null when passed to model)
+    
+    for i in range(len(df)):
+        neuron1 = df.loc[i, "Origin"]
+        neuron2 = df.loc[i, "Target"]
+        
+        origin += [neuron1]
+        target += [neuron2]
+        
+        type = df.loc[i, "Type"]
+        num_connections = df.loc[i, "Number of Connections"]
+        
+        if [neuron1, neuron2] not in edges:
+            edges += [[neuron1, neuron2]]
+            if type == "GapJunction":
+                edge_attr += [[num_connections, 0]]
+            else:
+                edge_attr += [[0, num_connections]]
+        else:
+            if type == "GapJunction":
+                edge_attr[-1][0] = num_connections
+            else:
+                edge_attr[-1][-1] = num_connections
+    
+    neuron_to_idx = dict(zip(NEURON_LABELS, [i for i in range(len(NEURON_LABELS))]))
+    # idx_to_neuron = dict(zip([i for i in range(len(NEURON_LABELS))], NEURON_LABELS))
+
+    edge_attr = torch.tensor(edge_attr)
+    edge_index = torch.tensor([[neuron_to_idx[neuron1], neuron_to_idx[neuron2]] for neuron1, neuron2 in edges]).T
+    
+    x, y, num_classes, node_type, node_label, pos, n_id = preprocess_common_tasks(raw_dir, edge_index, edge_attr)
+
+    graph_tensors = {
+        "edge_index": edge_index,
+        "edge_attr": edge_attr,
+        "pos": pos,
+        "num_classes": num_classes,
+        "x": x,
+        "y": y,
+        "node_type": node_type,
+        "node_label": node_label,
+        "n_id": n_id,
+    }
+
+    torch.save(
+        graph_tensors,
+        os.path.join(ROOT_DIR, "data", "processed", "connectome", save_as),
+    )
+
+def preprocess_witvliet_2020_7(raw_dir, save_as="graph_tensors_witvliet2020.pt"):
+    df = pd.read_csv(os.path.join(raw_dir, "witvliet_2020_7_processed.csv"))
+    
+    origin = []
+    target = []
+    
+    edges = []
+    edge_attr = []
+
+    for i in range(len(df)):
+        neuron1 = df.loc[i, "pre"]
+        neuron2 = df.loc[i, "post"]
+        
+        if neuron1 in NEURON_LABELS and neuron2 in NEURON_LABELS:
+            origin += [neuron1]
+            target += [neuron2]
+            
+            type = df.loc[i, "type"]
+            num_connections = df.loc[i, "synapses"]
+            
+            if [neuron1, neuron2] not in edges:
+                edges += [[neuron1, neuron2]]
+                if type == "electrical":
+                    edge_attr += [[num_connections, 0]]
+                else:
+                    edge_attr += [[0, num_connections]]
+            else:
+                if type == "electrical":
+                    edge_attr[-1][0] = num_connections
+                else:
+                    edge_attr[-1][-1] = num_connections
+
+    neuron_to_idx = dict(zip(NEURON_LABELS, [i for i in range(len(NEURON_LABELS))]))
+    # idx_to_neuron = dict(zip([i for i in range(len(NEURON_LABELS))], NEURON_LABELS))
+
+    edge_attr = torch.tensor(edge_attr)
+    edge_index = torch.tensor([[neuron_to_idx[neuron1], neuron_to_idx[neuron2]] for neuron1, neuron2 in edges]).T
+    
+    x, y, num_classes, node_type, node_label, pos, n_id = preprocess_common_tasks(raw_dir, edge_index, edge_attr)
+
+    graph_tensors = {
+        "edge_index": edge_index,
+        "edge_attr": edge_attr,
+        "pos": pos,
+        "num_classes": num_classes,
+        "x": x,
+        "y": y,
+        "node_type": node_type,
+        "node_label": node_label,
+        "n_id": n_id,
+    }
+
+    torch.save(
+        graph_tensors,
+        os.path.join(ROOT_DIR, "data", "processed", "connectome", save_as),
+    )
+
+def preprocess_witvliet_2020_8(raw_dir, save_as="graph_tensors_witvliet2020.pt"):
+    df = pd.read_csv(os.path.join(raw_dir, "witvliet_2020_8_processed.csv"))
+    
+    origin = []
+    target = []
+    
+    edges = []
+    edge_attr = []
+
+    for i in range(len(df)):
+        neuron1 = df.loc[i, "pre"]
+        neuron2 = df.loc[i, "post"]
+        
+        if neuron1 in NEURON_LABELS and neuron2 in NEURON_LABELS:
+            origin += [neuron1]
+            target += [neuron2]
+            
+            type = df.loc[i, "type"]
+            num_connections = df.loc[i, "synapses"]
+            
+            if [neuron1, neuron2] not in edges:
+                edges += [[neuron1, neuron2]]
+                if type == "electrical":
+                    edge_attr += [[num_connections, 0]]
+                else:
+                    edge_attr += [[0, num_connections]]
+            else:
+                if type == "electrical":
+                    edge_attr[-1][0] = num_connections
+                else:
+                    edge_attr[-1][-1] = num_connections
+
+    neuron_to_idx = dict(zip(NEURON_LABELS, [i for i in range(len(NEURON_LABELS))]))
+    # idx_to_neuron = dict(zip([i for i in range(len(NEURON_LABELS))], NEURON_LABELS))
+
+    edge_attr = torch.tensor(edge_attr)
+    edge_index = torch.tensor([[neuron_to_idx[neuron1], neuron_to_idx[neuron2]] for neuron1, neuron2 in edges]).T
+    
+    x, y, num_classes, node_type, node_label, pos, n_id = preprocess_common_tasks(raw_dir, edge_index, edge_attr)
+
+    graph_tensors = {
+        "edge_index": edge_index,
+        "edge_attr": edge_attr,
+        "pos": pos,
+        "num_classes": num_classes,
+        "x": x,
+        "y": y,
+        "node_type": node_type,
+        "node_label": node_label,
+        "n_id": n_id,
+    }
+
+    torch.save(
+        graph_tensors,
+        os.path.join(ROOT_DIR, "data", "processed", "connectome", save_as),
+    )
+
+def preprocess_cook_2019(raw_dir, save_as="graph_tensors_cook2019.pt"):
+    edges = []
+    edge_attr = []
+
+    # chemical synapse processing
+    df = pd.read_excel(os.path.join(raw_dir, "Cook2019.xlsx"), sheet_name="hermaphrodite chemical")
+
+    for i, line in enumerate(df):
+        if i > 2:
+            col_data = df.iloc[:-1, i]
+            for j, weight in enumerate(col_data):
+                if j > 1 and not pd.isna(df.iloc[j, i]):
+                    post = df.iloc[1, i]
+                    pre = df.iloc[j, 2]
+                    if pre in NEURON_LABELS and post in NEURON_LABELS:
+                        edges += [[pre, post]]
+                        edge_attr += [[0, df.iloc[j, i]]]
+
+    # gap junction processing
+    df = pd.read_excel(os.path.join(raw_dir, "Cook2019.xlsx"), sheet_name="hermaphrodite gap jn asymmetric")
+
+    for i, line in enumerate(df):
+        if i > 2:
+            col_data = df.iloc[:-1, i]
+            for j, weight in enumerate(col_data):
+                if j > 1 and not pd.isna(df.iloc[j, i]):
+                    post = df.iloc[1, i]
+                    pre = df.iloc[j, 2]
+                    if pre in NEURON_LABELS and post in NEURON_LABELS:
+                        if [pre, post] in edges:
+                            edge_idx = edges.index([pre, post])
+                            edge_attr[edge_idx][0] = df.iloc[j, i]
+                        else:
+                            edges += [[pre, post]]
+                            edge_attr += [[df.iloc[j, i], 0]]
+
+    neuron_to_idx = dict(zip(NEURON_LABELS, [i for i in range(len(NEURON_LABELS))]))
+    # idx_to_neuron = dict(zip([i for i in range(len(NEURON_LABELS))], NEURON_LABELS))
+
+    edge_attr = torch.tensor(edge_attr)
+    edge_index = torch.tensor([[neuron_to_idx[neuron1], neuron_to_idx[neuron2]] for neuron1, neuron2 in edges]).T
+    
+    x, y, num_classes, node_type, node_label, pos, n_id = preprocess_common_tasks(raw_dir, edge_index, edge_attr)
+
+    graph_tensors = {
+        "edge_index": edge_index,
+        "edge_attr": edge_attr,
+        "pos": pos,
+        "num_classes": num_classes,
+        "x": x,
+        "y": y,
+        "node_type": node_type,
+        "node_label": node_label,
+        "n_id": n_id,
+    }
+
+    torch.save(
+        graph_tensors,
+        os.path.join(ROOT_DIR, "data", "processed", "connectome", save_as),
+    )
+
+def preprocess_white_1986_whole(raw_dir, save_as="graph_tensors_white1986.pt"):
+    df = pd.read_csv(os.path.join(raw_dir, "white_1986_whole_processed.csv"))
+    origin = []
+    target = []
+    edges = []
+
+    edge_attr = []
+
+    for i in range(len(df)):
+        neuron1 = df.loc[i, "pre"]
+        neuron2 = df.loc[i, "post"]
+        
+        if neuron1 in NEURON_LABELS and neuron2 in NEURON_LABELS:
+            origin += [neuron1]
+            target += [neuron2]
+            
+            type = df.loc[i, "type"]
+            num_connections = df.loc[i, "synapses"]
+            
+            if [neuron1, neuron2] not in edges:
+                edges += [[neuron1, neuron2]]
+                if type == "electrical":
+                    edge_attr += [[num_connections, 0]]
+                else:
+                    edge_attr += [[0, num_connections]]
+            else:
+                if type == "electrical":
+                    edge_attr[-1][0] = num_connections
+                else:
+                    edge_attr[-1][-1] = num_connections
+
+    neuron_to_idx = dict(zip(NEURON_LABELS, [i for i in range(len(NEURON_LABELS))]))
+    # idx_to_neuron = dict(zip([i for i in range(len(NEURON_LABELS))], NEURON_LABELS))
+
+    edge_attr = torch.tensor(edge_attr)
+    edge_index = torch.tensor([[neuron_to_idx[neuron1], neuron_to_idx[neuron2]] for neuron1, neuron2 in edges]).T
+    
+    x, y, num_classes, node_type, node_label, pos, n_id = preprocess_common_tasks(raw_dir, edge_index, edge_attr)
+
+    graph_tensors = {
+        "edge_index": edge_index,
+        "edge_attr": edge_attr,
+        "pos": pos,
+        "num_classes": num_classes,
+        "x": x,
+        "y": y,
+        "node_type": node_type,
+        "node_label": node_label,
+        "n_id": n_id,
+    }
+
+    torch.save(
+        graph_tensors,
+        os.path.join(ROOT_DIR, "data", "processed", "connectome", save_as),
+    )
+
+def preprocess_white_1986_n2u(raw_dir, save_as="graph_tensors_white1986.pt"):
+    df = pd.read_csv(os.path.join(raw_dir, "white_1986_n2u_processed.csv"))
+    origin = []
+    target = []
+    edges = []
+
+    edge_attr = []
+
+    for i in range(len(df)):
+        neuron1 = df.loc[i, "pre"]
+        neuron2 = df.loc[i, "post"]
+        
+        if neuron1 in NEURON_LABELS and neuron2 in NEURON_LABELS:
+            origin += [neuron1]
+            target += [neuron2]
+            
+            type = df.loc[i, "type"]
+            num_connections = df.loc[i, "synapses"]
+            
+            if [neuron1, neuron2] not in edges:
+                edges += [[neuron1, neuron2]]
+                if type == "electrical":
+                    edge_attr += [[num_connections, 0]]
+                else:
+                    edge_attr += [[0, num_connections]]
+            else:
+                if type == "electrical":
+                    edge_attr[-1][0] = num_connections
+                else:
+                    edge_attr[-1][-1] = num_connections
+
+    neuron_to_idx = dict(zip(NEURON_LABELS, [i for i in range(len(NEURON_LABELS))]))
+    # idx_to_neuron = dict(zip([i for i in range(len(NEURON_LABELS))], NEURON_LABELS))
+
+    edge_attr = torch.tensor(edge_attr)
+    edge_index = torch.tensor([[neuron_to_idx[neuron1], neuron_to_idx[neuron2]] for neuron1, neuron2 in edges]).T
+    
+    x, y, num_classes, node_type, node_label, pos, n_id = preprocess_common_tasks(raw_dir, edge_index, edge_attr)
+
+    graph_tensors = {
+        "edge_index": edge_index,
+        "edge_attr": edge_attr,
+        "pos": pos,
+        "num_classes": num_classes,
+        "x": x,
+        "y": y,
+        "node_type": node_type,
+        "node_label": node_label,
+        "n_id": n_id,
+    }
+
+    torch.save(
+        graph_tensors,
+        os.path.join(ROOT_DIR, "data", "processed", "connectome", save_as),
+    )
+
+def preprocess_white_1986_jsh(raw_dir, save_as="graph_tensors_white1986.pt"):
+    df = pd.read_csv(os.path.join(raw_dir, "white_1986_jsh_processed.csv"))
+    origin = []
+    target = []
+    edges = []
+
+    edge_attr = []
+
+    for i in range(len(df)):
+        neuron1 = df.loc[i, "pre"]
+        neuron2 = df.loc[i, "post"]
+        
+        if neuron1 in NEURON_LABELS and neuron2 in NEURON_LABELS:
+            origin += [neuron1]
+            target += [neuron2]
+            
+            type = df.loc[i, "type"]
+            num_connections = df.loc[i, "synapses"]
+            
+            if [neuron1, neuron2] not in edges:
+                edges += [[neuron1, neuron2]]
+                if type == "electrical":
+                    edge_attr += [[num_connections, 0]]
+                else:
+                    edge_attr += [[0, num_connections]]
+            else:
+                if type == "electrical":
+                    edge_attr[-1][0] = num_connections
+                else:
+                    edge_attr[-1][-1] = num_connections
+
+    neuron_to_idx = dict(zip(NEURON_LABELS, [i for i in range(len(NEURON_LABELS))]))
+    # idx_to_neuron = dict(zip([i for i in range(len(NEURON_LABELS))], NEURON_LABELS))
+
+    edge_attr = torch.tensor(edge_attr)
+    edge_index = torch.tensor([[neuron_to_idx[neuron1], neuron_to_idx[neuron2]] for neuron1, neuron2 in edges]).T
+    
+    x, y, num_classes, node_type, node_label, pos, n_id = preprocess_common_tasks(raw_dir, edge_index, edge_attr)
+
+    graph_tensors = {
+        "edge_index": edge_index,
+        "edge_attr": edge_attr,
+        "pos": pos,
+        "num_classes": num_classes,
+        "x": x,
+        "y": y,
+        "node_type": node_type,
+        "node_label": node_label,
+        "n_id": n_id,
+    }
+
+    torch.save(
+        graph_tensors,
+        os.path.join(ROOT_DIR, "data", "processed", "connectome", save_as),
+    )
+
+def preprocess_white_1986_jse(raw_dir, save_as="graph_tensors_white1986.pt"):
+    df = pd.read_csv(os.path.join(raw_dir, "white_1986_jse_processed.csv"))
+    origin = []
+    target = []
+    edges = []
+
+    edge_attr = []
+
+    for i in range(len(df)):
+        neuron1 = df.loc[i, "pre"]
+        neuron2 = df.loc[i, "post"]
+        
+        if neuron1 in NEURON_LABELS and neuron2 in NEURON_LABELS:
+            origin += [neuron1]
+            target += [neuron2]
+            
+            type = df.loc[i, "type"]
+            num_connections = df.loc[i, "synapses"]
+            
+            if [neuron1, neuron2] not in edges:
+                edges += [[neuron1, neuron2]]
+                if type == "electrical":
+                    edge_attr += [[num_connections, 0]]
+                else:
+                    edge_attr += [[0, num_connections]]
+            else:
+                if type == "electrical":
+                    edge_attr[-1][0] = num_connections
+                else:
+                    edge_attr[-1][-1] = num_connections
+
+    neuron_to_idx = dict(zip(NEURON_LABELS, [i for i in range(len(NEURON_LABELS))]))
+    # idx_to_neuron = dict(zip([i for i in range(len(NEURON_LABELS))], NEURON_LABELS))
+
+    edge_attr = torch.tensor(edge_attr)
+    edge_index = torch.tensor([[neuron_to_idx[neuron1], neuron_to_idx[neuron2]] for neuron1, neuron2 in edges]).T
+    
+    x, y, num_classes, node_type, node_label, pos, n_id = preprocess_common_tasks(raw_dir, edge_index, edge_attr)
+
+    graph_tensors = {
+        "edge_index": edge_index,
+        "edge_attr": edge_attr,
+        "pos": pos,
+        "num_classes": num_classes,
+        "x": x,
+        "y": y,
+        "node_type": node_type,
+        "node_label": node_label,
+        "n_id": n_id,
+    }
+
+    torch.save(
+        graph_tensors,
+        os.path.join(ROOT_DIR, "data", "processed", "connectome", save_as),
+    )
+
+# TODO: Only use pub to determine files
+def preprocess_connectome(raw_dir, raw_files, pub="openworm"):
     """Convert the raw connectome data to a graph tensor.
 
     This function processes raw connectome data, which includes chemical
@@ -987,6 +856,17 @@ def preprocess_connectome(raw_dir, raw_files, pub=None):
         Directory with raw connectome data
     raw_files : list
         Contain the names of the raw connectome data to preprocess
+    pub : str, optional
+        The publication to use for preprocessing. Options include:
+        - "openworm" (default): OpenWorm project
+        - "witvliet_7": Witvliet et al., 2020 (7)
+        - "witvliet_8": Witvliet et al., 2020 (8)
+        - "white_1986_whole": White et al., 1986 (whole)
+        - "white_1986_n2u": White et al., 1986 (N2U)
+        - "white_1986_jsh": White et al., 1986 (JSH)
+        - "white_1986_jse": White et al., 1986 (JSE)
+        - "cook_2019": Cook et al., 2019
+        - None: Default to a preprocessed variant of Cook et al., 2019
 
     Returns
     -------
@@ -1000,12 +880,25 @@ def preprocess_connectome(raw_dir, raw_files, pub=None):
       an organism's brain or nervous system. It is essentially the wiring
       diagram of the brain, detailing how neurons and their synapses are
       interconnected.
-    * The connectome data used here is from Cook et al., 2019.
+    * The default connectome data used here is from Cook et al., 2019.
       If the raw data isn't found, please download it at this link:
       https://wormwiring.org/matlab%20scripts/Premaratne%20MATLAB-ready%20files%20.zip
       and drop in the data/raw folder.
     """
+    # Check if the raw connectome data exists
+    if not os.path.exists(raw_dir):
+        download_url(url=RAW_DATA_URL, folder=ROOT_DIR, filename=RAW_ZIP)
+        extract_zip(
+            path=os.path.join(ROOT_DIR, RAW_ZIP),
+            folder=RAW_DATA_DIR,
+            delete_zip=True,
+        )
+        raw_dir = RAW_DATA_DIR
 
+    # Check that all the necessary raw files were extracted
+    assert all([os.path.exists(os.path.join(raw_dir, rf)) for rf in raw_files])
+
+    # Determine appropriate preprocessing function based on publication
     if pub == "openworm":
         preprocess_openworm(raw_dir)
     elif pub == "witvliet_7":
@@ -1022,9 +915,8 @@ def preprocess_connectome(raw_dir, raw_files, pub=None):
         preprocess_white_1986_jse(raw_dir)
     elif pub == "cook_2019":
         preprocess_cook_2019(raw_dir)
-    else:
-        # preprocess_default(raw_dir, raw_files)
-        preprocess_witvliet_2020_7(raw_dir)
+    else: # if pub is None
+        preprocess_default(raw_dir, raw_files)
         pass
 
     return None
