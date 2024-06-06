@@ -5,7 +5,9 @@ logger = logging.getLogger(__name__)
 logging.getLogger("matplotlib").setLevel(logging.WARNING)  # Suppress matplotlib logging
 
 
-def draw_connectome(network, pos=None, labels=None, plt_title="C. elegans connectome network", plot_3d=False):
+def draw_connectome(
+    network, pos=None, labels=None, plt_title="C. elegans connectome network", plot_3d=False
+):
     """
     Args:
       network: PyG Data object containing a C. elegans connectome graph.
@@ -18,10 +20,10 @@ def draw_connectome(network, pos=None, labels=None, plt_title="C. elegans connec
     # create figure
     fig = plt.figure(figsize=(10, 8))
     if plot_3d:
-        ax = fig.add_subplot(111, projection='3d')
+        ax = fig.add_subplot(111, projection="3d")
     else:
         ax = fig.add_subplot(111)
-    
+
     ## nodes
     inter = [node for i, node in enumerate(G.nodes) if network.y[i] == 0.0]
     motor = [node for i, node in enumerate(G.nodes) if network.y[i] == 1.0]
@@ -57,6 +59,7 @@ def draw_connectome(network, pos=None, labels=None, plt_title="C. elegans connec
     ## draw nodes and edges
     def draw_nodes_edges(ax, pos, plot_3d):
         if plot_3d:
+
             def draw_3d_nodes(nodelist, color):
                 if len(nodelist) > 0:
                     coords = [pos[node] for node in nodelist]
@@ -64,18 +67,31 @@ def draw_connectome(network, pos=None, labels=None, plt_title="C. elegans connec
                         coords = [(x, y, 0) for x, y in coords]
                     xs, ys, zs = zip(*coords)
                     ax.scatter(xs, ys, zs, c=color, s=100, **options)
-            
+
             def draw_3d_edges(edgelist, color, weights):
                 for edge, weight in zip(edgelist, weights):
                     xs, ys, zs = zip(pos[edge[0]], pos[edge[1]])
                     ax.plot(xs, ys, zs, color=color, alpha=0.6, linewidth=weight)
+
         else:
-            pos = {node: pos[node][:2] for node in pos} # get 2D coordinates
+            pos = {node: pos[node][:2] for node in pos}  # get 2D coordinates
             nx.draw_networkx_edges(
-                G, pos, edgelist=junctions, width=gap_weights, alpha=0.6, edge_color="tab:blue", ax=ax
+                G,
+                pos,
+                edgelist=junctions,
+                width=gap_weights,
+                alpha=0.6,
+                edge_color="tab:blue",
+                ax=ax,
             )
             nx.draw_networkx_edges(
-                G, pos, edgelist=synapses, width=chem_weights, alpha=0.6, edge_color="tab:red", ax=ax
+                G,
+                pos,
+                edgelist=synapses,
+                width=chem_weights,
+                alpha=0.6,
+                edge_color="tab:red",
+                ax=ax,
             )
             nx.draw_networkx_labels(G, pos, labels, font_size=6, ax=ax)
             nx.draw_networkx_nodes(G, pos, nodelist=inter, node_color="blue", ax=ax, **options)
@@ -84,7 +100,7 @@ def draw_connectome(network, pos=None, labels=None, plt_title="C. elegans connec
             nx.draw_networkx_nodes(G, pos, nodelist=pharynx, node_color="yellow", ax=ax, **options)
             nx.draw_networkx_nodes(G, pos, nodelist=sensory, node_color="magenta", ax=ax, **options)
             nx.draw_networkx_nodes(G, pos, nodelist=sexspec, node_color="cyan", ax=ax, **options)
-        
+
         if plot_3d:
             draw_3d_edges(junctions, "tab:blue", gap_weights)
             draw_3d_edges(synapses, "tab:red", chem_weights)
@@ -96,17 +112,77 @@ def draw_connectome(network, pos=None, labels=None, plt_title="C. elegans connec
             draw_3d_nodes(sexspec, "cyan")
 
             # Setting the aspect ratio for each axis
-            ax.set_box_aspect([max(x_vals) - min(x_vals), (max(y_vals) - min(y_vals))//3, max(z_vals) - min(z_vals)])
+            ax.set_box_aspect(
+                [
+                    max(x_vals) - min(x_vals),
+                    (max(y_vals) - min(y_vals)) // 3,
+                    max(z_vals) - min(z_vals),
+                ]
+            )
 
     draw_nodes_edges(ax, pos, plot_3d)
 
     legend_elements = [
-        Line2D([0], [0], marker="o", color="w", label="inter", markerfacecolor="b", alpha=0.6, markersize=10),
-        Line2D([0], [0], marker="o", color="w", label="motor", markerfacecolor="r", alpha=0.6, markersize=10),
-        Line2D([0], [0], marker="o", color="w", label="other", markerfacecolor="g", alpha=0.6, markersize=10),
-        Line2D([0], [0], marker="o", color="w", label="pharynx", markerfacecolor="y", alpha=0.6, markersize=10),
-        Line2D([0], [0], marker="o", color="w", label="sensory", markerfacecolor="m", alpha=0.6, markersize=10),
-        Line2D([0], [0], marker="o", color="w", label="sex", markerfacecolor="c", alpha=0.6, markersize=10),
+        Line2D(
+            [0],
+            [0],
+            marker="o",
+            color="w",
+            label="inter",
+            markerfacecolor="b",
+            alpha=0.6,
+            markersize=10,
+        ),
+        Line2D(
+            [0],
+            [0],
+            marker="o",
+            color="w",
+            label="motor",
+            markerfacecolor="r",
+            alpha=0.6,
+            markersize=10,
+        ),
+        Line2D(
+            [0],
+            [0],
+            marker="o",
+            color="w",
+            label="other",
+            markerfacecolor="g",
+            alpha=0.6,
+            markersize=10,
+        ),
+        Line2D(
+            [0],
+            [0],
+            marker="o",
+            color="w",
+            label="pharynx",
+            markerfacecolor="y",
+            alpha=0.6,
+            markersize=10,
+        ),
+        Line2D(
+            [0],
+            [0],
+            marker="o",
+            color="w",
+            label="sensory",
+            markerfacecolor="m",
+            alpha=0.6,
+            markersize=10,
+        ),
+        Line2D(
+            [0],
+            [0],
+            marker="o",
+            color="w",
+            label="sex",
+            markerfacecolor="c",
+            alpha=0.6,
+            markersize=10,
+        ),
         Line2D([0], [0], color="b", label="gap junction", linewidth=2, alpha=0.6, markersize=10),
         Line2D([0], [0], color="r", label="synapse", linewidth=2, alpha=0.6, markersize=10),
     ]

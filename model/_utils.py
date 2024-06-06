@@ -535,7 +535,7 @@ class CTRNN(torch.nn.Module):
         """
         # Perform the recurrence update
         # h_new = torch.relu(self.input2h(input) + self.h2h(hidden)) # ReLU
-        h_new = torch.tanh(self.input2h(input) + self.h2h(hidden)) # Tanh
+        h_new = torch.tanh(self.input2h(input) + self.h2h(hidden))  # Tanh
         # The sigmoid contrains alpha such that 0 <= alpha <=1
         h_new = hidden * (1 - self.alpha.sigmoid()) + h_new * self.alpha.sigmoid()
         return h_new

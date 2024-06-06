@@ -93,9 +93,7 @@ else:
     # fmt: on
 
     # Write to a text file called "neuron_labels.txt" using pandas
-    pd.DataFrame(NEURON_LABELS).to_csv(
-        labels_file, sep=" ", header=False, index=False
-    )
+    pd.DataFrame(NEURON_LABELS).to_csv(labels_file, sep=" ", header=False, index=False)
 
 NUM_NEURONS = len(NEURON_LABELS)  # number of neurons in the model organism
 
