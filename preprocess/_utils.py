@@ -12,7 +12,7 @@ def pickle_neural_data(
     source_dataset="all",
     # TODO: Try different transforms from sklearn such as QuantileTransformer, etc. as well as custom CausalNormalizer.
     transform=StandardScaler(),  # StandardScaler() #PowerTransformer() #CausalNormalizer() #None
-    smooth_method="ma",
+    smooth_method="moving",
     interpolate_method="linear",
     resample_dt=None,
     cleanup=False,
@@ -1122,15 +1122,15 @@ def smooth_data_preprocess(calcium_data, time_in_seconds, smooth_method, **kwarg
     """
     if smooth_method is None:
         smooth_ca_data = calcium_data
-    elif str(smooth_method).lower() == "ga":
+    elif str(smooth_method).lower() == "gaussian":
         smooth_ca_data = gaussian_kernel_smooth(
             calcium_data, time_in_seconds, sigma=kwargs.get("sigma", 5)
         )
-    elif str(smooth_method).lower() == "ma":
+    elif str(smooth_method).lower() == "moving":
         smooth_ca_data = moving_average_smooth(
             calcium_data, time_in_seconds, window_size=kwargs.get("window_size", 15)
         )
-    elif str(smooth_method).lower() == "es":
+    elif str(smooth_method).lower() == "exponential":
         smooth_ca_data = exponential_kernel_smooth(
             calcium_data, time_in_seconds, alpha=kwargs.get("alpha", 0.5)
         )
@@ -1641,7 +1641,7 @@ class BasePreprocessor:
         dataset_name,
         # TODO: Try different transforms from sklearn such as QuantileTransformer, etc. as well as custom CausalNormalizer.
         transform=StandardScaler(),  # StandardScaler() #PowerTransformer() #CausalNormalizer() #None
-        smooth_method="ma",
+        smooth_method="moving",
         interpolate_method="linear",
         resample_dt=0.1,
         **kwargs,
