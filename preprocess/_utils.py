@@ -127,7 +127,6 @@ def pickle_neural_data(
     return None
 
 
-### DEBUG ###
 def get_presaved_datasets(url, file):
     """
     Download and unzip presaved data splits (commonly requested data patterns).
@@ -140,9 +139,6 @@ def get_presaved_datasets(url, file):
     download_url(url=presaved_url, folder=ROOT_DIR, filename=presaved_file)
     extract_zip(presave_path, folder=data_path, delete_zip=True)
     return None
-
-
-### DEBUG ###
 
 
 def preprocess_common_tasks(raw_dir, edge_index, edge_attr):
@@ -198,6 +194,7 @@ def preprocess_common_tasks(raw_dir, edge_index, edge_attr):
         zip(codes, types)
     )  # classification of neuron (e.g. sensory, motor, interneuron, etc.)
 
+    # TODO: Also return `node_class` (there are 118 classes). See Hobert et al. 2016, Revisiting Neuronal Cell Type Classification in Caenorhabditis elegans
     return x, y, num_classes, node_type, node_label, pos, n_id
 
 
@@ -1805,6 +1802,7 @@ class BasePreprocessor:
                 (str(_) if j is None or isinstance(j, np.ndarray) else str(j))
                 for _, j in enumerate(unique_IDs)
             ]
+            
             _, unique_indices = np.unique(unique_IDs, return_index=True)
             unique_IDs = [unique_IDs[_] for _ in unique_indices]
             # Create neuron label to index mapping
@@ -2320,7 +2318,7 @@ class Lin2023Preprocessor(BasePreprocessor):
         imputer = IterativeImputer(random_state=0)
         if np.isnan(raw_activitiy).any():
             raw_activitiy = imputer.fit_transform(raw_activitiy)
-        # Make the extracted data into a list of lists/arrays
+        # Make the extracted data into a list of arrays
         neuron_IDs, raw_traces, time_vector_seconds = [neurons], [raw_activitiy], [raw_time_vec]
         # Return the extracted data
         return neuron_IDs, raw_traces, time_vector_seconds
@@ -2369,37 +2367,15 @@ class Dag2023Preprocessor(BasePreprocessor):
         data = h5py.File(os.path.join(self.raw_data_path, self.source_dataset, file_name), "r")
         return data
 
-    # def load_data(self, file_name):
-    #     with open(os.path.join(self.raw_data_path, self.source_dataset, file_name), "r") as f:
-    #         data = [list(map(float, line.split(" "))) for line in f.readlines()]
-    #     data_array = np.array(data, dtype=np.float32)
-    #     return data_array
-
-    # def load_data(self, file_name):
-    #     # Overriding the base class method to use scipy.io.loadmat for .mat files
-    #     data = loadmat(os.path.join(self.raw_data_path, self.source_dataset, file_name))
-    #     return data
-
-    # def extract_data(self, arr):
-    #     # Identified neuron IDs (only subset have neuron names)
-    #     all_IDs = arr["IDs"]
-    #     # Neural activity traces corrected for bleaching
-    #     all_traces = arr["traces"]  # (time, neurons)
-    #     # Time vector in seconds
-    #     timeVectorSeconds = arr["tv"]
-    #     # Return the extracted data
-    #     return all_IDs, all_traces, timeVectorSeconds
-
     def load_labels_dict(self, labels_file="NeuroPAL_labels_dict.json"):
-        with open("NeuroPAL_labels_dict.json", "r") as f:
+        with open(os.path.join(self.raw_data_path, self.source_dataset, labels_file), "r") as f:
             label_info = json.load(f)
-        print(
-            f"label_info.keys() from NeuroPAL_labels_dict.json: \n\t {list(label_info.keys())}\n\n"
-        )
         return label_info
 
     def find_nearest_label(self, query, possible_labels, char="?"):
         """Find the nearest neuron label from a list given a query."""
+        # Ensure the possible labels is a sorted list
+        possible_labels = sorted(possible_labels)
         # Remove the '?' from the query to simplify comparison
         query_base = query.replace(char, "")
         # Initialize variables to track the best match
@@ -2420,40 +2396,47 @@ class Dag2023Preprocessor(BasePreprocessor):
         file_data = self.load_data(data_file)
         label_info = self.load_labels_dict(labels_file)
         # Extract the mapping of indices in the data to neuron labels
-        index_map = label_info[data_file.strip("-data.h5")][0]
+        index_map, _ = label_info.get(data_file.split("/")[-1].strip("-data.h5"), (dict(), None))
         # Neural activity traces
         calcium = np.array(file_data["gcamp"]["traces_array_F_F20"])  # (time, neurons)
         # Time vector in seconds
-        timevec = list(file_data["timing"]["timestamp_confocal"])
+        timevec = np.array(file_data["timing"]["timestamp_confocal"])
         # Get neuron labels corresponding to indices in calcium data
         indices = []
         neurons = []
-        for calnum in index_map:
-            # NOT: calnum is a string, not an integer
-            assert (
-                int(calnum) <= calcium.shape[1]
-            ), f"DEBUG \n\t calnum: {calnum}, calcium.shape[1]: {calcium.shape[1]}"  # DEBUG
-            lbl = index_map[calnum]["label"]
-            neurons.append(lbl)
-            # Need to minus one because Julia index starts at 1 whereas Python index starts with 0
-            idx = int(calnum) - 1
-            indices.append(idx)
-
-        ### DEBUG ###
-        # For bilateral neurons with ambiguous location, we randomly assign L/R
+        # If there is an index map, use it to extract the correct neuron labels
+        if index_map:
+            for calnum in index_map:
+                # NOTE: calnum is a string, not an integer
+                assert (
+                    int(calnum) <= calcium.shape[1]
+                ), f"Index out of range. calnum: {calnum}, calcium.shape[1]: {calcium.shape[1]}"
+                lbl = index_map[calnum]["label"]
+                neurons.append(lbl)
+                # Need to minus one because Julia index starts at 1 whereas Python index starts with 0
+                idx = int(calnum) - 1
+                indices.append(idx)
+        # Otherwise, use the indices as the neuron labels  
+        else:
+            indices = list(range(calcium.shape[1]))
+            neurons = [str(i) for i in indices]
+        # Ensure only calcium data at selected indices is kept
+        calcium = calcium[:, indices]
+        # Neurons with dorso-ventral/lateral ambiguity have a '?' in the label that must be inferred
         neurons_copy = []
-        # TODO: This is not comprehensive enough. Do like in Flavell2023Preprocessor.extract_data.
-        for neuron in neurons:
-            if neuron.replace("?", "L") not in set(neurons_copy):
-                neurons_copy.append(neuron.replace("?", "L"))
-            else:
-                neurons_copy.append(neuron.replace("?", "R"))
-        ### DEBUG ###
-
-        # Make the extracted data into a list of lists/arrays
+        for label in neurons:
+            # If an the neuron is unknown it will have a numeric label corresponding to its index
+            if label.isnumeric():
+                neurons_copy.append(label)
+                continue
+            # Look for the closest neuron label that will match the current string containing '?'
+            replacement, _ = self.find_nearest_label(label, set(NEURON_LABELS) - set(neurons_copy), char="?")
+            neurons_copy.append(replacement)
+        neurons = np.array(neurons_copy, dtype=str)
+        # Make the extracted data into a list of arrays
         all_IDs = [neurons]
-        all_traces = calcium[:, indices].tolist()
-        timeVectorSeconds = timevec
+        all_traces = [calcium]
+        timeVectorSeconds = [timevec]
         # Return the extracted data
         return all_IDs, all_traces, timeVectorSeconds
 
@@ -2470,15 +2453,18 @@ class Dag2023Preprocessor(BasePreprocessor):
         for file in os.listdir(withid_data_files):
             if not file.endswith(".h5"):
                 continue
-            neurons, raw_traces, time_vector_seconds = self.extract_data(file, labels_file)
+            data_file = os.path.join("swf702_with_id", file)
+            neurons, raw_traces, time_vector_seconds = self.extract_data(data_file, labels_file)
             preprocessed_data, worm_idx = self.preprocess_traces(
                 neurons, raw_traces, time_vector_seconds, preprocessed_data, worm_idx
             )  # preprocess
         # Next deal with the swf415_no_id which contains data from unlabeled neurons
+        # NOTE: These don't get used at all as they are skipped in BasePreprocessor.preprocess_traces
         for file in os.listdir(noid_data_files):
             if not file.endswith(".h5"):
                 continue
-            neurons, raw_traces, time_vector_seconds = self.extract_data(file, labels_file)
+            data_file = os.path.join("swf415_no_id", file)
+            neurons, raw_traces, time_vector_seconds = self.extract_data(data_file, labels_file)
             preprocessed_data, worm_idx = self.preprocess_traces(
                 neurons, raw_traces, time_vector_seconds, preprocessed_data, worm_idx
             )  # preprocess
@@ -2773,28 +2759,8 @@ class Flavell2023Preprocessor(BasePreprocessor):
         """
         A more complicated `extract_data` method was necessary for the Flavell2023 dataset.
         """
-        # # If files use H5 format
-        # if isinstance(file_data, h5py.File):
-        #     # Time vector in seconds
-        #     time_in_seconds = np.array(file_data["timestamp_confocal"], dtype=np.float32)
-        #     time_in_seconds = time_in_seconds.reshape((-1, 1))
-        #     calcium_data = np.array(file_data["trace_array"], dtype=np.float32)
-        #     neurons = np.array(file_data["neuropal_label"], dtype=str)
-        #     # For bilateral neurons with ambiguous location, we randomly assign L/R
-        #     neurons_copy = []
-        #     # TODO: This is not comprehensive enough; make more like below
-        #     for neuron in neurons:
-        #         if neuron.replace("?", "L") not in set(neurons_copy):
-        #             neurons_copy.append(neuron.replace("?", "L"))
-        #         else:
-        #             neurons_copy.append(neuron.replace("?", "R"))
-        #     # Filter for unique neuron labels
-        #     neurons = np.array(neurons_copy, dtype=str)
-        #     neurons, unique_indices = np.unique(neurons, return_index=True, return_counts=False)
-        #     # Only get data for unique neurons
-        #     calcium_data = calcium_data[:, unique_indices]
-        # The files are expected to use a JSON format
-        assert isinstance(file_data, dict), f"Unsupported data type: {type(file_data)}"
+        # The files are expected to use a JSON or H5 format
+        assert isinstance(file_data, (dict, h5py.File)), f"Unsupported data type: {type(file_data)}"
         # Time vector in seconds
         time_in_seconds = np.array(file_data["timestamp_confocal"], dtype=np.float32)
         time_in_seconds = time_in_seconds.reshape((-1, 1))
@@ -2853,8 +2819,6 @@ class Flavell2023Preprocessor(BasePreprocessor):
             neurons, unique_indices = np.unique(neurons, return_index=True, return_counts=False)
             # Only get data for unique neurons
             calcium_data = calcium_data[:, unique_indices]
-        else:
-            raise ValueError(f"Unsupported data type: {type(file_data)}")
         # Return the extracted data
         return neurons, calcium_data, time_in_seconds
 
