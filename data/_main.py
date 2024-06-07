@@ -361,9 +361,11 @@ def get_datasets(dataset_config: DictConfig, save=False):
         )
         # Copy saved data to presave_path
         if save and presave_path is not None:
+            os.makedirs(presave_path, exist_ok=True)
             for filename in os.listdir(os.path.join(log_dir, "dataset")):
                 if filename.endswith(".csv") or filename.endswith(".pickle"):
-                    shutil.copy(os.path.join(log_dir, "dataset", filename), os.path.join(presave_path, filename))
+                    shutil.copy(os.path.join(log_dir, "dataset", filename), 
+                                os.path.join(presave_path, filename))
         # Return the train and validation datasets
         return train_dataset, val_dataset
 

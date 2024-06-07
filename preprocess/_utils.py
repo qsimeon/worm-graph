@@ -2478,7 +2478,7 @@ class Dag2023Preprocessor(BasePreprocessor):
 
     def create_metadata(self):
         extra_info = dict(
-            citation="Dag et al., Cell 2023. “Dissecting the Functional Organization of the C. Elegans Serotonergic System at Whole-Brain Scale_"
+            citation="Dag et al., Cell 2023. “_Dissecting the Functional Organization of the C. Elegans Serotonergic System at Whole-Brain Scale_"
         )
         return extra_info
 
