@@ -147,9 +147,10 @@ DEVICE = init_device()
 
 # Set real C. elegans datasets we have processed
 EXPERIMENT_DATASETS = {
+    "Dag2023",
+    "Flavell2023",  # TODO: Something is wrong with worm0 always in this dataset. Why?
     "Leifer2023",  # Different type of dataset: stimulus-response.
     "Lin2023",
-    "Flavell2023",  # TODO: Something is wrong with worm0 always in this dataset. Why?
     "Uzel2022",
     "Yemini2021",
     "Kaplan2020",
