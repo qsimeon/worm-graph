@@ -1802,7 +1802,6 @@ class BasePreprocessor:
                 (str(_) if j is None or isinstance(j, np.ndarray) else str(j))
                 for _, j in enumerate(unique_IDs)
             ]
-            
             _, unique_indices = np.unique(unique_IDs, return_index=True)
             unique_IDs = [unique_IDs[_] for _ in unique_indices]
             # Create neuron label to index mapping
@@ -2404,8 +2403,9 @@ class Dag2023Preprocessor(BasePreprocessor):
         # Get neuron labels corresponding to indices in calcium data
         indices = []
         neurons = []
-        # If there is an index map, use it to extract the correct neuron labels
+        # If there is an index map, use it to extract the labeled neurons
         if index_map:
+            # Indices in index_map correspond to named neurons 
             for calnum in index_map:
                 # NOTE: calnum is a string, not an integer
                 assert (
@@ -2416,7 +2416,12 @@ class Dag2023Preprocessor(BasePreprocessor):
                 # Need to minus one because Julia index starts at 1 whereas Python index starts with 0
                 idx = int(calnum) - 1
                 indices.append(idx)
-        # Otherwise, use the indices as the neuron labels  
+            # Remaining indices correspond to unknown neurons
+            for i in range(calcium.shape[1]):
+                if i not in set(indices):
+                    indices.append(i)
+                    neurons.append(str(i))
+        # Otherwise, use the indices as the neuron labels for all traces  
         else:
             indices = list(range(calcium.shape[1]))
             neurons = [str(i) for i in indices]
@@ -2432,6 +2437,7 @@ class Dag2023Preprocessor(BasePreprocessor):
             # Look for the closest neuron label that will match the current string containing '?'
             replacement, _ = self.find_nearest_label(label, set(NEURON_LABELS) - set(neurons_copy), char="?")
             neurons_copy.append(replacement)
+        # Convert the list of neuron labels to a numpy array
         neurons = np.array(neurons_copy, dtype=str)
         # Make the extracted data into a list of arrays
         all_IDs = [neurons]
@@ -2458,7 +2464,7 @@ class Dag2023Preprocessor(BasePreprocessor):
             preprocessed_data, worm_idx = self.preprocess_traces(
                 neurons, raw_traces, time_vector_seconds, preprocessed_data, worm_idx
             )  # preprocess
-        # Next deal with the swf415_no_id which contains data from unlabeled neurons
+        # Next deal with the swf415_no_id which contains purely unlabeled neuron data
         # NOTE: These don't get used at all as they are skipped in BasePreprocessor.preprocess_traces
         for file in os.listdir(noid_data_files):
             if not file.endswith(".h5"):
@@ -2814,11 +2820,11 @@ class Flavell2023Preprocessor(BasePreprocessor):
                     # Pick the neuron label with the nearest similarity
                     neuron_label, _ = self.find_nearest_label(label, possible_labels, char="??")
                     neurons[i] = neuron_label
-            # Filter for unique neuron labels
-            neurons = np.array(neurons, dtype=str)
-            neurons, unique_indices = np.unique(neurons, return_index=True, return_counts=False)
-            # Only get data for unique neurons
-            calcium_data = calcium_data[:, unique_indices]
+        # Filter for unique neuron labels
+        neurons = np.array(neurons, dtype=str)
+        neurons, unique_indices = np.unique(neurons, return_index=True, return_counts=False)
+        # Only get data for unique neurons
+        calcium_data = calcium_data[:, unique_indices]
         # Return the extracted data
         return neurons, calcium_data, time_in_seconds
 

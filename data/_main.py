@@ -50,7 +50,6 @@ def get_datasets(dataset_config: DictConfig, save=False):
     train_split_first = dataset_config.train_split_first
     train_split_ratio = dataset_config.train_split_ratio
     save = dataset_config.save_datasets or save
-    ### DEBUG ###
     # Some common dataset patterns were presaved for efficiency
     presave_path = None
     all_experiment = all(
@@ -73,8 +72,7 @@ def get_datasets(dataset_config: DictConfig, save=False):
                 f"Directory {presave_path} does not exist or is empty.\n"
                 f"Creating the dataset from source datasets.\n\n"
             )
-    # TODO: Write other dataset patterns here.
-    ### DEBUG ###
+    # TODO: Write other dataset patterns here ...
     # Initialize datasets
     train_dataset, val_dataset = None, None
     # Verifications
