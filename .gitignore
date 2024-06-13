@@ -180,3 +180,4 @@ model/*.pt
 # corr figs
 corr_figs
 corr_data
+autocorr_figs

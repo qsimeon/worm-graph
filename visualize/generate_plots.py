@@ -97,10 +97,10 @@ for set_idx, files in enumerate(seperated_files):
                         mean = np.mean(filtered_data[i*len(NEURONS_302)+j], axis=0)
                         std = np.std(filtered_data[i*len(NEURONS_302)+j], axis=0)
 
-                        plt.plot(np.arange(0, 100, 1), mean, linewidth=5.0, alpha=1.0)
+                        plt.plot(np.arange(0, 100, 1), mean, linewidth=5.0, alpha=1.0, color="cornflowerblue")
 
                         for k in filtered_data[i*len(NEURONS_302)+j]:
-                            plt.plot(np.arange(0, 100, 1), k, alpha=0.3)
+                            plt.plot(np.arange(0, 100, 1), k, alpha=0.3, color="cornflowerblue")
 
                         z=1
                         plt.fill_between(np.arange(0, 100, 1), mean-(std*z), mean+(std*z), alpha=0.4)
