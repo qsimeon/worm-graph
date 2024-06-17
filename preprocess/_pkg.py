@@ -32,7 +32,6 @@ from utils import (
     RAW_ZIP,
     ROOT_DIR,
     RAW_FILES,
-    BLOCK_SIZE,
     NUM_NEURONS,
     NEURON_LABELS,
     RAW_DATA_URL,
