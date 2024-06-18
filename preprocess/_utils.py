@@ -1811,9 +1811,12 @@ class BasePreprocessor:
             unique_IDs = [unique_IDs[_] for _ in unique_indices]
             # Create neuron label to index mapping
             neuron_to_idx, num_named_neurons = self.create_neuron_idx(unique_IDs)
-            # Skip worms with no labelled neurons
-            if num_named_neurons == 0:
-                continue
+            ### DEBUG ###
+            # # Skip worms with no labelled neurons. 
+            # # TODO: Should we do this? What if we want to infer these using trained models as a dowstream task?
+            # if num_named_neurons == 0:
+            #     continue
+            ### DEBUG ###
             # Only get data for unique neurons
             trace_data = trace_data[:, unique_indices.astype(int)]
             # 2. Normalize calcium data
@@ -1822,6 +1825,11 @@ class BasePreprocessor:
             time_in_seconds = raw_timeVectorSeconds[i].reshape(raw_timeVectorSeconds[i].shape[0], 1)
             time_in_seconds = np.array(time_in_seconds, dtype=np.float32)  # vector
             time_in_seconds = time_in_seconds - time_in_seconds[0]  # start at 0.0 seconds
+            ### DEBUG ###
+            # print(f"DEBUG: {unique_IDs}\n") # DEBUG
+            # print(f"DEBUG: calcium_data {calcium_data.shape}\n") # DEBUG
+            # print(f"DEBUG: time_in_seconds {time_in_seconds.shape}\n") # DEBUG
+            ### DEBUG ###
             dt = np.diff(time_in_seconds, axis=0, prepend=0.0)  # vector
             original_median_dt = np.median(dt[1:]).item()  # scalar
             residual_calcium = np.gradient(
@@ -2204,6 +2212,9 @@ class Yemini2021Preprocessor(BasePreprocessor):
             imputer = IterativeImputer(random_state=0)
             if np.isnan(activity).any():
                 activity = imputer.fit_transform(activity)
+            # Observed empirically that the first three values of activity equal 0.0s 
+            activity = activity[4:]
+            tvec = tvec[4:]
             # Add acitvity to list of traces
             traces.append(activity)
             # Add time vector to list of time vectors
@@ -2339,7 +2350,7 @@ class Dag2023Preprocessor(BasePreprocessor):
         # Neural activity traces
         calcium = np.array(file_data["gcamp"]["traces_array_F_F20"])  # (time, neurons)
         # Time vector in seconds
-        timevec = np.array(file_data["timing"]["timestamp_confocal"])
+        timevec = np.array(file_data["timing"]["timestamp_confocal"])[: calcium.shape[0]] # (time,)
         # Get neuron labels corresponding to indices in calcium data
         indices = []
         neurons = []
@@ -2406,8 +2417,11 @@ class Dag2023Preprocessor(BasePreprocessor):
             preprocessed_data, worm_idx = self.preprocess_traces(
                 neurons, raw_traces, time_vector_seconds, preprocessed_data, worm_idx
             )  # preprocess
+        ### DEBUG ###
         # Next deal with the swf415_no_id which contains purely unlabeled neuron data
-        # NOTE: These don't get used at all as they are skipped in BasePreprocessor.preprocess_traces
+        # NOTE: These don't get used at all as they are skipped in 
+        # BasePreprocessor.preprocess_traces, becuase num_named_neurons == 0. 
+        # TODO: We temporarily turned that off to see what happens here.
         for file in os.listdir(noid_data_files):
             if not file.endswith(".h5"):
                 continue
@@ -2416,6 +2430,7 @@ class Dag2023Preprocessor(BasePreprocessor):
             preprocessed_data, worm_idx = self.preprocess_traces(
                 neurons, raw_traces, time_vector_seconds, preprocessed_data, worm_idx
             )  # preprocess
+        ### DEBUG ###
         # Reshape calcium data
         for worm in preprocessed_data.keys():
             preprocessed_data[worm] = reshape_calcium_data(preprocessed_data[worm])
@@ -2714,11 +2729,12 @@ class Leifer2023Preprocessor(BasePreprocessor):
         """
         t, n = data.shape
         linear_segments = np.zeros(n, dtype=int)
-        for i in range(t - window_size):
+        window_start = range(0, t - window_size, window_size//2) # non-overlapping or staggered windows (faster)
+        for i in window_start:
             segment = data[i : i + window_size, :]
             ls = np.apply_along_axis(self.is_monotonic_linear, 0, segment)
             linear_segments += ls.astype(int)
-        proportion_linear = linear_segments / (t - window_size)
+        proportion_linear = linear_segments / len(window_start)
         bad_traces_mask = np.array(proportion_linear > linear_segment_threshold)
         good_traces_mask = ~bad_traces_mask
         filtered_data = data[:, good_traces_mask]

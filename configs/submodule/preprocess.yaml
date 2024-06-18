@@ -5,7 +5,7 @@ preprocess:
   presaved_file: presaved_datasets.zip
   cleanup: true # Whether to delete the downloaded and unzipped opensource data folder
   source_dataset: all # [Kato2015, Nichols2017, Skora2018, Kaplan2020, Yemini2021, Uzel2022, Dag2023, Lin2023, Flavell2023, Leifer2023] # any dataset in utils.EXPERIMENT_DATASETS
-  resample_dt: 0.333 #0.666 # The time interval (in seconds) to resample the neural activity at; if null, no resampling is performed
+  resample_dt: 0.333 # The time interval (in seconds) to resample the neural activity at; if null, no resampling is performed
   interpolate: linear # The method to use for interpolation; options: null, linear, quadratic, cubic
   smooth: 
     # NOTE: Smoothing is done using a causal filter. Smoothing is applied before resampling.
