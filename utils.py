@@ -151,16 +151,16 @@ DEVICE = init_device()
 
 # Set real C. elegans datasets we have processed
 EXPERIMENT_DATASETS = {
-    "Flavell2023",  # TODO: Something is wrong with worm0 always in this dataset. Why?
-    "Lin2023",
-    "Leifer2023",  # Different type of dataset: stimulus-response.
-    "Dag2023",
-    "Uzel2022",
-    "Yemini2021",
-    "Kaplan2020",
-    "Skora2018",
-    "Nichols2017",
     "Kato2015",
+    "Nichols2017",
+    "Skora2018",
+    "Kaplan2020",
+    "Yemini2021",
+    "Uzel2022",
+    "Dag2023",
+    "Leifer2023",  # Different type of dataset: stimulus-response.
+    "Lin2023",
+    "Flavell2023",  # TODO: Something is wrong with worm0 always in this dataset. Why?
 }
 
 SYNTHETIC_DATASETS = {  # Datasets created with the `CreateSyntheticDataset.ipynb` notebook.
@@ -170,7 +170,6 @@ SYNTHETIC_DATASETS = {  # Datasets created with the `CreateSyntheticDataset.ipyn
     "RandWalk0000",
     "VanDerPol0000",
     "Wikitext0000",
-    "Recurrent0000",
 }
 
 

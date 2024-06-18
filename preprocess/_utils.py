@@ -2428,7 +2428,205 @@ class Dag2023Preprocessor(BasePreprocessor):
         )
         return extra_info
 
+class Flavell2023Preprocessor(BasePreprocessor):
+    def __init__(self, transform, smooth_method, interpolate_method, resample_dt, **kwargs):
+        super().__init__(
+            "Flavell2023",
+            transform,
+            smooth_method,
+            interpolate_method,
+            resample_dt,
+            **kwargs,
+        )
 
+    def find_nearest_label(self, query, possible_labels, char="?"):
+        """Find the nearest neuron label from a list given a query."""
+        # Remove the '?' from the query to simplify comparison
+        query_base = query.replace(char, "")
+        # Initialize variables to track the best match
+        nearest_label = None
+        highest_similarity = -1  # Start with lowest similarity possible
+        for label in possible_labels:
+            # Count matching characters, ignoring the character at the position of '?'
+            similarity = sum(1 for q, l in zip(query_base, label) if q == l)
+            # Update the nearest label if this one is more similar
+            if similarity > highest_similarity:
+                nearest_label = label
+                highest_similarity = similarity
+        return nearest_label, possible_labels.index(nearest_label)
+
+    def load_data(self, file_name):
+        if file_name.endswith(".h5"):
+            data = h5py.File(os.path.join(self.raw_data_path, self.source_dataset, file_name), "r")
+        elif file_name.endswith(".json"):
+            with open(os.path.join(self.raw_data_path, self.source_dataset, file_name), "r") as f:
+                data = json.load(f)
+        else:
+            raise ValueError(f"Unsupported file format: {file_name}")
+        return data
+
+    def extract_data(self, file_data):
+        """
+        A more complicated `extract_data` method was necessary for the Flavell2023 dataset.
+        """
+        # The files are expected to use a JSON or H5 format
+        assert isinstance(file_data, (dict, h5py.File)), f"Unsupported data type: {type(file_data)}"
+        # Time vector in seconds
+        time_in_seconds = np.array(file_data["timestamp_confocal"], dtype=np.float32)
+        time_in_seconds = time_in_seconds.reshape((-1, 1))
+        # Raw traces (list)
+        raw_traces = file_data["trace_array"]
+        # Max time steps (int)
+        max_t = len(raw_traces[0])
+        # Number of neurons (int)
+        number_neurons = len(raw_traces)
+        # Labels (list)
+        ids = file_data["labeled"]
+        # All traces
+        calcium_data = np.zeros((max_t, number_neurons), dtype=np.float32)
+        for i, trace in enumerate(raw_traces):
+            calcium_data[:, i] = trace
+        neurons = [str(i) for i in range(number_neurons)]
+        for i in ids.keys():
+            label = ids[str(i)]["label"]
+            neurons[int(i) - 1] = label
+        # Handle ambiguous neuron labels
+        for i in range(number_neurons):
+            label = neurons[i]
+            if not label.isnumeric():
+                # Treat the '?' in labels
+                if "?" in label and "??" not in label:
+                    # Find the group which the neuron belongs to
+                    label_split = label.split("?")
+                    # Find potential label matches excluding ones we already have
+                    possible_labels = [
+                        neuron_name
+                        for neuron_name in NEURON_LABELS
+                        if (label_split[0] in neuron_name)
+                        and (label_split[-1] in neuron_name)
+                        and (neuron_name not in set(neurons))
+                    ]
+                    # Pick the neuron label with the nearest similarity
+                    neuron_label, _ = self.find_nearest_label(label, possible_labels, char="?")
+                    neurons[i] = neuron_label
+                # Treat the '??' in labels
+                elif "??" in label:
+                    # Find the group which the neuron belongs to
+                    label_split = label.split("??")
+                    # Find potential label matches excluding ones we already have
+                    possible_labels = [
+                        neuron_name
+                        for neuron_name in NEURON_LABELS
+                        if (label_split[0] in neuron_name)
+                        and (label_split[-1] in neuron_name)
+                        and (neuron_name not in set(neurons))
+                    ]
+                    # Pick the neuron label with the nearest similarity
+                    neuron_label, _ = self.find_nearest_label(label, possible_labels, char="??")
+                    neurons[i] = neuron_label
+        # Filter for unique neuron labels
+        neurons = np.array(neurons, dtype=str)
+        neurons, unique_indices = np.unique(neurons, return_index=True, return_counts=False)
+        # Only get data for unique neurons
+        calcium_data = calcium_data[:, unique_indices]
+        # Return the extracted data
+        return neurons, calcium_data, time_in_seconds
+
+    def create_metadata(self):
+        extra_info = dict(
+            citation="Atanas et al., Cell 2023, _Brain-Wide Representations of Behavior Spanning Multiple Timescales and States in C. Elegans_"
+        )
+        return extra_info
+
+    def preprocess(self):
+        # TODO: Encapsulate the single worm part of this method into a `preprocess_traces` method.
+        # Load and preprocess data
+        preprocessed_data = dict()
+        for i, file in enumerate(os.listdir(os.path.join(self.raw_data_path, self.source_dataset))):
+            if not (file.endswith(".h5") or file.endswith(".json")):
+                continue
+            worm = "worm" + str(i)
+            file_data = self.load_data(file)  # load
+            # 0. Extract raw data
+            neurons, calcium_data, time_in_seconds = self.extract_data(file_data)
+            # Set time to start at 0.0 seconds
+            time_in_seconds = time_in_seconds - time_in_seconds[0]  # vector
+            # 1. Map named neurons
+            neuron_to_idx, num_named_neurons = self.create_neuron_idx(neurons)
+            # 2. Normalize calcium data
+            calcium_data = self.normalize_data(calcium_data)  # matrix
+            # 3. Compute calcium dynamics (residual calcium)
+            dt = np.diff(time_in_seconds, axis=0, prepend=0.0)  # vector
+            original_median_dt = np.median(dt[1:]).item()  # scalar
+            residual_calcium = np.gradient(
+                calcium_data, time_in_seconds.squeeze(), axis=0
+            )  # vector
+            # 4. Smooth data
+            smooth_calcium_data = self.smooth_data(calcium_data, time_in_seconds)
+            smooth_residual_calcium = self.smooth_data(residual_calcium, time_in_seconds)
+            # 5. Resample data (raw and smoothed data)
+            upsample = original_median_dt >= self.resample_dt  # bool: whether to up/down-sample
+            _, resampled_calcium_data = self.resample_data(time_in_seconds, calcium_data, upsample)
+            _, resampled_residual_calcium = self.resample_data(
+                time_in_seconds, residual_calcium, upsample
+            )
+            # NOTE: We use the resampling of the smooth calcium data to give us the resampled time points
+            resampled_time_in_seconds, resampled_smooth_calcium_data = self.resample_data(
+                time_in_seconds, smooth_calcium_data, upsample
+            )
+            resampled_time_in_seconds = (
+                resampled_time_in_seconds - resampled_time_in_seconds[0]
+            )  # start at 0.0 seconds
+            _, resampled_smooth_residual_calcium = self.resample_data(
+                time_in_seconds, smooth_residual_calcium, upsample
+            )
+            resampled_dt = np.diff(resampled_time_in_seconds, axis=0, prepend=0.0)  # vector
+            resampled_median_dt = np.median(resampled_dt[1:]).item()  # scalar
+            assert np.isclose(self.resample_dt, resampled_median_dt), "Resampling failed."
+            max_timesteps, num_neurons = resampled_calcium_data.shape
+            num_unknown_neurons = int(num_neurons) - num_named_neurons
+            # 6. Save data
+            worm_dict = {
+                worm: {
+                    "calcium_data": resampled_calcium_data,  # normalized and resampled
+                    "source_dataset": self.source_dataset,
+                    "dt": resampled_dt,  # vector from resampled time vector
+                    "idx_to_neuron": dict((v, k) for k, v in neuron_to_idx.items()),
+                    "interpolate_method": self.interpolate_method,
+                    "max_timesteps": int(max_timesteps),  # scalar from resampled time vector
+                    "median_dt": self.resample_dt,  # scalar from resampled time vector
+                    "neuron_to_idx": neuron_to_idx,
+                    "num_named_neurons": num_named_neurons,
+                    "num_neurons": int(num_neurons),
+                    "num_unknown_neurons": num_unknown_neurons,
+                    "original_dt": dt,  # vector from original time vector
+                    "original_calcium_data": calcium_data,  # normalized
+                    "original_max_timesteps": int(
+                        calcium_data.shape[0]
+                    ),  # scalar from original time vector
+                    "original_median_dt": original_median_dt,  # scalar from original time vector
+                    "original_residual_calcium": residual_calcium,  # original
+                    "original_smooth_calcium_data": smooth_calcium_data,  # normalized and smoothed
+                    "original_smooth_residual_calcium": smooth_residual_calcium,  # smoothed
+                    "original_time_in_seconds": time_in_seconds,  # original time vector
+                    "residual_calcium": resampled_residual_calcium,  # resampled
+                    "smooth_calcium_data": resampled_smooth_calcium_data,  # normalized, smoothed and resampled
+                    "smooth_method": self.smooth_method,
+                    "smooth_residual_calcium": resampled_smooth_residual_calcium,  # smoothed and resampled
+                    "time_in_seconds": resampled_time_in_seconds,  # resampled time vector
+                    "worm": worm,  # worm ID
+                    "extra_info": self.create_metadata(),  # additional information and metadata
+                }
+            }
+            # Update preprocessed data collection
+            preprocessed_data.update(worm_dict)
+        # Reshape calcium data
+        for worm in preprocessed_data.keys():
+            preprocessed_data[worm] = reshape_calcium_data(preprocessed_data[worm])
+        # Save data
+        self.save_data(preprocessed_data)
+        logger.info(f"Finished processing {self.source_dataset}.")
+        
 class Leifer2023Preprocessor(BasePreprocessor):
     def __init__(self, transform, smooth_method, interpolate_method, resample_dt, **kwargs):
         super().__init__(
@@ -2775,206 +2973,6 @@ class Lin2023Preprocessor(BasePreprocessor):
         self.save_data(preprocessed_data)
         logger.info(f"Finished processing {self.source_dataset}.")
         return None
-    
-    
-class Flavell2023Preprocessor(BasePreprocessor):
-    def __init__(self, transform, smooth_method, interpolate_method, resample_dt, **kwargs):
-        super().__init__(
-            "Flavell2023",
-            transform,
-            smooth_method,
-            interpolate_method,
-            resample_dt,
-            **kwargs,
-        )
-
-    def find_nearest_label(self, query, possible_labels, char="?"):
-        """Find the nearest neuron label from a list given a query."""
-        # Remove the '?' from the query to simplify comparison
-        query_base = query.replace(char, "")
-        # Initialize variables to track the best match
-        nearest_label = None
-        highest_similarity = -1  # Start with lowest similarity possible
-        for label in possible_labels:
-            # Count matching characters, ignoring the character at the position of '?'
-            similarity = sum(1 for q, l in zip(query_base, label) if q == l)
-            # Update the nearest label if this one is more similar
-            if similarity > highest_similarity:
-                nearest_label = label
-                highest_similarity = similarity
-        return nearest_label, possible_labels.index(nearest_label)
-
-    def load_data(self, file_name):
-        if file_name.endswith(".h5"):
-            data = h5py.File(os.path.join(self.raw_data_path, self.source_dataset, file_name), "r")
-        elif file_name.endswith(".json"):
-            with open(os.path.join(self.raw_data_path, self.source_dataset, file_name), "r") as f:
-                data = json.load(f)
-        else:
-            raise ValueError(f"Unsupported file format: {file_name}")
-        return data
-
-    def extract_data(self, file_data):
-        """
-        A more complicated `extract_data` method was necessary for the Flavell2023 dataset.
-        """
-        # The files are expected to use a JSON or H5 format
-        assert isinstance(file_data, (dict, h5py.File)), f"Unsupported data type: {type(file_data)}"
-        # Time vector in seconds
-        time_in_seconds = np.array(file_data["timestamp_confocal"], dtype=np.float32)
-        time_in_seconds = time_in_seconds.reshape((-1, 1))
-        # Raw traces (list)
-        raw_traces = file_data["trace_array"]
-        # Max time steps (int)
-        max_t = len(raw_traces[0])
-        # Number of neurons (int)
-        number_neurons = len(raw_traces)
-        # Labels (list)
-        ids = file_data["labeled"]
-        # All traces
-        calcium_data = np.zeros((max_t, number_neurons), dtype=np.float32)
-        for i, trace in enumerate(raw_traces):
-            calcium_data[:, i] = trace
-        neurons = [str(i) for i in range(number_neurons)]
-        for i in ids.keys():
-            label = ids[str(i)]["label"]
-            neurons[int(i) - 1] = label
-        # Handle ambiguous neuron labels
-        for i in range(number_neurons):
-            label = neurons[i]
-            if not label.isnumeric():
-                # Treat the '?' in labels
-                if "?" in label and "??" not in label:
-                    # Find the group which the neuron belongs to
-                    label_split = label.split("?")
-                    # Find potential label matches excluding ones we already have
-                    possible_labels = [
-                        neuron_name
-                        for neuron_name in NEURON_LABELS
-                        if (label_split[0] in neuron_name)
-                        and (label_split[-1] in neuron_name)
-                        and (neuron_name not in set(neurons))
-                    ]
-                    # Pick the neuron label with the nearest similarity
-                    neuron_label, _ = self.find_nearest_label(label, possible_labels, char="?")
-                    neurons[i] = neuron_label
-                # Treat the '??' in labels
-                elif "??" in label:
-                    # Find the group which the neuron belongs to
-                    label_split = label.split("??")
-                    # Find potential label matches excluding ones we already have
-                    possible_labels = [
-                        neuron_name
-                        for neuron_name in NEURON_LABELS
-                        if (label_split[0] in neuron_name)
-                        and (label_split[-1] in neuron_name)
-                        and (neuron_name not in set(neurons))
-                    ]
-                    # Pick the neuron label with the nearest similarity
-                    neuron_label, _ = self.find_nearest_label(label, possible_labels, char="??")
-                    neurons[i] = neuron_label
-        # Filter for unique neuron labels
-        neurons = np.array(neurons, dtype=str)
-        neurons, unique_indices = np.unique(neurons, return_index=True, return_counts=False)
-        # Only get data for unique neurons
-        calcium_data = calcium_data[:, unique_indices]
-        # Return the extracted data
-        return neurons, calcium_data, time_in_seconds
-
-    def create_metadata(self):
-        extra_info = dict(
-            citation="Atanas et al., Cell 2023, _Brain-Wide Representations of Behavior Spanning Multiple Timescales and States in C. Elegans_"
-        )
-        return extra_info
-
-    def preprocess(self):
-        # TODO: Encapsulate the single worm part of this method into a `preprocess_traces` method.
-        # Load and preprocess data
-        preprocessed_data = dict()
-        for i, file in enumerate(os.listdir(os.path.join(self.raw_data_path, self.source_dataset))):
-            if not (file.endswith(".h5") or file.endswith(".json")):
-                continue
-            worm = "worm" + str(i)
-            file_data = self.load_data(file)  # load
-            # 0. Extract raw data
-            neurons, calcium_data, time_in_seconds = self.extract_data(file_data)
-            # Set time to start at 0.0 seconds
-            time_in_seconds = time_in_seconds - time_in_seconds[0]  # vector
-            # 1. Map named neurons
-            neuron_to_idx, num_named_neurons = self.create_neuron_idx(neurons)
-            # 2. Normalize calcium data
-            calcium_data = self.normalize_data(calcium_data)  # matrix
-            # 3. Compute calcium dynamics (residual calcium)
-            dt = np.diff(time_in_seconds, axis=0, prepend=0.0)  # vector
-            original_median_dt = np.median(dt[1:]).item()  # scalar
-            residual_calcium = np.gradient(
-                calcium_data, time_in_seconds.squeeze(), axis=0
-            )  # vector
-            # 4. Smooth data
-            smooth_calcium_data = self.smooth_data(calcium_data, time_in_seconds)
-            smooth_residual_calcium = self.smooth_data(residual_calcium, time_in_seconds)
-            # 5. Resample data (raw and smoothed data)
-            upsample = original_median_dt >= self.resample_dt  # bool: whether to up/down-sample
-            _, resampled_calcium_data = self.resample_data(time_in_seconds, calcium_data, upsample)
-            _, resampled_residual_calcium = self.resample_data(
-                time_in_seconds, residual_calcium, upsample
-            )
-            # NOTE: We use the resampling of the smooth calcium data to give us the resampled time points
-            resampled_time_in_seconds, resampled_smooth_calcium_data = self.resample_data(
-                time_in_seconds, smooth_calcium_data, upsample
-            )
-            resampled_time_in_seconds = (
-                resampled_time_in_seconds - resampled_time_in_seconds[0]
-            )  # start at 0.0 seconds
-            _, resampled_smooth_residual_calcium = self.resample_data(
-                time_in_seconds, smooth_residual_calcium, upsample
-            )
-            resampled_dt = np.diff(resampled_time_in_seconds, axis=0, prepend=0.0)  # vector
-            resampled_median_dt = np.median(resampled_dt[1:]).item()  # scalar
-            assert np.isclose(self.resample_dt, resampled_median_dt), "Resampling failed."
-            max_timesteps, num_neurons = resampled_calcium_data.shape
-            num_unknown_neurons = int(num_neurons) - num_named_neurons
-            # 6. Save data
-            worm_dict = {
-                worm: {
-                    "calcium_data": resampled_calcium_data,  # normalized and resampled
-                    "source_dataset": self.source_dataset,
-                    "dt": resampled_dt,  # vector from resampled time vector
-                    "idx_to_neuron": dict((v, k) for k, v in neuron_to_idx.items()),
-                    "interpolate_method": self.interpolate_method,
-                    "max_timesteps": int(max_timesteps),  # scalar from resampled time vector
-                    "median_dt": self.resample_dt,  # scalar from resampled time vector
-                    "neuron_to_idx": neuron_to_idx,
-                    "num_named_neurons": num_named_neurons,
-                    "num_neurons": int(num_neurons),
-                    "num_unknown_neurons": num_unknown_neurons,
-                    "original_dt": dt,  # vector from original time vector
-                    "original_calcium_data": calcium_data,  # normalized
-                    "original_max_timesteps": int(
-                        calcium_data.shape[0]
-                    ),  # scalar from original time vector
-                    "original_median_dt": original_median_dt,  # scalar from original time vector
-                    "original_residual_calcium": residual_calcium,  # original
-                    "original_smooth_calcium_data": smooth_calcium_data,  # normalized and smoothed
-                    "original_smooth_residual_calcium": smooth_residual_calcium,  # smoothed
-                    "original_time_in_seconds": time_in_seconds,  # original time vector
-                    "residual_calcium": resampled_residual_calcium,  # resampled
-                    "smooth_calcium_data": resampled_smooth_calcium_data,  # normalized, smoothed and resampled
-                    "smooth_method": self.smooth_method,
-                    "smooth_residual_calcium": resampled_smooth_residual_calcium,  # smoothed and resampled
-                    "time_in_seconds": resampled_time_in_seconds,  # resampled time vector
-                    "worm": worm,  # worm ID
-                    "extra_info": self.create_metadata(),  # additional information and metadata
-                }
-            }
-            # Update preprocessed data collection
-            preprocessed_data.update(worm_dict)
-        # Reshape calcium data
-        for worm in preprocessed_data.keys():
-            preprocessed_data[worm] = reshape_calcium_data(preprocessed_data[worm])
-        # Save data
-        self.save_data(preprocessed_data)
-        logger.info(f"Finished processing {self.source_dataset}.")
 
 
 # # # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#

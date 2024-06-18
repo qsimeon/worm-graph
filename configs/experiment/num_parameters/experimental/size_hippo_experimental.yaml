@@ -39,13 +39,12 @@ submodule:
     source_datasets:
       # This gets overwritten by the sweeper
       # Synthetic datasets
-      Sines0000: null
       Lorenz0000: null
-      WhiteNoise0000: null
       RandWalk0000: null
+      Sines0000: null
       VanDerPol0000: null
+      WhiteNoise0000: null
       Wikitext0000: null
-      Recurrent0000: null
       # Experimental datasets
       Kato2015: null
       Nichols2017: null
@@ -54,9 +53,9 @@ submodule:
       Yemini2021: null
       Uzel2022: null
       Dag2023: null
+      Leifer2023: null
       Lin2023: null
       Flavell2023: null
-      Leifer2023: null
 
     num_named_neurons: null
     num_train_samples: 32
@@ -75,13 +74,12 @@ submodule:
     # This gets overwritten by the sweeper
     source_datasets:
       # Synthetic datasets
-      Sines0000: null
       Lorenz0000: null
-      WhiteNoise0000: null
       RandWalk0000: null
+      Sines0000: null
       VanDerPol0000: null
+      WhiteNoise0000: null
       Wikitext0000: null
-      Recurrent0000: null
       # Experimental datasets
       Kato2015: null
       Nichols2017: null
@@ -90,9 +88,9 @@ submodule:
       Yemini2021: null
       Uzel2022: null
       Dag2023: null
+      Leifer2023: null
       Lin2023: null
       Flavell2023: null
-      Leifer2023: null
     # Number of time steps to generate
     num_new_timesteps: null
     # Set to the same value as submodule.dataset.seq_len
@@ -104,13 +102,12 @@ submodule:
       # This gets overwritten by the sweeper
       source_datasets:
         # Synthetic datasets
-        Sines0000: null
         Lorenz0000: null
-        WhiteNoise0000: null
         RandWalk0000: null
+        Sines0000: null
         VanDerPol0000: null
+        WhiteNoise0000: null
         Wikitext0000: null
-        Recurrent0000: null
         # Experimental datasets
         Kato2015: null
         Nichols2017: null
@@ -119,9 +116,9 @@ submodule:
         Yemini2021: null
         Uzel2022: null
         Dag2023: null
+        Leifer2023: null
         Lin2023: null
         Flavell2023: null
-        Leifer2023: null
 
 experiment:
   key: num_parameters

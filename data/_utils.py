@@ -25,10 +25,10 @@ def load_dataset(name):
      name : str
          The name of the dataset to load. Must be one of the valid dataset names.
 
-    name = {Kato2015, Nichols2017, Nguyen2017, Skora2018,
-             Kaplan2020, Uzel2022, Flavell2023, Leifer2023}
-            | {Lorenz000, Sines0000, RandWalk0000, VanDerPol0000,
-                WhiteNoise0000, Wikitext0000, Recurrent0000}
+    name = {Kato2015, Nichols2017, Nguyen2017, Skora2018, Kaplan2020,
+            Uzel2022, Flavell2023, Dag2023, Leifer2023, Lin2023}
+        |  {Lorenz000, RandWalk0000, Sines0000, 
+            VanDerPol0000, WhiteNoise0000, Wikitext0000}
 
      Returns
      -------
