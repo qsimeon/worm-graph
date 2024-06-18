@@ -67,7 +67,7 @@ def get_datasets(dataset_config: DictConfig, save=False):
         # Check if the directory exists and is not empty
         if os.path.isdir(presave_path) and os.listdir(presave_path):
             dataset_config.use_these_datasets.path = presave_path
-        else: # Go to (*)
+        else:  # Go to (*)
             logger.info(
                 f"Directory {presave_path} does not exist or is empty.\n"
                 f"Creating the dataset from source datasets.\n\n"
@@ -264,7 +264,7 @@ def get_datasets(dataset_config: DictConfig, save=False):
                 header=True,
             )
             return train_dataset, val_dataset
-    else: # (*)
+    else:  # (*)
         # Create the datasets using the source datasets
         logger.info("Creating validation and train datasets from source datasets.")
         combined_dataset, dataset_info = create_combined_dataset(source_datasets, num_named_neurons)
@@ -362,8 +362,10 @@ def get_datasets(dataset_config: DictConfig, save=False):
             os.makedirs(presave_path, exist_ok=True)
             for filename in os.listdir(os.path.join(log_dir, "dataset")):
                 if filename.endswith(".csv") or filename.endswith(".pickle"):
-                    shutil.copy(os.path.join(log_dir, "dataset", filename), 
-                                os.path.join(presave_path, filename))
+                    shutil.copy(
+                        os.path.join(log_dir, "dataset", filename),
+                        os.path.join(presave_path, filename),
+                    )
         # Return the train and validation datasets
         return train_dataset, val_dataset
 

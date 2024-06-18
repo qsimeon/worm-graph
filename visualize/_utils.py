@@ -829,7 +829,12 @@ def plot_worm_data(worm_data, num_neurons=5, max_tsteps=1000, smooth=False):
     for neuron_idx in neuron_indices:
         neuron_name = slot_to_named_neuron.get(neuron_idx, None)
         if neuron_name is not None:
-            plt.plot(time_in_seconds[:max_tsteps], calcium_data[:max_tsteps, neuron_idx], alpha=0.7, label=neuron_name)
+            plt.plot(
+                time_in_seconds[:max_tsteps],
+                calcium_data[:max_tsteps, neuron_idx],
+                alpha=0.7,
+                label=neuron_name,
+            )
         else:
             ValueError("No neurons with data were selected.")
 

@@ -103,25 +103,25 @@ RAW_ZIP = "raw_data.zip"
 
 # Essential raw data files that must be in the raw data directory
 RAW_FILES = [  # TODO: Cite sources of these files.
-    ### >>> Default (Premaratne's preprocessed Cook2019) connectome data files >>> 
+    ### >>> Default (Premaratne's preprocessed Cook2019) connectome data files >>>
     "GHermChem_Edges.csv",
     "GHermChem_Nodes.csv",
     "GHermElec_Sym_Edges.csv",
     "GHermElec_Sym_Nodes.csv",
     ### <<< Default (Kamal Premaratne's preprocessed Cook2019) connectome data files <<<
-    "Cook2019.xlsx", # original Cook et al. (2019) connectome data file
-    "Chklovskii2011.xls", # Chklovskii et al. (2011) connectome data file
-    "OpenWormConnectome.csv", # OpenWorm connectome data file
-    "CElegansFunctionalConnectivity.xlsx", # Randi et al. (2023) functional connectome data file
-    "white_1986_jsh.csv", # L4 brain
-    "white_1986_n2u.csv", # adult brain
-    "white_1986_jse.csv", # adult tail
-    "white_1986_whole.csv", # whole animal compilation of Varshey et al. (2011)
-    "witvliet_2020_7.csv", # one adult brain of Witvliet et al. (2020)
-    "witvliet_2020_8.csv", # another adult brain of Witvliet et al. (2020)
-    "LowResAtlasWithHighResHeadsAndTails.csv", # atlas of C. elegans neuron 3D positions
-    "Witvliet2020_NeuronClasses.xlsx", # high level classes of hermaphrodite neurons
-    "neuron_labels.txt", # labels (names) of all hermaphrodite neurons
+    "Cook2019.xlsx",  # original Cook et al. (2019) connectome data file
+    "Chklovskii2011.xls",  # Chklovskii et al. (2011) connectome data file
+    "OpenWormConnectome.csv",  # OpenWorm connectome data file
+    "CElegansFunctionalConnectivity.xlsx",  # Randi et al. (2023) functional connectome data file
+    "white_1986_jsh.csv",  # L4 brain
+    "white_1986_n2u.csv",  # adult brain
+    "white_1986_jse.csv",  # adult tail
+    "white_1986_whole.csv",  # whole animal compilation of Varshey et al. (2011)
+    "witvliet_2020_7.csv",  # one adult brain of Witvliet et al. (2020)
+    "witvliet_2020_8.csv",  # another adult brain of Witvliet et al. (2020)
+    "LowResAtlasWithHighResHeadsAndTails.csv",  # atlas of C. elegans neuron 3D positions
+    "Witvliet2020_NeuronClasses.xlsx",  # high level classes of hermaphrodite neurons
+    "neuron_labels.txt",  # labels (names) of all hermaphrodite neurons
 ]
 
 WORLD_SIZE = torch.cuda.device_count()

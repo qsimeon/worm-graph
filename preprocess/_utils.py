@@ -201,7 +201,7 @@ def preprocess_common_tasks(raw_dir, edge_index, edge_attr):
 def preprocess_default(raw_dir, save_as="graph_tensors.pt"):
     """
     Defaults to using a preprocessed version of the Cook et al. (2019) connectome data that
-    was prepared by Kamal Premaratne (University of Miami) and extracted from the ZIP archive 
+    was prepared by Kamal Premaratne (University of Miami) and extracted from the ZIP archive
     downloadable from https://wormwiring.org/matlab%20scripts/Premaratne%20MATLAB-ready%20files%20.zip.
     """
     # Names of all C. elegans hermaphrodite neurons
@@ -2345,7 +2345,7 @@ class Dag2023Preprocessor(BasePreprocessor):
         neurons = []
         # If there is an index map, use it to extract the labeled neurons
         if index_map:
-            # Indices in index_map correspond to named neurons 
+            # Indices in index_map correspond to named neurons
             for calnum in index_map:
                 # NOTE: calnum is a string, not an integer
                 assert (
@@ -2361,7 +2361,7 @@ class Dag2023Preprocessor(BasePreprocessor):
                 if i not in set(indices):
                     indices.append(i)
                     neurons.append(str(i))
-        # Otherwise, use the indices as the neuron labels for all traces  
+        # Otherwise, use the indices as the neuron labels for all traces
         else:
             indices = list(range(calcium.shape[1]))
             neurons = [str(i) for i in indices]
@@ -2375,7 +2375,9 @@ class Dag2023Preprocessor(BasePreprocessor):
                 neurons_copy.append(label)
                 continue
             # Look for the closest neuron label that will match the current string containing '?'
-            replacement, _ = self.find_nearest_label(label, set(NEURON_LABELS) - set(neurons_copy), char="?")
+            replacement, _ = self.find_nearest_label(
+                label, set(NEURON_LABELS) - set(neurons_copy), char="?"
+            )
             neurons_copy.append(replacement)
         # Convert the list of neuron labels to a numpy array
         neurons = np.array(neurons_copy, dtype=str)
@@ -2427,6 +2429,7 @@ class Dag2023Preprocessor(BasePreprocessor):
             citation="Dag et al., Cell 2023. “_Dissecting the Functional Organization of the C. Elegans Serotonergic System at Whole-Brain Scale_"
         )
         return extra_info
+
 
 class Flavell2023Preprocessor(BasePreprocessor):
     def __init__(self, transform, smooth_method, interpolate_method, resample_dt, **kwargs):
@@ -2626,7 +2629,8 @@ class Flavell2023Preprocessor(BasePreprocessor):
         # Save data
         self.save_data(preprocessed_data)
         logger.info(f"Finished processing {self.source_dataset}.")
-        
+
+
 class Leifer2023Preprocessor(BasePreprocessor):
     def __init__(self, transform, smooth_method, interpolate_method, resample_dt, **kwargs):
         super().__init__(
@@ -2637,6 +2641,7 @@ class Leifer2023Preprocessor(BasePreprocessor):
             resample_dt,
             **kwargs,
         )
+
     def str_to_float(self, str_num):
         """
         Helper function for changing textual scientific
@@ -2673,48 +2678,49 @@ class Leifer2023Preprocessor(BasePreprocessor):
         data_array = np.array(data, dtype=np.float32)
         return data_array
 
-    
     def is_monotonic_linear(self, arr):
         """
         Checks if the array is a line with constant slope (i.e linear).
-        
+
         Parameters:
         arr (np.array): 1D Input array to check.
-        
+
         Returns:
         bool: True if the array is linear, False otherwise.
         """
         assert arr.ndim == 1, "Array must be a 1D (univariate) time series."
         diff = np.round(np.diff(arr), decimals=3)
-        result = np.unique(diff) 
+        result = np.unique(diff)
         return result.size == 1
 
-    def filter_bad_traces_by_linear_segments(self, data, window_size=50, linear_segment_threshold=1e-3):
+    def filter_bad_traces_by_linear_segments(
+        self, data, window_size=50, linear_segment_threshold=1e-3
+    ):
         """
         Filters out traces with significant proportions of linear segments. Linear segments suggest
         that the data was imputed with linear interpolation to remove stretches of NaN values.
 
-        There are weird-looking traces in the Leifer2023 raw data caused by interpolations of missing values 
-        (NaNs) when neurons were not consistently tracked over time due to imperfect nonrigid registration. 
+        There are weird-looking traces in the Leifer2023 raw data caused by interpolations of missing values
+        (NaNs) when neurons were not consistently tracked over time due to imperfect nonrigid registration.
         This helper function was written to filter out these problematic imputed neural traces.
-        
+
         Parameters:
         data (np.array): The neural data array with shape (time_points, neurons).
         window_size (int): The size of the window to check for linearity.
         linear_segment_threshold (float): Proportion of linear segments above which traces are considered bad.
-        
+
         Returns:
         (np.array, nparray): Tuple of filtered neural data and the associated mask into the original data array.
         """
         t, n = data.shape
         linear_segments = np.zeros(n, dtype=int)
         for i in range(t - window_size):
-            segment = data[i:i + window_size, :] 
+            segment = data[i : i + window_size, :]
             ls = np.apply_along_axis(self.is_monotonic_linear, 0, segment)
             linear_segments += ls.astype(int)
         proportion_linear = linear_segments / (t - window_size)
         bad_traces_mask = np.array(proportion_linear > linear_segment_threshold)
-        good_traces_mask = ~bad_traces_mask 
+        good_traces_mask = ~bad_traces_mask
         filtered_data = data[:, good_traces_mask]
         return filtered_data, good_traces_mask
 
@@ -2759,9 +2765,9 @@ class Leifer2023Preprocessor(BasePreprocessor):
 
     def extract_data(self, data_file, labels_file, time_file):
         """Slightly different `extract_data` method needed for Leifer2023 dataset."""
-        real_data = self.load_data(data_file) # shaped (time, neurons)
+        real_data = self.load_data(data_file)  # shaped (time, neurons)
         # In some strange cases there are more labels than neurons
-        label_list = self.load_labels(labels_file)[:real_data.shape[1]] 
+        label_list = self.load_labels(labels_file)[: real_data.shape[1]]
         time_in_seconds = self.load_time_vector(time_file)
         # Check that the data, labels and time shapes match
         assert real_data.shape[1] == len(
