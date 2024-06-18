@@ -1812,7 +1812,7 @@ class BasePreprocessor:
             # Create neuron label to index mapping
             neuron_to_idx, num_named_neurons = self.create_neuron_idx(unique_IDs)
             ### DEBUG ###
-            # # Skip worms with no labelled neurons. 
+            # # Skip worms with no labelled neurons.
             # # TODO: Should we do this? What if we want to infer these using trained models as a dowstream task?
             # if num_named_neurons == 0:
             #     continue
@@ -2212,7 +2212,7 @@ class Yemini2021Preprocessor(BasePreprocessor):
             imputer = IterativeImputer(random_state=0)
             if np.isnan(activity).any():
                 activity = imputer.fit_transform(activity)
-            # Observed empirically that the first three values of activity equal 0.0s 
+            # Observed empirically that the first three values of activity equal 0.0s
             activity = activity[4:]
             tvec = tvec[4:]
             # Add acitvity to list of traces
@@ -2350,7 +2350,7 @@ class Dag2023Preprocessor(BasePreprocessor):
         # Neural activity traces
         calcium = np.array(file_data["gcamp"]["traces_array_F_F20"])  # (time, neurons)
         # Time vector in seconds
-        timevec = np.array(file_data["timing"]["timestamp_confocal"])[: calcium.shape[0]] # (time,)
+        timevec = np.array(file_data["timing"]["timestamp_confocal"])[: calcium.shape[0]]  # (time,)
         # Get neuron labels corresponding to indices in calcium data
         indices = []
         neurons = []
@@ -2419,8 +2419,8 @@ class Dag2023Preprocessor(BasePreprocessor):
             )  # preprocess
         ### DEBUG ###
         # Next deal with the swf415_no_id which contains purely unlabeled neuron data
-        # NOTE: These don't get used at all as they are skipped in 
-        # BasePreprocessor.preprocess_traces, becuase num_named_neurons == 0. 
+        # NOTE: These don't get used at all as they are skipped in
+        # BasePreprocessor.preprocess_traces, becuase num_named_neurons == 0.
         # TODO: We temporarily turned that off to see what happens here.
         for file in os.listdir(noid_data_files):
             if not file.endswith(".h5"):
@@ -2729,7 +2729,9 @@ class Leifer2023Preprocessor(BasePreprocessor):
         """
         t, n = data.shape
         linear_segments = np.zeros(n, dtype=int)
-        window_start = range(0, t - window_size, window_size//2) # non-overlapping or staggered windows (faster)
+        window_start = range(
+            0, t - window_size, window_size // 2
+        )  # non-overlapping or staggered windows (faster)
         for i in window_start:
             segment = data[i : i + window_size, :]
             ls = np.apply_along_axis(self.is_monotonic_linear, 0, segment)

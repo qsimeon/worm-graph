@@ -1101,7 +1101,7 @@ class Model(torch.nn.Module):
                 mask.unsqueeze(1).expand_as(output).bool()
             )  # for use in indexing without storing expanded tensor
             # Normalize the loss by the total number of valid data points
-            norm_factor = valid_data_mask.sum() 
+            norm_factor = valid_data_mask.sum()
             mrlv = masked_recon_loss[valid_data_mask]
             numerator = mrlv.sum()
             recon_loss = numerator / torch.clamp(norm_factor, min=1)
