@@ -199,6 +199,11 @@ def preprocess_common_tasks(raw_dir, edge_index, edge_attr):
 
 
 def preprocess_default(raw_dir, save_as="graph_tensors.pt"):
+    """
+    Defaults to using a preprocessed version of the Cook et al. (2019) connectome data that
+    was prepared by Kamal Premaratne (University of Miami) and extracted from the ZIP archive 
+    downloadable from https://wormwiring.org/matlab%20scripts/Premaratne%20MATLAB-ready%20files%20.zip.
+    """
     # Names of all C. elegans hermaphrodite neurons
     # NOTE: Only neurons in this list will be included in the connectomes constructed here.
     neurons_all = set(NEURON_LABELS)
@@ -937,9 +942,9 @@ def preprocess_connectome(raw_dir, raw_files, pub="witvliet_7"):
       diagram of the brain, detailing how neurons and their synapses are
       interconnected.
     * The default connectome data used here is from Cook et al., 2019.
-      If the raw data isn't found, please download it at this link:
+      If the raw data isn't found, please download the zip file from this link:
       https://wormwiring.org/matlab%20scripts/Premaratne%20MATLAB-ready%20files%20.zip,
-      unzip it in the data/raw folder.then run the MATLAB script `export_nodes_edges.m`.
+      unzip the archive in the data/raw folder, then run the MATLAB script `export_nodes_edges.m`.
     """
     # Check if the raw connectome data exists
     if not os.path.exists(raw_dir):
@@ -2286,71 +2291,6 @@ class Uzel2022Preprocessor(BasePreprocessor):
         logger.info(f"Finished processing {self.source_dataset}.")
 
 
-class Lin2023Preprocessor(BasePreprocessor):
-    def __init__(self, transform, smooth_method, interpolate_method, resample_dt, **kwargs):
-        super().__init__(
-            "Lin2023",
-            transform,
-            smooth_method,
-            interpolate_method,
-            resample_dt,
-            **kwargs,
-        )
-
-    def load_data(self, file_name):
-        # Overriding the base class method to use scipy.io.loadmat for .mat files
-        data = loadmat(os.path.join(self.raw_data_path, self.source_dataset, file_name))
-        return data
-
-    def extract_data(self, data_file):
-        """Slightly different extract_data method for Lin2023 dataset."""
-        dataset_raw = self.load_data(data_file)
-        # Filter for proofread neurons.
-        _filter = dataset_raw["use_flag"].flatten() > 0
-        neurons = [str(_.item()) for _ in dataset_raw["proofread_neurons"].flatten()[_filter]]
-        raw_time_vec = np.array(dataset_raw["times"].flatten()[0][-1])
-        raw_activitiy = dataset_raw["corrected_F"][_filter].T  # (time, neurons)
-        # Replace first nan with F0 value
-        _f0 = dataset_raw["F_0"][_filter][:, 0]
-        raw_activitiy[0, :] = _f0
-        # Impute any remaining NaN values
-        imputer = IterativeImputer(random_state=0)
-        if np.isnan(raw_activitiy).any():
-            raw_activitiy = imputer.fit_transform(raw_activitiy)
-        # Make the extracted data into a list of arrays
-        neuron_IDs, raw_traces, time_vector_seconds = [neurons], [raw_activitiy], [raw_time_vec]
-        # Return the extracted data
-        return neuron_IDs, raw_traces, time_vector_seconds
-
-    def create_metadata(self):
-        extra_info = dict(
-            citation="Lin et al., Science Advances 2023, _Functional Imaging and Quantification of Multineuronal Olfactory Responses in C. Elegans_"
-        )
-        return extra_info
-
-    def preprocess(self):
-        # Load and preprocess data
-        preprocessed_data = dict()  # Store preprocessed data
-        worm_idx = 0  # Initialize worm index outside file loop
-        # Have multiple .mat files that you iterate over
-        data_files = os.path.join(self.raw_data_path, "Lin2023")
-        # Multiple .mat files to iterate over
-        for file in os.listdir(data_files):
-            if not file.endswith(".mat"):
-                continue
-            neurons, raw_traces, time_vector_seconds = self.extract_data(file)
-            preprocessed_data, worm_idx = self.preprocess_traces(
-                neurons, raw_traces, time_vector_seconds, preprocessed_data, worm_idx
-            )  # preprocess
-        # Reshape calcium data
-        for worm in preprocessed_data.keys():
-            preprocessed_data[worm] = reshape_calcium_data(preprocessed_data[worm])
-        # Save data
-        self.save_data(preprocessed_data)
-        logger.info(f"Finished processing {self.source_dataset}.")
-        return None
-
-
 class Dag2023Preprocessor(BasePreprocessor):
     def __init__(self, transform, smooth_method, interpolate_method, resample_dt, **kwargs):
         super().__init__(
@@ -2499,10 +2439,9 @@ class Leifer2023Preprocessor(BasePreprocessor):
             resample_dt,
             **kwargs,
         )
-
     def str_to_float(self, str_num):
         """
-        Helper function for changingin textual scientific
+        Helper function for changing textual scientific
         notation into a floating-point number.
         """
         before_e = float(str_num.split("e")[0])
@@ -2518,23 +2457,68 @@ class Leifer2023Preprocessor(BasePreprocessor):
         return float_num
 
     def load_labels(self, file_path):
-        """ "Helper function to load neuron labels from text file."""
+        """Helper function to load neuron labels from text file."""
         with open(file_path, "r") as f:
             labels = [line.strip("\n") for line in f.readlines()]
         return labels
 
     def load_time_vector(self, file_path):
-        """ "Helper function to load time vector from text file."""
+        """Helper function to load time vector from text file."""
         with open(file_path, "r") as f:
             timeVectorSeconds = [self.str_to_float(line.strip("\n")) for line in f.readlines()]
             timeVectorSeconds = np.array(timeVectorSeconds, dtype=np.float32).reshape(-1, 1)
         return timeVectorSeconds
 
-    def load_data(self, file_name):
-        with open(os.path.join(self.raw_data_path, self.source_dataset, file_name), "r") as f:
+    def load_data(self, file_path):
+        with open(file_path, "r") as f:
             data = [list(map(float, line.split(" "))) for line in f.readlines()]
         data_array = np.array(data, dtype=np.float32)
         return data_array
+
+    
+    def is_monotonic_linear(self, arr):
+        """
+        Checks if the array is a line with constant slope (i.e linear).
+        
+        Parameters:
+        arr (np.array): 1D Input array to check.
+        
+        Returns:
+        bool: True if the array is linear, False otherwise.
+        """
+        assert arr.ndim == 1, "Array must be a 1D (univariate) time series."
+        diff = np.round(np.diff(arr), decimals=3)
+        result = np.unique(diff) 
+        return result.size == 1
+
+    def filter_bad_traces_by_linear_segments(self, data, window_size=50, linear_segment_threshold=1e-3):
+        """
+        Filters out traces with significant proportions of linear segments. Linear segments suggest
+        that the data was imputed with linear interpolation to remove stretches of NaN values.
+
+        There are weird-looking traces in the Leifer2023 raw data caused by interpolations of missing values 
+        (NaNs) when neurons were not consistently tracked over time due to imperfect nonrigid registration. 
+        This helper function was written to filter out these problematic imputed neural traces.
+        
+        Parameters:
+        data (np.array): The neural data array with shape (time_points, neurons).
+        window_size (int): The size of the window to check for linearity.
+        linear_segment_threshold (float): Proportion of linear segments above which traces are considered bad.
+        
+        Returns:
+        (np.array, nparray): Tuple of filtered neural data and the associated mask into the original data array.
+        """
+        t, n = data.shape
+        linear_segments = np.zeros(n, dtype=int)
+        for i in range(t - window_size):
+            segment = data[i:i + window_size, :] 
+            ls = np.apply_along_axis(self.is_monotonic_linear, 0, segment)
+            linear_segments += ls.astype(int)
+        proportion_linear = linear_segments / (t - window_size)
+        bad_traces_mask = np.array(proportion_linear > linear_segment_threshold)
+        good_traces_mask = ~bad_traces_mask 
+        filtered_data = data[:, good_traces_mask]
+        return filtered_data, good_traces_mask
 
     def create_neuron_idx(self, label_list):
         """
@@ -2577,10 +2561,18 @@ class Leifer2023Preprocessor(BasePreprocessor):
 
     def extract_data(self, data_file, labels_file, time_file):
         """Slightly different `extract_data` method needed for Leifer2023 dataset."""
-        real_data = self.load_data(data_file)
-        label_list = self.load_labels(labels_file)[: real_data.shape[1]]
+        real_data = self.load_data(data_file) # shaped (time, neurons)
+        # In some strange cases there are more labels than neurons
+        label_list = self.load_labels(labels_file)[:real_data.shape[1]] 
         time_in_seconds = self.load_time_vector(time_file)
-        # Remove columns where all values are NaN
+        # Check that the data, labels and time shapes match
+        assert real_data.shape[1] == len(
+            label_list
+        ), f"Data and labels do not match!\n Files: {data_file}, {labels_file}"
+        assert (
+            real_data.shape[0] == time_in_seconds.shape[0]
+        ), f"Time vector does not match data!\n Files: {data_file}, {time_file}"
+        # Remove neuron traces that are all NaN values
         mask = np.argwhere(~np.isnan(real_data).all(axis=0)).flatten()
         real_data = real_data[:, mask]
         label_list = np.array(label_list, dtype=str)[mask].tolist()
@@ -2588,15 +2580,11 @@ class Leifer2023Preprocessor(BasePreprocessor):
         imputer = IterativeImputer(random_state=0)
         if np.isnan(real_data).any():
             real_data = imputer.fit_transform(real_data)
-        # Check that the data and labels match
-        assert real_data.shape[1] == len(
-            label_list
-        ), "Data and labels do not match!\n Files: {data_file}, {labels_file}"
-        assert (
-            real_data.shape[0] == time_in_seconds.shape[0]
-        ), "Time vector does not match data!\n Files: {data_file}, {time_file}"
+        # Remove badly imputed neurons from the data
+        filt_real_data, filt_mask = self.filter_bad_traces_by_linear_segments(real_data)
+        filt_label_list = np.array(label_list, dtype=str)[filt_mask].tolist()
         # Return the extracted data
-        return label_list, real_data, time_in_seconds
+        return filt_label_list, filt_real_data, time_in_seconds
 
     def create_metadata(self):
         extra_info = dict(
@@ -2724,6 +2712,71 @@ class Leifer2023Preprocessor(BasePreprocessor):
         logger.info(f"Finished processing {self.source_dataset}.")
 
 
+class Lin2023Preprocessor(BasePreprocessor):
+    def __init__(self, transform, smooth_method, interpolate_method, resample_dt, **kwargs):
+        super().__init__(
+            "Lin2023",
+            transform,
+            smooth_method,
+            interpolate_method,
+            resample_dt,
+            **kwargs,
+        )
+
+    def load_data(self, file_name):
+        # Overriding the base class method to use scipy.io.loadmat for .mat files
+        data = loadmat(os.path.join(self.raw_data_path, self.source_dataset, file_name))
+        return data
+
+    def extract_data(self, data_file):
+        """Slightly different extract_data method for Lin2023 dataset."""
+        dataset_raw = self.load_data(data_file)
+        # Filter for proofread neurons.
+        _filter = dataset_raw["use_flag"].flatten() > 0
+        neurons = [str(_.item()) for _ in dataset_raw["proofread_neurons"].flatten()[_filter]]
+        raw_time_vec = np.array(dataset_raw["times"].flatten()[0][-1])
+        raw_activitiy = dataset_raw["corrected_F"][_filter].T  # (time, neurons)
+        # Replace first nan with F0 value
+        _f0 = dataset_raw["F_0"][_filter][:, 0]
+        raw_activitiy[0, :] = _f0
+        # Impute any remaining NaN values
+        imputer = IterativeImputer(random_state=0)
+        if np.isnan(raw_activitiy).any():
+            raw_activitiy = imputer.fit_transform(raw_activitiy)
+        # Make the extracted data into a list of arrays
+        neuron_IDs, raw_traces, time_vector_seconds = [neurons], [raw_activitiy], [raw_time_vec]
+        # Return the extracted data
+        return neuron_IDs, raw_traces, time_vector_seconds
+
+    def create_metadata(self):
+        extra_info = dict(
+            citation="Lin et al., Science Advances 2023, _Functional Imaging and Quantification of Multineuronal Olfactory Responses in C. Elegans_"
+        )
+        return extra_info
+
+    def preprocess(self):
+        # Load and preprocess data
+        preprocessed_data = dict()  # Store preprocessed data
+        worm_idx = 0  # Initialize worm index outside file loop
+        # Have multiple .mat files that you iterate over
+        data_files = os.path.join(self.raw_data_path, "Lin2023")
+        # Multiple .mat files to iterate over
+        for file in os.listdir(data_files):
+            if not file.endswith(".mat"):
+                continue
+            neurons, raw_traces, time_vector_seconds = self.extract_data(file)
+            preprocessed_data, worm_idx = self.preprocess_traces(
+                neurons, raw_traces, time_vector_seconds, preprocessed_data, worm_idx
+            )  # preprocess
+        # Reshape calcium data
+        for worm in preprocessed_data.keys():
+            preprocessed_data[worm] = reshape_calcium_data(preprocessed_data[worm])
+        # Save data
+        self.save_data(preprocessed_data)
+        logger.info(f"Finished processing {self.source_dataset}.")
+        return None
+    
+    
 class Flavell2023Preprocessor(BasePreprocessor):
     def __init__(self, transform, smooth_method, interpolate_method, resample_dt, **kwargs):
         super().__init__(

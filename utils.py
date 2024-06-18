@@ -32,7 +32,7 @@ USER = "qsimeon"  # OpenMind/computing cluster username
 
 BLOCK_SIZE = 512  # maximum attention block size to use for Transformers
 
-VERSION_2 = False  # whether to use version 2 of the model (tokenizes neural data)
+VERSION_2 = False  # whether to use version 2 of the model which tokenizes neural data
 
 NUM_TOKENS = 256  # number of tokens in the neural vocabulary if using version 2
 
@@ -97,27 +97,31 @@ else:
 
 NUM_NEURONS = len(NEURON_LABELS)  # number of neurons in the model organism
 
-RAW_DATA_URL = "https://www.dropbox.com/scl/fi/j5q7u3detlea13ppyyp1s/raw_data.zip?rlkey=6nkbgnxifyx4tzuxx5khpztzj&dl=1"
+RAW_DATA_URL = "https://www.dropbox.com/scl/fi/97fxb5o4kekwmb41nmlsd/raw_data.zip?rlkey=klpglzoi79sgds2suwy5wujfo&dl=1"
 
 RAW_ZIP = "raw_data.zip"
 
 # Essential raw data files that must be in the raw data directory
 RAW_FILES = [  # TODO: Cite sources of these files.
-    # "GHermChem.mat",
-    # "GHermElec_Sym.mat",
+    ### >>> Default (Premaratne's preprocessed Cook2019) connectome data files >>> 
     "GHermChem_Edges.csv",
     "GHermChem_Nodes.csv",
     "GHermElec_Sym_Edges.csv",
     "GHermElec_Sym_Nodes.csv",
-    "OpenWormConnectome.csv",
-    "white_1986_jse_processed.csv",
-    "white_1986_jsh_processed.csv",
-    "white_1986_n2u_processed.csv",
-    "white_1986_whole_processed.csv",
-    "witvliet_2020_7_processed.csv",
-    "witvliet_2020_8_processed.csv",
-    "LowResAtlasWithHighResHeadsAndTails.csv",
-    "neuron_labels.txt",
+    ### <<< Default (Kamal Premaratne's preprocessed Cook2019) connectome data files <<<
+    "Cook2019.xlsx", # original Cook et al. (2019) connectome data file
+    "Chklovskii2011.xls", # Chklovskii et al. (2011) connectome data file
+    "OpenWormConnectome.csv", # OpenWorm connectome data file
+    "CElegansFunctionalConnectivity.xlsx", # Randi et al. (2023) functional connectome data file
+    "white_1986_jsh.csv", # L4 brain
+    "white_1986_n2u.csv", # adult brain
+    "white_1986_jse.csv", # adult tail
+    "white_1986_whole.csv", # whole animal compilation of Varshey et al. (2011)
+    "witvliet_2020_7.csv", # one adult brain of Witvliet et al. (2020)
+    "witvliet_2020_8.csv", # another adult brain of Witvliet et al. (2020)
+    "LowResAtlasWithHighResHeadsAndTails.csv", # atlas of C. elegans neuron 3D positions
+    "Witvliet2020_NeuronClasses.xlsx", # high level classes of hermaphrodite neurons
+    "neuron_labels.txt", # labels (names) of all hermaphrodite neurons
 ]
 
 WORLD_SIZE = torch.cuda.device_count()
@@ -148,8 +152,8 @@ DEVICE = init_device()
 # Set real C. elegans datasets we have processed
 EXPERIMENT_DATASETS = {
     "Flavell2023",  # TODO: Something is wrong with worm0 always in this dataset. Why?
-    "Leifer2023",  # Different type of dataset: stimulus-response.
     "Lin2023",
+    "Leifer2023",  # Different type of dataset: stimulus-response.
     "Dag2023",
     "Uzel2022",
     "Yemini2021",

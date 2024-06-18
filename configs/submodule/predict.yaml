@@ -22,9 +22,9 @@ predict:
     Kaplan2020: worm0
     Yemini2021: worm0
     Uzel2022: worm0
+    Leifer2023: worm0
     Lin2023: worm0
     Flavell2023: worm1 # something is wrong with worm0 in Flavell2023
-    Leifer2023: worm0
   
   # Number of time steps to generate 
   # null = generate all remaining time steps (max_timesteps - context_window)
