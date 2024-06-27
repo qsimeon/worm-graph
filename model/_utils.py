@@ -963,7 +963,7 @@ class Model(torch.nn.Module):
         """
         A helper function that computes the best linear approximation of
         the model weights using ordinary least squares (OLS) regression.
-        NOTE: We tried using `torch.linalg.lstsq(A, B)` as recommended 
+        NOTE: We tried using `torch.linalg.lstsq(A, B)` as recommended
         (instead of `torch.linalg.pinv(A) @ B` which we are uccrently using)
         but the solution that returned contained NaN values which broke backprop.
         """
@@ -1130,7 +1130,7 @@ class Model(torch.nn.Module):
         # Return the inner custom loss function
         return loss
 
-    ### >>> DEBUG: A different loss function more akin to that used with LM heads is needed for the verion_2 
+    ### >>> DEBUG: A different loss function more akin to that used with LM heads is needed for the verion_2
     # mode of our model which first discretize the neural data into tokens before forward method. >>> ###
     @torch.autocast(
         device_type=DEVICE.type, dtype=torch.half if "cuda" in DEVICE.type else torch.bfloat16
@@ -1258,10 +1258,10 @@ class Model(torch.nn.Module):
     ):
         """
         Special generate method for the newer version (version_2) of the model based on how
-        generation is done in Transformers. In the newer version (version_2), model takes continuous 
-        valued neural data as input but outputs token logits. Therefore, we must convert the token logits 
-        back to continuous neural data to be fed back into the model. To do this, we sample from the 
-        distribution over the predicted next token, retrieve the mean neural state vector corresponding to that 
+        generation is done in Transformers. In the newer version (version_2), model takes continuous
+        valued neural data as input but outputs token logits. Therefore, we must convert the token logits
+        back to continuous neural data to be fed back into the model. To do this, we sample from the
+        distribution over the predicted next token, retrieve the mean neural state vector corresponding to that
         token, append that neural data state vector to the running neural data sequence, then repeat this process.
         """
         # Set model to evaluation mode

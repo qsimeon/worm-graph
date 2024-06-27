@@ -120,8 +120,11 @@ RAW_FILES = [  # TODO: Cite sources of these files.
     "witvliet_2020_7.csv",  # one adult brain of Witvliet et al. (2020)
     "witvliet_2020_8.csv",  # another adult brain of Witvliet et al. (2020)
     "LowResAtlasWithHighResHeadsAndTails.csv",  # atlas of C. elegans neuron 3D positions
+    "Hobert2016_BrainAtlas.xlsx",  # mapping between class, label, type, and neurotransmitter
     "Witvliet2020_NeuronClasses.xlsx",  # high level classes of hermaphrodite neurons
     "neuron_labels.txt",  # labels (names) of all hermaphrodite neurons
+    "neuron_master_sheet.csv",  # TODO: working on a sheet combines all neuron information (labels, classes, neurotransmitter, cell type, and position)
+    # NOTE: "neuron_master_sheet.csv" will make the following files obsolete: "neuron_labels.txt", ""Witvliet2020_NeuronClasses.xlsx", "LowResAtlasWithHighResHeadsAndTails.csv", "Hobert2016_BrainAtlas.xlsx"
 ]
 
 WORLD_SIZE = torch.cuda.device_count()
@@ -149,7 +152,7 @@ def init_device():
 # Get GPU if available
 DEVICE = init_device()
 
-# Set real C. elegans datasets we have processed
+# Set of real C. elegans datasets we have processed
 EXPERIMENT_DATASETS = {
     "Kato2015",
     "Nichols2017",
@@ -160,7 +163,7 @@ EXPERIMENT_DATASETS = {
     "Dag2023",
     "Leifer2023",  # Different type of dataset: stimulus-response.
     "Lin2023",
-    "Flavell2023",  # TODO: Something is wrong with worm0 always in this dataset. Why?
+    "Flavell2023",  # TODO: Something is wrong with worm0 always in this dataset. Specifically, a "worm0" is absent. Why?
 }
 
 SYNTHETIC_DATASETS = {  # Datasets created with the `CreateSyntheticDataset.ipynb` notebook.
