@@ -140,6 +140,7 @@ def get_presaved_datasets(url, file):
     extract_zip(presave_path, folder=data_path, delete_zip=True)
     return None
 
+# TODO: Encapsulate the connectome preprocessing helper functions into a class (ConnectomeBasePreprocessor) much like we did with neural activity processing.
 
 def preprocess_common_tasks(raw_dir, edge_index, edge_attr):
 
@@ -279,6 +280,7 @@ def preprocess_default(raw_dir, save_as="graph_tensors.pt"):
     gsyn_edge_index = gsyn_edge_index.T  # [2, num_edges]
 
     # edge attributes
+    # NOTE: The first feature represents the weight of the gap junctions; the second feature represents the weight of the chemical synapses.
     num_edge_features = 2
 
     # edge_attr for gap junctions
@@ -399,6 +401,61 @@ def preprocess_default(raw_dir, save_as="graph_tensors.pt"):
         graph_tensors,
         os.path.join(ROOT_DIR, "data", "processed", "connectome", save_as),
     )
+
+def preprocess_randi_2023_funconn(raw_dir, save_as="graph_tensors_funconn.pt"):
+    edges = []
+    edge_attr = []
+
+    # Load the Excel file
+    xls = pd.ExcelFile(os.path.join(raw_dir, 'CElegansFunctionalConnectivity.xlsx'))
+
+    # Load the connectivity and significance matrices
+    df_connectivity = pd.read_excel(xls, sheet_name=0, index_col=0)
+    df_significance = pd.read_excel(xls, sheet_name=1, index_col=0)
+
+    # Iterate over the connectivity matrix to keep only significant edges (q-value in significance matrix < 0.05)
+    for i, (row_label, row) in enumerate(df_connectivity.iterrows()):
+        for j, (col_label, value) in enumerate(row.items()):
+            if pd.isna(value) or np.isnan(value): # skip unmeasured edges
+                continue
+            if row_label in NEURON_LABELS and col_label in NEURON_LABELS:
+                if df_significance.loc[row_label, col_label] < 0.05:
+                    edges.append([row_label, col_label])
+                    edge_attr.append([0, value]) # treat as if all edges are chemical synapses
+
+    # NOTE: There is no second iteration over electrical synapse as there really are none. 
+    # We treated the functional weights as if they were chemical synapses for consistency with the other connectomes.
+
+    # Create a mapping from neuron label to its index in the sorted list
+    neuron_to_idx = {label: idx for idx, label in enumerate(NEURON_LABELS)}
+
+    # Convert edge attributes and indices to tensors
+    edge_attr = torch.tensor(edge_attr)
+    edge_index = torch.tensor(
+        [[neuron_to_idx[neuron1], neuron_to_idx[neuron2]] for neuron1, neuron2 in edges]
+    ).T
+
+    x, y, num_classes, node_type, node_label, pos, n_id = preprocess_common_tasks(
+        raw_dir, edge_index, edge_attr
+    )
+
+    graph_tensors = {
+        "edge_index": edge_index,
+        "edge_attr": edge_attr,
+        "pos": pos,
+        "num_classes": num_classes,
+        "x": x,
+        "y": y,
+        "node_type": node_type,
+        "node_label": node_label,
+        "n_id": n_id,
+    }
+
+    torch.save(
+        graph_tensors,
+        os.path.join(ROOT_DIR, "data", "processed", "connectome", save_as),
+    )
+
 
 
 def preprocess_openworm(raw_dir, save_as="graph_tensors_openworm.pt"):
@@ -909,7 +966,10 @@ def preprocess_connectome(raw_dir, raw_files, pub="witvliet_7"):
     processes it to extract relevant information, and creates graph
     tensors that represent the C. elegans connectome. The resulting
     graph tensors are saved in the 'data/processed/connectome' folder
-    as 'graph_tensors.pt'.
+    as 'graph_tensors.pt'. We distinguish between electrical (gap junction)
+    and chemical synapses by using an edge attribute tesnor with two feature dimensions:
+    the first feature represents the weight of the gap junctions; and the second feature
+    represents the weight of the chemical synapses.
 
     Parameters
     ----------
@@ -919,8 +979,9 @@ def preprocess_connectome(raw_dir, raw_files, pub="witvliet_7"):
         Contain the names of the raw connectome data to preprocess
     pub : str, optional
         The publication to use for preprocessing. Options include:
-        - "openworm" (default): OpenWorm project
-        - "witvliet_7": Witvliet et al., 2020 (adult 7)
+        - "openworm": OpenWorm project
+        - "funconn" or "randi_2023": Randi et al., 2023 (functional connectivity)
+        - "witvliet_7" (default): Witvliet et al., 2020 (adult 7)
         - "witvliet_8": Witvliet et al., 2020 (adult 8)
         - "white_1986_whole": White et al., 1986 (whole)
         - "white_1986_n2u": White et al., 1986 (N2U)
@@ -957,11 +1018,13 @@ def preprocess_connectome(raw_dir, raw_files, pub="witvliet_7"):
         raw_dir = RAW_DATA_DIR
 
     # Check that all the necessary raw files were extracted
-    assert all([os.path.exists(os.path.join(raw_dir, rf)) for rf in raw_files])
+    assert all([os.path.exists(os.path.join(raw_dir, rf)) for rf in raw_files]), f"Some necessary connectome data files were not found in {raw_dir}."
 
     # Determine appropriate preprocessing function based on publication
     if pub == "openworm":
         preprocess_openworm(raw_dir)
+    elif pub == "funconn" or pub == "randi_2023":
+        preprocess_randi_2023_funconn(raw_dir)
     elif pub == "witvliet_7":
         preprocess_witvliet_2020_7(raw_dir)
     elif pub == "witvliet_8":
@@ -1598,7 +1661,7 @@ class CalciumDataReshaper:
             self.worm_dataset.pop(key, None)
 
 
-class BasePreprocessor:
+class NeuralBasePreprocessor:
     """
     This is a base class used for preprocessing different types of neurophysiological datasets.
 
@@ -1633,7 +1696,7 @@ class BasePreprocessor:
         `create_metadata` `save_data`, and `preprocess` methods.
 
     Example:
-        class SpecificDatasetPreprocessor(BasePreprocessor):
+        class SpecificDatasetPreprocessor(NeuralBasePreprocessor):
             def load_data(self):
                 # Implement dataset-specific loading logic here.
     """
@@ -1903,7 +1966,7 @@ class BasePreprocessor:
         return preprocessed_data, worm_idx
 
 
-class Kato2015Preprocessor(BasePreprocessor):
+class Kato2015Preprocessor(NeuralBasePreprocessor):
     def __init__(self, transform, smooth_method, interpolate_method, resample_dt, **kwargs):
         super().__init__(
             "Kato2015",
@@ -1953,7 +2016,7 @@ class Kato2015Preprocessor(BasePreprocessor):
         logger.info(f"Finished processing {self.source_dataset}.")
 
 
-class Nichols2017Preprocessor(BasePreprocessor):
+class Nichols2017Preprocessor(NeuralBasePreprocessor):
     def __init__(self, transform, smooth_method, interpolate_method, resample_dt, **kwargs):
         super().__init__(
             "Nichols2017",
@@ -2006,7 +2069,7 @@ class Nichols2017Preprocessor(BasePreprocessor):
         logger.info(f"Finished processing {self.source_dataset}.")
 
 
-class Skora2018Preprocessor(BasePreprocessor):
+class Skora2018Preprocessor(NeuralBasePreprocessor):
     def __init__(self, transform, smooth_method, interpolate_method, resample_dt, **kwargs):
         super().__init__(
             "Skora2018",
@@ -2054,7 +2117,7 @@ class Skora2018Preprocessor(BasePreprocessor):
         logger.info(f"Finished processing {self.source_dataset}.")
 
 
-class Kaplan2020Preprocessor(BasePreprocessor):
+class Kaplan2020Preprocessor(NeuralBasePreprocessor):
     def __init__(self, transform, smooth_method, interpolate_method, resample_dt, **kwargs):
         super().__init__(
             "Kaplan2020",
@@ -2111,7 +2174,7 @@ class Kaplan2020Preprocessor(BasePreprocessor):
         logger.info(f"Finished processing {self.source_dataset}.")
 
 
-class Yemini2021Preprocessor(BasePreprocessor):
+class Yemini2021Preprocessor(NeuralBasePreprocessor):
     def __init__(self, transform, smooth_method, interpolate_method, resample_dt, **kwargs):
         super().__init__(
             "Yemini2021",
@@ -2252,7 +2315,7 @@ class Yemini2021Preprocessor(BasePreprocessor):
         logger.info(f"Finished processing {self.source_dataset}.")
 
 
-class Uzel2022Preprocessor(BasePreprocessor):
+class Uzel2022Preprocessor(NeuralBasePreprocessor):
     def __init__(self, transform, smooth_method, interpolate_method, resample_dt, **kwargs):
         super().__init__(
             "Uzel2022",
@@ -2302,7 +2365,7 @@ class Uzel2022Preprocessor(BasePreprocessor):
         logger.info(f"Finished processing {self.source_dataset}.")
 
 
-class Dag2023Preprocessor(BasePreprocessor):
+class Dag2023Preprocessor(NeuralBasePreprocessor):
     def __init__(self, transform, smooth_method, interpolate_method, resample_dt, **kwargs):
         super().__init__(
             "Dag2023",
@@ -2420,7 +2483,7 @@ class Dag2023Preprocessor(BasePreprocessor):
         ### DEBUG ###
         # Next deal with the swf415_no_id which contains purely unlabeled neuron data
         # NOTE: These don't get used at all as they are skipped in
-        # BasePreprocessor.preprocess_traces, becuase num_named_neurons == 0.
+        # NeuralBasePreprocessor.preprocess_traces, becuase num_named_neurons == 0.
         # TODO: We temporarily turned that off to see what happens here.
         for file in os.listdir(noid_data_files):
             if not file.endswith(".h5"):
@@ -2446,7 +2509,7 @@ class Dag2023Preprocessor(BasePreprocessor):
         return extra_info
 
 
-class Flavell2023Preprocessor(BasePreprocessor):
+class Flavell2023Preprocessor(NeuralBasePreprocessor):
     def __init__(self, transform, smooth_method, interpolate_method, resample_dt, **kwargs):
         super().__init__(
             "Flavell2023",
@@ -2646,7 +2709,7 @@ class Flavell2023Preprocessor(BasePreprocessor):
         logger.info(f"Finished processing {self.source_dataset}.")
 
 
-class Leifer2023Preprocessor(BasePreprocessor):
+class Leifer2023Preprocessor(NeuralBasePreprocessor):
     def __init__(self, transform, smooth_method, interpolate_method, resample_dt, **kwargs):
         super().__init__(
             "Leifer2023",
@@ -2822,7 +2885,7 @@ class Leifer2023Preprocessor(BasePreprocessor):
             - Leifer2023 raw data uses 6 files per worm each containing distinct information.
             - The other datasets use 1 file containing all the information for multiple worms.
         Unlike the `preprocess` method in the other dataset classes which makes use of the
-        `preprocess_traces` method from the parent BasePreprocessor class, this one does not.
+        `preprocess_traces` method from the parent NeuralBasePreprocessor class, this one does not.
         """
         # TODO: Encapsulate the single worm part of this method into a `preprocess_traces` method.
         # Load and preprocess data
@@ -2934,7 +2997,7 @@ class Leifer2023Preprocessor(BasePreprocessor):
         logger.info(f"Finished processing {self.source_dataset}.")
 
 
-class Lin2023Preprocessor(BasePreprocessor):
+class Lin2023Preprocessor(NeuralBasePreprocessor):
     def __init__(self, transform, smooth_method, interpolate_method, resample_dt, **kwargs):
         super().__init__(
             "Lin2023",

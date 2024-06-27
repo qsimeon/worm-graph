@@ -97,7 +97,7 @@ else:
 
 NUM_NEURONS = len(NEURON_LABELS)  # number of neurons in the model organism
 
-RAW_DATA_URL = "https://www.dropbox.com/scl/fi/97fxb5o4kekwmb41nmlsd/raw_data.zip?rlkey=klpglzoi79sgds2suwy5wujfo&dl=1"
+RAW_DATA_URL = "https://www.dropbox.com/scl/fi/8iaedy4rfqq93jxzy9da4/raw_data.zip?rlkey=eauegkr4ttcjutjlrlv8vua4s&dl=1"
 
 RAW_ZIP = "raw_data.zip"
 
