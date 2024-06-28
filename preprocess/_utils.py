@@ -658,7 +658,6 @@ class Cook2019Preprocessor(ConnectomeBasePreprocessor):
     def preprocess(self, save_as="graph_tensors_cook2019.pt"):
         edges = []
         edge_attr = []
-        _ = None
 
         xlsx_file = pd.ExcelFile(os.path.join(RAW_DATA_DIR, "Cook2019.xlsx"))
 
