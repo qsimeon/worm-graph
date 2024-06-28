@@ -4,7 +4,7 @@ from data._utils import *
 logger = logging.getLogger(__name__)
 
 
-def get_datasets(dataset_config: DictConfig, save=True):
+def get_datasets(dataset_config: DictConfig, save=False):
     """Retrieve or generate training and validation sets based on the provided configuration.
 
     The function first checks if datasets are provided in the specified directory. If they are,
@@ -50,8 +50,8 @@ def get_datasets(dataset_config: DictConfig, save=True):
     train_split_first = dataset_config.train_split_first
     train_split_ratio = dataset_config.train_split_ratio
     save = dataset_config.save_datasets or save
-    ### DEBUG ###
     # Some common dataset patterns were presaved for efficiency
+    presave_path = None
     all_experiment = all(
         [
             (dataset in source_datasets and source_datasets[dataset] == "all")
@@ -60,25 +60,25 @@ def get_datasets(dataset_config: DictConfig, save=True):
     )
     if all_experiment:
         logger.info(
-            f"Requested dataset pattern matched the presaved `combined_AllExperimental` dataset.\n\t"
-            f"Setting `config.use_these_datasets.path` to the presaved directory path."
+            f"Requested dataset pattern matched the presaved `combined_AllExperimental` dataset.\n"
+            f"Setting `config.use_these_datasets.path` to the presaved directory path.\n\n"
         )
         presave_path = os.path.join(ROOT_DIR, "data", "combined_AllExperimental")
         # Check if the directory exists and is not empty
         if os.path.isdir(presave_path) and os.listdir(presave_path):
             dataset_config.use_these_datasets.path = presave_path
-        else:
+        else:  # Go to (*)
             logger.info(
-                f"Directory {presave_path} does not exist or is empty. Creating the dataset from source datasets."
+                f"Directory {presave_path} does not exist or is empty.\n"
+                f"Creating the dataset from source datasets.\n\n"
             )
-    # TODO: Write other dataset patterns here.
-    ### DEBUG ###
+    # TODO: Write other dataset patterns here ...
     # Initialize datasets
     train_dataset, val_dataset = None, None
     # Verifications
     assert isinstance(num_named_neurons, int) or (
         num_named_neurons is None
-    ), "num_named_neurons must be a positive integer or None."
+    ), "`num_named_neurons` must be a positive integer or None."
     # Make log directory
     log_dir = os.getcwd()  # logs/hydra/${now:%Y_%m_%d_%H_%M_%S}
     os.makedirs(os.path.join(log_dir, "dataset"), exist_ok=True)
@@ -264,7 +264,7 @@ def get_datasets(dataset_config: DictConfig, save=True):
                 header=True,
             )
             return train_dataset, val_dataset
-    else:
+    else:  # (*)
         # Create the datasets using the source datasets
         logger.info("Creating validation and train datasets from source datasets.")
         combined_dataset, dataset_info = create_combined_dataset(source_datasets, num_named_neurons)
@@ -357,6 +357,16 @@ def get_datasets(dataset_config: DictConfig, save=True):
             index=True,
             header=True,
         )
+        # Copy saved data to presave_path
+        if save and presave_path is not None:
+            os.makedirs(presave_path, exist_ok=True)
+            for filename in os.listdir(os.path.join(log_dir, "dataset")):
+                if filename.endswith(".csv") or filename.endswith(".pickle"):
+                    shutil.copy(
+                        os.path.join(log_dir, "dataset", filename),
+                        os.path.join(presave_path, filename),
+                    )
+        # Return the train and validation datasets
         return train_dataset, val_dataset
 
 

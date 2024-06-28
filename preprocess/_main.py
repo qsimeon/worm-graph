@@ -40,25 +40,20 @@ def process_data(preprocess_config: DictConfig) -> None:
             **kwargs,
         )
         logger.info("Finished preprocessing neural data.")
-        ### DEBUG ###
         # Extract presaved commonly use dataset split patterns
-        logger.info("Extracting presaved datasets.")
+        logger.info("Extracting presaved dataset patterns.")
         get_presaved_datasets(
             url=preprocess_config.presaved_url, file=preprocess_config.presaved_file
         )
-        logger.info("Done extracting presaved datasets.")
-        ### DEBUG ###
+        logger.info("Done extracting presaved dataset patterns.")
     else:
         logger.info("Neural data already preprocessed.")
 
     # Preprocess the connectome data if not already done
-    # TODO remove after testing helper functions
-    # raw_dir = os.path.join(ROOT_DIR, "data/raw")
-    # preprocess_connectome(raw_dir=raw_dir, raw_files=RAW_FILES, pub="white_1986_jse")
     if not os.path.exists(os.path.join(ROOT_DIR, "data/processed/connectome/graph_tensors.pt")):
         logger.info("Preprocessing C. elegans connectome...")
         raw_dir = os.path.join(ROOT_DIR, "data/raw")
-        preprocess_connectome(raw_dir=raw_dir, raw_files=RAW_FILES)
+        preprocess_connectome(raw_files=RAW_FILES, pub=preprocess_config.connectome_pub)
         logger.info("Finished preprocessing C. elegans connectome.")
     else:
         logger.info("Connectome already preprocessed.")

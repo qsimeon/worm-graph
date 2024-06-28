@@ -374,7 +374,7 @@ class SSM(torch.nn.Module):
         return Kernels.real  # (hidden_size, L, input_size)
 
     # ### DEBUG ###
-    # # NOTE: This is from Sasha Rush' blog post to simplify computing the matrix power.
+    # # NOTE: This is from Sasha Rush's blog post to simplify computing the matrix power.
     # # I don't fully understand it yet. "To address the problem of computing powers of 𝐴,
     # # we introduce another technique. Instead of computing the SSM convolution filter 𝐾
     # # directly, we introduce a generating function on its coefficients and compute evaluations of it."
@@ -534,8 +534,8 @@ class CTRNN(torch.nn.Module):
                 network activity at the next time step
         """
         # Perform the recurrence update
-        # h_new = torch.relu(self.input2h(input) + self.h2h(hidden)) # ReLU
-        h_new = torch.tanh(self.input2h(input) + self.h2h(hidden)) # Tanh
+        # h_new = torch.relu(self.input2h(input) + self.h2h(hidden)) # ReLU nonlinearity
+        h_new = torch.tanh(self.input2h(input) + self.h2h(hidden))  # Tanh nonlinearity
         # The sigmoid contrains alpha such that 0 <= alpha <=1
         h_new = hidden * (1 - self.alpha.sigmoid()) + h_new * self.alpha.sigmoid()
         return h_new
@@ -963,10 +963,11 @@ class Model(torch.nn.Module):
         """
         A helper function that computes the best linear approximation of
         the model weights using ordinary least squares (OLS) regression.
-        NOTE: We tried using `torch.linalg.lstsq(A, B)` as recommended but
-                its solution contained nans.
+        NOTE: We tried using `torch.linalg.lstsq(A, B)` as recommended
+        (instead of `torch.linalg.pinv(A) @ B` which we are uccrently using)
+        but the solution that returned contained NaN values which broke backprop.
         """
-        # Don't bother doing this time-intensive computation if not going to be used
+        # Don't do this time-intensive computation if it's not going to be used
         if self.connectome_reg_param == 0.0 or self.version_2:
             ols_tensor = torch.eye(self.input_size)
         # Don't compute/update the OLS if in inference mode
@@ -974,7 +975,6 @@ class Model(torch.nn.Module):
             ols_tensor = self.ols_weights.data
         else:
             A, B = model_in.float(), model_out.float()
-            # NOTE: We tried using `torch.linalg.lstsq(A, B)` as recommended but its solution contained nans.
             ols_tensor = torch.linalg.pinv(A) @ B
             if torch.isnan(ols_tensor).any():
                 ols_tensor = torch.nan_to_num(ols_tensor, nan=0.0)  # replace nans with 0
@@ -1104,7 +1104,7 @@ class Model(torch.nn.Module):
             norm_factor = valid_data_mask.sum()
             mrlv = masked_recon_loss[valid_data_mask]
             numerator = mrlv.sum()
-            recon_loss = numerator / norm_factor
+            recon_loss = numerator / torch.clamp(norm_factor, min=1)
             # L1 regularization term
             l1_loss = 0.0
             l1_reg_loss = 0.0
@@ -1130,7 +1130,8 @@ class Model(torch.nn.Module):
         # Return the inner custom loss function
         return loss
 
-    ### >>> DEBUG: Different loss function needed for new token mode >>> ###
+    ### >>> DEBUG: A different loss function more akin to that used with LM heads is needed for the verion_2
+    # mode of our model which first discretize the neural data into tokens before forward method. >>> ###
     @torch.autocast(
         device_type=DEVICE.type, dtype=torch.half if "cuda" in DEVICE.type else torch.bfloat16
     )
@@ -1257,11 +1258,11 @@ class Model(torch.nn.Module):
     ):
         """
         Special generate method for the newer version (version_2) of the model based on how
-        generation is done in Transformers. In the newer version (version_2), model take neural
-        data as input and output token logits. Therefore, we must convert the token logits back to
-        neural data to be fed back into the model. We sample from the distribution over the predicted
-        next token, retrieve the mean neural state vector corresponding to that token, append that
-        neural data state vector to the running neural data sequence, then repeat this process.
+        generation is done in Transformers. In the newer version (version_2), model takes continuous
+        valued neural data as input but outputs token logits. Therefore, we must convert the token logits
+        back to continuous neural data to be fed back into the model. To do this, we sample from the
+        distribution over the predicted next token, retrieve the mean neural state vector corresponding to that
+        token, append that neural data state vector to the running neural data sequence, then repeat this process.
         """
         # Set model to evaluation mode
         self.eval()
@@ -1309,7 +1310,7 @@ class Model(torch.nn.Module):
     def sample(self, num_new_timesteps: int):
         """
         Sample spontaneous neural activity from the model.
-        TODO: Figure out how to use diffusion model to do this.
+        TODO: Figure out how to use diffusion models to do this.
         """
         pass
 
@@ -1378,8 +1379,8 @@ class LinearRegression(Model):
     """
     A simple linear regression model.
     This model can only learn a fixed linear feature regression
-    function that it applies at every time step independently.
-    Memory-less but can learn linear feature regression.
+    function that it applies at every time step independently. It
+    is thus memoryless, but can learn linear feature regression.
     """
 
     def __init__(
@@ -1426,8 +1427,8 @@ class FeatureFFNN(Model):
     Unlike the LSTM and Transformer model, this
     model has no temporal memory and can only learn
     a fixed nonlinear feature regression function that
-    it applies at every time step independently.
-    Memory-less but can learn nonlinear feature regression.
+    it applies at every time step independently. It is thus
+    memoryless, but can learn nonlinear feature regression.
     """
 
     def __init__(

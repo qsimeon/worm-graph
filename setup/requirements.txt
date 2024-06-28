@@ -11,13 +11,13 @@ ipython
 jupyterlab
 mat73
 matplotlib
-nbimporter # uses pip
 ncps # uses pip
 networkx
 notebook
 numpy
 omegaconf
 openai # uses pip
+openpyxl
 pandas
 pytest
 requests

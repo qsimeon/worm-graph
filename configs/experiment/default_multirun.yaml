@@ -33,7 +33,6 @@ submodule:
       WhiteNoise0000: null
       RandWalk0000: null
       VanDerPol0000: null
-      Recurrent0000: null
       # Experimental datasets
       Kato2015: all
       Nichols2017: all
@@ -41,9 +40,10 @@ submodule:
       Kaplan2020: all
       Yemini2021: all
       Uzel2022: all
-      Lin2023: all
+      Dag2023: all
       Flavell2023: all
       Leifer2023: all
+      Lin2023: all
 
     num_named_neurons: null
     num_train_samples: 32
@@ -86,7 +86,6 @@ submodule:
       RandWalk0000: null
       VanDerPol0000: null
       Wikitext0000: null
-      Recurrent0000: null
       # Experimental datasets
       Kato2015: worm0
       Nichols2017: worm0
@@ -94,9 +93,10 @@ submodule:
       Kaplan2020: worm0
       Yemini2021: worm0
       Uzel2022: worm0
+      Dag2023: worm0
+      Leifer2023: worm0
       Lin2023: worm0
       Flavell2023: worm1 # something is wrong with worm0 in Flavell2023
-      Leifer2023: worm0
     # Number of time steps to generate 
     # null = generate all remaining time steps (max_timesteps - context_window)
     num_new_timesteps: null 
@@ -121,7 +121,6 @@ submodule:
         RandWalk0000: null
         VanDerPol0000: null
         Wikitext0000: null
-        Recurrent0000: null
         # Experimental datasets
         Kato2015: 1
         Nichols2017: 1
@@ -129,9 +128,10 @@ submodule:
         Kaplan2020: 1
         Yemini2021: 1
         Uzel2022: 1
+        Dag2023: 1
+        Leifer2023: 1
         Lin2023: 1
         Flavell2023: 1
-        Leifer2023: 1
 
   visualize:
     plot_this_log_dir: null

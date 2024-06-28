@@ -32,7 +32,7 @@ USER = "qsimeon"  # OpenMind/computing cluster username
 
 BLOCK_SIZE = 512  # maximum attention block size to use for Transformers
 
-VERSION_2 = False  # whether to use version 2 of the model (tokenizes neural data)
+VERSION_2 = False  # whether to use version 2 of the model which tokenizes neural data
 
 NUM_TOKENS = 256  # number of tokens in the neural vocabulary if using version 2
 
@@ -93,26 +93,39 @@ else:
     # fmt: on
 
     # Write to a text file called "neuron_labels.txt" using pandas
-    pd.DataFrame(NEURON_LABELS).to_csv(
-        labels_file, sep=" ", header=False, index=False
-    )
+    os.makedirs(RAW_DATA_DIR, exist_ok=True)
+    pd.DataFrame(NEURON_LABELS).to_csv(labels_file, sep=" ", header=False, index=False)
 
 NUM_NEURONS = len(NEURON_LABELS)  # number of neurons in the model organism
 
-RAW_DATA_URL = "https://www.dropbox.com/scl/fi/jlrohfwjknkonu9z7lyv0/raw_data.zip?rlkey=iwon81esiws2zhio3mx54s0xi&dl=1"
+RAW_DATA_URL = "https://www.dropbox.com/scl/fi/0qtxfg6mtqczs3ll0ncr5/raw_data.zip?rlkey=z1qulvafew3hpl4wn47jbhoez&dl=1"
 
 RAW_ZIP = "raw_data.zip"
 
 # Essential raw data files that must be in the raw data directory
 RAW_FILES = [  # TODO: Cite sources of these files.
-    "GHermChem.mat",
+    ### >>> Default (Premaratne's preprocessed Cook2019) connectome data files >>>
     "GHermChem_Edges.csv",
     "GHermChem_Nodes.csv",
-    "GHermElec_Sym.mat",
     "GHermElec_Sym_Edges.csv",
     "GHermElec_Sym_Nodes.csv",
-    "LowResAtlasWithHighResHeadsAndTails.csv",
-    "neuron_labels.txt",
+    ### <<< Default (Kamal Premaratne's preprocessed Cook2019) connectome data files <<<
+    "Cook2019.xlsx",  # original Cook et al. (2019) connectome data file
+    "Chklovskii2011.xls",  # Chklovskii et al. (2011) connectome data file
+    "OpenWormConnectome.csv",  # OpenWorm connectome data file
+    "CElegansFunctionalConnectivity.xlsx",  # Randi et al. (2023) functional connectome data file
+    "white_1986_jsh.csv",  # L4 brain
+    "white_1986_n2u.csv",  # adult brain
+    "white_1986_jse.csv",  # adult tail
+    "white_1986_whole.csv",  # whole animal compilation of Varshey et al. (2011)
+    "witvliet_2020_7.csv",  # one adult brain of Witvliet et al. (2020)
+    "witvliet_2020_8.csv",  # another adult brain of Witvliet et al. (2020)
+    "LowResAtlasWithHighResHeadsAndTails.csv",  # atlas of C. elegans neuron 3D positions
+    "Hobert2016_BrainAtlas.xlsx",  # mapping between class, label, type, and neurotransmitter
+    "Witvliet2020_NeuronClasses.xlsx",  # high level classes of hermaphrodite neurons
+    "neuron_labels.txt",  # labels (names) of all hermaphrodite neurons
+    "neuron_master_sheet.csv",  # TODO: working on a sheet combines all neuron information (labels, classes, neurotransmitter, cell type, and position)
+    # NOTE: "neuron_master_sheet.csv" will make the following files obsolete: "neuron_labels.txt", ""Witvliet2020_NeuronClasses.xlsx", "LowResAtlasWithHighResHeadsAndTails.csv", "Hobert2016_BrainAtlas.xlsx"
 ]
 
 WORLD_SIZE = torch.cuda.device_count()
@@ -140,17 +153,18 @@ def init_device():
 # Get GPU if available
 DEVICE = init_device()
 
-# Set real C. elegans datasets we have processed
+# Set of real C. elegans datasets we have processed
 EXPERIMENT_DATASETS = {
+    "Kato2015",
+    "Nichols2017",
+    "Skora2018",
+    "Kaplan2020",
+    "Yemini2021",
+    "Uzel2022",
+    "Dag2023",
     "Leifer2023",  # Different type of dataset: stimulus-response.
     "Lin2023",
-    "Flavell2023",  # TODO: Something is wrong with worm0 always in this dataset. Why?
-    "Uzel2022",
-    "Yemini2021",
-    "Kaplan2020",
-    "Skora2018",
-    "Nichols2017",
-    "Kato2015",
+    "Flavell2023",  # TODO: Something is wrong with worm0 always in this dataset. Specifically, a "worm0" is absent. Why?
 }
 
 SYNTHETIC_DATASETS = {  # Datasets created with the `CreateSyntheticDataset.ipynb` notebook.
@@ -160,7 +174,6 @@ SYNTHETIC_DATASETS = {  # Datasets created with the `CreateSyntheticDataset.ipyn
     "RandWalk0000",
     "VanDerPol0000",
     "Wikitext0000",
-    "Recurrent0000",
 }
 
 

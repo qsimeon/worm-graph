@@ -1,6 +1,6 @@
 # Train model 
 train:
-  optimizer: AdamW # options: Adam, AdamW, Adadelta, Adagrad, RMSprop, SGD
+  optimizer: SGD # options: Adam, AdamW, Adadelta, Adagrad, RMSprop, SGD
   lr: 0.001
   epochs: 100 
   # How often to save the model

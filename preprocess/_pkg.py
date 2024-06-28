@@ -12,7 +12,9 @@ import subprocess
 import numpy as np
 import pandas as pd
 
-# NOTE: IterativeImputer is experimental and the API might change without any deprecation cycle. To use it, you need to explicitly import enable_iterative_imputer.
+
+# NOTE: IterativeImputer is experimental and the API might change without any deprecation cycle.
+# To use it, you need to explicitly import enable_iterative_imputer.
 from sklearn.experimental import enable_iterative_imputer
 from sklearn.impute import IterativeImputer
 
@@ -20,6 +22,7 @@ from sklearn.impute import IterativeImputer
 from scipy.interpolate import interp1d
 
 from scipy.io import loadmat
+from typing import Dict, List
 from sklearn import preprocessing
 from omegaconf import DictConfig, OmegaConf
 from scipy.ndimage import gaussian_filter1d
@@ -32,7 +35,6 @@ from utils import (
     RAW_ZIP,
     ROOT_DIR,
     RAW_FILES,
-    BLOCK_SIZE,
     NUM_NEURONS,
     NEURON_LABELS,
     RAW_DATA_URL,
