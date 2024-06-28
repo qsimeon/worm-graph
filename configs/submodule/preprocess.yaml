@@ -1,8 +1,9 @@
 preprocess:
-  opensource_url: https://www.dropbox.com/scl/fi/23i38mi6ci171pwo66b9u/opensource_data.zip?rlkey=rk5oui2qjm6pdmrpx5yjg3zmi&dl=1
+  opensource_url: https://www.dropbox.com/s/nptkbckqibzm5ro/opensource_data.zip?dl=1
   opensource_zipfile: opensource_data.zip
   presaved_url: https://www.dropbox.com/scl/fi/unfvzda4iia4uebibgilv/presaved_datasets.zip?rlkey=nb0k5zou0dnx0g9dmmumi1iv2&dl=1
   presaved_file: presaved_datasets.zip
+  connectome_pub: null #[witvliet_7, witvliet_8, cook_2019] # A string indicating which connectome raw data file to use; if null, the default connectome is used
   cleanup: true # Whether to delete the downloaded and unzipped opensource data folder
   source_dataset: all # [Kato2015, Nichols2017, Skora2018, Kaplan2020, Yemini2021, Uzel2022, Dag2023, Lin2023, Flavell2023, Leifer2023] # any dataset in utils.EXPERIMENT_DATASETS
   resample_dt: 0.333 # The time interval (in seconds) to resample the neural activity at; if null, no resampling is performed

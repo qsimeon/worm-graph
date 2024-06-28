@@ -25,20 +25,18 @@ def draw_connectome(
         ax = fig.add_subplot(111)
 
     ## nodes
-    inter = [node for i, node in enumerate(G.nodes) if network.y[i] == 0.0]
-    motor = [node for i, node in enumerate(G.nodes) if network.y[i] == 1.0]
-    other = [node for i, node in enumerate(G.nodes) if network.y[i] == 2.0]
-    pharynx = [node for i, node in enumerate(G.nodes) if network.y[i] == 3.0]
-    sensory = [node for i, node in enumerate(G.nodes) if network.y[i] == 4.0]
-    sexspec = [node for i, node in enumerate(G.nodes) if network.y[i] == 5.0]
+    inter = [node for i, node in enumerate(G.nodes) if network.y[i] == 0]
+    motor = [node for i, node in enumerate(G.nodes) if network.y[i] == 1]
+    pharynx = [node for i, node in enumerate(G.nodes) if network.y[i] == 3]
+    sensory = [node for i, node in enumerate(G.nodes) if network.y[i] == 4]
 
     ## edges
     junctions = [
         edge for i, edge in enumerate(G.edges) if network.edge_attr[i, 0] > 0.0
-    ]  # gap junctions/electrical synapses encoded as [1,0]
+    ]  # gap junctions/electrical synapses encoded as [1,0] (i.e. first `edge_attr` feature dim)
     synapses = [
         edge for i, edge in enumerate(G.edges) if network.edge_attr[i, 1] > 0.0
-    ]  # chemical synapse encoded as [0,1]
+    ]  # chemical synapse encoded as [0,1] (i.e second `edge_attr` feature dim)
     ## edge weights
     gap_weights = [int(network.edge_attr[i, 0]) / 20 for i, edge in enumerate(G.edges)]
     chem_weights = [int(network.edge_attr[i, 1]) / 20 for i, edge in enumerate(G.edges)]
@@ -96,20 +94,16 @@ def draw_connectome(
             nx.draw_networkx_labels(G, pos, labels, font_size=6, ax=ax)
             nx.draw_networkx_nodes(G, pos, nodelist=inter, node_color="blue", ax=ax, **options)
             nx.draw_networkx_nodes(G, pos, nodelist=motor, node_color="red", ax=ax, **options)
-            nx.draw_networkx_nodes(G, pos, nodelist=other, node_color="green", ax=ax, **options)
-            nx.draw_networkx_nodes(G, pos, nodelist=pharynx, node_color="yellow", ax=ax, **options)
-            nx.draw_networkx_nodes(G, pos, nodelist=sensory, node_color="magenta", ax=ax, **options)
-            nx.draw_networkx_nodes(G, pos, nodelist=sexspec, node_color="cyan", ax=ax, **options)
+            nx.draw_networkx_nodes(G, pos, nodelist=pharynx, node_color="green", ax=ax, **options)
+            nx.draw_networkx_nodes(G, pos, nodelist=sensory, node_color="yellow", ax=ax, **options)
 
         if plot_3d:
             draw_3d_edges(junctions, "tab:blue", gap_weights)
             draw_3d_edges(synapses, "tab:red", chem_weights)
             draw_3d_nodes(inter, "blue")
             draw_3d_nodes(motor, "red")
-            draw_3d_nodes(other, "green")
-            draw_3d_nodes(pharynx, "yellow")
-            draw_3d_nodes(sensory, "magenta")
-            draw_3d_nodes(sexspec, "cyan")
+            draw_3d_nodes(pharynx, "green")
+            draw_3d_nodes(sensory, "yellow")
 
             # Setting the aspect ratio for each axis
             ax.set_box_aspect(
@@ -148,7 +142,7 @@ def draw_connectome(
             [0],
             marker="o",
             color="w",
-            label="other",
+            label="pharynx",
             markerfacecolor="g",
             alpha=0.6,
             markersize=10,
@@ -158,28 +152,8 @@ def draw_connectome(
             [0],
             marker="o",
             color="w",
-            label="pharynx",
-            markerfacecolor="y",
-            alpha=0.6,
-            markersize=10,
-        ),
-        Line2D(
-            [0],
-            [0],
-            marker="o",
-            color="w",
             label="sensory",
-            markerfacecolor="m",
-            alpha=0.6,
-            markersize=10,
-        ),
-        Line2D(
-            [0],
-            [0],
-            marker="o",
-            color="w",
-            label="sex",
-            markerfacecolor="c",
+            markerfacecolor="y",
             alpha=0.6,
             markersize=10,
         ),

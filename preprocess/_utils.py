@@ -141,7 +141,7 @@ def get_presaved_datasets(url, file):
     return None
 
 
-def preprocess_connectome(raw_dir, raw_files, pub="witvliet_7"):
+def preprocess_connectome(raw_files, pub=None):
     """Convert the raw connectome data to a graph tensor.
 
     This function processes raw connectome data, which includes chemical
@@ -157,15 +157,13 @@ def preprocess_connectome(raw_dir, raw_files, pub="witvliet_7"):
 
     Parameters
     ----------
-    raw_dir : str
-        Directory with raw connectome data
     raw_files : list
         Contain the names of the raw connectome data to preprocess
     pub : str, optional
         The publication to use for preprocessing. Options include:
         - "openworm": OpenWorm project
         - "funconn" or "randi_2023": Randi et al., 2023 (functional connectivity)
-        - "witvliet_7" (default): Witvliet et al., 2020 (adult 7)
+        - "witvliet_7": Witvliet et al., 2020 (adult 7)
         - "witvliet_8": Witvliet et al., 2020 (adult 8)
         - "white_1986_whole": White et al., 1986 (whole)
         - "white_1986_n2u": White et al., 1986 (N2U)
@@ -191,20 +189,15 @@ def preprocess_connectome(raw_dir, raw_files, pub="witvliet_7"):
       https://wormwiring.org/matlab%20scripts/Premaratne%20MATLAB-ready%20files%20.zip,
       unzip the archive in the data/raw folder, then run the MATLAB script `export_nodes_edges.m`.
     """
-    # Check if the raw connectome data exists
-    if not os.path.exists(raw_dir):
+    # Check that all necessary files are present
+    all_files_present = all([os.path.exists(os.path.join(RAW_DATA_DIR, rf)) for rf in raw_files])
+    if not all_files_present:
         download_url(url=RAW_DATA_URL, folder=ROOT_DIR, filename=RAW_ZIP)
         extract_zip(
             path=os.path.join(ROOT_DIR, RAW_ZIP),
             folder=RAW_DATA_DIR,
             delete_zip=True,
         )
-        raw_dir = RAW_DATA_DIR
-
-    # Check that all the necessary raw files were extracted
-    assert all(
-        [os.path.exists(os.path.join(raw_dir, rf)) for rf in raw_files]
-    ), f"Some necessary connectome data files were not found in {raw_dir}."
 
     # Determine appropriate preprocessing class based on publication
     preprocessors = {
@@ -222,15 +215,14 @@ def preprocess_connectome(raw_dir, raw_files, pub="witvliet_7"):
     }
 
     preprocessor_class = preprocessors.get(pub, DefaultPreprocessor)
-    preprocessor = preprocessor_class(raw_dir)
+    preprocessor = preprocessor_class()
     preprocessor.preprocess()
 
     return None
 
 
 class ConnectomeBasePreprocessor:
-    def __init__(self, raw_dir: str):
-        self.raw_dir = raw_dir
+    def __init__(self):
         self.neuron_labels = self.load_neuron_labels()
         self.neuron_master_sheet = self.load_neuron_master_sheet()
         self.neuron_to_idx = {label: idx for idx, label in enumerate(self.neuron_labels)}
@@ -240,7 +232,7 @@ class ConnectomeBasePreprocessor:
         return NEURON_LABELS
 
     def load_neuron_master_sheet(self) -> pd.DataFrame:
-        return pd.read_csv(os.path.join(self.raw_dir, "neuron_master_sheet.csv"))
+        return pd.read_csv(os.path.join(RAW_DATA_DIR, "neuron_master_sheet.csv"))
 
     def preprocess_common_tasks(self, edge_index, edge_attr):
         df_master = self.neuron_master_sheet
@@ -276,29 +268,47 @@ class ConnectomeBasePreprocessor:
         node_label = {idx: label for label, idx in self.neuron_to_idx.items()}
         n_id = torch.arange(len(self.neuron_labels))
 
-        return x, y, num_classes, node_type, node_label, pos, n_id, node_class
+        # Add missing nodes with zero-weight edges to ensure the adjacency matrix is 300x300
+        all_indices = torch.arange(len(self.neuron_labels))
+        full_edge_index = torch.combinations(all_indices, r=2).T
+        existing_edges_set = set(map(tuple, edge_index.T.tolist()))
+
+        additional_edges = []
+        additional_edge_attr = []
+        for edge in full_edge_index.T.tolist():
+            if tuple(edge) not in existing_edges_set:
+                additional_edges.append(edge)
+                additional_edge_attr.append([0, 0])
+
+        if additional_edges:
+            additional_edges = torch.tensor(additional_edges).T
+            additional_edge_attr = torch.tensor(additional_edge_attr, dtype=torch.float)
+            edge_index = torch.cat([edge_index, additional_edges], dim=1)
+            edge_attr = torch.cat([edge_attr, additional_edge_attr], dim=0)
+
+        # Create the graph data object
+        graph = Data(x=x, edge_index=edge_index, edge_attr=edge_attr, y=y)
+        graph.pos = pos  # Add positions to the graph object
+
+        return graph, num_classes, node_type, node_label, n_id, node_class
 
     def save_graph_tensors(
         self,
         save_as: str,
-        edge_index,
-        edge_attr,
-        pos,
+        graph,
         num_classes,
-        x,
-        y,
         node_type,
         node_label,
         n_id,
         node_class,
     ):
         graph_tensors = {
-            "edge_index": edge_index,
-            "edge_attr": edge_attr,
-            "pos": pos,
+            "edge_index": graph.edge_index,
+            "edge_attr": graph.edge_attr,
+            "pos": graph.pos,
             "num_classes": num_classes,
-            "x": x,
-            "y": y,
+            "x": graph.x,
+            "y": graph.y,
             "node_type": node_type,
             "node_label": node_label,
             "n_id": n_id,
@@ -307,31 +317,30 @@ class ConnectomeBasePreprocessor:
 
         torch.save(
             graph_tensors,
-            os.path.join(self.raw_dir, "processed", "connectome", save_as),
+            os.path.join(ROOT_DIR, "data", "processed", "connectome", save_as),
         )
 
 
 class DefaultPreprocessor(ConnectomeBasePreprocessor):
     def preprocess(self, save_as="graph_tensors.pt"):
         # Names of all C. elegans hermaphrodite neurons
-        # NOTE: Only neurons in this list will be included in the connectomes constructed here.
-        neurons_all = set(NEURON_LABELS)
+        neurons_all = set(self.neuron_labels)
         sep = r"[\t,]"
 
         # Chemical synapses nodes and edges
         GHermChem_Edges = pd.read_csv(
-            os.path.join(self.raw_dir, "GHermChem_Edges.csv"), sep=sep
+            os.path.join(RAW_DATA_DIR, "GHermChem_Edges.csv"), sep=sep
         )  # edges
         GHermChem_Nodes = pd.read_csv(
-            os.path.join(self.raw_dir, "GHermChem_Nodes.csv"), sep=sep
+            os.path.join(RAW_DATA_DIR, "GHermChem_Nodes.csv"), sep=sep
         )  # nodes
 
         # Gap junctions
         GHermElec_Sym_Edges = pd.read_csv(
-            os.path.join(self.raw_dir, "GHermElec_Sym_Edges.csv"), sep=sep
+            os.path.join(RAW_DATA_DIR, "GHermElec_Sym_Edges.csv"), sep=sep
         )  # edges
         GHermElec_Sym_Nodes = pd.read_csv(
-            os.path.join(self.raw_dir, "GHermElec_Sym_Nodes.csv"), sep=sep
+            os.path.join(RAW_DATA_DIR, "GHermElec_Sym_Nodes.csv"), sep=sep
         )  # nodes
 
         # Neurons involved in gap junctions
@@ -426,108 +435,24 @@ class DefaultPreprocessor(ConnectomeBasePreprocessor):
                 [0, weight], dtype=torch.float
             )  # chemical synapse encoded as [0,1]
 
-        # Load the neuron master sheet
-        df_master = pd.read_csv(os.path.join(self.raw_dir, "neuron_master_sheet.csv"))
-        df_master = df_master[df_master["label"].isin(neurons_all)]
-
-        # Get neuron types from the master sheet
-        df_master["type"] = df_master["type"].fillna("Unknown")  # Fill NaNs with 'Unknown'
-        le = preprocessing.LabelEncoder()
-        le.fit(df_master["type"].values)
-        num_classes = len(le.classes_)
-        y = torch.tensor(
-            le.transform(df_master.set_index("label").reindex(NEURON_LABELS)["type"].values),
-            dtype=torch.int32,
+        graph, num_classes, node_type, node_label, n_id, node_class = self.preprocess_common_tasks(
+            ggap_edge_index, ggap_edge_attr
         )
-        node_type = dict(zip(le.transform(le.classes_), le.classes_))
 
-        # Get neuron classes from the master sheet
-        df_master["class"] = df_master["class"].fillna("Unknown")  # Fill NaNs with 'Unknown'
-        class_le = preprocessing.LabelEncoder()
-        class_le.fit(df_master["class"].values)
-        node_class = dict(zip(class_le.transform(class_le.classes_), class_le.classes_))
-
-        # Create dummy feature matrix
-        num_node_features = 1024
-        x = torch.empty(len(NEURON_LABELS), num_node_features, dtype=torch.float)  # filler data
-
-        # Get positions for nodes from the master sheet
-        pos_dict = df_master.set_index("label")[["x", "y", "z"]].to_dict("index")
-        pos = {
-            neuron_to_idx[label]: [pos_dict[label]["x"], pos_dict[label]["y"], pos_dict[label]["z"]]
-            for label in pos_dict
-        }
-
-        # Normalize outgoing gap junction weights to sum to 1
-        ggap_weights = to_dense_adj(
-            edge_index=ggap_edge_index, edge_attr=ggap_edge_attr[:, 0]
-        ).squeeze(0)
-        ggap_weights = ggap_weights / torch.clamp(ggap_weights.sum(dim=1, keepdim=True), min=1)
-        ggap_edge_index, ggap_edge_attr = dense_to_sparse(ggap_weights)
-        ggap_edge_attr = torch.stack((ggap_edge_attr, torch.zeros_like(ggap_edge_attr))).T
-        # Normalize outgoing chemical synapse weights to sum to 1
-        gsyn_weights = to_dense_adj(
-            edge_index=gsyn_edge_index, edge_attr=gsyn_edge_attr[:, 1]
-        ).squeeze(0)
-        gsyn_weights = gsyn_weights / torch.clamp(gsyn_weights.sum(dim=1, keepdim=True), min=1)
-        gsyn_edge_index, gsyn_edge_attr = dense_to_sparse(gsyn_weights)
-        gsyn_edge_attr = torch.stack((torch.zeros_like(gsyn_edge_attr), gsyn_edge_attr)).T
-        # Graph for electrical connectivity uses `torch_geometric.Data` object
-        electrical_graph = Data(x=x, edge_index=ggap_edge_index, edge_attr=ggap_edge_attr, y=y)
-        # Graph for chemical connectivity uses `torch_geometric.Data` object
-        chemical_graph = Data(x=x, edge_index=gsyn_edge_index, edge_attr=gsyn_edge_attr, y=y)
-
-        # Merge electrical and chemical graphs into a single connectome graph
-        edge_index = torch.hstack((electrical_graph.edge_index, chemical_graph.edge_index))
-        edge_attr = torch.vstack((electrical_graph.edge_attr, chemical_graph.edge_attr))
-        edge_index, edge_attr = coalesce(
-            edge_index, edge_attr, reduce="add"
-        )  # features = [elec_wt, chem_wt]
-
-        assert all(chemical_graph.y == electrical_graph.y), "Node labels not matched!"
-        x = chemical_graph.x
-        y = chemical_graph.y
-
-        # Basic attributes of PyG Data object
-        graph = Data(x=x, edge_index=edge_index, edge_attr=edge_attr, y=y)
-
-        # Some additional attributes to the graph
-        neuron_to_idx = {label: idx for idx, label in enumerate(NEURON_LABELS)}
-        pos_dict = df_master.set_index("label")[["x", "y", "z"]].to_dict("index")
-        pos = {
-            neuron_to_idx[label]: [pos_dict[label]["x"], pos_dict[label]["y"], pos_dict[label]["z"]]
-            for label in pos_dict
-        }
-
-        # Assign each node its global node index
-        n_id = torch.arange(graph.num_nodes)
-        node_label = {
-            k: idx_to_neuron[k] for k in pos.keys()
-        }  # names of neurons (e.g. AVAL, RIBR, VC1, etc.)
-
-        # Save the tensors to use as raw data in the future.
-        graph_tensors = {
-            "edge_index": edge_index,
-            "edge_attr": edge_attr,
-            "pos": pos,
-            "num_classes": num_classes,
-            "x": x,
-            "y": y,
-            "node_type": node_type,
-            "node_label": node_label,
-            "n_id": n_id,
-            "node_class": node_class,
-        }
-
-        torch.save(
-            graph_tensors,
-            os.path.join(ROOT_DIR, "data", "processed", "connectome", save_as),
+        self.save_graph_tensors(
+            save_as,
+            graph,
+            num_classes,
+            node_type,
+            node_label,
+            n_id,
+            node_class,
         )
 
 
 class OpenWormPreprocessor(ConnectomeBasePreprocessor):
     def preprocess(self, save_as="graph_tensors_openworm.pt"):
-        df = pd.read_csv(os.path.join(self.raw_dir, "OpenWormConnectome.csv"), sep=r"[\t,]")
+        df = pd.read_csv(os.path.join(RAW_DATA_DIR, "OpenWormConnectome.csv"), sep=r"[\t,]")
 
         edges = []
         edge_attr = []
@@ -558,18 +483,14 @@ class OpenWormPreprocessor(ConnectomeBasePreprocessor):
             ]
         ).T
 
-        x, y, num_classes, node_type, node_label, pos, n_id, node_class = (
-            self.preprocess_common_tasks(edge_index, edge_attr)
+        graph, num_classes, node_type, node_label, n_id, node_class = self.preprocess_common_tasks(
+            edge_index, edge_attr
         )
 
         self.save_graph_tensors(
             save_as,
-            edge_index,
-            edge_attr,
-            pos,
+            graph,
             num_classes,
-            x,
-            y,
             node_type,
             node_label,
             n_id,
@@ -582,7 +503,7 @@ class Randi2023Preprocessor(ConnectomeBasePreprocessor):
         edges = []
         edge_attr = []
 
-        xls = pd.ExcelFile(os.path.join(self.raw_dir, "CElegansFunctionalConnectivity.xlsx"))
+        xls = pd.ExcelFile(os.path.join(RAW_DATA_DIR, "CElegansFunctionalConnectivity.xlsx"))
         df_connectivity = pd.read_excel(xls, sheet_name=0, index_col=0)
         df_significance = pd.read_excel(xls, sheet_name=1, index_col=0)
 
@@ -601,18 +522,14 @@ class Randi2023Preprocessor(ConnectomeBasePreprocessor):
             [[neuron_to_idx[neuron1], neuron_to_idx[neuron2]] for neuron1, neuron2 in edges]
         ).T
 
-        x, y, num_classes, node_type, node_label, pos, n_id, node_class = (
-            self.preprocess_common_tasks(edge_index, edge_attr)
+        graph, num_classes, node_type, node_label, n_id, node_class = self.preprocess_common_tasks(
+            edge_index, edge_attr
         )
 
         self.save_graph_tensors(
             save_as,
-            edge_index,
-            edge_attr,
-            pos,
+            graph,
             num_classes,
-            x,
-            y,
             node_type,
             node_label,
             n_id,
@@ -622,7 +539,7 @@ class Randi2023Preprocessor(ConnectomeBasePreprocessor):
 
 class Witvliet2020Preprocessor7(ConnectomeBasePreprocessor):
     def preprocess(self, save_as="graph_tensors_witvliet2020_7.pt"):
-        df = pd.read_csv(os.path.join(self.raw_dir, "witvliet_2020_7.csv"), sep=r"[\t,]")
+        df = pd.read_csv(os.path.join(RAW_DATA_DIR, "witvliet_2020_7.csv"), sep=r"[\t,]")
 
         edges = []
         edge_attr = []
@@ -655,18 +572,14 @@ class Witvliet2020Preprocessor7(ConnectomeBasePreprocessor):
             ]
         ).T
 
-        x, y, num_classes, node_type, node_label, pos, n_id, node_class = (
-            self.preprocess_common_tasks(edge_index, edge_attr)
+        graph, num_classes, node_type, node_label, n_id, node_class = self.preprocess_common_tasks(
+            edge_index, edge_attr
         )
 
         self.save_graph_tensors(
             save_as,
-            edge_index,
-            edge_attr,
-            pos,
+            graph,
             num_classes,
-            x,
-            y,
             node_type,
             node_label,
             n_id,
@@ -676,7 +589,7 @@ class Witvliet2020Preprocessor7(ConnectomeBasePreprocessor):
 
 class Witvliet2020Preprocessor8(ConnectomeBasePreprocessor):
     def preprocess(self, save_as="graph_tensors_witvliet2020_8.pt"):
-        df = pd.read_csv(os.path.join(self.raw_dir, "witvliet_2020_8.csv"), sep=r"[\t,]")
+        df = pd.read_csv(os.path.join(RAW_DATA_DIR, "witvliet_2020_8.csv"), sep=r"[\t,]")
 
         edges = []
         edge_attr = []
@@ -709,18 +622,14 @@ class Witvliet2020Preprocessor8(ConnectomeBasePreprocessor):
             ]
         ).T
 
-        x, y, num_classes, node_type, node_label, pos, n_id, node_class = (
-            self.preprocess_common_tasks(edge_index, edge_attr)
+        graph, num_classes, node_type, node_label, n_id, node_class = self.preprocess_common_tasks(
+            edge_index, edge_attr
         )
 
         self.save_graph_tensors(
             save_as,
-            edge_index,
-            edge_attr,
-            pos,
+            graph,
             num_classes,
-            x,
-            y,
             node_type,
             node_label,
             n_id,
@@ -733,9 +642,9 @@ class Cook2019Preprocessor(ConnectomeBasePreprocessor):
         edges = []
         edge_attr = []
 
-        df = pd.read_excel(
-            os.path.join(self.raw_dir, "Cook2019.xlsx"), sheet_name="hermaphrodite chemical"
-        )
+        xlsx_file = pd.ExcelFile(os.path.join(RAW_DATA_DIR, "Cook2019.xlsx"))
+
+        df = pd.read_excel(xlsx_file, sheet_name="hermaphrodite chemical")
 
         for i, line in enumerate(df):
             if i > 2:
@@ -748,10 +657,7 @@ class Cook2019Preprocessor(ConnectomeBasePreprocessor):
                             edges.append([pre, post])
                             edge_attr.append([0, df.iloc[j, i]])
 
-        df = pd.read_excel(
-            os.path.join(self.raw_dir, "Cook2019.xlsx"),
-            sheet_name="hermaphrodite gap jn asymmetric",
-        )
+        df = pd.read_excel(xlsx_file, sheet_name="hermaphrodite gap jn asymmetric")
 
         for i, line in enumerate(df):
             if i > 2:
@@ -776,18 +682,14 @@ class Cook2019Preprocessor(ConnectomeBasePreprocessor):
             ]
         ).T
 
-        x, y, num_classes, node_type, node_label, pos, n_id, node_class = (
-            self.preprocess_common_tasks(edge_index, edge_attr)
+        graph, num_classes, node_type, node_label, n_id, node_class = self.preprocess_common_tasks(
+            edge_index, edge_attr
         )
 
         self.save_graph_tensors(
             save_as,
-            edge_index,
-            edge_attr,
-            pos,
+            graph,
             num_classes,
-            x,
-            y,
             node_type,
             node_label,
             n_id,
@@ -797,7 +699,7 @@ class Cook2019Preprocessor(ConnectomeBasePreprocessor):
 
 class White1986WholePreprocessor(ConnectomeBasePreprocessor):
     def preprocess(self, save_as="graph_tensors_white1986_whole.pt"):
-        df = pd.read_csv(os.path.join(self.raw_dir, "white_1986_whole.csv"), sep=r"[\t,]")
+        df = pd.read_csv(os.path.join(RAW_DATA_DIR, "white_1986_whole.csv"), sep=r"[\t,]")
 
         edges = []
         edge_attr = []
@@ -830,18 +732,14 @@ class White1986WholePreprocessor(ConnectomeBasePreprocessor):
             ]
         ).T
 
-        x, y, num_classes, node_type, node_label, pos, n_id, node_class = (
-            self.preprocess_common_tasks(edge_index, edge_attr)
+        graph, num_classes, node_type, node_label, n_id, node_class = self.preprocess_common_tasks(
+            edge_index, edge_attr
         )
 
         self.save_graph_tensors(
             save_as,
-            edge_index,
-            edge_attr,
-            pos,
+            graph,
             num_classes,
-            x,
-            y,
             node_type,
             node_label,
             n_id,
@@ -851,7 +749,7 @@ class White1986WholePreprocessor(ConnectomeBasePreprocessor):
 
 class White1986N2UPreprocessor(ConnectomeBasePreprocessor):
     def preprocess(self, save_as="graph_tensors_white1986_n2u.pt"):
-        df = pd.read_csv(os.path.join(self.raw_dir, "white_1986_n2u.csv"), sep=r"[\t,]")
+        df = pd.read_csv(os.path.join(RAW_DATA_DIR, "white_1986_n2u.csv"), sep=r"[\t,]")
 
         edges = []
         edge_attr = []
@@ -884,18 +782,14 @@ class White1986N2UPreprocessor(ConnectomeBasePreprocessor):
             ]
         ).T
 
-        x, y, num_classes, node_type, node_label, pos, n_id, node_class = (
-            self.preprocess_common_tasks(edge_index, edge_attr)
+        graph, num_classes, node_type, node_label, n_id, node_class = self.preprocess_common_tasks(
+            edge_index, edge_attr
         )
 
         self.save_graph_tensors(
             save_as,
-            edge_index,
-            edge_attr,
-            pos,
+            graph,
             num_classes,
-            x,
-            y,
             node_type,
             node_label,
             n_id,
@@ -905,7 +799,7 @@ class White1986N2UPreprocessor(ConnectomeBasePreprocessor):
 
 class White1986JSHPreprocessor(ConnectomeBasePreprocessor):
     def preprocess(self, save_as="graph_tensors_white1986_jsh.pt"):
-        df = pd.read_csv(os.path.join(self.raw_dir, "white_1986_jsh.csv"), sep=r"[\t,]")
+        df = pd.read_csv(os.path.join(RAW_DATA_DIR, "white_1986_jsh.csv"), sep=r"[\t,]")
 
         edges = []
         edge_attr = []
@@ -938,18 +832,14 @@ class White1986JSHPreprocessor(ConnectomeBasePreprocessor):
             ]
         ).T
 
-        x, y, num_classes, node_type, node_label, pos, n_id, node_class = (
-            self.preprocess_common_tasks(edge_index, edge_attr)
+        graph, num_classes, node_type, node_label, n_id, node_class = self.preprocess_common_tasks(
+            edge_index, edge_attr
         )
 
         self.save_graph_tensors(
             save_as,
-            edge_index,
-            edge_attr,
-            pos,
+            graph,
             num_classes,
-            x,
-            y,
             node_type,
             node_label,
             n_id,
@@ -959,7 +849,7 @@ class White1986JSHPreprocessor(ConnectomeBasePreprocessor):
 
 class White1986JSEPreprocessor(ConnectomeBasePreprocessor):
     def preprocess(self, save_as="graph_tensors_white1986_jse.pt"):
-        df = pd.read_csv(os.path.join(self.raw_dir, "white_1986_jse.csv"), sep=r"[\t,]")
+        df = pd.read_csv(os.path.join(RAW_DATA_DIR, "white_1986_jse.csv"), sep=r"[\t,]")
 
         edges = []
         edge_attr = []
@@ -992,29 +882,19 @@ class White1986JSEPreprocessor(ConnectomeBasePreprocessor):
             ]
         ).T
 
-        x, y, num_classes, node_type, node_label, pos, n_id, node_class = (
-            self.preprocess_common_tasks(edge_index, edge_attr)
+        graph, num_classes, node_type, node_label, n_id, node_class = self.preprocess_common_tasks(
+            edge_index, edge_attr
         )
 
         self.save_graph_tensors(
             save_as,
-            edge_index,
-            edge_attr,
-            pos,
+            graph,
             num_classes,
-            x,
-            y,
             node_type,
             node_label,
             n_id,
             node_class,
         )
-
-
-# # Example usage
-# raw_dir = "/path/to/raw_data"
-# openworm_preprocessor = OpenWormPreprocessor(raw_dir)
-# openworm_preprocessor.preprocess()
 
 
 def extract_zip(path: str, folder: str = None, log: bool = True, delete_zip: bool = True):
@@ -1039,6 +919,8 @@ def extract_zip(path: str, folder: str = None, log: bool = True, delete_zip: boo
         os.unlink(path)
 
 
+###############################################################################################
+# TODO: Encapsulate smoothing functions in OOP style class.
 def gaussian_kernel_smooth(x, t, sigma):
     """Causal Gaussian smoothing for a multidimensional time series.
 
@@ -1173,6 +1055,9 @@ def smooth_data_preprocess(calcium_data, time_in_seconds, smooth_method, **kwarg
     else:
         raise TypeError("See `configs/submodule/preprocess.yaml` for viable smooth methods.")
     return smooth_ca_data
+
+
+###############################################################################################
 
 
 def reshape_calcium_data(worm_dataset):
@@ -1830,10 +1715,10 @@ class NeuralBasePreprocessor:
             assert trace_data.shape[1] == len(
                 neuron_IDs[i]
             ), "Calcium trace does not have the right number of neurons."
-            # 0. Ignore any worms with empty traces and name worm
+            # Ignore any worms with empty traces
             if trace_data.size == 0:
                 continue
-            # 1. Map named neurons
+            # Map named neurons
             unique_IDs = [
                 (self.pick_non_none(j) if isinstance(j, list) else j) for j in neuron_IDs[i]
             ]
@@ -1845,12 +1730,12 @@ class NeuralBasePreprocessor:
             unique_IDs = [unique_IDs[_] for _ in unique_indices]
             # Create neuron label to index mapping
             neuron_to_idx, num_named_neurons = self.create_neuron_idx(unique_IDs)
-            ### DEBUG ###
-            # # Skip worms with no labelled neurons.
-            # # TODO: Should we do this? What if we want to infer these using trained models as a dowstream task?
-            # if num_named_neurons == 0:
-            #     continue
-            ### DEBUG ###
+            ## DEBUG ###
+            # Skip worms with no labelled neurons.
+            # TODO: Should we do this? What if we want to infer these using trained models as a dowstream task?
+            if num_named_neurons == 0:
+                continue
+            ## DEBUG ###
             # Only get data for unique neurons
             trace_data = trace_data[:, unique_indices.astype(int)]
             # 2. Normalize calcium data
@@ -1859,11 +1744,6 @@ class NeuralBasePreprocessor:
             time_in_seconds = raw_timeVectorSeconds[i].reshape(raw_timeVectorSeconds[i].shape[0], 1)
             time_in_seconds = np.array(time_in_seconds, dtype=np.float32)  # vector
             time_in_seconds = time_in_seconds - time_in_seconds[0]  # start at 0.0 seconds
-            ### DEBUG ###
-            # print(f"DEBUG: {unique_IDs}\n") # DEBUG
-            # print(f"DEBUG: calcium_data {calcium_data.shape}\n") # DEBUG
-            # print(f"DEBUG: time_in_seconds {time_in_seconds.shape}\n") # DEBUG
-            ### DEBUG ###
             dt = np.diff(time_in_seconds, axis=0, prepend=0.0)  # vector
             original_median_dt = np.median(dt[1:]).item()  # scalar
             residual_calcium = np.gradient(
@@ -2244,8 +2124,8 @@ class Yemini2021Preprocessor(NeuralBasePreprocessor):
             ).T  # (time, neurons)
             # Impute any remaining NaN values
             imputer = IterativeImputer(random_state=0)
-            if np.isnan(activity).any():
-                activity = imputer.fit_transform(activity)
+            if np.isnan(real_data).any():
+                real_data = imputer.fit_transform(real_data)
             # Observed empirically that the first three values of activity equal 0.0s
             activity = activity[4:]
             tvec = tvec[4:]
@@ -2415,7 +2295,7 @@ class Dag2023Preprocessor(NeuralBasePreprocessor):
         # Neurons with dorso-ventral/lateral ambiguity have a '?' in the label that must be inferred
         neurons_copy = []
         for label in neurons:
-            # If an the neuron is unknown it will have a numeric label corresponding to its index
+            # If the neuron is unknown it will have a numeric label corresponding to its index
             if label.isnumeric():
                 neurons_copy.append(label)
                 continue
@@ -2454,8 +2334,7 @@ class Dag2023Preprocessor(NeuralBasePreprocessor):
         ### DEBUG ###
         # Next deal with the swf415_no_id which contains purely unlabeled neuron data
         # NOTE: These don't get used at all as they are skipped in
-        # NeuralBasePreprocessor.preprocess_traces, becuase num_named_neurons == 0.
-        # TODO: We temporarily turned that off to see what happens here.
+        # NeuralBasePreprocessor.preprocess_traces, because num_named_neurons == 0.
         for file in os.listdir(noid_data_files):
             if not file.endswith(".h5"):
                 continue
@@ -2599,15 +2478,15 @@ class Flavell2023Preprocessor(NeuralBasePreprocessor):
                 continue
             worm = "worm" + str(i)
             file_data = self.load_data(file)  # load
-            # 0. Extract raw data
+            # Extract raw data
             neurons, calcium_data, time_in_seconds = self.extract_data(file_data)
             # Set time to start at 0.0 seconds
             time_in_seconds = time_in_seconds - time_in_seconds[0]  # vector
-            # 1. Map named neurons
+            # Map named neurons
             neuron_to_idx, num_named_neurons = self.create_neuron_idx(neurons)
-            # 2. Normalize calcium data
+            # Normalize calcium data
             calcium_data = self.normalize_data(calcium_data)  # matrix
-            # 3. Compute calcium dynamics (residual calcium)
+            # Compute calcium dynamics (residual calcium)
             dt = np.diff(time_in_seconds, axis=0, prepend=0.0)  # vector
             original_median_dt = np.median(dt[1:]).item()  # scalar
             residual_calcium = np.gradient(
@@ -2833,7 +2712,8 @@ class Leifer2023Preprocessor(NeuralBasePreprocessor):
         real_data = real_data[:, mask]
         label_list = np.array(label_list, dtype=str)[mask].tolist()
         # Impute any remaining NaN values
-        imputer = IterativeImputer(random_state=0)
+        # NOTE: This is very slow with the default settings!
+        imputer = IterativeImputer(random_state=0, n_nearest_features=10, skip_complete=False)
         if np.isnan(real_data).any():
             real_data = imputer.fit_transform(real_data)
         # Remove badly imputed neurons from the data
@@ -2888,14 +2768,14 @@ class Leifer2023Preprocessor(NeuralBasePreprocessor):
             if len(time_in_seconds) < 700:
                 worm_idx -= 1
                 continue
-            # 1. Map named neurons
+            # Map named neurons
             neuron_to_idx, num_named_neurons = self.create_neuron_idx(label_list)
             if num_named_neurons == 0:  # skip worms with no labelled neuron
                 worm_idx -= 1
                 continue
-            # 2. Normalize calcium data
+            # Normalize calcium data
             calcium_data = self.normalize_data(real_data)  # matrix
-            # 3. Compute calcium dynamics (residual calcium)
+            # Compute calcium dynamics (residual calcium)
             dt = np.diff(time_in_seconds, axis=0, prepend=0.0)  # vector
             original_median_dt = np.median(dt[1:]).item()  # scalar
             residual_calcium = np.gradient(
@@ -2996,9 +2876,10 @@ class Lin2023Preprocessor(NeuralBasePreprocessor):
         _f0 = dataset_raw["F_0"][_filter][:, 0]
         raw_activitiy[0, :] = _f0
         # Impute any remaining NaN values
+        # NOTE: This is very slow with the default settings on this dataset!
         imputer = IterativeImputer(random_state=0)
-        if np.isnan(raw_activitiy).any():
-            raw_activitiy = imputer.fit_transform(raw_activitiy)
+        if np.isnan(real_data).any():
+            real_data = imputer.fit_transform(real_data)
         # Make the extracted data into a list of arrays
         neuron_IDs, raw_traces, time_vector_seconds = [neurons], [raw_activitiy], [raw_time_vec]
         # Return the extracted data

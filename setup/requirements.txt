@@ -17,6 +17,7 @@ notebook
 numpy
 omegaconf
 openai # uses pip
+openpyxl
 pandas
 pytest
 requests

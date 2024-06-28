@@ -93,11 +93,12 @@ else:
     # fmt: on
 
     # Write to a text file called "neuron_labels.txt" using pandas
+    os.makedirs(RAW_DATA_DIR, exist_ok=True)
     pd.DataFrame(NEURON_LABELS).to_csv(labels_file, sep=" ", header=False, index=False)
 
 NUM_NEURONS = len(NEURON_LABELS)  # number of neurons in the model organism
 
-RAW_DATA_URL = "https://www.dropbox.com/scl/fi/8iaedy4rfqq93jxzy9da4/raw_data.zip?rlkey=eauegkr4ttcjutjlrlv8vua4s&dl=1"
+RAW_DATA_URL = "https://www.dropbox.com/scl/fi/0qtxfg6mtqczs3ll0ncr5/raw_data.zip?rlkey=z1qulvafew3hpl4wn47jbhoez&dl=1"
 
 RAW_ZIP = "raw_data.zip"
 

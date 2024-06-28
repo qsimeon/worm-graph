@@ -13,7 +13,8 @@ import numpy as np
 import pandas as pd
 
 
-# NOTE: IterativeImputer is experimental and the API might change without any deprecation cycle. To use it, you need to explicitly import enable_iterative_imputer.
+# NOTE: IterativeImputer is experimental and the API might change without any deprecation cycle.
+# To use it, you need to explicitly import enable_iterative_imputer.
 from sklearn.experimental import enable_iterative_imputer
 from sklearn.impute import IterativeImputer
 

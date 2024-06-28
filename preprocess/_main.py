@@ -53,7 +53,7 @@ def process_data(preprocess_config: DictConfig) -> None:
     if not os.path.exists(os.path.join(ROOT_DIR, "data/processed/connectome/graph_tensors.pt")):
         logger.info("Preprocessing C. elegans connectome...")
         raw_dir = os.path.join(ROOT_DIR, "data/raw")
-        preprocess_connectome(raw_dir=raw_dir, raw_files=RAW_FILES)
+        preprocess_connectome(raw_files=RAW_FILES, pub=preprocess_config.connectome_pub)
         logger.info("Finished preprocessing C. elegans connectome.")
     else:
         logger.info("Connectome already preprocessed.")
