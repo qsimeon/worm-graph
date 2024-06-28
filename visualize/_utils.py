@@ -27,8 +27,8 @@ def draw_connectome(
     ## nodes
     inter = [node for i, node in enumerate(G.nodes) if network.y[i] == 0]
     motor = [node for i, node in enumerate(G.nodes) if network.y[i] == 1]
-    pharynx = [node for i, node in enumerate(G.nodes) if network.y[i] == 3]
-    sensory = [node for i, node in enumerate(G.nodes) if network.y[i] == 4]
+    pharynx = [node for i, node in enumerate(G.nodes) if network.y[i] == 2]
+    sensory = [node for i, node in enumerate(G.nodes) if network.y[i] == 3]
 
     ## edges
     junctions = [
@@ -92,16 +92,16 @@ def draw_connectome(
                 ax=ax,
             )
             nx.draw_networkx_labels(G, pos, labels, font_size=6, ax=ax)
-            nx.draw_networkx_nodes(G, pos, nodelist=inter, node_color="blue", ax=ax, **options)
-            nx.draw_networkx_nodes(G, pos, nodelist=motor, node_color="red", ax=ax, **options)
+            nx.draw_networkx_nodes(G, pos, nodelist=inter, node_color="magenta", ax=ax, **options)
+            nx.draw_networkx_nodes(G, pos, nodelist=motor, node_color="cyan", ax=ax, **options)
             nx.draw_networkx_nodes(G, pos, nodelist=pharynx, node_color="green", ax=ax, **options)
             nx.draw_networkx_nodes(G, pos, nodelist=sensory, node_color="yellow", ax=ax, **options)
 
         if plot_3d:
             draw_3d_edges(junctions, "tab:blue", gap_weights)
             draw_3d_edges(synapses, "tab:red", chem_weights)
-            draw_3d_nodes(inter, "blue")
-            draw_3d_nodes(motor, "red")
+            draw_3d_nodes(inter, "magenta")
+            draw_3d_nodes(motor, "cyan")
             draw_3d_nodes(pharynx, "green")
             draw_3d_nodes(sensory, "yellow")
 
@@ -123,7 +123,7 @@ def draw_connectome(
             marker="o",
             color="w",
             label="inter",
-            markerfacecolor="b",
+            markerfacecolor="magenta",
             alpha=0.6,
             markersize=10,
         ),
@@ -133,7 +133,7 @@ def draw_connectome(
             marker="o",
             color="w",
             label="motor",
-            markerfacecolor="r",
+            markerfacecolor="cyan",
             alpha=0.6,
             markersize=10,
         ),
@@ -143,7 +143,7 @@ def draw_connectome(
             marker="o",
             color="w",
             label="pharynx",
-            markerfacecolor="g",
+            markerfacecolor="green",
             alpha=0.6,
             markersize=10,
         ),
@@ -153,12 +153,12 @@ def draw_connectome(
             marker="o",
             color="w",
             label="sensory",
-            markerfacecolor="y",
+            markerfacecolor="yellow",
             alpha=0.6,
             markersize=10,
         ),
-        Line2D([0], [0], color="b", label="gap junction", linewidth=2, alpha=0.6, markersize=10),
-        Line2D([0], [0], color="r", label="synapse", linewidth=2, alpha=0.6, markersize=10),
+        Line2D([0], [0], color="blue", label="gap junction", linewidth=2, alpha=0.6, markersize=10),
+        Line2D([0], [0], color="red", label="synapse", linewidth=2, alpha=0.6, markersize=10),
     ]
 
     plt.title(plt_title)

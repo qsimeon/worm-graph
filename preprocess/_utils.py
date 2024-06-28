@@ -251,6 +251,7 @@ class ConnectomeBasePreprocessor:
         df_master["type"] = df_master["type"].fillna("Unknown")
         le = preprocessing.LabelEncoder()
         le.fit(df_master["type"].values)
+        # print(f"DEBUG Classes: {le.classes_}, Encoded: {le.transform(le.classes_)}") # DEBUG
         num_classes = len(le.classes_)
         y = torch.tensor(
             le.transform(df_master.set_index("label").reindex(self.neuron_labels)["type"].values),
@@ -394,8 +395,7 @@ class DefaultPreprocessor(ConnectomeBasePreprocessor):
         Gsyn_edges = df.iloc[inds].reset_index(drop=True)
 
         # Map neuron names (IDs) to indices
-        neuron_to_idx = dict(zip(Gsyn_nodes.Name.values, Gsyn_nodes.index.values))
-        idx_to_neuron = dict(zip(Gsyn_nodes.index.values, Gsyn_nodes.Name.values))
+        neuron_to_idx = dict(zip(self.neuron_labels, range(len(self.neuron_labels))))
 
         # edge_index for gap junctions
         arr = Ggap_edges[["EndNodes_1", "EndNodes_2"]].values
@@ -435,8 +435,15 @@ class DefaultPreprocessor(ConnectomeBasePreprocessor):
                 [0, weight], dtype=torch.float
             )  # chemical synapse encoded as [0,1]
 
+        # Merge electrical and chemical graphs into a single connectome graph
+        combined_edge_index = torch.hstack((ggap_edge_index, gsyn_edge_index))
+        combined_edge_attr = torch.vstack((ggap_edge_attr, gsyn_edge_attr))
+        edge_index, edge_attr = coalesce(
+            combined_edge_index, combined_edge_attr, reduce="add"
+        )  # features = [elec_wt, chem_wt]
+
         graph, num_classes, node_type, node_label, n_id, node_class = self.preprocess_common_tasks(
-            ggap_edge_index, ggap_edge_attr
+            edge_index, edge_attr
         )
 
         self.save_graph_tensors(
@@ -556,11 +563,16 @@ class Witvliet2020Preprocessor7(ConnectomeBasePreprocessor):
                     edges.append([neuron1, neuron2])
                     if type == "electrical":
                         edge_attr.append([num_connections, 0])
+                        # Adding the reverse direction for symmetry
+                        edges.append([neuron2, neuron1])
+                        edge_attr.append([num_connections, 0])
                     else:
                         edge_attr.append([0, num_connections])
                 else:
                     if type == "electrical":
                         edge_attr[-1][0] = num_connections
+                        # Adding the reverse direction for symmetry
+                        edge_attr[-2][0] = num_connections
                     else:
                         edge_attr[-1][-1] = num_connections
 
@@ -606,11 +618,16 @@ class Witvliet2020Preprocessor8(ConnectomeBasePreprocessor):
                     edges.append([neuron1, neuron2])
                     if type == "electrical":
                         edge_attr.append([num_connections, 0])
+                        # Adding the reverse direction for symmetry
+                        edges.append([neuron2, neuron1])
+                        edge_attr.append([num_connections, 0])
                     else:
                         edge_attr.append([0, num_connections])
                 else:
                     if type == "electrical":
                         edge_attr[-1][0] = num_connections
+                        # Adding the reverse direction for symmetry
+                        edge_attr[-2][0] = num_connections
                     else:
                         edge_attr[-1][-1] = num_connections
 
@@ -657,11 +674,12 @@ class Cook2019Preprocessor(ConnectomeBasePreprocessor):
                             edges.append([pre, post])
                             edge_attr.append([0, df.iloc[j, i]])
 
-        df = pd.read_excel(xlsx_file, sheet_name="hermaphrodite gap jn asymmetric")
+        df = pd.read_excel(xlsx_file, sheet_name="hermaphrodite gap jn symmetric")
 
         for i, line in enumerate(df):
             if i > 2:
                 col_data = df.iloc[:-1, i]
+                print(f"line: {line} \t col_data: {col_data}\n") # DEBUG
                 for j, weight in enumerate(col_data):
                     if j > 1 and not pd.isna(df.iloc[j, i]):
                         post = df.iloc[1, i]
@@ -673,7 +691,7 @@ class Cook2019Preprocessor(ConnectomeBasePreprocessor):
                             else:
                                 edges.append([pre, post])
                                 edge_attr.append([df.iloc[j, i], 0])
-
+                            
         edge_attr = torch.tensor(edge_attr)
         edge_index = torch.tensor(
             [
