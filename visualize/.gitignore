@@ -1,3 +1,7 @@
 # Mac file
 *.DS_Store
 *__MACOSX
+
+corr_data
+corr_figs
+autocorr_figs
