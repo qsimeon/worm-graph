@@ -5,56 +5,117 @@ logger = logging.getLogger(__name__)
 logging.getLogger("matplotlib").setLevel(logging.WARNING)  # Suppress matplotlib logging
 
 
-def draw_connectome(network, pos=None, labels=None, plt_title="C. elegans connectome network"):
+def draw_connectome(
+    network, pos=None, labels=None, plt_title="C. elegans connectome network", plot_3d=False
+):
     """
     Args:
       network: PyG Data object containing a C. elegans connectome graph.
-      pos: dict, mapping of node index to 2D coordinate.
+      pos: dict, mapping of node index to 2D or 3D coordinate.
       labels: dict, mapping of node index to neuron name.
+      plot_3d: bool, if True plots the graph in 3D, else in 2D.
     """
     # convert to networkx
     G = torch_geometric.utils.to_networkx(network)
     # create figure
-    plt.figure(figsize=(20, 10))
+    fig = plt.figure(figsize=(10, 8))
+    if plot_3d:
+        ax = fig.add_subplot(111, projection="3d")
+    else:
+        ax = fig.add_subplot(111)
+
     ## nodes
-    inter = [node for i, node in enumerate(G.nodes) if network.y[i] == 0.0]
-    motor = [node for i, node in enumerate(G.nodes) if network.y[i] == 1.0]
-    other = [node for i, node in enumerate(G.nodes) if network.y[i] == 2.0]
-    pharynx = [node for i, node in enumerate(G.nodes) if network.y[i] == 3.0]
-    sensory = [node for i, node in enumerate(G.nodes) if network.y[i] == 4.0]
-    sexspec = [node for i, node in enumerate(G.nodes) if network.y[i] == 5.0]
+    inter = [node for i, node in enumerate(G.nodes) if network.y[i] == 0]
+    motor = [node for i, node in enumerate(G.nodes) if network.y[i] == 1]
+    pharynx = [node for i, node in enumerate(G.nodes) if network.y[i] == 2]
+    sensory = [node for i, node in enumerate(G.nodes) if network.y[i] == 3]
+
     ## edges
     junctions = [
         edge for i, edge in enumerate(G.edges) if network.edge_attr[i, 0] > 0.0
-    ]  # gap junctions/electrical synapses encoded as [1,0]
+    ]  # gap junctions/electrical synapses encoded as [1,0] (i.e. first `edge_attr` feature dim)
     synapses = [
         edge for i, edge in enumerate(G.edges) if network.edge_attr[i, 1] > 0.0
-    ]  # chemical synapse encoded as [0,1]
+    ]  # chemical synapse encoded as [0,1] (i.e second `edge_attr` feature dim)
     ## edge weights
-    gap_weights = [int(network.edge_attr[i, 0]) / 50 for i, edge in enumerate(G.edges)]
-    chem_weights = [int(network.edge_attr[i, 1]) / 50 for i, edge in enumerate(G.edges)]
+    gap_weights = [int(network.edge_attr[i, 0]) / 20 for i, edge in enumerate(G.edges)]
+    chem_weights = [int(network.edge_attr[i, 1]) / 20 for i, edge in enumerate(G.edges)]
+
     ## metadata
     if pos is None:
         pos = network.pos
-    # pos = nx.kamada_kawai_layout(G)
     if labels is None:
-        labels = network.idx_to_neuron
-    options = {"edgecolors": "tab:gray", "node_size": 500, "alpha": 0.5}
-    ## draw nodes
-    nx.draw_networkx_edges(
-        G, pos, edgelist=junctions, width=gap_weights, alpha=0.5, edge_color="tab:blue"
-    )
-    nx.draw_networkx_edges(
-        G, pos, edgelist=synapses, width=chem_weights, alpha=0.5, edge_color="tab:red"
-    )
-    nx.draw_networkx_labels(G, pos, labels, font_size=6)
-    ## draw edges
-    nx.draw_networkx_nodes(G, pos, nodelist=inter, node_color="blue", **options)
-    nx.draw_networkx_nodes(G, pos, nodelist=motor, node_color="red", **options)
-    nx.draw_networkx_nodes(G, pos, nodelist=other, node_color="green", **options)
-    nx.draw_networkx_nodes(G, pos, nodelist=pharynx, node_color="yellow", **options)
-    nx.draw_networkx_nodes(G, pos, nodelist=sensory, node_color="magenta", **options)
-    nx.draw_networkx_nodes(G, pos, nodelist=sexspec, node_color="cyan", **options)
+        labels = network.node_label
+
+    options = {"edgecolors": "tab:gray", "alpha": 0.6}
+
+    ## determine the ranges for each axis
+    x_vals = [coord[0] for coord in pos.values()]
+    y_vals = [coord[1] for coord in pos.values()]
+    z_vals = [(coord[2] if len(coord) > 2 else 0) for coord in pos.values()]
+
+    ## draw nodes and edges
+    def draw_nodes_edges(ax, pos, plot_3d):
+        if plot_3d:
+
+            def draw_3d_nodes(nodelist, color):
+                if len(nodelist) > 0:
+                    coords = [pos[node] for node in nodelist]
+                    if len(coords[0]) == 2:
+                        coords = [(x, y, 0) for x, y in coords]
+                    xs, ys, zs = zip(*coords)
+                    ax.scatter(xs, ys, zs, c=color, s=100, **options)
+
+            def draw_3d_edges(edgelist, color, weights):
+                for edge, weight in zip(edgelist, weights):
+                    xs, ys, zs = zip(pos[edge[0]], pos[edge[1]])
+                    ax.plot(xs, ys, zs, color=color, alpha=0.6, linewidth=weight)
+
+        else:
+            pos = {node: pos[node][:2] for node in pos}  # get 2D coordinates
+            nx.draw_networkx_edges(
+                G,
+                pos,
+                edgelist=junctions,
+                width=gap_weights,
+                alpha=0.6,
+                edge_color="tab:blue",
+                ax=ax,
+            )
+            nx.draw_networkx_edges(
+                G,
+                pos,
+                edgelist=synapses,
+                width=chem_weights,
+                alpha=0.6,
+                edge_color="tab:red",
+                ax=ax,
+            )
+            nx.draw_networkx_labels(G, pos, labels, font_size=6, ax=ax)
+            nx.draw_networkx_nodes(G, pos, nodelist=inter, node_color="magenta", ax=ax, **options)
+            nx.draw_networkx_nodes(G, pos, nodelist=motor, node_color="cyan", ax=ax, **options)
+            nx.draw_networkx_nodes(G, pos, nodelist=pharynx, node_color="green", ax=ax, **options)
+            nx.draw_networkx_nodes(G, pos, nodelist=sensory, node_color="yellow", ax=ax, **options)
+
+        if plot_3d:
+            draw_3d_edges(junctions, "tab:blue", gap_weights)
+            draw_3d_edges(synapses, "tab:red", chem_weights)
+            draw_3d_nodes(inter, "magenta")
+            draw_3d_nodes(motor, "cyan")
+            draw_3d_nodes(pharynx, "green")
+            draw_3d_nodes(sensory, "yellow")
+
+            # Setting the aspect ratio for each axis
+            ax.set_box_aspect(
+                [
+                    max(x_vals) - min(x_vals),
+                    (max(y_vals) - min(y_vals)) // 3,
+                    max(z_vals) - min(z_vals),
+                ]
+            )
+
+    draw_nodes_edges(ax, pos, plot_3d)
+
     legend_elements = [
         Line2D(
             [0],
@@ -62,9 +123,9 @@ def draw_connectome(network, pos=None, labels=None, plt_title="C. elegans connec
             marker="o",
             color="w",
             label="inter",
-            markerfacecolor="b",
-            alpha=0.5,
-            markersize=15,
+            markerfacecolor="magenta",
+            alpha=0.6,
+            markersize=10,
         ),
         Line2D(
             [0],
@@ -72,19 +133,9 @@ def draw_connectome(network, pos=None, labels=None, plt_title="C. elegans connec
             marker="o",
             color="w",
             label="motor",
-            markerfacecolor="r",
-            alpha=0.5,
-            markersize=15,
-        ),
-        Line2D(
-            [0],
-            [0],
-            marker="o",
-            color="w",
-            label="other",
-            markerfacecolor="g",
-            alpha=0.5,
-            markersize=15,
+            markerfacecolor="cyan",
+            alpha=0.6,
+            markersize=10,
         ),
         Line2D(
             [0],
@@ -92,9 +143,9 @@ def draw_connectome(network, pos=None, labels=None, plt_title="C. elegans connec
             marker="o",
             color="w",
             label="pharynx",
-            markerfacecolor="y",
-            alpha=0.5,
-            markersize=15,
+            markerfacecolor="green",
+            alpha=0.6,
+            markersize=10,
         ),
         Line2D(
             [0],
@@ -102,31 +153,14 @@ def draw_connectome(network, pos=None, labels=None, plt_title="C. elegans connec
             marker="o",
             color="w",
             label="sensory",
-            markerfacecolor="m",
-            alpha=0.5,
-            markersize=15,
-        ),
-        Line2D(
-            [0],
-            [0],
-            marker="o",
-            color="w",
-            label="sex",
-            markerfacecolor="c",
-            alpha=0.5,
-            markersize=15,
-        ),
-        Line2D(
-            [0],
-            [0],
-            color="b",
-            label="gap junction",
-            linewidth=2,
-            alpha=0.5,
+            markerfacecolor="yellow",
+            alpha=0.6,
             markersize=10,
         ),
-        Line2D([0], [0], color="r", label="synapse", linewidth=2, alpha=0.5, markersize=10),
+        Line2D([0], [0], color="blue", label="gap junction", linewidth=2, alpha=0.6, markersize=10),
+        Line2D([0], [0], color="red", label="synapse", linewidth=2, alpha=0.6, markersize=10),
     ]
+
     plt.title(plt_title)
     plt.legend(handles=legend_elements, loc="upper right")
     plt.show()
@@ -144,21 +178,21 @@ def time_delay_embedding(x, delay, dimension):
     Returns:
     - The time-delay embedded data as a 2D numpy array.
 
-    Time delay embedding is a technique used in the analysis of dynamical systems, particularly in the context 
-    of reconstructing the phase space of a system from a series of observations over time. 
-    This technique is based on Takens' Embedding Theorem, which states that the dynamics of a system can be 
+    Time delay embedding is a technique used in the analysis of dynamical systems, particularly in the context
+    of reconstructing the phase space of a system from a series of observations over time.
+    This technique is based on Takens' Embedding Theorem, which states that the dynamics of a system can be
     reconstructed from the time series of a single observable of the system, under certain conditions.
     Here are some key points about time delay embedding:
-        - Time Delay, $τ$ (tau): This is the time interval between successive observations in the reconstructed phase space. 
-                                Choosing an appropriate $τ$ is crucial; too short a delay may lead to redundant information, 
+        - Time Delay, $τ$ (tau): This is the time interval between successive observations in the reconstructed phase space.
+                                Choosing an appropriate $τ$ is crucial; too short a delay may lead to redundant information,
                                 while too long a delay may lose the dynamics of interest.
-        - Embedding Dimension, $m$: This represents the number of delayed observations used to reconstruct the phase space. 
+        - Embedding Dimension, $m$: This represents the number of delayed observations used to reconstruct the phase space.
                                     It should be high enough to unfold the dynamics, but not too high to avoid overcomplicating the model.
-        - Phase Space Reconstruction: By plotting the time-delayed copies of the time series against each other, one can reconstruct the phase space, 
+        - Phase Space Reconstruction: By plotting the time-delayed copies of the time series against each other, one can reconstruct the phase space,
                                     which can reveal underlying dynamical properties like attractors or limit cycles.
-        - Mutual Information: To empirically choose the right $τ$, one common method is to calculate the mutual information between the time series and 
+        - Mutual Information: To empirically choose the right $τ$, one common method is to calculate the mutual information between the time series and
                             its delayed version, and select $τ$ at the first minimum of the mutual information function.
-        - False Nearest Neighbors (FNN): The method of False Nearest Neighbors can help determine a suitable embedding dimension $m$ by identifying when 
+        - False Nearest Neighbors (FNN): The method of False Nearest Neighbors can help determine a suitable embedding dimension $m$ by identifying when
                                         points that appear to be neighbors in lower-dimensional space are no longer neighbors in higher dimensions.
     """
     n = len(x)
@@ -182,7 +216,7 @@ def plot_autocorrelation_and_pacf(X, neurons):
 
     Returns:
     - None: The function creates and displays a plot.
-   
+
     Autocorrelation Function (ACF):
         - This is a correlation of a signal with a delayed copy of itself as a function of delay.
         - The autocorrelation plot (or ACF plot) displays the correlation between the time series and its lagged values.
@@ -231,6 +265,7 @@ def plot_autocorrelation_and_pacf(X, neurons):
     # Show the plots
     plt.show()
 
+
 def plot_frequency_distribution(data, ax, title, dt=0.5):
     """Plots the frequency distribution of a signal.
 
@@ -252,8 +287,8 @@ def plot_frequency_distribution(data, ax, title, dt=0.5):
 
 
 def plot_dataset_info(log_dir):
-    # Map the 302 C. elgans neurons to their standard slot/index
-    neuron_slot_mapping = {neuron: slot for slot, neuron in enumerate(NEURONS_302)}
+    # Map the ~300 C. elgans neurons to their standard slot/index
+    neuron_slot_mapping = {neuron: slot for slot, neuron in enumerate(NEURON_LABELS)}
     # Train dataset
     df_train = pd.read_csv(
         os.path.join(log_dir, "dataset", "train_dataset_info.csv"),
@@ -261,19 +296,19 @@ def plot_dataset_info(log_dir):
     )
     neurons_train = df_train["neurons"]
     # Flatten the list of lists into a single list of neurons
-    flattened_neurons_train = [neuron for sublist in neurons_train for neuron in sublist] 
+    flattened_neurons_train = [neuron for sublist in neurons_train for neuron in sublist]
     # Now use np.unique on this flattened list
     unique_neurons_train, neuron_counts_train = np.unique(
         flattened_neurons_train, return_counts=True
     )
     # Standard sorting
-    standard_counts_train = np.zeros(302, dtype=int)
+    standard_counts_train = np.zeros(NUM_NEURONS, dtype=int)
     neuron_idx = [neuron_slot_mapping[neuron] for neuron in unique_neurons_train]
     standard_counts_train[neuron_idx] = neuron_counts_train
     # Get unique datasets
     train_exp_datasets = df_train["source_dataset"].unique().tolist()
     # Create DataFrame for train data
-    train_data = {"Neuron": NEURONS_302, "Count": standard_counts_train}
+    train_data = {"Neuron": NEURON_LABELS, "Count": standard_counts_train}
     df_train_plot = pd.DataFrame(train_data)
     # Validation dataset
     df_val = pd.read_csv(
@@ -286,13 +321,13 @@ def plot_dataset_info(log_dir):
     # Now use np.unique on this flattened list
     unique_neurons_val, neuron_counts_val = np.unique(flattened_neurons_val, return_counts=True)
     # Standard sorting
-    standard_counts_val = np.zeros(302, dtype=int)
+    standard_counts_val = np.zeros(NUM_NEURONS, dtype=int)
     neuron_idx_val = [neuron_slot_mapping[neuron] for neuron in unique_neurons_val]
     standard_counts_val[neuron_idx_val] = neuron_counts_val
     # Get unique datasets
     val_exp_datasets = df_val["source_dataset"].unique().tolist()
     # Create DataFrame for validation data
-    val_data = {"Neuron": NEURONS_302, "Count": standard_counts_val}
+    val_data = {"Neuron": NEURON_LABELS, "Count": standard_counts_val}
     df_val_plot = pd.DataFrame(val_data)
     # Plot histogram using sns
     fig, ax = plt.subplots(2, 1, figsize=(10, 8))
@@ -301,33 +336,42 @@ def plot_dataset_info(log_dir):
     sns.barplot(x="Neuron", y="Count", hue="Neuron", data=df_train_plot, ax=ax[0], errorbar=None)
     # Adjust x-axis ticks
     ax[0].xaxis.set_major_locator(ticker.MultipleLocator(10))  # Show every 10th label
-    ax[0].set_xticklabels(ax[0].get_xticklabels(), rotation=45, ha="right")  # Rotate labels for better visibility
+    ax[0].set_xticklabels(
+        ax[0].get_xticklabels(), rotation=45, ha="right"
+    )  # Rotate labels for better visibility
     ax[0].set_ylabel("Count", fontsize=12)
     ax[0].set_xlabel("Neuron", fontsize=12)
     ax[0].set_title("Neuron count of Train Dataset", fontsize=14)
     # Add metadata text
     metadata_train_text = (
-        "Datasets used: {}\nTotal number of worms: {}\nNumber of unique neurons: {}".format(
+        "Source datasets: {}\nTotal number of worms: {}\nNumber of unique neurons: {}".format(
             ", ".join(train_exp_datasets),
             len(df_train),
             len(unique_neurons_train),
         )
     )
     ax[0].text(
-        0.02, 0.95, metadata_train_text, transform=ax[0].transAxes,
-        fontsize=10, verticalalignment="top", bbox=dict(boxstyle="round, pad=1", facecolor="white", edgecolor="black", alpha=0.5)
+        0.02,
+        0.95,
+        metadata_train_text,
+        transform=ax[0].transAxes,
+        fontsize=10,
+        verticalalignment="top",
+        bbox=dict(boxstyle="round, pad=1", facecolor="white", edgecolor="black", alpha=0.5),
     )
     # Validation dataset plot
     sns.barplot(x="Neuron", y="Count", hue="Neuron", data=df_val_plot, ax=ax[1], errorbar=None)
     # Adjust x-axis ticks
     ax[1].xaxis.set_major_locator(ticker.MultipleLocator(10))  # Show every 10th label
-    ax[1].set_xticklabels(ax[1].get_xticklabels(), rotation=45, ha="right")  # Rotate labels for better visibility
+    ax[1].set_xticklabels(
+        ax[1].get_xticklabels(), rotation=45, ha="right"
+    )  # Rotate labels for better visibility
     ax[1].set_ylabel("Count", fontsize=12)
     ax[1].set_xlabel("Neuron", fontsize=12)
     ax[1].set_title("Neuron count of Validation Dataset", fontsize=14)
     # Add metadata text
     metadata_val_text = (
-        "Datasets used: {}\nTotal number of worms: {}\nNumber of unique neurons: {}".format(
+        "Source datasets: {}\nTotal number of worms: {}\nNumber of unique neurons: {}".format(
             ", ".join(val_exp_datasets),
             len(df_val),
             len(unique_neurons_val),
@@ -661,20 +705,20 @@ def plot_pca_trajectory(log_dir, worms_to_plot=None):
                         marker="o",
                     )
 
-                    # Mark start point with black star
+                    # Mark end point of ground truth trace with black triangle
                     plt.scatter(
-                        reduced_ground_truth_data[0, 0],
-                        reduced_ground_truth_data[0, 1],
-                        color="black",
-                        marker="*",
-                        s=50,
-                    )
-                    # Mark end points with black triangle
-                    plt.scatter(
-                        reduced_ar_gen_data[-1, 0],
-                        reduced_ar_gen_data[-1, 1],
+                        reduced_ground_truth_data[-1, 0],
+                        reduced_ground_truth_data[-1, 1],
                         color="black",
                         marker="^",
+                        s=50,
+                    )
+                    # Mark start point of autoregressive trace with black star
+                    plt.scatter(
+                        reduced_ar_gen_data[0, 0],
+                        reduced_ar_gen_data[0, 1],
+                        color="black",
+                        marker="*",
                         s=50,
                     )
 
@@ -736,11 +780,12 @@ def plot_pca_trajectory(log_dir, worms_to_plot=None):
                     pass
 
 
-def plot_worm_data(worm_data, num_neurons=5, smooth=False):
+def plot_worm_data(worm_data, num_neurons=5, max_tsteps=1000, smooth=False):
     """
     Plot a few calcium traces from a given worm's data.
 
     :param worm_data: The data for a single worm.
+    :param max_tsteps: The maximum number of time steps to plot.
     :param num_neurons: The number of neurons to plot.
     """
     worm = worm_data["worm"]
@@ -758,7 +803,12 @@ def plot_worm_data(worm_data, num_neurons=5, smooth=False):
     for neuron_idx in neuron_indices:
         neuron_name = slot_to_named_neuron.get(neuron_idx, None)
         if neuron_name is not None:
-            plt.plot(time_in_seconds, calcium_data[:, neuron_idx], alpha=0.7, label=neuron_name)
+            plt.plot(
+                time_in_seconds[:max_tsteps],
+                calcium_data[:max_tsteps, neuron_idx],
+                alpha=0.7,
+                label=neuron_name,
+            )
         else:
             ValueError("No neurons with data were selected.")
 
@@ -968,7 +1018,7 @@ def experiment_parameter(exp_dir, key):
         xaxis = "Batch size"
 
     if key == "seq_len":
-        # Sequence length used for training the models
+        # Sequence length used for training the model
         pipeline_info = OmegaConf.load(os.path.join(exp_dir, "pipeline_info.yaml"))
         value = pipeline_info.submodule.dataset.seq_len
         title = "Sequence length"
@@ -1052,18 +1102,16 @@ def plot_experiment_losses(exp_log_dir, exp_key, exp_plot_dir=None):
     Plot train and validation loss curves and baseline losses for all experiments.
 
     Args:
-    - exp_log_dir (str): path to directory containing experiment logs
-    - exp_key (str): key to identify the experiment
-    - exp_plot_dir (str or None): path to directory to save the plot.
+        - exp_log_dir (str): path to directory containing experiment logs
+        - exp_key (str): key to identify the experiment
+        - exp_plot_dir (str or None): path to directory to save the plot.
 
     Returns:
-    - None
+        - None
     """
-
     # Create figure
     fig, ax = plt.subplots(1, 2, figsize=(10, 8))
     sns.set_style("whitegrid")
-
     # Store parameters, epochs and losses for plotting
     parameters = []
     epochs = []
@@ -1071,42 +1119,34 @@ def plot_experiment_losses(exp_log_dir, exp_key, exp_plot_dir=None):
     train_baselines = []
     val_losses = []
     val_baselines = []
-
     # Loop over trials/repetitions of the experiment
     for file in sorted(os.listdir(exp_log_dir), key=lambda x: x.strip("exp_")):
         # Skip if not in a trial/repetition directory
         if not file.startswith("exp") or file.startswith("exp_"):
             continue
-
         # Get experiment directory
         exp_dir = os.path.join(exp_log_dir, file)
-
         # Load train metrics if avalibale
         metrics_csv = os.path.join(exp_dir, "train", "train_metrics.csv")
         if os.path.exists(metrics_csv):
             # Get epochs and loss values
             df = pd.read_csv(metrics_csv)
-
             # Store all loss values to be plotted
             epochs.append(df["epoch"])
             train_losses.append(df["train_loss"])
             train_baselines.append(df["train_baseline"])
             val_losses.append(df["val_loss"])
             val_baselines.append(df["val_baseline"])
-
             # Get parameter values
             exp_param, exp_title, exp_xaxis = experiment_parameter(exp_dir, key=exp_key)
             parameters.append(exp_param)
-
             # Simply return if dealing with string parameters
             if isinstance(exp_param, str):
                 return fig, ax
             # TODO: Find a way to plot something with string parameters
-
         # Skip otherwise
         else:
             continue
-
     # Get indices for sorting parameters and sort all the lists
     sorted_indices = np.argsort(parameters)
     parameters = [parameters[i] for i in sorted_indices]
@@ -1115,16 +1155,13 @@ def plot_experiment_losses(exp_log_dir, exp_key, exp_plot_dir=None):
     train_baselines = [train_baselines[i] for i in sorted_indices]
     val_losses = [val_losses[i] for i in sorted_indices]
     val_baselines = [val_baselines[i] for i in sorted_indices]
-
     # Normalize the exp_param values for colormap
     norm = Normalize(vmin=min(parameters), vmax=max(parameters))
     scalar_map = cm.ScalarMappable(norm=norm, cmap=cm.YlOrRd)
-
     # Loop over parameter values and plot losses
     for i, param_val in enumerate(parameters):
         # Get color for current parameter value
         color_val = scalar_map.to_rgba(param_val)
-
         # Plot loss and baseline
         ax[0].plot(
             epochs[i],
@@ -1152,30 +1189,24 @@ def plot_experiment_losses(exp_log_dir, exp_key, exp_plot_dir=None):
             color="black",
             linestyle="--",
         )
-
     # Set x-axes to only use integer values
     ax[0].xaxis.set_major_locator(ticker.MaxNLocator(integer=True))
     ax[1].xaxis.set_major_locator(ticker.MaxNLocator(integer=True))
-
     # Set y-axes to use log-scale
     ax[0].set_yscale("log")
     ax[1].set_yscale("log")
-
     # Set loss labels
     ax[0].set_xlabel("Epoch", fontsize=12)
     ax[0].set_ylabel("Train loss", fontsize=12)
     ax[1].set_xlabel("Epoch", fontsize=12)
     ax[1].set_ylabel("Validation loss", fontsize=12)
-
     # Get handles and labels for the legend
     handles, labels = ax[0].get_legend_handles_labels()
-
     # Randomly sample a subset of handles and labels (up to 10)
     num_samples = min(10, len(handles))  # Ensure not to sample more than available
     sampled_indices = np.random.choice(len(handles), num_samples, replace=False)
     sampled_handles = [handles[i] for i in sampled_indices]
     sampled_labels = [labels[i] for i in sampled_indices]
-
     # Sort the labels and then sort handles accordingly
     sampled_labels, sampled_handles = zip(
         *sorted(
@@ -1185,22 +1216,18 @@ def plot_experiment_losses(exp_log_dir, exp_key, exp_plot_dir=None):
             ),
         )
     )
-
     # Set the legend with the sampled subset
     legend = ax[0].legend(sampled_handles, sampled_labels, fontsize=10, loc="best")
     legend.set_title(exp_xaxis)
-
     # Set loss figure title
     fig.suptitle(f"{exp_title} experiment", fontsize=14)
     plt.tight_layout()
-
     # Save or display the plot
     if exp_plot_dir:
         fig.savefig(os.path.join(exp_plot_dir, "exp_loss_curves.png"), dpi=300)
         plt.close()
     else:  # exp_plot_dir is None
         plt.show()
-
     # Return the figure and axes
     return fig, ax
 
@@ -1278,7 +1305,7 @@ def plot_experiment_summaries(exp_log_dir, exp_key, exp_plot_dir=None):
     param_range = range(len(parameters))  # numeric range for plots
 
     # Validation loss bar plot
-    axes[0].bar(param_range, val_losses, color="blue", label="Min Validation Loss")
+    axes[0].bar(param_range, val_losses, color="orange", label="Min Validation Loss")
     for baseline in val_baselines:
         axes[0].axhline(y=baseline, color="black", linestyle="--", label="Validation Baseline")
     axes[0].set_xticks(param_range)
@@ -1289,7 +1316,7 @@ def plot_experiment_summaries(exp_log_dir, exp_key, exp_plot_dir=None):
     axes[0].set_yscale("log")
 
     # Training loss bar plot
-    axes[1].bar(param_range, train_losses, color="orange", label="Min Training Loss")
+    axes[1].bar(param_range, train_losses, color="blue", label="Min Training Loss")
     for baseline in train_baselines:
         axes[1].axhline(y=baseline, color="black", linestyle="--", label="Training Baseline")
     axes[1].set_xticks(param_range)
@@ -1380,7 +1407,7 @@ def plot_loss_per_dataset(log_dir, mode="validation"):
     ax.legend(loc="upper right")
 
     props = dict(boxstyle="round", facecolor="white", alpha=0.5)
-    textstr = "Datasets used for training: \n{}".format(", ".join(train_dataset_names))
+    textstr = "Source datasets used for training: \n{}".format(", ".join(train_dataset_names))
     ax.text(
         0.02,
         0.95,

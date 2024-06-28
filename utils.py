@@ -1,4 +1,4 @@
-# NOTE: To oavoid circular imports, only import libraries essential to
+# NOTE: To avoid circular imports, only import libraries essential to
 # initializing global variables and functions used by the main.py script.
 import os
 import torch
@@ -21,6 +21,7 @@ torch.multiprocessing.set_start_method("spawn", force=True)
 # Set some environment variables
 os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "max_split_size_mb:128"
 os.environ["CUDA_LAUNCH_BLOCKING"] = "1"
+os.environ["TORCH_USE_CUDA_DSA"] = "1"
 os.environ["HYDRA_FULL_ERROR"] = "1"
 os.environ["MASTER_ADDR"] = "localhost"
 os.environ["MASTER_PORT"] = "12345"  # just a random port
@@ -29,31 +30,11 @@ os.environ["OC_CAUSE"] = "1"
 # Some global variables
 USER = "qsimeon"  # OpenMind/computing cluster username
 
-NUM_NEURONS = 302  # number of neurons in the model organism
-
 BLOCK_SIZE = 512  # maximum attention block size to use for Transformers
 
-VERSION_2 = False  # whether to use version 2 of the models (tokenizes neural data)
+VERSION_2 = False  # whether to use version 2 of the model which tokenizes neural data
 
 NUM_TOKENS = 256  # number of tokens in the neural vocabulary if using version 2
-
-WORLD_SIZE = torch.cuda.device_count()
-
-RAW_DATA_URL = "https://www.dropbox.com/scl/fi/q0dg6grqt5nz28dqbxok4/raw_data.zip?rlkey=q7yea001kxuen9w4sedi930oc&dl=1"
-
-RAW_ZIP = "raw_data.zip"
-
-# Essential raw data files that must be in the raw data directory
-RAW_FILES = [  # TODO: Cite sources of these files.
-    "GHermChem.mat",
-    "GHermChem_Edges.csv",
-    "GHermChem_Nodes.csv",
-    "GHermElec_Sym.mat",
-    "GHermElec_Sym_Edges.csv",
-    "GHermElec_Sym_Nodes.csv",
-    "LowResAtlasWithHighResHeadsAndTails.csv",
-    "neurons_302.txt",
-]
 
 ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -61,55 +42,12 @@ RAW_DATA_DIR = os.path.join(ROOT_DIR, "data", "raw")
 
 LOGS_DIR = os.path.join(ROOT_DIR, "logs")
 
-# Method for initializing the global computing device
-def init_device():
-    """
-    Initialize the global computing device to be used.
-    """
-    if torch.backends.mps.is_available():
-        print("MPS device found.")
-        device = torch.device("mps")
-    elif torch.cuda.is_available():
-        print("CUDA device found.")
-        device = torch.device("cuda")
-        gpu_props = torch.cuda.get_device_properties(device)
-        print(f"\t GPU: {gpu_props.name}")
-    else:
-        print("Defaulting to CPU.")
-        device = torch.device("cpu")
-    return device
-
-# Get GPU if available
-DEVICE = init_device()
-
-# Set real C. elegans datasets we have processed
-EXPERIMENT_DATASETS = {
-    "Leifer2023",  # Different type of dataset: stimulus-response.
-    "Lin2023",
-    "Flavell2023",  # TODO: Something is wrong with worm0 always in this dataset. Why?
-    "Uzel2022",
-    "Yemini2021",
-    "Kaplan2020",
-    "Skora2018",
-    "Nichols2017",
-    "Kato2015",
-}
-
-SYNTHETIC_DATASETS = {  # Datasets created with the `CreateSyntheticDataset.ipynb` notebook.
-    "Sines0000",
-    "Lorenz0000",
-    "WhiteNoise0000",
-    "RandWalk0000",
-    "VanDerPol0000",
-    "Wikitext0000",
-    "Recurrent0000",
-}
-
-# List of all 302 hermaphrodite neurons
-if os.path.exists(RAW_DATA_DIR):
-    NEURONS_302 = sorted(
+# List of all hermaphrodite neuron names
+labels_file = os.path.join(RAW_DATA_DIR, "neuron_labels.txt")
+if os.path.exists(labels_file):
+    NEURON_LABELS = sorted(
         pd.read_csv(
-            os.path.join(RAW_DATA_DIR, "neurons_302.txt"),
+            labels_file,
             sep=" ",
             header=None,
             names=["neuron"],
@@ -117,7 +55,7 @@ if os.path.exists(RAW_DATA_DIR):
     )
 else:
     # fmt: off
-    NEURONS_302 = [ 
+    NEURON_LABELS = [ 
             # References: (1) https://www.wormatlas.org/neurons/Individual%20Neurons/Neuronframeset.html 
             #             (2) https://www.wormatlas.org/NeuronNames.htm
             "ADAL", "ADAR", "ADEL", "ADER", "ADFL", "ADFR", "ADLL", "ADLR", "AFDL", "AFDR",
@@ -128,7 +66,7 @@ else:
             "AUAL", "AUAR", "AVAL", "AVAR", "AVBL", "AVBR", "AVDL", "AVDR", "AVEL", "AVER",
             "AVFL", "AVFR", "AVG", "AVHL", "AVHR", "AVJL", "AVJR", "AVKL", "AVKR", "AVL",
             "AVM", "AWAL", "AWAR", "AWBL", "AWBR", "AWCL", "AWCR", "BAGL", "BAGR", "BDUL",
-            "BDUR", "CANL", "CANR", "CEPDL", "CEPDR", "CEPVL", "CEPVR", "DA1", "DA2", "DA3",
+            "BDUR", "CEPDL", "CEPDR", "CEPVL", "CEPVR", "DA1", "DA2", "DA3",
             "DA4", "DA5", "DA6", "DA7", "DA8", "DA9", "DB1", "DB2", "DB3", "DB4", "DB5",
             "DB6", "DB7", "DD1", "DD2", "DD3", "DD4", "DD5", "DD6", "DVA", "DVB", "DVC",
             "FLPL", "FLPR", "HSNL", "HSNR", "I1L", "I1R", "I2L", "I2R", "I3", "I4", "I5",
@@ -150,8 +88,93 @@ else:
             "VA9", "VB1", "VB10", "VB11", "VB2", "VB3", "VB4", "VB5", "VB6", "VB7", "VB8",
             "VB9", "VC1", "VC2", "VC3", "VC4", "VC5", "VC6", "VD1", "VD10", "VD11", "VD12",
             "VD13", "VD2", "VD3", "VD4", "VD5", "VD6", "VD7", "VD8", "VD9"
-        ]
+        ] # "CANL", "CANR"
+    # NOTE: As of Cook et al. (2019), the CANL and CANR are considered to be end-organs, not neurons.
     # fmt: on
+
+    # Write to a text file called "neuron_labels.txt" using pandas
+    os.makedirs(RAW_DATA_DIR, exist_ok=True)
+    pd.DataFrame(NEURON_LABELS).to_csv(labels_file, sep=" ", header=False, index=False)
+
+NUM_NEURONS = len(NEURON_LABELS)  # number of neurons in the model organism
+
+RAW_DATA_URL = "https://www.dropbox.com/scl/fi/0qtxfg6mtqczs3ll0ncr5/raw_data.zip?rlkey=z1qulvafew3hpl4wn47jbhoez&dl=1"
+
+RAW_ZIP = "raw_data.zip"
+
+# Essential raw data files that must be in the raw data directory
+RAW_FILES = [  # TODO: Cite sources of these files.
+    ### >>> Default (Premaratne's preprocessed Cook2019) connectome data files >>>
+    "GHermChem_Edges.csv",
+    "GHermChem_Nodes.csv",
+    "GHermElec_Sym_Edges.csv",
+    "GHermElec_Sym_Nodes.csv",
+    ### <<< Default (Kamal Premaratne's preprocessed Cook2019) connectome data files <<<
+    "Cook2019.xlsx",  # original Cook et al. (2019) connectome data file
+    "Chklovskii2011.xls",  # Chklovskii et al. (2011) connectome data file
+    "OpenWormConnectome.csv",  # OpenWorm connectome data file
+    "CElegansFunctionalConnectivity.xlsx",  # Randi et al. (2023) functional connectome data file
+    "white_1986_jsh.csv",  # L4 brain
+    "white_1986_n2u.csv",  # adult brain
+    "white_1986_jse.csv",  # adult tail
+    "white_1986_whole.csv",  # whole animal compilation of Varshey et al. (2011)
+    "witvliet_2020_7.csv",  # one adult brain of Witvliet et al. (2020)
+    "witvliet_2020_8.csv",  # another adult brain of Witvliet et al. (2020)
+    "LowResAtlasWithHighResHeadsAndTails.csv",  # atlas of C. elegans neuron 3D positions
+    "Hobert2016_BrainAtlas.xlsx",  # mapping between class, label, type, and neurotransmitter
+    "Witvliet2020_NeuronClasses.xlsx",  # high level classes of hermaphrodite neurons
+    "neuron_labels.txt",  # labels (names) of all hermaphrodite neurons
+    "neuron_master_sheet.csv",  # TODO: working on a sheet combines all neuron information (labels, classes, neurotransmitter, cell type, and position)
+    # NOTE: "neuron_master_sheet.csv" will make the following files obsolete: "neuron_labels.txt", ""Witvliet2020_NeuronClasses.xlsx", "LowResAtlasWithHighResHeadsAndTails.csv", "Hobert2016_BrainAtlas.xlsx"
+]
+
+WORLD_SIZE = torch.cuda.device_count()
+
+
+# Method for initializing the global computing device
+def init_device():
+    """
+    Initialize the global computing device to be used.
+    """
+    if torch.backends.mps.is_available():
+        print("MPS device found.")
+        device = torch.device("mps")
+    elif torch.cuda.is_available():
+        print("CUDA device found.")
+        device = torch.device("cuda")
+        gpu_props = torch.cuda.get_device_properties(device)
+        print(f"\t GPU: {gpu_props.name}")
+    else:
+        print("Defaulting to CPU.")
+        device = torch.device("cpu")
+    return device
+
+
+# Get GPU if available
+DEVICE = init_device()
+
+# Set of real C. elegans datasets we have processed
+EXPERIMENT_DATASETS = {
+    "Kato2015",
+    "Nichols2017",
+    "Skora2018",
+    "Kaplan2020",
+    "Yemini2021",
+    "Uzel2022",
+    "Dag2023",
+    "Leifer2023",  # Different type of dataset: stimulus-response.
+    "Lin2023",
+    "Flavell2023",  # TODO: Something is wrong with worm0 always in this dataset. Specifically, a "worm0" is absent. Why?
+}
+
+SYNTHETIC_DATASETS = {  # Datasets created with the `CreateSyntheticDataset.ipynb` notebook.
+    "Sines0000",
+    "Lorenz0000",
+    "WhiteNoise0000",
+    "RandWalk0000",
+    "VanDerPol0000",
+    "Wikitext0000",
+}
 
 
 # Method for globally setting all random seeds
@@ -167,4 +190,3 @@ def init_random_seeds(seed=0):
         torch.cuda.manual_seed_all(seed)
         torch.backends.cudnn.deterministic = True
     return None
-

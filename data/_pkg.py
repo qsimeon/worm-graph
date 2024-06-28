@@ -6,6 +6,7 @@ import torch
 import random
 import pickle
 import psutil
+import shutil
 import subprocess
 import logging
 import numpy as np

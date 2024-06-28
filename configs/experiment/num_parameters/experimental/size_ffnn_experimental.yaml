@@ -3,7 +3,7 @@
 #   size = model size (key: num_parameters)
 #   hippo = FeatureFFNN model
 #   experimental = experimental datasets (Kato, Nichols, Skora, Uzel, Lin, Yemini, Kaplan, Flavell, Leifer)
-# We increase gradually the hidden size of the models as a way to increase the number of parameters.
+# We increase gradually the hidden size of the model as a way to increase the number of parameters.
 defaults:
   - override /submodule: [preprocess, model, train, visualize]
   - _self_
@@ -15,8 +15,8 @@ hydra:
   sweeper:
     params:
       experiment.seed: 2
-      submodule.model.hidden_size: choice(8,12,16,22,30,42,58,80,110,154,214,296,412,572,794,1102,1530,2124,2950,4096)
-      submodule.dataset.source_datasets: choice({Kato2015:all,Nichols2017:all,Skora2018:all,Kaplan2020:all,Yemini2021:all,Uzel2022:all,Lin2023:all,Flavell2023:all,Leifer2023:all})
+      submodule.model.hidden_size: choice(12,16,22,30,42,60,84,120,170,240,342,488,692,986,1402,1996,2842,4044,5756,8192)
+      submodule.dataset.source_datasets: choice({Kato2015:all,Nichols2017:all,Skora2018:all,Kaplan2020:all,Yemini2021:all,Uzel2022:all,Lin2023:all,Flavell2023:all,Leifer2023:all}) 
       submodule.predict.source_datasets: choice({Kato2015:worm0,Nichols2017:worm0,Skora2018:worm0,Kaplan2020:worm0,Yemini2021:worm0,Uzel2022:worm0,Lin2023:worm0,Flavell2023:worm1,Leifer2023:worm0})
       submodule.analysis.validation.source_datasets: choice({Kato2015:all,Nichols2017:all,Skora2018:all,Kaplan2020:all,Yemini2021:all,Uzel2022:all,Lin2023:all,Flavell2023:all,Leifer2023:all})
 
@@ -39,13 +39,12 @@ submodule:
     source_datasets:
       # This gets overwritten by the sweeper
       # Synthetic datasets
-      Sines0000: null
       Lorenz0000: null
-      WhiteNoise0000: null
       RandWalk0000: null
+      Sines0000: null
       VanDerPol0000: null
+      WhiteNoise0000: null
       Wikitext0000: null
-      Recurrent0000: null
       # Experimental datasets
       Kato2015: null
       Nichols2017: null
@@ -53,13 +52,14 @@ submodule:
       Kaplan2020: null
       Yemini2021: null
       Uzel2022: null
+      Dag2023: null
+      Leifer2023: null
       Lin2023: null
       Flavell2023: null
-      Leifer2023: null
 
     num_named_neurons: null
-    num_train_samples: 16
-    num_val_samples: 16
+    num_train_samples: 32
+    num_val_samples: 32
     # Set to the same value as submodule.predict.context_window
     seq_len: null
     reverse: false
@@ -74,13 +74,12 @@ submodule:
     # This gets overwritten by the sweeper
     source_datasets:
       # Synthetic datasets
-      Sines0000: null
       Lorenz0000: null
-      WhiteNoise0000: null
       RandWalk0000: null
+      Sines0000: null
       VanDerPol0000: null
+      WhiteNoise0000: null
       Wikitext0000: null
-      Recurrent0000: null
       # Experimental datasets
       Kato2015: null
       Nichols2017: null
@@ -88,9 +87,10 @@ submodule:
       Kaplan2020: null
       Yemini2021: null
       Uzel2022: null
+      Dag2023: null
+      Leifer2023: null
       Lin2023: null
       Flavell2023: null
-      Leifer2023: null
 
     # Number of time steps to generate
     num_new_timesteps: null
@@ -103,13 +103,12 @@ submodule:
       # This gets overwritten by the sweeper
       source_datasets:
         # Synthetic datasets
-        Sines0000: null
         Lorenz0000: null
-        WhiteNoise0000: null
         RandWalk0000: null
+        Sines0000: null
         VanDerPol0000: null
+        WhiteNoise0000: null
         Wikitext0000: null
-        Recurrent0000: null
         # Experimental datasets
         Kato2015: null
         Nichols2017: null
@@ -117,9 +116,10 @@ submodule:
         Kaplan2020: null
         Yemini2021: null
         Uzel2022: null
+        Dag2023: null
+        Leifer2023: null
         Lin2023: null
         Flavell2023: null
-        Leifer2023: null
 
 experiment:
   key: num_parameters

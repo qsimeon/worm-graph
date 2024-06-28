@@ -25,10 +25,10 @@ def load_dataset(name):
      name : str
          The name of the dataset to load. Must be one of the valid dataset names.
 
-    name = {Kato2015, Nichols2017, Nguyen2017, Skora2018,
-             Kaplan2020, Uzel2022, Flavell2023, Leifer2023}
-            | {Lorenz000, Sines0000, RandWalk0000, VanDerPol0000,
-                WhiteNoise0000, Wikitext0000, Recurrent0000}
+    name = {Kato2015, Nichols2017, Nguyen2017, Skora2018, Kaplan2020,
+            Uzel2022, Flavell2023, Dag2023, Leifer2023, Lin2023}
+        |  {Lorenz000, RandWalk0000, Sines0000,
+            VanDerPol0000, WhiteNoise0000, Wikitext0000}
 
      Returns
      -------
@@ -441,6 +441,7 @@ def filter_loaded_combined_dataset(combined_dataset, num_worms, num_named_neuron
     dataset_info = {
         "source_dataset": [],
         "original_median_dt": [],
+        "median_dt": [],
         "original_index": [],
         "combined_dataset_index": [],
         "neurons": [],
@@ -450,6 +451,7 @@ def filter_loaded_combined_dataset(combined_dataset, num_worms, num_named_neuron
     for worm, data in combined_dataset.items():
         dataset_info["source_dataset"].append(data["source_dataset"])
         dataset_info["original_median_dt"].append(data["original_median_dt"])
+        dataset_info["median_dt"].append(data["median_dt"])
         dataset_info["original_index"].append(data["original_worm"])
         dataset_info["combined_dataset_index"].append(worm)
         worm_neurons = [neuron for slot, neuron in data["slot_to_named_neuron"].items()]
@@ -756,6 +758,7 @@ def create_combined_dataset(
     dataset_info = {
         "source_dataset": [],
         "original_median_dt": [],
+        "median_dt": [],
         "original_index": [],
         "combined_dataset_index": [],
         "neurons": [],
@@ -765,6 +768,7 @@ def create_combined_dataset(
     for _, data in combined_dataset.items():
         dataset_info["source_dataset"].append(data["source_dataset"])
         dataset_info["original_median_dt"].append(data["original_median_dt"])
+        dataset_info["median_dt"].append(data["median_dt"])
         dataset_info["original_index"].append(data["original_worm"])
         dataset_info["combined_dataset_index"].append(data["worm"])
         worm_neurons = [neuron for _, neuron in data["slot_to_named_neuron"].items()]

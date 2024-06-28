@@ -10,7 +10,8 @@ hydra:
   verbose: true
   sweeper:
       params:
-        experiment.seed: 0 # assign each repetition of the experiment a distinct random seed
+        # If planning multiple repetitions of the experiment, assign each repetition a distinct random seed
+        experiment.seed: 0 
         submodule.model.type: NaivePredictor, LinearRegression, FeatureFFNN, NetworkLSTM, HippoSSM, NetworkCTRNN, LiquidCfC, PureAttention, NeuralTransformer
 
 # The submodule parameters set below will be used only if RUN mode is used. 
@@ -32,7 +33,6 @@ submodule:
       WhiteNoise0000: null
       RandWalk0000: null
       VanDerPol0000: null
-      Recurrent0000: null
       # Experimental datasets
       Kato2015: all
       Nichols2017: all
@@ -40,13 +40,14 @@ submodule:
       Kaplan2020: all
       Yemini2021: all
       Uzel2022: all
-      Lin2023: all
+      Dag2023: all
       Flavell2023: all
       Leifer2023: all
+      Lin2023: all
 
     num_named_neurons: null
-    num_train_samples: 16
-    num_val_samples: 16
+    num_train_samples: 32
+    num_val_samples: 32
     seq_len: null
     reverse: false
     use_residual: false
@@ -56,7 +57,7 @@ submodule:
 
   # Build model from scratch
   model:
-    input_size: 302
+    input_size: null
     hidden_size: 256
     loss: MSE
     l1_norm_reg_param: 0.0
@@ -69,7 +70,7 @@ submodule:
     lr: 0.001
     epochs: 100 
     save_freq: 100
-    batch_size: 64
+    batch_size: 128
     shuffle: true
     early_stopping:
       delta: 0
@@ -85,7 +86,6 @@ submodule:
       RandWalk0000: null
       VanDerPol0000: null
       Wikitext0000: null
-      Recurrent0000: null
       # Experimental datasets
       Kato2015: worm0
       Nichols2017: worm0
@@ -93,9 +93,10 @@ submodule:
       Kaplan2020: worm0
       Yemini2021: worm0
       Uzel2022: worm0
+      Dag2023: worm0
+      Leifer2023: worm0
       Lin2023: worm0
       Flavell2023: worm1 # something is wrong with worm0 in Flavell2023
-      Leifer2023: worm0
     # Number of time steps to generate 
     # null = generate all remaining time steps (max_timesteps - context_window)
     num_new_timesteps: null 
@@ -120,7 +121,6 @@ submodule:
         RandWalk0000: null
         VanDerPol0000: null
         Wikitext0000: null
-        Recurrent0000: null
         # Experimental datasets
         Kato2015: 1
         Nichols2017: 1
@@ -128,9 +128,10 @@ submodule:
         Kaplan2020: 1
         Yemini2021: 1
         Uzel2022: 1
+        Dag2023: 1
+        Leifer2023: 1
         Lin2023: 1
         Flavell2023: 1
-        Leifer2023: 1
 
   visualize:
     plot_this_log_dir: null
