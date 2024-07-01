@@ -672,7 +672,7 @@ class Cook2019Preprocessor(ConnectomeBasePreprocessor):
                         pre = df.iloc[j, 2]
                         if pre in self.neuron_labels and post in self.neuron_labels:
                             edges.append([pre, post])
-                            edge_attr.append([0, df.iloc[j, i]])
+                            edge_attr.append([0, df.iloc[j, i]]) # second edge_attr feature is for gap junction weights
 
         df = pd.read_excel(xlsx_file, sheet_name="hermaphrodite gap jn symmetric")
 
@@ -686,7 +686,7 @@ class Cook2019Preprocessor(ConnectomeBasePreprocessor):
                         if pre in self.neuron_labels and post in self.neuron_labels:
                             if [pre, post] in edges:
                                 edge_idx = edges.index([pre, post])
-                                edge_attr[edge_idx][0] = df.iloc[j, i]
+                                edge_attr[edge_idx][0] = df.iloc[j, i] # first edge_attr feature is for gap junction weights
                             else:
                                 edges.append([pre, post])
                                 edge_attr.append([df.iloc[j, i], 0])
