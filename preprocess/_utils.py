@@ -679,7 +679,6 @@ class Cook2019Preprocessor(ConnectomeBasePreprocessor):
         for i, line in enumerate(df):
             if i > 2:
                 col_data = df.iloc[:-1, i]
-                print(f"line: {line} \t col_data: {col_data}\n") # DEBUG
                 for j, weight in enumerate(col_data):
                     if j > 1 and not pd.isna(df.iloc[j, i]):
                         post = df.iloc[1, i]
