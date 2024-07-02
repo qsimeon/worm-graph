@@ -12,7 +12,7 @@ __pycache__/
 *tempCodeRunnerFile.py
 nohup.out
 jupyter.out
-.processed
+data/processed/neural/.processed
 setup/requirements_pip.txt
 setup/requirements_conda.txt
 
@@ -173,7 +173,6 @@ gui/
 dataset/*
 data/*AllExperimental
 data/worm_data*
-data/processed/neural/.processed
 data/processed/connectome/*.pt
 model/*.pt
 
