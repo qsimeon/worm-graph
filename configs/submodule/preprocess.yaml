@@ -3,9 +3,9 @@ preprocess:
   opensource_zipfile: opensource_data.zip
   presaved_url: https://www.dropbox.com/scl/fi/unfvzda4iia4uebibgilv/presaved_datasets.zip?rlkey=nb0k5zou0dnx0g9dmmumi1iv2&dl=1
   presaved_file: presaved_datasets.zip
-  connectome_pub: white_1986_jse #[witvliet_7, witvliet_8, cook_2019, openworm] # A string indicating which connectome raw data file to use; if null, the default connectome is used
+  connectome_pub: white_1986_jse #[witvliet_7, witvliet_8, cook_2019, openworm, white_1986_n2u, white_1986_jsh, white_1986_jse, white_1986_whole] # A string indicating which connectome raw data file to use; if null, the default connectome is used
   cleanup: true # Whether to delete the downloaded and unzipped opensource data folder
-  source_dataset: all # [Kato2015, Nichols2017, Skora2018, Kaplan2020, Yemini2021, Uzel2022, Dag2023, Lin2023, Flavell2023, Leifer2023] # any dataset in utils.EXPERIMENT_DATASETS
+  source_dataset: Venkatachalam2024 #all # [Kato2015, Nichols2017, Skora2018, Kaplan2020, Yemini2021, Uzel2022, Dag2023, Lin2023, Flavell2023, Leifer2023, Venkatachalam2024] # any dataset in utils.EXPERIMENT_DATASETS
   resample_dt: 0.333 # The time interval (in seconds) to resample the neural activity at; if null, no resampling is performed
   interpolate: linear # The method to use for interpolation; options: null, linear, quadratic, cubic
   smooth: 
