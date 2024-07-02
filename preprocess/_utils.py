@@ -328,6 +328,10 @@ class ConnectomeBasePreprocessor:
 
 class DefaultPreprocessor(ConnectomeBasePreprocessor):
     def preprocess(self, save_as="graph_tensors.pt"):
+        #### DEBUG ####
+        # Hack to override DefaultProprecessor with Witvliet2020Preprocessor7 which is a more up-to-date connectome of C. elegans.
+        return Witvliet2020Preprocessor7.preprocess(self, save_as="graph_tensors.pt")
+        #### DEBUG ####
         # Names of all C. elegans hermaphrodite neurons
         neurons_all = set(self.neuron_labels)
         sep = r"[\t,]"
