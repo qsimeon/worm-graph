@@ -1,5 +1,5 @@
 preprocess:
-  opensource_url: https://www.dropbox.com/s/nptkbckqibzm5ro/opensource_data.zip?dl=1
+  opensource_url: https://www.dropbox.com/s/8knuzm42ka5n0by/opensource_data.zip?dl=1
   opensource_zipfile: opensource_data.zip
   presaved_url: https://www.dropbox.com/scl/fi/unfvzda4iia4uebibgilv/presaved_datasets.zip?rlkey=nb0k5zou0dnx0g9dmmumi1iv2&dl=1
   presaved_file: presaved_datasets.zip
@@ -9,7 +9,7 @@ preprocess:
   resample_dt: 0.333 # The time interval (in seconds) to resample the neural activity at; if null, no resampling is performed
   interpolate: linear # The method to use for interpolation; options: null, linear, quadratic, cubic
   smooth: 
-    # NOTE: Smoothing is done using a causal filter. Smoothing is applied before resampling.
+    # NOTE: Smoothing is done using a causal filter. Smoothing is applied prior to resampling.
     method: exponential # null: No smoothing, # gaussian: Gaussian convolution filter, # exponential: Exponential kernel filter, # moving: Moving average filter
     # hyperparameters of the different smoothing methods
     alpha: 0.5 # exponential; smaller alpha = smoother
