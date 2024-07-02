@@ -328,6 +328,10 @@ class ConnectomeBasePreprocessor:
 
 class DefaultPreprocessor(ConnectomeBasePreprocessor):
     def preprocess(self, save_as="graph_tensors.pt"):
+        #### DEBUG ####
+        # Hack to override DefaultProprecessor with Witvliet2020Preprocessor7 which is a more up-to-date connectome of C. elegans.
+        return Witvliet2020Preprocessor7.preprocess(self, save_as="graph_tensors.pt")
+        #### DEBUG ####
         # Names of all C. elegans hermaphrodite neurons
         neurons_all = set(self.neuron_labels)
         sep = r"[\t,]"
@@ -407,6 +411,8 @@ class DefaultPreprocessor(ConnectomeBasePreprocessor):
         for i, row in enumerate(arr):
             ggap_edge_index[i, :] = torch.tensor([neuron_to_idx[x] for x in row], dtype=torch.long)
         ggap_edge_index = ggap_edge_index.T  # [2, num_edges]
+        # Do the reverse direction to ensure symmetry of gap junctions
+        ggap_edge_index = torch.hstack((ggap_edge_index, ggap_edge_index[[1, 0], :]))
 
         # edge_index for chemical synapses
         arr = Gsyn_edges[["EndNodes_1", "EndNodes_2"]].values
@@ -429,6 +435,8 @@ class DefaultPreprocessor(ConnectomeBasePreprocessor):
             ggap_edge_attr[i, :] = torch.tensor(
                 [weight, 0], dtype=torch.float
             )  # electrical synapse encoded as [1,0]
+        # Do the reverse direction to ensure symmetry of gap junctions
+        ggap_edge_attr = torch.vstack((ggap_edge_attr, ggap_edge_attr))
 
         # edge_attr for chemical synapses
         num_edges = len(Gsyn_edges)
@@ -460,30 +468,13 @@ class DefaultPreprocessor(ConnectomeBasePreprocessor):
             n_id,
             node_class,
         )
- 
+
 class OpenWormPreprocessor(ConnectomeBasePreprocessor):
     def preprocess(self, save_as="graph_tensors_openworm.pt"):
         df = pd.read_csv(os.path.join(RAW_DATA_DIR, "OpenWormConnectome.csv"), sep=r"[\t,]")
 
         edges = []
         edge_attr = []
-
-        # if neuron1 in self.neuron_labels and neuron2 in self.neuron_labels:
-        #         # NOTE: This file lists both types of edges in the same file with only the "type" column to differentiate.
-        #         # Therefore as we go through the lines, when see the [neuron_i, neuron_j] pair appearing a second time it is a different 
-        #         # type of synapse (chemical vs. electrical) than the one appearing previously (electrical vs chemical, respectively).
-        #         # The first synapse with [neuron_i, neuron_j] pair encountered could be either electrical or chemical. 
-        #         edge_type = df.loc[i, "type"]
-        #         num_connections = df.loc[i, "synapses"]
-        #         edges.append([neuron1, neuron2])
-        #         if edge_type == "electrical":
-        #             edge_attr.append([num_connections, 0])
-        #             # Adding the reverse direction to ensure symmetry of gap junctions
-        #             edges.append([neuron2, neuron1])
-        #             edge_attr.append([num_connections, 0])
-        #         elif edge_type == "chemical":
-        #             # NOTE: Chemical synapses are asymmetric
-        #             edge_attr.append([0, num_connections])
 
         for i in range(len(df)):
             neuron1 = df.loc[i, "Origin"]
@@ -504,11 +495,6 @@ class OpenWormPreprocessor(ConnectomeBasePreprocessor):
                     edge_attr.append([num_connections, 0])
                 elif synapse_type == "Send": # chemical synapse
                     edge_attr.append([0, num_connections])
-                # else:
-                #     if type == "GapJunction":
-                #         edge_attr[-1][0] = num_connections
-                #     else:
-                #         edge_attr[-1][-1] = num_connections
 
         edge_attr = torch.tensor(edge_attr)
         edge_index = torch.tensor(
@@ -622,7 +608,6 @@ class Witvliet2020Preprocessor7(ConnectomeBasePreprocessor):
             n_id,
             node_class,
         )
-
 
 class Witvliet2020Preprocessor8(ConnectomeBasePreprocessor):
     def preprocess(self, save_as="graph_tensors_witvliet2020_8.pt"):
