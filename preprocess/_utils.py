@@ -1844,56 +1844,6 @@ class NeuralBasePreprocessor:
         return preprocessed_data, worm_idx
 
 
-class Venkatachalam2024Preprocessor(NeuralBasePreprocessor):
-    def __init__(self, transform, smooth_method, interpolate_method, resample_dt, **kwargs):
-        super().__init__(
-            "Venkatachalam2024",
-            transform,
-            smooth_method,
-            interpolate_method,
-            resample_dt,
-            **kwargs,
-        )
-    
-    def unzip_and_extract_csv(self, source_directory, zip_path):
-        with zipfile.ZipFile(zip_path, 'r') as zip_ref:
-            path = zip_ref.extractall(source_directory)
-        return zip_path.replace(".zip", ".csv")
-    
-    def load_data(self, file_name):
-        zip_path = os.path.join(self.raw_data_path, self.source_dataset, file_name)
-        csv_file = self.unzip_and_extract_csv(os.path.join(self.raw_data_path, self.source_dataset), zip_path)
-        data = pd.read_csv(csv_file)
-        return data
-    
-    def extract_data(self, data):
-        neuron_ids = data['neuron'].unique()
-        # 9 + 98 blank timesteps at beginning (0-97)
-        time_vector = data.columns[107:-1].astype(float).to_numpy()  # Assuming columns 9 onwards are time points
-        traces = data.iloc[:, 107:-1].values.T  # Transpose to get (time, neurons)
-        return neuron_ids, traces, time_vector
-    
-    def create_metadata(self):
-        extra_info = dict(
-            citation="Venkatachalam dataset"
-        )
-        return extra_info
-    
-    def preprocess(self):
-        preprocessed_data = dict()
-        worm_idx = 0
-        for file_name in os.listdir(os.path.join(self.raw_data_path, self.source_dataset)):
-            if not file_name.endswith(".zip"):
-                continue
-            raw_data = self.load_data(file_name)
-            neuron_ids, traces, raw_time_vector = self.extract_data(raw_data)
-            preprocessed_data, worm_idx = self.preprocess_traces([neuron_ids], [traces], [raw_time_vector], preprocessed_data, worm_idx)
-        for worm in preprocessed_data.keys():
-            preprocessed_data[worm] = reshape_calcium_data(preprocessed_data[worm])
-        self.save_data(preprocessed_data)
-        logger.info(f"Finished processing {self.source_dataset}.")
-        
-
 class Kato2015Preprocessor(NeuralBasePreprocessor):
     def __init__(self, transform, smooth_method, interpolate_method, resample_dt, **kwargs):
         super().__init__(
@@ -2788,6 +2738,7 @@ class Leifer2023Preprocessor(NeuralBasePreprocessor):
         mask = np.argwhere(~np.isnan(real_data).all(axis=0)).flatten()
         real_data = real_data[:, mask]
         label_list = np.array(label_list, dtype=str)[mask].tolist()
+        # TODO: We removed data that was all NaNs above, but we may also want to remove data with long stretches of NaNs here.
         # Impute any remaining NaN values
         # NOTE: This is very slow with the default settings!
         imputer = IterativeImputer(random_state=0, n_nearest_features=10, skip_complete=False)
@@ -2990,5 +2941,55 @@ class Lin2023Preprocessor(NeuralBasePreprocessor):
         logger.info(f"Finished processing {self.source_dataset}.")
         return None
 
+
+class Venkatachalam2024Preprocessor(NeuralBasePreprocessor):
+    def __init__(self, transform, smooth_method, interpolate_method, resample_dt, **kwargs):
+        super().__init__(
+            "Venkatachalam2024",
+            transform,
+            smooth_method,
+            interpolate_method,
+            resample_dt,
+            **kwargs,
+        )
+    
+    def unzip_and_extract_csv(self, source_directory, zip_path):
+        with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+            path = zip_ref.extractall(source_directory)
+        return zip_path.replace(".zip", ".csv")
+    
+    def load_data(self, file_name):
+        zip_path = os.path.join(self.raw_data_path, self.source_dataset, file_name)
+        csv_file = self.unzip_and_extract_csv(os.path.join(self.raw_data_path, self.source_dataset), zip_path)
+        data = pd.read_csv(csv_file)
+        return data
+    
+    def extract_data(self, data):
+        neuron_ids = data['neuron'].unique()
+        # 9 columns + 98 columns of blanck neural data 
+        time_vector = data.columns[107:-1].astype(float).to_numpy() *  0.375 # columns 9 onwards contain calcium data; dt is 375ms
+        traces = data.iloc[:, 107:-1].values.T  # transpose to get (time, neurons)
+        return neuron_ids, traces, time_vector
+    
+    def create_metadata(self):
+        extra_info = dict(
+            citation="Unplublished data from Vivek Venkatachalam for hermaphrodite worms downloaded from https://chemosensory-data.worm.world/."
+        )
+        return extra_info
+    
+    def preprocess(self):
+        preprocessed_data = dict()
+        worm_idx = 0
+        for file_name in os.listdir(os.path.join(self.raw_data_path, self.source_dataset)):
+            if not file_name.endswith(".zip"):
+                continue
+            raw_data = self.load_data(file_name)
+            neuron_ids, traces, raw_time_vector = self.extract_data(raw_data)
+            preprocessed_data, worm_idx = self.preprocess_traces([neuron_ids], [traces], [raw_time_vector], preprocessed_data, worm_idx)
+        for worm in preprocessed_data.keys():
+            preprocessed_data[worm] = reshape_calcium_data(preprocessed_data[worm])
+        self.save_data(preprocessed_data)
+        logger.info(f"Finished processing {self.source_dataset}.")
+        
 
 # # # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#

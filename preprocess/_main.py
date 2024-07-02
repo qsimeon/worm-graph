@@ -41,11 +41,14 @@ def process_data(preprocess_config: DictConfig) -> None:
         )
         logger.info("Finished preprocessing neural data.")
         # Extract presaved commonly use dataset split patterns
-        logger.info("Extracting presaved dataset patterns.")
-        get_presaved_datasets(
-            url=preprocess_config.presaved_url, file=preprocess_config.presaved_file
-        )
-        logger.info("Done extracting presaved dataset patterns.")
+        if not os.path.exists(os.path.join(ROOT_DIR, "data/combined_AllExperimental")):
+            logger.info("Extracting presaved dataset patterns.")
+            get_presaved_datasets(
+                url=preprocess_config.presaved_url, file=preprocess_config.presaved_file
+            )
+            logger.info("Done extracting presaved dataset patterns.")
+        else:
+            logger.info("Presaved dataset patterns already extracted.")
     else:
         logger.info("Neural data already preprocessed.")
 
