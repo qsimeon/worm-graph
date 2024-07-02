@@ -58,6 +58,7 @@ def get_datasets(dataset_config: DictConfig, save=False):
             for dataset in EXPERIMENT_DATASETS
         ]
     )
+    # TODO: Write other potentially useful dataset patterns here. Example all Zimmer lab datasets, etc.
     if all_experiment:
         logger.info(
             f"Requested dataset pattern matched the presaved `combined_AllExperimental` dataset.\n"
@@ -72,7 +73,7 @@ def get_datasets(dataset_config: DictConfig, save=False):
                 f"Directory {presave_path} does not exist or is empty.\n"
                 f"Creating the dataset from source datasets.\n\n"
             )
-    # TODO: Write other dataset patterns here ...
+    
     # Initialize datasets
     train_dataset, val_dataset = None, None
     # Verifications
@@ -251,7 +252,7 @@ def get_datasets(dataset_config: DictConfig, save=False):
             if save:
                 torch.save(train_dataset, os.path.join(log_dir, "dataset", f"train_dataset.pt"))
                 torch.save(val_dataset, os.path.join(log_dir, "dataset", f"val_dataset.pt"))
-            # Save the dataset splot information regardless
+            # (Re)save the dataset split information regardless of `save` argument
             # => train and val. datasets contain the same neurons, but with different time steps and other information
             dataset_info_train.to_csv(
                 os.path.join(log_dir, "dataset", f"train_dataset_info.csv"),

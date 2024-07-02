@@ -19,8 +19,9 @@ def process_data(preprocess_config: DictConfig) -> None:
     pickle_neural_data : function in preprocess/_utils.py
     preprocess_connectome : function in preprocess/_utils.py
     """
-    # Init logger
+    # Initialize the logger
     logger = logging.getLogger(__name__)
+
     # Download and pickle the neural data if not already done
     if not os.path.exists(os.path.join(ROOT_DIR, "data/processed/neural/.processed")):
         logger.info("Preprocessing C. elegans neural data...")
@@ -40,22 +41,22 @@ def process_data(preprocess_config: DictConfig) -> None:
             **kwargs,
         )
         logger.info("Finished preprocessing neural data.")
-        # Extract presaved commonly use dataset split patterns
-        if not os.path.exists(os.path.join(ROOT_DIR, "data/combined_AllExperimental")):
-            logger.info("Extracting presaved dataset patterns.")
-            get_presaved_datasets(
-                url=preprocess_config.presaved_url, file=preprocess_config.presaved_file
-            )
-            logger.info("Done extracting presaved dataset patterns.")
-        else:
-            logger.info("Presaved dataset patterns already extracted.")
     else:
         logger.info("Neural data already preprocessed.")
+
+    # Extract presaved commonly use neural dataset split patterns
+    if not os.path.exists(os.path.join(ROOT_DIR, "data/combined_AllExperimental")):
+        logger.info("Extracting presaved dataset patterns.")
+        get_presaved_datasets(
+            url=preprocess_config.presaved_url, file=preprocess_config.presaved_file
+        )
+        logger.info("Done extracting presaved dataset patterns.")
+    else:
+        logger.info("Presaved dataset patterns already extracted.")
 
     # Preprocess the connectome data if not already done
     if not os.path.exists(os.path.join(ROOT_DIR, "data/processed/connectome/graph_tensors.pt")):
         logger.info("Preprocessing C. elegans connectome...")
-        raw_dir = os.path.join(ROOT_DIR, "data/raw")
         preprocess_connectome(raw_files=RAW_FILES, pub=preprocess_config.connectome_pub)
         logger.info("Finished preprocessing C. elegans connectome.")
     else:
