@@ -251,7 +251,6 @@ class ConnectomeBasePreprocessor:
         df_master["type"] = df_master["type"].fillna("Unknown")
         le = preprocessing.LabelEncoder()
         le.fit(df_master["type"].values)
-        # print(f"DEBUG Classes: {le.classes_}, Encoded: {le.transform(le.classes_)}") # DEBUG
         num_classes = len(le.classes_)
         y = torch.tensor(
             le.transform(df_master.set_index("label").reindex(self.neuron_labels)["type"].values),
@@ -286,6 +285,11 @@ class ConnectomeBasePreprocessor:
             additional_edge_attr = torch.tensor(additional_edge_attr, dtype=torch.float)
             edge_index = torch.cat([edge_index, additional_edges], dim=1)
             edge_attr = torch.cat([edge_attr, additional_edge_attr], dim=0)
+
+        # Check for symmetry in the gap junction adjacency matrix
+        gap_junctions = to_dense_adj(edge_index=edge_index, edge_attr=edge_attr[:, 0]).squeeze(0)
+        if not torch.allclose(gap_junctions.T, gap_junctions):
+            raise AssertionError("The gap junction adjacency matrix is not symmetric.")
 
         # Create the graph data object
         graph = Data(x=x, edge_index=edge_index, edge_attr=edge_attr, y=y)
@@ -412,7 +416,8 @@ class DefaultPreprocessor(ConnectomeBasePreprocessor):
         gsyn_edge_index = gsyn_edge_index.T  # [2, num_edges]
 
         # edge attributes
-        # NOTE: The first feature represents the weight of the gap junctions; the second feature represents the weight of the chemical synapses.
+        # NOTE: The first feature represents the weight of the gap junctions; 
+        # The second feature represents the weight of the chemical synapses.
         num_edge_features = 2
 
         # edge_attr for gap junctions
@@ -464,23 +469,47 @@ class OpenWormPreprocessor(ConnectomeBasePreprocessor):
         edges = []
         edge_attr = []
 
+        # if neuron1 in self.neuron_labels and neuron2 in self.neuron_labels:
+        #         # NOTE: This file lists both types of edges in the same file with only the "type" column to differentiate.
+        #         # Therefore as we go through the lines, when see the [neuron_i, neuron_j] pair appearing a second time it is a different 
+        #         # type of synapse (chemical vs. electrical) than the one appearing previously (electrical vs chemical, respectively).
+        #         # The first synapse with [neuron_i, neuron_j] pair encountered could be either electrical or chemical. 
+        #         edge_type = df.loc[i, "type"]
+        #         num_connections = df.loc[i, "synapses"]
+        #         edges.append([neuron1, neuron2])
+        #         if edge_type == "electrical":
+        #             edge_attr.append([num_connections, 0])
+        #             # Adding the reverse direction to ensure symmetry of gap junctions
+        #             edges.append([neuron2, neuron1])
+        #             edge_attr.append([num_connections, 0])
+        #         elif edge_type == "chemical":
+        #             # NOTE: Chemical synapses are asymmetric
+        #             edge_attr.append([0, num_connections])
+
         for i in range(len(df)):
             neuron1 = df.loc[i, "Origin"]
             neuron2 = df.loc[i, "Target"]
-            type = df.loc[i, "Type"]
-            num_connections = df.loc[i, "Number of Connections"]
 
-            if [neuron1, neuron2] not in edges:
+            if neuron1 in self.neuron_labels and neuron2 in self.neuron_labels:
+                # NOTE: This file lists both types of edges in the same file with only the "type" column to differentiate.
+                # Therefore as we go through the lines, when see the [neuron_i, neuron_j] pair appearing a second time it is a different 
+                # type of synapse (chemical vs. electrical) than the one appearing previously (electrical vs chemical, respectively).
+                # The first synapse with [neuron_i, neuron_j] pair encountered could be either electrical or chemical. 
+                synapse_type = df.loc[i, "Type"]
+                num_connections = df.loc[i, "Number of Connections"]
                 edges.append([neuron1, neuron2])
-                if type == "GapJunction":
+                if synapse_type == "GapJunction": # electrical synapse
                     edge_attr.append([num_connections, 0])
-                else:
+                    # Adding the reverse direction to ensure symmetry of gap junctions
+                    edges.append([neuron2, neuron1])
+                    edge_attr.append([num_connections, 0])
+                elif synapse_type == "Send": # chemical synapse
                     edge_attr.append([0, num_connections])
-            else:
-                if type == "GapJunction":
-                    edge_attr[-1][0] = num_connections
-                else:
-                    edge_attr[-1][-1] = num_connections
+                # else:
+                #     if type == "GapJunction":
+                #         edge_attr[-1][0] = num_connections
+                #     else:
+                #         edge_attr[-1][-1] = num_connections
 
         edge_attr = torch.tensor(edge_attr)
         edge_index = torch.tensor(
@@ -546,6 +575,7 @@ class Randi2023Preprocessor(ConnectomeBasePreprocessor):
 
 class Witvliet2020Preprocessor7(ConnectomeBasePreprocessor):
     def preprocess(self, save_as="graph_tensors_witvliet2020_7.pt"):
+
         df = pd.read_csv(os.path.join(RAW_DATA_DIR, "witvliet_2020_7.csv"), sep=r"[\t,]")
 
         edges = []
@@ -554,27 +584,23 @@ class Witvliet2020Preprocessor7(ConnectomeBasePreprocessor):
         for i in range(len(df)):
             neuron1 = df.loc[i, "pre"]
             neuron2 = df.loc[i, "post"]
-
+            
             if neuron1 in self.neuron_labels and neuron2 in self.neuron_labels:
-                type = df.loc[i, "type"]
+                # NOTE: This file lists both types of edges in the same file with only the "type" column to differentiate.
+                # Therefore as we go through the lines, when see the [neuron_i, neuron_j] pair appearing a second time it is a different 
+                # type of synapse (chemical vs. electrical) than the one appearing previously (electrical vs chemical, respectively).
+                # The first synapse with [neuron_i, neuron_j] pair encountered could be either electrical or chemical. 
+                edge_type = df.loc[i, "type"]
                 num_connections = df.loc[i, "synapses"]
-
-                if [neuron1, neuron2] not in edges:
-                    edges.append([neuron1, neuron2])
-                    if type == "electrical":
-                        edge_attr.append([num_connections, 0])
-                        # Adding the reverse direction for symmetry
-                        edges.append([neuron2, neuron1])
-                        edge_attr.append([num_connections, 0])
-                    else:
-                        edge_attr.append([0, num_connections])
-                else:
-                    if type == "electrical":
-                        edge_attr[-1][0] = num_connections
-                        # Adding the reverse direction for symmetry
-                        edge_attr[-2][0] = num_connections
-                    else:
-                        edge_attr[-1][-1] = num_connections
+                edges.append([neuron1, neuron2])
+                if edge_type == "electrical":
+                    edge_attr.append([num_connections, 0])
+                    # Adding the reverse direction to ensure symmetry of gap junctions
+                    edges.append([neuron2, neuron1])
+                    edge_attr.append([num_connections, 0])
+                elif edge_type == "chemical":
+                    # NOTE: Chemical synapses are asymmetric
+                    edge_attr.append([0, num_connections])
 
         edge_attr = torch.tensor(edge_attr)
         edge_index = torch.tensor(
@@ -609,27 +635,23 @@ class Witvliet2020Preprocessor8(ConnectomeBasePreprocessor):
         for i in range(len(df)):
             neuron1 = df.loc[i, "pre"]
             neuron2 = df.loc[i, "post"]
-
+            
             if neuron1 in self.neuron_labels and neuron2 in self.neuron_labels:
-                type = df.loc[i, "type"]
+                # NOTE: This file lists both types of edges in the same file with only the "type" column to differentiate.
+                # Therefore as we go through the lines, when see the [neuron_i, neuron_j] pair appearing a second time it is a different 
+                # type of synapse (chemical vs. electrical) than the one appearing previously (electrical vs chemical, respectively).
+                # The first synapse with [neuron_i, neuron_j] pair encountered could be either electrical or chemical. 
+                edge_type = df.loc[i, "type"]
                 num_connections = df.loc[i, "synapses"]
-
-                if [neuron1, neuron2] not in edges:
-                    edges.append([neuron1, neuron2])
-                    if type == "electrical":
-                        edge_attr.append([num_connections, 0])
-                        # Adding the reverse direction for symmetry
-                        edges.append([neuron2, neuron1])
-                        edge_attr.append([num_connections, 0])
-                    else:
-                        edge_attr.append([0, num_connections])
-                else:
-                    if type == "electrical":
-                        edge_attr[-1][0] = num_connections
-                        # Adding the reverse direction for symmetry
-                        edge_attr[-2][0] = num_connections
-                    else:
-                        edge_attr[-1][-1] = num_connections
+                edges.append([neuron1, neuron2])
+                if edge_type == "electrical":
+                    edge_attr.append([num_connections, 0])
+                    # Adding the reverse direction to ensure symmetry of gap junctions
+                    edges.append([neuron2, neuron1])
+                    edge_attr.append([num_connections, 0])
+                elif edge_type == "chemical":
+                    # NOTE: Chemical synapses are asymmetric
+                    edge_attr.append([0, num_connections])
 
         edge_attr = torch.tensor(edge_attr)
         edge_index = torch.tensor(
@@ -672,14 +694,13 @@ class Cook2019Preprocessor(ConnectomeBasePreprocessor):
                         pre = df.iloc[j, 2]
                         if pre in self.neuron_labels and post in self.neuron_labels:
                             edges.append([pre, post])
-                            edge_attr.append([0, df.iloc[j, i]])
+                            edge_attr.append([0, df.iloc[j, i]]) # second edge_attr feature is for gap junction weights
 
         df = pd.read_excel(xlsx_file, sheet_name="hermaphrodite gap jn symmetric")
 
         for i, line in enumerate(df):
             if i > 2:
                 col_data = df.iloc[:-1, i]
-                print(f"line: {line} \t col_data: {col_data}\n") # DEBUG
                 for j, weight in enumerate(col_data):
                     if j > 1 and not pd.isna(df.iloc[j, i]):
                         post = df.iloc[1, i]
@@ -687,7 +708,7 @@ class Cook2019Preprocessor(ConnectomeBasePreprocessor):
                         if pre in self.neuron_labels and post in self.neuron_labels:
                             if [pre, post] in edges:
                                 edge_idx = edges.index([pre, post])
-                                edge_attr[edge_idx][0] = df.iloc[j, i]
+                                edge_attr[edge_idx][0] = df.iloc[j, i] # first edge_attr feature is for gap junction weights
                             else:
                                 edges.append([pre, post])
                                 edge_attr.append([df.iloc[j, i], 0])
@@ -727,20 +748,21 @@ class White1986WholePreprocessor(ConnectomeBasePreprocessor):
             neuron2 = df.loc[i, "post"]
 
             if neuron1 in self.neuron_labels and neuron2 in self.neuron_labels:
-                type = df.loc[i, "type"]
+                # NOTE: This file lists both types of edges in the same file with only the "type" column to differentiate.
+                # Therefore as we go through the lines, when see the [neuron_i, neuron_j] pair appearing a second time it is a different 
+                # type of synapse (chemical vs. electrical) than the one appearing previously (electrical vs chemical, respectively).
+                # The first synapse with [neuron_i, neuron_j] pair encountered could be either electrical or chemical. 
+                edge_type = df.loc[i, "type"]
                 num_connections = df.loc[i, "synapses"]
-
-                if [neuron1, neuron2] not in edges:
-                    edges.append([neuron1, neuron2])
-                    if type == "electrical":
-                        edge_attr.append([num_connections, 0])
-                    else:
-                        edge_attr.append([0, num_connections])
-                else:
-                    if type == "electrical":
-                        edge_attr[-1][0] = num_connections
-                    else:
-                        edge_attr[-1][-1] = num_connections
+                edges.append([neuron1, neuron2])
+                if edge_type == "electrical":
+                    edge_attr.append([num_connections, 0])
+                    # Adding the reverse direction to ensure symmetry of gap junctions
+                    edges.append([neuron2, neuron1])
+                    edge_attr.append([num_connections, 0])
+                elif edge_type == "chemical":
+                    # NOTE: Chemical synapses are asymmetric
+                    edge_attr.append([0, num_connections])
 
         edge_attr = torch.tensor(edge_attr)
         edge_index = torch.tensor(
@@ -777,20 +799,21 @@ class White1986N2UPreprocessor(ConnectomeBasePreprocessor):
             neuron2 = df.loc[i, "post"]
 
             if neuron1 in self.neuron_labels and neuron2 in self.neuron_labels:
-                type = df.loc[i, "type"]
+                # NOTE: This file lists both types of edges in the same file with only the "type" column to differentiate.
+                # Therefore as we go through the lines, when see the [neuron_i, neuron_j] pair appearing a second time it is a different 
+                # type of synapse (chemical vs. electrical) than the one appearing previously (electrical vs chemical, respectively).
+                # The first synapse with [neuron_i, neuron_j] pair encountered could be either electrical or chemical. 
+                edge_type = df.loc[i, "type"]
                 num_connections = df.loc[i, "synapses"]
-
-                if [neuron1, neuron2] not in edges:
-                    edges.append([neuron1, neuron2])
-                    if type == "electrical":
-                        edge_attr.append([num_connections, 0])
-                    else:
-                        edge_attr.append([0, num_connections])
-                else:
-                    if type == "electrical":
-                        edge_attr[-1][0] = num_connections
-                    else:
-                        edge_attr[-1][-1] = num_connections
+                edges.append([neuron1, neuron2])
+                if edge_type == "electrical":
+                    edge_attr.append([num_connections, 0])
+                    # Adding the reverse direction to ensure symmetry of gap junctions
+                    edges.append([neuron2, neuron1])
+                    edge_attr.append([num_connections, 0])
+                elif edge_type == "chemical":
+                    # NOTE: Chemical synapses are asymmetric
+                    edge_attr.append([0, num_connections])
 
         edge_attr = torch.tensor(edge_attr)
         edge_index = torch.tensor(
@@ -827,20 +850,21 @@ class White1986JSHPreprocessor(ConnectomeBasePreprocessor):
             neuron2 = df.loc[i, "post"]
 
             if neuron1 in self.neuron_labels and neuron2 in self.neuron_labels:
-                type = df.loc[i, "type"]
+                # NOTE: This file lists both types of edges in the same file with only the "type" column to differentiate.
+                # Therefore as we go through the lines, when see the [neuron_i, neuron_j] pair appearing a second time it is a different 
+                # type of synapse (chemical vs. electrical) than the one appearing previously (electrical vs chemical, respectively).
+                # The first synapse with [neuron_i, neuron_j] pair encountered could be either electrical or chemical. 
+                edge_type = df.loc[i, "type"]
                 num_connections = df.loc[i, "synapses"]
-
-                if [neuron1, neuron2] not in edges:
-                    edges.append([neuron1, neuron2])
-                    if type == "electrical":
-                        edge_attr.append([num_connections, 0])
-                    else:
-                        edge_attr.append([0, num_connections])
-                else:
-                    if type == "electrical":
-                        edge_attr[-1][0] = num_connections
-                    else:
-                        edge_attr[-1][-1] = num_connections
+                edges.append([neuron1, neuron2])
+                if edge_type == "electrical":
+                    edge_attr.append([num_connections, 0])
+                    # Adding the reverse direction to ensure symmetry of gap junctions
+                    edges.append([neuron2, neuron1])
+                    edge_attr.append([num_connections, 0])
+                elif edge_type == "chemical":
+                    # NOTE: Chemical synapses are asymmetric
+                    edge_attr.append([0, num_connections])
 
         edge_attr = torch.tensor(edge_attr)
         edge_index = torch.tensor(
@@ -877,20 +901,21 @@ class White1986JSEPreprocessor(ConnectomeBasePreprocessor):
             neuron2 = df.loc[i, "post"]
 
             if neuron1 in self.neuron_labels and neuron2 in self.neuron_labels:
-                type = df.loc[i, "type"]
+                # NOTE: This file lists both types of edges in the same file with only the "type" column to differentiate.
+                # Therefore as we go through the lines, when see the [neuron_i, neuron_j] pair appearing a second time it is a different 
+                # type of synapse (chemical vs. electrical) than the one appearing previously (electrical vs chemical, respectively).
+                # The first synapse with [neuron_i, neuron_j] pair encountered could be either electrical or chemical. 
+                edge_type = df.loc[i, "type"]
                 num_connections = df.loc[i, "synapses"]
-
-                if [neuron1, neuron2] not in edges:
-                    edges.append([neuron1, neuron2])
-                    if type == "electrical":
-                        edge_attr.append([num_connections, 0])
-                    else:
-                        edge_attr.append([0, num_connections])
-                else:
-                    if type == "electrical":
-                        edge_attr[-1][0] = num_connections
-                    else:
-                        edge_attr[-1][-1] = num_connections
+                edges.append([neuron1, neuron2])
+                if edge_type == "electrical":
+                    edge_attr.append([num_connections, 0])
+                    # Adding the reverse direction to ensure symmetry of gap junctions
+                    edges.append([neuron2, neuron1])
+                    edge_attr.append([num_connections, 0])
+                elif edge_type == "chemical":
+                    # NOTE: Chemical synapses are asymmetric
+                    edge_attr.append([0, num_connections])
 
         edge_attr = torch.tensor(edge_attr)
         edge_index = torch.tensor(
