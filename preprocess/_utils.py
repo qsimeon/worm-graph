@@ -1883,8 +1883,9 @@ class Venkatachalam2024Preprocessor(NeuralBasePreprocessor):
     
     def extract_data(self, data):
         neuron_ids = data['neuron'].unique()
-        time_vector = data.columns[9:-1].astype(float).to_numpy()  # Assuming columns 9 onwards are time points
-        traces = data.iloc[:, 9:-1].values.T  # Transpose to get (time, neurons)
+        # 9 + 98 blank timesteps at beginning (0-97)
+        time_vector = data.columns[107:-1].astype(float).to_numpy()  # Assuming columns 9 onwards are time points
+        traces = data.iloc[:, 107:-1].values.T  # Transpose to get (time, neurons)
         return neuron_ids, traces, time_vector
     
     def create_metadata(self):
