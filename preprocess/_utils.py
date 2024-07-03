@@ -2966,9 +2966,19 @@ class Venkatachalam2024Preprocessor(NeuralBasePreprocessor):
     
     def extract_data(self, data):
         neuron_ids = data['neuron'].unique()
-        # 9 columns + 98 columns of blanck neural data 
+        # 9 columns + 98 columns of blank neural data 
         time_vector = data.columns[107:-1].astype(float).to_numpy() *  0.375 # columns 9 onwards contain calcium data; dt is 375ms
         traces = data.iloc[:, 107:-1].values.T  # transpose to get (time, neurons)
+        # Remove neuron traces that are all NaN values
+        mask = np.argwhere(~np.isnan(traces).all(axis=0)).flatten()
+        traces = traces[:, mask]
+        neuron_ids = np.array(neuron_ids, dtype=str)[mask].tolist()
+        # Impute any remaining NaN values
+        # NOTE: This is very slow with the default settings!
+        imputer = IterativeImputer(random_state=0, n_nearest_features=10, skip_complete=False)
+        if np.isnan(traces).any():
+            traces = imputer.fit_transform(traces)
+       
         return neuron_ids, traces, time_vector
     
     def create_metadata(self):
