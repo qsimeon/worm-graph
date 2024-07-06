@@ -73,7 +73,7 @@ def get_datasets(dataset_config: DictConfig, save=False):
                 f"Directory {presave_path} does not exist or is empty.\n"
                 f"Creating the dataset from source datasets.\n\n"
             )
-    
+
     # Initialize datasets
     train_dataset, val_dataset = None, None
     # Verifications
