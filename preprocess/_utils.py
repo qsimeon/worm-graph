@@ -1660,25 +1660,172 @@ class NeuralBasePreprocessor:
         with open(file, "wb") as f:
             pickle.dump(data_dict, f)
 
+    # def create_neuron_idx(self, label_list):
+    #     """
+    #     Overrides the base class method to handle the complicated data
+    #     format structure of the Leifer2023 dataset.
+    #     """
+    #     neuron_to_idx = dict()
+    #     num_unnamed_neurons = 0
+    #     for j, item in enumerate(label_list):
+    #         previous_list = label_list[:j]
+    #         if not item.isalnum(): # happens when the label is empty string ''
+    #             label_list[j] = str(j)
+    #             num_unnamed_neurons += 1
+    #             neuron_to_idx[str(j)] = j
+    #         else:
+    #             if item in NEURON_LABELS and item not in previous_list:
+    #                 neuron_to_idx[item] = j
+    #             # If a neuron label repeated assume a mistake and treat the duplicate as an unnamed neuron
+    #             elif item in NEURON_LABELS and item in previous_list: 
+    #                 label_list[j] = str(j)
+    #                 num_unnamed_neurons += 1
+    #                 neuron_to_idx[str(j)] = j
+    #             # Handle ambiguous neuron labels
+    #             else:
+    #                 if str(item + "L") in NEURON_LABELS and str(item + "L") not in previous_list:
+    #                     label_list[j] = str(item + "L")
+    #                     neuron_to_idx[str(item + "L")] = j
+    #                 elif str(item + "R") in NEURON_LABELS and str(item + "R") not in previous_list:
+    #                     label_list[j] = str(item + "R")
+    #                     neuron_to_idx[str(item + "R")] = j
+    #                 else: # happens when the label is "merge"; TODO: Ask authors what that is?
+    #                     label_list[j] = str(j)
+    #                     num_unnamed_neurons += 1
+    #                     neuron_to_idx[str(j)] = j
+    #     num_named_neurons = len(
+    #         [k for k in neuron_to_idx.keys() if not k.isnumeric()]
+    #     )  # number of labeled neurons
+    #     assert (
+    #         num_named_neurons == len(label_list) - num_unnamed_neurons
+    #     ), "Incorrect calculation of the number of named neurons."
+    #     return neuron_to_idx, num_named_neurons
+    
     def create_neuron_idx(self, unique_IDs):
-        neuron_to_idx = {
-            nid: (str(nid) if (j is None or isinstance(j, np.ndarray)) else str(j))
+        # TODO: Supplement this this with the Leifer2023 version so we only need this one definition.
+        idx_to_neuron = {
+            nid: (str(nid) if (j is None or isinstance(j, np.ndarray) or j=="merge" or not j.isalnum()) else str(j))
             for nid, j in enumerate(unique_IDs)
         }
-        neuron_to_idx = {
+        idx_to_neuron = {
             nid: (
                 name.replace("0", "") if not name.endswith("0") and not name.isnumeric() else name
             )
-            for nid, name in neuron_to_idx.items()
+            for nid, name in idx_to_neuron.items()
         }
-        neuron_to_idx = {
+        idx_to_neuron = {
             nid: (str(nid) if name not in set(NEURON_LABELS) else name)
-            for nid, name in neuron_to_idx.items()
+            for nid, name in idx_to_neuron.items()
         }
-        neuron_to_idx = dict((v, k) for k, v in neuron_to_idx.items())
-        # Number of neurons that were labeled with a name
-        num_named_neurons = len([k for k in neuron_to_idx.keys() if not k.isnumeric()])
+        neuron_to_idx = dict((v, k) for k, v in idx_to_neuron.items())
+        num_named_neurons = len([k for k in neuron_to_idx.keys() if not k.isnumeric()]) # number of labled neurons
         return neuron_to_idx, num_named_neurons
+
+    def find_nearest_label(self, query, possible_labels, char="?"):
+        """Find the nearest neuron label from a list given a query."""
+        # Ensure the possible labels is a sorted list
+        possible_labels = sorted(possible_labels)
+        # Remove the '?' from the query to simplify comparison
+        query_base = query.replace(char, "")
+        # Initialize variables to track the best match
+        nearest_label = None
+        highest_similarity = -1  # Start with lowest similarity possible
+        for label in possible_labels:
+            # Count matching characters, ignoring the character at the position of '?'
+            similarity = sum(1 for q, l in zip(query_base, label) if q == l)
+            # Update the nearest label if this one is more similar
+            if similarity > highest_similarity:
+                nearest_label = label
+                highest_similarity = similarity
+        return nearest_label, possible_labels.index(nearest_label)
+    
+    def get_longest_nan_stretch(self, arr):
+        """
+        Calculate the longest continuous stretch of NaNs in a 1D array.
+
+        Parameters:
+        arr (np.array): 1D Input array to check.
+
+        Returns:
+        int: Length of the longest continuous stretch of NaNs.
+        """
+        assert arr.ndim == 1, "Array must be a 1D time series."
+        isnan = np.isnan(arr)
+        if not np.any(isnan):
+            return 0
+        stretches = np.diff(
+            np.where(np.concatenate(([isnan[0]], isnan[:-1] != isnan[1:], [True])))[0]
+        )[::2]
+        return stretches.max() if len(stretches) > 0 else 0
+
+    def filter_bad_traces_by_nan_stretch(self, data, nan_stretch_threshold=0.05):
+        """
+        Filters out traces with long stretches of NaNs.
+
+        Parameters:
+        data (np.array): The neural data array with shape (time_points, neurons).
+        nan_stretch_threshold (float): Proportion of the total recording time above which traces are considered bad.
+
+        Returns:
+        (np.array, np.array): Tuple of filtered neural data and the associated mask into the original data array.
+        """
+        t, n = data.shape
+        max_nan_stretch_allowed = int(t * nan_stretch_threshold)
+        bad_traces_mask = (
+            np.apply_along_axis(self.get_longest_nan_stretch, 0, data) > max_nan_stretch_allowed
+        )
+        good_traces_mask = ~bad_traces_mask
+        filtered_data = data[:, good_traces_mask]
+        return filtered_data, good_traces_mask
+
+    def is_monotonic_linear(self, arr):
+        """
+        Checks if the array is a line with constant slope (i.e linear).
+
+        Parameters:
+        arr (np.array): 1D Input array to check.
+
+        Returns:
+        bool: True if the array is linear, False otherwise.
+        """
+        assert arr.ndim == 1, "Array must be a 1D (univariate) time series."
+        diff = np.round(np.diff(arr), decimals=3)
+        result = np.unique(diff)
+        return result.size == 1
+
+    def filter_bad_traces_by_linear_segments(
+        self, data, window_size=50, linear_segment_threshold=1e-3
+    ):
+        """
+        Filters out traces with significant proportions of linear segments. Linear segments suggest
+        that the data was imputed with linear interpolation to remove stretches of NaN values.
+
+        There are weird-looking traces in some raw data caused by interpolations of missing values
+        (NaNs) when neurons were not consistently tracked over time due to imperfect nonrigid registration.
+        This helper function was written to filter out these problematic imputed neural traces.
+
+        Parameters:
+        data (np.array): The neural data array with shape (time_points, neurons).
+        window_size (int): The size of the window to check for linearity.
+        linear_segment_threshold (float): Proportion of linear segments above which traces are considered bad.
+
+        Returns:
+        (np.array, nparray): Tuple of filtered neural data and the associated mask into the original data array.
+        """
+        t, n = data.shape
+        linear_segments = np.zeros(n, dtype=int)
+        window_start = range(
+            0, t - window_size, window_size // 2
+        )  # overlapping/staggered windows faster than non-overlapping
+        for i in window_start:
+            segment = data[i : i + window_size, :]
+            ls = np.apply_along_axis(self.is_monotonic_linear, 0, segment)
+            linear_segments += ls.astype(int)
+        proportion_linear = linear_segments / len(window_start)
+        bad_traces_mask = np.array(proportion_linear > linear_segment_threshold)
+        good_traces_mask = ~bad_traces_mask
+        filtered_data = data[:, good_traces_mask]
+        return filtered_data, good_traces_mask
 
     def load_data(self, file_name):
         """
@@ -1761,7 +1908,7 @@ class NeuralBasePreprocessor:
             if trace_data.size == 0:
                 continue
             # Ignore any worms with very short recordings
-            if len(raw_timeVectorSeconds[i]) < 700:
+            if len(raw_timeVectorSeconds[i]) < 600:
                 continue
             # Map named neurons
             unique_IDs = [
@@ -1897,7 +2044,9 @@ class Kato2015Preprocessor(NeuralBasePreprocessor):
             neuron_IDs, traces, raw_timeVectorSeconds = self.extract_data(raw_data)  # extract
             metadata = dict(
                 citation=self.citation,
-                data_file=os.path.join(os.path.basename(self.raw_data_path), self.source_dataset, file_name),
+                data_file=os.path.join(
+                    os.path.basename(self.raw_data_path), self.source_dataset, file_name
+                ),
             )
             preprocessed_data, worm_idx = self.preprocess_traces(
                 neuron_IDs,
@@ -1954,7 +2103,9 @@ class Nichols2017Preprocessor(NeuralBasePreprocessor):
             neuron_IDs, traces, raw_timeVectorSeconds = self.extract_data(raw_data)  # extract
             metadata = dict(
                 citation=self.citation,
-                data_file=os.path.join(os.path.basename(self.raw_data_path), self.source_dataset, file_name),
+                data_file=os.path.join(
+                    os.path.basename(self.raw_data_path), self.source_dataset, file_name
+                ),
             )
             preprocessed_data, worm_idx = self.preprocess_traces(
                 neuron_IDs,
@@ -2006,7 +2157,9 @@ class Skora2018Preprocessor(NeuralBasePreprocessor):
             neuron_IDs, traces, raw_timeVectorSeconds = self.extract_data(raw_data)  # extract
             metadata = dict(
                 citation=self.citation,
-                data_file=os.path.join(os.path.basename(self.raw_data_path), self.source_dataset, file_name),
+                data_file=os.path.join(
+                    os.path.basename(self.raw_data_path), self.source_dataset, file_name
+                ),
             )
             preprocessed_data, worm_idx = self.preprocess_traces(
                 neuron_IDs,
@@ -2067,7 +2220,9 @@ class Kaplan2020Preprocessor(NeuralBasePreprocessor):
             neuron_IDs, traces, raw_timeVectorSeconds = self.extract_data(raw_data)  # extract
             metadata = dict(
                 citation=self.citation,
-                data_file=os.path.join(os.path.basename(self.raw_data_path), self.source_dataset, file_name),
+                data_file=os.path.join(
+                    os.path.basename(self.raw_data_path), self.source_dataset, file_name
+                ),
             )
             preprocessed_data, worm_idx = self.preprocess_traces(
                 neuron_IDs,
@@ -2213,7 +2368,9 @@ class Yemini2021Preprocessor(NeuralBasePreprocessor):
             neuron_IDs, traces, raw_timeVectorSeconds = self.extract_data(raw_data)  # extract
             metadata = dict(
                 citation=self.citation,
-                data_file=os.path.join(os.path.basename(self.raw_data_path), self.source_dataset, file_name),
+                data_file=os.path.join(
+                    os.path.basename(self.raw_data_path), self.source_dataset, file_name
+                ),
             )
             preprocessed_data, worm_idx = self.preprocess_traces(
                 neuron_IDs,
@@ -2267,7 +2424,9 @@ class Uzel2022Preprocessor(NeuralBasePreprocessor):
             neuron_IDs, traces, raw_timeVectorSeconds = self.extract_data(raw_data)  # extract
             metadata = dict(
                 citation=self.citation,
-                data_file=os.path.join(os.path.basename(self.raw_data_path), self.source_dataset, file_name),
+                data_file=os.path.join(
+                    os.path.basename(self.raw_data_path), self.source_dataset, file_name
+                ),
             )
             preprocessed_data, worm_idx = self.preprocess_traces(
                 neuron_IDs,
@@ -2305,24 +2464,6 @@ class Dag2023Preprocessor(NeuralBasePreprocessor):
         with open(os.path.join(self.raw_data_path, self.source_dataset, labels_file), "r") as f:
             label_info = json.load(f)
         return label_info
-
-    def find_nearest_label(self, query, possible_labels, char="?"):
-        """Find the nearest neuron label from a list given a query."""
-        # Ensure the possible labels is a sorted list
-        possible_labels = sorted(possible_labels)
-        # Remove the '?' from the query to simplify comparison
-        query_base = query.replace(char, "")
-        # Initialize variables to track the best match
-        nearest_label = None
-        highest_similarity = -1  # Start with lowest similarity possible
-        for label in possible_labels:
-            # Count matching characters, ignoring the character at the position of '?'
-            similarity = sum(1 for q, l in zip(query_base, label) if q == l)
-            # Update the nearest label if this one is more similar
-            if similarity > highest_similarity:
-                nearest_label = label
-                highest_similarity = similarity
-        return nearest_label, possible_labels.index(nearest_label)
 
     def extract_data(self, data_file, labels_file):
         """Slightly different extract_data method for Dag2023 dataset."""
@@ -2374,9 +2515,16 @@ class Dag2023Preprocessor(NeuralBasePreprocessor):
                 label, set(NEURON_LABELS) - set(neurons_copy), char="?"
             )
             neurons_copy.append(replacement)
+
+        ### DEBUG ###
+        # Remove badly imputed neurons from the data
+        filt_calcium, filt_mask = self.filter_bad_traces_by_linear_segments(calcium)
+        filt_neurons_copy = np.array(neurons_copy, dtype=str)[filt_mask].tolist()
+        ### DEBUG ###
+
         # Make the extracted data into a list of arrays
-        all_IDs = [neurons_copy]
-        all_traces = [calcium]
+        all_IDs = [filt_neurons_copy]
+        all_traces = [filt_calcium]
         timeVectorSeconds = [timevec]
         # Return the extracted data
         return all_IDs, all_traces, timeVectorSeconds
@@ -2398,7 +2546,9 @@ class Dag2023Preprocessor(NeuralBasePreprocessor):
             neurons, raw_traces, time_vector_seconds = self.extract_data(data_file, labels_file)
             metadata = dict(
                 citation=self.citation,
-                data_file=os.path.join(os.path.basename(self.raw_data_path), self.source_dataset, file_name),
+                data_file=os.path.join(
+                    os.path.basename(self.raw_data_path), self.source_dataset, file_name
+                ),
             )
             preprocessed_data, worm_idx = self.preprocess_traces(
                 neurons,
@@ -2417,7 +2567,9 @@ class Dag2023Preprocessor(NeuralBasePreprocessor):
             neurons, raw_traces, time_vector_seconds = self.extract_data(data_file, labels_file)
             metadata = dict(
                 citation=self.citation,
-                data_file=os.path.join(os.path.basename(self.raw_data_path), self.source_dataset, file_name),
+                data_file=os.path.join(
+                    os.path.basename(self.raw_data_path), self.source_dataset, file_name
+                ),
             )
             preprocessed_data, worm_idx = self.preprocess_traces(
                 neurons,
@@ -2447,24 +2599,6 @@ class Flavell2023Preprocessor(NeuralBasePreprocessor):
             **kwargs,
         )
         self.citation = "Atanas et al., Cell 2023, _Brain-Wide Representations of Behavior Spanning Multiple Timescales and States in C. Elegans_"
-
-    def find_nearest_label(self, query, possible_labels, char="?"):
-        """Find the nearest neuron label from a list given a query."""
-        # Ensure the possible labels is a sorted list
-        possible_labels = sorted(possible_labels)
-        # Remove the '?' from the query to simplify comparison
-        query_base = query.replace(char, "")
-        # Initialize variables to track the best match
-        nearest_label = None
-        highest_similarity = -1  # Start with lowest similarity possible
-        for label in possible_labels:
-            # Count matching characters, ignoring the character at the position of '?'
-            similarity = sum(1 for q, l in zip(query_base, label) if q == l)
-            # Update the nearest label if this one is more similar
-            if similarity > highest_similarity:
-                nearest_label = label
-                highest_similarity = similarity
-        return nearest_label, possible_labels.index(nearest_label)
 
     def load_data(self, file_name):
         if file_name.endswith(".h5"):
@@ -2513,9 +2647,16 @@ class Flavell2023Preprocessor(NeuralBasePreprocessor):
                 label, set(NEURON_LABELS) - set(neurons_copy), char="?"
             )
             neurons_copy.append(replacement)
+
+        ### DEBUG ###
+        # Remove badly imputed neurons from the data
+        filt_calcium_data, filt_mask = self.filter_bad_traces_by_linear_segments(calcium_data)
+        filt_neurons_copy = np.array(neurons_copy, dtype=str)[filt_mask].tolist()
+        ### DEBUG ###
+
         # Make the extracted data into a list of arrays
-        all_IDs = [neurons_copy]
-        all_traces = [calcium_data]
+        all_IDs = [filt_neurons_copy]
+        all_traces = [filt_calcium_data]
         timeVectorSeconds = [time_in_seconds]
         # Return the extracted data
         return all_IDs, all_traces, timeVectorSeconds
@@ -2531,7 +2672,9 @@ class Flavell2023Preprocessor(NeuralBasePreprocessor):
             neurons, calcium_data, time_in_seconds = self.extract_data(file_data)  # extract
             metadata = dict(
                 citation=self.citation,
-                data_file=os.path.join(os.path.basename(self.raw_data_path), self.source_dataset, file_name),
+                data_file=os.path.join(
+                    os.path.basename(self.raw_data_path), self.source_dataset, file_name
+                ),
             )
             preprocessed_data, worm_idx = self.preprocess_traces(
                 neurons,
@@ -2599,55 +2742,6 @@ class Leifer2023Preprocessor(NeuralBasePreprocessor):
         data_array = np.array(data, dtype=np.float32)
         return data_array
 
-    def is_monotonic_linear(self, arr):
-        """
-        Checks if the array is a line with constant slope (i.e linear).
-
-        Parameters:
-        arr (np.array): 1D Input array to check.
-
-        Returns:
-        bool: True if the array is linear, False otherwise.
-        """
-        assert arr.ndim == 1, "Array must be a 1D (univariate) time series."
-        diff = np.round(np.diff(arr), decimals=3)
-        result = np.unique(diff)
-        return result.size == 1
-
-    def filter_bad_traces_by_linear_segments(
-        self, data, window_size=50, linear_segment_threshold=1e-3
-    ):
-        """
-        Filters out traces with significant proportions of linear segments. Linear segments suggest
-        that the data was imputed with linear interpolation to remove stretches of NaN values.
-
-        There are weird-looking traces in the Leifer2023 raw data caused by interpolations of missing values
-        (NaNs) when neurons were not consistently tracked over time due to imperfect nonrigid registration.
-        This helper function was written to filter out these problematic imputed neural traces.
-
-        Parameters:
-        data (np.array): The neural data array with shape (time_points, neurons).
-        window_size (int): The size of the window to check for linearity.
-        linear_segment_threshold (float): Proportion of linear segments above which traces are considered bad.
-
-        Returns:
-        (np.array, nparray): Tuple of filtered neural data and the associated mask into the original data array.
-        """
-        t, n = data.shape
-        linear_segments = np.zeros(n, dtype=int)
-        window_start = range(
-            0, t - window_size, window_size // 2
-        )  # non-overlapping or staggered windows (faster)
-        for i in window_start:
-            segment = data[i : i + window_size, :]
-            ls = np.apply_along_axis(self.is_monotonic_linear, 0, segment)
-            linear_segments += ls.astype(int)
-        proportion_linear = linear_segments / len(window_start)
-        bad_traces_mask = np.array(proportion_linear > linear_segment_threshold)
-        good_traces_mask = ~bad_traces_mask
-        filtered_data = data[:, good_traces_mask]
-        return filtered_data, good_traces_mask
-
     def create_neuron_idx(self, label_list):
         """
         Overrides the base class method to handle the complicated data
@@ -2657,14 +2751,15 @@ class Leifer2023Preprocessor(NeuralBasePreprocessor):
         num_unnamed_neurons = 0
         for j, item in enumerate(label_list):
             previous_list = label_list[:j]
-            if not item.isalnum():
+            if not item.isalnum(): # happens when the label is empty string ''
                 label_list[j] = str(j)
                 num_unnamed_neurons += 1
                 neuron_to_idx[str(j)] = j
             else:
                 if item in NEURON_LABELS and item not in previous_list:
                     neuron_to_idx[item] = j
-                elif item in NEURON_LABELS and item in previous_list:
+                # If a neuron label repeated assume a mistake and treat the duplicate as an unnamed neuron
+                elif item in NEURON_LABELS and item in previous_list: 
                     label_list[j] = str(j)
                     num_unnamed_neurons += 1
                     neuron_to_idx[str(j)] = j
@@ -2676,56 +2771,17 @@ class Leifer2023Preprocessor(NeuralBasePreprocessor):
                     elif str(item + "R") in NEURON_LABELS and str(item + "R") not in previous_list:
                         label_list[j] = str(item + "R")
                         neuron_to_idx[str(item + "R")] = j
-                    else:
+                    else: # happens when the label is "merge"; TODO: Ask authors what that is?
                         label_list[j] = str(j)
                         num_unnamed_neurons += 1
                         neuron_to_idx[str(j)] = j
         num_named_neurons = len(
             [k for k in neuron_to_idx.keys() if not k.isnumeric()]
-        )  # number of neurons that were labeled with a name
+        )  # number of labeled neurons
         assert (
             num_named_neurons == len(label_list) - num_unnamed_neurons
         ), "Incorrect calculation of the number of named neurons."
         return neuron_to_idx, num_named_neurons
-
-    def get_longest_nan_stretch(self, arr):
-        """
-        Calculate the longest continuous stretch of NaNs in a 1D array.
-
-        Parameters:
-        arr (np.array): 1D Input array to check.
-
-        Returns:
-        int: Length of the longest continuous stretch of NaNs.
-        """
-        assert arr.ndim == 1, "Array must be a 1D time series."
-        isnan = np.isnan(arr)
-        if not np.any(isnan):
-            return 0
-        stretches = np.diff(
-            np.where(np.concatenate(([isnan[0]], isnan[:-1] != isnan[1:], [True])))[0]
-        )[::2]
-        return stretches.max() if len(stretches) > 0 else 0
-
-    def filter_bad_traces_by_nan_stretch(self, data, nan_stretch_threshold=0.05):
-        """
-        Filters out traces with long stretches of NaNs.
-
-        Parameters:
-        data (np.array): The neural data array with shape (time_points, neurons).
-        nan_stretch_threshold (float): Proportion of the total recording time above which traces are considered bad.
-
-        Returns:
-        (np.array, np.array): Tuple of filtered neural data and the associated mask into the original data array.
-        """
-        t, n = data.shape
-        max_nan_stretch_allowed = int(t * nan_stretch_threshold)
-        bad_traces_mask = (
-            np.apply_along_axis(self.get_longest_nan_stretch, 0, data) > max_nan_stretch_allowed
-        )
-        good_traces_mask = ~bad_traces_mask
-        filtered_data = data[:, good_traces_mask]
-        return filtered_data, good_traces_mask
 
     def extract_data(self, data_file, labels_file, time_file):
         """Slightly different `extract_data` method needed for Leifer2023 dataset."""
@@ -2793,7 +2849,9 @@ class Leifer2023Preprocessor(NeuralBasePreprocessor):
             file_name = str(i) + "_{gcamp|labels|t}.txt"
             metadata = dict(
                 citation=self.citation,
-                data_file=os.path.join(os.path.basename(self.raw_data_path), self.source_dataset, file_name),
+                data_file=os.path.join(
+                    os.path.basename(self.raw_data_path), self.source_dataset, file_name
+                ),
             )
             # Preprocess raw data
             preprocessed_data, worm_idx = self.preprocess_traces(
@@ -2863,7 +2921,9 @@ class Lin2023Preprocessor(NeuralBasePreprocessor):
             neurons, raw_traces, time_vector_seconds = self.extract_data(file_name)
             metadata = dict(
                 citation=self.citation,
-                data_file=os.path.join(os.path.basename(self.raw_data_path), self.source_dataset, file_name),
+                data_file=os.path.join(
+                    os.path.basename(self.raw_data_path), self.source_dataset, file_name
+                ),
             )
             preprocessed_data, worm_idx = self.preprocess_traces(
                 neurons,
@@ -2940,7 +3000,9 @@ class Venkatachalam2024Preprocessor(NeuralBasePreprocessor):
             neuron_ids, traces, raw_time_vector = self.extract_data(raw_data)
             metadata = dict(
                 citation=self.citation,
-                data_file=os.path.join(os.path.basename(self.raw_data_path), self.source_dataset, file_name),
+                data_file=os.path.join(
+                    os.path.basename(self.raw_data_path), self.source_dataset, file_name
+                ),
             )
             preprocessed_data, worm_idx = self.preprocess_traces(
                 neuron_ids,
