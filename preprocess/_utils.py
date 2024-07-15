@@ -328,8 +328,10 @@ class ConnectomeBasePreprocessor:
 
 class DefaultPreprocessor(ConnectomeBasePreprocessor):
     def preprocess(self, save_as="graph_tensors.pt"):
+        #### DEBUG ####
         # Hack to override DefaultProprecessor with Witvliet2020Preprocessor7 which is a more up-to-date connectome of C. elegans.
         return Witvliet2020Preprocessor7.preprocess(self, save_as="graph_tensors.pt")
+        #### DEBUG ####
         # Names of all C. elegans hermaphrodite neurons
         neurons_all = set(self.neuron_labels)
         sep = r"[\t,]"
@@ -420,7 +422,7 @@ class DefaultPreprocessor(ConnectomeBasePreprocessor):
         gsyn_edge_index = gsyn_edge_index.T  # [2, num_edges]
 
         # edge attributes
-        # NOTE: The first feature represents the weight of the gap junctions;
+        # NOTE: The first feature represents the weight of the gap junctions; 
         # The second feature represents the weight of the chemical synapses.
         num_edge_features = 2
 
@@ -467,7 +469,6 @@ class DefaultPreprocessor(ConnectomeBasePreprocessor):
             node_class,
         )
 
-
 class OpenWormPreprocessor(ConnectomeBasePreprocessor):
     def preprocess(self, save_as="graph_tensors_openworm.pt"):
         df = pd.read_csv(os.path.join(RAW_DATA_DIR, "OpenWormConnectome.csv"), sep=r"[\t,]")
@@ -481,18 +482,18 @@ class OpenWormPreprocessor(ConnectomeBasePreprocessor):
 
             if neuron1 in self.neuron_labels and neuron2 in self.neuron_labels:
                 # NOTE: This file lists both types of edges in the same file with only the "type" column to differentiate.
-                # Therefore as we go through the lines, when see the [neuron_i, neuron_j] pair appearing a second time it is a different
+                # Therefore as we go through the lines, when see the [neuron_i, neuron_j] pair appearing a second time it is a different 
                 # type of synapse (chemical vs. electrical) than the one appearing previously (electrical vs chemical, respectively).
-                # The first synapse with [neuron_i, neuron_j] pair encountered could be either electrical or chemical.
+                # The first synapse with [neuron_i, neuron_j] pair encountered could be either electrical or chemical. 
                 synapse_type = df.loc[i, "Type"]
                 num_connections = df.loc[i, "Number of Connections"]
                 edges.append([neuron1, neuron2])
-                if synapse_type == "GapJunction":  # electrical synapse
+                if synapse_type == "GapJunction": # electrical synapse
                     edge_attr.append([num_connections, 0])
                     # Adding the reverse direction to ensure symmetry of gap junctions
                     edges.append([neuron2, neuron1])
                     edge_attr.append([num_connections, 0])
-                elif synapse_type == "Send":  # chemical synapse
+                elif synapse_type == "Send": # chemical synapse
                     edge_attr.append([0, num_connections])
 
         edge_attr = torch.tensor(edge_attr)
@@ -568,12 +569,12 @@ class Witvliet2020Preprocessor7(ConnectomeBasePreprocessor):
         for i in range(len(df)):
             neuron1 = df.loc[i, "pre"]
             neuron2 = df.loc[i, "post"]
-
+            
             if neuron1 in self.neuron_labels and neuron2 in self.neuron_labels:
                 # NOTE: This file lists both types of edges in the same file with only the "type" column to differentiate.
-                # Therefore as we go through the lines, when see the [neuron_i, neuron_j] pair appearing a second time it is a different
+                # Therefore as we go through the lines, when see the [neuron_i, neuron_j] pair appearing a second time it is a different 
                 # type of synapse (chemical vs. electrical) than the one appearing previously (electrical vs chemical, respectively).
-                # The first synapse with [neuron_i, neuron_j] pair encountered could be either electrical or chemical.
+                # The first synapse with [neuron_i, neuron_j] pair encountered could be either electrical or chemical. 
                 edge_type = df.loc[i, "type"]
                 num_connections = df.loc[i, "synapses"]
                 edges.append([neuron1, neuron2])
@@ -608,7 +609,6 @@ class Witvliet2020Preprocessor7(ConnectomeBasePreprocessor):
             node_class,
         )
 
-
 class Witvliet2020Preprocessor8(ConnectomeBasePreprocessor):
     def preprocess(self, save_as="graph_tensors_witvliet2020_8.pt"):
         df = pd.read_csv(os.path.join(RAW_DATA_DIR, "witvliet_2020_8.csv"), sep=r"[\t,]")
@@ -619,12 +619,12 @@ class Witvliet2020Preprocessor8(ConnectomeBasePreprocessor):
         for i in range(len(df)):
             neuron1 = df.loc[i, "pre"]
             neuron2 = df.loc[i, "post"]
-
+            
             if neuron1 in self.neuron_labels and neuron2 in self.neuron_labels:
                 # NOTE: This file lists both types of edges in the same file with only the "type" column to differentiate.
-                # Therefore as we go through the lines, when see the [neuron_i, neuron_j] pair appearing a second time it is a different
+                # Therefore as we go through the lines, when see the [neuron_i, neuron_j] pair appearing a second time it is a different 
                 # type of synapse (chemical vs. electrical) than the one appearing previously (electrical vs chemical, respectively).
-                # The first synapse with [neuron_i, neuron_j] pair encountered could be either electrical or chemical.
+                # The first synapse with [neuron_i, neuron_j] pair encountered could be either electrical or chemical. 
                 edge_type = df.loc[i, "type"]
                 num_connections = df.loc[i, "synapses"]
                 edges.append([neuron1, neuron2])
@@ -678,9 +678,7 @@ class Cook2019Preprocessor(ConnectomeBasePreprocessor):
                         pre = df.iloc[j, 2]
                         if pre in self.neuron_labels and post in self.neuron_labels:
                             edges.append([pre, post])
-                            edge_attr.append(
-                                [0, df.iloc[j, i]]
-                            )  # second edge_attr feature is for gap junction weights
+                            edge_attr.append([0, df.iloc[j, i]]) # second edge_attr feature is for gap junction weights
 
         df = pd.read_excel(xlsx_file, sheet_name="hermaphrodite gap jn symmetric")
 
@@ -694,13 +692,11 @@ class Cook2019Preprocessor(ConnectomeBasePreprocessor):
                         if pre in self.neuron_labels and post in self.neuron_labels:
                             if [pre, post] in edges:
                                 edge_idx = edges.index([pre, post])
-                                edge_attr[edge_idx][0] = df.iloc[
-                                    j, i
-                                ]  # first edge_attr feature is for gap junction weights
+                                edge_attr[edge_idx][0] = df.iloc[j, i] # first edge_attr feature is for gap junction weights
                             else:
                                 edges.append([pre, post])
                                 edge_attr.append([df.iloc[j, i], 0])
-
+                            
         edge_attr = torch.tensor(edge_attr)
         edge_index = torch.tensor(
             [
@@ -737,9 +733,9 @@ class White1986WholePreprocessor(ConnectomeBasePreprocessor):
 
             if neuron1 in self.neuron_labels and neuron2 in self.neuron_labels:
                 # NOTE: This file lists both types of edges in the same file with only the "type" column to differentiate.
-                # Therefore as we go through the lines, when see the [neuron_i, neuron_j] pair appearing a second time it is a different
+                # Therefore as we go through the lines, when see the [neuron_i, neuron_j] pair appearing a second time it is a different 
                 # type of synapse (chemical vs. electrical) than the one appearing previously (electrical vs chemical, respectively).
-                # The first synapse with [neuron_i, neuron_j] pair encountered could be either electrical or chemical.
+                # The first synapse with [neuron_i, neuron_j] pair encountered could be either electrical or chemical. 
                 edge_type = df.loc[i, "type"]
                 num_connections = df.loc[i, "synapses"]
                 edges.append([neuron1, neuron2])
@@ -788,9 +784,9 @@ class White1986N2UPreprocessor(ConnectomeBasePreprocessor):
 
             if neuron1 in self.neuron_labels and neuron2 in self.neuron_labels:
                 # NOTE: This file lists both types of edges in the same file with only the "type" column to differentiate.
-                # Therefore as we go through the lines, when see the [neuron_i, neuron_j] pair appearing a second time it is a different
+                # Therefore as we go through the lines, when see the [neuron_i, neuron_j] pair appearing a second time it is a different 
                 # type of synapse (chemical vs. electrical) than the one appearing previously (electrical vs chemical, respectively).
-                # The first synapse with [neuron_i, neuron_j] pair encountered could be either electrical or chemical.
+                # The first synapse with [neuron_i, neuron_j] pair encountered could be either electrical or chemical. 
                 edge_type = df.loc[i, "type"]
                 num_connections = df.loc[i, "synapses"]
                 edges.append([neuron1, neuron2])
@@ -839,9 +835,9 @@ class White1986JSHPreprocessor(ConnectomeBasePreprocessor):
 
             if neuron1 in self.neuron_labels and neuron2 in self.neuron_labels:
                 # NOTE: This file lists both types of edges in the same file with only the "type" column to differentiate.
-                # Therefore as we go through the lines, when see the [neuron_i, neuron_j] pair appearing a second time it is a different
+                # Therefore as we go through the lines, when see the [neuron_i, neuron_j] pair appearing a second time it is a different 
                 # type of synapse (chemical vs. electrical) than the one appearing previously (electrical vs chemical, respectively).
-                # The first synapse with [neuron_i, neuron_j] pair encountered could be either electrical or chemical.
+                # The first synapse with [neuron_i, neuron_j] pair encountered could be either electrical or chemical. 
                 edge_type = df.loc[i, "type"]
                 num_connections = df.loc[i, "synapses"]
                 edges.append([neuron1, neuron2])
@@ -890,9 +886,9 @@ class White1986JSEPreprocessor(ConnectomeBasePreprocessor):
 
             if neuron1 in self.neuron_labels and neuron2 in self.neuron_labels:
                 # NOTE: This file lists both types of edges in the same file with only the "type" column to differentiate.
-                # Therefore as we go through the lines, when see the [neuron_i, neuron_j] pair appearing a second time it is a different
+                # Therefore as we go through the lines, when see the [neuron_i, neuron_j] pair appearing a second time it is a different 
                 # type of synapse (chemical vs. electrical) than the one appearing previously (electrical vs chemical, respectively).
-                # The first synapse with [neuron_i, neuron_j] pair encountered could be either electrical or chemical.
+                # The first synapse with [neuron_i, neuron_j] pair encountered could be either electrical or chemical. 
                 edge_type = df.loc[i, "type"]
                 num_connections = df.loc[i, "synapses"]
                 edges.append([neuron1, neuron2])
@@ -1608,7 +1604,6 @@ class NeuralBasePreprocessor:
         self.smooth_kwargs = kwargs
         self.raw_data_path = os.path.join(ROOT_DIR, "opensource_data")
         self.processed_data_path = os.path.join(ROOT_DIR, "data/processed/neural")
-        self.citation = None
 
     def smooth_data(self, data, time_in_seconds):
         return smooth_data_preprocess(
@@ -1662,172 +1657,25 @@ class NeuralBasePreprocessor:
         with open(file, "wb") as f:
             pickle.dump(data_dict, f)
 
-    # def create_neuron_idx(self, label_list):
-    #     """
-    #     Overrides the base class method to handle the complicated data
-    #     format structure of the Leifer2023 dataset.
-    #     """
-    #     neuron_to_idx = dict()
-    #     num_unnamed_neurons = 0
-    #     for j, item in enumerate(label_list):
-    #         previous_list = label_list[:j]
-    #         if not item.isalnum(): # happens when the label is empty string ''
-    #             label_list[j] = str(j)
-    #             num_unnamed_neurons += 1
-    #             neuron_to_idx[str(j)] = j
-    #         else:
-    #             if item in NEURON_LABELS and item not in previous_list:
-    #                 neuron_to_idx[item] = j
-    #             # If a neuron label repeated assume a mistake and treat the duplicate as an unnamed neuron
-    #             elif item in NEURON_LABELS and item in previous_list: 
-    #                 label_list[j] = str(j)
-    #                 num_unnamed_neurons += 1
-    #                 neuron_to_idx[str(j)] = j
-    #             # Handle ambiguous neuron labels
-    #             else:
-    #                 if str(item + "L") in NEURON_LABELS and str(item + "L") not in previous_list:
-    #                     label_list[j] = str(item + "L")
-    #                     neuron_to_idx[str(item + "L")] = j
-    #                 elif str(item + "R") in NEURON_LABELS and str(item + "R") not in previous_list:
-    #                     label_list[j] = str(item + "R")
-    #                     neuron_to_idx[str(item + "R")] = j
-    #                 else: # happens when the label is "merge"; TODO: Ask authors what that is?
-    #                     label_list[j] = str(j)
-    #                     num_unnamed_neurons += 1
-    #                     neuron_to_idx[str(j)] = j
-    #     num_named_neurons = len(
-    #         [k for k in neuron_to_idx.keys() if not k.isnumeric()]
-    #     )  # number of labeled neurons
-    #     assert (
-    #         num_named_neurons == len(label_list) - num_unnamed_neurons
-    #     ), "Incorrect calculation of the number of named neurons."
-    #     return neuron_to_idx, num_named_neurons
-    
     def create_neuron_idx(self, unique_IDs):
-        # TODO: Supplement this this with the Leifer2023 version so we only need this one definition.
-        idx_to_neuron = {
-            nid: (str(nid) if (j is None or isinstance(j, np.ndarray) or j=="merge" or not j.isalnum()) else str(j))
+        neuron_to_idx = {
+            nid: (str(nid) if (j is None or isinstance(j, np.ndarray)) else str(j))
             for nid, j in enumerate(unique_IDs)
         }
-        idx_to_neuron = {
+        neuron_to_idx = {
             nid: (
                 name.replace("0", "") if not name.endswith("0") and not name.isnumeric() else name
             )
-            for nid, name in idx_to_neuron.items()
+            for nid, name in neuron_to_idx.items()
         }
-        idx_to_neuron = {
+        neuron_to_idx = {
             nid: (str(nid) if name not in set(NEURON_LABELS) else name)
-            for nid, name in idx_to_neuron.items()
+            for nid, name in neuron_to_idx.items()
         }
-        neuron_to_idx = dict((v, k) for k, v in idx_to_neuron.items())
-        num_named_neurons = len([k for k in neuron_to_idx.keys() if not k.isnumeric()]) # number of labled neurons
+        neuron_to_idx = dict((v, k) for k, v in neuron_to_idx.items())
+        # Number of neurons that were labeled with a name
+        num_named_neurons = len([k for k in neuron_to_idx.keys() if not k.isnumeric()])
         return neuron_to_idx, num_named_neurons
-
-    def find_nearest_label(self, query, possible_labels, char="?"):
-        """Find the nearest neuron label from a list given a query."""
-        # Ensure the possible labels is a sorted list
-        possible_labels = sorted(possible_labels)
-        # Remove the '?' from the query to simplify comparison
-        query_base = query.replace(char, "")
-        # Initialize variables to track the best match
-        nearest_label = None
-        highest_similarity = -1  # Start with lowest similarity possible
-        for label in possible_labels:
-            # Count matching characters, ignoring the character at the position of '?'
-            similarity = sum(1 for q, l in zip(query_base, label) if q == l)
-            # Update the nearest label if this one is more similar
-            if similarity > highest_similarity:
-                nearest_label = label
-                highest_similarity = similarity
-        return nearest_label, possible_labels.index(nearest_label)
-    
-    def get_longest_nan_stretch(self, arr):
-        """
-        Calculate the longest continuous stretch of NaNs in a 1D array.
-
-        Parameters:
-        arr (np.array): 1D Input array to check.
-
-        Returns:
-        int: Length of the longest continuous stretch of NaNs.
-        """
-        assert arr.ndim == 1, "Array must be a 1D time series."
-        isnan = np.isnan(arr)
-        if not np.any(isnan):
-            return 0
-        stretches = np.diff(
-            np.where(np.concatenate(([isnan[0]], isnan[:-1] != isnan[1:], [True])))[0]
-        )[::2]
-        return stretches.max() if len(stretches) > 0 else 0
-
-    def filter_bad_traces_by_nan_stretch(self, data, nan_stretch_threshold=0.05):
-        """
-        Filters out traces with long stretches of NaNs.
-
-        Parameters:
-        data (np.array): The neural data array with shape (time_points, neurons).
-        nan_stretch_threshold (float): Proportion of the total recording time above which traces are considered bad.
-
-        Returns:
-        (np.array, np.array): Tuple of filtered neural data and the associated mask into the original data array.
-        """
-        t, n = data.shape
-        max_nan_stretch_allowed = int(t * nan_stretch_threshold)
-        bad_traces_mask = (
-            np.apply_along_axis(self.get_longest_nan_stretch, 0, data) > max_nan_stretch_allowed
-        )
-        good_traces_mask = ~bad_traces_mask
-        filtered_data = data[:, good_traces_mask]
-        return filtered_data, good_traces_mask
-
-    def is_monotonic_linear(self, arr):
-        """
-        Checks if the array is a line with constant slope (i.e linear).
-
-        Parameters:
-        arr (np.array): 1D Input array to check.
-
-        Returns:
-        bool: True if the array is linear, False otherwise.
-        """
-        assert arr.ndim == 1, "Array must be a 1D (univariate) time series."
-        diff = np.round(np.diff(arr), decimals=3)
-        result = np.unique(diff)
-        return result.size == 1
-
-    def filter_bad_traces_by_linear_segments(
-        self, data, window_size=50, linear_segment_threshold=1e-3
-    ):
-        """
-        Filters out traces with significant proportions of linear segments. Linear segments suggest
-        that the data was imputed with linear interpolation to remove stretches of NaN values.
-
-        There are weird-looking traces in some raw data caused by interpolations of missing values
-        (NaNs) when neurons were not consistently tracked over time due to imperfect nonrigid registration.
-        This helper function was written to filter out these problematic imputed neural traces.
-
-        Parameters:
-        data (np.array): The neural data array with shape (time_points, neurons).
-        window_size (int): The size of the window to check for linearity.
-        linear_segment_threshold (float): Proportion of linear segments above which traces are considered bad.
-
-        Returns:
-        (np.array, nparray): Tuple of filtered neural data and the associated mask into the original data array.
-        """
-        t, n = data.shape
-        linear_segments = np.zeros(n, dtype=int)
-        window_start = range(
-            0, t - window_size, window_size // 2
-        )  # overlapping/staggered windows faster than non-overlapping
-        for i in window_start:
-            segment = data[i : i + window_size, :]
-            ls = np.apply_along_axis(self.is_monotonic_linear, 0, segment)
-            linear_segments += ls.astype(int)
-        proportion_linear = linear_segments / len(window_start)
-        bad_traces_mask = np.array(proportion_linear > linear_segment_threshold)
-        good_traces_mask = ~bad_traces_mask
-        filtered_data = data[:, good_traces_mask]
-        return filtered_data, good_traces_mask
 
     def load_data(self, file_name):
         """
@@ -1843,13 +1691,12 @@ class NeuralBasePreprocessor:
         """
         raise NotImplementedError()
 
-    def create_metadata(self, **kwargs):
+    def create_metadata(self):
         """
         Place-holder method for making dictionary of
         extra information or metadata for a dataset.
         """
         extra_info = dict()
-        extra_info.update(kwargs)
         return extra_info
 
     def pick_non_none(self, l):
@@ -1876,10 +1723,9 @@ class NeuralBasePreprocessor:
         raw_timeVectorSeconds,
         preprocessed_data,
         worm_idx,
-        metadata=dict(),
     ):
         """
-        Helper function for preprocessing calcium fluorescence neural data from one or multiple worms.
+        Helper function for preprocessing calcium fluorescence neural data from one worm.
 
         Args:
             neuron_IDs (list): List of arrays of neuron IDs.
@@ -1887,30 +1733,19 @@ class NeuralBasePreprocessor:
             raw_timeVectorSeconds (list): List of arrays of time vectors, with indices corresponding to neuron_IDs.
             preprocessed_data (dict): Dictionary of preprocessed data from previous worms that gets extended with more worms here.
             worm_idx (int): Index of the current worm.
-            kwargs (dict): Extra worm information passed to create_metadata method.
 
         Returns:
             dict: Collection of all preprocessed worm data so far.
             int: Index of the next worm to preprocess.
         """
-        assert (
-            len(neuron_IDs) == len(traces) == len(raw_timeVectorSeconds)
-        ), "Lists for neuron labels, activity data, and time vectors must all be the same length."
-        # Each worm has a unique set of neurons, time vectors and calcium traces
         for i, trace_data in enumerate(traces):
             # Matrix `trace_data` should be shaped as (time, neurons)
             assert trace_data.ndim == 2, "Calcium traces must be 2D arrays."
-            assert trace_data.shape[0] == len(
-                raw_timeVectorSeconds[i]
-            ), "Calcium trace does not have the right number of time points."
             assert trace_data.shape[1] == len(
                 neuron_IDs[i]
             ), "Calcium trace does not have the right number of neurons."
             # Ignore any worms with empty traces
             if trace_data.size == 0:
-                continue
-            # Ignore any worms with very short recordings
-            if len(raw_timeVectorSeconds[i]) < 600:
                 continue
             # Map named neurons
             unique_IDs = [
@@ -1924,9 +1759,12 @@ class NeuralBasePreprocessor:
             unique_IDs = [unique_IDs[_] for _ in unique_indices]
             # Create neuron label to index mapping
             neuron_to_idx, num_named_neurons = self.create_neuron_idx(unique_IDs)
-            # Ignore any worms with no labelled neurons
+            ## DEBUG ###
+            # Skip worms with no labelled neurons.
+            # TODO: Should we do this? What if we want to infer these using trained models as a dowstream task?
             if num_named_neurons == 0:
                 continue
+            ## DEBUG ###
             # Only get data for unique neurons
             trace_data = trace_data[:, unique_indices.astype(int)]
             # 2. Normalize calcium data
@@ -1999,9 +1837,7 @@ class NeuralBasePreprocessor:
                     "smooth_residual_calcium": resampled_smooth_residual_calcium,  # smoothed and resampled
                     "time_in_seconds": resampled_time_in_seconds,  # resampled time vector
                     "worm": worm,  # worm ID
-                    "extra_info": self.create_metadata(
-                        **metadata
-                    ),  # additional information and metadata
+                    "extra_info": self.create_metadata(),  # additional information and metadata
                 }
             }
             # Update preprocessed data collection
@@ -2009,6 +1845,95 @@ class NeuralBasePreprocessor:
         # Return the updated preprocessed data and worm index
         return preprocessed_data, worm_idx
 
+
+class Nejatbakhsh2020Preprocessor(NeuralBasePreprocessor):
+    def __init__(self, transform, smooth_method, interpolate_method, resample_dt, **kwargs):
+        super().__init__(
+            "Nejatbakhsh2020",
+            transform,
+            smooth_method,
+            interpolate_method,
+            resample_dt,
+            **kwargs,
+        )
+    
+    def extract_data(self, file):
+        with NWBHDF5IO(file, "r") as io:
+            read_nwbfile = io.read()
+            traces = np.array(read_nwbfile.processing["CalciumActivity"].data_interfaces["SignalRawFluor"].roi_response_series["SignalCalciumImResponseSeries"].data)
+            neuron_ids = np.array(read_nwbfile.processing["CalciumActivity"].data_interfaces["NeuronIDs"].labels)
+            time_vector = np.arange(0, len(neuron_ids))
+        
+        return neuron_ids, traces, time_vector
+    
+    def create_metadata(self):
+        extra_info = dict(
+            citation="Nejatbakhsh 2020 dataset"
+        )
+        return extra_info
+    
+    def preprocess(self):
+        preprocessed_data = dict()
+        worm_idx = 0
+        for subfolder in tqdm(os.listdir(os.path.join(self.raw_data_path, self.source_dataset))):
+            for file_name in os.listdir(os.path.join(self.raw_data_path, self.source_dataset, subfolder)):
+                neuron_ids, traces, raw_time_vector = self.extract_data(os.path.join(self.raw_data_path, self.source_dataset, subfolder, file_name))
+                preprocessed_data, worm_idx = self.preprocess_traces([neuron_ids], [traces], [raw_time_vector], preprocessed_data, worm_idx)
+        for worm in preprocessed_data.keys():
+            preprocessed_data[worm] = reshape_calcium_data(preprocessed_data[worm])
+        self.save_data(preprocessed_data)
+        logger.info(f"Finished processing {self.source_dataset}.")
+        
+class Venkatachalam2024Preprocessor(NeuralBasePreprocessor):
+    def __init__(self, transform, smooth_method, interpolate_method, resample_dt, **kwargs):
+        super().__init__(
+            "Venkatachalam2024",
+            transform,
+            smooth_method,
+            interpolate_method,
+            resample_dt,
+            **kwargs,
+        )
+    
+    def unzip_and_extract_csv(self, source_directory, zip_path):
+        with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+            path = zip_ref.extractall(source_directory)
+        return zip_path.replace(".zip", ".csv")
+    
+    def load_data(self, file_name):
+        zip_path = os.path.join(self.raw_data_path, self.source_dataset, file_name)
+        csv_file = self.unzip_and_extract_csv(os.path.join(self.raw_data_path, self.source_dataset), zip_path)
+        data = pd.read_csv(csv_file)
+        return data
+    
+    def extract_data(self, data):
+        neuron_ids = data['neuron'].unique()
+        # 9 + 98 blank timesteps at beginning (0-97)
+        time_vector = data.columns[107:-1].astype(float).to_numpy()  # Assuming columns 9 onwards are time points
+        traces = data.iloc[:, 107:-1].values.T  # Transpose to get (time, neurons)
+        
+        return neuron_ids, traces, time_vector
+    
+    def create_metadata(self):
+        extra_info = dict(
+            citation="Venkatachalam dataset"
+        )
+        return extra_info
+    
+    def preprocess(self):
+        preprocessed_data = dict()
+        worm_idx = 0
+        for file_name in os.listdir(os.path.join(self.raw_data_path, self.source_dataset)):
+            if not file_name.endswith(".zip"):
+                continue
+            raw_data = self.load_data(file_name)
+            neuron_ids, traces, raw_time_vector = self.extract_data(raw_data)
+            preprocessed_data, worm_idx = self.preprocess_traces([neuron_ids], [traces], [raw_time_vector], preprocessed_data, worm_idx)
+        for worm in preprocessed_data.keys():
+            preprocessed_data[worm] = reshape_calcium_data(preprocessed_data[worm])
+        self.save_data(preprocessed_data)
+        logger.info(f"Finished processing {self.source_dataset}.")
+        
 
 class Kato2015Preprocessor(NeuralBasePreprocessor):
     def __init__(self, transform, smooth_method, interpolate_method, resample_dt, **kwargs):
@@ -2020,7 +1945,6 @@ class Kato2015Preprocessor(NeuralBasePreprocessor):
             resample_dt,
             **kwargs,
         )
-        self.citation = "Kato et al., Cell 2015, _Global Brain Dynamics Embed the Motor Command Sequence of Caenorhabditis elegans_"
 
     def extract_data(self, arr):
         # Identified neuron IDs (only subset have neuron names)
@@ -2034,6 +1958,12 @@ class Kato2015Preprocessor(NeuralBasePreprocessor):
         # Return the extracted data
         return all_IDs, all_traces, timeVectorSeconds
 
+    def create_metadata(self):
+        extra_info = dict(
+            citation="Kato et al., Cell 2015, _Global Brain Dynamics Embed the Motor Command Sequence of Caenorhabditis elegans_"
+        )
+        return extra_info
+
     def preprocess(self):
         # Store preprocessed data
         preprocessed_data = dict()
@@ -2044,19 +1974,8 @@ class Kato2015Preprocessor(NeuralBasePreprocessor):
             data_key = file_name.split(".")[0]
             raw_data = self.load_data(file_name)[data_key]  # load
             neuron_IDs, traces, raw_timeVectorSeconds = self.extract_data(raw_data)  # extract
-            metadata = dict(
-                citation=self.citation,
-                data_file=os.path.join(
-                    os.path.basename(self.raw_data_path), self.source_dataset, file_name
-                ),
-            )
             preprocessed_data, worm_idx = self.preprocess_traces(
-                neuron_IDs,
-                traces,
-                raw_timeVectorSeconds,
-                preprocessed_data,
-                worm_idx,
-                metadata,
+                neuron_IDs, traces, raw_timeVectorSeconds, preprocessed_data, worm_idx
             )  # preprocess
         # Reshape calcium data
         for worm in preprocessed_data.keys():
@@ -2076,7 +1995,6 @@ class Nichols2017Preprocessor(NeuralBasePreprocessor):
             resample_dt,
             **kwargs,
         )
-        self.citation = "Nichols et al., Science 2017, _A global brain state underlies C. elegans sleep behavior_"
 
     def extract_data(self, arr):
         # Identified neuron IDs (only subset have neuron names)
@@ -2087,6 +2005,12 @@ class Nichols2017Preprocessor(NeuralBasePreprocessor):
         timeVectorSeconds = arr["timeVectorSeconds"]
         # Return the extracted data
         return all_IDs, all_traces, timeVectorSeconds
+
+    def create_metadata(self):
+        extra_info = dict(
+            citation="Nichols et al., Science 2017, _A global brain state underlies C. elegans sleep behavior_"
+        )
+        return extra_info
 
     def preprocess(self):
         # Store preprocessed data
@@ -2103,19 +2027,8 @@ class Nichols2017Preprocessor(NeuralBasePreprocessor):
             data_key = file_name.split(".")[0]
             raw_data = self.load_data(file_name)[data_key]  # load
             neuron_IDs, traces, raw_timeVectorSeconds = self.extract_data(raw_data)  # extract
-            metadata = dict(
-                citation=self.citation,
-                data_file=os.path.join(
-                    os.path.basename(self.raw_data_path), self.source_dataset, file_name
-                ),
-            )
             preprocessed_data, worm_idx = self.preprocess_traces(
-                neuron_IDs,
-                traces,
-                raw_timeVectorSeconds,
-                preprocessed_data,
-                worm_idx,
-                metadata,
+                neuron_IDs, traces, raw_timeVectorSeconds, preprocessed_data, worm_idx
             )  # preprocess
         # Reshape calcium data
         for worm in preprocessed_data.keys():
@@ -2135,7 +2048,6 @@ class Skora2018Preprocessor(NeuralBasePreprocessor):
             resample_dt,
             **kwargs,
         )
-        self.citation = "Skora et al., Cell Reports 2018, _Energy Scarcity Promotes a Brain-wide Sleep State Modulated by Insulin Signaling in C. elegans_"
 
     def extract_data(self, arr):
         # Identified neuron IDs (only subset have neuron names)
@@ -2147,6 +2059,12 @@ class Skora2018Preprocessor(NeuralBasePreprocessor):
         # Return the extracted data
         return all_IDs, all_traces, timeVectorSeconds
 
+    def create_metadata(self):
+        extra_info = dict(
+            citation="Skora et al., Cell Reports 2018, _Energy Scarcity Promotes a Brain-wide Sleep State Modulated by Insulin Signaling in C. elegans_"
+        )
+        return extra_info
+
     def preprocess(self):
         # Store preprocessed data
         preprocessed_data = dict()
@@ -2157,19 +2075,8 @@ class Skora2018Preprocessor(NeuralBasePreprocessor):
             data_key = file_name.split(".")[0]
             raw_data = self.load_data(file_name)[data_key]  # load
             neuron_IDs, traces, raw_timeVectorSeconds = self.extract_data(raw_data)  # extract
-            metadata = dict(
-                citation=self.citation,
-                data_file=os.path.join(
-                    os.path.basename(self.raw_data_path), self.source_dataset, file_name
-                ),
-            )
             preprocessed_data, worm_idx = self.preprocess_traces(
-                neuron_IDs,
-                traces,
-                raw_timeVectorSeconds,
-                preprocessed_data,
-                worm_idx,
-                metadata,
+                neuron_IDs, traces, raw_timeVectorSeconds, preprocessed_data, worm_idx
             )  # preprocess
         # Reshape calcium data
         for worm in preprocessed_data.keys():
@@ -2189,7 +2096,6 @@ class Kaplan2020Preprocessor(NeuralBasePreprocessor):
             resample_dt,
             **kwargs,
         )
-        self.citation = "Kaplan et al., Neuron 2020, _Nested Neuronal Dynamics Orchestrate a Behavioral Hierarchy across Timescales_"
 
     def load_data(self, file_name):
         # Load data with mat73
@@ -2206,6 +2112,12 @@ class Kaplan2020Preprocessor(NeuralBasePreprocessor):
         # Return the extracted data
         return all_IDs, all_traces, timeVectorSeconds
 
+    def create_metadata(self):
+        extra_info = dict(
+            citation="Kaplan et al., Neuron 2020, _Nested Neuronal Dynamics Orchestrate a Behavioral Hierarchy across Timescales_"
+        )
+        return extra_info
+
     def preprocess(self):
         # Store preprocessed data
         preprocessed_data = dict()
@@ -2220,19 +2132,8 @@ class Kaplan2020Preprocessor(NeuralBasePreprocessor):
             data_key = "_".join((file_name.split(".")[0].strip("Neuron2019_Data_"), "Neuron2019"))
             raw_data = self.load_data(file_name)[data_key]  # load
             neuron_IDs, traces, raw_timeVectorSeconds = self.extract_data(raw_data)  # extract
-            metadata = dict(
-                citation=self.citation,
-                data_file=os.path.join(
-                    os.path.basename(self.raw_data_path), self.source_dataset, file_name
-                ),
-            )
             preprocessed_data, worm_idx = self.preprocess_traces(
-                neuron_IDs,
-                traces,
-                raw_timeVectorSeconds,
-                preprocessed_data,
-                worm_idx,
-                metadata,
+                neuron_IDs, traces, raw_timeVectorSeconds, preprocessed_data, worm_idx
             )  # preprocess
         # Reshape calcium data
         for worm in preprocessed_data.keys():
@@ -2252,7 +2153,6 @@ class Yemini2021Preprocessor(NeuralBasePreprocessor):
             resample_dt,
             **kwargs,
         )
-        self.citation = "Yemini et al., Cell CurrBio 2022, _NeuroPAL: A Multicolor Atlas for Whole-Brain Neuronal Identification in C. elegans_"
 
     def load_data(self, file_name):
         # Overriding the base class method to use scipy.io.loadmat for .mat files
@@ -2340,20 +2240,25 @@ class Yemini2021Preprocessor(NeuralBasePreprocessor):
                 ],
                 dtype=np.float32,
             ).T  # (time, neurons)
+            # Impute any remaining NaN values
+            imputer = IterativeImputer(random_state=0)
+            if np.isnan(real_data).any():
+                real_data = imputer.fit_transform(real_data)
             # Observed empirically that the first three values of activity equal 0.0s
             activity = activity[4:]
             tvec = tvec[4:]
-            # Impute any remaining NaN values
-            # NOTE: This is very slow with the default settings!
-            imputer = IterativeImputer(random_state=0, n_nearest_features=10, skip_complete=False)
-            if np.isnan(activity).any():
-                activity = imputer.fit_transform(activity)
             # Add acitvity to list of traces
             traces.append(activity)
             # Add time vector to list of time vectors
             time_vector_seconds.append(tvec)
         # Return the extracted data
         return neuron_IDs, traces, time_vector_seconds
+
+    def create_metadata(self):
+        extra_info = dict(
+            citation="Yemini et al., Cell CurrBio 2022, _NeuroPAL: A Multicolor Atlas for Whole-Brain Neuronal Identification in C. elegans_"
+        )
+        return extra_info
 
     def preprocess(self):
         # Store preprocessed data
@@ -2368,19 +2273,8 @@ class Yemini2021Preprocessor(NeuralBasePreprocessor):
         ]:
             raw_data = self.load_data(file_name)  # load
             neuron_IDs, traces, raw_timeVectorSeconds = self.extract_data(raw_data)  # extract
-            metadata = dict(
-                citation=self.citation,
-                data_file=os.path.join(
-                    os.path.basename(self.raw_data_path), self.source_dataset, file_name
-                ),
-            )
             preprocessed_data, worm_idx = self.preprocess_traces(
-                neuron_IDs,
-                traces,
-                raw_timeVectorSeconds,
-                preprocessed_data,
-                worm_idx,
-                metadata,
+                neuron_IDs, traces, raw_timeVectorSeconds, preprocessed_data, worm_idx
             )  # preprocess
         # Reshape calcium data
         for worm in preprocessed_data.keys():
@@ -2400,7 +2294,6 @@ class Uzel2022Preprocessor(NeuralBasePreprocessor):
             resample_dt,
             **kwargs,
         )
-        self.citation = "Uzel et al., Cell CurrBio 2022, _A set of hub neurons and non-local connectivity features support global brain dynamics in C. elegans_"
 
     def load_data(self, file_name):
         # Load data with mat73
@@ -2416,6 +2309,12 @@ class Uzel2022Preprocessor(NeuralBasePreprocessor):
         # Return the extracted data
         return all_IDs, all_traces, timeVectorSeconds
 
+    def create_metadata(self):
+        extra_info = dict(
+            citation="Uzel et al., Cell CurrBio 2022, _A set of hub neurons and non-local connectivity features support global brain dynamics in C. elegans_"
+        )
+        return extra_info
+
     def preprocess(self):
         preprocessed_data = dict()  # Store preprocessed data
         worm_idx = 0  # Initialize worm index outside file loop
@@ -2424,19 +2323,8 @@ class Uzel2022Preprocessor(NeuralBasePreprocessor):
             data_key = "Uzel_WT"
             raw_data = self.load_data(file_name)[data_key]  # load
             neuron_IDs, traces, raw_timeVectorSeconds = self.extract_data(raw_data)  # extract
-            metadata = dict(
-                citation=self.citation,
-                data_file=os.path.join(
-                    os.path.basename(self.raw_data_path), self.source_dataset, file_name
-                ),
-            )
             preprocessed_data, worm_idx = self.preprocess_traces(
-                neuron_IDs,
-                traces,
-                raw_timeVectorSeconds,
-                preprocessed_data,
-                worm_idx,
-                metadata,
+                neuron_IDs, traces, raw_timeVectorSeconds, preprocessed_data, worm_idx
             )  # preprocess
         # Reshape calcium data
         for worm in preprocessed_data.keys():
@@ -2456,7 +2344,6 @@ class Dag2023Preprocessor(NeuralBasePreprocessor):
             resample_dt,
             **kwargs,
         )
-        self.citation = "Dag et al., Cell 2023. “_Dissecting the Functional Organization of the C. Elegans Serotonergic System at Whole-Brain Scale_"
 
     def load_data(self, file_name):
         data = h5py.File(os.path.join(self.raw_data_path, self.source_dataset, file_name), "r")
@@ -2466,6 +2353,24 @@ class Dag2023Preprocessor(NeuralBasePreprocessor):
         with open(os.path.join(self.raw_data_path, self.source_dataset, labels_file), "r") as f:
             label_info = json.load(f)
         return label_info
+
+    def find_nearest_label(self, query, possible_labels, char="?"):
+        """Find the nearest neuron label from a list given a query."""
+        # Ensure the possible labels is a sorted list
+        possible_labels = sorted(possible_labels)
+        # Remove the '?' from the query to simplify comparison
+        query_base = query.replace(char, "")
+        # Initialize variables to track the best match
+        nearest_label = None
+        highest_similarity = -1  # Start with lowest similarity possible
+        for label in possible_labels:
+            # Count matching characters, ignoring the character at the position of '?'
+            similarity = sum(1 for q, l in zip(query_base, label) if q == l)
+            # Update the nearest label if this one is more similar
+            if similarity > highest_similarity:
+                nearest_label = label
+                highest_similarity = similarity
+        return nearest_label, possible_labels.index(nearest_label)
 
     def extract_data(self, data_file, labels_file):
         """Slightly different extract_data method for Dag2023 dataset."""
@@ -2505,7 +2410,7 @@ class Dag2023Preprocessor(NeuralBasePreprocessor):
             neurons = [str(i) for i in indices]
         # Ensure only calcium data at selected indices is kept
         calcium = calcium[:, indices]
-        # Neurons with DV/LR ambiguity have '?' or '??' in labels that must be inferred
+        # Neurons with dorso-ventral/lateral ambiguity have a '?' in the label that must be inferred
         neurons_copy = []
         for label in neurons:
             # If the neuron is unknown it will have a numeric label corresponding to its index
@@ -2517,16 +2422,11 @@ class Dag2023Preprocessor(NeuralBasePreprocessor):
                 label, set(NEURON_LABELS) - set(neurons_copy), char="?"
             )
             neurons_copy.append(replacement)
-
-        ### DEBUG ###
-        # Remove badly imputed neurons from the data
-        filt_calcium, filt_mask = self.filter_bad_traces_by_linear_segments(calcium)
-        filt_neurons_copy = np.array(neurons_copy, dtype=str)[filt_mask].tolist()
-        ### DEBUG ###
-
+        # Convert the list of neuron labels to a numpy array
+        neurons = np.array(neurons_copy, dtype=str)
         # Make the extracted data into a list of arrays
-        all_IDs = [filt_neurons_copy]
-        all_traces = [filt_calcium]
+        all_IDs = [neurons]
+        all_traces = [calcium]
         timeVectorSeconds = [timevec]
         # Return the extracted data
         return all_IDs, all_traces, timeVectorSeconds
@@ -2537,50 +2437,31 @@ class Dag2023Preprocessor(NeuralBasePreprocessor):
         worm_idx = 0  # Initialize worm index outside file loop
         # There are two subfolders in the Dag2023 dataset: 'swf415_no_id' and 'swf702_with_id'
         withid_data_files = os.path.join(self.raw_data_path, "Dag2023", "swf702_with_id")
-        noid_data_files = os.path.join(self.raw_data_path, "Dag2023", "swf415_no_id")  # unused
+        noid_data_files = os.path.join(self.raw_data_path, "Dag2023", "swf415_no_id")
         # 'NeuroPAL_labels_dict.json' maps data file names to a dictionary of neuron label information
         labels_file = "NeuroPAL_labels_dict.json"
         # First deal with the swf702_with_id which contains data from labeled neurons
-        for file_name in os.listdir(withid_data_files):
-            if not file_name.endswith(".h5"):
+        for file in os.listdir(withid_data_files):
+            if not file.endswith(".h5"):
                 continue
-            data_file = os.path.join("swf702_with_id", file_name)
+            data_file = os.path.join("swf702_with_id", file)
             neurons, raw_traces, time_vector_seconds = self.extract_data(data_file, labels_file)
-            metadata = dict(
-                citation=self.citation,
-                data_file=os.path.join(
-                    os.path.basename(self.raw_data_path), self.source_dataset, file_name
-                ),
-            )
             preprocessed_data, worm_idx = self.preprocess_traces(
-                neurons,
-                raw_traces,
-                time_vector_seconds,
-                preprocessed_data,
-                worm_idx,
-                metadata,
+                neurons, raw_traces, time_vector_seconds, preprocessed_data, worm_idx
             )  # preprocess
+        ### DEBUG ###
         # Next deal with the swf415_no_id which contains purely unlabeled neuron data
-        # NOTE: These don't get used at all as they are skipped in NeuralBasePreprocessor.preprocess_traces since their num_named_neurons==0.
-        for file_name in os.listdir(noid_data_files):
-            if not file_name.endswith(".h5"):
+        # NOTE: These don't get used at all as they are skipped in
+        # NeuralBasePreprocessor.preprocess_traces, because num_named_neurons == 0.
+        for file in os.listdir(noid_data_files):
+            if not file.endswith(".h5"):
                 continue
-            data_file = os.path.join("swf415_no_id", file_name)
+            data_file = os.path.join("swf415_no_id", file)
             neurons, raw_traces, time_vector_seconds = self.extract_data(data_file, labels_file)
-            metadata = dict(
-                citation=self.citation,
-                data_file=os.path.join(
-                    os.path.basename(self.raw_data_path), self.source_dataset, file_name
-                ),
-            )
             preprocessed_data, worm_idx = self.preprocess_traces(
-                neurons,
-                raw_traces,
-                time_vector_seconds,
-                preprocessed_data,
-                worm_idx,
-                metadata,
+                neurons, raw_traces, time_vector_seconds, preprocessed_data, worm_idx
             )  # preprocess
+        ### DEBUG ###
         # Reshape calcium data
         for worm in preprocessed_data.keys():
             preprocessed_data[worm] = reshape_calcium_data(preprocessed_data[worm])
@@ -2588,6 +2469,12 @@ class Dag2023Preprocessor(NeuralBasePreprocessor):
         self.save_data(preprocessed_data)
         logger.info(f"Finished processing {self.source_dataset}.")
         return None
+
+    def create_metadata(self):
+        extra_info = dict(
+            citation="Dag et al., Cell 2023. “_Dissecting the Functional Organization of the C. Elegans Serotonergic System at Whole-Brain Scale_"
+        )
+        return extra_info
 
 
 class Flavell2023Preprocessor(NeuralBasePreprocessor):
@@ -2600,7 +2487,22 @@ class Flavell2023Preprocessor(NeuralBasePreprocessor):
             resample_dt,
             **kwargs,
         )
-        self.citation = "Atanas et al., Cell 2023, _Brain-Wide Representations of Behavior Spanning Multiple Timescales and States in C. Elegans_"
+
+    def find_nearest_label(self, query, possible_labels, char="?"):
+        """Find the nearest neuron label from a list given a query."""
+        # Remove the '?' from the query to simplify comparison
+        query_base = query.replace(char, "")
+        # Initialize variables to track the best match
+        nearest_label = None
+        highest_similarity = -1  # Start with lowest similarity possible
+        for label in possible_labels:
+            # Count matching characters, ignoring the character at the position of '?'
+            similarity = sum(1 for q, l in zip(query_base, label) if q == l)
+            # Update the nearest label if this one is more similar
+            if similarity > highest_similarity:
+                nearest_label = label
+                highest_similarity = similarity
+        return nearest_label, possible_labels.index(nearest_label)
 
     def load_data(self, file_name):
         if file_name.endswith(".h5"):
@@ -2637,55 +2539,136 @@ class Flavell2023Preprocessor(NeuralBasePreprocessor):
         for i in ids.keys():
             label = ids[str(i)]["label"]
             neurons[int(i) - 1] = label
-        # Neurons with DV/LR ambiguity have '?' or '??' in labels that must be inferred
-        neurons_copy = []
-        for label in neurons:
-            # If the neuron is unknown it will have a numeric label corresponding to its index
-            if label.isnumeric():
-                neurons_copy.append(label)
-                continue
-            # Look for the closest neuron label that will match the current string containing '?'
-            replacement, _ = self.find_nearest_label(
-                label, set(NEURON_LABELS) - set(neurons_copy), char="?"
-            )
-            neurons_copy.append(replacement)
-
-        ### DEBUG ###
-        # Remove badly imputed neurons from the data
-        filt_calcium_data, filt_mask = self.filter_bad_traces_by_linear_segments(calcium_data)
-        filt_neurons_copy = np.array(neurons_copy, dtype=str)[filt_mask].tolist()
-        ### DEBUG ###
-
-        # Make the extracted data into a list of arrays
-        all_IDs = [filt_neurons_copy]
-        all_traces = [filt_calcium_data]
-        timeVectorSeconds = [time_in_seconds]
+        # Handle ambiguous neuron labels
+        for i in range(number_neurons):
+            label = neurons[i]
+            if not label.isnumeric():
+                # Treat the '?' in labels
+                if "?" in label and "??" not in label:
+                    # Find the group which the neuron belongs to
+                    label_split = label.split("?")
+                    # Find potential label matches excluding ones we already have
+                    possible_labels = [
+                        neuron_name
+                        for neuron_name in NEURON_LABELS
+                        if (label_split[0] in neuron_name)
+                        and (label_split[-1] in neuron_name)
+                        and (neuron_name not in set(neurons))
+                    ]
+                    # Pick the neuron label with the nearest similarity
+                    neuron_label, _ = self.find_nearest_label(label, possible_labels, char="?")
+                    neurons[i] = neuron_label
+                # Treat the '??' in labels
+                elif "??" in label:
+                    # Find the group which the neuron belongs to
+                    label_split = label.split("??")
+                    # Find potential label matches excluding ones we already have
+                    possible_labels = [
+                        neuron_name
+                        for neuron_name in NEURON_LABELS
+                        if (label_split[0] in neuron_name)
+                        and (label_split[-1] in neuron_name)
+                        and (neuron_name not in set(neurons))
+                    ]
+                    # Pick the neuron label with the nearest similarity
+                    neuron_label, _ = self.find_nearest_label(label, possible_labels, char="??")
+                    neurons[i] = neuron_label
+        # Filter for unique neuron labels
+        neurons = np.array(neurons, dtype=str)
+        neurons, unique_indices = np.unique(neurons, return_index=True, return_counts=False)
+        # Only get data for unique neurons
+        calcium_data = calcium_data[:, unique_indices]
         # Return the extracted data
-        return all_IDs, all_traces, timeVectorSeconds
+        return neurons, calcium_data, time_in_seconds
+
+    def create_metadata(self):
+        extra_info = dict(
+            citation="Atanas et al., Cell 2023, _Brain-Wide Representations of Behavior Spanning Multiple Timescales and States in C. Elegans_"
+        )
+        return extra_info
 
     def preprocess(self):
+        # TODO: Encapsulate the single worm part of this method into a `preprocess_traces` method.
         # Load and preprocess data
         preprocessed_data = dict()
-        worm_idx = 0
-        for file_name in os.listdir(os.path.join(self.raw_data_path, self.source_dataset)):
-            if not (file_name.endswith(".h5") or file_name.endswith(".json")):
+        for i, file in enumerate(os.listdir(os.path.join(self.raw_data_path, self.source_dataset))):
+            if not (file.endswith(".h5") or file.endswith(".json")):
                 continue
-            file_data = self.load_data(file_name)  # load
-            neurons, calcium_data, time_in_seconds = self.extract_data(file_data)  # extract
-            metadata = dict(
-                citation=self.citation,
-                data_file=os.path.join(
-                    os.path.basename(self.raw_data_path), self.source_dataset, file_name
-                ),
+            worm = "worm" + str(i)
+            file_data = self.load_data(file)  # load
+            # Extract raw data
+            neurons, calcium_data, time_in_seconds = self.extract_data(file_data)
+            # Set time to start at 0.0 seconds
+            time_in_seconds = time_in_seconds - time_in_seconds[0]  # vector
+            # Map named neurons
+            neuron_to_idx, num_named_neurons = self.create_neuron_idx(neurons)
+            # Normalize calcium data
+            calcium_data = self.normalize_data(calcium_data)  # matrix
+            # Compute calcium dynamics (residual calcium)
+            dt = np.diff(time_in_seconds, axis=0, prepend=0.0)  # vector
+            original_median_dt = np.median(dt[1:]).item()  # scalar
+            residual_calcium = np.gradient(
+                calcium_data, time_in_seconds.squeeze(), axis=0
+            )  # vector
+            # 4. Smooth data
+            smooth_calcium_data = self.smooth_data(calcium_data, time_in_seconds)
+            smooth_residual_calcium = self.smooth_data(residual_calcium, time_in_seconds)
+            # 5. Resample data (raw and smoothed data)
+            upsample = original_median_dt >= self.resample_dt  # bool: whether to up/down-sample
+            _, resampled_calcium_data = self.resample_data(time_in_seconds, calcium_data, upsample)
+            _, resampled_residual_calcium = self.resample_data(
+                time_in_seconds, residual_calcium, upsample
             )
-            preprocessed_data, worm_idx = self.preprocess_traces(
-                neurons,
-                calcium_data,
-                time_in_seconds,
-                preprocessed_data,
-                worm_idx,
-                metadata,
-            )  # preprocess
+            # NOTE: We use the resampling of the smooth calcium data to give us the resampled time points
+            resampled_time_in_seconds, resampled_smooth_calcium_data = self.resample_data(
+                time_in_seconds, smooth_calcium_data, upsample
+            )
+            resampled_time_in_seconds = (
+                resampled_time_in_seconds - resampled_time_in_seconds[0]
+            )  # start at 0.0 seconds
+            _, resampled_smooth_residual_calcium = self.resample_data(
+                time_in_seconds, smooth_residual_calcium, upsample
+            )
+            resampled_dt = np.diff(resampled_time_in_seconds, axis=0, prepend=0.0)  # vector
+            resampled_median_dt = np.median(resampled_dt[1:]).item()  # scalar
+            assert np.isclose(self.resample_dt, resampled_median_dt), "Resampling failed."
+            max_timesteps, num_neurons = resampled_calcium_data.shape
+            num_unknown_neurons = int(num_neurons) - num_named_neurons
+            # 6. Save data
+            worm_dict = {
+                worm: {
+                    "calcium_data": resampled_calcium_data,  # normalized and resampled
+                    "source_dataset": self.source_dataset,
+                    "dt": resampled_dt,  # vector from resampled time vector
+                    "idx_to_neuron": dict((v, k) for k, v in neuron_to_idx.items()),
+                    "interpolate_method": self.interpolate_method,
+                    "max_timesteps": int(max_timesteps),  # scalar from resampled time vector
+                    "median_dt": self.resample_dt,  # scalar from resampled time vector
+                    "neuron_to_idx": neuron_to_idx,
+                    "num_named_neurons": num_named_neurons,
+                    "num_neurons": int(num_neurons),
+                    "num_unknown_neurons": num_unknown_neurons,
+                    "original_dt": dt,  # vector from original time vector
+                    "original_calcium_data": calcium_data,  # normalized
+                    "original_max_timesteps": int(
+                        calcium_data.shape[0]
+                    ),  # scalar from original time vector
+                    "original_median_dt": original_median_dt,  # scalar from original time vector
+                    "original_residual_calcium": residual_calcium,  # original
+                    "original_smooth_calcium_data": smooth_calcium_data,  # normalized and smoothed
+                    "original_smooth_residual_calcium": smooth_residual_calcium,  # smoothed
+                    "original_time_in_seconds": time_in_seconds,  # original time vector
+                    "residual_calcium": resampled_residual_calcium,  # resampled
+                    "smooth_calcium_data": resampled_smooth_calcium_data,  # normalized, smoothed and resampled
+                    "smooth_method": self.smooth_method,
+                    "smooth_residual_calcium": resampled_smooth_residual_calcium,  # smoothed and resampled
+                    "time_in_seconds": resampled_time_in_seconds,  # resampled time vector
+                    "worm": worm,  # worm ID
+                    "extra_info": self.create_metadata(),  # additional information and metadata
+                }
+            }
+            # Update preprocessed data collection
+            preprocessed_data.update(worm_dict)
         # Reshape calcium data
         for worm in preprocessed_data.keys():
             preprocessed_data[worm] = reshape_calcium_data(preprocessed_data[worm])
@@ -2703,9 +2686,6 @@ class Leifer2023Preprocessor(NeuralBasePreprocessor):
             interpolate_method,
             resample_dt,
             **kwargs,
-        )
-        self.citation = (
-            "Randi et al., Nature 2023, _Neural Signal Propagation Atlas of Caenorhabditis Elegans_"
         )
 
     def str_to_float(self, str_num):
@@ -2744,6 +2724,55 @@ class Leifer2023Preprocessor(NeuralBasePreprocessor):
         data_array = np.array(data, dtype=np.float32)
         return data_array
 
+    def is_monotonic_linear(self, arr):
+        """
+        Checks if the array is a line with constant slope (i.e linear).
+
+        Parameters:
+        arr (np.array): 1D Input array to check.
+
+        Returns:
+        bool: True if the array is linear, False otherwise.
+        """
+        assert arr.ndim == 1, "Array must be a 1D (univariate) time series."
+        diff = np.round(np.diff(arr), decimals=3)
+        result = np.unique(diff)
+        return result.size == 1
+
+    def filter_bad_traces_by_linear_segments(
+        self, data, window_size=50, linear_segment_threshold=1e-3
+    ):
+        """
+        Filters out traces with significant proportions of linear segments. Linear segments suggest
+        that the data was imputed with linear interpolation to remove stretches of NaN values.
+
+        There are weird-looking traces in the Leifer2023 raw data caused by interpolations of missing values
+        (NaNs) when neurons were not consistently tracked over time due to imperfect nonrigid registration.
+        This helper function was written to filter out these problematic imputed neural traces.
+
+        Parameters:
+        data (np.array): The neural data array with shape (time_points, neurons).
+        window_size (int): The size of the window to check for linearity.
+        linear_segment_threshold (float): Proportion of linear segments above which traces are considered bad.
+
+        Returns:
+        (np.array, nparray): Tuple of filtered neural data and the associated mask into the original data array.
+        """
+        t, n = data.shape
+        linear_segments = np.zeros(n, dtype=int)
+        window_start = range(
+            0, t - window_size, window_size // 2
+        )  # non-overlapping or staggered windows (faster)
+        for i in window_start:
+            segment = data[i : i + window_size, :]
+            ls = np.apply_along_axis(self.is_monotonic_linear, 0, segment)
+            linear_segments += ls.astype(int)
+        proportion_linear = linear_segments / len(window_start)
+        bad_traces_mask = np.array(proportion_linear > linear_segment_threshold)
+        good_traces_mask = ~bad_traces_mask
+        filtered_data = data[:, good_traces_mask]
+        return filtered_data, good_traces_mask
+
     def create_neuron_idx(self, label_list):
         """
         Overrides the base class method to handle the complicated data
@@ -2753,19 +2782,17 @@ class Leifer2023Preprocessor(NeuralBasePreprocessor):
         num_unnamed_neurons = 0
         for j, item in enumerate(label_list):
             previous_list = label_list[:j]
-            if not item.isalnum(): # happens when the label is empty string ''
+            if not item.isalnum():
                 label_list[j] = str(j)
                 num_unnamed_neurons += 1
                 neuron_to_idx[str(j)] = j
             else:
                 if item in NEURON_LABELS and item not in previous_list:
                     neuron_to_idx[item] = j
-                # If a neuron label repeated assume a mistake and treat the duplicate as an unnamed neuron
-                elif item in NEURON_LABELS and item in previous_list: 
+                elif item in NEURON_LABELS and item in previous_list:
                     label_list[j] = str(j)
                     num_unnamed_neurons += 1
                     neuron_to_idx[str(j)] = j
-                # Handle ambiguous neuron labels
                 else:
                     if str(item + "L") in NEURON_LABELS and str(item + "L") not in previous_list:
                         label_list[j] = str(item + "L")
@@ -2773,13 +2800,13 @@ class Leifer2023Preprocessor(NeuralBasePreprocessor):
                     elif str(item + "R") in NEURON_LABELS and str(item + "R") not in previous_list:
                         label_list[j] = str(item + "R")
                         neuron_to_idx[str(item + "R")] = j
-                    else: # happens when the label is "merge"; TODO: Ask authors what that is?
+                    else:
                         label_list[j] = str(j)
                         num_unnamed_neurons += 1
                         neuron_to_idx[str(j)] = j
         num_named_neurons = len(
             [k for k in neuron_to_idx.keys() if not k.isnumeric()]
-        )  # number of labeled neurons
+        )  # number of neurons that were labeled with a name
         assert (
             num_named_neurons == len(label_list) - num_unnamed_neurons
         ), "Incorrect calculation of the number of named neurons."
@@ -2802,9 +2829,6 @@ class Leifer2023Preprocessor(NeuralBasePreprocessor):
         mask = np.argwhere(~np.isnan(real_data).all(axis=0)).flatten()
         real_data = real_data[:, mask]
         label_list = np.array(label_list, dtype=str)[mask].tolist()
-        # Remove neurons with long stretches of NaNs
-        real_data, nan_mask = self.filter_bad_traces_by_nan_stretch(real_data)
-        label_list = np.array(label_list, dtype=str)[nan_mask].tolist()
         # Impute any remaining NaN values
         # NOTE: This is very slow with the default settings!
         imputer = IterativeImputer(random_state=0, n_nearest_features=10, skip_complete=False)
@@ -2813,12 +2837,14 @@ class Leifer2023Preprocessor(NeuralBasePreprocessor):
         # Remove badly imputed neurons from the data
         filt_real_data, filt_mask = self.filter_bad_traces_by_linear_segments(real_data)
         filt_label_list = np.array(label_list, dtype=str)[filt_mask].tolist()
-        # Make the extracted data into a list of arrays
-        all_IDs = [filt_label_list]
-        all_traces = [filt_real_data]
-        timeVectorSeconds = [time_in_seconds]
         # Return the extracted data
-        return all_IDs, all_traces, timeVectorSeconds
+        return filt_label_list, filt_real_data, time_in_seconds
+
+    def create_metadata(self):
+        extra_info = dict(
+            citation="Randi et al., Nature 2023, _Neural Signal Propagation Atlas of Caenorhabditis Elegans_"
+        )
+        return extra_info
 
     def preprocess(self):
         """
@@ -2830,7 +2856,7 @@ class Leifer2023Preprocessor(NeuralBasePreprocessor):
         Unlike the `preprocess` method in the other dataset classes which makes use of the
         `preprocess_traces` method from the parent NeuralBasePreprocessor class, this one does not.
         """
-
+        # TODO: Encapsulate the single worm part of this method into a `preprocess_traces` method.
         # Load and preprocess data
         preprocessed_data = dict()
         data_dir = os.path.join(self.raw_data_path, self.source_dataset)
@@ -2839,31 +2865,99 @@ class Leifer2023Preprocessor(NeuralBasePreprocessor):
         num_worms = int(len(files) / 6)
         # Initialize worm index outside file loop
         worm_idx = 0
-        # Iterate over each worm's triad of data text files
+        # Iterate over each worm's data text files
         for i in range(0, num_worms):
+            worm = f"worm{str(worm_idx)}"
+            worm_idx += 1
             data_file = os.path.join(data_dir, f"{str(i)}_gcamp.txt")
             labels_file = os.path.join(data_dir, f"{str(i)}_labels.txt")
             time_file = os.path.join(data_dir, f"{str(i)}_t.txt")
             # Load and extract raw data
             label_list, real_data, time_in_seconds = self.extract_data(
                 data_file, labels_file, time_file
-            )  # extract
-            file_name = str(i) + "_{gcamp|labels|t}.txt"
-            metadata = dict(
-                citation=self.citation,
-                data_file=os.path.join(
-                    os.path.basename(self.raw_data_path), self.source_dataset, file_name
-                ),
             )
-            # Preprocess raw data
-            preprocessed_data, worm_idx = self.preprocess_traces(
-                label_list,
-                real_data,
-                time_in_seconds,
-                preprocessed_data,
-                worm_idx,
-                metadata,
-            )  # preprocess
+            # Set time to start at 0.0 seconds
+            time_in_seconds = time_in_seconds - time_in_seconds[0]  # vector
+            # Skip worms with no recorded neurons
+            if len(label_list) == 0:
+                worm_idx -= 1
+                continue
+            # Skip worms with very short recordings
+            if len(time_in_seconds) < 700:
+                worm_idx -= 1
+                continue
+            # Map named neurons
+            neuron_to_idx, num_named_neurons = self.create_neuron_idx(label_list)
+            if num_named_neurons == 0:  # skip worms with no labelled neuron
+                worm_idx -= 1
+                continue
+            # Normalize calcium data
+            calcium_data = self.normalize_data(real_data)  # matrix
+            # Compute calcium dynamics (residual calcium)
+            dt = np.diff(time_in_seconds, axis=0, prepend=0.0)  # vector
+            original_median_dt = np.median(dt[1:]).item()  # scalar
+            residual_calcium = np.gradient(
+                calcium_data, time_in_seconds.squeeze(), axis=0
+            )  # vector
+            # 4. Smooth data
+            smooth_calcium_data = self.smooth_data(calcium_data, time_in_seconds)
+            smooth_residual_calcium = self.smooth_data(residual_calcium, time_in_seconds)
+            # 5. Resample data (raw and smoothed data)
+            upsample = original_median_dt >= self.resample_dt  # bool: whether to up/down-sample
+            _, resampled_calcium_data = self.resample_data(time_in_seconds, calcium_data, upsample)
+            _, resampled_residual_calcium = self.resample_data(
+                time_in_seconds, residual_calcium, upsample
+            )
+            # NOTE: We use the resampling of the smooth calcium data to give us the resampled time points
+            resampled_time_in_seconds, resampled_smooth_calcium_data = self.resample_data(
+                time_in_seconds, smooth_calcium_data, upsample
+            )
+            resampled_time_in_seconds = (
+                resampled_time_in_seconds - resampled_time_in_seconds[0]
+            )  # start at 0.0 seconds
+            _, resampled_smooth_residual_calcium = self.resample_data(
+                time_in_seconds, smooth_residual_calcium, upsample
+            )
+            resampled_dt = np.diff(resampled_time_in_seconds, axis=0, prepend=0.0)  # vector
+            resampled_median_dt = np.median(resampled_dt[1:]).item()  # scalar
+            assert np.isclose(self.resample_dt, resampled_median_dt), "Resampling failed."
+            max_timesteps, num_neurons = resampled_calcium_data.shape
+            num_unknown_neurons = int(num_neurons) - num_named_neurons
+            # 6. Save data
+            worm_dict = {
+                worm: {
+                    "calcium_data": resampled_calcium_data,  # normalized and resampled
+                    "source_dataset": self.source_dataset,
+                    "dt": resampled_dt,  # vector from resampled time vector
+                    "idx_to_neuron": dict((v, k) for k, v in neuron_to_idx.items()),
+                    "interpolate_method": self.interpolate_method,
+                    "max_timesteps": int(max_timesteps),  # scalar from resampled time vector
+                    "median_dt": self.resample_dt,  # scalar from resampled time vector
+                    "neuron_to_idx": neuron_to_idx,
+                    "num_named_neurons": num_named_neurons,
+                    "num_neurons": int(num_neurons),
+                    "num_unknown_neurons": num_unknown_neurons,
+                    "original_calcium_data": calcium_data,  # normalized
+                    "original_max_timesteps": int(
+                        calcium_data.shape[0]
+                    ),  # scalar from original time vector
+                    "original_dt": dt,  # vector from original time vector
+                    "original_median_dt": original_median_dt,  # scalar from original time vector
+                    "original_residual_calcium": residual_calcium,  # original
+                    "original_smooth_calcium_data": smooth_calcium_data,  # normalized and smoothed
+                    "original_smooth_residual_calcium": smooth_residual_calcium,  # smoothed
+                    "original_time_in_seconds": time_in_seconds,  # original time vector
+                    "residual_calcium": resampled_residual_calcium,  # resampled
+                    "smooth_calcium_data": resampled_smooth_calcium_data,  # normalized, smoothed and resampled
+                    "smooth_method": self.smooth_method,
+                    "smooth_residual_calcium": resampled_smooth_residual_calcium,  # smoothed and resampled
+                    "time_in_seconds": resampled_time_in_seconds,  # resampled time vector
+                    "worm": worm,  # worm ID
+                    "extra_info": self.create_metadata(),  # additional information and metadata
+                }
+            }
+            # Update preprocessed data collection
+            preprocessed_data.update(worm_dict)
         # Reshape calcium data
         for worm in preprocessed_data.keys():
             preprocessed_data[worm] = reshape_calcium_data(preprocessed_data[worm])
@@ -2882,7 +2976,6 @@ class Lin2023Preprocessor(NeuralBasePreprocessor):
             resample_dt,
             **kwargs,
         )
-        self.citation = "Lin et al., Science Advances 2023, _Functional Imaging and Quantification of Multineuronal Olfactory Responses in C. Elegans_"
 
     def load_data(self, file_name):
         # Overriding the base class method to use scipy.io.loadmat for .mat files
@@ -2892,7 +2985,7 @@ class Lin2023Preprocessor(NeuralBasePreprocessor):
     def extract_data(self, data_file):
         """Slightly different extract_data method for Lin2023 dataset."""
         dataset_raw = self.load_data(data_file)
-        # Filter for proofread neurons
+        # Filter for proofread neurons.
         _filter = dataset_raw["use_flag"].flatten() > 0
         neurons = [str(_.item()) for _ in dataset_raw["proofread_neurons"].flatten()[_filter]]
         raw_time_vec = np.array(dataset_raw["times"].flatten()[0][-1])
@@ -2901,14 +2994,20 @@ class Lin2023Preprocessor(NeuralBasePreprocessor):
         _f0 = dataset_raw["F_0"][_filter][:, 0]
         raw_activitiy[0, :] = _f0
         # Impute any remaining NaN values
-        # NOTE: This is very slow with the default settings!
-        imputer = IterativeImputer(random_state=0, n_nearest_features=10, skip_complete=False)
-        if np.isnan(raw_activitiy).any():
-            raw_activitiy = imputer.fit_transform(raw_activitiy)
+        # NOTE: This is very slow with the default settings on this dataset!
+        imputer = IterativeImputer(random_state=0)
+        if np.isnan(real_data).any():
+            real_data = imputer.fit_transform(real_data)
         # Make the extracted data into a list of arrays
         neuron_IDs, raw_traces, time_vector_seconds = [neurons], [raw_activitiy], [raw_time_vec]
         # Return the extracted data
         return neuron_IDs, raw_traces, time_vector_seconds
+
+    def create_metadata(self):
+        extra_info = dict(
+            citation="Lin et al., Science Advances 2023, _Functional Imaging and Quantification of Multineuronal Olfactory Responses in C. Elegans_"
+        )
+        return extra_info
 
     def preprocess(self):
         # Load and preprocess data
@@ -2917,23 +3016,12 @@ class Lin2023Preprocessor(NeuralBasePreprocessor):
         # Have multiple .mat files that you iterate over
         data_files = os.path.join(self.raw_data_path, "Lin2023")
         # Multiple .mat files to iterate over
-        for file_name in os.listdir(data_files):
-            if not file_name.endswith(".mat"):
+        for file in os.listdir(data_files):
+            if not file.endswith(".mat"):
                 continue
-            neurons, raw_traces, time_vector_seconds = self.extract_data(file_name)
-            metadata = dict(
-                citation=self.citation,
-                data_file=os.path.join(
-                    os.path.basename(self.raw_data_path), self.source_dataset, file_name
-                ),
-            )
+            neurons, raw_traces, time_vector_seconds = self.extract_data(file)
             preprocessed_data, worm_idx = self.preprocess_traces(
-                neurons,
-                raw_traces,
-                time_vector_seconds,
-                preprocessed_data,
-                worm_idx,
-                metadata,
+                neurons, raw_traces, time_vector_seconds, preprocessed_data, worm_idx
             )  # preprocess
         # Reshape calcium data
         for worm in preprocessed_data.keys():
@@ -2942,82 +3030,6 @@ class Lin2023Preprocessor(NeuralBasePreprocessor):
         self.save_data(preprocessed_data)
         logger.info(f"Finished processing {self.source_dataset}.")
         return None
-
-
-class Venkatachalam2024Preprocessor(NeuralBasePreprocessor):
-    def __init__(self, transform, smooth_method, interpolate_method, resample_dt, **kwargs):
-        super().__init__(
-            "Venkatachalam2024",
-            transform,
-            smooth_method,
-            interpolate_method,
-            resample_dt,
-            **kwargs,
-        )
-        self.citation = "Unplublished data from Vivek Venkatachalam for hermaphrodite worms downloaded from https://chemosensory-data.worm.world/."
-
-    def unzip_and_extract_csv(self, source_directory, zip_path):
-        with zipfile.ZipFile(zip_path, "r") as zip_ref:
-            zip_ref.extractall(source_directory)
-        return zip_path.replace(".zip", ".csv")
-
-    def load_data(self, file_name):
-        zip_path = os.path.join(self.raw_data_path, self.source_dataset, file_name)
-        csv_file = self.unzip_and_extract_csv(
-            os.path.join(self.raw_data_path, self.source_dataset), zip_path
-        )
-        data = pd.read_csv(csv_file)
-        return data
-
-    def extract_data(self, data):
-        # 9 columns + 98 columns of blank neural data
-        time_vector = (
-            data.columns[107:-1].astype(float).to_numpy() * 0.375
-        )  # columns 9 onwards contain calcium data; dt is 375ms
-        traces = data.iloc[:, 107:-1].values.T  # transpose to get (time, neurons)
-        # Remove neuron traces that are all NaN values
-        mask = np.argwhere(~np.isnan(traces).all(axis=0)).flatten()
-        traces = traces[:, mask]
-        # Get the neuron labels corresponding to the traces
-        neuron_ids = np.array(data["neuron"].unique(), dtype=str)[mask].tolist()
-        # Impute any remaining NaN values
-        # NOTE: This is very slow with the default settings!
-        imputer = IterativeImputer(random_state=0, n_nearest_features=10, skip_complete=False)
-        if np.isnan(traces).any():
-            traces = imputer.fit_transform(traces)
-        # Make the extracted data into a list of arrays
-        all_IDs = [neuron_ids]
-        all_traces = [traces]
-        timeVectorSeconds = [time_vector]
-        # Return the extracted data
-        return all_IDs, all_traces, timeVectorSeconds
-
-    def preprocess(self):
-        preprocessed_data = dict()
-        worm_idx = 0
-        for file_name in os.listdir(os.path.join(self.raw_data_path, self.source_dataset)):
-            if not file_name.endswith(".zip"):
-                continue
-            raw_data = self.load_data(file_name)
-            neuron_ids, traces, raw_time_vector = self.extract_data(raw_data)
-            metadata = dict(
-                citation=self.citation,
-                data_file=os.path.join(
-                    os.path.basename(self.raw_data_path), self.source_dataset, file_name
-                ),
-            )
-            preprocessed_data, worm_idx = self.preprocess_traces(
-                neuron_ids,
-                traces,
-                raw_time_vector,
-                preprocessed_data,
-                worm_idx,
-                metadata,
-            )
-        for worm in preprocessed_data.keys():
-            preprocessed_data[worm] = reshape_calcium_data(preprocessed_data[worm])
-        self.save_data(preprocessed_data)
-        logger.info(f"Finished processing {self.source_dataset}.")
 
 
 # # # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
