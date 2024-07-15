@@ -11,6 +11,7 @@ import logging
 import subprocess
 import numpy as np
 import pandas as pd
+from tqdm import tqdm
 
 
 # NOTE: IterativeImputer is experimental and the API might change without any deprecation cycle.
@@ -29,6 +30,8 @@ from scipy.ndimage import gaussian_filter1d
 from torch_geometric.data import Data, download_url
 from sklearn.preprocessing import MinMaxScaler, StandardScaler
 from torch_geometric.utils import coalesce, to_dense_adj, dense_to_sparse
+
+from pynwb import NWBHDF5IO
 
 # Local libraries
 from utils import (

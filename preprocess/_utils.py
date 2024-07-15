@@ -69,7 +69,7 @@ def pickle_neural_data(
             bash_command = [
                 "unzip",
                 zip_path,
-                "{}/*".format(source_dataset),
+                # "{}/*".format(source_dataset),
                 "-d",
                 source_path,
                 "-x",
@@ -934,6 +934,8 @@ def extract_zip(path: str, folder: str = None, log: bool = True, delete_zip: boo
         log (bool, optional): If False, will not print anything to the console. Default is True.
         delete_zip (bool, optional): If True, will delete the zip archive after extraction. Default is True.
     """
+    print(path)
+    
     if folder is None:
         folder = os.path.dirname(path)
     if log:
@@ -1844,6 +1846,44 @@ class NeuralBasePreprocessor:
         return preprocessed_data, worm_idx
 
 
+class Nejatbakhsh2020Preprocessor(NeuralBasePreprocessor):
+    def __init__(self, transform, smooth_method, interpolate_method, resample_dt, **kwargs):
+        super().__init__(
+            "Nejatbakhsh2020",
+            transform,
+            smooth_method,
+            interpolate_method,
+            resample_dt,
+            **kwargs,
+        )
+    
+    def extract_data(self, file):
+        with NWBHDF5IO(file, "r") as io:
+            read_nwbfile = io.read()
+            traces = np.array(read_nwbfile.processing["CalciumActivity"].data_interfaces["SignalRawFluor"].roi_response_series["SignalCalciumImResponseSeries"].data)
+            neuron_ids = np.array(read_nwbfile.processing["CalciumActivity"].data_interfaces["NeuronIDs"].labels)
+            time_vector = np.arange(0, len(neuron_ids))
+        
+        return neuron_ids, traces, time_vector
+    
+    def create_metadata(self):
+        extra_info = dict(
+            citation="Nejatbakhsh 2020 dataset"
+        )
+        return extra_info
+    
+    def preprocess(self):
+        preprocessed_data = dict()
+        worm_idx = 0
+        for subfolder in tqdm(os.listdir(os.path.join(self.raw_data_path, self.source_dataset))):
+            for file_name in os.listdir(os.path.join(self.raw_data_path, self.source_dataset, subfolder)):
+                neuron_ids, traces, raw_time_vector = self.extract_data(os.path.join(self.raw_data_path, self.source_dataset, subfolder, file_name))
+                preprocessed_data, worm_idx = self.preprocess_traces([neuron_ids], [traces], [raw_time_vector], preprocessed_data, worm_idx)
+        for worm in preprocessed_data.keys():
+            preprocessed_data[worm] = reshape_calcium_data(preprocessed_data[worm])
+        self.save_data(preprocessed_data)
+        logger.info(f"Finished processing {self.source_dataset}.")
+        
 class Venkatachalam2024Preprocessor(NeuralBasePreprocessor):
     def __init__(self, transform, smooth_method, interpolate_method, resample_dt, **kwargs):
         super().__init__(
@@ -1871,6 +1911,7 @@ class Venkatachalam2024Preprocessor(NeuralBasePreprocessor):
         # 9 + 98 blank timesteps at beginning (0-97)
         time_vector = data.columns[107:-1].astype(float).to_numpy()  # Assuming columns 9 onwards are time points
         traces = data.iloc[:, 107:-1].values.T  # Transpose to get (time, neurons)
+        
         return neuron_ids, traces, time_vector
     
     def create_metadata(self):
