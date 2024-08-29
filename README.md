@@ -5,8 +5,6 @@ Simulating the _C. elegans_ whole brain with neural networks.
 ---
 
 ### Notes to Users
-- See this [Wiki page](https://github.com/metaconsciousgroup/worm-graph/wiki/Pipeline-Structure#overview) if running locally (i.e. not on a SLURM cluster)
-
 - Please change `submitit_slurm` to `submitit_local` in the file `configs/pipeline.yaml` if running on your local machine.
 
 - Disable autocast if on cpu.
