@@ -7,31 +7,36 @@ logger = logging.getLogger(__name__)
 ### Custom loss function (MASE) # # #
 # # # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
 class MASELoss(torch.nn.Module):
-    """Mean Absolute Scaled Error (MASE) Loss Function.
+    """Mean Absolute Scaled Error (MASE) loss function.
 
-    Supports 'none', 'mean', and 'sum' reductions.
+    This loss function is used to measure the accuracy of forecasts
+    by comparing the mean absolute error of the forecast to the mean
+    absolute error of a naive forecast.
 
-    ---
-    Example usage:
-    mase_loss = MASELoss(reduction='mean')
-    loss = mase_loss(y_pred, target)
+    Attributes:
+        seasonality: An integer representing the seasonality of the data.
+    
     TODO: Improve and validate this implementation of the MASE loss.
     """
 
     def __init__(self, reduction="mean"):
+        """Initializes the MASELoss with the given seasonality.
+
+        Args:
+            seasonality: The seasonality of the data. Default is 1.
+        """
         super().__init__()
         self.reduction = reduction
 
     def forward(self, y_pred, target):
-        """
-        Forward pass for MASE Loss.
+        """Calculates the MASE loss between the predicted and true values.
 
-        Parameters:
-            y_pred (torch.Tensor): Predicted values with shape (batch_size, seq_len, num_features)
-            target (torch.Tensor): Actual values with shape (batch_size, seq_len, num_features)
+        Args:
+            y_pred: The predicted values as a tensor.
+            y_true: The true values as a tensor.
 
         Returns:
-            torch.Tensor: The MASE loss.
+            A tensor representing the MASE loss.
         """
         # Ensure the target and predictions have the same shape
         assert y_pred.shape == target.shape, "y_pred and target must have the same shape"
@@ -71,14 +76,14 @@ class MASELoss(torch.nn.Module):
 def load_model_checkpoint(checkpoint_path):
     """Load a model from a checkpoint file.
 
-    The checkpoint should contain all the neccesary information to
+    The checkpoint should contain all the necessary information to
     reinstantiate the model using its constructor.
 
     Args:
-        checkpoint_path (str): The path to the checkpoint file.
+        checkpoint_path: The path to the checkpoint file.
 
     Returns:
-        model: The loaded model.
+        The loaded model.
     """
     if not os.path.isabs(checkpoint_path):
         checkpoint_path = os.path.join(ROOT_DIR, checkpoint_path)
@@ -111,6 +116,22 @@ def load_model_checkpoint(checkpoint_path):
 
 
 def print_parameters(model, verbose=False):
+    """Prints the parameters of a model in a table format.
+
+    This function prints a table of the model's parameters, including the
+    module name, the number of parameters, and whether they are trainable.
+    If verbose is True, it also prints the total number of parameters and
+    the total number of trainable parameters.
+
+    Args:
+        model: The model whose parameters are to be printed.
+        verbose: If True, prints the total number of parameters and the
+            total number of trainable parameters.
+
+    Returns:
+        A tuple containing the total number of parameters and the total
+        number of trainable parameters.
+    """
     table = PrettyTable(["Module", "Parameters", "Trainable"])
 
     total_params = 0
@@ -140,33 +161,65 @@ def print_parameters(model, verbose=False):
 
 
 class RMSNorm(torch.nn.Module):
-    """
-    Straightforward implementation of root-mean-square normalization.
-    """
+    """Root-Mean-Square (RMS) normalization.
 
+    This class implements the RMS normalization technique, which normalizes
+    the input tensor based on the root mean square of its elements.
+
+    Attributes:
+        eps: A small value to avoid division by zero.
+        weight: A learnable parameter for scaling the normalized input.
+    """
     def __init__(self, d_model: int, eps: float = 1e-5):
+        """Initializes the RMSNorm with the given model dimension and epsilon.
+
+        Args:
+            d_model: The dimension of the model.
+            eps: A small value to avoid division by zero. Default is 1e-5.
+        """
         super().__init__()
         self.eps = eps
         self.weight = torch.nn.Parameter(torch.ones(d_model))
 
     def forward(self, x):
+        """Applies RMS normalization to the input tensor.
+
+        Args:
+            x: The input tensor.
+
+        Returns:
+            The normalized tensor.
+        """
         output = x * torch.rsqrt(x.pow(2).mean(-1, keepdim=True) + self.eps) * self.weight
         return output
 
 
 class PositionalEncoding(torch.nn.Module):
-    """
-    Sinuosoidal positional encoding from Attention is All You Need paper,
-    with the minor modification that we use the first dimension as the batch
-    dimension (i.e. batch_first=True).
-    """
+    """Sinuosoidal positional encoding from 'Attention is All You Need' paper.
 
+    This class implements the sinusoidal positional encoding technique, which
+    adds positional information to the input tensor. The first dimension is
+    used as the batch dimension (i.e., batch_first=True).
+
+    Attributes:
+        d_model: The dimension of the model.
+        max_len: The maximum length of the input sequences.
+        dropout: The dropout rate.
+        pe: The positional encoding tensor.
+    """
     def __init__(
         self,
         d_model: int,
         max_len: int = BLOCK_SIZE,
         dropout: float = 0.1,
     ):
+        """Initializes the PositionalEncoding with the given model dimension, maximum length, and dropout rate.
+
+        Args:
+            d_model: The dimension of the model.
+            max_len: The maximum length of the input sequences. Default is BLOCK_SIZE.
+            dropout: The dropout rate. Default is 0.1.
+        """
         super().__init__()
         self.d_model = d_model
         self.max_len = max_len
@@ -179,9 +232,13 @@ class PositionalEncoding(torch.nn.Module):
         self.register_buffer("pe", pe)
 
     def forward(self, x):
-        """
+        """Adds positional encoding to the input tensor.
+
         Args:
-            x: Tensor, shape (batch_size, seq_len, embedding_dim)
+            x: Tensor, shape (batch_size, seq_len, embedding_dim).
+
+        Returns:
+            The input tensor with added positional encoding.
         """
         x = x * math.sqrt(self.d_model)  # normalization used in Transformers
         x = x + self.pe[:, : x.size(1), :]  # add positional encoding to input
@@ -196,12 +253,26 @@ class PositionalEncoding(torch.nn.Module):
 
 
 class CausalTransformer(torch.nn.Module):
-    """
-    We use a single Transformer Encoder layer as the hidden-hidden model.
-    Sets `is_causal=True` in forward method of TransformerEncoderLayer.
-    """
+    """A single Transformer Encoder layer with causal attention.
 
+    This class uses a single Transformer Encoder layer as the hidden-hidden model.
+    It sets `is_causal=True` in the forward method of TransformerEncoderLayer.
+
+    Attributes:
+        num_layers: The number of layers in the Transformer Encoder.
+        is_causal: A boolean indicating whether causal attention is used.
+        encoder_layer: The Transformer Encoder layer.
+        transformer_encoder: The Transformer Encoder.
+    """
     def __init__(self, d_model, nhead, dim_feedforward, dropout=0.1):
+        """Initializes the CausalTransformer with the given parameters.
+
+        Args:
+            d_model: The dimension of the model.
+            nhead: The number of attention heads.
+            dim_feedforward: The dimension of the feedforward network.
+            dropout: The dropout rate. Default is 0.1.
+        """
         super().__init__()
         self.num_layers = 1  # single layer
         self.is_causal = True  # causal attention
@@ -217,6 +288,14 @@ class CausalTransformer(torch.nn.Module):
         self.transformer_encoder = torch.nn.TransformerEncoder(self.encoder_layer, self.num_layers)
 
     def forward(self, src):
+        """Applies the Transformer Encoder with causal attention to the input tensor.
+
+        Args:
+            src: The input tensor with shape (batch_size, seq_len, d_model).
+
+        Returns:
+            The output tensor after applying the Transformer Encoder.
+        """
         causal_mask = torch.nn.Transformer.generate_square_subsequent_mask(
             src.size(1),
             device=src.device,
@@ -227,11 +306,17 @@ class CausalTransformer(torch.nn.Module):
 
 class FeedForward(torch.nn.Module):
     """Simple linear layer followed by a non-linearity and dropout.
-    n_embd: embedding dimension or width of the single hidden layer.
-    dropout: probability of dropping a neuron.
-    """
 
+    Attributes:
+        ffwd: A sequential container of the linear layer, ReLU activation, and dropout.
+    """
     def __init__(self, n_embd, dropout=0.1):
+        """Initializes the FeedForward layer with the given embedding dimension and dropout rate.
+
+        Args:
+            n_embd: The embedding dimension or width of the single hidden layer.
+            dropout: The dropout rate. Default is 0.1.
+        """
         super().__init__()
         self.ffwd = torch.nn.Sequential(
             torch.nn.Linear(n_embd, n_embd),
@@ -240,23 +325,37 @@ class FeedForward(torch.nn.Module):
         )
 
     def forward(self, x):
+        """Applies the feedforward network to the input tensor.
+
+        Args:
+            x: The input tensor.
+
+        Returns:
+            The output tensor after applying the feedforward network.
+        """
         return self.ffwd(x)
 
 
 class SelfAttention(torch.nn.Module):
     """A single self-attention layer.
 
-    Parameters:
-        embed_dim: embedding dimension
-        num_heads: number of attention heads
-        dropout: probability of dropping a neuron
+    Attributes:
+        attn: A multi-head attention module.
 
-    Inputs:
-        input: tensor of shape (batch, seq_len, embed_dim)
-
+    Args:
+        embed_dim: The embedding dimension.
+        num_heads: The number of attention heads.
+        dropout: The dropout rate.
     """
 
     def __init__(self, embed_dim, num_heads, dropout=0.1):
+        """Initializes the SelfAttention layer with the given parameters.
+
+        Args:
+            embed_dim: The embedding dimension.
+            num_heads: The number of attention heads.
+            dropout: The dropout rate. Default is 0.1.
+        """
         super().__init__()
         self.attn = torch.nn.MultiheadAttention(
             embed_dim,
@@ -266,8 +365,13 @@ class SelfAttention(torch.nn.Module):
         )
 
     def forward(self, src):
-        """
-        NOTE: Because we use batch_first=True, src must have shape (batch, seq_len, embed_dim).
+        """Applies self-attention to the input tensor.
+
+        Args:
+            src: The input tensor with shape (batch, seq_len, embed_dim).
+
+        Returns:
+            The output tensor after applying self-attention.
         """
         # Create a causal attention mask
         causal_mask = torch.nn.Transformer.generate_square_subsequent_mask(
@@ -292,20 +396,27 @@ class SSM(torch.nn.Module):
     """State Space Model.
 
     Parameters:
-        input_size: Number of input neurons
-        hidden_size: Number of hidden neurons
+        input_size: Number of input neurons.
+        hidden_size: Number of hidden neurons.
+        decode: Whether to use recurrence (True) or convolution (False) to propagate input.
 
     Inputs:
-        input: tensor of shape (seq_len, batch, input_size)
-        hidden: tensor of shape (batch, hidden_size), initial hidden activity
-            if None, hidden is initialized through self.init_hidden()
+        input: Tensor of shape (batch_size, seq_len, input_size).
+        hidden: Tensor of shape (batch_size, hidden_size), initial hidden activity.
+            If None, hidden is initialized through self.init_hidden().
 
     Outputs:
-        output: tensor of shape (batch, seq_len, hidden_size)
-        hidden: tensor of shape (batch, hidden_size), final hidden activity
+        output: Tensor of shape (batch_size, seq_len, hidden_size).
+        hidden: Tensor of shape (batch_size, hidden_size), final hidden activity.
     """
-
     def __init__(self, input_size, hidden_size, decode=False):
+        """Initializes the SSM with the given input size, hidden size, and decode mode.
+
+        Args:
+            input_size: Number of input neurons.
+            hidden_size: Number of hidden neurons.
+            decode: Whether to use recurrence (True) or convolution (False) to propagate input.
+        """
         super().__init__()
         self.input_size = input_size
         self.hidden_size = hidden_size
@@ -317,6 +428,11 @@ class SSM(torch.nn.Module):
         self.register_parameter(name="step", param=torch.nn.Parameter(torch.ones(hidden_size)))
 
     def discretize(self):
+        """Discretizes the continuous-time SSM parameters.
+
+        Returns:
+            A tuple containing the discretized A and B matrices.
+        """
         I = torch.eye(self.hidden_size, device=self.B.weight.device, dtype=self.B.weight.dtype)
         step_half_A = (self.step / 2.0) * self.A.weight
         BL = torch.linalg.inv(I - step_half_A)
@@ -326,27 +442,44 @@ class SSM(torch.nn.Module):
         return Ab, Bb
 
     def make_HiPPO(self, N):
+        """Creates the HiPPO matrix for the given size.
+
+        Args:
+            N: The size of the HiPPO matrix.
+
+        Returns:
+            The HiPPO matrix.
+        """
         P = torch.sqrt(1 + 2 * torch.arange(N))
         A = P.unsqueeze(-1) @ P.unsqueeze(0)
         A = torch.tril(A) - torch.diag(torch.arange(N))
         return -A
 
     def init_hidden(self, shape, device):
+        """Initializes the hidden state.
+
+        Args:
+            shape: The shape of the input tensor.
+            device: The device to initialize the hidden state on.
+
+        Returns:
+            The initialized hidden state tensor.
+        """
         batch_size = shape[0]  # because batch_first=True
         hidden = torch.zeros(batch_size, self.hidden_size).to(device)
         return hidden
 
     def recurrence(self, input, hidden, A, B):
-        """
-        Run network for one time step.
+        """Runs the network for one time step.
 
-        Inputs:
-            input: tensor of shape (batch_size, input_size)
-            hidden: tensor of shape (batch_size, hidden_size)
+        Args:
+            input: Tensor of shape (batch_size, input_size).
+            hidden: Tensor of shape (batch_size, hidden_size).
+            A: The discretized A matrix.
+            B: The discretized B matrix.
 
-        Outputs:
-            h_new: tensor of shape (batch_size, hidden_size),
-                network activity at the next time step
+        Returns:
+            The network activity at the next time step.
         """
         # Perform the recurrence update
         h_new = A @ hidden.unsqueeze(-1) + B @ input.unsqueeze(-1)
@@ -354,12 +487,15 @@ class SSM(torch.nn.Module):
 
     def K_conv(self, Ab, Bb, L):
         """Computes the kernels for the convolutional mode of the SSM.
-        Ab and Bb are the discretized SSM parameter matrices. L is the sequence length.
 
-        We create an independent kernel for each state (i.e. hidden) dimension.
-        Each element of Kernels is a tensor of shape (hidden_size, input_size).
-        Kernels should have shape (hidden_size, L, input_size).
+        Args:
+            Ab: The discretized A matrix.
+            Bb: The discretized B matrix.
+            L: The sequence length.
 
+        Returns:
+            The kernels for the convolutional mode of the SSM.
+        
         NOTE: Warning: this implementation is naive and unstable. In practice it will fail
         to work for more than very small lengths. However, we are going to replace it with
         S4 in Part 2, so for now we just keep it around as a placeholder.
@@ -428,12 +564,12 @@ class SSM(torch.nn.Module):
     def causal_convolution(self, u, Kernels):
         """Computes the result of applying the filters `Kernels` to inputs `u` using the convolution theorem with Fast Fourier Transform (FFT).
 
-        Parameters:
-            u: input tensor with shape (seq_len, input_size).
+        Args:
+            u: Input tensor with shape (seq_len, input_size).
             Kernels: 3D tensor with `hidden_size` independent kernels, each with shape (seq_len, input_size).
 
         Returns:
-            outputs: tensor with shape (seq_len, hidden_size).
+            The output tensor with shape (seq_len, hidden_size).
         """
         seq_len = u.size(0)
         assert (
@@ -454,14 +590,26 @@ class SSM(torch.nn.Module):
         return outputs
 
     def batch_causal_convolution(self, input, Kernels):
+        """Applies causal convolution to a batch of inputs.
+
+        Args:
+            input: Input tensor with shape (batch_size, seq_len, input_size).
+            Kernels: 3D tensor with `hidden_size` independent kernels, each with shape (seq_len, input_size).
+
+        Returns:
+            The output tensor with shape (batch_size, seq_len, hidden_size).
+        """
         return torch.vmap(self.causal_convolution, in_dims=(0, None), out_dims=0)(input, Kernels)
 
     def forward(self, input, hidden=None):
-        """
-        Propagate input through the network. NOTE: Because we use
-        batch_first=True, input has shape (batch_size, seq_len, input_size).
+        """Propagates input through the network.
 
-        decode: Whether to use recurrence (True) or convolution (False) to propagate input.
+        Args:
+            input: Tensor with shape (batch_size, seq_len, input_size).
+            hidden: Tensor with shape (batch_size, hidden_size), initial hidden activity. If None, hidden is initialized through self.init_hidden().
+
+        Returns:
+            A tuple containing the output tensor with shape (batch_size, seq_len, hidden_size) and the final hidden activity tensor with shape (batch_size, hidden_size).
         """
         # If hidden activity is not provided, initialize it
         if hidden is None:
@@ -495,20 +643,26 @@ class CTRNN(torch.nn.Module):
     """Continuous-time RNN.
 
     Parameters:
-        input_size: Number of input neurons
-        hidden_size: Number of hidden neurons
+        input_size: Number of input neurons.
+        hidden_size: Number of hidden neurons.
 
     Inputs:
-        input: tensor of shape (seq_len, batch, input_size)
-        hidden: tensor of shape (batch, hidden_size), initial hidden activity
-            if None, hidden is initialized through self.init_hidden()
+        input: Tensor of shape (batch_size, seq_len, input_size).
+        hidden: Tensor of shape (batch_size, hidden_size), initial hidden activity.
+            If None, hidden is initialized through self.init_hidden().
 
     Outputs:
-        output: tensor of shape (batch, seq_len, hidden_size)
-        hidden: tensor of shape (batch, hidden_size), final hidden activity
+        output: Tensor of shape (batch_size, seq_len, hidden_size).
+        hidden: Tensor of shape (batch_size, hidden_size), final hidden activity.
     """
 
     def __init__(self, input_size, hidden_size):
+        """Initializes the CTRNN with the given input size and hidden size.
+
+        Args:
+            input_size: Number of input neurons.
+            hidden_size: Number of hidden neurons.
+        """
         super().__init__()
         self.input_size = input_size
         self.hidden_size = hidden_size
@@ -517,21 +671,28 @@ class CTRNN(torch.nn.Module):
         self.h2h = torch.nn.Linear(hidden_size, hidden_size)
 
     def init_hidden(self, shape, device):
+        """Initializes the hidden state.
+
+        Args:
+            shape: The shape of the input tensor.
+            device: The device to initialize the hidden state on.
+
+        Returns:
+            The initialized hidden state tensor.
+        """
         batch_size = shape[0]  # because batch_first=True
         hidden = torch.zeros(batch_size, self.hidden_size).to(device)
         return hidden
 
     def recurrence(self, input, hidden):
-        """
-        Run network for one time step.
+        """Runs the network for one time step.
 
-        Inputs:
-            input: tensor of shape (batch, input_size)
-            hidden: tensor of shape (batch, hidden_size)
+        Args:
+            input: Tensor of shape (batch_size, input_size).
+            hidden: Tensor of shape (batch_size, hidden_size).
 
-        Outputs:
-            h_new: tensor of shape (batch, hidden_size),
-                network activity at the next time step
+        Returns:
+            The network activity at the next time step.
         """
         # Perform the recurrence update
         # h_new = torch.relu(self.input2h(input) + self.h2h(hidden)) # ReLU nonlinearity
@@ -541,9 +702,14 @@ class CTRNN(torch.nn.Module):
         return h_new
 
     def forward(self, input, hidden=None):
-        """
-        Propagate input through the network. NOTE: Because we use
-        batch_first=True, input has shape (batch, seq_len, input_size).
+        """Propagates input through the network.
+
+        Args:
+            input: Tensor with shape (batch_size, seq_len, input_size).
+            hidden: Tensor with shape (batch_size, hidden_size), initial hidden activity. If None, hidden is initialized through self.init_hidden().
+
+        Returns:
+            A tuple containing the output tensor with shape (batch_size, seq_len, hidden_size) and the final hidden activity tensor with shape (batch_size, hidden_size).
         """
         # If hidden activity is not provided, initialize it
         if hidden is None:
@@ -567,16 +733,34 @@ class CTRNN(torch.nn.Module):
 
 
 class InnerHiddenModel(torch.nn.Module):
-    """
-    Inner hidden (latent) model.
-    """
+    """Inner hidden (latent) model.
 
+    This class encapsulates the "core" of the inner model of different architectures.
+
+    Attributes:
+        hidden_hidden: The hidden-hidden model (core) of the architecture.
+        hidden: The hidden state of the model.
+    """
     def __init__(self, hidden_hidden_model: torch.nn.Module, hidden_state=None):
+        """Initializes the InnerHiddenModel with the given hidden-hidden model and hidden state.
+
+        Args:
+            hidden_hidden_model: The hidden-hidden model (core) of the architecture.
+            hidden_state: The initial hidden state of the model. Default is None.
+        """
         super().__init__()
         self.hidden_hidden = hidden_hidden_model
         self.hidden = hidden_state
 
     def forward(self, x):
+        """Propagates input through the inner hidden model.
+
+        Args:
+            x: The input tensor.
+
+        Returns:
+            The output tensor after applying the inner hidden model.
+        """
         if self.hidden is None:
             x = self.hidden_hidden(x)
         else:
@@ -585,6 +769,11 @@ class InnerHiddenModel(torch.nn.Module):
         return x
 
     def set_hidden(self, hidden_state):
+        """Sets the hidden state of the model.
+
+        Args:
+            hidden_state: The hidden state to set.
+        """
         self.hidden = hidden_state
         return None
 
@@ -609,7 +798,7 @@ class Model(torch.nn.Module):
             called `self.linear_readout`.
         4. The core of all model is called `self.hidden_hidden` and it is
             comprised of a single hidden layer of an architecture of choice.
-        7. Getter methods for the input size and hidden size called
+        5. Getter methods for the input size and hidden size called
         `get_input_size`, `get_hidden_size`, `get_loss_name`, and `get_l1_norm_reg_param`.
     """
 
@@ -629,7 +818,18 @@ class Model(torch.nn.Module):
         positional_encoding: Union[bool, None] = False,
     ):
         """
-        Defines attributes common to all model.
+        Initializes the Model with the given parameters.
+
+        Args:
+            input_size: The number of input neurons.
+            hidden_size: The number of hidden neurons.
+            loss: The loss function to be used by the model. Default is None.
+            l1_norm_reg_param: The L1 norm regularization parameter. Default is 0.0.
+            connectome_reg_param: The connectome regularization parameter. Default is 0.0.
+            version_2: Whether to use version 2 of the model. Default is VERSION_2.
+            num_tokens: The number of tokens for version 2. Default is NUM_TOKENS.
+            normalization: The type of normalization to use. Default is None.
+            positional_encoding: Whether to use positional encoding. Default is False.
         """
         super(Model, self).__init__()
         assert (
@@ -738,10 +938,12 @@ class Model(torch.nn.Module):
 
     # Initialization functions for setting hidden states and weights.
     def _init_hidden(self):
+        """Initializes the hidden state."""
         self.hidden = None
         return None
 
     def _init_weights(self):
+        """Initializes the weights of the model."""
         # Initialize the readout bias
         torch.nn.init.zeros_(self.linear_readout.bias)
         # Initialize the readout weights
@@ -755,41 +957,54 @@ class Model(torch.nn.Module):
     @abstractmethod
     def init_hidden(self, shape=None, device=None):
         """
-        Enforce that all model have an `init_hidden` method which initializes the hidden state of the "core".
+        Initializes the hidden state of the "core".
+
+        Args:
+            shape: The shape of the input tensor.
+            device: The device to initialize the hidden state on.
+
+        Returns:
+            The initialized hidden state tensor.
+            
+        NOTE: Enforce that all model have an `init_hidden` method which initializes the hidden state of the "core".
         This function must be overridden in subclasses with the specified argument 'shape'.
         """
         raise NotImplementedError()
 
     # Getter functions for returning all attributes needed to reinstantiate a similar model
     def get_input_size(self):
+         """Returns the input size of the model."""
         return self.input_size
 
     def get_hidden_size(self):
+        """Returns the hidden size of the model."""
         return self.hidden_size
 
     def get_loss_name(self):
+        """Returns the name of the loss function."""
         return self.loss_name
 
     def get_l1_norm_reg_param(self):
+        """Returns the L1 norm regularization parameter."""
         return self.l1_norm_reg_param
 
     def get_connectome_reg_param(self):
+        """Returns the connectome regularization parameter."""
         return self.connectome_reg_param
 
     @torch.autocast(
         device_type=DEVICE.type, dtype=torch.half if "cuda" in DEVICE.type else torch.bfloat16
     )
     def calculate_distances(self, neural_sequence, token_matrix, feature_mask=None):
-        """
-        Efficiently calculates Euclidean distances between neural sequence vectors and token matrix vectors.
+        """Efficiently calculates Euclidean distances between neural sequence vectors and token matrix vectors.
 
         Args:
-            neural_sequence (torch.Tensor): Shape (batch_size, seq_len, input_size).
-            token_matrix (torch.Tensor): Shape (num_tokens, input_size).
-            feature_mask (torch.Tensor, optional): Shape (batch_size, input_size). If None, all features are considered.
+            neural_sequence: Tensor of shape (batch_size, seq_len, input_size).
+            token_matrix: Tensor of shape (num_tokens, input_size).
+            feature_mask: Tensor of shape (batch_size, input_size). If None, all features are considered.
 
         Returns:
-            distances (torch.Tensor): Distance matrix for each batch. Shape (batch_size, seq_len, num_tokens).
+            distances: Distance matrix for each batch. Shape (batch_size, seq_len, num_tokens).
         """
         # Get input shapes
         batch_size, _, input_size = neural_sequence.shape
@@ -845,12 +1060,13 @@ class Model(torch.nn.Module):
         as the dimensionality of the neural data (i.e. `input_size` or `num_channels`).
 
         Args:
-            neural_sequence: tensor with shape (batch_size, seq_len, input_size)
-            feature_mask: tensor with shape (batch_size, input_size)
-            token_matrix: (optional) tensor with shape (num_tokens, input_size)
-            decay: (optional) float EMA decay factor for updating the neural embedding
-        Output:
-            token_sequence: tensor of shape (batch_size, seq_len)
+            neural_sequence: Tensor with shape (batch_size, seq_len, input_size).
+            feature_mask: Tensor with shape (batch_size, input_size).
+            token_matrix: (optional) Tensor with shape (num_tokens, input_size).
+            decay: (optional) float EMA decay factor for updating the neural embedding.
+
+        Returns:
+            token_sequence: Tensor of shape (batch_size, seq_len).
         """
         # Ensure the neural_sequence has the correct shapes
         assert (
@@ -920,15 +1136,15 @@ class Model(torch.nn.Module):
         return token_sequence
 
     def bin_tensor(self, nt):
-        """
-        Converts a neural tensor of continuous values from a standard normal
+        """Converts a neural tensor of continuous values from a standard normal
         distribution into a tensor of discrete values by indexing them into
         bins defined by self.bin_edges.
 
         Args:
-            nt: neural tensor (batch_size, seq_len, input_size)
-        Output:
-            it: index tensor (batch_size, seq_len, input_size)
+            nt: Neural tensor (batch_size, seq_len, input_size).
+
+        Returns:
+            it: Index tensor (batch_size, seq_len, input_size).
         """
         b1 = nt.unsqueeze(-1) > self.bin_edges[:-1]
         b2 = nt.unsqueeze(-1) <= self.bin_edges[1:]
@@ -963,6 +1179,11 @@ class Model(torch.nn.Module):
         """
         A helper function that computes the best linear approximation of
         the model weights using ordinary least squares (OLS) regression.
+        
+        Args:
+            model_in: Input tensor.
+            model_out: Output tensor.
+            
         NOTE: We tried using `torch.linalg.lstsq(A, B)` as recommended
         (instead of `torch.linalg.pinv(A) @ B` which we are uccrently using)
         but the solution that returned contained NaN values which broke backprop.
@@ -990,15 +1211,14 @@ class Model(torch.nn.Module):
         device_type=DEVICE.type, dtype=torch.half if "cuda" in DEVICE.type else torch.bfloat16
     )
     def forward(self, input: torch.Tensor, mask: torch.Tensor):
-        """
-        Common forward method for all model.
+        """Common forward method for all models.
 
-        Parameters
-        ----------
-        input : torch.Tensor
-            Input data with shape (batch, seq_len, neurons)
-        mask : torch.Tensor
-            Mask on the neurons with shape (batch, neurons)
+        Args:
+            input: Input data with shape (batch, seq_len, neurons).
+            mask: Mask on the neurons with shape (batch, neurons).
+
+        Returns:
+            The output tensor after applying the model.
         """
         # Route to the appropriate forward method
         if self.version_2:
@@ -1028,10 +1248,16 @@ class Model(torch.nn.Module):
         device_type=DEVICE.type, dtype=torch.half if "cuda" in DEVICE.type else torch.bfloat16
     )
     def forward_v2(self, input: torch.Tensor, mask: torch.Tensor):
-        """
-        Special forward method for the newer version (version_2) of the model
+        """Special forward method for the newer version (version_2) of the model
         based on first tokenizing the high-dimensional neural data before
         doing sequence modeling to mimic the approach used in Transformers.
+
+        Args:
+            input: Input data with shape (batch, seq_len, neurons).
+            mask: Mask on the neurons with shape (batch, neurons).
+
+        Returns:
+            The output tensor after applying the model.
         """
         # Initialize hidden state
         self.hidden = self.init_hidden(input.shape, input.device)
@@ -2133,6 +2359,13 @@ class NaivePredictor(Model):
     """
     A parameter-less model that simply copies the input as its output.
     Serves as our baseline model. Memory-less and feature-less.
+
+    Attributes:
+        input_hidden: Identity transformation for input to hidden.
+        hidden_hidden: Identity transformation for hidden to hidden.
+        inner_hidden_model: The internal hidden model (core).
+        linear_readout: Identity transformation for the linear readout.
+    
     NOTE:
     (1) This model will throw an error if you try to train it because
     it has no trainable parameters and thus has no gradient function.
@@ -2147,6 +2380,16 @@ class NaivePredictor(Model):
         l1_norm_reg_param=0.0,
         **kwargs,
     ):
+        """
+        Initializes the NaivePredictor with the given parameters.
+
+        Args:
+            input_size: The number of input neurons.
+            hidden_size: The number of hidden neurons (unused in this model).
+            loss: The loss function to be used by the model. Default is None.
+            l1_norm_reg_param: The L1 norm regularization parameter. Default is 0.0.
+            **kwargs: Additional keyword arguments.
+        """
         # NaivePredictor does not work with version_2
         if kwargs.get("version_2", True):
             logger.info(
@@ -2181,6 +2424,15 @@ class NaivePredictor(Model):
         self._ = torch.nn.Parameter(torch.tensor(0.0))
 
     def init_hidden(self, shape=None, device=None):
+        """Initializes the hidden state.
+
+        Args:
+            shape: The shape of the input tensor.
+            device: The device to initialize the hidden state on.
+
+        Returns:
+            None
+        """
         return None
 
 
@@ -2190,6 +2442,11 @@ class LinearRegression(Model):
     This model can only learn a fixed linear feature regression
     function that it applies at every time step independently. It
     is thus memoryless, but can learn linear feature regression.
+
+    Attributes:
+        input_hidden: Transformation from input to hidden.
+        hidden_hidden: Identity transformation for hidden to hidden.
+        inner_hidden_model: The internal hidden model (core).
     """
 
     def __init__(
@@ -2200,6 +2457,16 @@ class LinearRegression(Model):
         l1_norm_reg_param=0.0,
         **kwargs,
     ):
+        """
+        Initializes the LinearRegression model with the given parameters.
+
+        Args:
+            input_size: The number of input neurons.
+            hidden_size: The number of hidden neurons (unused in this model).
+            loss: The loss function to be used by the model. Default is None.
+            l1_norm_reg_param: The L1 norm regularization parameter. Default is 0.0.
+            **kwargs: Additional keyword arguments.
+        """
         # Specify positional encoding and normalization
         kwargs["positional_encoding"] = False
         kwargs["normalization"] = None
@@ -2226,6 +2493,15 @@ class LinearRegression(Model):
         )
 
     def init_hidden(self, shape=None, device=None):
+        """Initializes the hidden state.
+
+        Args:
+            shape: The shape of the input tensor.
+            device: The device to initialize the hidden state on.
+
+        Returns:
+            None
+        """
         return None
 
 
@@ -2238,6 +2514,12 @@ class FeatureFFNN(Model):
     a fixed nonlinear feature regression function that
     it applies at every time step independently. It is thus
     memoryless, but can learn nonlinear feature regression.
+
+    Attributes:
+        dropout: The dropout rate.
+        input_hidden: Transformation from input to hidden.
+        hidden_hidden: FeedForward layer for hidden to hidden transformation.
+        inner_hidden_model: The internal hidden model (core).
     """
 
     def __init__(
@@ -2249,6 +2531,17 @@ class FeatureFFNN(Model):
         connectome_reg_param: float = 0.0,
         **kwargs,
     ):
+        """
+        Initializes the FeatureFFNN model with the given parameters.
+
+        Args:
+            input_size: The number of input neurons.
+            hidden_size: The number of hidden neurons.
+            loss: The loss function to be used by the model. Default is None.
+            l1_norm_reg_param: The L1 norm regularization parameter. Default is 0.0.
+            connectome_reg_param: The connectome regularization parameter. Default is 0.0.
+            **kwargs: Additional keyword arguments.
+        """
         # Specify positional encoding and normalization
         kwargs["positional_encoding"] = False
         kwargs["normalization"] = "layer_norm"
@@ -2281,14 +2574,30 @@ class FeatureFFNN(Model):
         )
 
     def init_hidden(self, shape=None, device=None):
+        """Initializes the hidden state.
+
+        Args:
+            shape: The shape of the input tensor.
+            device: The device to initialize the hidden state on.
+
+        Returns:
+            None
+        """
         return None
 
 
 class PureAttention(Model):
     """
     A model that uses just the multi-head attention mechanism of the Transformer encoder
-    as its internal "core. This is in contrast to NeuralTransformer which uses a complete
+    as its internal "core". This is in contrast to NeuralTransformer which uses a complete
     TransformerEncoderLayer as its "core" or inner hidden model.
+
+    Attributes:
+        num_heads: The number of attention heads.
+        dropout: The dropout rate.
+        input_hidden: Transformation from input to hidden.
+        hidden_hidden: Multihead Attention layer for hidden to hidden transformation.
+        inner_hidden_model: The internal hidden model (core).
     """
 
     def __init__(
@@ -2300,6 +2609,17 @@ class PureAttention(Model):
         connectome_reg_param: float = 0.0,
         **kwargs,
     ):
+        """
+        Initializes the PureAttention model with the given parameters.
+
+        Args:
+            input_size: The number of input neurons.
+            hidden_size: The number of hidden neurons.
+            loss: The loss function to be used by the model. Default is None.
+            l1_norm_reg_param: The L1 norm regularization parameter. Default is 0.0.
+            connectome_reg_param: The connectome regularization parameter. Default is 0.0.
+            **kwargs: Additional keyword arguments.
+        """
         # NOTE: Attention only works with even `embed_dim`
         if hidden_size % 2 != 0:
             logger.info(f"Changing hidden_size from {hidden_size} to {hidden_size+1}.")
@@ -2342,6 +2662,15 @@ class PureAttention(Model):
         )
 
     def init_hidden(self, shape=None, device=None):
+        """Initializes the hidden state.
+
+        Args:
+            shape: The shape of the input tensor.
+            device: The device to initialize the hidden state on.
+
+        Returns:
+            None
+        """
         return None
 
 
@@ -2354,6 +2683,13 @@ class NeuralTransformer(Model):
     Transformer architecture, we use a linear layer to perform
     expansion recoding. This replaces the embedding layer in the
     traditional Transformer but it is really just a linear projection.
+
+    Attributes:
+        num_heads: The number of attention heads.
+        dropout: The dropout rate.
+        input_hidden: Transformation from input to hidden.
+        hidden_hidden: TransformerEncoderLayer for hidden to hidden transformation.
+        inner_hidden_model: The internal hidden model (core).
     """
 
     def __init__(
@@ -2365,6 +2701,17 @@ class NeuralTransformer(Model):
         connectome_reg_param: float = 0.0,
         **kwargs,
     ):
+        """
+        Initializes the NeuralTransformer model with the given parameters.
+
+        Args:
+            input_size: The number of input neurons.
+            hidden_size: The number of hidden neurons.
+            loss: The loss function to be used by the model. Default is None.
+            l1_norm_reg_param: The L1 norm regularization parameter. Default is 0.0.
+            connectome_reg_param: The connectome regularization parameter. Default is 0.0.
+            **kwargs: Additional keyword arguments.
+        """
         # NOTE: Transformer only works with even `d_model`
         if hidden_size % 2 != 0:
             logger.info(f"Changing hidden_size from {hidden_size} to {hidden_size+1}.")
@@ -2408,6 +2755,15 @@ class NeuralTransformer(Model):
         )
 
     def init_hidden(self, shape=None, device=None):
+        """Initializes the hidden state.
+
+        Args:
+            shape: The shape of the input tensor.
+            device: The device to initialize the hidden state on.
+
+        Returns:
+            None
+        """
         return None
 
 
@@ -2415,6 +2771,12 @@ class HippoSSM(Model):
     """
     A model of the _C. elegans_ nervous system using a state-space model (SSM) backbone
     that utilizes the HiPPo matrix for long-term sequence modeling.
+
+    Attributes:
+        decode: Whether to use convolution (True) or recurrence (False) mode of SSM.
+        input_hidden: Transformation from input to hidden.
+        hidden_hidden: State Space Model (SSM) layer for hidden to hidden transformation.
+        inner_hidden_model: The internal hidden model (core).
     """
 
     def __init__(
@@ -2426,6 +2788,17 @@ class HippoSSM(Model):
         connectome_reg_param: float = 0.0,
         **kwargs,
     ):
+        """
+        Initializes the HippoSSM model with the given parameters.
+
+        Args:
+            input_size: The number of input neurons.
+            hidden_size: The number of hidden neurons.
+            loss: The loss function to be used by the model. Default is None.
+            l1_norm_reg_param: The L1 norm regularization parameter. Default is 0.0.
+            connectome_reg_param: The connectome regularization parameter. Default is 0.0.
+            **kwargs: Additional keyword arguments.
+        """
         # Specify positional encoding and normalization
         kwargs["positional_encoding"] = False
         kwargs["normalization"] = "layer_norm"
@@ -2459,6 +2832,15 @@ class HippoSSM(Model):
         )
 
     def init_hidden(self, shape, device):
+        """Initializes the hidden state.
+
+        Args:
+            shape: The shape of the input tensor.
+            device: The device to initialize the hidden state on.
+
+        Returns:
+            The initialized hidden state tensor.
+        """
         batch_size = shape[0]  # because batch_first=True
         hidden = torch.zeros(batch_size, self.hidden_size).to(device)
         return hidden
@@ -2468,6 +2850,11 @@ class NetworkCTRNN(Model):
     """
     A model of the C. elegans nervous system using a continuous-time RNN backbone.
     TODO: Cite tutorial by Guangyu Robert Yang and the paper: Artificial Neural Networks for Neuroscientists: A Primer.
+
+    Attributes:
+        input_hidden: Transformation from input to hidden.
+        hidden_hidden: Continuous time RNN (CTRNN) layer for hidden to hidden transformation.
+        inner_hidden_model: The internal hidden model (core).
     """
 
     def __init__(
@@ -2479,6 +2866,17 @@ class NetworkCTRNN(Model):
         connectome_reg_param: float = 0.0,
         **kwargs,
     ):
+        """
+        Initializes the NetworkCTRNN model with the given parameters.
+
+        Args:
+            input_size: The number of input neurons.
+            hidden_size: The number of hidden neurons.
+            loss: The loss function to be used by the model. Default is None.
+            l1_norm_reg_param: The L1 norm regularization parameter. Default is 0.0.
+            connectome_reg_param: The connectome regularization parameter. Default is 0.0.
+            **kwargs: Additional keyword arguments.
+        """
         # Specify positional encoding and normalization
         kwargs["positional_encoding"] = False
         kwargs["normalization"] = "layer_norm"
@@ -2509,6 +2907,15 @@ class NetworkCTRNN(Model):
         )
 
     def init_hidden(self, shape, device):
+        """Initializes the hidden state.
+
+        Args:
+            shape: The shape of the input tensor.
+            device: The device to initialize the hidden state on.
+
+        Returns:
+            The initialized hidden state tensor.
+        """
         batch_size = shape[0]  # because batch_first=True
         hidden = torch.zeros(batch_size, self.hidden_size).to(device)
         return hidden
@@ -2519,6 +2926,11 @@ class LiquidCfC(Model):
     Neural Circuit Policy (NCP) Closed-form continuous time (CfC) model.
     Hasani, R., Lechner, M., Amini, A. et al. Closed-form continuous-time neural networks.
     Nat Mach Intell 4, 992–1003 (2022). https://doi.org/10.1038/s42256-022-00556-7.
+
+    Attributes:
+        input_hidden: Transformation from input to hidden.
+        hidden_hidden: Closed-form continuous-time (CfC) layer for hidden to hidden transformation.
+        inner_hidden_model: The internal hidden model (core).
     """
 
     def __init__(
@@ -2530,6 +2942,17 @@ class LiquidCfC(Model):
         connectome_reg_param: float = 0.0,
         **kwargs,
     ):
+        """
+        Initializes the LiquidCfC model with the given parameters.
+
+        Args:
+            input_size: The number of input neurons.
+            hidden_size: The number of hidden neurons.
+            loss: The loss function to be used by the model. Default is None.
+            l1_norm_reg_param: The L1 norm regularization parameter. Default is 0.0.
+            connectome_reg_param: The connectome regularization parameter. Default is 0.0.
+            **kwargs: Additional keyword arguments.
+        """
         # Specify positional encoding and normalization
         kwargs["positional_encoding"] = False
         kwargs["normalization"] = "layer_norm"
@@ -2564,7 +2987,14 @@ class LiquidCfC(Model):
 
     def init_hidden(self, shape, device):
         """
-        Inititializes the hidden state of the RNN.
+        Initializes the hidden state of the RNN.
+
+        Args:
+            shape: The shape of the input tensor.
+            device: The device to initialize the hidden state on.
+
+        Returns:
+            The initialized hidden state tensor.
         """
         batch_size = shape[0]  # because batch_first=True
         hidden = torch.zeros(batch_size, self.hidden_size).to(device)
@@ -2587,6 +3017,11 @@ class NetworkLSTM(Model):
     Given an input sequence of length $L$ and an offset this
     model is trained to output the sequence of length $L$ that
     occurs 1 time steps after the start of the input sequence.
+
+    Attributes:
+        input_hidden: Transformation from input to hidden.
+        hidden_hidden: Long-short term memory (LSTM) layer for hidden to hidden transformation.
+        inner_hidden_model: The internal hidden model (core).
     """
 
     def __init__(
@@ -2598,6 +3033,17 @@ class NetworkLSTM(Model):
         connectome_reg_param: float = 0.0,
         **kwargs,
     ):
+        """
+        Initializes the NetworkLSTM model with the given parameters.
+
+        Args:
+            input_size: The number of input neurons.
+            hidden_size: The number of hidden neurons.
+            loss: The loss function to be used by the model. Default is None.
+            l1_norm_reg_param: The L1 norm regularization parameter. Default is 0.0.
+            connectome_reg_param: The connectome regularization parameter. Default is 0.0.
+            **kwargs: Additional keyword arguments.
+        """
         # Specify positional encoding and normalization
         kwargs["positional_encoding"] = False
         kwargs["normalization"] = "layer_norm"
@@ -2633,7 +3079,14 @@ class NetworkLSTM(Model):
 
     def init_hidden(self, shape, device):
         """
-        Inititializes the hidden and cell states of the LSTM.
+        Initializes the hidden and cell states of the LSTM.
+
+        Args:
+            shape: The shape of the input tensor.
+            device: The device to initialize the hidden state on.
+
+        Returns:
+            A tuple containing the initialized hidden state tensor and cell state tensor.
         """
         batch_size = shape[0]  # because batch_first=True
         h0 = torch.zeros(1, batch_size, self.hidden_size).to(device)
