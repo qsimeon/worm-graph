@@ -37,9 +37,9 @@ dataset:
     # Dag2023: all
     # Flavell2023: all
     # Leifer2023: all
-    # Lin2023: all
+    Lin2023: all
     Nejatbakhsh2020: all
-    # Venkatachalam2024: all
+    Venkatachalam2024: all
     
   # If null, use all the named neurons from each worm. Otherwise, if <int> use that number of named neurons (randomly picked) from the each worm.
   num_named_neurons: null # number of neurons to train the model with (positive integer or null)

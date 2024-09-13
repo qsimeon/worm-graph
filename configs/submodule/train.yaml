@@ -6,7 +6,7 @@ train:
   # How often to save the model
   save_freq: 100 
   # Batch size may need to be adjusted based on how big the dataset is
-  batch_size: 128
+  batch_size: 16
   shuffle: true
 
   early_stopping:

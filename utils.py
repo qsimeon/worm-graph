@@ -166,6 +166,7 @@ EXPERIMENT_DATASETS = {
     "Lin2023",
     "Flavell2023",  # TODO: Something is wrong with worm0 always in this dataset. Specifically, a "worm0" is absent. Why?
     "Venkatachalam2024",  # This is unpublished data. Downloaded from chemosensory-data.worm.world/.
+    "Nejatbakhsh2020"
 }
 
 SYNTHETIC_DATASETS = {  # Datasets created with the `CreateSyntheticDataset.ipynb` notebook.

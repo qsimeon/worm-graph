@@ -1738,6 +1738,7 @@ class NeuralBasePreprocessor:
             dict: Collection of all preprocessed worm data so far.
             int: Index of the next worm to preprocess.
         """
+        
         for i, trace_data in enumerate(traces):
             # Matrix `trace_data` should be shaped as (time, neurons)
             assert trace_data.ndim == 2, "Calcium traces must be 2D arrays."
@@ -1764,6 +1765,8 @@ class NeuralBasePreprocessor:
             # TODO: Should we do this? What if we want to infer these using trained models as a dowstream task?
             if num_named_neurons == 0:
                 continue
+            
+            logger.info(trace_data.shape)
             ## DEBUG ###
             # Only get data for unique neurons
             trace_data = trace_data[:, unique_indices.astype(int)]
@@ -1775,6 +1778,10 @@ class NeuralBasePreprocessor:
             time_in_seconds = time_in_seconds - time_in_seconds[0]  # start at 0.0 seconds
             dt = np.diff(time_in_seconds, axis=0, prepend=0.0)  # vector
             original_median_dt = np.median(dt[1:]).item()  # scalar
+            
+            logger.info(calcium_data.shape)
+            logger.info(time_in_seconds.shape)
+            
             residual_calcium = np.gradient(
                 calcium_data, time_in_seconds.squeeze(), axis=0
             )  # vector
@@ -1808,6 +1815,7 @@ class NeuralBasePreprocessor:
             worm = "worm" + str(worm_idx)  # use global worm index
             worm_idx += 1  # increment worm index
             # 7. Save data
+            
             worm_dict = {
                 worm: {
                     "calcium_data": resampled_calcium_data,  # normalized and resampled
@@ -1840,6 +1848,7 @@ class NeuralBasePreprocessor:
                     "extra_info": self.create_metadata(),  # additional information and metadata
                 }
             }
+            
             # Update preprocessed data collection
             preprocessed_data.update(worm_dict)
         # Return the updated preprocessed data and worm index
@@ -1861,8 +1870,9 @@ class Nejatbakhsh2020Preprocessor(NeuralBasePreprocessor):
         with NWBHDF5IO(file, "r") as io:
             read_nwbfile = io.read()
             traces = np.array(read_nwbfile.processing["CalciumActivity"].data_interfaces["SignalRawFluor"].roi_response_series["SignalCalciumImResponseSeries"].data)
-            neuron_ids = np.array(read_nwbfile.processing["CalciumActivity"].data_interfaces["NeuronIDs"].labels)
-            time_vector = np.arange(0, len(neuron_ids))
+            neuron_ids = np.array(read_nwbfile.processing["CalciumActivity"].data_interfaces["NeuronIDs"].labels, dtype=np.dtype(str))
+            # sampling frequency is 4 Hz
+            time_vector = np.arange(0, traces.shape[0]).astype(np.dtype(float)) / 4
         
         return neuron_ids, traces, time_vector
     
@@ -1879,6 +1889,7 @@ class Nejatbakhsh2020Preprocessor(NeuralBasePreprocessor):
             for file_name in os.listdir(os.path.join(self.raw_data_path, self.source_dataset, subfolder)):
                 neuron_ids, traces, raw_time_vector = self.extract_data(os.path.join(self.raw_data_path, self.source_dataset, subfolder, file_name))
                 preprocessed_data, worm_idx = self.preprocess_traces([neuron_ids], [traces], [raw_time_vector], preprocessed_data, worm_idx)
+        
         for worm in preprocessed_data.keys():
             preprocessed_data[worm] = reshape_calcium_data(preprocessed_data[worm])
         self.save_data(preprocessed_data)
