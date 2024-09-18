@@ -12,7 +12,7 @@ def pickle_neural_data(
     source_dataset="all",
     # TODO: Try different transforms from sklearn such as QuantileTransformer, etc. as well as custom CausalNormalizer.
     transform=StandardScaler(),  # StandardScaler() #PowerTransformer() #CausalNormalizer() #None
-    smooth_method="moving",
+    smooth_method="none",
     interpolate_method="linear",
     resample_dt=None,
     cleanup=False,
@@ -1522,6 +1522,8 @@ def smooth_data_preprocess(calcium_data, time_in_seconds, smooth_method, **kwarg
         smooth_ca_data = exponential_kernel_smooth(
             calcium_data, time_in_seconds, alpha=kwargs.get("alpha", 0.5)
         )
+    elif str(smooth_method).lower() == "none":
+        smooth_ca_data = calcium_data
     else:
         raise TypeError("See `configs/submodule/preprocess.yaml` for viable smooth methods.")
     return smooth_ca_data
@@ -2116,7 +2118,7 @@ class NeuralBasePreprocessor:
         dataset_name,
         # TODO: Try different transforms from sklearn such as QuantileTransformer, etc. as well as custom CausalNormalizer.
         transform=StandardScaler(),  # StandardScaler() #PowerTransformer() #CausalNormalizer() #None
-        smooth_method="moving",
+        smooth_method="none",
         interpolate_method="linear",
         resample_dt=0.1,
         **kwargs,
