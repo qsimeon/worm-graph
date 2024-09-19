@@ -10,7 +10,7 @@ preprocess:
   interpolate: linear # The method to use for interpolation; options: null, linear, quadratic, cubic
   smooth: 
     # NOTE: Smoothing is done using a causal filter. Smoothing is applied prior to resampling.
-    method: exponential # null: No smoothing, # gaussian: Gaussian convolution filter, # exponential: Exponential kernel filter, # moving: Moving average filter
+    method: none # none: No smoothing, # gaussian: Gaussian convolution filter, # exponential: Exponential kernel filter, # moving: Moving average filter
     # hyperparameters of the different smoothing methods
     alpha: 0.5 # exponential; smaller alpha = smoother
     sigma: 5 # gaussian; larger sigma = smoother
