@@ -137,7 +137,7 @@ RAW_FILES = [  # TODO: Cite sources of these files.
     "Witvliet2020_NeuronClasses.xlsx",  # high level classes of hermaphrodite neurons
     "neuron_labels.txt",  # labels (names) of all hermaphrodite neurons
     "neuron_master_sheet.csv",  # TODO: working on a sheet combines all neuron information (labels, classes, neurotransmitter, cell type, and position)
-    # NOTE: "neuron_master_sheet.csv" will make the following files obsolete: "neuron_labels.txt", ""Witvliet2020_NeuronClasses.xlsx", "LowResAtlasWithHighResHeadsAndTails.csv", "Hobert2016_BrainAtlas.xlsx"
+    # NOTE: "neuron_master_sheet.csv", once complete, should make the following files obsolete: "neuron_labels.txt", ""Witvliet2020_NeuronClasses.xlsx", "LowResAtlasWithHighResHeadsAndTails.csv", "Hobert2016_BrainAtlas.xlsx"
 ]
 
 WORLD_SIZE = torch.cuda.device_count()

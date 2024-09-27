@@ -5,17 +5,15 @@ Simulating the _C. elegans_ whole brain with neural networks.
 ---
 
 ### Notes to Users
-- See this [Wiki page](https://github.com/metaconsciousgroup/worm-graph/wiki/Pipeline-Structure#overview) if running locally (i.e. not on a SLURM cluster)
-
 - Please change `submitit_slurm` to `submitit_local` in the file `configs/pipeline.yaml` if running on your local machine.
 
-- Disable autocast if on cpu.
+- Disable autocast if using a CPU.
 
 ### Cite
-Q. Simeon, L. Venâncio, M. A. Skuhersky, A. Nayebi, E. S. Boyden and G. R. Yang, "Scaling Properties for Artificial Neural Network Models of a Small Nervous System," SoutheastCon 2024, Atlanta, gaussian, USA, 2024, pp. 516-524, doi: 10.1109/SoutheastCon52093.2024.10500049. 
+Q. Simeon, L. Venâncio, M. A. Skuhersky, A. Nayebi, E. S. Boyden and G. R. Yang, "Scaling Properties for Artificial Neural Network Models of a Small Nervous System," SoutheastCon 2024, Atlanta, GA, USA, 2024, pp. 516-524, doi: 10.1109/SoutheastCon52093.2024.10500049.
 
 ### Abstract
-The nematode worm C. elegans provides a unique opportunity for exploring in silico data-driven model of a whole nervous system, given its transparency and well-characterized nervous system facilitating a wealth of measurement data from wet-lab experiments. This study explores the scaling properties that may govern learning the underlying neural dynamics of this small nervous system by using artificial neural network (ANN) model. We investigate the accuracy of self-supervised next time-step neural activity prediction as a function of data and model. For data scaling, we report a monotonic log-linear reduction in mean-squared error (MSE) as a function of the amount of neural activity data. For model scaling, we find MSE to be a nonlinear function of the size of the ANN model. Furthermore, we observe that the dataset and model size scaling properties are influenced by the particular choice of model architecture but not by the precise experimental source of the C. elegans neural data. Our results fall short of producing long-horizon predictive and generative model of C. elegans whole nervous system dynamics but suggest directions to achieve those. In particular our data scaling properties extrapolate that recording more neural activity data is a fruitful near-term approach to obtaining better predictive ANN model of a small nervous system.
+The nematode worm C. elegans provides a unique opportunity for exploring in silico data-driven models of a whole nervous system, given its transparency and well-characterized nervous system facilitating a wealth of measurement data from wet-lab experiments. This study explores the scaling properties that may govern learning the underlying neural dynamics of this small nervous system by using artificial neural network (ANN) models. We investigate the accuracy of self-supervised next time-step neural activity prediction as a function of data and models. For data scaling, we report a monotonic log-linear reduction in mean-squared error (MSE) as a function of the amount of neural activity data. For model scaling, we find MSE to be a nonlinear function of the size of the ANN models. Furthermore, we observe that the dataset and model size scaling properties are influenced by the particular choice of model architecture but not by the precise experimental source of the C. elegans neural data. Our results fall short of producing long-horizon predictive and generative models of C. elegans whole nervous system dynamics but suggest directions to achieve those. In particular our data scaling properties extrapolate that recording more neural activity data is a fruitful near-term approach to obtaining better predictive ANN models of a small nervous system.
 
 ### [Hugging Face Dataset](https://huggingface.co/datasets/qsimeon/celegans_neural_data)
 
@@ -90,7 +88,7 @@ The nematode worm C. elegans provides a unique opportunity for exploring in sili
 
 ## Environment Setup
 
-To prepare your environment for this project, you should use either the provided `env.sh` script. Firstly, navigate to the `setup` directory. This directory contains all the necessary configuration files to set up the virtual environment. Use the following command to access the directory:
+To prepare your environment for this project, you should use the provided `env.sh` bash script. Firstly, navigate to the `setup` directory. This directory contains all the necessary configuration files to set up the virtual environment. Use the following command to access the directory:
 
 ```
 cd setup
@@ -162,15 +160,15 @@ To make sure nothing breaks, the first thing you need to do is download and prep
     - `python main.py "+submodule=[preprocess,dataset]"`
 
 
-Now you can run the main script as a demo of the fully functional pipeline:
+Now you can run the main script as a demo of the full functional pipeline (`preprocess`) -> `data` -> `model` -> `train` -> `analysis` -> (`visualize`):
 
 `python main.py +experiment=default_run`
 
-* If on a Mac, place `+experiment=default_run` in quotations:
+* If on a Mac, place `+experiment=default_run` in quotes:
 
     - `python main.py "+experiment=default_run"`
 
-* If you are running on a SLURM computing cluster:
+* If running on Linux or a SLURM computing cluster:
 
     - `python main.py +experiment=default_multirun`
 
@@ -179,8 +177,6 @@ For one multi-worm dataset of neural activity, this pipeline will:
 1. Load the preprocessed calcium data for all worms in the dataset.
 2. Train a neural network model to predict future calcium activity from previous activity.
 3. Plot the train and validation loss curves for the model, and its predictions on validation data.
-
-For more tutorials on how to use the pipeline and configuration files, refer to the `worm-graph` GitHub Wiki page.
 
 
 ## For Developers
@@ -197,26 +193,26 @@ For Jupyter notebooks, use the `CamelCase` naming style.
 
 ### Code Style Conventions
 
-- Aim to keep every runnable script (e.g. Python files with a `if __name__ == "__main__":` section) not significantly longer than 300 lines. If your code is getting longer than this, consider modularizing by encapsulating certain processes in helper functions and moving them to a separate file like `_utils.py`.
+1. Aim to keep every runnable script (e.g. Python files with a `if __name__ == "__main__":` section) not significantly longer than 300 lines. If your code is getting longer than this, consider modularizing by encapsulating certain processes in helper functions and moving them to a separate file like `_utils.py`.
 
-- Follow the organization structure of this project, where each self-contained (sub-)module has its own folder containing the files: `_main.py`, `_utils.py`, and `_pkg.py`.
+2. Follow the organization structure of this project, where each self-contained (sub-)module is its own directory containing the files `_main.py`, `_utils.py`, and `_pkg.py`.
   - `_main.py` holds the main code that the module executes, typically as a single function that gets called in the `if __name__ == "__main__":` part.
   - `_pkg.py` is exclusively for placing all package imports that the module needs.
-  - `_utils.py` contains the definitions for all custom classes and helper functions to be used by the module.
+  - `_utils.py` contains the definitions for all custom classes and functions to be used by the module.
 
-- Use the [Black Code Style](https://github.com/psf/black) formatter:
+3. Use the [Black Code Style](https://github.com/psf/black) formatter:
   - Before committing, run the command `black .` in the Terminal from the repository's root directory `worm-graph`.
   - This will automatically reformat all code according to the Black Code Style.
 
-- Follow the [Google Python Style Guide](https://google.github.io/styleguide/pyguide.html) for comments, documentation strings, and unit tests.
+4. Follow the [Google Python Style Guide](https://google.github.io/styleguide/pyguide.html) for comments, documentation strings, and unit tests.
 
-- When in doubt about anything else style-related that's not addressed by the previous two points, reference the [Python Enhancement Protocols (PEP8)](https://peps.python.org/pep-0008/).
+5. When in doubt about anything else style-related that's not addressed by the previous two points, reference the [Python Enhancement Protocols (PEP8)](https://peps.python.org/pep-0008/).
 
-- Always shape neural data matrices as `(time, neurons, {features})`. The braces `{}` indicate that the last `features` dimension is optional, as the `neurons` currently serve as the features for our model.
+6. Always shape neural data matrices as `(time, neurons, {features})`. The braces `{}` indicate that the last `features` dimension is optional, as the `neurons` currently serve as the features for our model.
 
 
 ## Future Tasks
 
 - Post the preprocess datasets to a file-hosting site.
 - Implement unit tests for all submodules in the `tests` directory.
-- Add docstrings to all functions and classes. Follow the Google Python Style Guide for formating.
+- Add docstrings to all functions and classes, follow the Google Python Style Guide for formating.
