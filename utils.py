@@ -42,18 +42,30 @@ RAW_DATA_DIR = os.path.join(ROOT_DIR, "data", "raw")
 
 LOGS_DIR = os.path.join(ROOT_DIR, "logs")
 
-# List of all hermaphrodite neuron names
+# List of all 300 hermaphrodite neuron names
 labels_file = os.path.join(RAW_DATA_DIR, "neuron_labels.txt")
-if os.path.exists(labels_file):
-    NEURON_LABELS = sorted(
-        pd.read_csv(
-            labels_file,
-            sep=" ",
-            header=None,
-            names=["neuron"],
-        ).neuron
-    )
+
+# Master sheet of info on all 300 hermaphrodite neurons
+neurons_master_file = os.path.join(RAW_DATA_DIR, "neuron_master_sheet.csv")
+
+# if os.path.exists(labels_file):
+if os.path.exists(neurons_master_file):
+    # # Load the labels from the text file
+    # NEURON_LABELS = sorted(
+    #     pd.read_csv(
+    #         labels_file,
+    #         sep=" ",
+    #         header=None,
+    #         names=["neuron"],
+    #     ).neuron
+    # )
+    # Load the labels from the master csv file
+    print(f"Loading from {neurons_master_file}.\n")
+    df_neurons_master = pd.read_csv(neurons_master_file).sort_values(by='label', ascending=True)
+    NEURON_LABELS = df_neurons_master["label"].tolist()
 else:
+    # Create the labels and save them to a text file
+    print(f"Saving to {labels_file}.\n")
     # fmt: off
     NEURON_LABELS = [ 
             # References: (1) https://www.wormatlas.org/neurons/Individual%20Neurons/Neuronframeset.html 
@@ -98,7 +110,7 @@ else:
 
 NUM_NEURONS = len(NEURON_LABELS)  # number of neurons in the model organism
 
-RAW_DATA_URL = "https://www.dropbox.com/scl/fi/0qtxfg6mtqczs3ll0ncr5/raw_data.zip?rlkey=z1qulvafew3hpl4wn47jbhoez&dl=1"
+RAW_DATA_URL = "https://www.dropbox.com/scl/fi/xh1hzqt4uzdy61q28gdyv/raw_data.zip?rlkey=vedabydkjp5oxnpecy0zw3ogj&dl=1"
 
 RAW_ZIP = "raw_data.zip"
 
@@ -125,7 +137,7 @@ RAW_FILES = [  # TODO: Cite sources of these files.
     "Witvliet2020_NeuronClasses.xlsx",  # high level classes of hermaphrodite neurons
     "neuron_labels.txt",  # labels (names) of all hermaphrodite neurons
     "neuron_master_sheet.csv",  # TODO: working on a sheet combines all neuron information (labels, classes, neurotransmitter, cell type, and position)
-    # NOTE: "neuron_master_sheet.csv" will make the following files obsolete: "neuron_labels.txt", ""Witvliet2020_NeuronClasses.xlsx", "LowResAtlasWithHighResHeadsAndTails.csv", "Hobert2016_BrainAtlas.xlsx"
+    # NOTE: "neuron_master_sheet.csv", once complete, should make the following files obsolete: "neuron_labels.txt", ""Witvliet2020_NeuronClasses.xlsx", "LowResAtlasWithHighResHeadsAndTails.csv", "Hobert2016_BrainAtlas.xlsx"
 ]
 
 WORLD_SIZE = torch.cuda.device_count()
@@ -164,7 +176,9 @@ EXPERIMENT_DATASETS = {
     "Dag2023",
     "Leifer2023",  # Different type of dataset: stimulus-response.
     "Lin2023",
-    "Flavell2023",  # TODO: Something is wrong with worm0 always in this dataset. Specifically, a "worm0" is absent. Why?
+    "Flavell2023",  # TODO: Something is wrong with worm0 in this dataset. Specifically, "worm0" is always absent. Why?
+    "Venkatachalam2024",  # This is unpublished data. Downloaded from chemosensory-data.worm.world/.
+    "Nejatbakhsh2020"
 }
 
 SYNTHETIC_DATASETS = {  # Datasets created with the `CreateSyntheticDataset.ipynb` notebook.

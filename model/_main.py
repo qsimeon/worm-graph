@@ -83,6 +83,8 @@ def get_model(model_config: DictConfig, verbose=True) -> torch.nn.Module:
             model = NaivePredictor(**args)
         elif model_config.type == "LinearRegression":
             model = LinearRegression(**args)
+        elif model_config.type == "NetworkLatentLSTM":
+            model = NetworkLatentLSTM(**args)
         else:  # default to "LinearRegression" model
             model = LinearRegression(**args)
 

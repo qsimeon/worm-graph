@@ -26,7 +26,7 @@ def load_dataset(name):
          The name of the dataset to load. Must be one of the valid dataset names.
 
     name = {Kato2015, Nichols2017, Nguyen2017, Skora2018, Kaplan2020,
-            Uzel2022, Flavell2023, Dag2023, Leifer2023, Lin2023}
+            Uzel2022, Flavell2023, Dag2023, Leifer2023, Lin2023, Venkatachalam2024}
         |  {Lorenz000, RandWalk0000, Sines0000,
             VanDerPol0000, WhiteNoise0000, Wikitext0000}
 
@@ -632,6 +632,38 @@ def select_named_neurons(multi_worm_dataset, num_named_neurons):
 
 
 def select_desired_worms(multi_worm_dataset, worms):
+    """
+    Selects the desired worms from the multi-worm dataset.
+
+    This function filters the multi-worm dataset to include only the specified worms.
+    The `worms` parameter can be a string, integer, or list, specifying which worms to keep.
+
+    Parameters
+    ----------
+    multi_worm_dataset : dict
+        A dictionary containing the multi-worm dataset.
+    worms : str, int, or list
+        Specifies which worms to keep:
+        - If 'all', returns the entire dataset.
+        - If a string, keeps the specified worm.
+        - If an integer, randomly selects the specified number of worms.
+        - If a list, keeps the specified worms.
+
+    Returns
+    -------
+    dict
+        A dictionary containing the filtered multi-worm dataset.
+
+    Raises
+    ------
+    Exception
+        If the `worms` argument is of an invalid type.
+
+    Notes
+    -----
+    * If the requested number of worms exceeds the available worms, all available worms are returned.
+    * If specific worms are requested but not available, all available worms are returned.
+    """
     # If worms is 'all', return the whole dataset
     if worms == "all":
         return multi_worm_dataset

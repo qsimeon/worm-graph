@@ -1,14 +1,16 @@
+
 # ============================ Hydra Config ============================
 
+
 defaults:
-  # To run the default pipeline, add +experiment=default to the command.
-  - submodule: []
-  # SubmitIt Launcher Plugin:
-  #   This plugin provides SLURM launcher to work on the cluster.
-  #   - Use submitit_local when using OpenMind (add hydra/launcher=submitit_local in command line)
-  #   - Use submitit_local when running locally
-  - override hydra/launcher: submitit_local 
-  - _self_
+ # To run the default pipeline, add +experiment=default to the command.
+ - submodule: []
+ # SubmitIt Launcher Plugin:
+ #   This plugin provides SLURM launcher to work on the cluster.
+ #   - Use submitit_slurm when using OpenMind (add hydra/launcher=submitit_slurm in command line)
+ #   - Use submitit_local when running locally
+ - override hydra/launcher: submitit_slurm
+ - _self_
 
 hydra:
   # Hydra mode:
@@ -50,14 +52,14 @@ hydra:
     cpus_per_task: 4  # Number of CPU cores per task
     gpus_per_node: null  # Number of GPUs per node (NOTE: Don't use with gres.)
     tasks_per_node: 1  # Number of tasks to run on each node
-    mem_gb: 80  # Memory required per node in GB (NOTE: Only powers of 2.)
+    mem_gb: 64  # Memory required per node in GB (NOTE: Only powers of 2.)
     nodes: 1  # Number of nodes to use
-    partition: yanglab #use-everything #yanglab #normal # Partition to submit to
+    partition: # Partition to submit to
     qos: null  # Quality of Service level
     comment: null  # Comment to pass to the job
-    constraint: high-capacity #any-a100 # Constraint specification
-    exclude: dgx001, dgx002, node031, node034, node055  # Hosts to exclude
-    gres: gpu:a100:1 #gpu:1 # Generic resources to request
+    constraint: null # Constraint specification
+    exclude: null # Hosts to exclude
+    gres: gpu:1 # Generic resources to request
     cpus_per_gpu: null  # Number of CPUs per GPU
     gpus_per_task: null  # Number of GPUs per task
     mem_per_gpu: null  # Memory per GPU

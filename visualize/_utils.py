@@ -1157,7 +1157,7 @@ def plot_experiment_losses(exp_log_dir, exp_key, exp_plot_dir=None):
     val_baselines = [val_baselines[i] for i in sorted_indices]
     # Normalize the exp_param values for colormap
     norm = Normalize(vmin=min(parameters), vmax=max(parameters))
-    scalar_map = cm.ScalarMappable(norm=norm, cmap=cm.YlOrRd)
+    scalar_map = plt.cm.ScalarMappable(norm=norm, cmap=plt.cm.YlOrRd)
     # Loop over parameter values and plot losses
     for i, param_val in enumerate(parameters):
         # Get color for current parameter value
