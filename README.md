@@ -111,14 +111,8 @@ cd setup
     conda activate worm-graph
     ```
 
-3. Install the remaining dependencies using pip:
 
-    ```
-    pip install --upgrade -r requirements.txt
-    ```
-
-
-4. After finishing the installations above, navigate back to the root directory (`worm-graph/`):
+3. After finishing the installations above, navigate back to the root directory (`worm-graph/`):
     ```
     cd ..
     ```
@@ -130,7 +124,7 @@ cd setup
     ```
 
 **Note:** 
-* Please ensure to carry out this step, otherwise you may encounter `ModuleNotFoundError` later on.
+* Please ensure to carry out that last step; otherwise you may encounter `ModuleNotFoundError` later on.
 
 * You can check if the environment was successfully installed by running `conda env list` or `conda info --envs`. 
     
