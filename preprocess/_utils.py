@@ -83,7 +83,7 @@ def pickle_neural_data(
             # Run the bash command
             std_out = subprocess.run(bash_command, text=True)
             # Output to log or terminal
-            logger.info(std_out)
+            logger.info(f"Unzipping: {std_out} ...")
             # Delete the zip file
             os.unlink(zip_path)
     # (re)-Pickle all the datasets ... OR
@@ -198,7 +198,7 @@ def preprocess_connectome(raw_files, pub=None):
         3. Determine the appropriate preprocessing class based on the publication.
         4. Instantiate and use the appropriate preprocessor class to preprocess the data.
         5. Save the preprocessed graph tensors to a file.
-    
+
     NOTE:
     * A connectome is a comprehensive map of the neural connections within
       an organism's brain or nervous system. It is essentially the wiring
@@ -264,6 +264,7 @@ class ConnectomeBasePreprocessor:
         save_graph_tensors(save_as: str, graph, num_classes, node_type, node_label, n_id, node_class):
             Saves the graph tensors to a file.
     """
+
     def __init__(self):
         """Initializes the ConnectomeBasePreprocessor with neuron labels and master sheet.
 
@@ -438,6 +439,7 @@ class DefaultPreprocessor(ConnectomeBasePreprocessor):
         preprocess(save_as="graph_tensors.pt"):
             Preprocesses the connectome data and saves the graph tensors to a file.
     """
+
     def preprocess(self, save_as="graph_tensors.pt"):
         """
         Preprocesses the connectome data and saves the graph tensors to a file.
@@ -462,10 +464,10 @@ class DefaultPreprocessor(ConnectomeBasePreprocessor):
             7. Call the `preprocess_common_tasks` method to perform common preprocessing tasks.
             8. Save the graph tensors to the specified file.
         """
-        #### DEBUG ####
+        # >>>>>>>>
         # Hack to override DefaultProprecessor with Witvliet2020Preprocessor7 which is a more up-to-date connectome of C. elegans.
         return Witvliet2020Preprocessor7.preprocess(self, save_as="graph_tensors.pt")
-        #### DEBUG ####
+        # <<<<<<<
         # Names of all C. elegans hermaphrodite neurons
         neurons_all = set(self.neuron_labels)
         sep = r"[\t,]"
@@ -556,7 +558,7 @@ class DefaultPreprocessor(ConnectomeBasePreprocessor):
         gsyn_edge_index = gsyn_edge_index.T  # [2, num_edges]
 
         # edge attributes
-        # NOTE: The first feature represents the weight of the gap junctions; 
+        # NOTE: The first feature represents the weight of the gap junctions;
         # The second feature represents the weight of the chemical synapses.
         num_edge_features = 2
 
@@ -603,6 +605,7 @@ class DefaultPreprocessor(ConnectomeBasePreprocessor):
             node_class,
         )
 
+
 class OpenWormPreprocessor(ConnectomeBasePreprocessor):
     """
     Preprocessor for the OpenWorm connectome data.
@@ -615,6 +618,7 @@ class OpenWormPreprocessor(ConnectomeBasePreprocessor):
         preprocess(save_as="graph_tensors_openworm.pt"):
             Preprocesses the OpenWorm connectome data and saves the graph tensors to a file.
     """
+
     def preprocess(self, save_as="graph_tensors_openworm.pt"):
         """
         Preprocesses the OpenWorm connectome data and saves the graph tensors to a file.
@@ -646,18 +650,18 @@ class OpenWormPreprocessor(ConnectomeBasePreprocessor):
 
             if neuron1 in self.neuron_labels and neuron2 in self.neuron_labels:
                 # NOTE: This file lists both types of edges in the same file with only the "type" column to differentiate.
-                # Therefore as we go through the lines, when see the [neuron_i, neuron_j] pair appearing a second time it is a different 
+                # Therefore as we go through the lines, when see the [neuron_i, neuron_j] pair appearing a second time it is a different
                 # type of synapse (chemical vs. electrical) than the one appearing previously (electrical vs chemical, respectively).
-                # The first synapse with [neuron_i, neuron_j] pair encountered could be either electrical or chemical. 
+                # The first synapse with [neuron_i, neuron_j] pair encountered could be either electrical or chemical.
                 synapse_type = df.loc[i, "Type"]
                 num_connections = df.loc[i, "Number of Connections"]
                 edges.append([neuron1, neuron2])
-                if synapse_type == "GapJunction": # electrical synapse
+                if synapse_type == "GapJunction":  # electrical synapse
                     edge_attr.append([num_connections, 0])
                     # Adding the reverse direction to ensure symmetry of gap junctions
                     edges.append([neuron2, neuron1])
                     edge_attr.append([num_connections, 0])
-                elif synapse_type == "Send": # chemical synapse
+                elif synapse_type == "Send":  # chemical synapse
                     edge_attr.append([0, num_connections])
 
         edge_attr = torch.tensor(edge_attr)
@@ -695,6 +699,7 @@ class Randi2023Preprocessor(ConnectomeBasePreprocessor):
         preprocess(save_as="graph_tensors_funconn.pt"):
             Preprocesses the Randi et al., 2023 connectome data and saves the graph tensors to a file.
     """
+
     def preprocess(self, save_as="graph_tensors_funconn.pt"):
         """
         Preprocesses the Randi et al., 2023 connectome data and saves the graph tensors to a file.
@@ -763,6 +768,7 @@ class Witvliet2020Preprocessor7(ConnectomeBasePreprocessor):
         preprocess(save_as="graph_tensors_witvliet2020_7.pt"):
             Preprocesses the Witvliet et al., 2020 connectome data for adult 7 and saves the graph tensors to a file.
     """
+
     def preprocess(self, save_as="graph_tensors_witvliet2020_7.pt"):
         """
         Preprocesses the Witvliet et al., 2020 connectome data for adult 7 and saves the graph tensors to a file.
@@ -791,12 +797,12 @@ class Witvliet2020Preprocessor7(ConnectomeBasePreprocessor):
         for i in range(len(df)):
             neuron1 = df.loc[i, "pre"]
             neuron2 = df.loc[i, "post"]
-            
+
             if neuron1 in self.neuron_labels and neuron2 in self.neuron_labels:
                 # NOTE: This file lists both types of edges in the same file with only the "type" column to differentiate.
-                # Therefore as we go through the lines, when see the [neuron_i, neuron_j] pair appearing a second time it is a different 
+                # Therefore as we go through the lines, when see the [neuron_i, neuron_j] pair appearing a second time it is a different
                 # type of synapse (chemical vs. electrical) than the one appearing previously (electrical vs chemical, respectively).
-                # The first synapse with [neuron_i, neuron_j] pair encountered could be either electrical or chemical. 
+                # The first synapse with [neuron_i, neuron_j] pair encountered could be either electrical or chemical.
                 edge_type = df.loc[i, "type"]
                 num_connections = df.loc[i, "synapses"]
                 edges.append([neuron1, neuron2])
@@ -831,6 +837,7 @@ class Witvliet2020Preprocessor7(ConnectomeBasePreprocessor):
             node_class,
         )
 
+
 class Witvliet2020Preprocessor8(ConnectomeBasePreprocessor):
     """
     Preprocessor for the Witvliet et al., 2020 connectome data (adult 8).
@@ -845,6 +852,7 @@ class Witvliet2020Preprocessor8(ConnectomeBasePreprocessor):
         Preprocesses the Witvliet et al., 2020 connectome data for adult 8 and saves the graph tensors to a file.
         The data is read from a CSV file named "witvliet_2020_8.csv".
     """
+
     def preprocess(self, save_as="graph_tensors_witvliet2020_8.pt"):
         """
         Preprocesses the Witvliet et al., 2020 connectome data for adult 8 and saves the graph tensors to a file.
@@ -873,12 +881,12 @@ class Witvliet2020Preprocessor8(ConnectomeBasePreprocessor):
         for i in range(len(df)):
             neuron1 = df.loc[i, "pre"]
             neuron2 = df.loc[i, "post"]
-            
+
             if neuron1 in self.neuron_labels and neuron2 in self.neuron_labels:
                 # NOTE: This file lists both types of edges in the same file with only the "type" column to differentiate.
-                # Therefore as we go through the lines, when see the [neuron_i, neuron_j] pair appearing a second time it is a different 
+                # Therefore as we go through the lines, when see the [neuron_i, neuron_j] pair appearing a second time it is a different
                 # type of synapse (chemical vs. electrical) than the one appearing previously (electrical vs chemical, respectively).
-                # The first synapse with [neuron_i, neuron_j] pair encountered could be either electrical or chemical. 
+                # The first synapse with [neuron_i, neuron_j] pair encountered could be either electrical or chemical.
                 edge_type = df.loc[i, "type"]
                 num_connections = df.loc[i, "synapses"]
                 edges.append([neuron1, neuron2])
@@ -926,6 +934,7 @@ class Cook2019Preprocessor(ConnectomeBasePreprocessor):
         preprocess(save_as="graph_tensors_cook2019.pt"):
             Preprocesses the Cook et al., 2019 connectome data and saves the graph tensors to a file.
     """
+
     def preprocess(self, save_as="graph_tensors_cook2019.pt"):
         """
         Preprocesses the Cook et al., 2019 connectome data and saves the graph tensors to a file.
@@ -966,7 +975,9 @@ class Cook2019Preprocessor(ConnectomeBasePreprocessor):
                         pre = df.iloc[j, 2]
                         if pre in self.neuron_labels and post in self.neuron_labels:
                             edges.append([pre, post])
-                            edge_attr.append([0, df.iloc[j, i]]) # second edge_attr feature is for gap junction weights
+                            edge_attr.append(
+                                [0, df.iloc[j, i]]
+                            )  # second edge_attr feature is for gap junction weights
 
         df = pd.read_excel(xlsx_file, sheet_name="hermaphrodite gap jn symmetric")
 
@@ -980,11 +991,13 @@ class Cook2019Preprocessor(ConnectomeBasePreprocessor):
                         if pre in self.neuron_labels and post in self.neuron_labels:
                             if [pre, post] in edges:
                                 edge_idx = edges.index([pre, post])
-                                edge_attr[edge_idx][0] = df.iloc[j, i] # first edge_attr feature is for gap junction weights
+                                edge_attr[edge_idx][0] = df.iloc[
+                                    j, i
+                                ]  # first edge_attr feature is for gap junction weights
                             else:
                                 edges.append([pre, post])
                                 edge_attr.append([df.iloc[j, i], 0])
-                            
+
         edge_attr = torch.tensor(edge_attr)
         edge_index = torch.tensor(
             [
@@ -1020,6 +1033,7 @@ class White1986WholePreprocessor(ConnectomeBasePreprocessor):
         preprocess(save_as="graph_tensors_white1986_whole.pt"):
             Preprocesses the White et al., 1986 connectome data for the whole organism and saves the graph tensors to a file.
     """
+
     def preprocess(self, save_as="graph_tensors_white1986_whole.pt"):
         """
         Preprocesses the White et al., 1986 connectome data for the whole organism and saves the graph tensors to a file.
@@ -1051,9 +1065,9 @@ class White1986WholePreprocessor(ConnectomeBasePreprocessor):
 
             if neuron1 in self.neuron_labels and neuron2 in self.neuron_labels:
                 # NOTE: This file lists both types of edges in the same file with only the "type" column to differentiate.
-                # Therefore as we go through the lines, when see the [neuron_i, neuron_j] pair appearing a second time it is a different 
+                # Therefore as we go through the lines, when see the [neuron_i, neuron_j] pair appearing a second time it is a different
                 # type of synapse (chemical vs. electrical) than the one appearing previously (electrical vs chemical, respectively).
-                # The first synapse with [neuron_i, neuron_j] pair encountered could be either electrical or chemical. 
+                # The first synapse with [neuron_i, neuron_j] pair encountered could be either electrical or chemical.
                 edge_type = df.loc[i, "type"]
                 num_connections = df.loc[i, "synapses"]
                 edges.append([neuron1, neuron2])
@@ -1101,6 +1115,7 @@ class White1986N2UPreprocessor(ConnectomeBasePreprocessor):
         preprocess(save_as="graph_tensors_white1986_n2u.pt"):
             Preprocesses the White et al., 1986 connectome data for the N2U organism and saves the graph tensors to a file.
     """
+
     def preprocess(self, save_as="graph_tensors_white1986_n2u.pt"):
         """
         Preprocesses the White et al., 1986 connectome data for the N2U organism and saves the graph tensors to a file.
@@ -1132,9 +1147,9 @@ class White1986N2UPreprocessor(ConnectomeBasePreprocessor):
 
             if neuron1 in self.neuron_labels and neuron2 in self.neuron_labels:
                 # NOTE: This file lists both types of edges in the same file with only the "type" column to differentiate.
-                # Therefore as we go through the lines, when see the [neuron_i, neuron_j] pair appearing a second time it is a different 
+                # Therefore as we go through the lines, when see the [neuron_i, neuron_j] pair appearing a second time it is a different
                 # type of synapse (chemical vs. electrical) than the one appearing previously (electrical vs chemical, respectively).
-                # The first synapse with [neuron_i, neuron_j] pair encountered could be either electrical or chemical. 
+                # The first synapse with [neuron_i, neuron_j] pair encountered could be either electrical or chemical.
                 edge_type = df.loc[i, "type"]
                 num_connections = df.loc[i, "synapses"]
                 edges.append([neuron1, neuron2])
@@ -1182,6 +1197,7 @@ class White1986JSHPreprocessor(ConnectomeBasePreprocessor):
         preprocess(save_as="graph_tensors_white1986_jsh.pt"):
             Preprocesses the White et al., 1986 connectome data for the JSH organism and saves the graph tensors to a file.
     """
+
     def preprocess(self, save_as="graph_tensors_white1986_jsh.pt"):
         """
         Preprocesses the White et al., 1986 connectome data for the JSH organism and saves the graph tensors to a file.
@@ -1213,9 +1229,9 @@ class White1986JSHPreprocessor(ConnectomeBasePreprocessor):
 
             if neuron1 in self.neuron_labels and neuron2 in self.neuron_labels:
                 # NOTE: This file lists both types of edges in the same file with only the "type" column to differentiate.
-                # Therefore as we go through the lines, when see the [neuron_i, neuron_j] pair appearing a second time it is a different 
+                # Therefore as we go through the lines, when see the [neuron_i, neuron_j] pair appearing a second time it is a different
                 # type of synapse (chemical vs. electrical) than the one appearing previously (electrical vs chemical, respectively).
-                # The first synapse with [neuron_i, neuron_j] pair encountered could be either electrical or chemical. 
+                # The first synapse with [neuron_i, neuron_j] pair encountered could be either electrical or chemical.
                 edge_type = df.loc[i, "type"]
                 num_connections = df.loc[i, "synapses"]
                 edges.append([neuron1, neuron2])
@@ -1263,6 +1279,7 @@ class White1986JSEPreprocessor(ConnectomeBasePreprocessor):
         preprocess(save_as="graph_tensors_white1986_jse.pt"):
             Preprocesses the White et al., 1986 connectome data for the JSE organism and saves the graph tensors to a file.
     """
+
     def preprocess(self, save_as="graph_tensors_white1986_jse.pt"):
         """
         Preprocesses the White et al., 1986 connectome data for the JSE organism and saves the graph tensors to a file.
@@ -1294,9 +1311,9 @@ class White1986JSEPreprocessor(ConnectomeBasePreprocessor):
 
             if neuron1 in self.neuron_labels and neuron2 in self.neuron_labels:
                 # NOTE: This file lists both types of edges in the same file with only the "type" column to differentiate.
-                # Therefore as we go through the lines, when see the [neuron_i, neuron_j] pair appearing a second time it is a different 
+                # Therefore as we go through the lines, when see the [neuron_i, neuron_j] pair appearing a second time it is a different
                 # type of synapse (chemical vs. electrical) than the one appearing previously (electrical vs chemical, respectively).
-                # The first synapse with [neuron_i, neuron_j] pair encountered could be either electrical or chemical. 
+                # The first synapse with [neuron_i, neuron_j] pair encountered could be either electrical or chemical.
                 edge_type = df.loc[i, "type"]
                 num_connections = df.loc[i, "synapses"]
                 edges.append([neuron1, neuron2])
@@ -1350,7 +1367,7 @@ def extract_zip(path: str, folder: str = None, log: bool = True, delete_zip: boo
         4. Delete the zip file if `delete_zip` is True.
     """
     print(path)
-    
+
     if folder is None:
         folder = os.path.dirname(path)
     if log:
@@ -1819,13 +1836,14 @@ class CalciumDataReshaper:
         _remove_old_mappings():
             Removes old mappings from the worm dataset.
     """
+
     def __init__(self, worm_dataset: dict):
         """
         Initialize the CalciumDataReshaper with the provided worm dataset.
 
         Parameters:
             worm_dataset (dict): Dataset for a single worm that includes calcium data and other information.
-            
+
         NOTE:
             'idx' refers to the index of the neuron in the original dataset.
                 0 < idx < N, where N is however many neurons were recorded.
@@ -2336,7 +2354,7 @@ class NeuralBasePreprocessor:
             6. Name the worm and update the index.
             7. Save the data.
         """
-        
+
         for i, trace_data in enumerate(traces):
             # Matrix `trace_data` should be shaped as (time, neurons)
             assert trace_data.ndim == 2, "Calcium traces must be 2D arrays."
@@ -2363,8 +2381,8 @@ class NeuralBasePreprocessor:
             # TODO: Should we do this? What if we want to infer these using trained models as a dowstream task?
             if num_named_neurons == 0:
                 continue
-            
-            logger.info(trace_data.shape)
+
+            logger.info(f"DEBUG. trace_data.shape = {trace_data.shape}") # DEBUG
             ## DEBUG ###
             # Only get data for unique neurons
             trace_data = trace_data[:, unique_indices.astype(int)]
@@ -2376,10 +2394,10 @@ class NeuralBasePreprocessor:
             time_in_seconds = time_in_seconds - time_in_seconds[0]  # start at 0.0 seconds
             dt = np.diff(time_in_seconds, axis=0, prepend=0.0)  # vector
             original_median_dt = np.median(dt[1:]).item()  # scalar
-            
-            logger.info(calcium_data.shape)
-            logger.info(time_in_seconds.shape)
-            
+
+            logger.info(f"DEBUG. calcium_data.shape = {calcium_data.shape}") # DEBUG
+            logger.info(f"DEBUG. time_in_seconds.shape = {time_in_seconds.shape}") # DEBUG
+
             residual_calcium = np.gradient(
                 calcium_data, time_in_seconds.squeeze(), axis=0
             )  # vector
@@ -2413,7 +2431,7 @@ class NeuralBasePreprocessor:
             worm = "worm" + str(worm_idx)  # use global worm index
             worm_idx += 1  # increment worm index
             # 7. Save data
-            
+
             worm_dict = {
                 worm: {
                     "calcium_data": resampled_calcium_data,  # normalized and resampled
@@ -2446,7 +2464,7 @@ class NeuralBasePreprocessor:
                     "extra_info": self.create_metadata(),  # additional information and metadata
                 }
             }
-            
+
             # Update preprocessed data collection
             preprocessed_data.update(worm_dict)
         # Return the updated preprocessed data and worm index
@@ -2455,17 +2473,18 @@ class NeuralBasePreprocessor:
 
 class Nejatbakhsh2020Preprocessor(NeuralBasePreprocessor):
     """
-    Preprocessor for the Nejatbakhsh et al., 2020 connectome data.
+    Preprocessor for the Nejatbakhsh et al., 2020 neural data.
 
     This class extends the NeuralBasePreprocessor to provide specific preprocessing
-    steps for the Nejatbakhsh et al., 2020 connectome data. It includes methods for loading,
-    processing, and saving the connectome data.
+    steps for the Nejatbakhsh et al., 2020 neural data. It includes methods for loading,
+    processing, and saving the neural data.
 
     Methods:
         extract_data(file): Extracts neuron IDs, calcium traces, and time vector from the NWB file.
         create_metadata(): Creates a dictionary of extra information or metadata for the dataset.
-        preprocess(save_as="graph_tensors_nejatbakhsh2020.pt"): Preprocesses the Nejatbakhsh et al., 2020 connectome data and saves the graph tensors to a file.
+        preprocess(): Preprocesses the Nejatbakhsh et al., 2020 neural data and saves a pickle file.
     """
+
     def __init__(self, transform, smooth_method, interpolate_method, resample_dt, **kwargs):
         """
         Initialize the Nejatbakhsh2020Preprocessor with the provided parameters.
@@ -2485,7 +2504,7 @@ class Nejatbakhsh2020Preprocessor(NeuralBasePreprocessor):
             resample_dt,
             **kwargs,
         )
-    
+
     def extract_data(self, file):
         """
         Extracts neuron IDs, calcium traces, and time vector from the NWB file.
@@ -2498,13 +2517,21 @@ class Nejatbakhsh2020Preprocessor(NeuralBasePreprocessor):
         """
         with NWBHDF5IO(file, "r") as io:
             read_nwbfile = io.read()
-            traces = np.array(read_nwbfile.processing["CalciumActivity"].data_interfaces["SignalRawFluor"].roi_response_series["SignalCalciumImResponseSeries"].data)
-            neuron_ids = np.array(read_nwbfile.processing["CalciumActivity"].data_interfaces["NeuronIDs"].labels, dtype=np.dtype(str))
+            traces = np.array(
+                read_nwbfile.processing["CalciumActivity"]
+                .data_interfaces["SignalRawFluor"]
+                .roi_response_series["SignalCalciumImResponseSeries"]
+                .data
+            )
+            neuron_ids = np.array(
+                read_nwbfile.processing["CalciumActivity"].data_interfaces["NeuronIDs"].labels,
+                dtype=np.dtype(str),
+            )
             # sampling frequency is 4 Hz
             time_vector = np.arange(0, traces.shape[0]).astype(np.dtype(float)) / 4
-        
+
         return neuron_ids, traces, time_vector
-    
+
     def create_metadata(self):
         """
         Creates a dictionary of extra information or metadata for the dataset.
@@ -2512,19 +2539,14 @@ class Nejatbakhsh2020Preprocessor(NeuralBasePreprocessor):
         Returns:
             dict: A dictionary containing extra information or metadata.
         """
-        extra_info = dict(
-            citation="Nejatbakhsh 2020 dataset"
-        )
+        extra_info = dict(citation="Nejatbakhsh 2020 dataset")
         return extra_info
-    
+
     def preprocess(self):
         """
-        Preprocesses the Nejatbakhsh et al., 2020 connectome data and saves the graph tensors to a file.
+        Preprocesses the Nejatbakhsh et al., 2020 neural data and saves it as a pickle file
 
         The data is read from NWB files located in the dataset directory.
-
-        Parameters:
-            save_as (str, optional): The name of the file to save the graph tensors to. Default is "graph_tensors_nejatbakhsh2020.pt".
 
         Steps:
             1. Initialize an empty dictionary for preprocessed data and a worm index.
@@ -2532,35 +2554,48 @@ class Nejatbakhsh2020Preprocessor(NeuralBasePreprocessor):
                 - Extract neuron IDs, calcium traces, and time vector from each NWB file.
                 - Preprocess the traces and update the preprocessed data dictionary.
             3. Reshape the calcium data for each worm.
-            4. Save the preprocessed data to the specified file.
+            4. Save the preprocessed data to a pickle file.
         """
         preprocessed_data = dict()
         worm_idx = 0
-        for subfolder in tqdm(os.listdir(os.path.join(self.raw_data_path, self.source_dataset))):
-            for file_name in os.listdir(os.path.join(self.raw_data_path, self.source_dataset, subfolder)):
-                neuron_ids, traces, raw_time_vector = self.extract_data(os.path.join(self.raw_data_path, self.source_dataset, subfolder, file_name))
-                preprocessed_data, worm_idx = self.preprocess_traces([neuron_ids], [traces], [raw_time_vector], preprocessed_data, worm_idx)
-        
+        for tree in tqdm(os.listdir(os.path.join(self.raw_data_path, self.source_dataset))):
+            print(f"DEBUG tree {tree}")
+            if tree.startswith('.'):
+                continue
+            subfolder = os.path.join(self.raw_data_path, self.source_dataset, tree)
+            if not os.path.isdir(subfolder):
+                continue
+            for file_name in os.listdir(subfolder):
+                if not file_name.endswith('.nwb'):
+                    continue
+                neuron_ids, traces, raw_time_vector = self.extract_data(
+                    os.path.join(self.raw_data_path, self.source_dataset, subfolder, file_name)
+                )
+                preprocessed_data, worm_idx = self.preprocess_traces(
+                    [neuron_ids], [traces], [raw_time_vector], preprocessed_data, worm_idx
+                )
         for worm in preprocessed_data.keys():
             preprocessed_data[worm] = reshape_calcium_data(preprocessed_data[worm])
         self.save_data(preprocessed_data)
         logger.info(f"Finished processing {self.source_dataset}.")
-        
+
+
 class Venkatachalam2024Preprocessor(NeuralBasePreprocessor):
     """
     Preprocessor for the Venkatachalam et al., 2024 connectome data.
 
     This class extends the NeuralBasePreprocessor to provide specific preprocessing
-    steps for the Venkatachalam et al., 2024 connectome data. It includes methods for loading,
-    processing, and saving the connectome data.
+    steps for the Venkatachalam et al., 2024 neural data. It includes methods for loading,
+    processing, and saving the neural data.
 
     Methods:
         unzip_and_extract_csv(source_directory, zip_path): Unzips the provided ZIP file and extracts the CSV file.
         load_data(file_name): Loads the data from the extracted CSV file.
         extract_data(data): Extracts neuron IDs, calcium traces, and time vector from the CSV data.
         create_metadata(): Creates a dictionary of extra information or metadata for the dataset.
-        preprocess(save_as="graph_tensors_venkatachalam2024.pt"): Preprocesses the Venkatachalam et al., 2024 connectome data and saves the graph tensors to a file.
+        preprocess(): Preprocesses the Venkatachalam et al., 2024 neural data and saves a pickle file.
     """
+
     def __init__(self, transform, smooth_method, interpolate_method, resample_dt, **kwargs):
         """
         Initialize the Venkatachalam2024Preprocessor with the provided parameters.
@@ -2580,7 +2615,7 @@ class Venkatachalam2024Preprocessor(NeuralBasePreprocessor):
             resample_dt,
             **kwargs,
         )
-    
+
     def unzip_and_extract_csv(self, source_directory, zip_path):
         """
         Unzips the provided ZIP file and extracts the CSV file.
@@ -2592,10 +2627,10 @@ class Venkatachalam2024Preprocessor(NeuralBasePreprocessor):
         Returns:
             str: The path to the extracted CSV file.
         """
-        with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+        with zipfile.ZipFile(zip_path, "r") as zip_ref:
             path = zip_ref.extractall(source_directory)
         return zip_path.replace(".zip", ".csv")
-    
+
     def load_data(self, file_name):
         """
         Loads the data from the extracted CSV file.
@@ -2607,10 +2642,12 @@ class Venkatachalam2024Preprocessor(NeuralBasePreprocessor):
             pd.DataFrame: The loaded data as a pandas DataFrame.
         """
         zip_path = os.path.join(self.raw_data_path, self.source_dataset, file_name)
-        csv_file = self.unzip_and_extract_csv(os.path.join(self.raw_data_path, self.source_dataset), zip_path)
+        csv_file = self.unzip_and_extract_csv(
+            os.path.join(self.raw_data_path, self.source_dataset), zip_path
+        )
         data = pd.read_csv(csv_file)
         return data
-    
+
     def extract_data(self, data):
         """
         Extracts neuron IDs, calcium traces, and time vector from the CSV data.
@@ -2621,13 +2658,15 @@ class Venkatachalam2024Preprocessor(NeuralBasePreprocessor):
         Returns:
             tuple: A tuple containing neuron IDs, calcium traces, and time vector.
         """
-        neuron_ids = data['neuron'].unique()
+        neuron_ids = data["neuron"].unique()
         # 9 + 98 blank timesteps at beginning (0-97)
-        time_vector = data.columns[107:-1].astype(float).to_numpy()  # Assuming columns 9 onwards are time points
+        time_vector = (
+            data.columns[107:-1].astype(float).to_numpy()
+        )  # Assuming columns 9 onwards are time points
         traces = data.iloc[:, 107:-1].values.T  # Transpose to get (time, neurons)
-        
+
         return neuron_ids, traces, time_vector
-    
+
     def create_metadata(self):
         """
         Creates a dictionary of extra information or metadata for the dataset.
@@ -2635,19 +2674,14 @@ class Venkatachalam2024Preprocessor(NeuralBasePreprocessor):
         Returns:
             dict: A dictionary containing extra information or metadata.
         """
-        extra_info = dict(
-            citation="Venkatachalam dataset"
-        )
+        extra_info = dict(citation="Venkatachalam dataset")
         return extra_info
-    
+
     def preprocess(self):
         """
-        Preprocesses the Venkatachalam et al., 2024 connectome data and saves the graph tensors to a file.
+        Preprocesses the Venkatachalam et al., 2024 neural data and saves it as a pickle file
 
         The data is read from ZIP files containing CSV data located in the dataset directory.
-
-        Parameters:
-            save_as (str, optional): The name of the file to save the graph tensors to. Default is "graph_tensors_venkatachalam2024.pt".
 
         Steps:
             1. Initialize an empty dictionary for preprocessed data and a worm index.
@@ -2657,7 +2691,7 @@ class Venkatachalam2024Preprocessor(NeuralBasePreprocessor):
                 - Extract neuron IDs, calcium traces, and time vector from the CSV data.
                 - Preprocess the traces and update the preprocessed data dictionary.
             3. Reshape the calcium data for each worm.
-            4. Save the preprocessed data to the specified file.
+            4. Save the preprocessed data to a pickle file.
         """
         preprocessed_data = dict()
         worm_idx = 0
@@ -2666,26 +2700,29 @@ class Venkatachalam2024Preprocessor(NeuralBasePreprocessor):
                 continue
             raw_data = self.load_data(file_name)
             neuron_ids, traces, raw_time_vector = self.extract_data(raw_data)
-            preprocessed_data, worm_idx = self.preprocess_traces([neuron_ids], [traces], [raw_time_vector], preprocessed_data, worm_idx)
+            preprocessed_data, worm_idx = self.preprocess_traces(
+                [neuron_ids], [traces], [raw_time_vector], preprocessed_data, worm_idx
+            )
         for worm in preprocessed_data.keys():
             preprocessed_data[worm] = reshape_calcium_data(preprocessed_data[worm])
         self.save_data(preprocessed_data)
         logger.info(f"Finished processing {self.source_dataset}.")
-        
+
 
 class Kato2015Preprocessor(NeuralBasePreprocessor):
     """
-    Preprocessor for the Kato et al., 2015 connectome data.
+    Preprocessor for the Kato et al., 2015 neural data.
 
     This class extends the NeuralBasePreprocessor to provide specific preprocessing
-    steps for the Kato et al., 2015 connectome data. It includes methods for loading,
-    processing, and saving the connectome data.
+    steps for the Kato et al., 2015 neural data. It includes methods for loading,
+    processing, and saving the neural data.
 
     Methods:
         extract_data(arr): Extracts neuron IDs, calcium traces, and time vector from the loaded data array.
         create_metadata(): Creates a dictionary of extra information or metadata for the dataset.
-        preprocess(save_as="graph_tensors_kato2015.pt"): Preprocesses the Kato et al., 2015 connectome data and saves the graph tensors to a file.
+        preprocess(): Preprocesses the Kato et al., 2015 neural data and saves a pickle file.
     """
+
     def __init__(self, transform, smooth_method, interpolate_method, resample_dt, **kwargs):
         """
         Initialize the Kato2015Preprocessor with the provided parameters.
@@ -2741,12 +2778,9 @@ class Kato2015Preprocessor(NeuralBasePreprocessor):
 
     def preprocess(self):
         """
-        Preprocesses the Kato et al., 2015 connectome data and saves the graph tensors to a file.
+        Preprocesses the Kato et al., 2015 neural data and saves it as a pickle file.
 
         The data is read from MAT files named "WT_Stim.mat" and "WT_NoStim.mat".
-
-        Parameters:
-            save_as (str, optional): The name of the file to save the graph tensors to. Default is "graph_tensors_kato2015.pt".
 
         Steps:
             1. Initialize an empty dictionary for preprocessed data and a worm index.
@@ -2755,7 +2789,7 @@ class Kato2015Preprocessor(NeuralBasePreprocessor):
                 - Extract neuron IDs, calcium traces, and time vector from the loaded data.
                 - Preprocess the traces and update the preprocessed data dictionary.
             3. Reshape the calcium data for each worm.
-            4. Save the preprocessed data to the specified file.
+            4. Save the preprocessed data to a pickle file.
         """
         # Store preprocessed data
         preprocessed_data = dict()
@@ -2779,17 +2813,18 @@ class Kato2015Preprocessor(NeuralBasePreprocessor):
 
 class Nichols2017Preprocessor(NeuralBasePreprocessor):
     """
-    Preprocessor for the Nichols et al., 2017 connectome data.
+    Preprocessor for the Nichols et al., 2017 neural data.
 
     This class extends the NeuralBasePreprocessor to provide specific preprocessing
-    steps for the Nichols et al., 2017 connectome data. It includes methods for loading,
-    processing, and saving the connectome data.
+    steps for the Nichols et al., 2017 neural data. It includes methods for loading,
+    processing, and saving the neural data.
 
     Methods:
         extract_data(arr): Extracts neuron IDs, calcium traces, and time vector from the loaded data array.
         create_metadata(): Creates a dictionary of extra information or metadata for the dataset.
-        preprocess(save_as="graph_tensors_nichols2017.pt"): Preprocesses the Nichols et al., 2017 connectome data and saves the graph tensors to a file.
+        preprocess(): Preprocesses the Nichols et al., 2017 neural data and saves it as a pickle file.
     """
+
     def __init__(self, transform, smooth_method, interpolate_method, resample_dt, **kwargs):
         """
         Initialize the Nichols2017Preprocessor with the provided parameters.
@@ -2843,12 +2878,9 @@ class Nichols2017Preprocessor(NeuralBasePreprocessor):
 
     def preprocess(self):
         """
-        Preprocesses the Nichols et al., 2017 connectome data and saves the graph tensors to a file.
+        Preprocesses the Nichols et al., 2017 neural data and saves it as a pickle file.
 
         The data is read from MAT files named "n2_let.mat", "n2_prelet.mat", "npr1_let.mat", and "npr1_prelet.mat".
-
-        Parameters:
-            save_as (str, optional): The name of the file to save the graph tensors to. Default is "graph_tensors_nichols2017.pt".
 
         Steps:
             1. Initialize an empty dictionary for preprocessed data and a worm index.
@@ -2857,7 +2889,7 @@ class Nichols2017Preprocessor(NeuralBasePreprocessor):
                 - Extract neuron IDs, calcium traces, and time vector from the loaded data.
                 - Preprocess the traces and update the preprocessed data dictionary.
             3. Reshape the calcium data for each worm.
-            4. Save the preprocessed data to the specified file.
+            4. Save the preprocessed data to a pickle file.
         """
         # Store preprocessed data
         preprocessed_data = dict()
@@ -2886,17 +2918,18 @@ class Nichols2017Preprocessor(NeuralBasePreprocessor):
 
 class Skora2018Preprocessor(NeuralBasePreprocessor):
     """
-    Preprocessor for the Skora et al., 2018 connectome data.
+    Preprocessor for the Skora et al., 2018 neural data.
 
     This class extends the NeuralBasePreprocessor to provide specific preprocessing
-    steps for the Skora et al., 2018 connectome data. It includes methods for loading,
-    processing, and saving the connectome data.
+    steps for the Skora et al., 2018 neural data. It includes methods for loading,
+    processing, and saving the neural data.
 
     Methods:
         extract_data(arr): Extracts neuron IDs, calcium traces, and time vector from the loaded data array.
         create_metadata(): Creates a dictionary of extra information or metadata for the dataset.
-        preprocess(save_as="graph_tensors_skora2018.pt"): Preprocesses the Skora et al., 2018 connectome data and saves the graph tensors to a file.
+        preprocess(): Preprocesses the Skora et al., 2018 neural data and saves it as a pickle file.
     """
+
     def __init__(self, transform, smooth_method, interpolate_method, resample_dt, **kwargs):
         """
         Initialize the Skora2018Preprocessor with the provided parameters.
@@ -2950,12 +2983,9 @@ class Skora2018Preprocessor(NeuralBasePreprocessor):
 
     def preprocess(self):
         """
-        Preprocesses the Skora et al., 2018 connectome data and saves the graph tensors to a file.
+        Preprocesses the Skora et al., 2018 neural data and saves it as a pickle file.
 
         The data is read from MAT files named "WT_fasted.mat" and "WT_starved.mat".
-
-        Parameters:
-            save_as (str, optional): The name of the file to save the graph tensors to. Default is "graph_tensors_skora2018.pt".
 
         Steps:
             1. Initialize an empty dictionary for preprocessed data and a worm index.
@@ -2964,7 +2994,7 @@ class Skora2018Preprocessor(NeuralBasePreprocessor):
                 - Extract neuron IDs, calcium traces, and time vector from the loaded data.
                 - Preprocess the traces and update the preprocessed data dictionary.
             3. Reshape the calcium data for each worm.
-            4. Save the preprocessed data to the specified file.
+            4. Save the preprocessed data to a pickle file.
         """
         # Store preprocessed data
         preprocessed_data = dict()
@@ -2988,18 +3018,19 @@ class Skora2018Preprocessor(NeuralBasePreprocessor):
 
 class Kaplan2020Preprocessor(NeuralBasePreprocessor):
     """
-    Preprocessor for the Kaplan et al., 2020 connectome data.
+    Preprocessor for the Kaplan et al., 2020 neural data.
 
     This class extends the NeuralBasePreprocessor to provide specific preprocessing
-    steps for the Kaplan et al., 2020 connectome data. It includes methods for loading,
-    processing, and saving the connectome data.
+    steps for the Kaplan et al., 2020 neural data. It includes methods for loading,
+    processing, and saving the neural data.
 
     Methods:
         load_data(file_name): Loads the data from the specified MAT file.
         extract_data(arr): Extracts neuron IDs, calcium traces, and time vector from the loaded data array.
         create_metadata(): Creates a dictionary of extra information or metadata for the dataset.
-        preprocess(save_as="graph_tensors_kaplan2020.pt"): Preprocesses the Kaplan et al., 2020 connectome data and saves the graph tensors to a file.
+        preprocess(): Preprocesses the Kaplan et al., 2020 neural data and saves a pickle file.
     """
+
     def __init__(self, transform, smooth_method, interpolate_method, resample_dt, **kwargs):
         """
         Initialize the Kaplan2020Preprocessor with the provided parameters.
@@ -3067,12 +3098,9 @@ class Kaplan2020Preprocessor(NeuralBasePreprocessor):
 
     def preprocess(self):
         """
-        Preprocesses the Kaplan et al., 2020 connectome data and saves the graph tensors to a file.
+        Preprocesses the Kaplan et al., 2020 neural data and saves it as a pickle file.
 
         The data is read from MAT files named "Neuron2019_Data_MNhisCl_RIShisCl.mat", "Neuron2019_Data_RIShisCl.mat", and "Neuron2019_Data_SMDhisCl_RIShisCl.mat".
-
-        Parameters:
-            save_as (str, optional): The name of the file to save the graph tensors to. Default is "graph_tensors_kaplan2020.pt".
 
         Steps:
             1. Initialize an empty dictionary for preprocessed data and a worm index.
@@ -3081,7 +3109,7 @@ class Kaplan2020Preprocessor(NeuralBasePreprocessor):
                 - Extract neuron IDs, calcium traces, and time vector from the loaded data.
                 - Preprocess the traces and update the preprocessed data dictionary.
             3. Reshape the calcium data for each worm.
-            4. Save the preprocessed data to the specified file.
+            4. Save the preprocessed data to a pickle file.
         """
         # Store preprocessed data
         preprocessed_data = dict()
@@ -3109,18 +3137,19 @@ class Kaplan2020Preprocessor(NeuralBasePreprocessor):
 
 class Yemini2021Preprocessor(NeuralBasePreprocessor):
     """
-    Preprocessor for the Yemini et al., 2021 connectome data.
+    Preprocessor for the Yemini et al., 2021 neural data.
 
     This class extends the NeuralBasePreprocessor to provide specific preprocessing
-    steps for the Yemini et al., 2021 connectome data. It includes methods for loading,
-    processing, and saving the connectome data.
+    steps for the Yemini et al., 2021 neural data. It includes methods for loading,
+    processing, and saving the neural data.
 
     Methods:
         load_data(file_name): Loads the data from the specified MAT file.
         extract_data(raw_data): Extracts neuron IDs, calcium traces, and time vector from the loaded data array.
         create_metadata(): Creates a dictionary of extra information or metadata for the dataset.
-        preprocess(save_as="graph_tensors_yemini2021.pt"): Preprocesses the Yemini et al., 2021 connectome data and saves the graph tensors to a file.
+        preprocess(): Preprocesses the Yemini et al., 2021 neural data and saves it as a pickle file.
     """
+
     def __init__(self, transform, smooth_method, interpolate_method, resample_dt, **kwargs):
         """
         Initialize the Yemini2021Preprocessor with the provided parameters.
@@ -3284,12 +3313,9 @@ class Yemini2021Preprocessor(NeuralBasePreprocessor):
 
     def preprocess(self):
         """
-        Preprocesses the Yemini et al., 2021 connectome data and saves the graph tensors to a file.
+        Preprocesses the Yemini et al., 2021 neural data and saves it as a pickle file.
 
         The data is read from MAT files named "Head_Activity_OH15500.mat", "Head_Activity_OH16230.mat", and "Tail_Activity_OH16230.mat".
-
-        Parameters:
-            save_as (str, optional): The name of the file to save the graph tensors to. Default is "graph_tensors_yemini2021.pt".
 
         Steps:
             1. Initialize an empty dictionary for preprocessed data and a worm index.
@@ -3298,7 +3324,7 @@ class Yemini2021Preprocessor(NeuralBasePreprocessor):
                 - Extract neuron IDs, calcium traces, and time vector from the loaded data.
                 - Preprocess the traces and update the preprocessed data dictionary.
             3. Reshape the calcium data for each worm.
-            4. Save the preprocessed data to the specified file.
+            4. Save the preprocessed data to a pickle file.
         """
         # Store preprocessed data
         preprocessed_data = dict()
@@ -3335,8 +3361,9 @@ class Uzel2022Preprocessor(NeuralBasePreprocessor):
         load_data(file_name): Loads the data from the specified MAT file.
         extract_data(arr): Extracts neuron IDs, calcium traces, and time vector from the loaded data array.
         create_metadata(): Creates a dictionary of extra information or metadata for the dataset.
-        preprocess(save_as="graph_tensors_uzel2022.pt"): Preprocesses the Uzel et al., 2022 connectome data and saves the graph tensors to a file.
+        preprocess(save_as="graph_tensors_uzel2022.pt"): Preprocesses the Uzel et al., 2022 neural data and saves is as a file.
     """
+
     def __init__(self, transform, smooth_method, interpolate_method, resample_dt, **kwargs):
         """
         Initialize the Uzel2022Preprocessor with the provided parameters.
@@ -3347,7 +3374,7 @@ class Uzel2022Preprocessor(NeuralBasePreprocessor):
             interpolate_method (str): The interpolation method to use when resampling the data.
             resample_dt (float): The resampling time interval in seconds.
             **kwargs: Additional keyword arguments for smoothing.
-        """ 
+        """
         super().__init__(
             "Uzel2022",
             transform,
@@ -3403,7 +3430,7 @@ class Uzel2022Preprocessor(NeuralBasePreprocessor):
 
     def preprocess(self):
         """
-        Preprocesses the Uzel et al., 2022 connectome data and saves the graph tensors to a file.
+        Preprocesses the Uzel et al., 2022 neural data and saves it as a pickle file.
 
         The data is read from a MAT file named "Uzel_WT.mat".
 
@@ -3450,8 +3477,9 @@ class Dag2023Preprocessor(NeuralBasePreprocessor):
         find_nearest_label(query, possible_labels, char="?"): Finds the nearest neuron label from a list given a query.
         extract_data(data_file, labels_file): Extracts neuron IDs, calcium traces, and time vector from the loaded data file.
         create_metadata(): Creates a dictionary of extra information or metadata for the dataset.
-        preprocess(save_as="graph_tensors_dag2023.pt"): Preprocesses the Dag et al., 2023 connectome data and saves the graph tensors to a file.
+        preprocess(save_as="graph_tensors_dag2023.pt"): Preprocesses the Dag et al., 2023 neural data and saves it as a pickle file.
     """
+
     def __init__(self, transform, smooth_method, interpolate_method, resample_dt, **kwargs):
         """
         Initialize the Dag2023Preprocessor with the provided parameters.
@@ -3605,12 +3633,9 @@ class Dag2023Preprocessor(NeuralBasePreprocessor):
 
     def preprocess(self):
         """
-        Preprocesses the Dag et al., 2023 connectome data and saves the graph tensors to a file.
+        Preprocesses the Dag et al., 2023 neural data and saves it as a pickle file.
 
         The data is read from HDF5 files located in the dataset directory.
-
-        Parameters:
-            save_as (str, optional): The name of the file to save the graph tensors to. Default is "graph_tensors_dag2023.pt".
 
         Steps:
             1. Initialize an empty dictionary for preprocessed data and a worm index.
@@ -3618,7 +3643,7 @@ class Dag2023Preprocessor(NeuralBasePreprocessor):
                 - Extract neuron IDs, calcium traces, and time vector from each HDF5 file.
                 - Preprocess the traces and update the preprocessed data dictionary.
             3. Reshape the calcium data for each worm.
-            4. Save the preprocessed data to the specified file.
+            4. Save the preprocessed data to a pickle file.
         """
         # Load and preprocess data
         preprocessed_data = dict()  # Store preprocessed data
@@ -3673,19 +3698,20 @@ class Dag2023Preprocessor(NeuralBasePreprocessor):
 
 class Flavell2023Preprocessor(NeuralBasePreprocessor):
     """
-    Preprocessor for the Flavell et al., 2023 connectome data.
+    Preprocessor for the Flavell et al., 2023 neural data.
 
     This class extends the NeuralBasePreprocessor to provide specific preprocessing
-    steps for the Flavell et al., 2023 connectome data. It includes methods for loading,
-    processing, and saving the connectome data.
+    steps for the Flavell et al., 2023 neural data. It includes methods for loading,
+    processing, and saving the neural data.
 
     Methods:
         find_nearest_label(query, possible_labels, char="?"): Finds the nearest neuron label from a list given a query.
         load_data(file_name): Loads the data from the specified HDF5 or JSON file.
         extract_data(file_data): Extracts neuron IDs, calcium traces, and time vector from the loaded data file.
         create_metadata(): Creates a dictionary of extra information or metadata for the dataset.
-        preprocess(save_as="graph_tensors_flavell2023.pt"): Preprocesses the Flavell et al., 2023 connectome data and saves the graph tensors to a file.
+        preprocess(save_as="graph_tensors_flavell2023.pt"): Preprocesses the Flavell et al., 2023 neural data and saves is as pickle file.
     """
+
     def __init__(self, transform, smooth_method, interpolate_method, resample_dt, **kwargs):
         """
         Initialize the Flavell2023Preprocessor with the provided parameters.
@@ -3846,7 +3872,7 @@ class Flavell2023Preprocessor(NeuralBasePreprocessor):
 
     def preprocess(self):
         """
-        Preprocesses the Flavell et al., 2023 connectome data and saves the graph tensors to a file.
+        Preprocesses the Flavell et al., 2023 neural data and saves it as a pickle file.
 
         The data is read from HDF5 or JSON files located in the dataset directory.
 
@@ -3860,7 +3886,7 @@ class Flavell2023Preprocessor(NeuralBasePreprocessor):
                 - Extract neuron IDs, calcium traces, and time vector from the loaded data.
                 - Preprocess the traces and update the preprocessed data dictionary.
             3. Reshape the calcium data for each worm.
-            4. Save the preprocessed data to the specified file.
+            4. Save the preprocessed data to a pickle file.
         """
         # TODO: Encapsulate the single worm part of this method into a `preprocess_traces` method.
         # Load and preprocess data
@@ -3956,8 +3982,8 @@ class Leifer2023Preprocessor(NeuralBasePreprocessor):
     Preprocessor for the Leifer et al., 2023 connectome data.
 
     This class extends the NeuralBasePreprocessor to provide specific preprocessing
-    steps for the Leifer et al., 2023 connectome data. It includes methods for loading,
-    processing, and saving the connectome data.
+    steps for the Leifer et al., 2023 neural data. It includes methods for loading,
+    processing, and saving the neural data.
 
     Methods:
         str_to_float(str_num): Converts a string in scientific notation to a floating-point number.
@@ -3969,8 +3995,9 @@ class Leifer2023Preprocessor(NeuralBasePreprocessor):
         create_neuron_idx(label_list): Creates a mapping of neuron labels to indices.
         extract_data(data_file, labels_file, time_file): Extracts neuron IDs, calcium traces, and time vector from the loaded data files.
         create_metadata(): Creates a dictionary of extra information or metadata for the dataset.
-        preprocess(save_as="graph_tensors_leifer2023.pt"): Preprocesses the Leifer et al., 2023 connectome data and saves the graph tensors to a file.
+        preprocess(save_as="graph_tensors_leifer2023.pt"): Preprocesses the Leifer et al., 2023 neural data and saves it as a pickle a file.
     """
+
     def __init__(self, transform, smooth_method, interpolate_method, resample_dt, **kwargs):
         """
         Initialize the Leifer2023Preprocessor with the provided parameters.
@@ -4207,7 +4234,7 @@ class Leifer2023Preprocessor(NeuralBasePreprocessor):
 
     def preprocess(self):
         """
-        Preprocesses the Leifer et al., 2023 connectome data and saves the graph tensors to a file.
+        Preprocesses the Leifer et al., 2023 neural data and saves it as a pickle file.
 
         The data is read from text files located in the dataset directory.
 
@@ -4335,18 +4362,19 @@ class Leifer2023Preprocessor(NeuralBasePreprocessor):
 
 class Lin2023Preprocessor(NeuralBasePreprocessor):
     """
-    Preprocessor for the Lin et al., 2023 connectome data.
+    Preprocessor for the Lin et al., 2023 neural data.
 
     This class extends the NeuralBasePreprocessor to provide specific preprocessing
-    steps for the Lin et al., 2023 connectome data. It includes methods for loading,
-    processing, and saving the connectome data.
+    steps for the Lin et al., 2023 neural data. It includes methods for loading,
+    processing, and saving the neural data.
 
     Methods:
         load_data(file_name): Loads the data from the specified MAT file.
         extract_data(file_data): Extracts neuron IDs, calcium traces, and time vector from the loaded data file.
         create_metadata(): Creates a dictionary of extra information or metadata for the dataset.
-        preprocess(save_as="graph_tensors_lin2023.pt"): Preprocesses the Lin et al., 2023 connectome data and saves the graph tensors to a file.
+        preprocess(): Preprocesses the Lin et al., 2023 neural data and saves it as a pickle file.
     """
+
     def __init__(self, transform, smooth_method, interpolate_method, resample_dt, **kwargs):
         """
         Initialize the Lin2023Preprocessor with the provided parameters.
@@ -4432,7 +4460,7 @@ class Lin2023Preprocessor(NeuralBasePreprocessor):
 
     def preprocess(self):
         """
-        Preprocesses the Lin et al., 2023 connectome data and saves the graph tensors to a file.
+        Preprocesses the Lin et al., 2023 neural data and saves it as a pickle file.
 
         The data is read from MAT files located in the dataset directory.
 

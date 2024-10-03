@@ -61,7 +61,7 @@ if os.path.exists(neurons_master_file):
     # )
     # Load the labels from the master csv file
     print(f"Loading from {neurons_master_file}.\n")
-    df_neurons_master = pd.read_csv(neurons_master_file).sort_values(by='label', ascending=True)
+    df_neurons_master = pd.read_csv(neurons_master_file).sort_values(by="label", ascending=True)
     NEURON_LABELS = df_neurons_master["label"].tolist()
 else:
     # Create the labels and save them to a text file
@@ -178,7 +178,7 @@ EXPERIMENT_DATASETS = {
     "Lin2023",
     "Flavell2023",  # TODO: Something is wrong with worm0 in this dataset. Specifically, "worm0" is always absent. Why?
     "Venkatachalam2024",  # This is unpublished data. Downloaded from chemosensory-data.worm.world/.
-    "Nejatbakhsh2020"
+    "Nejatbakhsh2020",
 }
 
 SYNTHETIC_DATASETS = {  # Datasets created with the `CreateSyntheticDataset.ipynb` notebook.

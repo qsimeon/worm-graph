@@ -19,6 +19,7 @@ omegaconf
 openai # uses pip
 openpyxl
 pandas
+pynwb # uses pip
 pytest
 requests
 scikit-learn

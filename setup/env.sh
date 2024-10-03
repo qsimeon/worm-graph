@@ -22,19 +22,25 @@ function has_gpu {
     command -v nvidia-smi > /dev/null && nvidia-smi > /dev/null 2>&1
 }
 
-# Create a new conda environment with Python 3.11
+# Create a new conda environment with Python 3.12
 ENV_NAME="worm-graph"
 echo ""
 echo "Creating $ENV_NAME environment."
 echo ""
 conda clean -y --packages
-conda create -y -n $ENV_NAME python=3.11 conda-build pip
+conda create -y -n $ENV_NAME python=3.12 conda-build pip
+
 
 # Check if the environment was successfully created and activated
 if ! conda activate $ENV_NAME; then
-    echo "Failed to activate $ENV_NAME environment. Exiting."
-    exit 1
+    if ! source activate $ENV_NAME; then
+        echo "Failed to activate $ENV_NAME environment. Exiting."
+        exit 1
+    fi
 fi
+
+# Update to the latest version of Python
+conda update -y -n $ENV_NAME  python
 
 # Update pip in the new environment
 python -m pip install --upgrade pip
@@ -57,8 +63,7 @@ case "$(uname -s)" in
     Darwin)
         echo ""
         echo "Mac OS Detected"
-        # If you prefer to use conda:
-        conda install -y -n $ENV_NAME pytorch==2.0.1 torchvision==0.15.2 torchaudio==2.0.2 -c pytorch
+        conda install pytorch::pytorch torchvision torchaudio -c pytorch
         conda install -y -n $ENV_NAME pyg -c pyg
         ;;
 
@@ -67,11 +72,10 @@ case "$(uname -s)" in
         if has_gpu; then
             echo ""
             echo "Nvidia GPU Detected"
-            # If you prefer to use conda:
-            conda install -y -n $ENV_NAME pytorch==2.0.1 torchvision==0.15.2 torchaudio==2.0.2 pytorch-cuda=11.7 -c pytorch -c nvidia
+            conda install -y -n $ENV_NAME pytorch torchvision torchaudio pytorch-cuda=12.4 -c pytorch -c nvidia
             conda install -y -n $ENV_NAME pyg -c pyg
         else
-            conda install -y -n $ENV_NAME pytorch==2.0.1 torchvision==0.15.2 torchaudio==2.0.2 cpuonly -c pytorch
+            conda install -y -n $ENV_NAME pytorch torchvision torchaudio cpuonly -c pytorch
             conda install -y -n $ENV_NAME pyg -c pyg
         fi
         ;;
@@ -81,10 +85,10 @@ case "$(uname -s)" in
         echo "Windows OS Detected"
         if has_gpu; then
             echo "Nvidia GPU Detected"
-            conda install -y -n $ENV_NAME pytorch==2.0.1 torchvision==0.15.2 torchaudio==2.0.2 pytorch-cuda=11.7 -c pytorch -c nvidia
+            conda install -y -n $ENV_NAME pytorch torchvision torchaudio pytorch-cuda=12.4 -c pytorch -c nvidia
             conda install -y -n $ENV_NAME pyg -c pyg
         else
-            conda install -y -n $ENV_NAME pytorch==2.0.1 torchvision==0.15.2 torchaudio==2.0.2 cpuonly -c pytorch
+            conda install -y -n $ENV_NAME pytorch torchvision torchaudio cpuonly -c pytorch
             conda install -y -n $ENV_NAME pyg -c pyg
         fi
         ;;
