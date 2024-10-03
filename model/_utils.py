@@ -15,7 +15,7 @@ class MASELoss(torch.nn.Module):
 
     Attributes:
         seasonality: An integer representing the seasonality of the data.
-    
+
     TODO: Improve and validate this implementation of the MASE loss.
     """
 
@@ -170,6 +170,7 @@ class RMSNorm(torch.nn.Module):
         eps: A small value to avoid division by zero.
         weight: A learnable parameter for scaling the normalized input.
     """
+
     def __init__(self, d_model: int, eps: float = 1e-5):
         """Initializes the RMSNorm with the given model dimension and epsilon.
 
@@ -207,6 +208,7 @@ class PositionalEncoding(torch.nn.Module):
         dropout: The dropout rate.
         pe: The positional encoding tensor.
     """
+
     def __init__(
         self,
         d_model: int,
@@ -264,6 +266,7 @@ class CausalTransformer(torch.nn.Module):
         encoder_layer: The Transformer Encoder layer.
         transformer_encoder: The Transformer Encoder.
     """
+
     def __init__(self, d_model, nhead, dim_feedforward, dropout=0.1):
         """Initializes the CausalTransformer with the given parameters.
 
@@ -310,6 +313,7 @@ class FeedForward(torch.nn.Module):
     Attributes:
         ffwd: A sequential container of the linear layer, ReLU activation, and dropout.
     """
+
     def __init__(self, n_embd, dropout=0.1):
         """Initializes the FeedForward layer with the given embedding dimension and dropout rate.
 
@@ -409,6 +413,7 @@ class SSM(torch.nn.Module):
         output: Tensor of shape (batch_size, seq_len, hidden_size).
         hidden: Tensor of shape (batch_size, hidden_size), final hidden activity.
     """
+
     def __init__(self, input_size, hidden_size, decode=False):
         """Initializes the SSM with the given input size, hidden size, and decode mode.
 
@@ -495,7 +500,7 @@ class SSM(torch.nn.Module):
 
         Returns:
             The kernels for the convolutional mode of the SSM.
-        
+
         NOTE: Warning: this implementation is naive and unstable. In practice it will fail
         to work for more than very small lengths. However, we are going to replace it with
         S4 in Part 2, so for now we just keep it around as a placeholder.
@@ -741,6 +746,7 @@ class InnerHiddenModel(torch.nn.Module):
         hidden_hidden: The hidden-hidden model (core) of the architecture.
         hidden: The hidden state of the model.
     """
+
     def __init__(self, hidden_hidden_model: torch.nn.Module, hidden_state=None):
         """Initializes the InnerHiddenModel with the given hidden-hidden model and hidden state.
 
@@ -965,7 +971,7 @@ class Model(torch.nn.Module):
 
         Returns:
             The initialized hidden state tensor.
-            
+
         NOTE: Enforce that all model have an `init_hidden` method which initializes the hidden state of the "core".
         This function must be overridden in subclasses with the specified argument 'shape'.
         """
@@ -973,7 +979,7 @@ class Model(torch.nn.Module):
 
     # Getter functions for returning all attributes needed to reinstantiate a similar model
     def get_input_size(self):
-         """Returns the input size of the model."""
+        """Returns the input size of the model."""
         return self.input_size
 
     def get_hidden_size(self):
@@ -1179,11 +1185,11 @@ class Model(torch.nn.Module):
         """
         A helper function that computes the best linear approximation of
         the model weights using ordinary least squares (OLS) regression.
-        
+
         Args:
             model_in: Input tensor.
             model_out: Output tensor.
-            
+
         NOTE: We tried using `torch.linalg.lstsq(A, B)` as recommended
         (instead of `torch.linalg.pinv(A) @ B` which we are uccrently using)
         but the solution that returned contained NaN values which broke backprop.
@@ -1539,6 +1545,7 @@ class Model(torch.nn.Module):
         TODO: Figure out how to use diffusion models to do this.
         """
         pass
+
 
 class LatentModel(torch.nn.Module):
     """
@@ -1974,7 +1981,9 @@ class LatentModel(torch.nn.Module):
         # Transform the input into a latent
         # latent_out = self.input_hidden(input_activity)  # (batch_size, seq_len, hidden_size)
         # Transform the latent
-        hidden_out = self.inner_input_hidden_model(input_activity)  # (batch_size, seq_len, hidden_size)
+        hidden_out = self.inner_input_hidden_model(
+            input_activity
+        )  # (batch_size, seq_len, hidden_size)
         # Perform a linear readout to get the output
         output = self.inner_hidden_output_model(hidden_out)
         # output = self.linear_readout(hidden_out)  # (batch_size, seq_len, input_size)
@@ -2090,7 +2099,7 @@ class LatentModel(torch.nn.Module):
 
         # Return the inner custom loss function
         return loss
-    
+
     @torch.autocast(
         device_type=DEVICE.type, dtype=torch.half if "cuda" in DEVICE.type else torch.bfloat16
     )
@@ -2165,7 +2174,7 @@ class LatentModel(torch.nn.Module):
 
         # Return the inner custom loss function
         return loss
-            
+
     ### >>> DEBUG: A different loss function more akin to that used with LM heads is needed for the verion_2
     # mode of our model which first discretize the neural data into tokens before forward method. >>> ###
     @torch.autocast(
@@ -2350,6 +2359,7 @@ class LatentModel(torch.nn.Module):
         """
         pass
 
+
 # # # Models subclasses: Individually differentiated model architectures # # # #
 # Use the same model backbone provided by Model but with a distinct core or inner hidden model. #
 # # # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
@@ -2365,7 +2375,7 @@ class NaivePredictor(Model):
         hidden_hidden: Identity transformation for hidden to hidden.
         inner_hidden_model: The internal hidden model (core).
         linear_readout: Identity transformation for the linear readout.
-    
+
     NOTE:
     (1) This model will throw an error if you try to train it because
     it has no trainable parameters and thus has no gradient function.
@@ -3108,8 +3118,7 @@ class NetworkLSTM(Model):
 
 
 class NetworkLatentLSTM(torch.nn.Module):
-    """
-    """
+    """ """
 
     def __init__(
         self,
@@ -3125,22 +3134,22 @@ class NetworkLatentLSTM(torch.nn.Module):
         kwargs["normalization"] = "layer_norm"
         # Initialize super class
         super(NetworkLatentLSTM, self).__init__()
-        
+
         self.loss = torch.nn.MSELoss
         self.latent_loss = torch.nn.MSELoss
-        
+
         self.l1_norm_reg_param = 0
         self.connectome_reg_param = 0
-        
+
         self.identity = torch.nn.Identity()
-        
+
         self.input_hidden = torch.nn.LSTM(
             input_size=input_size,
             hidden_size=hidden_size,
             bias=True,
             batch_first=True,
         )
-        
+
         self.hidden_output = torch.nn.LSTM(
             input_size=hidden_size,
             hidden_size=input_size,
@@ -3149,7 +3158,7 @@ class NetworkLatentLSTM(torch.nn.Module):
         )
         # Initialize LSTM weights
         self.init_weights()
-    
+
     @torch.autocast(
         device_type=DEVICE.type, dtype=torch.half if "cuda" in DEVICE.type else torch.bfloat16
     )
@@ -3174,7 +3183,9 @@ class NetworkLatentLSTM(torch.nn.Module):
         # Transform the input into a latent
         # latent_out = self.input_hidden(input_activity)  # (batch_size, seq_len, hidden_size)
         # Transform the latent
-        hidden_out, (latent_h, latent_c) = self.input_hidden(input)  # (batch_size, seq_len, hidden_size)
+        hidden_out, (latent_h, latent_c) = self.input_hidden(
+            input
+        )  # (batch_size, seq_len, hidden_size)
         # Perform a linear readout to get the output
         output, (out_h, out_c) = self.hidden_output(hidden_out)
         # output = self.linear_readout(hidden_out)  # (batch_size, seq_len, input_size)
@@ -3193,7 +3204,7 @@ class NetworkLatentLSTM(torch.nn.Module):
         h0 = torch.zeros(1, batch_size, self.hidden_size).to(device)
         c0 = torch.zeros(1, batch_size, self.hidden_size).to(device)
         return (h0, c0)
-    
+
     def init_weights(self):
         """
         Initializes the weights of the LSTM.
@@ -3206,7 +3217,7 @@ class NetworkLatentLSTM(torch.nn.Module):
             elif "bias" in name:  # Bias weights
                 # param.data.fill_(0)
                 torch.nn.init.zeros_(param.data)
-        
+
         for name, param in self.hidden_output.named_parameters():
             if "weight_ih" in name:  # Input-hidden weights
                 torch.nn.init.xavier_uniform_(param.data, gain=1.5)
@@ -3215,7 +3226,7 @@ class NetworkLatentLSTM(torch.nn.Module):
             elif "bias" in name:  # Bias weights
                 # param.data.fill_(0)
                 torch.nn.init.zeros_(param.data)
-                
+
     @torch.autocast(
         device_type=DEVICE.type, dtype=torch.half if "cuda" in DEVICE.type else torch.bfloat16
     )
@@ -3240,7 +3251,7 @@ class NetworkLatentLSTM(torch.nn.Module):
                 target: (batch_size, seq_len, input_size)
                 mask: (batch_size, input_size)
             """
-            mask=None
+            mask = None
             # Default mask to all True if not provided
             if mask is None:
                 mask = torch.ones(target.size(0), target.size(-1), dtype=torch.bool).to(
@@ -3288,7 +3299,7 @@ class NetworkLatentLSTM(torch.nn.Module):
 
         # Return the inner custom loss function
         return loss
-    
+
     @torch.autocast(
         device_type=DEVICE.type, dtype=torch.half if "cuda" in DEVICE.type else torch.bfloat16
     )
@@ -3302,6 +3313,7 @@ class NetworkLatentLSTM(torch.nn.Module):
         generalization by encouraging the model to use only the most important features. The
         L1 penalty is the sum of the absolute values of the weights.
         """
+
         def loss(output, target, mask=None, **kwargs):
             """
             Calculate loss with added L1 regularization
@@ -3312,7 +3324,7 @@ class NetworkLatentLSTM(torch.nn.Module):
                 target: (batch_size, seq_len, input_size)
                 mask: (batch_size, input_size)
             """
-            mask=None
+            mask = None
             # Default mask to all True if not provided
             if mask is None:
                 mask = torch.ones(target.size(0), target.size(-1), dtype=torch.bool).to(
@@ -3360,5 +3372,6 @@ class NetworkLatentLSTM(torch.nn.Module):
 
         # Return the inner custom loss function
         return loss
+
 
 # # # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#

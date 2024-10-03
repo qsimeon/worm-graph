@@ -395,7 +395,7 @@ def train_model2(
         pin_memory=False,
         # pin_memory="cuda" in DEVICE.type,  # DEBUG
     )
-    
+
     # for latent target generation
     hidden_dim = 32
     # Start training
@@ -406,11 +406,11 @@ def train_model2(
         leave=True,  # position at top and remove when done
         dynamic_ncols=True,  # adjust width to terminal window size
     )
-    
+
     window_size = 100
-    
+
     identity = torch.nn.Identity()
-    
+
     # ### DEBUG ###
     # # NOTE: This throws `RuntimeError: Function 'AbsBackward0' returned nan values in its 0th output.`
     # # when L1 regularization is added, indicating that some gradients are not computed correctly there.
@@ -426,33 +426,34 @@ def train_model2(
         for batch_idx, (X_train, Y_train, mask_train, _) in enumerate(train_loader):
             X_train = X_train.to(rank)
             Y_train = Y_train.to(rank)
-            
+
             mask_train = mask_train.to(rank)
-            
-            input_activity = identity(
-                X_train * mask_train.unsqueeze(1).expand_as(X_train)
-            )
-            
+
+            input_activity = identity(X_train * mask_train.unsqueeze(1).expand_as(X_train))
+
             reduced_dim_data = None
-            padded_data = torch.nn.functional.pad(input_activity, (0, 0, window_size-1, 0))
+            padded_data = torch.nn.functional.pad(input_activity, (0, 0, window_size - 1, 0))
             for sample in tqdm(padded_data):
                 unfolded_data = None
-                for i in range(sample.shape[0]-window_size):
+                for i in range(sample.shape[0] - window_size):
                     if i == 0:
                         unfolded_data = sample[:window_size, :].unsqueeze(0)
                     else:
-                        unfolded_data = torch.cat((unfolded_data, sample[i:window_size+i, :].unsqueeze(0)), dim=0)
-                
+                        unfolded_data = torch.cat(
+                            (unfolded_data, sample[i : window_size + i, :].unsqueeze(0)), dim=0
+                        )
+
                 pca = PCA(n_components=hidden_dim)
-                
-                transformed_data = torch.tensor(pca.fit_transform(unfolded_data.flatten(1, -1).cpu().numpy())).unsqueeze(0)
-                
+
+                transformed_data = torch.tensor(
+                    pca.fit_transform(unfolded_data.flatten(1, -1).cpu().numpy())
+                ).unsqueeze(0)
+
                 if reduced_dim_data is None:
                     reduced_dim_data = transformed_data
                 else:
                     reduced_dim_data = torch.cat((reduced_dim_data, transformed_data), dim=0)
-            
-            
+
             # Baseline model/naive predictor: predict that the next time step is the same as the current one.
             # if model.version_2:
             #     train_baseline = torch.tensor(0.0)
@@ -463,12 +464,13 @@ def train_model2(
             optimizer.zero_grad()
             # Forward pass. Models are sequence-to-sequence.
             Y_hidden, Y_pred = model(X_train, mask_train)
-            
+
             output_loss = criterion(output=Y_pred, target=Y_train, mask=mask_train)
-            
-            train_loss = output_loss + \
-                latent_criterion(output=Y_hidden, target=reduced_dim_data.to(rank), mask=mask_train)
-                
+
+            train_loss = output_loss + latent_criterion(
+                output=Y_hidden, target=reduced_dim_data.to(rank), mask=mask_train
+            )
+
             ### DEBUG ###
             # if batch_idx == 0 and math.isnan(train_loss.item()):
             #     print(
@@ -518,13 +520,13 @@ def train_model2(
                 # Forward pass. Models are sequence-to-sequence.
                 Y_pred = model(X_val, mask_val)
                 val_loss = criterion(output=Y_pred, target=Y_val, mask=mask_val)
-                
+
                 logger.info(f"{val_loss}")
-                
+
                 # Update running losses
                 # val_running_base_loss += val_baseline.item()
                 val_running_loss += val_loss.item()
-            # Store metrics            
+            # Store metrics
             val_epoch_loss.append(val_running_loss / len(val_loader))
             val_epoch_baseline.append(val_running_base_loss / len(val_loader))
             # Reset running losses
