@@ -40,7 +40,7 @@ if ! conda activate $ENV_NAME; then
 fi
 
 # Update to the latest version of Python
-conda update -y -n $ENV_NAME  python
+conda update -y -n $ENV_NAME python
 
 # Update pip in the new environment
 python -m pip install --upgrade pip
@@ -120,7 +120,7 @@ conda install -y -n $ENV_NAME -c conda-forge --file "$SCRIPT_DIR/requirements_co
 # Install packages that require pip (after conda to avoid conflicts)
 echo ""
 echo "Installing pip-specific packages."
-pip install -r "$SCRIPT_DIR/requirements_pip.txt"
+python -m pip install -r "$SCRIPT_DIR/requirements_pip.txt"
 
 echo ""
 echo "Run conda activate $ENV_NAME to activate the environment."

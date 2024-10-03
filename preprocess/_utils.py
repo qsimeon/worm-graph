@@ -83,7 +83,7 @@ def pickle_neural_data(
             # Run the bash command
             std_out = subprocess.run(bash_command, text=True)
             # Output to log or terminal
-            logger.info(f"Unzipping: {std_out} ...")
+            logger.info(f"Unzip status {std_out} ...")
             # Delete the zip file
             os.unlink(zip_path)
     # (re)-Pickle all the datasets ... OR
@@ -161,13 +161,13 @@ def get_presaved_datasets(url, file):
     return None
 
 
-def preprocess_connectome(raw_files, pub=None):
+def preprocess_connectome(raw_files, source_connectome=None):
     """Convert the raw connectome data to a graph tensor.
 
     This function processes raw connectome data, which includes chemical
     synapses and gap junctions, into a format suitable for use in machine
-    learning or graph analysis. It reads the raw data in .csv format,
-    processes it to extract relevant information, and creates graph
+    learning or graph analysis. It reads the raw data in tabular format (.csv, .xls[x]),
+    processes it to extract the relevant information, and creates graph
     tensors that represent the C. elegans connectome. The resulting
     graph tensors are saved in the 'data/processed/connectome' folder
     as 'graph_tensors.pt'. We distinguish between electrical (gap junction)
@@ -177,8 +177,8 @@ def preprocess_connectome(raw_files, pub=None):
 
     Args:
         raw_files (list): Contain the names of the raw connectome data to preprocess.
-        pub (str, optional): The publication to use for preprocessing. Options include:
-            - "openworm": OpenWorm project
+        source_connectome (str, optional): The source connectome file to use for preprocessing. Options include:
+            - "openworm": OpenWorm project  (augmentation of earlier connectome with neurotransmitter type)
             - "funconn" or "randi_2023": Randi et al., 2023 (functional connectivity)
             - "witvliet_7": Witvliet et al., 2020 (adult 7)
             - "witvliet_8": Witvliet et al., 2020 (adult 8)
@@ -187,6 +187,7 @@ def preprocess_connectome(raw_files, pub=None):
             - "white_1986_jsh": White et al., 1986 (JSH)
             - "white_1986_jse": White et al., 1986 (JSE)
             - "cook_2019": Cook et al., 2019
+            - "all": preprocess all of the above connectomes separately
             - None: Default to a preprocessed variant of Cook et al., 2019
 
     Returns:
@@ -204,10 +205,6 @@ def preprocess_connectome(raw_files, pub=None):
       an organism's brain or nervous system. It is essentially the wiring
       diagram of the brain, detailing how neurons and their synapses are
       interconnected.
-    * The default connectome data used here is from Cook et al., 2019.
-      If the raw data isn't found, please download the zip file from this link:
-      https://wormwiring.org/matlab%20scripts/Premaratne%20MATLAB-ready%20files%20.zip,
-      unzip the archive in the data/raw folder, then run the MATLAB script `export_nodes_edges.m`.
     """
     # Check that all necessary files are present
     all_files_present = all([os.path.exists(os.path.join(RAW_DATA_DIR, rf)) for rf in raw_files])
@@ -219,9 +216,15 @@ def preprocess_connectome(raw_files, pub=None):
             delete_zip=True,
         )
 
+    # Make the connectome data directory if it doesn't exist
+    processed_path = os.path.join(ROOT_DIR, "data/processed/connectome")
+    if not os.path.exists(processed_path):
+        os.makedirs(processed_path, exist_ok=True)
+
     # Determine appropriate preprocessing class based on publication
     preprocessors = {
         "openworm": OpenWormPreprocessor,
+        "chklovskii": ChklovskiiPreprocessor,
         "funconn": Randi2023Preprocessor,
         "randi_2023": Randi2023Preprocessor,
         "witvliet_7": Witvliet2020Preprocessor7,
@@ -234,9 +237,17 @@ def preprocess_connectome(raw_files, pub=None):
         None: DefaultPreprocessor,
     }
 
-    preprocessor_class = preprocessors.get(pub, DefaultPreprocessor)
-    preprocessor = preprocessor_class()
-    preprocessor.preprocess()
+    # Preprocess all the connectomes including the default one
+    if source_connectome == "all":
+        for preprocessor_class in preprocessors.values():
+            preprocessor_class().preprocess()
+        # Create a file to indicate that the preprocessing was successful
+        open(os.path.join(processed_path, ".processed"), "a").close()
+
+    # Preprocess just the requested connectome
+    else: 
+        preprocessor_class = preprocessors.get(source_connectome, DefaultPreprocessor)
+        preprocessor_class().preprocess()
 
     return None
 
@@ -435,6 +446,11 @@ class DefaultPreprocessor(ConnectomeBasePreprocessor):
     steps for the default connectome data. It includes methods for loading, processing,
     and saving the connectome data.
 
+    The default connectome data used here is a MATLAB preprocessed version of Cook et al., 2019 by
+    Kamal Premaratne. If the raw data isn't found, please download the zip file from this link:
+    https://wormwiring.org/matlab%20scripts/Premaratne%20MATLAB-ready%20files%20.zip, 
+    unzip the archive in the data/raw folder, then run the MATLAB script `export_nodes_edges.m`.
+
     Methods:
         preprocess(save_as="graph_tensors.pt"):
             Preprocesses the connectome data and saves the graph tensors to a file.
@@ -464,10 +480,10 @@ class DefaultPreprocessor(ConnectomeBasePreprocessor):
             7. Call the `preprocess_common_tasks` method to perform common preprocessing tasks.
             8. Save the graph tensors to the specified file.
         """
-        # >>>>>>>>
-        # Hack to override DefaultProprecessor with Witvliet2020Preprocessor7 which is a more up-to-date connectome of C. elegans.
-        return Witvliet2020Preprocessor7.preprocess(self, save_as="graph_tensors.pt")
-        # <<<<<<<
+        # # >>>>>>>>
+        # # Hack to override DefaultProprecessor with Witvliet2020Preprocessor7 which is a more up-to-date connectome of C. elegans.
+        # return Witvliet2020Preprocessor7.preprocess(self, save_as="graph_tensors.pt")
+        # # <<<<<<<
         # Names of all C. elegans hermaphrodite neurons
         neurons_all = set(self.neuron_labels)
         sep = r"[\t,]"
@@ -605,6 +621,100 @@ class DefaultPreprocessor(ConnectomeBasePreprocessor):
             node_class,
         )
 
+class ChklovskiiPreprocessor(ConnectomeBasePreprocessor):
+    """
+    Preprocessor for the Chklovskii connectome data.
+
+    This class extends the ConnectomeBasePreprocessor to provide specific preprocessing
+    steps for the Chklovskii connectome data from the 'NeuronConnect.csv' sheet.
+    It includes methods for loading, processing, and saving the connectome data.
+
+    Methods:
+        preprocess(save_as="graph_tensors_chklkovskii.pt"):
+            Preprocesses the Chklovskii connectome data and saves the graph tensors to a file.
+    """
+
+    def preprocess(self, save_as="graph_tensors_cklkovskii.pt"):
+        """
+        Preprocesses the Chklovskii et al connectome data and saves the graph tensors to a file.
+
+        The data is read from the XLS file named "Chklovskii_NeuronConnect.xls", which is a renaming of 
+        the file downloaded from https://www.wormatlas.org/images/NeuronConnect.xls. The connectome table 
+        is in the 'NeuronConnect.csv' sheet. 
+
+        NOTE: Description of this data from https://wormwiring.org/:
+        Adult hermaphrodite, Data of Chen, Hall, and Chklovskii, 2006, Wiring optimization can relate neuronal structure and function, PNAS 103: 4723-4728 (doi:10.1073/pnas.0506806103) 
+        and Varshney, Chen, Paniaqua, Hall and Chklovskii, 2011, Structural properties of the C. elegans neuronal network, PLoS Comput. Biol. 3:7:e1001066 (doi:10.1371/journal.pcbi.1001066).
+        Data of White et al., 1986, with additional connectivity in the ventral cord from reannotation of original electron micrographs.
+        Connectivity table available through WormAtlas.org: Connectivity Data-download [.xls]
+        Number of chemical and gap junction (electrical) synapses for all neurons and motor neurons. Number of NMJ’s for all ventral cord motor neurons.
+
+        For chemical synapses, only entries with type "Sp" (send reannotated) are considered to 
+        avoid redundant connections.
+
+        Args:
+            save_as (str, optional): The name of the file to save the graph tensors to. Default is "graph_tensors_cklkovskii.pt".
+
+        Steps:
+            1. Load the connectome data from the 'NeuronConnect.csv' sheet in "Chklovskii_NeuronConnect.xls".
+            2. Only consider rows with "Sp" (chemical) and "EJ" (gap junction) types.
+            3. Append edges and attributes (synapse strength).
+            4. Ensure symmetry for electrical synapses.
+            5. Convert edge attributes and edge indices to tensors.
+            6. Call the `preprocess_common_tasks` method to create graph tensors.
+            7. Save the graph tensors to the specified file.
+        """
+        # Load the XLS file and extract data from the 'NeuronConnect.csv' sheet
+        df = pd.read_excel(os.path.join(RAW_DATA_DIR, "Chklovskii_NeuronConnect.xls"), sheet_name="NeuronConnect.csv")
+
+        edges = []
+        edge_attr = []
+
+        # Iterate over each row in the DataFrame
+        for i in range(len(df)):
+            neuron1 = df.loc[i, "Neuron 1"]  # Pre-synaptic neuron
+            neuron2 = df.loc[i, "Neuron 2"]  # Post-synaptic neuron
+            synapse_type = df.loc[i, "Type"]  # Synapse type (e.g., EJ, Sp)
+            num_connections = df.loc[i, "Nbr"]  # Number of connections
+
+            if neuron1 in self.neuron_labels and neuron2 in self.neuron_labels:
+                if synapse_type == "EJ":  # Electrical synapse (Gap Junction)
+                    edges.append([neuron1, neuron2])
+                    edge_attr.append([num_connections, 0])  # Electrical synapse encoded as [num_connections, 0]
+                    
+                    # Ensure symmetry by adding reverse direction for electrical synapses
+                    edges.append([neuron2, neuron1])
+                    edge_attr.append([num_connections, 0])
+
+                elif synapse_type == "Sp":  # Only process "Sp" type chemical synapses
+                    edges.append([neuron1, neuron2])
+                    edge_attr.append([0, num_connections])  # Chemical synapse encoded as [0, num_connections]
+
+        # Convert edge attributes and edge indices to torch tensors
+        edge_attr = torch.tensor(edge_attr, dtype=torch.float)
+        edge_index = torch.tensor(
+            [
+                [self.neuron_to_idx[neuron1], self.neuron_to_idx[neuron2]]
+                for neuron1, neuron2 in edges
+            ]
+        ).T
+
+        # Perform common preprocessing tasks to create graph tensors
+        graph, num_classes, node_type, node_label, n_id, node_class = self.preprocess_common_tasks(
+            edge_index, edge_attr
+        )
+
+        # Save the processed graph tensors to the specified file
+        self.save_graph_tensors(
+            save_as,
+            graph,
+            num_classes,
+            node_type,
+            node_label,
+            n_id,
+            node_class,
+        )
+
 
 class OpenWormPreprocessor(ConnectomeBasePreprocessor):
     """
@@ -612,7 +722,7 @@ class OpenWormPreprocessor(ConnectomeBasePreprocessor):
 
     This class extends the ConnectomeBasePreprocessor to provide specific preprocessing
     steps for the OpenWorm connectome data. It includes methods for loading, processing,
-    and saving the connectome data.
+    and saving the connectome data directly from the xls file.
 
     Methods:
         preprocess(save_as="graph_tensors_openworm.pt"):
@@ -623,13 +733,14 @@ class OpenWormPreprocessor(ConnectomeBasePreprocessor):
         """
         Preprocesses the OpenWorm connectome data and saves the graph tensors to a file.
 
-        The data is read from a CSV file named "OpenWormConnectome.csv".
-
+        The data is read directly from an XLS file named "OpenWorm_CElegansNeuronTables.xls", which is a rename of the 
+        file downloaded from the OpenWorm repository: https://github.com/openworm/c302/blob/master/c302/CElegansNeuronTables.xls
+    
         Args:
             save_as (str, optional): The name of the file to save the graph tensors to. Default is "graph_tensors_openworm.pt".
 
         Steps:
-            1. Load the connectome data from "OpenWormConnectome.csv".
+            1. Load the connectome data from the first sheet of the "OpenWorm_CElegansNeuronTables.xls" file.
             2. Initialize lists for edges and edge attributes.
             3. Iterate through the rows of the DataFrame:
                 - Extract neuron pairs and synapse type.
@@ -639,7 +750,8 @@ class OpenWormPreprocessor(ConnectomeBasePreprocessor):
             5. Call the `preprocess_common_tasks` method to perform common preprocessing tasks.
             6. Save the graph tensors to the specified file.
         """
-        df = pd.read_csv(os.path.join(RAW_DATA_DIR, "OpenWormConnectome.csv"), sep=r"[\t,]")
+        # Load the XLS file and extract data from the first sheet "Connectome"
+        df = pd.read_excel(os.path.join(RAW_DATA_DIR, "OpenWorm_CElegansNeuronTables.xls"), sheet_name="Connectome")
 
         edges = []
         edge_attr = []
@@ -649,21 +761,23 @@ class OpenWormPreprocessor(ConnectomeBasePreprocessor):
             neuron2 = df.loc[i, "Target"]
 
             if neuron1 in self.neuron_labels and neuron2 in self.neuron_labels:
-                # NOTE: This file lists both types of edges in the same file with only the "type" column to differentiate.
-                # Therefore as we go through the lines, when see the [neuron_i, neuron_j] pair appearing a second time it is a different
-                # type of synapse (chemical vs. electrical) than the one appearing previously (electrical vs chemical, respectively).
-                # The first synapse with [neuron_i, neuron_j] pair encountered could be either electrical or chemical.
+                # Determine the synapse type and number of connections
                 synapse_type = df.loc[i, "Type"]
                 num_connections = df.loc[i, "Number of Connections"]
+                
+                # Add the connection between neuron1 and neuron2
                 edges.append([neuron1, neuron2])
+
                 if synapse_type == "GapJunction":  # electrical synapse
-                    edge_attr.append([num_connections, 0])
-                    # Adding the reverse direction to ensure symmetry of gap junctions
+                    edge_attr.append([num_connections, 0])  # electrical synapse encoded as [num_connections, 0]
+                    
+                    # Ensure symmetry for gap junctions by adding reverse connection
                     edges.append([neuron2, neuron1])
                     edge_attr.append([num_connections, 0])
                 elif synapse_type == "Send":  # chemical synapse
-                    edge_attr.append([0, num_connections])
+                    edge_attr.append([0, num_connections])  # chemical synapse encoded as [0, num_connections]
 
+        # Convert to torch tensors
         edge_attr = torch.tensor(edge_attr)
         edge_index = torch.tensor(
             [
@@ -672,10 +786,12 @@ class OpenWormPreprocessor(ConnectomeBasePreprocessor):
             ]
         ).T
 
+        # Perform common preprocessing tasks
         graph, num_classes, node_type, node_label, n_id, node_class = self.preprocess_common_tasks(
             edge_index, edge_attr
         )
 
+        # Save the graph tensors
         self.save_graph_tensors(
             save_as,
             graph,
@@ -704,7 +820,10 @@ class Randi2023Preprocessor(ConnectomeBasePreprocessor):
         """
         Preprocesses the Randi et al., 2023 connectome data and saves the graph tensors to a file.
 
-        The data is read from an Excel file named "CElegansFunctionalConnectivity.xlsx".
+        The data is read from an Excel file named "CElegansFunctionalConnectivity.xlsx" which is a renaming of the
+        Supplementary Table 1 file "1586_2023_6683_MOESM3_ESM.xlsx" downloaded from the Supplementary information of the paper
+        "Randi, F., Sharma, A. K., Dvali, S., & Leifer, A. M. (2023). Neural signal propagation atlas of Caenorhabditis elegans. Nature, 623(7986), 406–414. https://doi.org/10.1038/s41586-023-06683-4"
+        at this direct link: https://static-content.springer.com/esm/art%3A10.1038%2Fs41586-023-06683-4/MediaObjects/41586_2023_6683_MOESM3_ESM.xlsx
 
         Args:
             save_as (str, optional): The name of the file to save the graph tensors to. Default is "graph_tensors_funconn.pt".
@@ -2376,14 +2495,10 @@ class NeuralBasePreprocessor:
             unique_IDs = [unique_IDs[_] for _ in unique_indices]
             # Create neuron label to index mapping
             neuron_to_idx, num_named_neurons = self.create_neuron_idx(unique_IDs)
-            ## DEBUG ###
             # Skip worms with no labelled neurons.
-            # TODO: Should we do this? What if we want to infer these using trained models as a dowstream task?
             if num_named_neurons == 0:
                 continue
-
             logger.info(f"DEBUG. trace_data.shape = {trace_data.shape}") # DEBUG
-            ## DEBUG ###
             # Only get data for unique neurons
             trace_data = trace_data[:, unique_indices.astype(int)]
             # 2. Normalize calcium data
@@ -2394,10 +2509,8 @@ class NeuralBasePreprocessor:
             time_in_seconds = time_in_seconds - time_in_seconds[0]  # start at 0.0 seconds
             dt = np.diff(time_in_seconds, axis=0, prepend=0.0)  # vector
             original_median_dt = np.median(dt[1:]).item()  # scalar
-
             logger.info(f"DEBUG. calcium_data.shape = {calcium_data.shape}") # DEBUG
             logger.info(f"DEBUG. time_in_seconds.shape = {time_in_seconds.shape}") # DEBUG
-
             residual_calcium = np.gradient(
                 calcium_data, time_in_seconds.squeeze(), axis=0
             )  # vector
@@ -2559,7 +2672,7 @@ class Nejatbakhsh2020Preprocessor(NeuralBasePreprocessor):
         preprocessed_data = dict()
         worm_idx = 0
         for tree in tqdm(os.listdir(os.path.join(self.raw_data_path, self.source_dataset))):
-            print(f"DEBUG tree {tree}")
+            print(f"DEBUG. tree {tree}")
             if tree.startswith('.'):
                 continue
             subfolder = os.path.join(self.raw_data_path, self.source_dataset, tree)
@@ -3662,10 +3775,8 @@ class Dag2023Preprocessor(NeuralBasePreprocessor):
             preprocessed_data, worm_idx = self.preprocess_traces(
                 neurons, raw_traces, time_vector_seconds, preprocessed_data, worm_idx
             )  # preprocess
-        ### DEBUG ###
         # Next deal with the swf415_no_id which contains purely unlabeled neuron data
-        # NOTE: These don't get used at all as they are skipped in
-        # NeuralBasePreprocessor.preprocess_traces, because num_named_neurons == 0.
+        # NOTE: These won't get used at all as they are skipped in NeuralBasePreprocessor.preprocess_traces since num_named_neurons is 0.
         for file in os.listdir(noid_data_files):
             if not file.endswith(".h5"):
                 continue
@@ -3674,7 +3785,6 @@ class Dag2023Preprocessor(NeuralBasePreprocessor):
             preprocessed_data, worm_idx = self.preprocess_traces(
                 neurons, raw_traces, time_vector_seconds, preprocessed_data, worm_idx
             )  # preprocess
-        ### DEBUG ###
         # Reshape calcium data
         for worm in preprocessed_data.keys():
             preprocessed_data[worm] = reshape_calcium_data(preprocessed_data[worm])

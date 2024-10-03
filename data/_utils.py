@@ -272,6 +272,7 @@ class NeuralActivityDataset(torch.utils.data.Dataset):
 class CElegansConnectome(InMemoryDataset):
     """
     A PyG InMemoryDataset representing the connectome of the C. elegans worm.
+    Based on tutorial: https://pytorch-geometric.readthedocs.io/en/2.4.0/tutorial/create_dataset.html.
 
     Args:
         root (string): Root directory where the dataset should be saved.
@@ -346,13 +347,8 @@ class CElegansConnectome(InMemoryDataset):
 
         Downloads the raw zip file from the specified URL and extracts it into the raw directory.
         """
-        # dataset adapted from from Cook et al. (2019) SI5
-        url = RAW_DATA_URL  # base url
-        filename = os.path.join("raw_data.zip")
-        folder = os.path.join(self.raw_dir)
-        download_url(url=url, folder=os.getcwd(), filename=filename)  # download zip file
-        extract_zip(filename, folder=folder)  # unzip data into raw directory
-        os.unlink(filename)  # remove zip file
+        # Shouldn't need to implement since already been done by preprocessing submodule
+        pass
 
     def process(self):
         """
@@ -362,9 +358,9 @@ class CElegansConnectome(InMemoryDataset):
         # preprocessing necessary
         data_path = os.path.join(self.processed_dir, "connectome", "graph_tensors.pt")
         # create a simple dict for loading the connectome
-        if not os.path.exists(data_path):  # fun fast preprocess
+        if not os.path.exists(data_path):  # run fast preprocess
             subprocess.run("python -u ../preprocess/_main.py", text=True)
-        assert os.path.exists(data_path), "Must first call `python -u preprocess/_main.py`"
+        assert os.path.exists(data_path), "Must first have had run preproccessing pipeline: `python -u preprocess/_main.py`"
         graph_tensors = torch.load(data_path)
         # make the graph
         connectome = Data(**graph_tensors)
