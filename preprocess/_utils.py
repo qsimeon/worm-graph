@@ -2520,13 +2520,13 @@ class NeuralBasePreprocessor:
 
     def is_monotonic_linear(self, arr):
         """
-        Checks if the array is a line with constant slope (i.e linear).
+        Checks if the array is a line with a constant slope (i.e., linear).
 
         Parameters:
-        arr (np.array): 1D Input array to check.
+            arr (np.ndarray): The input array to check.
 
         Returns:
-        bool: True if the array is linear, False otherwise.
+            bool: True if the array is linear, False otherwise.
         """
         assert arr.ndim == 1, "Array must be a 1D (univariate) time series."
         diff = np.round(np.diff(arr), decimals=3)
@@ -4026,8 +4026,6 @@ class Leifer2023Preprocessor(NeuralBasePreprocessor):
         load_labels(file_path): Loads neuron labels from a text file.
         load_time_vector(file_path): Loads the time vector from a text file.
         load_data(file_path): Loads the neural data from a text file.
-        is_monotonic_linear(arr): Checks if the array is a line with a constant slope (i.e., linear).
-        filter_bad_traces_by_linear_segments(data, window_size=50, linear_segment_threshold=1e-3): Filters out traces with significant proportions of linear segments.
         create_neuron_idx(label_list): Creates a mapping of neuron labels to indices.
         extract_data(data_file, labels_file, time_file): Extracts neuron IDs, calcium traces, and time vector from the loaded data files.
         preprocess(): Preprocesses the Leifer et al., 2023 neural data and saves it as a pickle a file.
@@ -4119,21 +4117,6 @@ class Leifer2023Preprocessor(NeuralBasePreprocessor):
             data = [list(map(float, line.split(" "))) for line in f.readlines()]
         data_array = np.array(data, dtype=np.float32)
         return data_array
-
-    def is_monotonic_linear(self, arr):
-        """
-        Checks if the array is a line with a constant slope (i.e., linear).
-
-        Parameters:
-            arr (np.ndarray): The input array to check.
-
-        Returns:
-            bool: True if the array is linear, False otherwise.
-        """
-        assert arr.ndim == 1, "Array must be a 1D (univariate) time series."
-        diff = np.round(np.diff(arr), decimals=3)
-        result = np.unique(diff)
-        return result.size == 1
 
     def create_neuron_idx(self, label_list):
         """
