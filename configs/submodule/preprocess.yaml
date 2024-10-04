@@ -6,7 +6,7 @@ preprocess:
   connectome_pub: all # null or all; otherwise a string indicating which connectome raw data file to use; if null, the default connectome is used
                        # [witvliet_7, witvliet_8, cook_2019, chklovskii, openworm, white_1986_n2u, white_1986_jsh, white_1986_jse, white_1986_whole]
   cleanup: true # Whether to delete the downloaded and unzipped opensource data folder
-  source_dataset: Lin2023 #all # all; otherwise a string (or list) of dataset(s) in utils.EXPERIMENT_DATASETS
+  source_dataset: all # all; otherwise a string (or list) of dataset(s) in utils.EXPERIMENT_DATASETS
                       # [Kato2015, Nichols2017, Skora2018, Kaplan2020, Yemini2021, Uzel2022, Dag2023, Flavell2023, Leifer2023, Lin2023, Venkatachalam2024]
   resample_dt: 0.333 # The time interval (in seconds) to resample the neural activity at; if null, no resampling is performed
   interpolate: linear # The method to use for interpolation; options: null, linear, quadratic, cubic

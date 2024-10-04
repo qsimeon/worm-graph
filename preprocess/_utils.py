@@ -2781,7 +2781,6 @@ class Kato2015Preprocessor(NeuralBasePreprocessor):
 
     Methods:
         extract_data(arr): Extracts neuron IDs, calcium traces, and time vector from the loaded data array.
-        create_metadata(): Creates a dictionary of extra information or metadata for the dataset.
         preprocess(): Preprocesses the Kato et al., 2015 neural data and saves a pickle file.
     """
 
@@ -2883,7 +2882,6 @@ class Nichols2017Preprocessor(NeuralBasePreprocessor):
 
     Methods:
         extract_data(arr): Extracts neuron IDs, calcium traces, and time vector from the loaded data array.
-        create_metadata(): Creates a dictionary of extra information or metadata for the dataset.
         preprocess(): Preprocesses the Nichols et al., 2017 neural data and saves it as a pickle file.
     """
 
@@ -2988,7 +2986,6 @@ class Skora2018Preprocessor(NeuralBasePreprocessor):
 
     Methods:
         extract_data(arr): Extracts neuron IDs, calcium traces, and time vector from the loaded data array.
-        create_metadata(): Creates a dictionary of extra information or metadata for the dataset.
         preprocess(): Preprocesses the Skora et al., 2018 neural data and saves it as a pickle file.
     """
 
@@ -3089,7 +3086,6 @@ class Kaplan2020Preprocessor(NeuralBasePreprocessor):
     Methods:
         load_data(file_name): Loads the data from the specified MAT file.
         extract_data(arr): Extracts neuron IDs, calcium traces, and time vector from the loaded data array.
-        create_metadata(): Creates a dictionary of extra information or metadata for the dataset.
         preprocess(): Preprocesses the Kaplan et al., 2020 neural data and saves a pickle file.
     """
 
@@ -3207,7 +3203,6 @@ class Nejatbakhsh2020Preprocessor(NeuralBasePreprocessor):
 
     Methods:
         extract_data(file): Extracts neuron IDs, calcium traces, and time vector from the NWB file.
-        create_metadata(): Creates a dictionary of extra information or metadata for the dataset.
         preprocess(): Preprocesses the Nejatbakhsh et al., 2020 neural data and saves a pickle file.
     """
 
@@ -3321,7 +3316,6 @@ class Yemini2021Preprocessor(NeuralBasePreprocessor):
     Methods:
         load_data(file_name): Loads the data from the specified MAT file.
         extract_data(raw_data): Extracts neuron IDs, calcium traces, and time vector from the loaded data array.
-        create_metadata(): Creates a dictionary of extra information or metadata for the dataset.
         preprocess(): Preprocesses the Yemini et al., 2021 neural data and saves it as a pickle file.
     """
 
@@ -3536,8 +3530,7 @@ class Uzel2022Preprocessor(NeuralBasePreprocessor):
     Methods:
         load_data(file_name): Loads the data from the specified MAT file.
         extract_data(arr): Extracts neuron IDs, calcium traces, and time vector from the loaded data array.
-        create_metadata(): Creates a dictionary of extra information or metadata for the dataset.
-        preprocess(save_as="graph_tensors_uzel2022.pt"): Preprocesses the Uzel et al., 2022 neural data and saves is as a file.
+        preprocess(): Preprocesses the Uzel et al., 2022 neural data and saves is as a file.
     """
 
     def __init__(self, transform, smooth_method, interpolate_method, resample_dt, **kwargs):
@@ -3652,8 +3645,7 @@ class Dag2023Preprocessor(NeuralBasePreprocessor):
         load_labels_dict(labels_file="NeuroPAL_labels_dict.json"): Loads the neuron labels dictionary from a JSON file.
         find_nearest_label(query, possible_labels, char="?"): Finds the nearest neuron label from a list given a query.
         extract_data(data_file, labels_file): Extracts neuron IDs, calcium traces, and time vector from the loaded data file.
-        create_metadata(): Creates a dictionary of extra information or metadata for the dataset.
-        preprocess(save_as="graph_tensors_dag2023.pt"): Preprocesses the Dag et al., 2023 neural data and saves it as a pickle file.
+        preprocess(): Preprocesses the Dag et al., 2023 neural data and saves it as a pickle file.
     """
 
     def __init__(self, transform, smooth_method, interpolate_method, resample_dt, **kwargs):
@@ -3867,8 +3859,7 @@ class Flavell2023Preprocessor(NeuralBasePreprocessor):
         find_nearest_label(query, possible_labels, char="?"): Finds the nearest neuron label from a list given a query.
         load_data(file_name): Loads the data from the specified HDF5 or JSON file.
         extract_data(file_data): Extracts neuron IDs, calcium traces, and time vector from the loaded data file.
-        create_metadata(): Creates a dictionary of extra information or metadata for the dataset.
-        preprocess(save_as="graph_tensors_flavell2023.pt"): Preprocesses the Flavell et al., 2023 neural data and saves it as pickle file.
+        preprocess(): Preprocesses the Flavell et al., 2023 neural data and saves it as pickle file.
     """
 
     def __init__(self, transform, smooth_method, interpolate_method, resample_dt, **kwargs):
@@ -4039,8 +4030,7 @@ class Leifer2023Preprocessor(NeuralBasePreprocessor):
         filter_bad_traces_by_linear_segments(data, window_size=50, linear_segment_threshold=1e-3): Filters out traces with significant proportions of linear segments.
         create_neuron_idx(label_list): Creates a mapping of neuron labels to indices.
         extract_data(data_file, labels_file, time_file): Extracts neuron IDs, calcium traces, and time vector from the loaded data files.
-        create_metadata(): Creates a dictionary of extra information or metadata for the dataset.
-        preprocess(save_as="graph_tensors_leifer2023.pt"): Preprocesses the Leifer et al., 2023 neural data and saves it as a pickle a file.
+        preprocess(): Preprocesses the Leifer et al., 2023 neural data and saves it as a pickle a file.
     """
 
     def __init__(self, transform, smooth_method, interpolate_method, resample_dt, **kwargs):
@@ -4276,7 +4266,7 @@ class Leifer2023Preprocessor(NeuralBasePreprocessor):
         # Initialize worm index outside file loop
         worm_idx = 0
         # Iterate over each worm's triad of data text files
-        for i in range(0, num_worms):
+        for i in tqdm(range(0, num_worms)):
             data_file = os.path.join(data_dir, f"{str(i)}_gcamp.txt")
             labels_file = os.path.join(data_dir, f"{str(i)}_labels.txt")
             time_file = os.path.join(data_dir, f"{str(i)}_t.txt")
@@ -4419,7 +4409,7 @@ class Lin2023Preprocessor(NeuralBasePreprocessor):
         # Have multiple .mat files that you iterate over
         data_files = os.path.join(self.raw_data_path, "Lin2023")
         # Multiple .mat files to iterate over
-        for file_name in os.listdir(data_files):
+        for file_name in tqdm(os.listdir(data_files)):
             if not file_name.endswith(".mat"):
                 continue
             neurons, raw_traces, time_vector_seconds = self.extract_data(file_name)
