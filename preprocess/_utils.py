@@ -202,10 +202,9 @@ def preprocess_connectome(raw_files, source_connectome=None):
         5. Save the preprocessed graph tensors to a file.
 
     NOTE:
-    * A connectome is a comprehensive map of the neural connections within
-      an organism's brain or nervous system. It is essentially the wiring
-      diagram of the brain, detailing how neurons and their synapses are
-      interconnected.
+    * A connectome is a comprehensive map of the neural connections within an
+      organism's brain or nervous system. It is essentially the wiring diagram
+      of the brain, detailing how neurons and their synapses are interconnected.
     """
     # Check that all necessary files are present
     all_files_present = all([os.path.exists(os.path.join(RAW_DATA_DIR, rf)) for rf in raw_files])
@@ -273,7 +272,7 @@ class ConnectomeBasePreprocessor:
             Loads the neuron master sheet from a CSV file.
         preprocess_common_tasks(edge_index, edge_attr):
             Performs common preprocessing tasks such as creating graph tensors.
-        save_graph_tensors(save_as: str, graph, num_classes, node_type, node_label, n_id, node_class):
+        save_graph_tensors(save_as: str, graph, num_classes, node_type, node_label, node_index, node_class):
             Saves the graph tensors to a file.
     """
 
@@ -313,8 +312,9 @@ class ConnectomeBasePreprocessor:
         """Performs common preprocessing tasks such as creating graph tensors.
 
         This function processes the edge indices and attributes to create graph tensors
-        that represent the connectome. It also ensures the symmetry of the gap junction
-        adjacency matrix and adds missing nodes with zero-weight edges.
+        that represent the connectome. It ensures the correct mapping of neurons to their classes
+        and types, checks for the symmetry of the gap junction adjacency matrix, and adds
+        missing nodes with zero-weight edges to maintain graph completeness.
 
         Args:
             edge_index (torch.Tensor): Tensor containing the edge indices.
@@ -322,24 +322,18 @@ class ConnectomeBasePreprocessor:
 
         Returns:
             graph (torch_geometric.data.Data): The processed graph data object.
-            num_classes (int): The number of unique neuron types.
-            node_type (dict): Dictionary mapping neuron type indices to their labels.
+            node_type (torch.Tensor): Tensor of integers representing neuron types.
             node_label (dict): Dictionary mapping node indices to neuron labels.
-            n_id (torch.Tensor): Tensor containing the node indices.
-            node_class (dict): Dictionary mapping neuron class indices to their labels.
-
-        Steps:
-            1. Filter the neuron master sheet to include only relevant neurons.
-            2. Create a position dictionary for the neurons.
-            3. Encode neuron types and classes using LabelEncoder.
-            4. Initialize node features and labels.
-            5. Add missing nodes with zero-weight edges to ensure a complete adjacency matrix.
-            6. Ensure the symmetry of the gap junction adjacency matrix.
-            7. Create the graph data object with the processed information.
+            node_index (torch.Tensor): Tensor containing the node indices.
+            node_class (dict): Dictionary mapping node indices to neuron classes.
+            num_classes (int): The number of unique neuron classes.
         """
-        df_master = self.neuron_master_sheet
-        df_master = df_master[df_master["label"].isin(self.neuron_labels)]
+        # Filter the neuron master sheet to include only neurons present in the labels
+        df_master = self.neuron_master_sheet[
+            self.neuron_master_sheet["label"].isin(self.neuron_labels)
+        ]
 
+        # Create a position dictionary (pos) for neurons using their x, y, z coordinates
         pos_dict = df_master.set_index("label")[["x", "y", "z"]].to_dict("index")
         pos = {
             self.neuron_to_idx[label]: [
@@ -350,25 +344,38 @@ class ConnectomeBasePreprocessor:
             for label in pos_dict
         }
 
-        df_master["type"] = df_master["type"].fillna("Unknown")
-        le = preprocessing.LabelEncoder()
-        le.fit(df_master["type"].values)
-        num_classes = len(le.classes_)
-        y = torch.tensor(
-            le.transform(df_master.set_index("label").reindex(self.neuron_labels)["type"].values),
-            dtype=torch.int32,
-        )
-        node_type = dict(zip(le.transform(le.classes_), le.classes_))
-
+        # Encode the neuron class (e.g., ADA, ADF) and create a mapping from node index to neuron class
         df_master["class"] = df_master["class"].fillna("Unknown")
-        class_le = preprocessing.LabelEncoder()
-        class_le.fit(df_master["class"].values)
-        node_class = dict(zip(class_le.transform(class_le.classes_), class_le.classes_))
+        node_class = {
+            self.neuron_to_idx[label]: neuron_class
+            for label, neuron_class in zip(df_master["label"], df_master["class"])
+        }
+        num_classes = len(df_master["class"].unique())
 
+        # Alphabetically sort neuron types and encode them as integers
+        df_master["type"] = df_master["type"].fillna("Unknown")
+        unique_types = sorted(df_master["type"].unique())
+        type_to_int = {neuron_type: i for i, neuron_type in enumerate(unique_types)}
+
+        # Create tensor of neuron types (y) using the encoded integers
+        y = torch.tensor(
+            [type_to_int[neuron_type] for neuron_type in df_master["type"]], dtype=torch.long
+        )
+
+        # Map node indices to neuron types using integers
+        node_type = {
+            self.neuron_to_idx[label]: type_to_int[neuron_type]
+            for label, neuron_type in zip(df_master["label"], df_master["type"])
+        }
+
+        # Initialize the node features (x) as a tensor, here set as empty with 1024 features per node (customize as needed)
         x = torch.empty(len(self.neuron_labels), 1024, dtype=torch.float)
 
+        # Create the mapping from node indices to neuron labels (e.g., 'ADAL', 'ADAR', etc.)
         node_label = {idx: label for label, idx in self.neuron_to_idx.items()}
-        n_id = torch.arange(len(self.neuron_labels))
+
+        # Create the node index tensor for the graph
+        node_index = torch.arange(len(self.neuron_labels))
 
         # Add missing nodes with zero-weight edges to ensure the adjacency matrix is 300x300
         all_indices = torch.arange(len(self.neuron_labels))
@@ -380,62 +387,70 @@ class ConnectomeBasePreprocessor:
         for edge in full_edge_index.T.tolist():
             if tuple(edge) not in existing_edges_set:
                 additional_edges.append(edge)
-                additional_edge_attr.append([0, 0])
+                additional_edge_attr.append(
+                    [0, 0]
+                )  # Add a zero-weight edge for missing connections
 
+        # If there are additional edges, add them to the edge_index and edge_attr tensors
         if additional_edges:
             additional_edges = torch.tensor(additional_edges).T
             additional_edge_attr = torch.tensor(additional_edge_attr, dtype=torch.float)
             edge_index = torch.cat([edge_index, additional_edges], dim=1)
             edge_attr = torch.cat([edge_attr, additional_edge_attr], dim=0)
 
-        # Check for symmetry in the gap junction adjacency matrix
+        # Check for symmetry in the gap junction adjacency matrix (electrical synapses should be symmetric)
         gap_junctions = to_dense_adj(edge_index=edge_index, edge_attr=edge_attr[:, 0]).squeeze(0)
         if not torch.allclose(gap_junctions.T, gap_junctions):
             raise AssertionError("The gap junction adjacency matrix is not symmetric.")
 
-        # Create the graph data object
+        # Create the graph data object with all the processed information
         graph = Data(x=x, edge_index=edge_index, edge_attr=edge_attr, y=y)
-        graph.pos = pos  # Add positions to the graph object
+        graph.pos = pos  # Add positional information to the graph object
 
-        return graph, num_classes, node_type, node_label, n_id, node_class
+        return graph, node_type, node_label, node_index, node_class, num_classes
 
     def save_graph_tensors(
         self,
         save_as: str,
-        graph,
-        num_classes,
-        node_type,
-        node_label,
-        n_id,
-        node_class,
+        graph: Data,
+        node_type: dict,
+        node_label: dict,
+        node_index: torch.Tensor,
+        node_class: dict,
+        num_classes: int,
     ):
-        """Saves the graph tensors to a file.
+        """
+        Saves the graph tensors and additional attributes to a file.
 
         Args:
-            save_as (str): The name of the file to save the graph tensors to.
-            graph (torch_geometric.data.Data): The processed graph data object.
-            num_classes (int): The number of unique neuron types.
-            node_type (dict): Dictionary mapping neuron type indices to their labels.
-            node_label (dict): Dictionary mapping node indices to neuron labels.
-            n_id (torch.Tensor): Tensor containing the node indices.
-            node_class (dict): Dictionary mapping neuron class indices to their labels.
+            save_as (str): Filename for the saved graph data.
+            graph (Data): Processed graph data containing node features (`x`), edge indices (`edge_index`), edge attributes (`edge_attr`), node positions (`pos`), and optional node labels (`y`).
+            node_type (dict): Maps node index to neuron type (e.g., sensory, motor).
+            node_label (dict): Maps node index to neuron label (e.g., 'ADAL').
+            node_index (torch.Tensor): Tensor of node indices.
+            node_class (dict): Maps node index to neuron class (e.g., 'ADA').
+            num_classes (int): Number of unique neuron types/classes.
+
+        The graph tensors dictionary includes connectivity (`edge_index`), attributes (`edge_attr`), neuron positions (`pos`), features (`x`), and additional information such as node labels and types.
         """
+
+        # Collect the graph data and additional attributes in a dictionary
         graph_tensors = {
             "edge_index": graph.edge_index,
             "edge_attr": graph.edge_attr,
             "pos": graph.pos,
-            "num_classes": num_classes,
             "x": graph.x,
             "y": graph.y,
             "node_type": node_type,
             "node_label": node_label,
-            "n_id": n_id,
             "node_class": node_class,
+            "node_index": node_index,
+            "num_classes": num_classes,
         }
 
+        # Save the graph tensors to a file
         torch.save(
-            graph_tensors,
-            os.path.join(ROOT_DIR, "data", "processed", "connectome", save_as),
+            graph_tensors, os.path.join(ROOT_DIR, "data", "processed", "connectome", save_as)
         )
 
 
@@ -481,10 +496,10 @@ class DefaultPreprocessor(ConnectomeBasePreprocessor):
             7. Call the `preprocess_common_tasks` method to perform common preprocessing tasks.
             8. Save the graph tensors to the specified file.
         """
-        # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-        # Override DefaultProprecessor with Witvliet2020Preprocessor7, a more up-to-date connectome of C. elegans.
-        return Witvliet2020Preprocessor7.preprocess(self, save_as="graph_tensors.pt")
-        # <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+        # # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+        # # Override DefaultProprecessor with Witvliet2020Preprocessor7, a more up-to-date connectome of C. elegans.
+        # return Witvliet2020Preprocessor7.preprocess(self, save_as="graph_tensors.pt")
+        # # <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
         # Names of all C. elegans hermaphrodite neurons
         neurons_all = set(self.neuron_labels)
         sep = r"[\t,]"
@@ -608,18 +623,20 @@ class DefaultPreprocessor(ConnectomeBasePreprocessor):
             combined_edge_index, combined_edge_attr, reduce="add"
         )  # features = [elec_wt, chem_wt]
 
-        graph, num_classes, node_type, node_label, n_id, node_class = self.preprocess_common_tasks(
-            edge_index, edge_attr
+        # Perform common preprocessing tasks to create graph tensors
+        graph, node_type, node_label, node_index, node_class, num_classes = (
+            self.preprocess_common_tasks(edge_index, edge_attr)
         )
 
+        # Save the processed graph tensors to the specified file
         self.save_graph_tensors(
             save_as,
             graph,
-            num_classes,
             node_type,
             node_label,
-            n_id,
+            node_index,
             node_class,
+            num_classes,
         )
 
 
@@ -709,19 +726,19 @@ class ChklovskiiPreprocessor(ConnectomeBasePreprocessor):
         ).T
 
         # Perform common preprocessing tasks to create graph tensors
-        graph, num_classes, node_type, node_label, n_id, node_class = self.preprocess_common_tasks(
-            edge_index, edge_attr
+        graph, node_type, node_label, node_index, node_class, num_classes = (
+            self.preprocess_common_tasks(edge_index, edge_attr)
         )
 
         # Save the processed graph tensors to the specified file
         self.save_graph_tensors(
             save_as,
             graph,
-            num_classes,
             node_type,
             node_label,
-            n_id,
+            node_index,
             node_class,
+            num_classes,
         )
 
 
@@ -801,20 +818,20 @@ class OpenWormPreprocessor(ConnectomeBasePreprocessor):
             ]
         ).T
 
-        # Perform common preprocessing tasks
-        graph, num_classes, node_type, node_label, n_id, node_class = self.preprocess_common_tasks(
-            edge_index, edge_attr
+        # Perform common preprocessing tasks to create graph tensors
+        graph, node_type, node_label, node_index, node_class, num_classes = (
+            self.preprocess_common_tasks(edge_index, edge_attr)
         )
 
-        # Save the graph tensors
+        # Save the processed graph tensors to the specified file
         self.save_graph_tensors(
             save_as,
             graph,
-            num_classes,
             node_type,
             node_label,
-            n_id,
+            node_index,
             node_class,
+            num_classes,
         )
 
 
@@ -875,18 +892,20 @@ class Randi2023Preprocessor(ConnectomeBasePreprocessor):
             [[neuron_to_idx[neuron1], neuron_to_idx[neuron2]] for neuron1, neuron2 in edges]
         ).T
 
-        graph, num_classes, node_type, node_label, n_id, node_class = self.preprocess_common_tasks(
-            edge_index, edge_attr
+        # Perform common preprocessing tasks to create graph tensors
+        graph, node_type, node_label, node_index, node_class, num_classes = (
+            self.preprocess_common_tasks(edge_index, edge_attr)
         )
 
+        # Save the processed graph tensors to the specified file
         self.save_graph_tensors(
             save_as,
             graph,
-            num_classes,
             node_type,
             node_label,
-            n_id,
+            node_index,
             node_class,
+            num_classes,
         )
 
 
@@ -957,18 +976,20 @@ class Witvliet2020Preprocessor7(ConnectomeBasePreprocessor):
             ]
         ).T
 
-        graph, num_classes, node_type, node_label, n_id, node_class = self.preprocess_common_tasks(
-            edge_index, edge_attr
+        # Perform common preprocessing tasks to create graph tensors
+        graph, node_type, node_label, node_index, node_class, num_classes = (
+            self.preprocess_common_tasks(edge_index, edge_attr)
         )
 
+        # Save the processed graph tensors to the specified file
         self.save_graph_tensors(
             save_as,
             graph,
-            num_classes,
             node_type,
             node_label,
-            n_id,
+            node_index,
             node_class,
+            num_classes,
         )
 
 
@@ -1041,18 +1062,20 @@ class Witvliet2020Preprocessor8(ConnectomeBasePreprocessor):
             ]
         ).T
 
-        graph, num_classes, node_type, node_label, n_id, node_class = self.preprocess_common_tasks(
-            edge_index, edge_attr
+        # Perform common preprocessing tasks to create graph tensors
+        graph, node_type, node_label, node_index, node_class, num_classes = (
+            self.preprocess_common_tasks(edge_index, edge_attr)
         )
 
+        # Save the processed graph tensors to the specified file
         self.save_graph_tensors(
             save_as,
             graph,
-            num_classes,
             node_type,
             node_label,
-            n_id,
+            node_index,
             node_class,
+            num_classes,
         )
 
 
@@ -1140,18 +1163,20 @@ class Cook2019Preprocessor(ConnectomeBasePreprocessor):
             ]
         ).T
 
-        graph, num_classes, node_type, node_label, n_id, node_class = self.preprocess_common_tasks(
-            edge_index, edge_attr
+        # Perform common preprocessing tasks to create graph tensors
+        graph, node_type, node_label, node_index, node_class, num_classes = (
+            self.preprocess_common_tasks(edge_index, edge_attr)
         )
 
+        # Save the processed graph tensors to the specified file
         self.save_graph_tensors(
             save_as,
             graph,
-            num_classes,
             node_type,
             node_label,
-            n_id,
+            node_index,
             node_class,
+            num_classes,
         )
 
 
@@ -1222,18 +1247,20 @@ class White1986WholePreprocessor(ConnectomeBasePreprocessor):
             ]
         ).T
 
-        graph, num_classes, node_type, node_label, n_id, node_class = self.preprocess_common_tasks(
-            edge_index, edge_attr
+        # Perform common preprocessing tasks to create graph tensors
+        graph, node_type, node_label, node_index, node_class, num_classes = (
+            self.preprocess_common_tasks(edge_index, edge_attr)
         )
 
+        # Save the processed graph tensors to the specified file
         self.save_graph_tensors(
             save_as,
             graph,
-            num_classes,
             node_type,
             node_label,
-            n_id,
+            node_index,
             node_class,
+            num_classes,
         )
 
 
@@ -1304,18 +1331,20 @@ class White1986N2UPreprocessor(ConnectomeBasePreprocessor):
             ]
         ).T
 
-        graph, num_classes, node_type, node_label, n_id, node_class = self.preprocess_common_tasks(
-            edge_index, edge_attr
+        # Perform common preprocessing tasks to create graph tensors
+        graph, node_type, node_label, node_index, node_class, num_classes = (
+            self.preprocess_common_tasks(edge_index, edge_attr)
         )
 
+        # Save the processed graph tensors to the specified file
         self.save_graph_tensors(
             save_as,
             graph,
-            num_classes,
             node_type,
             node_label,
-            n_id,
+            node_index,
             node_class,
+            num_classes,
         )
 
 
@@ -1386,18 +1415,20 @@ class White1986JSHPreprocessor(ConnectomeBasePreprocessor):
             ]
         ).T
 
-        graph, num_classes, node_type, node_label, n_id, node_class = self.preprocess_common_tasks(
-            edge_index, edge_attr
+        # Perform common preprocessing tasks to create graph tensors
+        graph, node_type, node_label, node_index, node_class, num_classes = (
+            self.preprocess_common_tasks(edge_index, edge_attr)
         )
 
+        # Save the processed graph tensors to the specified file
         self.save_graph_tensors(
             save_as,
             graph,
-            num_classes,
             node_type,
             node_label,
-            n_id,
+            node_index,
             node_class,
+            num_classes,
         )
 
 
@@ -1468,18 +1499,20 @@ class White1986JSEPreprocessor(ConnectomeBasePreprocessor):
             ]
         ).T
 
-        graph, num_classes, node_type, node_label, n_id, node_class = self.preprocess_common_tasks(
-            edge_index, edge_attr
+        # Perform common preprocessing tasks to create graph tensors
+        graph, node_type, node_label, node_index, node_class, num_classes = (
+            self.preprocess_common_tasks(edge_index, edge_attr)
         )
 
+        # Save the processed graph tensors to the specified file
         self.save_graph_tensors(
             save_as,
             graph,
-            num_classes,
             node_type,
             node_label,
-            n_id,
+            node_index,
             node_class,
+            num_classes,
         )
 
 

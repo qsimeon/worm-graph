@@ -58,7 +58,8 @@ def get_datasets(dataset_config: DictConfig, save=False):
             for dataset in EXPERIMENT_DATASETS
         ]
     )
-    # TODO: Write other potentially useful dataset patterns here. Example all Zimmer lab datasets, etc.
+    # TODO: Write other potentially useful dataset patterns.
+    # (e.g. all Zimmer lab datasets, all datastes with freely moving worms, etc.)
     if all_experiment:
         logger.info(
             f"Requested dataset pattern matched the presaved `combined_AllExperimental` dataset.\n"
@@ -71,7 +72,7 @@ def get_datasets(dataset_config: DictConfig, save=False):
         else:  # Go to (*)
             logger.info(
                 f"Directory {presave_path} does not exist or is empty.\n"
-                f"Creating the dataset from source datasets.\n\n"
+                f"Creating the combined dataset from source datasets.\n\n"
             )
 
     # Initialize datasets
