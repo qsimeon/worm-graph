@@ -606,7 +606,7 @@ if __name__ == "__main__":
     print(OmegaConf.to_yaml(train_config), end="\n\n")
     model_config = OmegaConf.load("configs/submodule/model.yaml")
     print(OmegaConf.to_yaml(model_config), end="\n\n")
-    dataset_config = OmegaConf.load("configs/submodule/dataset.yaml")
+    dataset_config = OmegaConf.load("configs/submodule/data.yaml")
     print(OmegaConf.to_yaml(dataset_config), end="\n\n")
     # Create new log directory
     timestamp = datetime.now().strftime("%Y_%m_%d_%H_%M_%S")

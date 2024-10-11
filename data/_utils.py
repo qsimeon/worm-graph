@@ -49,7 +49,7 @@ def load_dataset(name):
 
 
 class NeuralActivityDataset(torch.utils.data.Dataset):
-    """A custom PyTorch dataset for neural activity time-series prediction.
+    """A custom PyTorch dataset for C. elegans neural activity time-series prediction.
 
     This dataset generates sequences of length `seq_len` from a given
     neural activity tensor `data`, and returns the corresponding input

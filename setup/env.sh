@@ -82,7 +82,7 @@ case "$(uname -s)" in
     Darwin)
         echo ""
         echo "Mac OS Detected"
-        conda install pytorch::pytorch torchvision torchaudio -c pytorch
+        # conda install pytorch::pytorch torchvision torchaudio -c pytorch
         conda install -y -n $ENV_NAME pyg -c pyg
         ;;
 
@@ -91,10 +91,10 @@ case "$(uname -s)" in
         if has_gpu; then
             echo ""
             echo "Nvidia GPU Detected with CUDA version $cuda_version"
-            conda install -y -n $ENV_NAME pytorch torchvision torchaudio pytorch-cuda=$cuda_version -c pytorch -c nvidia
-            conda install -y -n $ENV_NAME pyg -c pyg
+            # conda install -y -n $ENV_NAME pytorch torchvision torchaudio pytorch-cuda=$cuda_version -c pytorch -c nvidia
+            conda install -y -n $ENV_NAME pyg=*=*cu* -c pyg
         else
-            conda install -y -n $ENV_NAME pytorch torchvision torchaudio cpuonly -c pytorch
+            # conda install -y -n $ENV_NAME pytorch torchvision torchaudio cpuonly -c pytorch
             conda install -y -n $ENV_NAME pyg -c pyg
         fi
         ;;
@@ -104,10 +104,10 @@ case "$(uname -s)" in
         echo "Windows OS Detected"
         if has_gpu; then
             echo "Nvidia GPU Detected with CUDA version $cuda_version"
-            conda install -y -n $ENV_NAME pytorch torchvision torchaudio pytorch-cuda=$cuda_version -c pytorch -c nvidia
-            conda install -y -n $ENV_NAME pyg -c pyg
+            # conda install -y -n $ENV_NAME pytorch torchvision torchaudio pytorch-cuda=$cuda_version -c pytorch -c nvidia
+            conda install -y -n $ENV_NAME pyg=*=*cu* -c pyg
         else
-            conda install -y -n $ENV_NAME pytorch torchvision torchaudio cpuonly -c pytorch
+            # conda install -y -n $ENV_NAME pytorch torchvision torchaudio cpuonly -c pytorch
             conda install -y -n $ENV_NAME pyg -c pyg
         fi
         ;;

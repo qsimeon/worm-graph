@@ -373,7 +373,7 @@ def get_datasets(dataset_config: DictConfig, save=False):
 
 
 if __name__ == "__main__":
-    config = OmegaConf.load("configs/submodule/dataset.yaml")
+    config = OmegaConf.load("configs/submodule/data.yaml")
     print(OmegaConf.to_yaml(config), end="\n\n")
     dataset = get_datasets(config.dataset, save=True)
     print(f"train dataset: {type(dataset[0])}\n")
