@@ -1974,10 +1974,10 @@ class CalciumDataReshaper:
 
     Attributes:
         worm_dataset (dict): Dataset for a single worm that includes calcium data and other information.
-        named_neuron_to_idx (dict): Mapping of named neurons to their indices.
-        unknown_neuron_to_idx (dict): Mapping of unknown neurons to their indices.
-        slot_to_named_neuron (dict): Mapping of slots to named neurons.
-        slot_to_unknown_neuron (dict): Mapping of slots to unknown neurons.
+        labeled_neuron_to_idx (dict): Mapping of labeled neurons to their indices.
+        unlabeled_neuron_to_idx (dict): Mapping of unlabeled neurons to their indices.
+        slot_to_labeled_neuron (dict): Mapping of slots to labeled neurons.
+        slot_to_unlabeled_neuron (dict): Mapping of slots to unlabeled neurons.
         slot_to_neuron (dict): Mapping of slots to neurons.
         dtype (torch.dtype): Data type for the tensors.
 
@@ -1992,12 +1992,12 @@ class CalciumDataReshaper:
             Initializes empty calcium data matrices.
         _tensor_time_data():
             Converts time data to torch tensors.
-        _fill_named_neurons_data():
-            Fills data for named neurons.
+        _fill_labeled_neurons_data():
+            Fills data for labeled neurons.
         _fill_calcium_data(idx, slot):
             Fills calcium data for a given neuron index and slot.
-        _fill_unknown_neurons_data():
-            Fills data for unknown neurons.
+        _fill_unlabeled_neurons_data():
+            Fills data for unlabeled neurons.
         _update_worm_dataset():
             Updates the worm dataset with reshaped data and mappings.
         _remove_old_mappings():
@@ -2018,10 +2018,10 @@ class CalciumDataReshaper:
                 0 < slot < NUM_NEURONS, the number of neurons in hermaphrodite C. elegans.
         """
         self.worm_dataset = worm_dataset
-        self.named_neuron_to_idx = dict()
-        self.unknown_neuron_to_idx = dict()
-        self.slot_to_named_neuron = dict()
-        self.slot_to_unknown_neuron = dict()
+        self.labeled_neuron_to_idx = dict()
+        self.unlabeled_neuron_to_idx = dict()
+        self.slot_to_labeled_neuron = dict()
+        self.slot_to_unlabeled_neuron = dict()
         self.slot_to_neuron = dict()
         self.dtype = torch.half
         self._init_neuron_data()
@@ -2074,8 +2074,8 @@ class CalciumDataReshaper:
         Reshapes the calcium data and updates the worm dataset.
         """
         self._prepare_initial_data()
-        self._fill_named_neurons_data()
-        self._fill_unknown_neurons_data()
+        self._fill_labeled_neurons_data()
+        self._fill_unlabeled_neurons_data()
         self._update_worm_dataset()
         self._remove_old_mappings()
 
@@ -2086,8 +2086,8 @@ class CalciumDataReshaper:
         assert (
             len(self.idx_to_neuron) == self.calcium_data.shape[1]
         ), "Number of neurons in calcium data matrix does not match number of recorded neurons."
-        self.named_neurons_mask = torch.zeros(NUM_NEURONS, dtype=torch.bool)
-        self.unknown_neurons_mask = torch.zeros(NUM_NEURONS, dtype=torch.bool)
+        self.labeled_neurons_mask = torch.zeros(NUM_NEURONS, dtype=torch.bool)
+        self.unlabeled_neurons_mask = torch.zeros(NUM_NEURONS, dtype=torch.bool)
         self._init_empty_calcium_data()
         self._tensor_time_data()
 
@@ -2151,17 +2151,17 @@ class CalciumDataReshaper:
         if self.original_dt.ndim == 1:
             self.original_dt = self.original_dt.unsqueeze(-1)
 
-    def _fill_named_neurons_data(self):
+    def _fill_labeled_neurons_data(self):
         """
-        Fills data for named neurons.
+        Fills data for labeled neurons.
         """
         for slot, neuron in enumerate(NEURON_LABELS):
-            if neuron in self.neuron_to_idx:  # named neuron
+            if neuron in self.neuron_to_idx:  # labeled neuron
                 idx = self.neuron_to_idx[neuron]
-                self.named_neuron_to_idx[neuron] = idx
+                self.labeled_neuron_to_idx[neuron] = idx
                 self._fill_calcium_data(idx, slot)
-                self.named_neurons_mask[slot] = True
-                self.slot_to_named_neuron[slot] = neuron
+                self.labeled_neurons_mask[slot] = True
+                self.slot_to_labeled_neuron[slot] = neuron
 
     def _fill_calcium_data(self, idx, slot):
         """
@@ -2197,37 +2197,37 @@ class CalciumDataReshaper:
             self.original_smooth_residual_calcium[:, idx]
         ).to(self.dtype)
 
-    def _fill_unknown_neurons_data(self):
+    def _fill_unlabeled_neurons_data(self):
         """
-        Fills data for unknown neurons.
+        Fills data for unlabeled neurons.
         """
-        free_slots = list(np.where(~self.named_neurons_mask)[0])
-        for neuron in set(self.neuron_to_idx) - set(self.named_neuron_to_idx):
-            self.unknown_neuron_to_idx[neuron] = self.neuron_to_idx[neuron]
+        free_slots = list(np.where(~self.labeled_neurons_mask)[0])
+        for neuron in set(self.neuron_to_idx) - set(self.labeled_neuron_to_idx):
+            self.unlabeled_neuron_to_idx[neuron] = self.neuron_to_idx[neuron]
             slot = np.random.choice(free_slots)
             free_slots.remove(slot)
-            self.slot_to_unknown_neuron[slot] = neuron
+            self.slot_to_unlabeled_neuron[slot] = neuron
             self._fill_calcium_data(self.neuron_to_idx[neuron], slot)
-            self.unknown_neurons_mask[slot] = True
+            self.unlabeled_neurons_mask[slot] = True
 
     def _update_worm_dataset(self):
         """
         Updates the worm dataset with reshaped data and mappings.
         """
-        self.slot_to_neuron.update(self.slot_to_named_neuron)
-        self.slot_to_neuron.update(self.slot_to_unknown_neuron)
+        self.slot_to_neuron.update(self.slot_to_labeled_neuron)
+        self.slot_to_neuron.update(self.slot_to_unlabeled_neuron)
         self.worm_dataset.update(
             {
                 "calcium_data": self.standard_calcium_data,  # normalized, resampled
                 "dt": self.dt,  # resampled (vector)
-                "idx_to_named_neuron": {v: k for k, v in self.named_neuron_to_idx.items()},
-                "idx_to_unknown_neuron": {v: k for k, v in self.unknown_neuron_to_idx.items()},
+                "idx_to_labeled_neuron": {v: k for k, v in self.labeled_neuron_to_idx.items()},
+                "idx_to_unlabeled_neuron": {v: k for k, v in self.unlabeled_neuron_to_idx.items()},
                 "median_dt": self.median_dt,  # resampled (scalar)
-                "named_neuron_to_idx": self.named_neuron_to_idx,
-                "named_neuron_to_slot": {v: k for k, v in self.slot_to_named_neuron.items()},
-                "named_neurons_mask": self.named_neurons_mask,
+                "labeled_neuron_to_idx": self.labeled_neuron_to_idx,
+                "labeled_neuron_to_slot": {v: k for k, v in self.slot_to_labeled_neuron.items()},
+                "labeled_neurons_mask": self.labeled_neurons_mask,
                 "neuron_to_slot": {v: k for k, v in self.slot_to_neuron.items()},
-                "neurons_mask": self.named_neurons_mask | self.unknown_neurons_mask,
+                "neurons_mask": self.labeled_neurons_mask | self.unlabeled_neurons_mask,
                 "original_calcium_data": self.standard_original_calcium_data,  # original, normalized
                 "original_dt": self.original_dt,  # original (vector)
                 "original_median_dt": self.original_median_dt,  # original (scalar)
@@ -2238,13 +2238,15 @@ class CalciumDataReshaper:
                 "residual_calcium": self.standard_residual_calcium,  # resampled
                 "smooth_calcium_data": self.standard_smooth_calcium_data,  # normalized, smoothed, resampled
                 "smooth_residual_calcium": self.standard_residual_smooth_calcium,  # smoothed, resampled
-                "slot_to_named_neuron": self.slot_to_named_neuron,
+                "slot_to_labeled_neuron": self.slot_to_labeled_neuron,
                 "slot_to_neuron": self.slot_to_neuron,
-                "slot_to_unknown_neuron": self.slot_to_unknown_neuron,
+                "slot_to_unlabeled_neuron": self.slot_to_unlabeled_neuron,
                 "time_in_seconds": self.time_in_seconds,  # resampled
-                "unknown_neuron_to_idx": self.unknown_neuron_to_idx,
-                "unknown_neuron_to_slot": {v: k for k, v in self.slot_to_unknown_neuron.items()},
-                "unknown_neurons_mask": self.unknown_neurons_mask,
+                "unlabeled_neuron_to_idx": self.unlabeled_neuron_to_idx,
+                "unlabeled_neuron_to_slot": {
+                    v: k for k, v in self.slot_to_unlabeled_neuron.items()
+                },
+                "unlabeled_neurons_mask": self.unlabeled_neurons_mask,
                 "extra_info": self.extra_info,
             }
         )
@@ -2413,20 +2415,20 @@ class NeuralBasePreprocessor:
     #     format structure of the Leifer2023 dataset.
     #     """
     #     neuron_to_idx = dict()
-    #     num_unnamed_neurons = 0
+    #     num_unlabeled_neurons = 0
     #     for j, item in enumerate(label_list):
     #         previous_list = label_list[:j]
     #         if not item.isalnum(): # happens when the label is empty string ''
     #             label_list[j] = str(j)
-    #             num_unnamed_neurons += 1
+    #             num_unlabeled_neurons += 1
     #             neuron_to_idx[str(j)] = j
     #         else:
     #             if item in NEURON_LABELS and item not in previous_list:
     #                 neuron_to_idx[item] = j
-    #             # If a neuron label repeated assume a mistake and treat the duplicate as an unnamed neuron
+    #             # If a neuron label repeated assume a mistake and treat the duplicate as an unlabeled neuron
     #             elif item in NEURON_LABELS and item in previous_list:
     #                 label_list[j] = str(j)
-    #                 num_unnamed_neurons += 1
+    #                 num_unlabeled_neurons += 1
     #                 neuron_to_idx[str(j)] = j
     #             # Handle ambiguous neuron labels
     #             else:
@@ -2438,15 +2440,15 @@ class NeuralBasePreprocessor:
     #                     neuron_to_idx[str(item + "R")] = j
     #                 else: # happens when the label is "merge"; TODO: Ask authors what that is?
     #                     label_list[j] = str(j)
-    #                     num_unnamed_neurons += 1
+    #                     num_unlabeled_neurons += 1
     #                     neuron_to_idx[str(j)] = j
-    #     num_named_neurons = len(
+    #     num_labeled_neurons = len(
     #         [k for k in neuron_to_idx.keys() if not k.isnumeric()]
     #     )  # number of labeled neurons
     #     assert (
-    #         num_named_neurons == len(label_list) - num_unnamed_neurons
-    #     ), "Incorrect calculation of the number of named neurons."
-    #     return neuron_to_idx, num_named_neurons
+    #         num_labeled_neurons == len(label_list) - num_unlabeled_neurons
+    #     ), "Incorrect calculation of the number of labeled neurons."
+    #     return neuron_to_idx, num_labeled_neurons
 
     def create_neuron_idx(self, unique_IDs):
         """
@@ -2457,7 +2459,7 @@ class NeuralBasePreprocessor:
 
         Returns:
             dict: Mapping of neuron labels to indices.
-            int: Number of named neurons.
+            int: Number of labeled neurons.
         """
         # TODO: Supplement this this with the Leifer2023 version so we only need this one definition.
         idx_to_neuron = {
@@ -2479,10 +2481,10 @@ class NeuralBasePreprocessor:
             for nid, name in idx_to_neuron.items()
         }
         neuron_to_idx = dict((v, k) for k, v in idx_to_neuron.items())
-        num_named_neurons = len(
+        num_labeled_neurons = len(
             [k for k in neuron_to_idx.keys() if not k.isnumeric()]
         )  # number of labled neurons
-        return neuron_to_idx, num_named_neurons
+        return neuron_to_idx, num_labeled_neurons
 
     def find_nearest_label(self, query, possible_labels, char="?"):
         """
@@ -2706,7 +2708,7 @@ class NeuralBasePreprocessor:
             # Ignore any worms with very short recordings
             if len(raw_timeVectorSeconds[i]) < 600:
                 continue
-            # Map named neurons
+            # Map labeled neurons
             unique_IDs = [
                 (self.pick_non_none(j) if isinstance(j, list) else j) for j in neuron_IDs[i]
             ]
@@ -2717,9 +2719,9 @@ class NeuralBasePreprocessor:
             _, unique_indices = np.unique(unique_IDs, return_index=True)
             unique_IDs = [unique_IDs[_] for _ in unique_indices]
             # Create neuron label to index mapping
-            neuron_to_idx, num_named_neurons = self.create_neuron_idx(unique_IDs)
+            neuron_to_idx, num_labeled_neurons = self.create_neuron_idx(unique_IDs)
             # Ignore any worms with no labelled neurons
-            if num_named_neurons == 0:
+            if num_labeled_neurons == 0:
                 continue
             # Only get data for unique neurons
             trace_data = trace_data[:, unique_indices.astype(int)]
@@ -2759,7 +2761,7 @@ class NeuralBasePreprocessor:
                 self.resample_dt, resampled_median_dt, atol=0.01
             ), f"Resampling failed. The median dt ({resampled_median_dt}) of the resampled time vector is different from desired dt ({self.resample_dt})."
             max_timesteps, num_neurons = resampled_calcium_data.shape
-            num_unknown_neurons = int(num_neurons) - num_named_neurons
+            num_unlabeled_neurons = int(num_neurons) - num_labeled_neurons
             # 6. Name worm and update index
             worm = "worm" + str(worm_idx)  # use global worm index
             worm_idx += 1  # increment worm index
@@ -2774,9 +2776,9 @@ class NeuralBasePreprocessor:
                     "max_timesteps": int(max_timesteps),  # scalar from resampled time vector
                     "median_dt": self.resample_dt,  # scalar from resampled time vector
                     "neuron_to_idx": neuron_to_idx,
-                    "num_named_neurons": num_named_neurons,
+                    "num_labeled_neurons": num_labeled_neurons,
                     "num_neurons": int(num_neurons),
-                    "num_unknown_neurons": num_unknown_neurons,
+                    "num_unlabeled_neurons": num_unlabeled_neurons,
                     "original_dt": dt,  # vector from original time vector
                     "original_calcium_data": calcium_data,  # normalized
                     "original_max_timesteps": int(
@@ -3762,7 +3764,7 @@ class Dag2023Preprocessor(NeuralBasePreprocessor):
         neurons = []
         # If there is an index map, use it to extract the labeled neurons
         if index_map:
-            # Indices in index_map correspond to named neurons
+            # Indices in index_map correspond to labeled neurons
             for calnum in index_map:
                 # NOTE: calnum is a string, not an integer
                 assert (
@@ -3773,7 +3775,7 @@ class Dag2023Preprocessor(NeuralBasePreprocessor):
                 # Need to minus one because Julia index starts at 1 whereas Python index starts with 0
                 idx = int(calnum) - 1
                 indices.append(idx)
-            # Remaining indices correspond to unknown neurons
+            # Remaining indices correspond to unlabeled neurons
             for i in range(calcium.shape[1]):
                 if i not in set(indices):
                     indices.append(i)
@@ -3851,7 +3853,7 @@ class Dag2023Preprocessor(NeuralBasePreprocessor):
                 metadata,
             )  # preprocess
         # Next deal with the swf415_no_id which contains purely unlabeled neuron data
-        # NOTE: These won't get used at all as they are skipped in NeuralBasePreprocessor.preprocess_traces since num_named_neurons is 0.
+        # NOTE: These won't get used at all as they are skipped in NeuralBasePreprocessor.preprocess_traces since num_labeled_neurons is 0.
         for file_name in os.listdir(noid_data_files):
             if not file_name.endswith(".h5"):
                 continue
@@ -4159,23 +4161,23 @@ class Leifer2023Preprocessor(NeuralBasePreprocessor):
             label_list (list): The list of neuron labels.
 
         Returns:
-            tuple: A tuple containing the neuron-to-index mapping and the number of named neurons.
+            tuple: A tuple containing the neuron-to-index mapping and the number of labeled neurons.
         """
         neuron_to_idx = dict()
-        num_unnamed_neurons = 0
+        num_unlabeled_neurons = 0
         for j, item in enumerate(label_list):
             previous_list = label_list[:j]
             if not item.isalnum():  # happens when the label is empty string ''
                 label_list[j] = str(j)
-                num_unnamed_neurons += 1
+                num_unlabeled_neurons += 1
                 neuron_to_idx[str(j)] = j
             else:
                 if item in NEURON_LABELS and item not in previous_list:
                     neuron_to_idx[item] = j
-                # If a neuron label repeated assume a mistake and treat the duplicate as an unnamed neuron
+                # If a neuron label repeated assume a mistake and treat the duplicate as an unlabeled neuron
                 elif item in NEURON_LABELS and item in previous_list:
                     label_list[j] = str(j)
-                    num_unnamed_neurons += 1
+                    num_unlabeled_neurons += 1
                     neuron_to_idx[str(j)] = j
                 # Handle ambiguous neuron labels
                 else:
@@ -4187,15 +4189,15 @@ class Leifer2023Preprocessor(NeuralBasePreprocessor):
                         neuron_to_idx[str(item + "R")] = j
                     else:  # happens when the label is "merge"; TODO: Ask authors what that is?
                         label_list[j] = str(j)
-                        num_unnamed_neurons += 1
+                        num_unlabeled_neurons += 1
                         neuron_to_idx[str(j)] = j
-        num_named_neurons = len(
+        num_labeled_neurons = len(
             [k for k in neuron_to_idx.keys() if not k.isnumeric()]
         )  # number of labeled neurons
         assert (
-            num_named_neurons == len(label_list) - num_unnamed_neurons
-        ), "Incorrect calculation of the number of named neurons."
-        return neuron_to_idx, num_named_neurons
+            num_labeled_neurons == len(label_list) - num_unlabeled_neurons
+        ), "Incorrect calculation of the number of labeled neurons."
+        return neuron_to_idx, num_labeled_neurons
 
     def extract_data(self, data_file, labels_file, time_file):
         """

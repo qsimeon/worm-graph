@@ -58,7 +58,7 @@ submodule:
       Flavell2023: null
       Leifer2023: null
 
-    num_named_neurons: null
+    num_labeled_neurons: null
     num_train_samples: 8
     num_val_samples: 8
     seq_len: null

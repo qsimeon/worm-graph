@@ -360,7 +360,9 @@ class CElegansConnectome(InMemoryDataset):
         # create a simple dict for loading the connectome
         if not os.path.exists(data_path):  # run fast preprocess
             subprocess.run("python -u ../preprocess/_main.py", text=True)
-        assert os.path.exists(data_path), "Must first have had run preproccessing pipeline: `python -u preprocess/_main.py`"
+        assert os.path.exists(
+            data_path
+        ), "Must first have had run preproccessing pipeline: `python -u preprocess/_main.py`"
         graph_tensors = torch.load(data_path)
         # make the graph
         connectome = Data(**graph_tensors)
@@ -390,7 +392,7 @@ def rename_worm_keys(d):
     return {key_mapping[key]: d[key] for key in sorted_keys}
 
 
-def filter_loaded_combined_dataset(combined_dataset, num_worms, num_named_neurons):
+def filter_loaded_combined_dataset(combined_dataset, num_worms, num_labeled_neurons):
     """
     Auxiliary function to filter worms when loading a combined dataset.
 
@@ -400,8 +402,8 @@ def filter_loaded_combined_dataset(combined_dataset, num_worms, num_named_neuron
         Multi-worm dataset to filter the worms from.
     num_worms : int or None
         Number of worms to keep. If None keep all.
-    num_named_neurons : int or None
-        Number of named neurons to keep. If None keep all.
+    num_labeled_neurons : int or None
+        Number of labeled neurons to keep. If None keep all.
 
     Returns
     -------
@@ -409,7 +411,7 @@ def filter_loaded_combined_dataset(combined_dataset, num_worms, num_named_neuron
         Filtered multi-worm dataset.
     """
 
-    combined_dataset = select_named_neurons(combined_dataset, num_named_neurons)
+    combined_dataset = select_labeled_neurons(combined_dataset, num_labeled_neurons)
 
     # Verify if len(combined_dataset) is >= num_worms
     if num_worms is not None:  # must have been an integer otherwise
@@ -450,7 +452,7 @@ def filter_loaded_combined_dataset(combined_dataset, num_worms, num_named_neuron
         dataset_info["median_dt"].append(data["median_dt"])
         dataset_info["original_index"].append(data["original_worm"])
         dataset_info["combined_dataset_index"].append(worm)
-        worm_neurons = [neuron for slot, neuron in data["slot_to_named_neuron"].items()]
+        worm_neurons = [neuron for slot, neuron in data["slot_to_labeled_neuron"].items()]
         dataset_info["neurons"].append(worm_neurons)
         dataset_info["num_neurons"].append(len(worm_neurons))
 
@@ -472,7 +474,7 @@ def find_reliable_neurons(multi_worm_dataset):
     intersection = set()
     for i, worm in enumerate(multi_worm_dataset):
         single_worm_dataset = pick_worm(multi_worm_dataset, worm)
-        neuron_to_idx = single_worm_dataset["named_neuron_to_idx"]
+        neuron_to_idx = single_worm_dataset["labeled_neuron_to_idx"]
         curr_set = set(neuron for neuron in neuron_to_idx if not neuron.isnumeric())
         if i == 0:
             intersection |= curr_set
@@ -523,15 +525,15 @@ def pick_worm(dataset, wormid):
     return single_worm_dataset
 
 
-def select_named_neurons(multi_worm_dataset, num_named_neurons):
-    """Select the `num_named_neurons` neurons from the dataset.
+def select_labeled_neurons(multi_worm_dataset, num_labeled_neurons):
+    """Select the `num_labeled_neurons` neurons from the dataset.
 
     Parameters
     ----------
     multi_worm_dataset : dict
         A dictionary containing the multi-worm dataset to select neurons from.
-    num_named_neurons : int or None
-        The number of named neurons to select from the dataset. If None, selects all
+    num_labeled_neurons : int or None
+        The number of labeled neurons to select from the dataset. If None, selects all
         available neurons.
 
     Returns
@@ -542,76 +544,77 @@ def select_named_neurons(multi_worm_dataset, num_named_neurons):
     worms_to_drop = []
 
     for wormID, data in multi_worm_dataset.items():
-        # Check if worm has named neurons
-        if torch.sum(data["named_neurons_mask"]) == 0:
+        # Check if worm has labeled neurons
+        if torch.sum(data["labeled_neurons_mask"]) == 0:
             worms_to_drop.append(wormID)
             continue
 
-        # Skip if num_named_neurons is None
-        if num_named_neurons is None:
+        # Skip if num_labeled_neurons is None
+        if num_labeled_neurons is None:
             continue
 
-        # Verify if new num_named_neurons <= actual num_named_neurons
-        if num_named_neurons > data["num_named_neurons"]:
+        # Verify if new num_labeled_neurons <= actual num_labeled_neurons
+        if num_labeled_neurons > data["num_labeled_neurons"]:
             worms_to_drop.append(wormID)
             continue
 
         else:
             # Overwrite the neuron values
-            data["num_named_neurons"] = num_named_neurons
-            data["num_unknown_neurons"] = data["num_neurons"] - num_named_neurons
+            data["num_labeled_neurons"] = num_labeled_neurons
+            data["num_unlabeled_neurons"] = data["num_neurons"] - num_labeled_neurons
 
             # Select the neurons to keep
-            named_neurons_mask = data["named_neurons_mask"]
+            labeled_neurons_mask = data["labeled_neurons_mask"]
             neurons_to_keep = np.random.choice(
-                np.where(named_neurons_mask == True)[0],
-                num_named_neurons,
+                np.where(labeled_neurons_mask == True)[0],
+                num_labeled_neurons,
                 replace=False,
             )
 
-            # Overwrite the named neuron masks
-            named_neurons_mask = torch.zeros_like(named_neurons_mask)
-            named_neurons_mask[neurons_to_keep] = True
+            # Overwrite the labeled neuron masks
+            labeled_neurons_mask = torch.zeros_like(labeled_neurons_mask)
+            labeled_neurons_mask[neurons_to_keep] = True
 
-            # Overwrite the unknown neuron masks
-            unknown_neurons_mask = data["unknown_neurons_mask"]
-            unknown_neurons_mask = ~(named_neurons_mask ^ unknown_neurons_mask)
+            # Overwrite the unlabeled neuron masks
+            unlabeled_neurons_mask = data["unlabeled_neurons_mask"]
+            unlabeled_neurons_mask = ~(labeled_neurons_mask ^ unlabeled_neurons_mask)
 
-            slot_to_named_neuron = data["slot_to_named_neuron"]
-            slot_to_unknown_neuron = data["slot_to_unknown_neuron"]
+            slot_to_labeled_neuron = data["slot_to_labeled_neuron"]
+            slot_to_unlabeled_neuron = data["slot_to_unlabeled_neuron"]
 
-            # New unknown neurons
-            new_unknown_neurons_map = {
-                slot: named_neuron
-                for slot, named_neuron in slot_to_named_neuron.items()
+            # New unlabeled neurons
+            new_unlabeled_neurons_map = {
+                slot: labeled_neuron
+                for slot, labeled_neuron in slot_to_labeled_neuron.items()
                 if slot not in neurons_to_keep
             }
-            slot_to_unknown_neuron.update(new_unknown_neurons_map)
+            slot_to_unlabeled_neuron.update(new_unlabeled_neurons_map)
 
-            # New named neurons
-            slot_to_named_neuron = {
-                slot: named_neuron
-                for slot, named_neuron in slot_to_named_neuron.items()
+            # New labeled neurons
+            slot_to_labeled_neuron = {
+                slot: labeled_neuron
+                for slot, labeled_neuron in slot_to_labeled_neuron.items()
                 if slot in neurons_to_keep
             }
 
             # Invert new mappings
-            named_neuron_to_slot = {
-                named_neuron: slot for slot, named_neuron in slot_to_named_neuron.items()
+            labeled_neuron_to_slot = {
+                labeled_neuron: slot for slot, labeled_neuron in slot_to_labeled_neuron.items()
             }
-            unknown_neuron_to_slot = {
-                unknown_neuron: slot for slot, unknown_neuron in slot_to_unknown_neuron.items()
+            unlabeled_neuron_to_slot = {
+                unlabeled_neuron: slot
+                for slot, unlabeled_neuron in slot_to_unlabeled_neuron.items()
             }
 
             # Update the dataset
-            data["named_neurons_mask"] = named_neurons_mask
-            data["unknown_neurons_mask"] = unknown_neurons_mask
-            data["slot_to_named_neuron"] = slot_to_named_neuron
-            data["slot_to_unknown_neuron"] = slot_to_unknown_neuron
-            data["named_neuron_to_slot"] = named_neuron_to_slot
-            data["unknown_neuron_to_slot"] = unknown_neuron_to_slot
+            data["labeled_neurons_mask"] = labeled_neurons_mask
+            data["unlabeled_neurons_mask"] = unlabeled_neurons_mask
+            data["slot_to_labeled_neuron"] = slot_to_labeled_neuron
+            data["slot_to_unlabeled_neuron"] = slot_to_unlabeled_neuron
+            data["labeled_neuron_to_slot"] = labeled_neuron_to_slot
+            data["unlabeled_neuron_to_slot"] = unlabeled_neuron_to_slot
 
-    # Drop worms with less than `num_named_neurons` neurons
+    # Drop worms with less than `num_labeled_neurons` neurons
     if len(worms_to_drop) > 0:
         logger.info(
             "Dropping {} worms from {}. {} remaining.".format(
@@ -704,7 +707,7 @@ def select_desired_worms(multi_worm_dataset, worms):
 
 def create_combined_dataset(
     source_datasets: dict,
-    num_named_neurons: Union[None, int] = None,
+    num_labeled_neurons: Union[None, int] = None,
 ):
     """Returns a dict with the worm data of all requested datasets.
 
@@ -712,8 +715,8 @@ def create_combined_dataset(
     ----------
     source_datasets : dict
         A dictionary mapping the names of the experimental datasets to worms to select.
-    num_named_neurons : int or None
-        The number of named neurons to select. If None, all available neurons are selected.
+    num_labeled_neurons : int or None
+        The number of labeled neurons to select. If None, all available neurons are selected.
 
     Calls
     -----
@@ -721,8 +724,8 @@ def create_combined_dataset(
         Load a specified dataset by name.
     select_desired_worms : function in data/_utils.py
         Select the desired number of worms from a dataset.
-    select_named_neurons : function in data/_utils.py
-        Select the desired number of named neurons from a dataset.
+    select_labeled_neurons : function in data/_utils.py
+        Select the desired number of labeled neurons from a dataset.
     rename_worm_keys : function in data/_utils.py
         Rename the keys of the combined dataset.
 
@@ -738,8 +741,8 @@ def create_combined_dataset(
     * The keys of the dictionary are the worm IDs ('worm0', 'worm1', etc.).
     * The main features of each worm are stored in the following keys:
         'calcium_data', 'source_dataset', 'dt', 'max_timesteps',
-        'named_neurons_mask', 'neuron_to_slot', 'neurons_mask',
-        'num_named_neurons', 'num_neurons', 'num_unknown_neurons',
+        'labeled_neurons_mask', 'neuron_to_slot', 'neurons_mask',
+        'num_labeled_neurons', 'num_neurons', 'num_unlabeled_neurons',
         'residual_calcium', 'smooth_calcium_data', 'smooth_method',
         'smooth_residual_calcium', 'time_in_seconds', 'worm'.
     """
@@ -762,8 +765,8 @@ def create_combined_dataset(
         # Select desired worms from this dataset
         multi_worms_dataset = select_desired_worms(multi_worms_dataset, worms)
 
-        # Select the `num_named_neurons` neurons and overwrite the masks
-        multi_worms_dataset = select_named_neurons(multi_worms_dataset, num_named_neurons)
+        # Select the `num_labeled_neurons` neurons and overwrite the masks
+        multi_worms_dataset = select_labeled_neurons(multi_worms_dataset, num_labeled_neurons)
 
         # Add the worms from this dataset to the combined dataset
         for worm in multi_worms_dataset:
@@ -799,7 +802,7 @@ def create_combined_dataset(
         dataset_info["median_dt"].append(data["median_dt"])
         dataset_info["original_index"].append(data["original_worm"])
         dataset_info["combined_dataset_index"].append(data["worm"])
-        worm_neurons = [neuron for _, neuron in data["slot_to_named_neuron"].items()]
+        worm_neurons = [neuron for _, neuron in data["slot_to_labeled_neuron"].items()]
         dataset_info["neurons"].append(worm_neurons)
         dataset_info["num_neurons"].append(len(worm_neurons))
 
@@ -1006,7 +1009,7 @@ def split_combined_dataset(
         # TODO: Encapsulate this inner part as a function `split_single_dataset`.
         # Extract relevant features from the dataset
         data = single_worm_dataset[key_data]
-        neurons_mask = single_worm_dataset["named_neurons_mask"]
+        neurons_mask = single_worm_dataset["labeled_neurons_mask"]
         time_vec = single_worm_dataset["time_in_seconds"]
         worm_dataset = single_worm_dataset["source_dataset"]
         original_worm_id = single_worm_dataset["original_worm"]

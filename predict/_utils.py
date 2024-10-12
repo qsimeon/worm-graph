@@ -44,7 +44,7 @@ def model_predict(
     # Load the combined dataset
     combined_dataset, dataset_info = create_combined_dataset(
         source_datasets=source_datasets,
-        num_named_neurons=None,  # use all available neurons
+        num_labeled_neurons=None,  # use all available neurons
     )
     # Put model on device
     model = model.to(DEVICE)
@@ -52,17 +52,17 @@ def model_predict(
     for _, single_worm_dataset in combined_dataset.items():
         # Extract relevant features from the dataset
         data = single_worm_dataset[key_data]
-        neurons_mask = single_worm_dataset["named_neurons_mask"]
+        neurons_mask = single_worm_dataset["labeled_neurons_mask"]
         worm_dataset = single_worm_dataset["source_dataset"]
         original_worm_id = single_worm_dataset["original_worm"]
-        # Query and save the named neurons to plot predictions afterwards
+        # Query and save the labeled neurons to plot predictions afterwards
         neurons = dataset_info.query(
             'source_dataset == "{}" and original_index == "{}"'.format(
                 worm_dataset, original_worm_id
             )
         )["neurons"].iloc[0]
         # Now create the DataFrame
-        neuron_df = pd.DataFrame({"named_neurons": neurons})
+        neuron_df = pd.DataFrame({"labeled_neurons": neurons})
         # The index where to split the data
         split_idx = (
             int(train_split_ratio * len(data))
@@ -122,7 +122,7 @@ def model_predict(
                 "train",
                 worm_dataset,
                 original_worm_id,
-                "named_neurons.csv",
+                "labeled_neurons.csv",
             )
         )
         # Predictions using the first validation split
@@ -168,7 +168,7 @@ def model_predict(
                 "val",
                 worm_dataset,
                 original_worm_id,
-                "named_neurons.csv",
+                "labeled_neurons.csv",
             )
         )
 

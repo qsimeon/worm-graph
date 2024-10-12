@@ -45,7 +45,7 @@ def hierarchical_clustering_algorithm(
         plt.style.use("seaborn-whitegrid")
 
     X = single_worm_data["smooth_calcium_data"]  # (time, all neurons)
-    X = X[:, single_worm_data["named_neurons_mask"]]  # (time, named and acive neurons)
+    X = X[:, single_worm_data["labeled_neurons_mask"]]  # (time, named and acive neurons)
 
     if distance == "correlation":
         R = np.corrcoef(X, rowvar=False)  # no correlated <- [0, 1] -> correlated
@@ -97,7 +97,7 @@ def hierarchical_clustering_algorithm(
 
     # === Sorting ===
     original_neuron_labels = np.array(
-        [label for idx, label in single_worm_data["slot_to_named_neuron"].items()]
+        [label for idx, label in single_worm_data["slot_to_labeled_neuron"].items()]
     )
 
     # Now we can sort the correlation matrix according to the cluster labels, and plot the correlation matrix again.
@@ -307,7 +307,7 @@ def loss_per_dataset(
         # Create dataset
         combined_dataset, _ = create_combined_dataset(
             source_datasets={source_dataset: worms_to_use},
-            num_named_neurons=None,  # use all available neurons
+            num_labeled_neurons=None,  # use all available neurons
         )
         train_dataset, val_dataset, _ = split_combined_dataset(
             combined_dataset=combined_dataset,

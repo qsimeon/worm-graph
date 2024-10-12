@@ -45,7 +45,7 @@ submodule:
       Leifer2023: all
       Lin2023: all
 
-    num_named_neurons: null
+    num_labeled_neurons: null
     num_train_samples: 32
     num_val_samples: 32
     seq_len: null
@@ -141,7 +141,7 @@ submodule:
 
 experiment:
   # key: What parameter are you experimenting with?
-  # Options: num_worms, num_time_steps, num_named_neurons, time_steps_per_neuron,
+  # Options: num_worms, num_time_steps, num_labeled_neurons, time_steps_per_neuron,
   #          num_samples, hidden_size, batch_size, seq_len, learn_rate, dataset,
   #          dataset, model_type, optimizer, loss, experiment_seed,
   #          time_last_epoch, num_parameters, computation_flops,

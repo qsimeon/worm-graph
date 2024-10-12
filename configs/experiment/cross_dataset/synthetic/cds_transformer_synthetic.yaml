@@ -50,7 +50,7 @@ submodule:
       RandWalk0000: null
       VanDerPol0000: null
 
-    num_named_neurons: null
+    num_labeled_neurons: null
     num_train_samples: 8
     num_val_samples: 8
     seq_len: null

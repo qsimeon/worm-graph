@@ -56,15 +56,15 @@ Each dataset is stored in a Python dictionary:
 - `original_time_in_seconds`: (torch.tensor) A column vector with the original time recording times (without resampling). Shape: (original_max_timesteps, 1)
 - `time_in_seconds`: (torch.tensor) A column vector equally spaced by dt after resampling. Shape: (max_timesteps, 1)
 - `num_neurons`: (int) Number of total tracked neurons of this specific worm
-- `num_named_neurons`: (int) Number of labeled neurons
-- `num_unknown_neurons`: (int) Number of unlabeled neurons
-- `named_neurons_mask`: (torch.tensor) A bool vector indicating the positions of the labeled neurons. Shape: (`NUM_NEURONS`)
-- `unknown_neurons_mask`: (torch.tensor) A bool vector indicating the positions of the unlabeled neurons. Shape: (`NUM_NEURONS`)
+- `num_labeled_neurons`: (int) Number of labeled neurons
+- `num_unlabeled_neurons`: (int) Number of unlabeled neurons
+- `labeled_neurons_mask`: (torch.tensor) A bool vector indicating the positions of the labeled neurons. Shape: (`NUM_NEURONS`)
+- `unlabeled_neurons_mask`: (torch.tensor) A bool vector indicating the positions of the unlabeled neurons. Shape: (`NUM_NEURONS`)
 - `neurons_mask`: (torch.tensor) A bool vector indicating the positions of all tracked neurons (labeled + unlabeled). Shape: (`NUM_NEURONS`)
-- `slot_to_named_neuron`: (dict) Mapping of column index -> `NUM_NEURONS` neurons. Len: num_neurons
-- `named_neuron_to_slot`: (dict) Mapping of `NUM_NEURONS` neurons -> column index. Len: num_neurons
-- `slot_to_unknown_neuron`: (dict) Mapping of column index -> unlabeled neuron. Len: num_unknown_neurons
-- `unknown_neuron_to_slot`: (dict) Mapping of unlabeled neurons -> column index. Len: num_unknown_neurons
+- `slot_to_labeled_neuron`: (dict) Mapping of column index -> `NUM_NEURONS` neurons. Len: num_neurons
+- `labeled_neuron_to_slot`: (dict) Mapping of `NUM_NEURONS` neurons -> column index. Len: num_neurons
+- `slot_to_unlabeled_neuron`: (dict) Mapping of column index -> unlabeled neuron. Len: num_unlabeled_neurons
+- `unlabeled_neuron_to_slot`: (dict) Mapping of unlabeled neurons -> column index. Len: num_unlabeled_neurons
 - `slot_to_neuron`: (dict) Mapping of column index -> labeled+unlabeled neurons. Len: num_neurons
 - `neuron_to_slot`: (dict) Mapping of labeled+unlabeled neurons -> column index. Len: num_neurons
 

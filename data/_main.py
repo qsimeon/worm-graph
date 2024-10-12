@@ -19,7 +19,7 @@ def get_datasets(dataset_config: DictConfig, save=False):
             If provided, datasets will be loaded from this directory if they exist.
             If not provided or datasets don't exist in the directory, they will be generated using the other parameters.
         - source_datasets: Path to the source datasets.
-        - num_named_neurons (int or None): Number of named neurons to include or None to include all.
+        - num_labeled_neurons (int or None): Number of labeled neurons to include or None to include all.
         - num_worms (int or None): Number of worms to include or None to include all.
         - num_train_samples (int): Number of training samples per worm.
         - num_val_samples (int): Number of validation samples per worm.
@@ -40,7 +40,7 @@ def get_datasets(dataset_config: DictConfig, save=False):
     """
     # Parse out parameters from the config
     source_datasets = dataset_config.source_datasets
-    num_named_neurons = dataset_config.num_named_neurons
+    num_labeled_neurons = dataset_config.num_labeled_neurons
     num_train_samples = dataset_config.num_train_samples
     num_val_samples = dataset_config.num_val_samples
     seq_len = dataset_config.seq_len
@@ -78,9 +78,9 @@ def get_datasets(dataset_config: DictConfig, save=False):
     # Initialize datasets
     train_dataset, val_dataset = None, None
     # Verifications
-    assert isinstance(num_named_neurons, int) or (
-        num_named_neurons is None
-    ), "`num_named_neurons` must be a positive integer or None."
+    assert isinstance(num_labeled_neurons, int) or (
+        num_labeled_neurons is None
+    ), "`num_labeled_neurons` must be a positive integer or None."
     # Make log directory
     log_dir = os.getcwd()  # logs/hydra/${now:%Y_%m_%d_%H_%M_%S}
     os.makedirs(os.path.join(log_dir, "dataset"), exist_ok=True)
@@ -172,12 +172,12 @@ def get_datasets(dataset_config: DictConfig, save=False):
                 combined_dataset, dataset_info = filter_loaded_combined_dataset(
                     combined_dataset,
                     dataset_config.use_these_datasets.num_worms,
-                    num_named_neurons,
+                    num_labeled_neurons,
                 )
             else:
                 logger.info("Creating combined dataset from individual source datasets.")
                 combined_dataset, dataset_info = create_combined_dataset(
-                    source_datasets, num_named_neurons
+                    source_datasets, num_labeled_neurons
                 )
             # Use largest `seq_len` that produces required unique samples from shortest dataset
             if seq_len is None:
@@ -269,7 +269,9 @@ def get_datasets(dataset_config: DictConfig, save=False):
     else:  # (*)
         # Create the datasets using the source datasets
         logger.info("Creating validation and train datasets from source datasets.")
-        combined_dataset, dataset_info = create_combined_dataset(source_datasets, num_named_neurons)
+        combined_dataset, dataset_info = create_combined_dataset(
+            source_datasets, num_labeled_neurons
+        )
         # Use largest seq_len that produce num. unique samples from shortest dataset
         if seq_len is None:
             max_num_samples = max(num_train_samples, num_val_samples)
