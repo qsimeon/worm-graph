@@ -28,6 +28,7 @@ seaborn
 statsmodels
 tiktoken # uses pip
 tokenizers
+torch_geometric # uses pip
 tqdm
 transformers 
 typing

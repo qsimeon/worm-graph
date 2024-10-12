@@ -19,10 +19,16 @@ function is_slurm_cluster {
 
 # Debug: Display if on a Slurm cluster
 if is_slurm_cluster; then
+    echo ""
     echo "Slurm cluster detected."
 else
+    echo ""
     echo "Not on a Slurm cluster."
 fi
+
+# Debug: Display the detected OS
+echo ""
+echo "Detected OS: $OSTYPE"
 
 # Function to check for Nvidia GPU
 function has_gpu {
@@ -38,14 +44,14 @@ function has_gpu {
 ENV_NAME="worm-graph"
 echo ""
 echo "Creating $ENV_NAME environment."
-echo ""
-conda clean -y --packages
-conda create -y -n $ENV_NAME python=3.12 conda-build pip
+# conda clean -y --packages
+conda create -y -n $ENV_NAME python=3.12 conda-build
 
 
 # Check if the environment was successfully created and activated
 if ! conda activate $ENV_NAME; then
     if ! source activate $ENV_NAME; then
+        echo ""
         echo "Failed to activate $ENV_NAME environment. Exiting."
         exit 1
     fi
@@ -59,10 +65,8 @@ python -m pip install --upgrade pip
 
 # Check if running on a Slurm cluster and adjust configs/pipeline.yaml accordingly
 if ! is_slurm_cluster; then
+    echo ""
     echo "Not on a Slurm cluster. Adjusting configs/pipeline.yaml for local execution."
-    
-    # Debug: Display the detected OS
-    echo "Detected OS: $OSTYPE"
     
     if [[ "$OSTYPE" == "darwin"* ]]; then
         echo "Modifying pipeline.yaml for MacOS"
@@ -71,6 +75,9 @@ if ! is_slurm_cluster; then
         echo "Modifying pipeline.yaml for Linux"
         sed -i 's/submitit_slurm/submitit_local/g' "$SCRIPT_DIR/configs/pipeline.yaml"
     fi
+else
+    echo ""
+    echo "On a SLURM computing cluster. Keeping configs/pipeline.yaml for remote execution."
 fi
 
 # Operating System Detection and Environment Setup
@@ -82,20 +89,22 @@ case "$(uname -s)" in
     Darwin)
         echo ""
         echo "Mac OS Detected"
-        # conda install pytorch::pytorch torchvision torchaudio -c pytorch
-        conda install -y -n $ENV_NAME pyg -c pyg
+        conda install pytorch::pytorch torchvision torchaudio -c pytorch
+        # conda install -y -n $ENV_NAME pyg -c pyg
         ;;
 
     Linux)
+        echo ""
         echo "Linux OS Detected"
         if has_gpu; then
             echo ""
             echo "Nvidia GPU Detected with CUDA version $cuda_version"
-            # conda install -y -n $ENV_NAME pytorch torchvision torchaudio pytorch-cuda=$cuda_version -c pytorch -c nvidia
-            conda install -y -n $ENV_NAME pyg=*=*cu* -c pyg
+            conda install -y -n $ENV_NAME pytorch torchvision torchaudio pytorch-cuda=$cuda_version -c pytorch -c nvidia
+            # conda install -y -n $ENV_NAME pyg -c pyg
         else
-            # conda install -y -n $ENV_NAME pytorch torchvision torchaudio cpuonly -c pytorch
-            conda install -y -n $ENV_NAME pyg -c pyg
+            echo ""
+            conda install -y -n $ENV_NAME pytorch torchvision torchaudio cpuonly -c pytorch
+            # conda install -y -n $ENV_NAME pyg -c pyg
         fi
         ;;
 
@@ -103,12 +112,14 @@ case "$(uname -s)" in
         echo ""
         echo "Windows OS Detected"
         if has_gpu; then
+            echo ""
             echo "Nvidia GPU Detected with CUDA version $cuda_version"
-            # conda install -y -n $ENV_NAME pytorch torchvision torchaudio pytorch-cuda=$cuda_version -c pytorch -c nvidia
-            conda install -y -n $ENV_NAME pyg=*=*cu* -c pyg
+            conda install -y -n $ENV_NAME pytorch torchvision torchaudio pytorch-cuda=$cuda_version -c pytorch -c nvidia
+            # conda install -y -n $ENV_NAME pyg -c pyg
         else
-            # conda install -y -n $ENV_NAME pytorch torchvision torchaudio cpuonly -c pytorch
-            conda install -y -n $ENV_NAME pyg -c pyg
+            echo ""
+            conda install -y -n $ENV_NAME pytorch torchvision torchaudio cpuonly -c pytorch
+            # conda install -y -n $ENV_NAME pyg -c pyg
         fi
         ;;
 
@@ -127,6 +138,7 @@ REQUIREMENTS_FILE="$SCRIPT_DIR/requirements.txt"
 if [ -f "$REQUIREMENTS_FILE" ]; then
     awk '/# uses pip/{print $1 > "'"$SCRIPT_DIR"'/requirements_pip.txt"; next} {print > "'"$SCRIPT_DIR"'/requirements_conda.txt"}' "$REQUIREMENTS_FILE"
 else
+    echo ""
     echo "requirements.txt not found in $SCRIPT_DIR. Exiting."
     exit 1
 fi
