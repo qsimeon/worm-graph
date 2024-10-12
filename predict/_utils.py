@@ -36,11 +36,11 @@ def model_predict(
     )
     seq_len = int(train_dataset_info["train_seq_len"].values[0])
     use_residual = int(train_dataset_info["use_residual"].values[0])
-    smooth_data = int(train_dataset_info["smooth_data"].values[0])
+    use_smooth = int(train_dataset_info["use_smooth"].values[0])
     train_split_first = int(train_dataset_info["train_split_first"].values[0])
     train_split_ratio = float(train_dataset_info["train_split_ratio"].values[0])
     key_data = "residual_calcium" if use_residual else "calcium_data"
-    key_data = "smooth_" + key_data if smooth_data else key_data
+    key_data = "smooth_" + key_data if use_smooth else key_data
     # Load the combined dataset
     combined_dataset, dataset_info = create_combined_dataset(
         source_datasets=source_datasets,

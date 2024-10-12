@@ -86,7 +86,7 @@ submodule:
     seq_len: null
     reverse: false
     use_residual: false
-    smooth_data: true
+    use_smooth: true
     train_split_first: true
     train_split_ratio: 0.5
 

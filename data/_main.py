@@ -17,8 +17,9 @@ def get_datasets(data_config: DictConfig, save=False):
 
         - use_these_datasets (str or None): Directory containing train and validation datasets.
             If provided, datasets will be loaded from this directory if they exist.
-            If not provided or datasets don't exist in the directory, they will be generated using the other parameters.
-        - source_datasets: Path to the source datasets.
+            If not provided or datasets don't exist in the directory,
+            they will be generated using the parameters below.
+        - source_datasets (str): Path to the source datasets.
         - num_labeled_neurons (int or None): Number of labeled neurons to include or None to include all.
         - num_worms (int or None): Number of worms to include or None to include all.
         - num_train_samples (int): Number of training samples per worm.
@@ -26,7 +27,7 @@ def get_datasets(data_config: DictConfig, save=False):
         - seq_len (int): Sequence length for time series data.
         - reverse (bool): Whether to reverse the time series data.
         - use_residual (bool): Whether to use residuals in the data.
-        - smooth_data (bool): Whether to smooth the data.
+        - use_smooth (bool): Whether to smooth the data.
 
     save: (bool)
         Whether to save the datasets and their information to the log directory.
@@ -46,7 +47,7 @@ def get_datasets(data_config: DictConfig, save=False):
     seq_len = data_config.seq_len
     reverse = data_config.reverse
     use_residual = data_config.use_residual
-    smooth_data = data_config.smooth_data
+    use_smooth = data_config.use_smooth
     train_split_first = data_config.train_split_first
     train_split_ratio = data_config.train_split_ratio
     save = data_config.save_datasets or save
@@ -74,7 +75,6 @@ def get_datasets(data_config: DictConfig, save=False):
                 f"Directory {presave_path} does not exist or is empty.\n"
                 f"Creating the combined dataset from source datasets.\n\n"
             )
-
     # Initialize datasets
     train_dataset, val_dataset = None, None
     # Verifications
@@ -194,7 +194,7 @@ def get_datasets(data_config: DictConfig, save=False):
                 seq_len,
                 reverse,
                 use_residual,
-                smooth_data,
+                use_smooth,
                 train_split_first,
                 train_split_ratio,
             )
@@ -215,7 +215,7 @@ def get_datasets(data_config: DictConfig, save=False):
                         "num_train_samples",
                         "train_seq_len",
                         "train_split_idx",
-                        "smooth_data",
+                        "use_smooth",
                         "use_residual",
                         "train_split_first",
                         "train_split_ratio",
@@ -232,7 +232,7 @@ def get_datasets(data_config: DictConfig, save=False):
                         "num_val_samples",
                         "val_seq_len",
                         "val_split_idx",
-                        "smooth_data",
+                        "use_smooth",
                         "use_residual",
                         "train_split_first",
                         "train_split_ratio",
@@ -287,7 +287,7 @@ def get_datasets(data_config: DictConfig, save=False):
             seq_len,
             reverse,
             use_residual,
-            smooth_data,
+            use_smooth,
             train_split_first,
             train_split_ratio,
         )
@@ -308,7 +308,7 @@ def get_datasets(data_config: DictConfig, save=False):
                     "num_train_samples",
                     "train_seq_len",
                     "train_split_idx",
-                    "smooth_data",
+                    "use_smooth",
                     "use_residual",
                     "train_split_first",
                     "train_split_ratio",
@@ -325,7 +325,7 @@ def get_datasets(data_config: DictConfig, save=False):
                     "num_val_samples",
                     "val_seq_len",
                     "val_split_idx",
-                    "smooth_data",
+                    "use_smooth",
                     "use_residual",
                     "train_split_first",
                     "train_split_ratio",

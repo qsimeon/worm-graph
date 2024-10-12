@@ -276,7 +276,7 @@ def loss_per_dataset(
     num_train_samples = int(train_dataset_info["num_train_samples"].values[0])
     train_split_ratio = float(train_dataset_info["train_split_ratio"].values[0])
     use_residual = bool(train_dataset_info["use_residual"].values[0])
-    smooth_data = bool(train_dataset_info["smooth_data"].values[0])
+    use_smooth = bool(train_dataset_info["use_smooth"].values[0])
     train_split_first = bool(train_dataset_info["train_split_first"].values[0])
 
     # Loss metrics
@@ -316,7 +316,7 @@ def loss_per_dataset(
             seq_len=seq_len,
             reverse=False,
             use_residual=use_residual,
-            smooth_data=smooth_data,
+            use_smooth=use_smooth,
             train_split_first=train_split_first,
             train_split_ratio=train_split_ratio,
         )

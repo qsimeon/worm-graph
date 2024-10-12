@@ -709,6 +709,7 @@ def create_combined_dataset(
     source_datasets: dict,
     num_labeled_neurons: Union[None, int] = None,
 ):
+    # TODO: This should return a .pt file instead of a pickle file for `combined_dataset`.
     """Returns a dict with the worm data of all requested datasets.
 
     Parameters
@@ -938,10 +939,11 @@ def split_combined_dataset(
     seq_len,
     reverse,
     use_residual,
-    smooth_data,
+    use_smooth,
     train_split_first,
     train_split_ratio,
 ):
+    # TODO: This should operate a .pt file instead of a pickle file for `combined_dataset`.
     """
     Splits the combined dataset into training and validation datasets.
 
@@ -959,7 +961,7 @@ def split_combined_dataset(
         Whether to reverse the sequences.
     use_residual : bool
         Whether to use the residual data.
-    smooth_data : bool
+    use_smooth : bool
         Whether to use the smoothed data.
     train_split_first : bool
         Whether to use the first half for the training split.
@@ -983,7 +985,7 @@ def split_combined_dataset(
     else:
         key_data = "calcium_data"
     # Choose whether to use original or smoothed data
-    if smooth_data:
+    if use_smooth:
         key_data = "smooth_" + key_data
     # Store the training and validation datasets
     train_dataset = []
@@ -1000,7 +1002,7 @@ def split_combined_dataset(
         "val_seq_len": [],
         "val_split_idx": [],
         "use_residual": [],
-        "smooth_data": [],
+        "use_smooth": [],
         "train_split_first": [],
         "train_split_ratio": [],
     }
@@ -1026,8 +1028,8 @@ def split_combined_dataset(
         data_splits = np.array_split(data, indices_or_sections=[split_idx], axis=0)
         time_vec_splits = np.array_split(time_vec, indices_or_sections=[split_idx], axis=0)
         # Separate the splits into training and validation sets
-        # NOTE: This was originally written to be able to split the data into multipl equally sized folds;
-        #       We have kept it this way despite deciding to only split into two folds (i.e. halves).
+        # NOTE: This was originally written to be able to split the data into multiple equally sized folds;
+        #       We have kept it this way despite deciding to only split into just two folds (i.e. halves).
         if train_split_first:
             train_data_splits, val_data_splits = data_splits[::2], data_splits[1::2]
             train_time_vec_splits, val_time_vec_splits = (
@@ -1100,7 +1102,7 @@ def split_combined_dataset(
                 )
         # Store the number of unique time steps for each worm
         dataset_info_split["combined_dataset_index"].append(wormID)
-        dataset_info_split["smooth_data"].append(smooth_data)
+        dataset_info_split["use_smooth"].append(use_smooth)
         dataset_info_split["use_residual"].append(use_residual)
         dataset_info_split["train_split_first"].append(train_split_first)
         dataset_info_split["train_split_ratio"].append(train_split_ratio)
@@ -1128,11 +1130,11 @@ def split_combined_dataset(
 
 def graph_inject_data(single_worm_dataset, connectome_graph):
     """
-    Find the nodes on the connecotme corresponding to labelled
+    Find the nodes on the connecotme corresponding to labeled
     neurons in the provided single worm dataset and place the data
     on the connectome graph.
     Returns the full graph with 0s on unlabelled neurons,
-    the subgraph with only labelled neurons, the subgraph mask.
+    the subgraph with only labeled neurons, the subgraph mask.
     """
     calcium_data = single_worm_dataset["data"]
     graph = connectome_graph
