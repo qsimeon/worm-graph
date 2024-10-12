@@ -50,6 +50,7 @@ dataset:
   reverse: false # whether to sample sequences in reverse order
   use_residual: false # whether to use the residual (i.e first difference) of the neural activity
   smooth_data: false # whether to use the smoothed the neural activity
-  train_split_first: true # whether to use the first (true) or second (false) half of neural activity as the train half 
+  train_split_first: true # whether to use the first (true; causal; easy) or second (false; anticausal; hard) half of neural activity as the training set 
   train_split_ratio: 0.5 # the ratio of the neural data to assign to the train split  <int> in (0, 1)
+  # TODO: add an hyperparam `train_val_shuffle: whether to randomly shuffle the samples paired indices assigned to each split (no temporal continuity)`
   

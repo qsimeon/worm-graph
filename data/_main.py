@@ -4,7 +4,7 @@ from data._utils import *
 logger = logging.getLogger(__name__)
 
 
-def get_datasets(dataset_config: DictConfig, save=False):
+def get_datasets(data_config: DictConfig, save=False):
     """Retrieve or generate training and validation sets based on the provided configuration.
 
     The function first checks if datasets are provided in the specified directory. If they are,
@@ -12,7 +12,7 @@ def get_datasets(dataset_config: DictConfig, save=False):
 
     Params
     ------
-    dataset_config: (DictConfig)
+    data_config: (DictConfig)
         A configuration dictionary containing the following keys:
 
         - use_these_datasets (str or None): Directory containing train and validation datasets.
@@ -39,20 +39,20 @@ def get_datasets(dataset_config: DictConfig, save=False):
         - val_dataset (torch.Tensor): The validation dataset.
     """
     # Parse out parameters from the config
-    source_datasets = dataset_config.source_datasets
-    num_labeled_neurons = dataset_config.num_labeled_neurons
-    num_train_samples = dataset_config.num_train_samples
-    num_val_samples = dataset_config.num_val_samples
-    seq_len = dataset_config.seq_len
-    reverse = dataset_config.reverse
-    use_residual = dataset_config.use_residual
-    smooth_data = dataset_config.smooth_data
-    train_split_first = dataset_config.train_split_first
-    train_split_ratio = dataset_config.train_split_ratio
-    save = dataset_config.save_datasets or save
+    source_datasets = data_config.source_datasets
+    num_labeled_neurons = data_config.num_labeled_neurons
+    num_train_samples = data_config.num_train_samples
+    num_val_samples = data_config.num_val_samples
+    seq_len = data_config.seq_len
+    reverse = data_config.reverse
+    use_residual = data_config.use_residual
+    smooth_data = data_config.smooth_data
+    train_split_first = data_config.train_split_first
+    train_split_ratio = data_config.train_split_ratio
+    save = data_config.save_datasets or save
     # Some common dataset patterns were presaved for efficiency
     presave_path = None
-    all_experiment = all(
+    all_experiment = all(  # e.g. pattern containing all the avaialable source datasets
         [
             (dataset in source_datasets and source_datasets[dataset] == "all")
             for dataset in EXPERIMENT_DATASETS
@@ -68,7 +68,7 @@ def get_datasets(dataset_config: DictConfig, save=False):
         presave_path = os.path.join(ROOT_DIR, "data", "combined_AllExperimental")
         # Check if the directory exists and is not empty
         if os.path.isdir(presave_path) and os.listdir(presave_path):
-            dataset_config.use_these_datasets.path = presave_path
+            data_config.use_these_datasets.path = presave_path
         else:  # Go to (*)
             logger.info(
                 f"Directory {presave_path} does not exist or is empty.\n"
@@ -85,29 +85,29 @@ def get_datasets(dataset_config: DictConfig, save=False):
     log_dir = os.getcwd()  # logs/hydra/${now:%Y_%m_%d_%H_%M_%S}
     os.makedirs(os.path.join(log_dir, "dataset"), exist_ok=True)
     # Control flow for loading or creating datasets
-    if dataset_config.use_these_datasets.path is not None:
+    if data_config.use_these_datasets.path is not None:
         # Assert that the directory exists
         assert os.path.isdir(
-            dataset_config.use_these_datasets.path
-        ), f"Directory {dataset_config.use_these_datasets.path} does not exist."
+            data_config.use_these_datasets.path
+        ), f"Directory {data_config.use_these_datasets.path} does not exist."
         # Flags to know if the datasets already exist
         train_dataset_exists = False
         val_dataset_exists = False
         # Check what files are in the directory
-        ds_files = os.listdir(dataset_config.use_these_datasets.path)
+        ds_files = os.listdir(data_config.use_these_datasets.path)
         if "train_dataset.pt" in ds_files:
             assert (
                 "train_dataset_info.csv" in ds_files
             ), "train_dataset.pt exists but train_dataset_info.csv does not."
             logger.info(
-                "Loading provided train dataset from %s." % dataset_config.use_these_datasets.path
+                "Loading provided train dataset from %s." % data_config.use_these_datasets.path
             )
             train_dataset_exists = True
             train_dataset = torch.load(
-                os.path.join(dataset_config.use_these_datasets.path, "train_dataset.pt")
+                os.path.join(data_config.use_these_datasets.path, "train_dataset.pt")
             )
             dataset_info_train = pd.read_csv(
-                os.path.join(dataset_config.use_these_datasets.path, "train_dataset_info.csv"),
+                os.path.join(data_config.use_these_datasets.path, "train_dataset_info.csv"),
                 index_col=0,
                 converters={"neurons": ast.literal_eval},
             )
@@ -116,15 +116,14 @@ def get_datasets(dataset_config: DictConfig, save=False):
                 "val_dataset_info.csv" in ds_files
             ), "val_dataset.pt exists but val_dataset_info.csv does not."
             logger.info(
-                "Loading provided validation dataset from %s."
-                % dataset_config.use_these_datasets.path
+                "Loading provided validation dataset from %s." % data_config.use_these_datasets.path
             )
             val_dataset_exists = True
             val_dataset = torch.load(
-                os.path.join(dataset_config.use_these_datasets.path, "val_dataset.pt")
+                os.path.join(data_config.use_these_datasets.path, "val_dataset.pt")
             )
             dataset_info_val = pd.read_csv(
-                os.path.join(dataset_config.use_these_datasets.path, "val_dataset_info.csv"),
+                os.path.join(data_config.use_these_datasets.path, "val_dataset_info.csv"),
                 index_col=0,
                 converters={"neurons": ast.literal_eval},
             )
@@ -148,22 +147,22 @@ def get_datasets(dataset_config: DictConfig, save=False):
             if not train_dataset_exists:
                 logger.info(
                     "No train dataset found in %s, creating a new one."
-                    % dataset_config.use_these_datasets.path
+                    % data_config.use_these_datasets.path
                 )
             if not val_dataset_exists:
                 logger.info(
                     "No validation dataset found in %s, creating a new one."
-                    % dataset_config.use_these_datasets.path
+                    % data_config.use_these_datasets.path
                 )
             # Check if combined dataset was provided. If so, load it, otherwise create it from the source datasets
             if "combined_dataset.pickle" in ds_files:
                 logger.info(
                     "Creating combined dataset using pickle file from %s."
-                    % dataset_config.use_these_datasets.path
+                    % data_config.use_these_datasets.path
                 )
                 with open(
                     os.path.join(
-                        dataset_config.use_these_datasets.path,
+                        data_config.use_these_datasets.path,
                         "combined_dataset.pickle",
                     ),
                     "rb",
@@ -171,7 +170,7 @@ def get_datasets(dataset_config: DictConfig, save=False):
                     combined_dataset = pickle.load(f)
                 combined_dataset, dataset_info = filter_loaded_combined_dataset(
                     combined_dataset,
-                    dataset_config.use_these_datasets.num_worms,
+                    data_config.use_these_datasets.num_worms,
                     num_labeled_neurons,
                 )
             else:

@@ -52,8 +52,8 @@ def make_predictions(
 
 if __name__ == "__main__":
     # Get the necessary configs
-    dataset_config = OmegaConf.load("configs/submodule/data.yaml")
-    print(OmegaConf.to_yaml(dataset_config), end="\n\n")
+    data_config = OmegaConf.load("configs/submodule/data.yaml")
+    print(OmegaConf.to_yaml(data_config), end="\n\n")
     model_config = OmegaConf.load("configs/submodule/model.yaml")
     print(OmegaConf.to_yaml(model_config), end="\n\n")
     predict_config = OmegaConf.load("configs/submodule/predict.yaml")
@@ -67,7 +67,7 @@ if __name__ == "__main__":
     # Get the model
     model = get_model(model_config.model)
     # Get the dataset
-    dataset = get_datasets(dataset_config.dataset)
+    dataset = get_datasets(data_config.dataset)
     # Make predictions
     make_predictions(
         model=model,

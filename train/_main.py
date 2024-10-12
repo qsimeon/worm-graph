@@ -606,8 +606,8 @@ if __name__ == "__main__":
     print(OmegaConf.to_yaml(train_config), end="\n\n")
     model_config = OmegaConf.load("configs/submodule/model.yaml")
     print(OmegaConf.to_yaml(model_config), end="\n\n")
-    dataset_config = OmegaConf.load("configs/submodule/data.yaml")
-    print(OmegaConf.to_yaml(dataset_config), end="\n\n")
+    data_config = OmegaConf.load("configs/submodule/data.yaml")
+    print(OmegaConf.to_yaml(data_config), end="\n\n")
     # Create new log directory
     timestamp = datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
     log_dir = os.path.join("logs/hydra", timestamp)
@@ -615,7 +615,7 @@ if __name__ == "__main__":
     # Switch to the log directory
     os.chdir(log_dir)
     # Dataset
-    train_dataset, val_dataset = get_datasets(dataset_config.dataset)
+    train_dataset, val_dataset = get_datasets(data_config.dataset)
     # Get the model
     model = get_model(model_config.model)
     # Train the model
