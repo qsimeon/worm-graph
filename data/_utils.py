@@ -151,7 +151,7 @@ class NeuralActivityDataset(torch.utils.data.Dataset):
         assert torch.is_tensor(time_vec), "Recast the time vector as type `torch.tensor`."
         assert time_vec.squeeze().ndim == 1 and len(time_vec) == data.size(
             0
-        ), f"Time vector must be the same length as {data.size(0)}."
+        ), f"Time vector must be the same length as data matrix ({data.size(0)})."
         self.time_vec = time_vec.squeeze()
 
         self.max_timesteps, self.num_neurons = data.shape
@@ -380,7 +380,8 @@ class CElegansConnectome(InMemoryDataset):
 
 def rename_worm_keys(d):
     """
-    Auxiliary function to rename the keys (wormIDs) of a combined dataset.
+    Auxiliary function to rename the keys (wormIDs) of a combined dataset so
+    that there is a consecutive ordering with no jumps in worm numbering.
     """
     # Sort the keys
     sorted_keys = sorted(d.keys(), key=lambda x: int(x.replace("worm", "")))
@@ -419,7 +420,7 @@ def filter_loaded_combined_dataset(combined_dataset, num_worms, num_labeled_neur
             len(combined_dataset) >= num_worms
         ), "num_worms must be less than or equal to the number of worms in the combined dataset. "
 
-        # Select `num_worms` worms
+        # Select `num_worms` worms at random
         wormIDs = [wormID for wormID in combined_dataset.keys()]
         wormIDs_to_keep = np.random.choice(wormIDs, size=num_worms, replace=False)
         logger.info(
@@ -433,6 +434,7 @@ def filter_loaded_combined_dataset(combined_dataset, num_worms, num_labeled_neur
             if wormID not in wormIDs_to_keep:
                 combined_dataset.pop(wormID)
 
+    # Ensure that are no jumps in worm numbering after having dropped worms
     combined_dataset = rename_worm_keys(combined_dataset)
 
     # Information about the dataset
@@ -709,7 +711,12 @@ def create_combined_dataset(
     source_datasets: dict,
     num_labeled_neurons: Union[None, int] = None,
 ):
-    # TODO: This should return a .pt file instead of a pickle file for `combined_dataset`.
+    # TODO: In addtion to file, should also the Pytorch Dataset (.pt) containing the full dataset.
+    # ### >>> TODO >>> ###
+    # combined_dataset_dict : dict
+    #     A dictionary containing the worm data of all requested datasets.
+    # combined_dataset_pt : Neural
+    # ### <<< TODO <<< ###
     """Returns a dict with the worm data of all requested datasets.
 
     Parameters
@@ -732,7 +739,7 @@ def create_combined_dataset(
 
     Returns
     -------
-    combined_dataset : dict
+    combined_dataset_dict : dict
         A dictionary containing the worm data of all requested datasets.
     dataset_info : pandas.DataFrame
         A dataframe containing information about the combined dataset.
@@ -740,7 +747,7 @@ def create_combined_dataset(
     Notes
     -----
     * The keys of the dictionary are the worm IDs ('worm0', 'worm1', etc.).
-    * The main features of each worm are stored in the following keys:
+    * The main data of each worm are stored in the following keys:
         'calcium_data', 'source_dataset', 'dt', 'max_timesteps',
         'labeled_neurons_mask', 'neuron_to_slot', 'neurons_mask',
         'num_labeled_neurons', 'num_neurons', 'num_unlabeled_neurons',
@@ -943,9 +950,8 @@ def split_combined_dataset(
     train_split_first,
     train_split_ratio,
 ):
-    # TODO: This should operate a .pt file instead of a pickle file for `combined_dataset`.
     """
-    Splits the combined dataset into training and validation datasets.
+    Splits the combined dataset into training and validation Pytorch Datasets.
 
     Parameters
     ----------
@@ -990,6 +996,7 @@ def split_combined_dataset(
     # Store the training and validation datasets
     train_dataset = []
     val_dataset = []
+    full_dataset = []
     # Store the time steps info
     dataset_info_split = {
         "combined_dataset_index": [],

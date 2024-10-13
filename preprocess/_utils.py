@@ -1737,27 +1737,18 @@ def reshape_calcium_data(worm_dataset):
 
 def interpolate_data(time, data, target_dt, method="linear"):
     """
-    Interpolate data using np.interp.
+    Interpolate data using scipy's interp1d or np.interp.
 
-    This function takes the given time points and corresponding data and
-    interpolates them to create new data points with the desired time interval.
+    This function interpolates the given data to the desired time intervals.
 
     Parameters:
         time (numpy.ndarray): 1D array containing the time points corresponding to the data.
         data (numpy.ndarray): A 2D array containing the data to be interpolated, with shape (time, neurons).
-        target_dt (float): The desired time interval between the interpolated data points. If None, no interpolation is performed.
-        method (str, optional): The scipy interpolation method to use when resampling the data. Default is 'linear'.
+        target_dt (float): The desired time interval between the interpolated data points.
+        method (str, optional): The interpolation method to use. Default is 'linear'.
 
     Returns:
         numpy.ndarray, numpy.ndarray: Two arrays containing the interpolated time points and data.
-
-    Steps:
-        1. Check if correct interpolation method is provided.
-        2. If target_dt is None, return the original data.
-        3. Ensure that time is a 1D array.
-        4. Interpolate the data.
-        5. Reshape interpolated time vector to (time, 1).
-        6. Return the interpolated data.
     """
     # Check if correct interpolation method provided
     assert method in {
@@ -1766,30 +1757,35 @@ def interpolate_data(time, data, target_dt, method="linear"):
         "quadratic",
         "cubic",
     }, "Invalid interpolation method. Choose from [None, 'linear', 'cubic', 'quadratic']."
+    assert time.shape[0] == data.shape[0], "Input temporal dimension mismatch."
     # If target_dt is None, return the original data
     if target_dt is None:
         return time, data
     # Ensure that time is a 1D array
     time = time.squeeze()
-    # Interpolate the data
-    target_time_np = np.arange(time.min(), time.max() + target_dt, target_dt)  # 1D array
+    # Create the target time vector, ensuring the range does not exceed the original data range
+    target_time_np = np.arange(time.min(), time.max(), target_dt)
     num_neurons = data.shape[1]
     interpolated_data_np = np.zeros((len(target_time_np), num_neurons), dtype=np.float32)
-    # TODO: Vectorize this interpolation method
-    if method is None:
-        target_time_np = time  # 1D array
-        interpolated_data_np = data
-    elif method == "linear":
+    # Use scipy's interpolation method
+    # TODO: Vectorize this operation.
+    if method == "linear":
         for i in range(num_neurons):
             interpolated_data_np[:, i] = np.interp(target_time_np, time, data[:, i])
-    else:  # either quadratic or cubic
+    else:
+        logger.info(
+            "Warning: scipy.interplate.interp1d is deprecated. Best to choose method='linear'."
+        )
         for i in range(num_neurons):
-            # NOTE: scipy.interplate.interp1d is deprecated. Best to choose method='linear'.
-            interp = interp1d(x=time, y=data[:, i], kind=method)
+            interp = interp1d(
+                x=time, y=data[:, i], kind=method, bounds_error=False, fill_value="extrapolate"
+            )
             interpolated_data_np[:, i] = interp(target_time_np)
     # Reshape interpolated time vector to (time, 1)
     target_time_np = target_time_np.reshape(-1, 1)
-    # Return the interpolated data
+    # Final check for shape consistency
+    assert target_time_np.shape[0] == interpolated_data_np.shape[0], "Output temporal dimension."
+    # Return the interpolated time and data
     return target_time_np, interpolated_data_np
 
 
@@ -1797,49 +1793,53 @@ def aggregate_data(time, data, target_dt):
     """
     Downsample data using aggregation.
 
-    This function takes the given time points and corresponding data and
-    downsamples them by averaging over intervals defined by `target_dt`.
+    This function downsamples the data by averaging over intervals of size `target_dt`.
 
     Parameters:
-        time (numpy.ndarray): 1D array containing the time points corresponding to the data,
-                              with shape (time, 1).
-        data (numpy.ndarray): A 2D array containing the data to be downsampled, with shape
-                              (time, neurons).
+        time (numpy.ndarray): 1D array containing the time points corresponding to the data.
+        data (numpy.ndarray): A 2D array containing the data to be downsampled, with shape (time, neurons).
         target_dt (float): The desired time interval between the downsampled data points.
-                           If None, no downsampling is performed.
 
     Returns:
         numpy.ndarray, numpy.ndarray: Two arrays containing the downsampled time points and data.
-
-    Steps:
-        1. If target_dt is None, return the original data.
-        2. Ensure that time is a 1D array.
-        3. Compute the downsample rate.
-        4. Determine the number of intervals.
-        5. Create the downsampled time array.
-        6. Downsample the data by averaging over intervals.
-        7. Reshape downsampled time vector to (time, 1).
-        8. Return the downsampled data.
     """
+    # print(f"\nDEBUG. downsampling. inside aggregate_data.\n")
+    assert time.shape[0] == data.shape[0], "Input temporal dimension."
     # If target_dt is None, return the original data
     if target_dt is None:
         return time, data
     # Ensure that time is a 1D array
     time = time.squeeze()
+    # print(f"\nDEBUG. time.shape, time.min(), time.max(): {time.shape, time.min(), time.max()}\n")
     # Compute the downsample rate
     original_dt = np.median(np.diff(time, axis=0)[1:]).item()
-    interval_width = int(target_dt // original_dt)
-    # Determine the number of intervals
+    interval_width = max(1, int(np.round(target_dt / original_dt)))
     num_intervals = len(time) // interval_width
-    downsampled_data = np.zeros((num_intervals, data.shape[1]), dtype=np.float32)
+    # print(f"\nDEBUG. data.shape, interval_width: {data.shape, interval_width, num_intervals}\n")
     # Create the downsampled time array
-    target_time_np = np.arange(time.min(), time.max() + target_dt, target_dt)[:num_intervals]
+    target_time_np = target_dt * np.arange(num_intervals)
+    # Create the downsampled data array
+    num_neurons = data.shape[1]
+    downsampled_data = np.zeros((num_intervals, num_neurons), dtype=np.float32)
+    # print(f"\nDEBUG. downsampled_data.shape: {downsampled_data.shape}\n")
+    # print(
+    #     f"\nDEBUG. target_time_np.shape, target_time_np.min(), target_time_np.max(): {target_time_np.shape, target_time_np.min(), target_time_np.max()}\n"
+    # )
+    new_dt = np.median(np.diff(target_time_np, axis=0)[1:]).item()
+    # print(f"\nDEBUG. original_dt, new_dt, target_dt: {original_dt, new_dt, target_dt}\n")
     # Downsample the data by averaging over intervals
-    for i in range(data.shape[1]):
-        reshaped_data = data[: num_intervals * interval_width, i].reshape(-1, interval_width)
+    # TODO: Vectorize this operation.
+    for i in range(num_neurons):
+        reshaped_data = data[: num_intervals * interval_width, i].reshape(
+            num_intervals, interval_width
+        )
         downsampled_data[:, i] = reshaped_data.mean(axis=1)
     # Reshape downsampled time vector to (time, 1)
     target_time_np = target_time_np.reshape(-1, 1)
+    # Final check for shape consistency
+    assert (
+        target_time_np.shape[0] == downsampled_data.shape[0]
+    ), "Output temporal dimension mismatch."
     # Return the interpolated data
     return target_time_np, downsampled_data
 
@@ -2348,41 +2348,53 @@ class NeuralBasePreprocessor:
             **self.smooth_kwargs,
         )
 
-    def resample_data(self, time_in_seconds, data, upsample=True):
+    def resample_data(self, time_in_seconds, ca_data, upsample=True):
         """
-        Resample the data to the desired time interval.
+        Resample the calcium data to the desired time steps.
+        The input time vector and data matrix should be matched in time,
+        and the resampled time vector and data matrix should also be matched.
 
         Parameters:
             time_in_seconds (np.ndarray): Time vector in seconds with shape (time, 1).
-            data (np.ndarray): Original, non-uniformly sampled calcium data with shape (time, neurons).
+            ca_data (np.ndarray): Original, non-uniformly sampled calcium data with shape (time, neurons).
             upsample (bool, optional): Whether to sample at a higher frequency (i.e., with smaller dt). Default is True.
 
         Returns:
             np.ndarray, np.ndarray: Resampled time vector and calcium data.
         """
-        # Upsample (interpolate)
+        assert time_in_seconds.shape[0] == ca_data.shape[0], (
+            f"Input mismatch! Time vector length ({time_in_seconds.shape[0]}) "
+            f"doesn't match data length ({ca_data.shape[0]})."
+        )
+        # Perform upsampling (interpolation) or downsampling (aggregation) as needed
         if upsample:
-            return interpolate_data(
+            interp_time, interp_ca = interpolate_data(
                 time_in_seconds,
-                data,
+                ca_data,
                 target_dt=self.resample_dt,
                 method=self.interpolate_method,
             )
-        # Downsample (aggregate)
         else:
-            # We first upsample to a fraction of the desired dt
+            # First upsample to a finer dt before downsampling
             interp_time, interp_ca = interpolate_data(
                 time_in_seconds,
-                data,
-                target_dt=self.resample_dt / 6,
+                ca_data,
+                target_dt=self.resample_dt / 6,  # Finer granularity first
                 method=self.interpolate_method,
             )
-            # Then average over short intervals to downsample to the desired dt
-            return aggregate_data(
+            # Then aggregate over intervals to match the desired dt
+            interp_time, interp_ca = aggregate_data(
                 interp_time,
                 interp_ca,
                 target_dt=self.resample_dt,
             )
+        # Ensure the resampled time and data are the same shape
+        if interp_time.shape[0] != interp_ca.shape[0]:
+            raise ValueError(
+                f"Resampling mismatch! Resampled time vector ({interp_time.shape[0]}) "
+                f"doesn't match resampled data length ({interp_ca.shape[0]})."
+            )
+        return interp_time, interp_ca
 
     def normalize_data(self, data):
         """
@@ -2409,47 +2421,6 @@ class NeuralBasePreprocessor:
         with open(file, "wb") as f:
             pickle.dump(data_dict, f)
 
-    # def create_neuron_idx(self, label_list):
-    #     """
-    #     Overrides the base class method to handle the complicated data
-    #     format structure of the Leifer2023 dataset.
-    #     """
-    #     neuron_to_idx = dict()
-    #     num_unlabeled_neurons = 0
-    #     for j, item in enumerate(label_list):
-    #         previous_list = label_list[:j]
-    #         if not item.isalnum(): # happens when the label is empty string ''
-    #             label_list[j] = str(j)
-    #             num_unlabeled_neurons += 1
-    #             neuron_to_idx[str(j)] = j
-    #         else:
-    #             if item in NEURON_LABELS and item not in previous_list:
-    #                 neuron_to_idx[item] = j
-    #             # If a neuron label repeated assume a mistake and treat the duplicate as an unlabeled neuron
-    #             elif item in NEURON_LABELS and item in previous_list:
-    #                 label_list[j] = str(j)
-    #                 num_unlabeled_neurons += 1
-    #                 neuron_to_idx[str(j)] = j
-    #             # Handle ambiguous neuron labels
-    #             else:
-    #                 if str(item + "L") in NEURON_LABELS and str(item + "L") not in previous_list:
-    #                     label_list[j] = str(item + "L")
-    #                     neuron_to_idx[str(item + "L")] = j
-    #                 elif str(item + "R") in NEURON_LABELS and str(item + "R") not in previous_list:
-    #                     label_list[j] = str(item + "R")
-    #                     neuron_to_idx[str(item + "R")] = j
-    #                 else: # happens when the label is "merge"; TODO: Ask authors what that is?
-    #                     label_list[j] = str(j)
-    #                     num_unlabeled_neurons += 1
-    #                     neuron_to_idx[str(j)] = j
-    #     num_labeled_neurons = len(
-    #         [k for k in neuron_to_idx.keys() if not k.isnumeric()]
-    #     )  # number of labeled neurons
-    #     assert (
-    #         num_labeled_neurons == len(label_list) - num_unlabeled_neurons
-    #     ), "Incorrect calculation of the number of labeled neurons."
-    #     return neuron_to_idx, num_labeled_neurons
-
     def create_neuron_idx(self, unique_IDs):
         """
         Create a neuron label to index mapping from the raw data.
@@ -2461,7 +2432,7 @@ class NeuralBasePreprocessor:
             dict: Mapping of neuron labels to indices.
             int: Number of labeled neurons.
         """
-        # TODO: Supplement this this with the Leifer2023 version so we only need this one definition.
+        # TODO: Supplement this this with the Leifer2023 version so that we only need this one definition.
         idx_to_neuron = {
             nid: (
                 str(nid)
@@ -2668,6 +2639,9 @@ class NeuralBasePreprocessor:
     ):
         """
         Helper function for preprocessing calcium fluorescence neural data from one worm.
+        This method checks that the neuron labels, data matrix and time vector are of consistent
+        shapes (e.g. number of timesteps in data matrix should be same as length of time vector).
+        Any empty data (e.g. no labeled neurons or no recorded activity data) are thrown out.
 
         Parameters:
             neuron_IDs (list): List of arrays of neuron IDs.
@@ -2681,13 +2655,13 @@ class NeuralBasePreprocessor:
             int: Index of the next worm to preprocess.
 
         Steps:
-            1. Iterate through the traces and preprocess each one.
-            2. Normalize the calcium data.
-            3. Compute calcium dynamics (residual calcium).
-            4. Smooth the data.
-            5. Resample the data (raw and smoothed data).
-            6. Name the worm and update the index.
-            7. Save the data.
+            Iterate through the traces and preprocess each one:
+                1. Normalize the calcium data.
+                2. Compute the residual calcium.
+                3. Smooth the data.
+                4. Resample the data.
+                5. Name the worm and update the index.
+            Save the resulting data.
         """
         assert (
             len(neuron_IDs) == len(traces) == len(raw_timeVectorSeconds)
@@ -2725,9 +2699,9 @@ class NeuralBasePreprocessor:
                 continue
             # Only get data for unique neurons
             trace_data = trace_data[:, unique_indices.astype(int)]
-            # 2. Normalize calcium data
+            # Normalize calcium data
             calcium_data = self.normalize_data(trace_data)  # matrix
-            # 3. Compute calcium dynamics (residual calcium)
+            # Compute residual calcium
             time_in_seconds = raw_timeVectorSeconds[i].reshape(raw_timeVectorSeconds[i].shape[0], 1)
             time_in_seconds = np.array(time_in_seconds, dtype=np.float32)  # vector
             time_in_seconds = time_in_seconds - time_in_seconds[0]  # start at 0.0 seconds
@@ -2736,10 +2710,10 @@ class NeuralBasePreprocessor:
             residual_calcium = np.gradient(
                 calcium_data, time_in_seconds.squeeze(), axis=0
             )  # vector
-            # 4. Smooth data
+            # Smooth data
             smooth_calcium_data = self.smooth_data(calcium_data, time_in_seconds)
             smooth_residual_calcium = self.smooth_data(residual_calcium, time_in_seconds)
-            # 5. Resample data (raw and smoothed data)
+            # Resample data
             upsample = self.resample_dt < original_median_dt  # bool
             _, resampled_calcium_data = self.resample_data(time_in_seconds, calcium_data, upsample)
             _, resampled_residual_calcium = self.resample_data(
@@ -2761,11 +2735,18 @@ class NeuralBasePreprocessor:
                 self.resample_dt, resampled_median_dt, atol=0.01
             ), f"Resampling failed. The median dt ({resampled_median_dt}) of the resampled time vector is different from desired dt ({self.resample_dt})."
             max_timesteps, num_neurons = resampled_calcium_data.shape
+            # ### DEBUG ###
+            # print("\n\nDEBUG.")
+            # print("in `preprocess_traces` (after `self.resample_data`)")
+            # print(f"resampled_calcium_data: {resampled_calcium_data.shape}")
+            # print(f"resampled_smooth_calcium_data: {resampled_smooth_calcium_data.shape}")
+            # print(f"resampled_time_in_seconds: {resampled_time_in_seconds.shape}")
+            # ### DEBUG ###
             num_unlabeled_neurons = int(num_neurons) - num_labeled_neurons
-            # 6. Name worm and update index
+            # Name worm and update index
             worm = "worm" + str(worm_idx)  # use global worm index
             worm_idx += 1  # increment worm index
-            # 7. Save data
+            # Save data
             worm_dict = {
                 worm: {
                     "calcium_data": resampled_calcium_data,  # normalized and resampled
@@ -3798,14 +3779,14 @@ class Dag2023Preprocessor(NeuralBasePreprocessor):
                 label, set(NEURON_LABELS) - set(neurons_copy), char="?"
             )
             neurons_copy.append(replacement)
-        ### DEBUG ###
-        # Remove badly imputed neurons from the data
-        filt_calcium, filt_mask = self.filter_bad_traces_by_linear_segments(calcium)
-        filt_neurons_copy = np.array(neurons_copy, dtype=str)[filt_mask].tolist()
-        ### DEBUG ###
+        # ### DEBUG ###
+        # # Remove badly imputed neurons from the data
+        # calcium, mask = self.filter_bad_traces_by_linear_segments(calcium)
+        # neurons_copy = np.array(neurons_copy, dtype=str)[mask].tolist()
+        # ### DEBUG ###
         # Make the extracted data into a list of arrays
-        all_IDs = [filt_neurons_copy]
-        all_traces = [filt_calcium]
+        all_IDs = [neurons_copy]
+        all_traces = [calcium]
         timeVectorSeconds = [timevec]
         # Return the extracted data
         return all_IDs, all_traces, timeVectorSeconds
@@ -3988,14 +3969,14 @@ class Flavell2023Preprocessor(NeuralBasePreprocessor):
                 label, set(NEURON_LABELS) - set(neurons_copy), char="?"
             )
             neurons_copy.append(replacement)
-        ### DEBUG ###
-        # Remove badly imputed neurons from the data
-        filt_calcium_data, filt_mask = self.filter_bad_traces_by_linear_segments(calcium_data)
-        filt_neurons_copy = np.array(neurons_copy, dtype=str)[filt_mask].tolist()
-        ### DEBUG ###
+        # ### DEBUG ###
+        # # Remove badly imputed neurons from the data
+        # calcium_data, filt_mask = self.filter_bad_traces_by_linear_segments(calcium_data)
+        # neurons_copy = np.array(neurons_copy, dtype=str)[filt_mask].tolist()
+        # ### DEBUG ###
         # Make the extracted data into a list of arrays
-        all_IDs = [filt_neurons_copy]
-        all_traces = [filt_calcium_data]
+        all_IDs = [neurons_copy]
+        all_traces = [calcium_data]
         timeVectorSeconds = [time_in_seconds]
         # Return the extracted data
         return all_IDs, all_traces, timeVectorSeconds
