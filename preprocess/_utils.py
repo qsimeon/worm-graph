@@ -3763,11 +3763,6 @@ class Dag2023Preprocessor(NeuralBasePreprocessor):
                 label, set(NEURON_LABELS) - set(neurons_copy), char="?"
             )
             neurons_copy.append(replacement)
-        # ### DEBUG ###
-        # # Remove badly imputed neurons from the data
-        # calcium, mask = self.filter_bad_traces_by_linear_segments(calcium)
-        # neurons_copy = np.array(neurons_copy, dtype=str)[mask].tolist()
-        # ### DEBUG ###
         # Make the extracted data into a list of arrays
         all_IDs = [neurons_copy]
         all_traces = [calcium]
@@ -3953,11 +3948,6 @@ class Flavell2023Preprocessor(NeuralBasePreprocessor):
                 label, set(NEURON_LABELS) - set(neurons_copy), char="?"
             )
             neurons_copy.append(replacement)
-        # ### DEBUG ###
-        # # Remove badly imputed neurons from the data
-        # calcium_data, filt_mask = self.filter_bad_traces_by_linear_segments(calcium_data)
-        # neurons_copy = np.array(neurons_copy, dtype=str)[filt_mask].tolist()
-        # ### DEBUG ###
         # Make the extracted data into a list of arrays
         all_IDs = [neurons_copy]
         all_traces = [calcium_data]

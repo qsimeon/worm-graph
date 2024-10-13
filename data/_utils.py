@@ -63,8 +63,8 @@ class NeuralActivityDataset(torch.utils.data.Dataset):
         A vector of the time (in seconds) corresponding to the time
         axis (axis=0) of the `data` tensor.
     neurons_mask : torch.Tensor
-        Index of neuron(s) to return data for, defaults to returnin
-        data for all neurons if `neurons_mask=Non`e.
+        Index of neuron(s) to return data for, defaults to returning
+        data for all neurons if `neurons_mask=None`.
     wormID : str
         ID of the worm.
     worm_dataset : str
@@ -711,13 +711,8 @@ def create_combined_dataset(
     source_datasets: dict,
     num_labeled_neurons: Union[None, int] = None,
 ):
-    # TODO: In addtion to file, should also the Pytorch Dataset (.pt) containing the full dataset.
-    # ### >>> TODO >>> ###
-    # combined_dataset_dict : dict
-    #     A dictionary containing the worm data of all requested datasets.
-    # combined_dataset_pt : Neural
-    # ### <<< TODO <<< ###
-    """Returns a dict with the worm data of all requested datasets.
+    """
+    Returns a dict with the worm data of all requested datasets.
 
     Parameters
     ----------
@@ -759,7 +754,7 @@ def create_combined_dataset(
         source_datasets = OmegaConf.to_object(source_datasets)
 
     # Load the dataset(s)
-    combined_dataset = dict()
+    combined_dataset_dict = dict()
 
     for dataset_name, worms in source_datasets.items():
         # Skip if no worms requested for this dataset
@@ -778,20 +773,22 @@ def create_combined_dataset(
 
         # Add the worms from this dataset to the combined dataset
         for worm in multi_worms_dataset:
-            if worm in combined_dataset:
-                worm_ = max([int(key.split("worm")[-1]) for key in combined_dataset.keys()]) + 1
+            if worm in combined_dataset_dict:
+                worm_ = (
+                    max([int(key.split("worm")[-1]) for key in combined_dataset_dict.keys()]) + 1
+                )
                 worm_ = "worm" + str(worm_)
-                combined_dataset[worm_] = multi_worms_dataset[worm]
-                combined_dataset[worm_]["worm"] = worm_
-                combined_dataset[worm_]["original_worm"] = worm
+                combined_dataset_dict[worm_] = multi_worms_dataset[worm]
+                combined_dataset_dict[worm_]["worm"] = worm_
+                combined_dataset_dict[worm_]["original_worm"] = worm
             else:
-                combined_dataset[worm] = multi_worms_dataset[worm]
-                combined_dataset[worm]["original_worm"] = worm
+                combined_dataset_dict[worm] = multi_worms_dataset[worm]
+                combined_dataset_dict[worm]["original_worm"] = worm
 
-    logger.info("Combined dataset has {} worms".format(len(combined_dataset)))
+    logger.info("Combined dataset has {} worms".format(len(combined_dataset_dict)))
 
     # Rename the worm keys so that they are ordered
-    combined_dataset = rename_worm_keys(combined_dataset)
+    combined_dataset_dict = rename_worm_keys(combined_dataset_dict)
 
     # Information about the dataset
     dataset_info = {
@@ -804,7 +801,7 @@ def create_combined_dataset(
         "num_neurons": [],
     }
 
-    for _, data in combined_dataset.items():
+    for _, data in combined_dataset_dict.items():
         dataset_info["source_dataset"].append(data["source_dataset"])
         dataset_info["original_median_dt"].append(data["original_median_dt"])
         dataset_info["median_dt"].append(data["median_dt"])
@@ -816,7 +813,7 @@ def create_combined_dataset(
 
     dataset_info = pd.DataFrame(dataset_info)
 
-    return combined_dataset, dataset_info
+    return combined_dataset_dict, dataset_info
 
 
 def generate_subsets_of_size(
@@ -940,7 +937,7 @@ def distribute_samples(data_splits, total_nb_samples):
 
 
 def split_combined_dataset(
-    combined_dataset,
+    combined_dataset_dict,
     num_train_samples,
     num_val_samples,
     seq_len,
@@ -955,7 +952,7 @@ def split_combined_dataset(
 
     Parameters
     ----------
-    combined_dataset : dict
+    combined_dataset_dict : dict
         Combined dataset to split.
     num_train_samples : int
         Number of training samples per worm.
@@ -976,6 +973,8 @@ def split_combined_dataset(
 
     Returns
     -------
+    full_dataset: torch.utils.data.ConcatDataset
+        Concatenated full dataset.
     train_dataset : torch.utils.data.ConcatDataset
         Concatenated training dataset.
     val_dataset : torch.utils.data.ConcatDataset
@@ -993,10 +992,10 @@ def split_combined_dataset(
     # Choose whether to use original or smoothed data
     if use_smooth:
         key_data = "smooth_" + key_data
-    # Store the training and validation datasets
+    # Store the full, training and validation datasets
+    full_dataset = []
     train_dataset = []
     val_dataset = []
-    full_dataset = []
     # Store the time steps info
     dataset_info_split = {
         "combined_dataset_index": [],
@@ -1014,16 +1013,30 @@ def split_combined_dataset(
         "train_split_ratio": [],
     }
     # Loop through the worms in the dataset
-    for wormID, single_worm_dataset in combined_dataset.items():
-        # TODO: Encapsulate this inner part as a function `split_single_dataset`.
+    for wormID, single_worm_dataset in combined_dataset_dict.items():
         # Extract relevant features from the dataset
         data = single_worm_dataset[key_data]
         neurons_mask = single_worm_dataset["labeled_neurons_mask"]
         time_vec = single_worm_dataset["time_in_seconds"]
         worm_dataset = single_worm_dataset["source_dataset"]
         original_worm_id = single_worm_dataset["original_worm"]
-        # The index where to split the data
-        split_idx = (
+        # First create the full dataset
+        # FULL
+        full_dataset.append(
+            NeuralActivityDataset(
+                data=data,
+                time_vec=time_vec,
+                neurons_mask=neurons_mask,
+                wormID=original_worm_id,  # worm ID from the original experimental dataset
+                worm_dataset=worm_dataset,  # name of the original experimental dataset the data is from
+                seq_len=seq_len,
+                num_samples=(num_train_samples + num_val_samples),
+                use_residual=use_residual,
+                reverse=reverse,
+            )
+        )
+        # Now handle splitting into train and validation
+        split_idx = (  # index where to split the data
             math.ceil(train_split_ratio * len(data))
             if train_split_first
             else math.ceil((1 - train_split_ratio) * len(data))
@@ -1063,8 +1076,8 @@ def split_combined_dataset(
                 continue
             train_dataset.append(
                 NeuralActivityDataset(
-                    data=train_split.detach(),
-                    time_vec=train_time_split.detach(),
+                    data=train_split,
+                    time_vec=train_time_split,
                     neurons_mask=neurons_mask,
                     wormID=original_worm_id,  # worm ID from the original experimental dataset
                     worm_dataset=worm_dataset,  # name of the original experimental dataset the data is from
@@ -1089,8 +1102,8 @@ def split_combined_dataset(
                 continue
             val_dataset.append(
                 NeuralActivityDataset(
-                    data=val_split.detach(),
-                    time_vec=val_time_split.detach(),
+                    data=val_split,
+                    time_vec=val_time_split,
                     neurons_mask=neurons_mask,
                     wormID=original_worm_id,  # worm ID of the experimental dataset (original)
                     worm_dataset=worm_dataset,  # dataset where the worm comes from
@@ -1124,6 +1137,9 @@ def split_combined_dataset(
         dataset_info_split["val_seq_len"].append(seq_len)
         dataset_info_split["val_split_idx"].append(split_idx)
     # Concatenate the datasets
+    full_dataset = (
+        torch.utils.data.ConcatDataset(full_dataset) if len(full_dataset) else None
+    )  # number of train sequences = number samples * number of worms
     train_dataset = (
         torch.utils.data.ConcatDataset(train_dataset) if len(train_dataset) else None
     )  # number of train sequences = number train samples * number of worms
@@ -1132,7 +1148,7 @@ def split_combined_dataset(
     )  # number of val sequences = number val samples * number of worms
     # Convert information about the split datasets into a DataFrame
     dataset_info_split = pd.DataFrame(dataset_info_split)
-    return train_dataset, val_dataset, dataset_info_split
+    return full_dataset, train_dataset, val_dataset, dataset_info_split
 
 
 def graph_inject_data(single_worm_dataset, connectome_graph):

@@ -309,7 +309,7 @@ def loss_per_dataset(
             source_datasets={source_dataset: worms_to_use},
             num_labeled_neurons=None,  # use all available neurons
         )
-        train_dataset, val_dataset, _ = split_combined_dataset(
+        full_dataset, train_dataset, val_dataset, _ = split_combined_dataset(
             combined_dataset=combined_dataset,
             num_train_samples=num_train_samples,
             num_val_samples=num_train_samples,  # use the same number of samples as in the train dataset
