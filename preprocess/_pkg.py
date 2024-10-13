@@ -22,6 +22,7 @@ from sklearn.impute import IterativeImputer
 # NOTE: interp1d is considered legacy and may be removed in future updates of scipy.
 from scipy.interpolate import interp1d
 
+from pynwb import NWBHDF5IO
 from scipy.io import loadmat
 from typing import Dict, List
 from sklearn import preprocessing
@@ -30,8 +31,6 @@ from scipy.ndimage import gaussian_filter1d
 from torch_geometric.data import Data, download_url
 from sklearn.preprocessing import MinMaxScaler, StandardScaler
 from torch_geometric.utils import coalesce, to_dense_adj, dense_to_sparse
-
-from pynwb import NWBHDF5IO
 
 # Local libraries
 from utils import (

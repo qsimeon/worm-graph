@@ -36,15 +36,15 @@ def model_predict(
     )
     seq_len = int(train_dataset_info["train_seq_len"].values[0])
     use_residual = int(train_dataset_info["use_residual"].values[0])
-    smooth_data = int(train_dataset_info["smooth_data"].values[0])
+    use_smooth = int(train_dataset_info["use_smooth"].values[0])
     train_split_first = int(train_dataset_info["train_split_first"].values[0])
     train_split_ratio = float(train_dataset_info["train_split_ratio"].values[0])
     key_data = "residual_calcium" if use_residual else "calcium_data"
-    key_data = "smooth_" + key_data if smooth_data else key_data
+    key_data = "smooth_" + key_data if use_smooth else key_data
     # Load the combined dataset
     combined_dataset, dataset_info = create_combined_dataset(
         source_datasets=source_datasets,
-        num_named_neurons=None,  # use all available neurons
+        num_labeled_neurons=None,  # use all available neurons
     )
     # Put model on device
     model = model.to(DEVICE)
@@ -52,17 +52,17 @@ def model_predict(
     for _, single_worm_dataset in combined_dataset.items():
         # Extract relevant features from the dataset
         data = single_worm_dataset[key_data]
-        neurons_mask = single_worm_dataset["named_neurons_mask"]
+        neurons_mask = single_worm_dataset["labeled_neurons_mask"]
         worm_dataset = single_worm_dataset["source_dataset"]
         original_worm_id = single_worm_dataset["original_worm"]
-        # Query and save the named neurons to plot predictions afterwards
+        # Query and save the labeled neurons to plot predictions afterwards
         neurons = dataset_info.query(
             'source_dataset == "{}" and original_index == "{}"'.format(
                 worm_dataset, original_worm_id
             )
         )["neurons"].iloc[0]
         # Now create the DataFrame
-        neuron_df = pd.DataFrame({"named_neurons": neurons})
+        neuron_df = pd.DataFrame({"labeled_neurons": neurons})
         # The index where to split the data
         split_idx = (
             int(train_split_ratio * len(data))
@@ -122,7 +122,7 @@ def model_predict(
                 "train",
                 worm_dataset,
                 original_worm_id,
-                "named_neurons.csv",
+                "labeled_neurons.csv",
             )
         )
         # Predictions using the first validation split
@@ -168,7 +168,7 @@ def model_predict(
                 "val",
                 worm_dataset,
                 original_worm_id,
-                "named_neurons.csv",
+                "labeled_neurons.csv",
             )
         )
 

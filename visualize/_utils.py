@@ -509,7 +509,7 @@ def plot_predictions(log_dir, neurons_to_plot=None, worms_to_plot=None):
                     log_dir, "prediction", type_ds, ds_name, wormID, "predictions.csv"
                 )
                 neurons_url = os.path.join(
-                    log_dir, "prediction", type_ds, ds_name, wormID, "named_neurons.csv"
+                    log_dir, "prediction", type_ds, ds_name, wormID, "labeled_neurons.csv"
                 )
 
                 # Access the prediction directory
@@ -517,11 +517,11 @@ def plot_predictions(log_dir, neurons_to_plot=None, worms_to_plot=None):
                 df.set_index(["Type", "Unnamed: 1"], inplace=True)
                 df.index.names = ["Type", ""]
 
-                # Get the named neurons
+                # Get the labeled neurons
                 neurons_df = pd.read_csv(
                     neurons_url,
                 )
-                neurons = neurons_df["named_neurons"]
+                neurons = neurons_df["labeled_neurons"]
 
                 # Treat neurons_to_plot
                 if isinstance(neurons_to_plot, int):
@@ -650,15 +650,15 @@ def plot_pca_trajectory(log_dir, worms_to_plot=None):
                     log_dir, "prediction", type_ds, ds_name, wormID, "predictions.csv"
                 )
                 neurons_url = os.path.join(
-                    log_dir, "prediction", type_ds, ds_name, wormID, "named_neurons.csv"
+                    log_dir, "prediction", type_ds, ds_name, wormID, "labeled_neurons.csv"
                 )
                 df = pd.read_csv(url)
 
-                # Get the named neurons
+                # Get the labeled neurons
                 neurons_df = pd.read_csv(
                     neurons_url,
                 )
-                neurons = neurons_df["named_neurons"]
+                neurons = neurons_df["labeled_neurons"]
 
                 sns.set_style("whitegrid")
                 palette = sns.color_palette("tab10")
@@ -667,12 +667,12 @@ def plot_pca_trajectory(log_dir, worms_to_plot=None):
 
                 # Split data by Type
                 ar_gen_data = df[df["Type"] == "AR Generation"].drop(columns=["Type", "Unnamed: 1"])
-                ar_gen_data = ar_gen_data[neurons]  # filter only named neurons
+                ar_gen_data = ar_gen_data[neurons]  # filter only labeled neurons
 
                 ground_truth_data = df[df["Type"] == "Ground Truth"].drop(
                     columns=["Type", "Unnamed: 1"]
                 )
-                ground_truth_data = ground_truth_data[neurons]  # filter only named neurons
+                ground_truth_data = ground_truth_data[neurons]  # filter only labeled neurons
 
                 try:
                     # Fit PCA only on the ground-truth data
@@ -770,7 +770,7 @@ def plot_pca_trajectory(log_dir, worms_to_plot=None):
 
                 except Exception as e:
                     logger.info(
-                        f"PCA 2D plot failed for {type_ds} dataset (check if num_named_neurons >= 3)"
+                        f"PCA 2D plot failed for {type_ds} dataset (check if num_labeled_neurons >= 3)"
                     )
                     logger.error(f"The error that occurred: {e}")
                     err_msg = (
@@ -795,13 +795,13 @@ def plot_worm_data(worm_data, num_neurons=5, max_tsteps=1000, smooth=False):
     else:
         calcium_data = worm_data["calcium_data"]
     time_in_seconds = worm_data["time_in_seconds"]
-    slot_to_named_neuron = worm_data["slot_to_named_neuron"]
+    slot_to_labeled_neuron = worm_data["slot_to_labeled_neuron"]
     neuron_indices = set(
-        np.random.choice(list(slot_to_named_neuron.keys()), num_neurons, replace=True)
+        np.random.choice(list(slot_to_labeled_neuron.keys()), num_neurons, replace=True)
     )
     plt.figure(figsize=(10, 5))
     for neuron_idx in neuron_indices:
-        neuron_name = slot_to_named_neuron.get(neuron_idx, None)
+        neuron_name = slot_to_labeled_neuron.get(neuron_idx, None)
         if neuron_name is not None:
             plt.plot(
                 time_in_seconds[:max_tsteps],
@@ -892,7 +892,7 @@ def experiment_parameter(exp_dir, key):
         - dataset: The name(s) of the dataset(s) used for training
         - num_worms: The number of worms in the trainining set
         - num_time_steps: The total number of train time steps
-        - num_named_neurons: The number of distinct named neurons recorded across all worms
+        - num_labeled_neurons: The number of distinct labeled neurons recorded across all worms
         - time_steps_per_neuron: The average number of train time steps per neuron
         - num_samples: The number of training sequences sampled per worm
         - hidden_size: The hidden size of the model
@@ -960,14 +960,14 @@ def experiment_parameter(exp_dir, key):
         title = "Total amount of training data"
         xaxis = "Num. time steps"
 
-    if key in {"num_neurons", "num_named_neurons"}:
-        # Number of named neurons used for training
+    if key in {"num_neurons", "num_labeled_neurons"}:
+        # Number of labeled neurons used for training
         pipeline_info = OmegaConf.load(os.path.join(exp_dir, "pipeline_info.yaml"))
         df = pd.read_csv(
             os.path.join(exp_dir, "dataset", "train_dataset_info.csv"),
             converters={"neurons": ast.literal_eval},
         )
-        value = pipeline_info.submodule.dataset.num_named_neurons
+        value = pipeline_info.submodule.dataset.num_labeled_neurons
         title = "Number of unique labelled neurons"
         xaxis = "Num. neurons"
         if value is None:

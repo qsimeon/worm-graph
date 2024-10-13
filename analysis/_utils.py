@@ -45,7 +45,7 @@ def hierarchical_clustering_algorithm(
         plt.style.use("seaborn-whitegrid")
 
     X = single_worm_data["smooth_calcium_data"]  # (time, all neurons)
-    X = X[:, single_worm_data["named_neurons_mask"]]  # (time, named and acive neurons)
+    X = X[:, single_worm_data["labeled_neurons_mask"]]  # (time, named and acive neurons)
 
     if distance == "correlation":
         R = np.corrcoef(X, rowvar=False)  # no correlated <- [0, 1] -> correlated
@@ -97,7 +97,7 @@ def hierarchical_clustering_algorithm(
 
     # === Sorting ===
     original_neuron_labels = np.array(
-        [label for idx, label in single_worm_data["slot_to_named_neuron"].items()]
+        [label for idx, label in single_worm_data["slot_to_labeled_neuron"].items()]
     )
 
     # Now we can sort the correlation matrix according to the cluster labels, and plot the correlation matrix again.
@@ -276,7 +276,7 @@ def loss_per_dataset(
     num_train_samples = int(train_dataset_info["num_train_samples"].values[0])
     train_split_ratio = float(train_dataset_info["train_split_ratio"].values[0])
     use_residual = bool(train_dataset_info["use_residual"].values[0])
-    smooth_data = bool(train_dataset_info["smooth_data"].values[0])
+    use_smooth = bool(train_dataset_info["use_smooth"].values[0])
     train_split_first = bool(train_dataset_info["train_split_first"].values[0])
 
     # Loss metrics
@@ -307,7 +307,7 @@ def loss_per_dataset(
         # Create dataset
         combined_dataset, _ = create_combined_dataset(
             source_datasets={source_dataset: worms_to_use},
-            num_named_neurons=None,  # use all available neurons
+            num_labeled_neurons=None,  # use all available neurons
         )
         train_dataset, val_dataset, _ = split_combined_dataset(
             combined_dataset=combined_dataset,
@@ -316,7 +316,7 @@ def loss_per_dataset(
             seq_len=seq_len,
             reverse=False,
             use_residual=use_residual,
-            smooth_data=smooth_data,
+            use_smooth=use_smooth,
             train_split_first=train_split_first,
             train_split_ratio=train_split_ratio,
         )

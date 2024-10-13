@@ -28,6 +28,8 @@ os.environ["MASTER_PORT"] = "12345"  # just a random port
 os.environ["OC_CAUSE"] = "1"
 
 # Some global variables
+WORLD_SIZE = torch.cuda.device_count() # for multiprocessing stuff (unused currently)
+
 USER = "qsimeon"  # OpenMind/computing cluster username
 
 BLOCK_SIZE = 512  # maximum attention block size to use for Transformers
@@ -40,6 +42,8 @@ ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
 
 RAW_DATA_DIR = os.path.join(ROOT_DIR, "data", "raw")
 
+RAW_DATA_URL = "https://www.dropbox.com/scl/fi/mp6qfxhf9h816y5apj9b1/raw_data.zip?rlkey=5tu0zkrge8atwccxjec0umkfb&dl=1"
+
 LOGS_DIR = os.path.join(ROOT_DIR, "logs")
 
 # List of all 300 hermaphrodite neuron names
@@ -50,21 +54,23 @@ neurons_master_file = os.path.join(RAW_DATA_DIR, "neuron_master_sheet.csv")
 
 # if os.path.exists(labels_file):
 if os.path.exists(neurons_master_file):
-    # # Load the labels from the text file
-    # NEURON_LABELS = sorted(
-    #     pd.read_csv(
-    #         labels_file,
-    #         sep=" ",
-    #         header=None,
-    #         names=["neuron"],
-    #     ).neuron
-    # )
+   
     # Load the labels from the master csv file
     print(f"Loading from {neurons_master_file}.\n")
     df_neurons_master = pd.read_csv(neurons_master_file).sort_values(by="label", ascending=True)
     NEURON_LABELS = df_neurons_master["label"].tolist()
+elif os.path.exists(labels_file):
+    # Load the labels from the text file
+    NEURON_LABELS = sorted(
+        pd.read_csv(
+            labels_file,
+            sep=" ",
+            header=None,
+            names=["neuron"],
+        ).neuron
+    )
 else:
-    # Create the labels and save them to a text file
+    # Enumarte all the labels manually (once) and save them to a text file
     print(f"Saving to {labels_file}.\n")
     # fmt: off
     NEURON_LABELS = [ 
@@ -110,8 +116,6 @@ else:
 
 NUM_NEURONS = len(NEURON_LABELS)  # number of neurons in the model organism
 
-RAW_DATA_URL = "https://www.dropbox.com/scl/fi/xh1hzqt4uzdy61q28gdyv/raw_data.zip?rlkey=vedabydkjp5oxnpecy0zw3ogj&dl=1"
-
 RAW_ZIP = "raw_data.zip"
 
 # Essential raw data files that must be in the raw data directory
@@ -123,8 +127,8 @@ RAW_FILES = [  # TODO: Cite sources of these files.
     "GHermElec_Sym_Nodes.csv",
     ### <<< Default (Kamal Premaratne's preprocessed Cook2019) connectome data files <<<
     "Cook2019.xlsx",  # original Cook et al. (2019) connectome data file
-    "Chklovskii2011.xls",  # Chklovskii et al. (2011) connectome data file
-    "OpenWormConnectome.csv",  # OpenWorm connectome data file
+    "Chklovskii_NeuronConnect.xls",  # Chen et al. (2006) & Varshney et al. (2011) connectome data file
+    "OpenWorm_CElegansNeuronTables.xls",  # OpenWorm connectome data file (an earlier connectome (which one?) augmented with neurotransmitter type)
     "CElegansFunctionalConnectivity.xlsx",  # Randi et al. (2023) functional connectome data file
     "white_1986_jsh.csv",  # L4 brain
     "white_1986_n2u.csv",  # adult brain
@@ -139,9 +143,6 @@ RAW_FILES = [  # TODO: Cite sources of these files.
     "neuron_master_sheet.csv",  # TODO: working on a sheet combines all neuron information (labels, classes, neurotransmitter, cell type, and position)
     # NOTE: "neuron_master_sheet.csv", once complete, should make the following files obsolete: "neuron_labels.txt", ""Witvliet2020_NeuronClasses.xlsx", "LowResAtlasWithHighResHeadsAndTails.csv", "Hobert2016_BrainAtlas.xlsx"
 ]
-
-WORLD_SIZE = torch.cuda.device_count()
-
 
 # Method for initializing the global computing device
 def init_device():
@@ -171,6 +172,7 @@ EXPERIMENT_DATASETS = {
     "Nichols2017",
     "Skora2018",
     "Kaplan2020",
+    "Nejatbakhsh2020",
     "Yemini2021",
     "Uzel2022",
     "Dag2023",
@@ -178,7 +180,6 @@ EXPERIMENT_DATASETS = {
     "Lin2023",
     "Flavell2023",  # TODO: Something is wrong with worm0 in this dataset. Specifically, "worm0" is always absent. Why?
     "Venkatachalam2024",  # This is unpublished data. Downloaded from chemosensory-data.worm.world/.
-    "Nejatbakhsh2020",
 }
 
 SYNTHETIC_DATASETS = {  # Datasets created with the `CreateSyntheticDataset.ipynb` notebook.

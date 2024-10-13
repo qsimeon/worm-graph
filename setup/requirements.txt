@@ -1,4 +1,4 @@
-black[jupyter] # uses pip
+black # uses pip
 datasets 
 einops
 h5py
@@ -28,7 +28,9 @@ seaborn
 statsmodels
 tiktoken # uses pip
 tokenizers
+torch_geometric # uses pip
 tqdm
 transformers 
 typing
 pyyaml
+xlrd

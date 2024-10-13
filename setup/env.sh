@@ -11,52 +11,78 @@ eval "$(conda shell.bash hook)"
 # Function to detect if running on a Slurm cluster
 function is_slurm_cluster {
     if command -v sinfo >/dev/null 2>&1 || [ -n "$SLURM_JOB_ID" ]; then
-        return 0  # Equivalent to boolean True in bash (success)
+        return 0  # True (Slurm cluster)
     else
-        return 1  # Equivalent to boolean False in bash (failure)
+        return 1  # False (not Slurm)
     fi
 }
 
+# Debug: Display if on a Slurm cluster
+if is_slurm_cluster; then
+    echo ""
+    echo "Slurm cluster detected."
+else
+    echo ""
+    echo "Not on a Slurm cluster."
+fi
+
+# Debug: Display the detected OS
+echo ""
+echo "Detected OS: $OSTYPE"
+
 # Function to check for Nvidia GPU
 function has_gpu {
-    command -v nvidia-smi > /dev/null && nvidia-smi > /dev/null 2>&1
+    if command -v nvidia-smi > /dev/null && nvidia-smi > /dev/null 2>&1; then
+        cuda_version=$(nvidia-smi | grep -oP '(?<=CUDA Version: )[\d\.]+')  # Now accessible globally
+        return 0 # Indicates that a GPU is available (exit status 0 means success)
+    else
+        return 1 # Indicates that no GPU is available (exit status 1 means failure)
+    fi
 }
 
 # Create a new conda environment with Python 3.12
 ENV_NAME="worm-graph"
 echo ""
 echo "Creating $ENV_NAME environment."
-echo ""
-conda clean -y --packages
-conda create -y -n $ENV_NAME python=3.12 conda-build pip
+# conda clean -y --packages
+conda create -y -n $ENV_NAME python=3.12 conda-build
 
 
 # Check if the environment was successfully created and activated
 if ! conda activate $ENV_NAME; then
     if ! source activate $ENV_NAME; then
+        echo ""
         echo "Failed to activate $ENV_NAME environment. Exiting."
         exit 1
     fi
 fi
 
 # Update to the latest version of Python
-conda update -y -n $ENV_NAME  python
+conda update -y -n $ENV_NAME python
 
 # Update pip in the new environment
 python -m pip install --upgrade pip
 
 # Check if running on a Slurm cluster and adjust configs/pipeline.yaml accordingly
 if ! is_slurm_cluster; then
+    echo ""
     echo "Not on a Slurm cluster. Adjusting configs/pipeline.yaml for local execution."
+    
     if [[ "$OSTYPE" == "darwin"* ]]; then
-        sed -i '' 's/submitit_slurm/submitit_local/g' configs/pipeline.yaml
+        echo "Modifying pipeline.yaml for MacOS"
+        sed -i '' 's/submitit_slurm/submitit_local/g' "$SCRIPT_DIR/configs/pipeline.yaml"
     else
-        sed -i 's/submitit_slurm/submitit_local/g' configs/pipeline.yaml
+        echo "Modifying pipeline.yaml for Linux"
+        sed -i 's/submitit_slurm/submitit_local/g' "$SCRIPT_DIR/configs/pipeline.yaml"
     fi
+else
+    echo ""
+    echo "On a SLURM computing cluster. Keeping configs/pipeline.yaml for remote execution."
 fi
 
 # Operating System Detection and Environment Setup
 echo ""
+echo "Starting environment setup ..."
 
 # Detect the Operating System and Check for GPU
 case "$(uname -s)" in
@@ -64,19 +90,21 @@ case "$(uname -s)" in
         echo ""
         echo "Mac OS Detected"
         conda install pytorch::pytorch torchvision torchaudio -c pytorch
-        conda install -y -n $ENV_NAME pyg -c pyg
+        # conda install -y -n $ENV_NAME pyg -c pyg
         ;;
 
     Linux)
+        echo ""
         echo "Linux OS Detected"
         if has_gpu; then
             echo ""
-            echo "Nvidia GPU Detected"
-            conda install -y -n $ENV_NAME pytorch torchvision torchaudio pytorch-cuda=12.4 -c pytorch -c nvidia
-            conda install -y -n $ENV_NAME pyg -c pyg
+            echo "Nvidia GPU Detected with CUDA version $cuda_version"
+            conda install -y -n $ENV_NAME pytorch torchvision torchaudio pytorch-cuda=$cuda_version -c pytorch -c nvidia
+            # conda install -y -n $ENV_NAME pyg -c pyg
         else
+            echo ""
             conda install -y -n $ENV_NAME pytorch torchvision torchaudio cpuonly -c pytorch
-            conda install -y -n $ENV_NAME pyg -c pyg
+            # conda install -y -n $ENV_NAME pyg -c pyg
         fi
         ;;
 
@@ -84,12 +112,14 @@ case "$(uname -s)" in
         echo ""
         echo "Windows OS Detected"
         if has_gpu; then
-            echo "Nvidia GPU Detected"
-            conda install -y -n $ENV_NAME pytorch torchvision torchaudio pytorch-cuda=12.4 -c pytorch -c nvidia
-            conda install -y -n $ENV_NAME pyg -c pyg
+            echo ""
+            echo "Nvidia GPU Detected with CUDA version $cuda_version"
+            conda install -y -n $ENV_NAME pytorch torchvision torchaudio pytorch-cuda=$cuda_version -c pytorch -c nvidia
+            # conda install -y -n $ENV_NAME pyg -c pyg
         else
+            echo ""
             conda install -y -n $ENV_NAME pytorch torchvision torchaudio cpuonly -c pytorch
-            conda install -y -n $ENV_NAME pyg -c pyg
+            # conda install -y -n $ENV_NAME pyg -c pyg
         fi
         ;;
 
@@ -108,6 +138,7 @@ REQUIREMENTS_FILE="$SCRIPT_DIR/requirements.txt"
 if [ -f "$REQUIREMENTS_FILE" ]; then
     awk '/# uses pip/{print $1 > "'"$SCRIPT_DIR"'/requirements_pip.txt"; next} {print > "'"$SCRIPT_DIR"'/requirements_conda.txt"}' "$REQUIREMENTS_FILE"
 else
+    echo ""
     echo "requirements.txt not found in $SCRIPT_DIR. Exiting."
     exit 1
 fi
@@ -120,7 +151,7 @@ conda install -y -n $ENV_NAME -c conda-forge --file "$SCRIPT_DIR/requirements_co
 # Install packages that require pip (after conda to avoid conflicts)
 echo ""
 echo "Installing pip-specific packages."
-pip install -r "$SCRIPT_DIR/requirements_pip.txt"
+python -m pip install -r "$SCRIPT_DIR/requirements_pip.txt"
 
 echo ""
 echo "Run conda activate $ENV_NAME to activate the environment."

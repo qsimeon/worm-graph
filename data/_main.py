@@ -4,7 +4,7 @@ from data._utils import *
 logger = logging.getLogger(__name__)
 
 
-def get_datasets(dataset_config: DictConfig, save=False):
+def get_datasets(data_config: DictConfig, save=False):
     """Retrieve or generate training and validation sets based on the provided configuration.
 
     The function first checks if datasets are provided in the specified directory. If they are,
@@ -12,21 +12,22 @@ def get_datasets(dataset_config: DictConfig, save=False):
 
     Params
     ------
-    dataset_config: (DictConfig)
+    data_config: (DictConfig)
         A configuration dictionary containing the following keys:
 
         - use_these_datasets (str or None): Directory containing train and validation datasets.
             If provided, datasets will be loaded from this directory if they exist.
-            If not provided or datasets don't exist in the directory, they will be generated using the other parameters.
-        - source_datasets: Path to the source datasets.
-        - num_named_neurons (int or None): Number of named neurons to include or None to include all.
+            If not provided or datasets don't exist in the directory,
+            they will be generated using the parameters below.
+        - source_datasets (str): Path to the source datasets.
+        - num_labeled_neurons (int or None): Number of labeled neurons to include or None to include all.
         - num_worms (int or None): Number of worms to include or None to include all.
         - num_train_samples (int): Number of training samples per worm.
         - num_val_samples (int): Number of validation samples per worm.
         - seq_len (int): Sequence length for time series data.
         - reverse (bool): Whether to reverse the time series data.
         - use_residual (bool): Whether to use residuals in the data.
-        - smooth_data (bool): Whether to smooth the data.
+        - use_smooth (bool): Whether to smooth the data.
 
     save: (bool)
         Whether to save the datasets and their information to the log directory.
@@ -39,26 +40,27 @@ def get_datasets(dataset_config: DictConfig, save=False):
         - val_dataset (torch.Tensor): The validation dataset.
     """
     # Parse out parameters from the config
-    source_datasets = dataset_config.source_datasets
-    num_named_neurons = dataset_config.num_named_neurons
-    num_train_samples = dataset_config.num_train_samples
-    num_val_samples = dataset_config.num_val_samples
-    seq_len = dataset_config.seq_len
-    reverse = dataset_config.reverse
-    use_residual = dataset_config.use_residual
-    smooth_data = dataset_config.smooth_data
-    train_split_first = dataset_config.train_split_first
-    train_split_ratio = dataset_config.train_split_ratio
-    save = dataset_config.save_datasets or save
+    source_datasets = data_config.source_datasets
+    num_labeled_neurons = data_config.num_labeled_neurons
+    num_train_samples = data_config.num_train_samples
+    num_val_samples = data_config.num_val_samples
+    seq_len = data_config.seq_len
+    reverse = data_config.reverse
+    use_residual = data_config.use_residual
+    use_smooth = data_config.use_smooth
+    train_split_first = data_config.train_split_first
+    train_split_ratio = data_config.train_split_ratio
+    save = data_config.save_datasets or save
     # Some common dataset patterns were presaved for efficiency
     presave_path = None
-    all_experiment = all(
+    all_experiment = all(  # e.g. pattern containing all the avaialable source datasets
         [
             (dataset in source_datasets and source_datasets[dataset] == "all")
             for dataset in EXPERIMENT_DATASETS
         ]
     )
-    # TODO: Write other potentially useful dataset patterns here. Example all Zimmer lab datasets, etc.
+    # TODO: Write other potentially useful dataset patterns.
+    # (e.g. all Zimmer lab datasets, all datastes with freely moving worms, etc.)
     if all_experiment:
         logger.info(
             f"Requested dataset pattern matched the presaved `combined_AllExperimental` dataset.\n"
@@ -67,46 +69,45 @@ def get_datasets(dataset_config: DictConfig, save=False):
         presave_path = os.path.join(ROOT_DIR, "data", "combined_AllExperimental")
         # Check if the directory exists and is not empty
         if os.path.isdir(presave_path) and os.listdir(presave_path):
-            dataset_config.use_these_datasets.path = presave_path
+            data_config.use_these_datasets.path = presave_path
         else:  # Go to (*)
             logger.info(
                 f"Directory {presave_path} does not exist or is empty.\n"
-                f"Creating the dataset from source datasets.\n\n"
+                f"Creating the combined dataset from source datasets.\n\n"
             )
-
     # Initialize datasets
     train_dataset, val_dataset = None, None
     # Verifications
-    assert isinstance(num_named_neurons, int) or (
-        num_named_neurons is None
-    ), "`num_named_neurons` must be a positive integer or None."
+    assert isinstance(num_labeled_neurons, int) or (
+        num_labeled_neurons is None
+    ), "`num_labeled_neurons` must be a positive integer or None."
     # Make log directory
     log_dir = os.getcwd()  # logs/hydra/${now:%Y_%m_%d_%H_%M_%S}
     os.makedirs(os.path.join(log_dir, "dataset"), exist_ok=True)
     # Control flow for loading or creating datasets
-    if dataset_config.use_these_datasets.path is not None:
+    if data_config.use_these_datasets.path is not None:
         # Assert that the directory exists
         assert os.path.isdir(
-            dataset_config.use_these_datasets.path
-        ), f"Directory {dataset_config.use_these_datasets.path} does not exist."
+            data_config.use_these_datasets.path
+        ), f"Directory {data_config.use_these_datasets.path} does not exist."
         # Flags to know if the datasets already exist
         train_dataset_exists = False
         val_dataset_exists = False
         # Check what files are in the directory
-        ds_files = os.listdir(dataset_config.use_these_datasets.path)
+        ds_files = os.listdir(data_config.use_these_datasets.path)
         if "train_dataset.pt" in ds_files:
             assert (
                 "train_dataset_info.csv" in ds_files
             ), "train_dataset.pt exists but train_dataset_info.csv does not."
             logger.info(
-                "Loading provided train dataset from %s." % dataset_config.use_these_datasets.path
+                "Loading provided train dataset from %s." % data_config.use_these_datasets.path
             )
             train_dataset_exists = True
             train_dataset = torch.load(
-                os.path.join(dataset_config.use_these_datasets.path, "train_dataset.pt")
+                os.path.join(data_config.use_these_datasets.path, "train_dataset.pt")
             )
             dataset_info_train = pd.read_csv(
-                os.path.join(dataset_config.use_these_datasets.path, "train_dataset_info.csv"),
+                os.path.join(data_config.use_these_datasets.path, "train_dataset_info.csv"),
                 index_col=0,
                 converters={"neurons": ast.literal_eval},
             )
@@ -115,15 +116,14 @@ def get_datasets(dataset_config: DictConfig, save=False):
                 "val_dataset_info.csv" in ds_files
             ), "val_dataset.pt exists but val_dataset_info.csv does not."
             logger.info(
-                "Loading provided validation dataset from %s."
-                % dataset_config.use_these_datasets.path
+                "Loading provided validation dataset from %s." % data_config.use_these_datasets.path
             )
             val_dataset_exists = True
             val_dataset = torch.load(
-                os.path.join(dataset_config.use_these_datasets.path, "val_dataset.pt")
+                os.path.join(data_config.use_these_datasets.path, "val_dataset.pt")
             )
             dataset_info_val = pd.read_csv(
-                os.path.join(dataset_config.use_these_datasets.path, "val_dataset_info.csv"),
+                os.path.join(data_config.use_these_datasets.path, "val_dataset_info.csv"),
                 index_col=0,
                 converters={"neurons": ast.literal_eval},
             )
@@ -147,22 +147,22 @@ def get_datasets(dataset_config: DictConfig, save=False):
             if not train_dataset_exists:
                 logger.info(
                     "No train dataset found in %s, creating a new one."
-                    % dataset_config.use_these_datasets.path
+                    % data_config.use_these_datasets.path
                 )
             if not val_dataset_exists:
                 logger.info(
                     "No validation dataset found in %s, creating a new one."
-                    % dataset_config.use_these_datasets.path
+                    % data_config.use_these_datasets.path
                 )
             # Check if combined dataset was provided. If so, load it, otherwise create it from the source datasets
             if "combined_dataset.pickle" in ds_files:
                 logger.info(
                     "Creating combined dataset using pickle file from %s."
-                    % dataset_config.use_these_datasets.path
+                    % data_config.use_these_datasets.path
                 )
                 with open(
                     os.path.join(
-                        dataset_config.use_these_datasets.path,
+                        data_config.use_these_datasets.path,
                         "combined_dataset.pickle",
                     ),
                     "rb",
@@ -170,13 +170,13 @@ def get_datasets(dataset_config: DictConfig, save=False):
                     combined_dataset = pickle.load(f)
                 combined_dataset, dataset_info = filter_loaded_combined_dataset(
                     combined_dataset,
-                    dataset_config.use_these_datasets.num_worms,
-                    num_named_neurons,
+                    data_config.use_these_datasets.num_worms,
+                    num_labeled_neurons,
                 )
             else:
                 logger.info("Creating combined dataset from individual source datasets.")
                 combined_dataset, dataset_info = create_combined_dataset(
-                    source_datasets, num_named_neurons
+                    source_datasets, num_labeled_neurons
                 )
             # Use largest `seq_len` that produces required unique samples from shortest dataset
             if seq_len is None:
@@ -185,7 +185,7 @@ def get_datasets(dataset_config: DictConfig, save=False):
                     dataset["max_timesteps"] for _, dataset in combined_dataset.items()
                 )
                 seq_len = (min_timesteps // 2) - max_num_samples - 1
-            logger.info(f"Chosen sequence length: {seq_len}\n")  # DEBUG
+            logger.info(f"Chosen sequence length: {seq_len}\n")
             # Split the combined dataset into train and validation datasets
             created_train_dataset, created_val_dataset, dataset_info_split = split_combined_dataset(
                 combined_dataset,
@@ -194,7 +194,7 @@ def get_datasets(dataset_config: DictConfig, save=False):
                 seq_len,
                 reverse,
                 use_residual,
-                smooth_data,
+                use_smooth,
                 train_split_first,
                 train_split_ratio,
             )
@@ -215,7 +215,7 @@ def get_datasets(dataset_config: DictConfig, save=False):
                         "num_train_samples",
                         "train_seq_len",
                         "train_split_idx",
-                        "smooth_data",
+                        "use_smooth",
                         "use_residual",
                         "train_split_first",
                         "train_split_ratio",
@@ -232,7 +232,7 @@ def get_datasets(dataset_config: DictConfig, save=False):
                         "num_val_samples",
                         "val_seq_len",
                         "val_split_idx",
-                        "smooth_data",
+                        "use_smooth",
                         "use_residual",
                         "train_split_first",
                         "train_split_ratio",
@@ -268,7 +268,9 @@ def get_datasets(dataset_config: DictConfig, save=False):
     else:  # (*)
         # Create the datasets using the source datasets
         logger.info("Creating validation and train datasets from source datasets.")
-        combined_dataset, dataset_info = create_combined_dataset(source_datasets, num_named_neurons)
+        combined_dataset, dataset_info = create_combined_dataset(
+            source_datasets, num_labeled_neurons
+        )
         # Use largest seq_len that produce num. unique samples from shortest dataset
         if seq_len is None:
             max_num_samples = max(num_train_samples, num_val_samples)
@@ -276,7 +278,7 @@ def get_datasets(dataset_config: DictConfig, save=False):
                 (dataset["max_timesteps"] for _, dataset in combined_dataset.items())
             )
             seq_len = (min_timesteps // 2) - max_num_samples - 1
-        logger.info(f"Chosen sequence length: {seq_len}\n.")  # DEBUG
+        logger.info(f"Chosen sequence length: {seq_len}\n.")
         # Split the combined dataset into train and validation datasets
         train_dataset, val_dataset, dataset_info_split = split_combined_dataset(
             combined_dataset,
@@ -285,7 +287,7 @@ def get_datasets(dataset_config: DictConfig, save=False):
             seq_len,
             reverse,
             use_residual,
-            smooth_data,
+            use_smooth,
             train_split_first,
             train_split_ratio,
         )
@@ -306,7 +308,7 @@ def get_datasets(dataset_config: DictConfig, save=False):
                     "num_train_samples",
                     "train_seq_len",
                     "train_split_idx",
-                    "smooth_data",
+                    "use_smooth",
                     "use_residual",
                     "train_split_first",
                     "train_split_ratio",
@@ -323,7 +325,7 @@ def get_datasets(dataset_config: DictConfig, save=False):
                     "num_val_samples",
                     "val_seq_len",
                     "val_split_idx",
-                    "smooth_data",
+                    "use_smooth",
                     "use_residual",
                     "train_split_first",
                     "train_split_ratio",
@@ -372,7 +374,7 @@ def get_datasets(dataset_config: DictConfig, save=False):
 
 
 if __name__ == "__main__":
-    config = OmegaConf.load("configs/submodule/dataset.yaml")
+    config = OmegaConf.load("configs/submodule/data.yaml")
     print(OmegaConf.to_yaml(config), end="\n\n")
     dataset = get_datasets(config.dataset, save=True)
     print(f"train dataset: {type(dataset[0])}\n")
