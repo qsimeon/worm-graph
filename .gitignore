@@ -23,6 +23,7 @@ opensource_data/
 raw_data.zip
 raw_data/
 *.pickle
+*.pt
 
 # numpy
 *.npy

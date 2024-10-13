@@ -163,7 +163,7 @@ class NeuralActivityDataset(torch.utils.data.Dataset):
         self.unique_time_steps = set()
 
         self.data = data
-        self.neurons_mask = neurons_mask * 1
+        self.neurons_mask = neurons_mask.bool()
         self.num_samples = num_samples
         self.data_samples = self.__data_generator()
 
@@ -256,9 +256,9 @@ class NeuralActivityDataset(torch.utils.data.Dataset):
         start_range = (
             np.linspace(0, T - L - 1, self.num_samples, dtype=int)
             if not self.reverse  # generate from start to end
-            else np.linspace(  # generate from end to start
+            else np.linspace(
                 T - L - 2, 0, self.num_samples, dtype=int
-            )
+            )  # generate from end to start
         )
         # Sequential processing (applying the function to each element)
         data_samples = list(map(self.parfor_func, start_range))
