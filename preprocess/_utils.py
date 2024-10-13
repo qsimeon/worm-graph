@@ -1803,30 +1803,21 @@ def aggregate_data(time, data, target_dt):
     Returns:
         numpy.ndarray, numpy.ndarray: Two arrays containing the downsampled time points and data.
     """
-    # print(f"\nDEBUG. downsampling. inside aggregate_data.\n")
     assert time.shape[0] == data.shape[0], "Input temporal dimension."
     # If target_dt is None, return the original data
     if target_dt is None:
         return time, data
     # Ensure that time is a 1D array
     time = time.squeeze()
-    # print(f"\nDEBUG. time.shape, time.min(), time.max(): {time.shape, time.min(), time.max()}\n")
     # Compute the downsample rate
     original_dt = np.median(np.diff(time, axis=0)[1:]).item()
     interval_width = max(1, int(np.round(target_dt / original_dt)))
     num_intervals = len(time) // interval_width
-    # print(f"\nDEBUG. data.shape, interval_width: {data.shape, interval_width, num_intervals}\n")
     # Create the downsampled time array
     target_time_np = target_dt * np.arange(num_intervals)
     # Create the downsampled data array
     num_neurons = data.shape[1]
     downsampled_data = np.zeros((num_intervals, num_neurons), dtype=np.float32)
-    # print(f"\nDEBUG. downsampled_data.shape: {downsampled_data.shape}\n")
-    # print(
-    #     f"\nDEBUG. target_time_np.shape, target_time_np.min(), target_time_np.max(): {target_time_np.shape, target_time_np.min(), target_time_np.max()}\n"
-    # )
-    new_dt = np.median(np.diff(target_time_np, axis=0)[1:]).item()
-    # print(f"\nDEBUG. original_dt, new_dt, target_dt: {original_dt, new_dt, target_dt}\n")
     # Downsample the data by averaging over intervals
     # TODO: Vectorize this operation.
     for i in range(num_neurons):
@@ -2735,13 +2726,6 @@ class NeuralBasePreprocessor:
                 self.resample_dt, resampled_median_dt, atol=0.01
             ), f"Resampling failed. The median dt ({resampled_median_dt}) of the resampled time vector is different from desired dt ({self.resample_dt})."
             max_timesteps, num_neurons = resampled_calcium_data.shape
-            # ### DEBUG ###
-            # print("\n\nDEBUG.")
-            # print("in `preprocess_traces` (after `self.resample_data`)")
-            # print(f"resampled_calcium_data: {resampled_calcium_data.shape}")
-            # print(f"resampled_smooth_calcium_data: {resampled_smooth_calcium_data.shape}")
-            # print(f"resampled_time_in_seconds: {resampled_time_in_seconds.shape}")
-            # ### DEBUG ###
             num_unlabeled_neurons = int(num_neurons) - num_labeled_neurons
             # Name worm and update index
             worm = "worm" + str(worm_idx)  # use global worm index
