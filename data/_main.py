@@ -63,27 +63,25 @@ def get_datasets(data_config: DictConfig, save=False):
     # (e.g. all Zimmer lab datasets, all datastes with freely moving worms, etc.)
     if all_experiment:
         logger.info(
-            f"Requested dataset pattern matched the presaved `combined_AllExperimental` dataset.\n"
-            f"Setting `config.use_these_datasets.path` to the presaved directory path.\n\n"
+            f"Requested dataset pattern matched the presaved dataset.\n"
+            f"Setting `config.use_these_datasets.path` to the presaved directory.\n\n"
         )
-        presave_path = os.path.join(ROOT_DIR, "data", "combined_AllExperimental")
-        # Check if the directory exists and is not empty
+        presave_path = os.path.join(ROOT_DIR, "data", "datasets")
+        os.makedirs(presave_path, exist_ok=True)
+        # Check if the directory is not empty
         if os.path.isdir(presave_path) and os.listdir(presave_path):
             data_config.use_these_datasets.path = presave_path
         else:  # Go to (*)
             logger.info(
-                f"Directory {presave_path} does not exist or is empty.\n"
-                f"Creating the combined dataset from source datasets.\n\n"
+                f"Directory {presave_path} is empty.\n"
+                f"Creating the datasets from source files.\n\n"
             )
     # Initialize datasets
-    train_dataset, val_dataset = None, None
+    full_dataset, train_dataset, val_dataset = None, None, None
     # Verifications
     assert isinstance(num_labeled_neurons, int) or (
         num_labeled_neurons is None
     ), "`num_labeled_neurons` must be a positive integer or None."
-    # Make log directory
-    log_dir = os.getcwd()  # logs/hydra/${now:%Y_%m_%d_%H_%M_%S}
-    os.makedirs(os.path.join(log_dir, "dataset"), exist_ok=True)
     # Control flow for loading or creating datasets
     if data_config.use_these_datasets.path is not None:
         # Assert that the directory exists
@@ -144,25 +142,25 @@ def get_datasets(data_config: DictConfig, save=False):
                 index_col=0,
                 converters={"neurons": ast.literal_eval},
             )
-        # If full, train and val splits present, load and return them
+        # If full, train and val data present, load and return them
         if full_dataset_exists and train_dataset_exists and val_dataset_exists and save:
-            # Just save the dataset split information (for use in the visualization submodule)
+            # Just save the dataset information (for use in the visualization submodule)
             dataset_info_full.to_csv(
-                os.path.join(log_dir, "dataset", f"full_dataset_info.csv"),
+                os.path.join(presave_path, f"full_dataset_info.csv"),
                 index=True,
                 header=True,
             )
             dataset_info_train.to_csv(
-                os.path.join(log_dir, "dataset", f"train_dataset_info.csv"),
+                os.path.join(presave_path, f"train_dataset_info.csv"),
                 index=True,
                 header=True,
             )
             dataset_info_val.to_csv(
-                os.path.join(log_dir, "dataset", f"val_dataset_info.csv"),
+                os.path.join(presave_path, f"val_dataset_info.csv"),
                 index=True,
                 header=True,
             )
-            return train_dataset, val_dataset
+            return full_dataset, train_dataset, val_dataset
         # Otherwise create them using the source datasets
         else:
             # Logging info
@@ -181,10 +179,10 @@ def get_datasets(data_config: DictConfig, save=False):
                     "No validation dataset found in %s, creating a new one."
                     % data_config.use_these_datasets.path
                 )
-            # Check if combined dataset was provided. If so, load it, otherwise create it from the source datasets
+            # Check if combined_dataset.pickle file present
             if "combined_dataset.pickle" in ds_files:
                 logger.info(
-                    "Creating combined dataset using pickle file from %s."
+                    "Creating datasets from combined_dataset.pick found in %s."
                     % data_config.use_these_datasets.path
                 )
                 with open(
@@ -194,51 +192,46 @@ def get_datasets(data_config: DictConfig, save=False):
                     ),
                     "rb",
                 ) as f:
-                    combined_dataset = pickle.load(f)
-                combined_dataset, dataset_info = filter_loaded_combined_dataset(
-                    combined_dataset,
+                    combined_dataset_dict = pickle.load(f)
+                combined_dataset_dict, dataset_info_full = filter_loaded_combined_dataset(
+                    combined_dataset_dict,
                     data_config.use_these_datasets.num_worms,
                     num_labeled_neurons,
                 )
             else:
                 logger.info("Creating combined dataset from individual source datasets.")
-                combined_dataset, dataset_info = create_combined_dataset(
+                combined_dataset_dict, dataset_info_full = create_combined_dataset(
                     source_datasets, num_labeled_neurons
                 )
             # Use largest `seq_len` that produces required unique samples from shortest dataset
             if seq_len is None:
                 max_num_samples = max(num_train_samples, num_val_samples)
                 min_timesteps = min(
-                    dataset["max_timesteps"] for _, dataset in combined_dataset.items()
+                    dataset["max_timesteps"] for _, dataset in combined_dataset_dict.items()
                 )
                 seq_len = (min_timesteps // 2) - max_num_samples - 1
             logger.info(f"Chosen sequence length: {seq_len}\n")
-            # Split the combined dataset into train and validation datasets
-            created_full_dataset, created_train_dataset, created_val_dataset, dataset_info_split = (
-                split_combined_dataset(
-                    combined_dataset,
-                    num_train_samples,
-                    num_val_samples,
-                    seq_len,
-                    reverse,
-                    use_residual,
-                    use_smooth,
-                    train_split_first,
-                    train_split_ratio,
-                )
+            # Get full, train and validation sets from the combined dataset
+            full_dataset, train_dataset, val_dataset, dataset_info_split = split_combined_dataset(
+                combined_dataset_dict,
+                num_train_samples,
+                num_val_samples,
+                seq_len,
+                reverse,
+                use_residual,
+                use_smooth,
+                train_split_first,
+                train_split_ratio,
             )
-            if any(
-                ds is None
-                for ds in [created_full_dataset, created_train_dataset, created_val_dataset]
-            ):
+            if any(ds is None for ds in [full_dataset, train_dataset, val_dataset]):
                 raise ValueError(
                     f"Error creating dataset. No sequences of length {seq_len} could be sampled."
                 )
-            # Merge dataset_info and time_step_info
-            created_dataset_info_train = dataset_info.merge(
+            # Merge dataset_info_full and dataset_info_full
+            dataset_info_train = dataset_info_full.merge(
                 dataset_info_split[
                     [
-                        "combined_dataset_index",
+                        "full_dataset_index",
                         "train_time_steps",
                         "num_train_samples",
                         "train_seq_len",
@@ -249,13 +242,13 @@ def get_datasets(data_config: DictConfig, save=False):
                         "train_split_ratio",
                     ]
                 ],
-                on="combined_dataset_index",
+                on="full_dataset_index",
                 how="outer",
             )
-            created_dataset_info_val = dataset_info.merge(
+            dataset_info_val = dataset_info_full.merge(
                 dataset_info_split[
                     [
-                        "combined_dataset_index",
+                        "full_dataset_index",
                         "val_time_steps",
                         "num_val_samples",
                         "val_seq_len",
@@ -266,58 +259,49 @@ def get_datasets(data_config: DictConfig, save=False):
                         "train_split_ratio",
                     ]
                 ],
-                on="combined_dataset_index",
+                on="full_dataset_index",
                 how="outer",
             )
-            # Replace missing dataset
-            if not full_dataset_exists:
-                full_dataset = created_full_dataset
-            if not train_dataset_exists:
-                train_dataset = created_train_dataset
-                dataset_info_train = created_dataset_info_train
-            if not val_dataset_exists:
-                val_dataset = created_val_dataset
-                dataset_info_val = created_dataset_info_val
             # Save the dataset .pt files
             if save:
-                torch.save(full_dataset, os.path.join(log_dir, "dataset", f"full_dataset.pt"))
-                torch.save(train_dataset, os.path.join(log_dir, "dataset", f"train_dataset.pt"))
-                torch.save(val_dataset, os.path.join(log_dir, "dataset", f"val_dataset.pt"))
-            # (Re)save the dataset split information regardless of `save` argument
-            # => full, train and val. datasets contain the same neurons, but with different time steps and other information
-            dataset_info.to_csv(
-                os.path.join(log_dir, "dataset", f"full_dataset_info.csv"),
+                torch.save(full_dataset, os.path.join(presave_path, f"full_dataset.pt"))
+                torch.save(train_dataset, os.path.join(presave_path, f"train_dataset.pt"))
+                torch.save(val_dataset, os.path.join(presave_path, f"val_dataset.pt"))
+            # (Re)save the dataset information regardless of `save` argument
+            # => full, train and val. sets contain the same neurons, but with different time steps and other info
+            dataset_info_full.to_csv(
+                os.path.join(presave_path, f"full_dataset_info.csv"),
                 index=True,
                 header=True,
             )
             dataset_info_train.to_csv(
-                os.path.join(log_dir, "dataset", f"train_dataset_info.csv"),
+                os.path.join(presave_path, f"train_dataset_info.csv"),
                 index=True,
                 header=True,
             )
             dataset_info_val.to_csv(
-                os.path.join(log_dir, "dataset", f"val_dataset_info.csv"),
+                os.path.join(presave_path, f"val_dataset_info.csv"),
                 index=True,
                 header=True,
             )
-            return train_dataset, val_dataset
+            return full_dataset, train_dataset, val_dataset
     else:  # (*)
         # Create the datasets using the source datasets
-        logger.info("Creating validation and train datasets from source datasets.")
-        combined_dataset, dataset_info = create_combined_dataset(
+        logger.info("Creating full, train and validation sets from source files.")
+        combined_dataset_dict, dataset_info_full = create_combined_dataset(
             source_datasets, num_labeled_neurons
         )
         # Use largest seq_len that produce num. unique samples from shortest dataset
         if seq_len is None:
             max_num_samples = max(num_train_samples, num_val_samples)
             min_timesteps = min(
-                (dataset["max_timesteps"] for _, dataset in combined_dataset.items())
+                (dataset["max_timesteps"] for _, dataset in combined_dataset_dict.items())
             )
             seq_len = (min_timesteps // 2) - max_num_samples - 1
         logger.info(f"Chosen sequence length: {seq_len}\n.")
-        # Split the combined dataset into train and validation datasets
+        # Get full, train and validation sets from the combined dataset
         full_dataset, train_dataset, val_dataset, dataset_info_split = split_combined_dataset(
-            combined_dataset,
+            combined_dataset_dict,
             num_train_samples,
             num_val_samples,
             seq_len,
@@ -331,11 +315,11 @@ def get_datasets(data_config: DictConfig, save=False):
             raise ValueError(
                 f"Error creating dataset. No sequences of length {seq_len} could be sampled."
             )
-        # Merge dataset_info and dataset_info_split
-        dataset_info_train = dataset_info.merge(
+        # Merge dataset_info_full and dataset_info_split
+        dataset_info_train = dataset_info_full.merge(
             dataset_info_split[
                 [
-                    "combined_dataset_index",
+                    "full_dataset_index",
                     "train_time_steps",
                     "num_train_samples",
                     "train_seq_len",
@@ -346,13 +330,13 @@ def get_datasets(data_config: DictConfig, save=False):
                     "train_split_ratio",
                 ]
             ],
-            on="combined_dataset_index",
+            on="full_dataset_index",
             how="outer",
         )
-        dataset_info_val = dataset_info.merge(
+        dataset_info_val = dataset_info_full.merge(
             dataset_info_split[
                 [
-                    "combined_dataset_index",
+                    "full_dataset_index",
                     "val_time_steps",
                     "num_val_samples",
                     "val_seq_len",
@@ -363,45 +347,37 @@ def get_datasets(data_config: DictConfig, save=False):
                     "train_split_ratio",
                 ]
             ],
-            on="combined_dataset_index",
+            on="full_dataset_index",
             how="outer",
         )
         # Delete the combined dataset column after merging (since it is not necessary anymore)
-        dataset_info_train.drop(columns=["combined_dataset_index"], inplace=True)
-        dataset_info_val.drop(columns=["combined_dataset_index"], inplace=True)
+        dataset_info_train.drop(columns=["full_dataset_index"], inplace=True)
+        dataset_info_val.drop(columns=["full_dataset_index"], inplace=True)
         # Save the dataset .pt files
         if save:
-            torch.save(full_dataset, os.path.join(log_dir, "dataset", f"full_dataset.pt"))
-            torch.save(train_dataset, os.path.join(log_dir, "dataset", f"train_dataset.pt"))
-            torch.save(val_dataset, os.path.join(log_dir, "dataset", f"val_dataset.pt"))
-            with open(os.path.join(log_dir, "dataset", f"combined_dataset.pickle"), "wb") as f:
-                pickle.dump(combined_dataset, f)
+            torch.save(full_dataset, os.path.join(presave_path, f"full_dataset.pt"))
+            torch.save(train_dataset, os.path.join(presave_path, f"train_dataset.pt"))
+            torch.save(val_dataset, os.path.join(presave_path, f"val_dataset.pt"))
+            with open(os.path.join(presave_path, f"combined_dataset.pickle"), "wb") as f:
+                pickle.dump(combined_dataset_dict, f)
         # Save the dataset split information regardless
         # => train and val. datasets contain the same neurons, but with different time steps and other information
-        dataset_info.to_csv(
-            os.path.join(log_dir, "dataset", f"full_dataset_info.csv"),
+        dataset_info_full.to_csv(
+            os.path.join(presave_path, f"full_dataset_info.csv"),
             index=True,
             header=True,
         )
         dataset_info_train.to_csv(
-            os.path.join(log_dir, "dataset", f"train_dataset_info.csv"),
+            os.path.join(presave_path, f"train_dataset_info.csv"),
             index=True,
             header=True,
         )
         dataset_info_val.to_csv(
-            os.path.join(log_dir, "dataset", f"val_dataset_info.csv"),
+            os.path.join(presave_path, f"val_dataset_info.csv"),
             index=True,
             header=True,
         )
-        # Copy saved data to presave_path
-        if save and presave_path is not None:
-            os.makedirs(presave_path, exist_ok=True)
-            for filename in os.listdir(os.path.join(log_dir, "dataset")):
-                if filename.endswith(".csv") or filename.endswith(".pickle"):
-                    shutil.copy(
-                        os.path.join(log_dir, "dataset", filename),
-                        os.path.join(presave_path, filename),
-                    )
+
         # Return the train and validation datasets
         return full_dataset, train_dataset, val_dataset
 

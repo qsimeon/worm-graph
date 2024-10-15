@@ -9,6 +9,7 @@ __pycache__/
 *$py.class
 
 # Temporary files
+*.sh
 *tempCodeRunnerFile.py
 nohup.out
 jupyter.out
@@ -22,6 +23,7 @@ opensource_data.zip
 opensource_data/
 raw_data.zip
 raw_data/
+data/datasets/
 *.pickle
 *.pt
 

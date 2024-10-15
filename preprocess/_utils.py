@@ -134,11 +134,11 @@ def pickle_neural_data(
 
 
 def get_presaved_datasets(url, file):
-    """Download and unzip presaved data splits.
+    """Download and unzip presaved data patterns.
 
-    This function downloads and extracts presaved data splits (commonly requested data patterns)
-    from the specified URL. The extracted data is saved in the 'data' folder. The zip file is
-    deleted after extraction.
+    This function downloads and extracts presaved data patterns).
+    from the specified URL. The extracted data is saved in the 'data' folder.
+    The zip file is deleted after extraction.
 
     Args:
         url (str): The download link to the zip file containing the presaved data splits.

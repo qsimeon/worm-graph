@@ -38,15 +38,14 @@ def process_data(preprocess_config: DictConfig) -> None:
             resample_dt=preprocess_config.resample_dt,
             interpolate_method=preprocess_config.interpolate,
             cleanup=preprocess_config.cleanup,
-            # cleanup=False, # DEBUG
             **kwargs,
         )
         logger.info("Finished preprocessing neural data.")
     else:
         logger.info("Neural data already preprocessed.")
 
-    # Extract presaved commonly use neural dataset split patterns
-    if not os.path.exists(os.path.join(ROOT_DIR, "data/combined_AllExperimental")):
+    # Extract presaved commonly used neural dataset split patterns
+    if not os.path.exists(os.path.join(ROOT_DIR, "data/datasets")):
         logger.info("Extracting presaved dataset patterns.")
         get_presaved_datasets(
             url=preprocess_config.presaved_url, file=preprocess_config.presaved_file
@@ -58,7 +57,9 @@ def process_data(preprocess_config: DictConfig) -> None:
     # Preprocess the connectome data if not already done
     if not os.path.exists(os.path.join(ROOT_DIR, "data/processed/connectome/.processed")):
         logger.info("Preprocessing C. elegans connectome data ...")
-        preprocess_connectome(raw_files=RAW_FILES, source_connectome=preprocess_config.connectome_pub)
+        preprocess_connectome(
+            raw_files=RAW_FILES, source_connectome=preprocess_config.connectome_pub
+        )
         logger.info("Finished preprocessing connectome.")
     else:
         logger.info("Connectome already preprocessed.")
