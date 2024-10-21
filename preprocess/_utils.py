@@ -354,7 +354,7 @@ class ConnectomeBasePreprocessor:
 
         # Alphabetically sort neuron types and encode them as integers
         df_master["type"] = df_master["type"].fillna("Unknown")
-        unique_types = sorted(df_master["type"].unique())
+        unique_types = sorted(df_master["type"].unique()) # inter, motor, pharynx, sensory
         type_to_int = {neuron_type: i for i, neuron_type in enumerate(unique_types)}
 
         # Create tensor of neuron types (y) using the encoded integers

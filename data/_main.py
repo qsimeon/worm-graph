@@ -51,16 +51,14 @@ def get_datasets(data_config: DictConfig, save=False):
     train_split_first = data_config.train_split_first
     train_split_ratio = data_config.train_split_ratio
     save = data_config.save_datasets or save
-    # Some common dataset patterns were presaved for efficiency
+    # The dataset containing all the available source datasets was presaved
     presave_path = None
-    all_experiment = all(  # e.g. pattern containing all the avaialable source datasets
+    all_experiment = all(
         [
             (dataset in source_datasets and source_datasets[dataset] == "all")
             for dataset in EXPERIMENT_DATASETS
         ]
     )
-    # TODO: Write other potentially useful dataset patterns.
-    # (e.g. all Zimmer lab datasets, all datastes with freely moving worms, etc.)
     if all_experiment:
         logger.info(
             f"Requested dataset pattern matched the presaved dataset.\n"
