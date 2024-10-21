@@ -49,11 +49,11 @@ def load_dataset(name):
 
 
 class NeuralActivityDataset(torch.utils.data.Dataset):
-    """A custom PyTorch dataset for C. elegans neural activity time-series prediction.
+    """A custom PyTorch dataset for C. elegans neural activity time-series.
 
     This dataset generates sequences of length `seq_len` from a given
-    neural activity tensor `data`, and returns the corresponding input
-    and target tensors. The sequences can have overlapped time steps.
+    neural activity tensor `data`, and returns the corresponding data
+    and mask tensors. The sequences can have overlapped time steps.
 
     Parameters
     ----------
@@ -107,7 +107,7 @@ class NeuralActivityDataset(torch.utils.data.Dataset):
     __len__()
         Returns the number of samples in the dataset.
     __getitem__(index)
-        Returns the input and target tensors for the given index.
+        Returns the data and mask tensors for the given index.
     parfor_func(start)
         Helper function for parallelizing `__data_generator`.
     __data_generator()
@@ -204,31 +204,37 @@ class NeuralActivityDataset(torch.utils.data.Dataset):
             start (int): The starting index for the data generator.
 
         Returns:
-            tuple: A tuple containing the input data (X), target data (Y), a mask for the neurons, and metadata.
+            tuple: A tuple containing the sequence data, a mask of labeled neurons, and metadata.
         """
         # Define an end index
         end = start + self.seq_len
         # Get the time vector
-        time_vec = self.time_vec[start:end].detach().clone()
+        time_vec = self.time_vec[start:end].detach()
         # Calculate the average timestep
         avg_dt = torch.diff(time_vec).mean()
         # Data samples: input (X) and target (Y)
-        X = self.data[start:end, :].detach().clone()
-        Y = (
-            self.data[start + 1 : end + 1, :].detach().clone()
-        )  # note that X and Y overlap everywhere except the last time step
-        # Calculate the (average) residual (i.e. the forward first derivative)
-        Res = (Y - X).detach() / avg_dt
+        sequence_t = self.data[start:end, :].detach()
+        sequence_tp1 = self.data[
+            start + 1 : end + 1, :
+        ].detach()  # overlap everywhere except the last time step
+        # Calculate the residual (i.e. the forward first derivative)
+        residual = (sequence_t - sequence_tp1) / avg_dt
+        # Choose which sequence data to return
+        if self.use_residual:
+            X = residual
+        else:
+            X = sequence_t
+        # Get the mask of labeled neurons
+        M = self.neurons_mask.detach()
         # Store some metadata
         metadata = dict(
             wormID=self.wormID,
             worm_dataset=self.worm_dataset,
             time_vec=time_vec,
+            use_residual=self.use_residual,
         )
-        # Return sample
-        if self.use_residual:
-            Y = Res
-        return X, Y, self.neurons_mask, metadata
+        # Return the data sample
+        return X, M, metadata
 
     def __data_generator(self):
         """Generate data samples by splitting the data into sequences of length `seq_len`.
@@ -263,7 +269,7 @@ class NeuralActivityDataset(torch.utils.data.Dataset):
         # Sequential processing (applying the function to each element)
         data_samples = list(map(self.parfor_func, start_range))
         # Update the `unique_time_steps` set
-        for _, _, _, metadata in data_samples:
+        for _, _, metadata in data_samples:
             time_steps = metadata["time_vec"].numpy()
             self.unique_time_steps.update(time_steps)
         return data_samples
