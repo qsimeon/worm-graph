@@ -12,7 +12,7 @@ Simulating the _C. elegans_ whole brain with neural networks.
 ### Cite
 Q. Simeon, L. Venâncio, M. A. Skuhersky, A. Nayebi, E. S. Boyden and G. R. Yang, "Scaling Properties for Artificial Neural Network Models of a Small Nervous System," SoutheastCon 2024, Atlanta, GA, USA, 2024, pp. 516-524, doi: 10.1109/SoutheastCon52093.2024.10500049.
 
-Simeon, Q., Kashyap, A., Kording, K. P., & Boyden, E. S. (2024). Homogenized $\textitC. elegans$ Neural Activity and Connectivity Data. In arXiv [q-bio.NC]. arXiv. http://arxiv.org/abs/2411.12091
+Simeon, Q., Kashyap, A., Kording, K. P., & Boyden, E. S. (2024). Homogenized \textitC. elegans Neural Activity and Connectivity Data. In arXiv [q-bio.NC]. arXiv. http://arxiv.org/abs/2411.12091
 
 ### [Hugging Face Dataset](https://huggingface.co/datasets/qsimeon/celegans_neural_data)
 
