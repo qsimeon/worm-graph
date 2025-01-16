@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# Get the absolute path of the script's directory
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
+# Get the absolute path of the repo's root directory
+SCRIPT_DIR="$(git rev-parse --show-toplevel)"
 echo ""
 echo "env.sh called from $SCRIPT_DIR"
 
@@ -98,23 +98,23 @@ case "$(uname -s)" in
 esac
 
 # Splitting requirements.txt for conda and pip installations
-REQUIREMENTS_FILE="$SCRIPT_DIR/requirements.txt"
+REQUIREMENTS_FILE="$SCRIPT_DIR/setup/requirements.txt"
 if [ -f "$REQUIREMENTS_FILE" ]; then
-    awk '/# uses pip/{print > "'"$SCRIPT_DIR"'/requirements_pip.txt"; next} {print > "'"$SCRIPT_DIR"'/requirements_conda.txt"}' "$REQUIREMENTS_FILE"
+    awk '/# uses pip/{print > "'"$SCRIPT_DIR"'/setup/requirements_pip.txt"; next} {print > "'"$SCRIPT_DIR"'/requirements_conda.txt"}' "$REQUIREMENTS_FILE"
 else
-    echo "requirements.txt not found in $SCRIPT_DIR. Exiting."
+    echo "requirements.txt not found in $SCRIPT_DIR/setup. Exiting."
     exit 1
 fi
 
 # Install common packages using conda
 echo ""
 echo "Installing packages with conda."
-conda install -y -n $ENV_NAME -c conda-forge --file "$SCRIPT_DIR/requirements_conda.txt"
+conda install -y -n $ENV_NAME -c conda-forge --file "$SCRIPT_DIR/setup/requirements_conda.txt"
 
 # Install pip-specific packages
 echo ""
 echo "Installing pip-specific packages."
-python -m pip install -r "$SCRIPT_DIR/requirements_pip.txt"
+python -m pip install -r "$SCRIPT_DIR/setup/requirements_pip.txt"
 
 echo ""
 echo "Environment setup complete. Run 'conda activate $ENV_NAME' to use the environment."
