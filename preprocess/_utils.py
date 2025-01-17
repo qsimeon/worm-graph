@@ -6,42 +6,132 @@ logger = logging.getLogger(__name__)
 
 ### Function definitions # # #
 # # # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
+# def pickle_neural_data(
+#     url,
+#     zipfile,
+#     source_dataset="all",
+#     # TODO: Try different transforms from sklearn such as QuantileTransformer, etc. as well as custom CausalNormalizer.
+#     transform=StandardScaler(),  # StandardScaler() #PowerTransformer() #CausalNormalizer() #None
+#     smooth_method="none",
+#     interpolate_method="linear",
+#     resample_dt=None,
+#     cleanup=False,
+#     **kwargs,
+# ):
+#     """Preprocess and save C. elegans neural data to .pickle format.
+
+#     This function downloads and extracts the open-source datasets if not found in the
+#     root directory, preprocesses the neural data using the corresponding DatasetPreprocessor class,
+#     and then saves it to .pickle format. The processed data is saved in the
+#     data/processed/neural folder for further use.
+
+#     Args:
+#         url (str): Download link to a zip file containing the open-source data in raw form.
+#         zipfile (str): The name of the zipfile that is being downloaded.
+#         source_dataset (str, optional): The name of the source dataset to be pickled.
+#             If None or 'all', all datasets are pickled. Default is 'all'.
+#         transform (object, optional): The sklearn transformation to be applied to the data.
+#             Default is StandardScaler().
+#         smooth_method (str, optional): The smoothing method to apply to the data;
+#             options are 'gaussian', 'exponential', or 'moving'. Default is 'moving'.
+#         interpolate_method (str, optional): The scipy interpolation method to use when resampling the data.
+#             Default is 'linear'.
+#         resample_dt (float, optional): The resampling time interval in seconds.
+#             If None, no resampling is performed. Default is None.
+#         cleanup (bool, optional): If True, deletes the unzipped folder after processing. Default is False.
+#         **kwargs: Additional keyword arguments to be passed to the DatasetPreprocessor class.
+
+#     Returns:
+#         None
+
+#     Raises:
+#         AssertionError: If an invalid source dataset is requested.
+#         NameError: If the specified preprocessor class is not found.
 
 
-async def download_url_async(url: str, folder: str, filename: str, chunk_size: int = 1024 * 1024):
-    """Asynchronously download a file from a URL with progress bar.
-
-    Args:
-        url (str): URL to download from
-        folder (str): Folder to save the file in
-        filename (str): Name to save the file as
-        chunk_size (int): Size of chunks to download (default 1MB)
-    """
-    filepath = os.path.join(folder, filename)
-
-    async with aiohttp.ClientSession() as session:
-        async with session.get(url) as response:
-            if response.status != 200:
-                raise RuntimeError(f"Failed to download {url}, status: {response.status}")
-
-            total_size = int(response.headers.get("content-length", 0))
-
-            with open(filepath, "wb") as f:
-                progress_bar = tqdm.tqdm(total=total_size, unit="iB", unit_scale=True)
-
-                async for chunk in response.content.iter_chunked(chunk_size):
-                    f.write(chunk)
-                    progress_bar.update(len(chunk))
-
-                progress_bar.close()
-
-
-def download_url(url: str, folder: str, filename: str):
-    """Synchronous wrapper for async download function"""
-    logger.info(f"Downloading {url}")
-    asyncio.run(download_url_async(url, folder, filename))
-
-
+#     Steps:
+#         1. Construct paths for the zip file and source data.
+#         2. Create the neural data directory if it doesn't exist.
+#         3. Download and extract the zip file if the source data is not found.
+#         4. Instantiate and use the appropriate DatasetPreprocessor class to preprocess the data.
+#         5. Save the preprocessed data to .pickle format.
+#         6. Optionally, delete the unzipped folder if cleanup is True.
+#     """
+#     zip_path = os.path.join(ROOT_DIR, zipfile)
+#     source_path = os.path.join(ROOT_DIR, zipfile.strip(".zip"))
+#     # Make the neural data directory if it doesn't exist
+#     processed_path = os.path.join(ROOT_DIR, "data/processed/neural")
+#     if not os.path.exists(processed_path):
+#         os.makedirs(processed_path, exist_ok=True)
+#     # If .zip not found in the root directory, download the curated open-source worm datasets
+#     if not os.path.exists(source_path):
+#         download_url(url=url, folder=ROOT_DIR, filename=zipfile)
+#         # Extract all the datasets ... OR
+#         if source_dataset.lower() == "all":
+#             # Extract zip file then delete it
+#             extract_zip(zip_path, folder=source_path, delete_zip=True)
+#         # Extract just the requested source dataset
+#         else:
+#             bash_command = [
+#                 "unzip",
+#                 zip_path,
+#                 "{}/*".format(source_dataset),
+#                 "-d",
+#                 source_path,
+#                 "-x",
+#                 "__MACOSX/*",
+#             ]
+#             # Run the bash command
+#             std_out = subprocess.run(bash_command, text=True)
+#             # Output to log or terminal
+#             logger.info(f"Unzip status {std_out} ...")
+#             # Delete the zip file
+#             os.unlink(zip_path)
+#     # (re)-Pickle all the datasets ... OR
+#     if source_dataset is None or source_dataset.lower() == "all":
+#         for source in EXPERIMENT_DATASETS:
+#             logger.info(f"Start processing {source}.")
+#             try:
+#                 # Instantiate the relevant preprocessor class
+#                 preprocessor = eval(source + "Preprocessor")(
+#                     transform,
+#                     smooth_method,
+#                     interpolate_method,
+#                     resample_dt,
+#                     **kwargs,
+#                 )
+#                 # Call its method
+#                 preprocessor.preprocess()
+#             except NameError as e:
+#                 logger.info(f"NameError calling proprocessor: {e}")
+#                 continue
+#         # Create a file to indicate that the preprocessing was successful
+#         open(os.path.join(processed_path, ".processed"), "a").close()
+#     # ... (re)-Pickle a single dataset
+#     else:
+#         assert (
+#             source_dataset in EXPERIMENT_DATASETS
+#         ), "Invalid source dataset requested! Please pick one from:\n{}".format(
+#             list(EXPERIMENT_DATASETS)
+#         )
+#         logger.info(f"Start processing {source_dataset}.")
+#         try:
+#             # Instantiate the relevant preprocessor class
+#             preprocessor = eval(source_dataset + "Preprocessor")(
+#                 transform,
+#                 smooth_method,
+#                 interpolate_method,
+#                 resample_dt,
+#                 **kwargs,
+#             )
+#             # Call its method
+#             preprocessor.preprocess()
+#         except NameError:
+#             pass
+#     # Delete the unzipped folder
+#     if cleanup:
+#         shutil.rmtree(source_path)
+#     return None
 def process_single_dataset(args):
     """Helper function to process a single dataset
 
@@ -249,7 +339,7 @@ def preprocess_connectome(raw_files, source_connectome=None):
         raw_files (list): Contain the names of the raw connectome data to preprocess.
         source_connectome (str, optional): The source connectome file to use for preprocessing. Options include:
             - "openworm": OpenWorm project  (augmentation of earlier connectome with neurotransmitter type)
-            - "funconn" or "randi_2023": Randi et al., 2023 (functional connectivity) # TODO: Remove as this is not a true connectome.
+            - "funconn" or "randi_2023": Randi et al., 2023 (functional connectivity)
             - "witvliet_7": Witvliet et al., 2020 (adult 7)
             - "witvliet_8": Witvliet et al., 2020 (adult 8)
             - "white_1986_whole": White et al., 1986 (whole)
@@ -294,8 +384,8 @@ def preprocess_connectome(raw_files, source_connectome=None):
     preprocessors = {
         "openworm": OpenWormPreprocessor,
         "chklovskii": ChklovskiiPreprocessor,
-        "funconn": Randi2023Preprocessor,  # TODO: remove
-        "randi_2023": Randi2023Preprocessor,  # TODO: remove.
+        "funconn": Randi2023Preprocessor,
+        "randi_2023": Randi2023Preprocessor,
         "witvliet_7": Witvliet2020Preprocessor7,
         "witvliet_8": Witvliet2020Preprocessor8,
         "white_1986_whole": White1986WholePreprocessor,
@@ -451,7 +541,6 @@ class ConnectomeBasePreprocessor:
         full_edge_index = torch.combinations(all_indices, r=2).T
         existing_edges_set = set(map(tuple, edge_index.T.tolist()))
 
-        # TODO: We should use the functional weight strengths of Randi et al., 2023. as additional edge attributes.
         additional_edges = []
         additional_edge_attr = []
         for edge in full_edge_index.T.tolist():

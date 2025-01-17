@@ -18,12 +18,12 @@ Simeon, Q., Kashyap, A., Kording, K. P., & Boyden, E. S. (2024). Homogenized _C.
 
 ## Table of Contents
 1. [Project Overview](#worm-graph)
-2. [Folder Structure](#folder-structure)
+2. [Environment Setup](#environment-setup)
+    - [Recommended Bash Script](#recommended-bash-script)
+3. [Getting Started](#getting-started)
+4. [Folder Structure](#folder-structure)
     - [Directory Tree](#directory-tree)
     - [Submodule Information](#submodule-information)
-3. [Environment Setup](#environment-setup)
-    - [Recommended Bash Script](#recommended-bash-script)
-4. [Getting Started](#getting-started)
 5. [For Developers](#for-developers)
     - [File Naming Conventions](#file-naming-conventions)
     - [Code Style Conventions](#code-style-conventions)
@@ -35,73 +35,19 @@ Simeon, Q., Kashyap, A., Kording, K. P., & Boyden, E. S. (2024). Homogenized _C.
 `worm-graph` is a computational framework for modeling and simulating the neural dynamics of _Caenorhabditis elegans_ (_C. elegans_) using artificial neural networks (ANNs). 
 
 
-## Folder Structure
-
-### Directory Tree
-
-`tree -L 1 worm-graph`
-```
-├── analysis
-├── configs
-├── data
-├── __init__.py
-├── LICENSE
-├── logs
-├── main.py
-├── model
-├── opensource_data
-├── pkg.py
-├── predict
-├── preprocess
-├── __pycache__
-├── pyproject.toml
-├── README.md
-├── setup
-├── train
-├── utils.py
-└── visualize
-```
-
-### Submodule Information
-- `configs`
-    - All experiment, evaluation, etc. config files compatible with hydra for streamlined development/experimental process
-- `analysis`
-    - Different analysis notebooks to identify valuable statistics to validate predictive capabilities of model
-- `data`
-    - Dataset class implementations, notebooks for validation + synthetic data generation
-- `logs`
-    - Hydra logs for runs
-- `model`
-    - Contains all model component implementation + loading util functions, package imports, wrapper for retrieving model architecture
-- `opensource_data`
-    - Datasets compiled from different experimental open source publications.
-- `predict`
-    - Prediction utilities - loading model, package imports, prediction passthrough
-- `preprocess`
-    - Preprocess data utilities
-- `train`
-    - Utilities for early stopping, saving checkpoints. Example training script for regressing calcium neural activity + validation during training
-- `visualize`
-    - Visualization notebooks - visualizing connectome + plotting neural activity
-
-
 ## Environment Setup
 
-To prepare your environment for this project, you should use the provided `env.sh` bash script. Firstly, navigate to the `setup` directory. This directory contains all the necessary configuration files to set up the virtual environment. Use the following command to access the directory:
-
-```
-cd setup
-```
+To prepare your environment for this project, you should use the provided `setup/env.sh` bash script. 
 
 **Note:** Installing the environment can sometimes take up to 1 hour!
 
 
 ### Recommended Bash Script 
 
-1. Run the `env.sh` script. This will create the new `worm-graph` environment and install the required packages:
+1. Run the `setup/env.sh` script. This will create the new `worm-graph` environment and install the required packages:
 
     ```
-    bash env.sh
+    bash setup/env.sh
     ```
 
 2. Activate the new `worm-graph` environment:
@@ -111,12 +57,7 @@ cd setup
     ```
 
 
-3. After finishing the installations above, navigate back to the root directory (`worm-graph/`):
-    ```
-    cd ..
-    ```
-
-    then run:
+3. After finishing the installations above, from the root directory (`worm-graph/`),  run:
 
     ```
     conda develop .
@@ -170,6 +111,56 @@ For one multi-worm dataset of neural activity, this pipeline will:
 1. Load the preprocessed calcium data for all worms in the dataset.
 2. Train a neural network model to predict future calcium activity from previous activity.
 3. Plot the train and validation loss curves for the model, and its predictions on validation data.
+
+
+## Folder Structure
+
+### Directory Tree
+
+`tree -L 1 worm-graph`
+```
+├── analysis
+├── configs
+├── data
+├── __init__.py
+├── LICENSE
+├── logs
+├── main.py
+├── model
+├── opensource_data
+├── pkg.py
+├── predict
+├── preprocess
+├── __pycache__
+├── pyproject.toml
+├── README.md
+├── setup
+├── train
+├── utils.py
+└── visualize
+```
+
+### Submodule Information
+- `configs`
+    - All experiment, evaluation, etc. config files compatible with hydra for streamlined development/experimental process
+- `analysis`
+    - Different analysis notebooks to identify valuable statistics to validate predictive capabilities of model
+- `data`
+    - Dataset class implementations, notebooks for validation + synthetic data generation
+- `logs`
+    - Hydra logs for runs
+- `model`
+    - Contains all model component implementation + loading util functions, package imports, wrapper for retrieving model architecture
+- `opensource_data`
+    - Datasets compiled from different experimental open source publications.
+- `predict`
+    - Prediction utilities - loading model, package imports, prediction passthrough
+- `preprocess`
+    - Preprocess data utilities
+- `train`
+    - Utilities for early stopping, saving checkpoints. Example training script for regressing calcium neural activity + validation during training
+- `visualize`
+    - Visualization notebooks - visualizing connectome + plotting neural activity
 
 
 ## For Developers
