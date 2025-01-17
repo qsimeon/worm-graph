@@ -9,9 +9,14 @@ import pickle
 import zipfile
 import logging
 import subprocess
+import multiprocessing
 import numpy as np
 import pandas as pd
 from tqdm import tqdm
+import aiohttp
+import asyncio
+import tqdm.asyncio
+from multiprocessing import Pool
 
 
 # NOTE: IterativeImputer is experimental and the API might change without any deprecation cycle.

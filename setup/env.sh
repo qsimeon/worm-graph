@@ -44,7 +44,7 @@ function has_gpu {
 ENV_NAME="worm-graph"
 echo ""
 echo "Creating $ENV_NAME environment."
-conda create -y -n $ENV_NAME python=3.13
+conda create -y -n $ENV_NAME python=3.13 conda-build
 
 # Activate the environment
 source activate $ENV_NAME || conda activate $ENV_NAME
