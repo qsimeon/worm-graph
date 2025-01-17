@@ -7,9 +7,9 @@ defaults:
  - submodule: []
  # SubmitIt Launcher Plugin:
  #   This plugin provides SLURM launcher to work on the cluster.
- #   - Use submitit_slurm when using OpenMind (add hydra/launcher=submitit_slurm in command line)
+ #   - Use submitit_local when using OpenMind (add hydra/launcher=submitit_local in command line)
  #   - Use submitit_local when running locally
- - override hydra/launcher: submitit_slurm
+ - override hydra/launcher: submitit_local
  - _self_
 
 hydra:

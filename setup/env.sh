@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# Get the absolute path of the repo's root directory
-SCRIPT_DIR="$(git rev-parse --show-toplevel)"
+# Get the absolute path of the script's directory
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
 echo ""
 echo "env.sh called from $SCRIPT_DIR"
 
@@ -40,81 +40,85 @@ function has_gpu {
     fi
 }
 
-# Create a new conda environment with Python 3.13
+# Create a new conda environment with Python 3.12
 ENV_NAME="worm-graph"
 echo ""
 echo "Creating $ENV_NAME environment."
-conda create -y -n $ENV_NAME python=3.13 conda-build
+conda create -y -n $ENV_NAME python=3.12 conda-build
 
-# Activate the environment
-source activate $ENV_NAME || conda activate $ENV_NAME
+# # Activate the environment
+# if ! conda activate $ENV_NAME; then
+#     echo ""
+#     echo "Failed to activate $ENV_NAME environment. Exiting."
+#     exit 1
+# fi
 
-# Update Python and pip in the new environment
-conda update -y -n $ENV_NAME python
-python -m pip install --upgrade pip
+# # Update Python and pip in the new environment
+# conda update -y python
+# python -m pip install --upgrade pip
 
-# Adjust configs/pipeline.yaml based on SLURM cluster detection
-CONFIG_FILE="$SCRIPT_DIR/configs/pipeline.yaml"
-if ! is_slurm_cluster; then
-    echo ""
-    echo "Not on a Slurm cluster. Adjusting configs/pipeline.yaml for local execution."
-    if [[ "$OSTYPE" == "darwin"* ]]; then
-        sed -i '' 's/submitit_slurm/submitit_local/g' "$CONFIG_FILE"
-    else
-        sed -i 's/submitit_slurm/submitit_local/g' "$CONFIG_FILE"
-    fi
-else
-    echo ""
-    echo "On a SLURM computing cluster. Keeping configs/pipeline.yaml for remote execution."
-fi
+# # Adjust configs/pipeline.yaml based on SLURM cluster detection
+# CONFIG_FILE="$SCRIPT_DIR/configs/pipeline.yaml"
+# if ! is_slurm_cluster; then
+#     echo ""
+#     echo "Not on a Slurm cluster. Adjusting configs/pipeline.yaml for local execution."
+#     if [[ "$OSTYPE" == "darwin"* ]]; then
+#         sed -i '' 's/submitit_slurm/submitit_local/g' "$CONFIG_FILE"
+#     else
+#         sed -i 's/submitit_slurm/submitit_local/g' "$CONFIG_FILE"
+#     fi
+# else
+#     echo ""
+#     echo "On a SLURM computing cluster. Keeping configs/pipeline.yaml for remote execution."
+# fi
 
-# OS Detection and Environment Setup
-echo ""
-echo "Starting environment setup ..."
+# # OS Detection and Environment Setup
+# echo ""
+# echo "Starting environment setup ..."
 
-case "$(uname -s)" in
-    Darwin)
-        echo "Mac OS Detected"
-        conda install -y -n $ENV_NAME pytorch torchvision torchaudio cpuonly -c pytorch -c conda-forge
-        ;;
-    Linux)
-        echo "Linux OS Detected"
-        if has_gpu; then
-            echo "Nvidia GPU Detected with CUDA version $cuda_version"
-            conda install -y -n $ENV_NAME pytorch torchvision torchaudio pytorch-cuda=$cuda_version -c pytorch -c nvidia
-        else
-            echo "No GPU detected. Installing CPU-only PyTorch."
-            conda install -y -n $ENV_NAME pytorch torchvision torchaudio cpuonly -c pytorch
-        fi
-        ;;
-    CYGWIN*|MINGW32*|MSYS*|MINGW*)
-        echo "Windows OS Detected"
-        conda install -y -n $ENV_NAME pytorch torchvision torchaudio cpuonly -c pytorch
-        ;;
-    *)
-        echo "Unknown OS Detected. Exiting."
-        exit 1
-        ;;
-esac
+# case "$(uname -s)" in
+#     Darwin)
+#         echo "Mac OS Detected"
+#         conda install -y -n $ENV_NAME pytorch torchvision torchaudio cpuonly -c pytorch -c conda-forge
+#         ;;
+#     Linux)
+#         echo "Linux OS Detected"
+#         if has_gpu; then
+#             echo "Nvidia GPU Detected with CUDA version $cuda_version"
+#             conda install -y -n $ENV_NAME pytorch torchvision torchaudio pytorch-cuda=$cuda_version -c pytorch -c nvidia
+#         else
+#             echo "No GPU detected. Installing CPU-only PyTorch."
+#             conda install -y -n $ENV_NAME pytorch torchvision torchaudio cpuonly -c pytorch
+#         fi
+#         ;;
+#     CYGWIN*|MINGW32*|MSYS*|MINGW*)
+#         echo "Windows OS Detected"
+#         conda install -y -n $ENV_NAME pytorch torchvision torchaudio cpuonly -c pytorch
+#         ;;
+#     *)
+#         echo "Unknown OS Detected. Exiting."
+#         exit 1
+#         ;;
+# esac
 
-# Splitting requirements.txt for conda and pip installations
-REQUIREMENTS_FILE="$SCRIPT_DIR/setup/requirements.txt"
-if [ -f "$REQUIREMENTS_FILE" ]; then
-    awk '/# uses pip/{print > "'"$SCRIPT_DIR"'/setup/requirements_pip.txt"; next} {print > "'"$SCRIPT_DIR"'/requirements_conda.txt"}' "$REQUIREMENTS_FILE"
-else
-    echo "requirements.txt not found in $SCRIPT_DIR/setup. Exiting."
-    exit 1
-fi
+# # Splitting requirements.txt for conda and pip installations
+# REQUIREMENTS_FILE="$SCRIPT_DIR/requirements.txt"
+# if [ -f "$REQUIREMENTS_FILE" ]; then
+#     awk '/# uses pip/{print > "'"$SCRIPT_DIR"'/requirements_pip.txt"; next} {print > "'"$SCRIPT_DIR"'/requirements_conda.txt"}' "$REQUIREMENTS_FILE"
+# else
+#     echo "requirements.txt not found in $SCRIPT_DIR. Exiting."
+#     exit 1
+# fi
 
-# Install common packages using conda
-echo ""
-echo "Installing packages with conda."
-conda install -y -n $ENV_NAME -c conda-forge --file "$SCRIPT_DIR/setup/requirements_conda.txt"
+# # Install common packages using conda
+# echo ""
+# echo "Installing packages with conda."
+# conda install -y -n $ENV_NAME -c conda-forge --file "$SCRIPT_DIR/requirements_conda.txt"
 
-# Install pip-specific packages
-echo ""
-echo "Installing pip-specific packages."
-python -m pip install -r "$SCRIPT_DIR/setup/requirements_pip.txt"
+# # Install pip-specific packages
+# echo ""
+# echo "Installing pip-specific packages."
+# python -m pip install -r "$SCRIPT_DIR/requirements_pip.txt"
 
-echo ""
-echo "Environment setup complete. Run 'conda activate $ENV_NAME' to use the environment."
+# echo ""
+# echo "Environment setup complete. Run 'conda activate $ENV_NAME' to use the environment."
