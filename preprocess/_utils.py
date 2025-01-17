@@ -6,77 +6,16 @@ logger = logging.getLogger(__name__)
 
 ### Function definitions # # #
 # # # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
-
-
-async def download_url_async(url: str, folder: str, filename: str, chunk_size: int = 1024 * 1024):
-    """Asynchronously download a file from a URL with progress bar.
-
-    Args:
-        url (str): URL to download from
-        folder (str): Folder to save the file in
-        filename (str): Name to save the file as
-        chunk_size (int): Size of chunks to download (default 1MB)
-    """
-    filepath = os.path.join(folder, filename)
-
-    async with aiohttp.ClientSession() as session:
-        async with session.get(url) as response:
-            if response.status != 200:
-                raise RuntimeError(f"Failed to download {url}, status: {response.status}")
-
-            total_size = int(response.headers.get("content-length", 0))
-
-            with open(filepath, "wb") as f:
-                progress_bar = tqdm.tqdm(total=total_size, unit="iB", unit_scale=True)
-
-                async for chunk in response.content.iter_chunked(chunk_size):
-                    f.write(chunk)
-                    progress_bar.update(len(chunk))
-
-                progress_bar.close()
-
-
-def download_url(url: str, folder: str, filename: str):
-    """Synchronous wrapper for async download function"""
-    logger.info(f"Downloading {url}")
-    asyncio.run(download_url_async(url, folder, filename))
-
-
-def process_single_dataset(args):
-    """Helper function to process a single dataset
-
-    Args:
-        args (tuple): (source, transform, smooth_method, interpolate_method, resample_dt, kwargs)
-    """
-    source, transform, smooth_method, interpolate_method, resample_dt, kwargs = args
-    try:
-        logger.info(f"Start processing {source}.")
-        # Instantiate the relevant preprocessor class
-        preprocessor = eval(source + "Preprocessor")(
-            transform,
-            smooth_method,
-            interpolate_method,
-            resample_dt,
-            **kwargs,
-        )
-        # Call its method
-        preprocessor.preprocess()
-        return True
-    except NameError as e:
-        logger.info(f"NameError calling preprocessor: {e}")
-        return False
-
-
 def pickle_neural_data(
     url,
     zipfile,
     source_dataset="all",
-    transform=StandardScaler(),
+    # TODO: Try different transforms from sklearn such as QuantileTransformer, etc. as well as custom CausalNormalizer.
+    transform=StandardScaler(),  # StandardScaler() #PowerTransformer() #CausalNormalizer() #None
     smooth_method="none",
     interpolate_method="linear",
     resample_dt=None,
     cleanup=False,
-    n_workers=None,  # New parameter for controlling number of workers
     **kwargs,
 ):
     """Preprocess and save C. elegans neural data to .pickle format.
@@ -125,25 +64,7 @@ def pickle_neural_data(
         os.makedirs(processed_path, exist_ok=True)
     # If .zip not found in the root directory, download the curated open-source worm datasets
     if not os.path.exists(source_path):
-        try:
-            download_url(url=url, folder=ROOT_DIR, filename=zipfile)
-        except Exception as e:
-            logger.error(f"Failed to download using async method: {e}")
-            logger.info("Falling back to wget...")
-            # Fallback to wget if async download fails
-            import subprocess
-
-            subprocess.run(
-                [
-                    "wget",
-                    "-O",
-                    os.path.join(ROOT_DIR, zipfile),
-                    "--tries=3",  # Retry 3 times
-                    "--continue",  # Resume partial downloads
-                    "--progress=bar:force",  # Show progress bar
-                    url,
-                ]
-            )
+        download_url(url=url, folder=ROOT_DIR, filename=zipfile)
         # Extract all the datasets ... OR
         if source_dataset.lower() == "all":
             # Extract zip file then delete it
@@ -167,24 +88,24 @@ def pickle_neural_data(
             os.unlink(zip_path)
     # (re)-Pickle all the datasets ... OR
     if source_dataset is None or source_dataset.lower() == "all":
-        # Determine number of workers (use CPU count - 1 by default)
-        if n_workers is None:
-            n_workers = max(1, multiprocessing.cpu_count() - 1)
-
-        # Prepare arguments for parallel processing
-        process_args = [
-            (source, transform, smooth_method, interpolate_method, resample_dt, kwargs)
-            for source in EXPERIMENT_DATASETS
-        ]
-
-        # Use multiprocessing Pool to process datasets in parallel
-        with Pool(processes=n_workers) as pool:
-            results = pool.map(process_single_dataset, process_args)
-
+        for source in EXPERIMENT_DATASETS:
+            logger.info(f"Start processing {source}.")
+            try:
+                # Instantiate the relevant preprocessor class
+                preprocessor = eval(source + "Preprocessor")(
+                    transform,
+                    smooth_method,
+                    interpolate_method,
+                    resample_dt,
+                    **kwargs,
+                )
+                # Call its method
+                preprocessor.preprocess()
+            except NameError as e:
+                logger.info(f"NameError calling proprocessor: {e}")
+                continue
         # Create a file to indicate that the preprocessing was successful
-        if any(results):  # If at least one dataset was processed successfully
-            open(os.path.join(processed_path, ".processed"), "a").close()
-
+        open(os.path.join(processed_path, ".processed"), "a").close()
     # ... (re)-Pickle a single dataset
     else:
         assert (
@@ -192,10 +113,20 @@ def pickle_neural_data(
         ), "Invalid source dataset requested! Please pick one from:\n{}".format(
             list(EXPERIMENT_DATASETS)
         )
-        process_single_dataset(
-            (source_dataset, transform, smooth_method, interpolate_method, resample_dt, kwargs)
-        )
-
+        logger.info(f"Start processing {source_dataset}.")
+        try:
+            # Instantiate the relevant preprocessor class
+            preprocessor = eval(source_dataset + "Preprocessor")(
+                transform,
+                smooth_method,
+                interpolate_method,
+                resample_dt,
+                **kwargs,
+            )
+            # Call its method
+            preprocessor.preprocess()
+        except NameError:
+            pass
     # Delete the unzipped folder
     if cleanup:
         shutil.rmtree(source_path)
@@ -249,7 +180,7 @@ def preprocess_connectome(raw_files, source_connectome=None):
         raw_files (list): Contain the names of the raw connectome data to preprocess.
         source_connectome (str, optional): The source connectome file to use for preprocessing. Options include:
             - "openworm": OpenWorm project  (augmentation of earlier connectome with neurotransmitter type)
-            - "funconn" or "randi_2023": Randi et al., 2023 (functional connectivity) # TODO: Remove as this is not a true connectome.
+            - "funconn" or "randi_2023": Randi et al., 2023 (functional connectivity)
             - "witvliet_7": Witvliet et al., 2020 (adult 7)
             - "witvliet_8": Witvliet et al., 2020 (adult 8)
             - "white_1986_whole": White et al., 1986 (whole)
@@ -294,8 +225,8 @@ def preprocess_connectome(raw_files, source_connectome=None):
     preprocessors = {
         "openworm": OpenWormPreprocessor,
         "chklovskii": ChklovskiiPreprocessor,
-        "funconn": Randi2023Preprocessor,  # TODO: remove
-        "randi_2023": Randi2023Preprocessor,  # TODO: remove.
+        "funconn": Randi2023Preprocessor,
+        "randi_2023": Randi2023Preprocessor,
         "witvliet_7": Witvliet2020Preprocessor7,
         "witvliet_8": Witvliet2020Preprocessor8,
         "white_1986_whole": White1986WholePreprocessor,
@@ -451,7 +382,6 @@ class ConnectomeBasePreprocessor:
         full_edge_index = torch.combinations(all_indices, r=2).T
         existing_edges_set = set(map(tuple, edge_index.T.tolist()))
 
-        # TODO: We should use the functional weight strengths of Randi et al., 2023. as additional edge attributes.
         additional_edges = []
         additional_edge_attr = []
         for edge in full_edge_index.T.tolist():

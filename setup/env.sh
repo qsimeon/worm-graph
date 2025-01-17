@@ -101,14 +101,14 @@ conda create -y -n $ENV_NAME python=3.12 conda-build
 #         ;;
 # esac
 
-# # Splitting requirements.txt for conda and pip installations
-# REQUIREMENTS_FILE="$SCRIPT_DIR/requirements.txt"
-# if [ -f "$REQUIREMENTS_FILE" ]; then
-#     awk '/# uses pip/{print > "'"$SCRIPT_DIR"'/requirements_pip.txt"; next} {print > "'"$SCRIPT_DIR"'/requirements_conda.txt"}' "$REQUIREMENTS_FILE"
-# else
-#     echo "requirements.txt not found in $SCRIPT_DIR. Exiting."
-#     exit 1
-# fi
+# Splitting requirements.txt for conda and pip installations
+REQUIREMENTS_FILE="$SCRIPT_DIR/setup/requirements.txt"
+if [ -f "$REQUIREMENTS_FILE" ]; then
+    awk '/# uses pip/{print > "'"$SCRIPT_DIR"'/setup/requirements_pip.txt"; next} {print > "'"$SCRIPT_DIR"'/setup/requirements_conda.txt"}' "$REQUIREMENTS_FILE"
+else
+    echo "requirements.txt not found in $SCRIPT_DIR. Exiting."
+    exit 1
+fi
 
 # # Install common packages using conda
 # echo ""

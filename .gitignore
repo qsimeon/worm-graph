@@ -22,6 +22,7 @@ opensource_data.zip
 opensource_data/
 raw_data.zip
 raw_data/
+data/datasets
 *.pickle
 
 # numpy

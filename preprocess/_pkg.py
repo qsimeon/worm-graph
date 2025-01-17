@@ -15,7 +15,7 @@ import pandas as pd
 from tqdm import tqdm
 import aiohttp
 import asyncio
-import tqdm.asyncio
+import tqdm.asyncio as tqdmaio
 from multiprocessing import Pool
 
 
