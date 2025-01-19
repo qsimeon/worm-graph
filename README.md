@@ -29,18 +29,13 @@ Simeon, Q., Kashyap, A., Kording, K. P., & Boyden, E. S. (2024). Homogenized _C.
     - [Code Style Conventions](#code-style-conventions)
 6. [Future Tasks](#future-tasks--todos)
 
-
 ## Project Overview
 
-`worm-graph` is a computational framework for modeling and simulating the neural dynamics of _Caenorhabditis elegans_ (_C. elegans_) using artificial neural networks (ANNs). 
-
+`worm-graph` is a computational framework for modeling the neural dynamics of _Caenorhabditis elegans_ (_C. elegans_) using artificial neural networks (ANNs). 
 
 ## Environment Setup
 
 To prepare your environment for this project, you should use the provided `setup/env.sh` bash script. 
-
-**Note:** Installing the environment can sometimes take up to 1 hour!
-
 
 ### Recommended Bash Script 
 
@@ -55,7 +50,6 @@ To prepare your environment for this project, you should use the provided `setup
     ```
     conda activate worm-graph
     ```
-
 
 3. After finishing the installations above, from the root directory (`worm-graph/`),  run:
 
@@ -75,7 +69,6 @@ To prepare your environment for this project, you should use the provided `setup
     # Once you add your API key below, make sure to not share it with anyone! The API key should remain private.
     OPENAI_API_KEY=abc123 # replace with your personal API key
     ```
-
 
 ## Getting Started
 
@@ -106,12 +99,10 @@ Now you can run the main script as a demo of the full functional pipeline (`prep
 
     - `python main.py +experiment=default_multirun`
 
-
 For one multi-worm dataset of neural activity, this pipeline will:
 1. Load the preprocessed calcium data for all worms in the dataset.
 2. Train a neural network model to predict future calcium activity from previous activity.
 3. Plot the train and validation loss curves for the model, and its predictions on validation data.
-
 
 ## Folder Structure
 
@@ -162,9 +153,7 @@ For one multi-worm dataset of neural activity, this pipeline will:
 - `visualize`
     - Visualization notebooks - visualizing connectome + plotting neural activity
 
-
 ## For Developers
-
 
 ### File Naming Conventions
 
@@ -173,7 +162,6 @@ For folders and script files, use the `lower_case_with_underscores` naming style
 
 For Jupyter notebooks, use the `CamelCase` naming style.
 **Example:** `MyAnalysisNotebook.ipynb`.
-
 
 ### Code Style Conventions
 
@@ -193,7 +181,6 @@ For Jupyter notebooks, use the `CamelCase` naming style.
 5. When in doubt about anything else style-related that's not addressed by the previous two points, reference the [Python Enhancement Protocols (PEP8)](https://peps.python.org/pep-0008/).
 
 6. Always shape neural data matrices as `(time, neurons, {features})`. The braces `{}` indicate that the last `features` dimension is optional, as the `neurons` currently serve as the features for our model.
-
 
 ## Future Tasks
 
