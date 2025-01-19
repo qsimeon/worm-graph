@@ -28,7 +28,7 @@ os.environ["MASTER_PORT"] = "12345"  # just a random port
 os.environ["OC_CAUSE"] = "1"
 
 # Some global variables
-WORLD_SIZE = torch.cuda.device_count() # for multiprocessing stuff (unused currently)
+WORLD_SIZE = torch.cuda.device_count()  # for multiprocessing stuff (unused currently)
 
 USER = "qsimeon"  # OpenMind/computing cluster username
 
@@ -54,7 +54,7 @@ neurons_master_file = os.path.join(RAW_DATA_DIR, "neuron_master_sheet.csv")
 
 # if os.path.exists(labels_file):
 if os.path.exists(neurons_master_file):
-   
+
     # Load the labels from the master csv file
     print(f"Loading from {neurons_master_file}.\n")
     df_neurons_master = pd.read_csv(neurons_master_file).sort_values(by="label", ascending=True)
@@ -143,6 +143,7 @@ RAW_FILES = [  # TODO: Cite sources of these files.
     "neuron_master_sheet.csv",  # TODO: working on a sheet combines all neuron information (labels, classes, neurotransmitter, cell type, and position)
     # NOTE: "neuron_master_sheet.csv", once complete, should make the following files obsolete: "neuron_labels.txt", ""Witvliet2020_NeuronClasses.xlsx", "LowResAtlasWithHighResHeadsAndTails.csv", "Hobert2016_BrainAtlas.xlsx"
 ]
+
 
 # Method for initializing the global computing device
 def init_device():

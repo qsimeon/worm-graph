@@ -108,23 +108,23 @@ For one multi-worm dataset of neural activity, this pipeline will:
 
 ### Directory Tree
 
-`tree -L 1 worm-graph`
+`cd worm-graph`
+`tree -L 1 .`
 ```
+├── LICENSE
+├── README.md
+├── __init__.py
+├── __pycache__
 ├── analysis
 ├── configs
 ├── data
-├── __init__.py
-├── LICENSE
 ├── logs
 ├── main.py
 ├── model
-├── opensource_data
 ├── pkg.py
 ├── predict
 ├── preprocess
-├── __pycache__
 ├── pyproject.toml
-├── README.md
 ├── setup
 ├── train
 ├── utils.py
