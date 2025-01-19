@@ -51,23 +51,26 @@ To prepare your environment for this project, you should use the provided `setup
     conda activate worm-graph
     ```
 
-3. After finishing the installations above, from the root directory (`worm-graph/`),  run:
+3. After finishing the installations above, from the root directory (`worm-graph`),  run:
 
     ```
     conda develop .
     ```
 
-**Note:** 
-* Please ensure to carry out that last step; otherwise you may encounter `ModuleNotFoundError` later on.
+    * Please ensure to carry out that last step; otherwise you may encounter `ModuleNotFoundError` later on.
 
-* You can check if the environment was successfully installed by running `conda env list` or `conda info --envs`. 
-    
-* Always activate the environment before starting your work on the project by running `conda activate worm-graph`.
-
-* To use the OpenAI text embeddings, add your API key to the `.env` file. The file `worm-graph/.env` should look like this:
+4. Check if the environment was successfully installed by running 
     ```
-    # Once you add your API key below, make sure to not share it with anyone! The API key should remain private.
-    OPENAI_API_KEY=abc123 # replace with your personal API key
+    conda env list
+    ```` 
+    or 
+    ```
+    conda info --envs
+    ```
+    
+5.  Activate the environment before starting your work on the project by running:
+    ```
+    conda activate worm-graph
     ```
 
 ## Getting Started
@@ -108,8 +111,7 @@ For one multi-worm dataset of neural activity, this pipeline will:
 
 ### Directory Tree
 
-`cd worm-graph`
-`tree -L 1 .`
+`cd worm-graph; tree -L 1 .`
 ```
 ├── LICENSE
 ├── README.md
@@ -187,3 +189,8 @@ For Jupyter notebooks, use the `CamelCase` naming style.
 - Post the preprocess datasets to a file-hosting site.
 - Implement unit tests for all submodules in the `tests` directory.
 - Add docstrings to all functions and classes, follow the Google Python Style Guide for formating.
+- To use OpenAI text embeddings, add your API key to the `.env` file. The file `worm-graph/.env` should look like this:
+    ```
+    # Once you add your API key below, make sure to not share it with anyone! The API key should remain private.
+    OPENAI_API_KEY=abc123 # replace with your personal API key
+    ```
