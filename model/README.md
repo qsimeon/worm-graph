@@ -43,20 +43,15 @@ The available model implementations (i.e. subclasses of `Model`) are:
 
 - `FeatureFFNN`: This model is a simple nonlinear regression model with an embedding layer and feedforward blocks.
 
-- `PureAttention`: This model implements self-attention. It is essentially a single layer of multi-head attention
-without any of the extra stuff from the full transformer model.
+-  `HippoSSM`: This model is a structured state space sequence (S4) model based on the work of Albert Gu.
 
-- `NeuralTransformer`: This model is a transformer for neural activity data. It includes a positional encoding layer, an embedding layer, and transformer blocks. This model does not use LayerNorm in its input to hidden and hidden to hidden transformations.
+- `NeuralTransformer`: This model is a transformer for neural activity data. It includes a positional encoding layer, an embedding layer, and transformer blocks. 
 
-- `NetworkCTRNN`: This model is a representation of the _C. elegans_ nervous system using a continuous-time RNN backbone. It uses a LayerNorm in its input to hidden transformation.
+- `NetworkCTRNN`: This model is a representation of the _C. elegans_ nervous system using a continuous-time RNN backbone. 
 
-- `LiquidCfC`: This is a Neural Circuit Policy (NCP) Closed-form continuous time (CfC) model. It uses a LayerNorm in its input to hidden transformation and also provides methods for initializing hidden state and weights.
+- `NetworkLSTM`: This model is a representation of the _C. elegans_ neural network using an LSTM. 
 
-- `NetworkLSTM`: This model is a representation of the _C. elegans_ neural network using an LSTM. It uses a LayerNorm in its input to hidden transformation and also provides methods for initializing hidden state and weights.
-
-- `NetworkGCN`: This is a graph neural network model of the _C. elegans_ nervous system. This model does not use a LayerNorm. The model assumes the connectome graph data to be present in a specific path and loads it.
-
-The overarching structure of these model is the same. They all contain an input-to-hidden transformation (embedding layer + activation function + LayerNorm (optional)), and a hidden-to-hidden transformation (usually a specific neural network layer or block). Also, they all have the `InnerHiddenModel` instantiated for use. 
+The overarching structure of these model is the same. They all contain an input-to-hidden transformation (embedding layer + activation function + (optional) LayerNorm), and a hidden-to-hidden transformation (usually a specific neural network layer or block) instantiated as an `InnerHiddenModel`.
 
 The structure of all of the model is based on three primary components:
 
