@@ -51,7 +51,7 @@ def pipeline(cfg: DictConfig) -> None:
     # DATASET
     if "dataset" in cfg.submodule:
         # Create the train and validation datasets
-        train_dataset, val_dataset = get_datasets(
+        full_dataset, train_dataset, val_dataset = get_datasets(
             cfg.submodule.dataset, save=cfg.submodule.dataset.save_datasets
         )
         # Update visualize submodule to plot current run
@@ -64,7 +64,7 @@ def pipeline(cfg: DictConfig) -> None:
     # TRAIN
     if "train" in cfg.submodule:
         # Run the training loop
-        model, metric = train_model(
+        model, metric = train_model2(
             train_config=cfg.submodule.train,
             model=model,
             train_dataset=train_dataset,

@@ -293,11 +293,11 @@ def pickle_neural_data(
 
 
 def get_presaved_datasets(url, file):
-    """Download and unzip presaved data splits.
+    """Download and unzip presaved data patterns.
 
-    This function downloads and extracts presaved data splits (commonly requested data patterns)
-    from the specified URL. The extracted data is saved in the 'data' folder. The zip file is
-    deleted after extraction.
+    This function downloads and extracts presaved data patterns).
+    from the specified URL. The extracted data is saved in the 'data' folder.
+    The zip file is deleted after extraction.
 
     Args:
         url (str): The download link to the zip file containing the presaved data splits.
@@ -513,7 +513,7 @@ class ConnectomeBasePreprocessor:
 
         # Alphabetically sort neuron types and encode them as integers
         df_master["type"] = df_master["type"].fillna("Unknown")
-        unique_types = sorted(df_master["type"].unique())
+        unique_types = sorted(df_master["type"].unique()) # inter, motor, pharynx, sensory
         type_to_int = {neuron_type: i for i, neuron_type in enumerate(unique_types)}
 
         # Create tensor of neuron types (y) using the encoded integers
@@ -3922,11 +3922,6 @@ class Dag2023Preprocessor(NeuralBasePreprocessor):
                 label, set(NEURON_LABELS) - set(neurons_copy), char="?"
             )
             neurons_copy.append(replacement)
-        # ### DEBUG ###
-        # # Remove badly imputed neurons from the data
-        # calcium, mask = self.filter_bad_traces_by_linear_segments(calcium)
-        # neurons_copy = np.array(neurons_copy, dtype=str)[mask].tolist()
-        # ### DEBUG ###
         # Make the extracted data into a list of arrays
         all_IDs = [neurons_copy]
         all_traces = [calcium]
@@ -4112,11 +4107,6 @@ class Flavell2023Preprocessor(NeuralBasePreprocessor):
                 label, set(NEURON_LABELS) - set(neurons_copy), char="?"
             )
             neurons_copy.append(replacement)
-        # ### DEBUG ###
-        # # Remove badly imputed neurons from the data
-        # calcium_data, filt_mask = self.filter_bad_traces_by_linear_segments(calcium_data)
-        # neurons_copy = np.array(neurons_copy, dtype=str)[filt_mask].tolist()
-        # ### DEBUG ###
         # Make the extracted data into a list of arrays
         all_IDs = [neurons_copy]
         all_traces = [calcium_data]

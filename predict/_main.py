@@ -18,10 +18,6 @@ def make_predictions(
         Hydra configuration object.
     model : torch.nn.Module
         Trained model.
-    train_dataset : torch.utils.data.Dataset
-        Train dataset with worm data examples.
-    val_dataset : dict
-        Validation dataset with worm data examples.
     """
     # Use current working directory if one is not specified in predict_config
     if predict_config.predict_this_log_dir is None:
@@ -66,11 +62,8 @@ if __name__ == "__main__":
     os.chdir(log_dir)
     # Get the model
     model = get_model(model_config.model)
-    # Get the dataset
-    dataset = get_datasets(data_config.dataset)
     # Make predictions
     make_predictions(
         model=model,
-        dataset=dataset,
         predict_config=predict_config.predict,
     )

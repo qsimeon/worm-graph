@@ -76,15 +76,15 @@ To make sure nothing breaks, the first thing you need to do is download and prep
 
 `python main.py +submodule=[preprocess]`
 
-* If chaining multiple submodules together (e.g. `dataset` and `preprocess`) do not use spaces after commas:
+* If chaining multiple submodules together (e.g. `data` and `preprocess`) do not use spaces after commas:
     
-    - `python main.py +submodule=[preprocess,dataset]`
+    - `python main.py +submodule=[preprocess,data]`
 
 * If on a Mac, place `+submodule=[preprocess]` in quotations:
     
     - `python main.py "+submodule=[preprocess]"`
 
-    - `python main.py "+submodule=[preprocess,dataset]"`
+    - `python main.py "+submodule=[preprocess,data]"`
 
 
 Now you can run the main script as a demo of the full functional pipeline (`preprocess`) -> `data` -> `model` -> `train` -> `analysis` -> (`visualize`):

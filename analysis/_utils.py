@@ -309,7 +309,7 @@ def loss_per_dataset(
             source_datasets={source_dataset: worms_to_use},
             num_labeled_neurons=None,  # use all available neurons
         )
-        train_dataset, val_dataset, _ = split_combined_dataset(
+        full_dataset, train_dataset, val_dataset, _ = split_combined_dataset(
             combined_dataset=combined_dataset,
             num_train_samples=num_train_samples,
             num_val_samples=num_train_samples,  # use the same number of samples as in the train dataset
@@ -341,23 +341,24 @@ def loss_per_dataset(
         model.eval()
 
         with torch.no_grad():
-            for _, (X, Y, mask, _) in enumerate(dataloader):
-                X = X.to(DEVICE)
-                Y = Y.to(DEVICE)
-                mask = mask.to(DEVICE)
+            for _, (data, mask, _) in enumerate(dataloader):
+                X = data[:, :-1].to(DEVICE)
+                # Target is the next time step
+                Y = data[:, 1:].to(DEVICE)
+                M = mask.to(DEVICE)
 
                 # Baseline model is the naive predictor: predict that the value at
                 # next time step is the same as the current value.
-                y_base = X
+                Y_b = X
                 baseline = (
                     torch.tensor(0.0)
                     if model.version_2
-                    else criterion(output=y_base, target=Y, mask=mask)
+                    else criterion(output=Y_b, target=Y, mask=M)
                 )
 
                 # All model operate sequence-to-sequence
-                y_pred = model(X, mask)
-                loss = criterion(output=y_pred, target=Y, mask=mask)
+                Y_p = model(X, M)
+                loss = criterion(output=Y_p, target=Y, mask=M)
 
                 # Update running losses
                 running_base_loss += baseline.item()

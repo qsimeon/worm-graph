@@ -780,12 +780,12 @@ def plot_pca_trajectory(log_dir, worms_to_plot=None):
                     pass
 
 
-def plot_worm_data(worm_data, num_neurons=5, max_tsteps=1000, smooth=False):
+def plot_worm_data(worm_data, num_neurons=5, max_timesteps=1000, smooth=False):
     """
     Plot a few calcium traces from a given worm's data.
 
     :param worm_data: The data for a single worm.
-    :param max_tsteps: The maximum number of time steps to plot.
+    :param max_timesteps: The maximum number of time steps to plot.
     :param num_neurons: The number of neurons to plot.
     """
     worm = worm_data["worm"]
@@ -804,8 +804,8 @@ def plot_worm_data(worm_data, num_neurons=5, max_tsteps=1000, smooth=False):
         neuron_name = slot_to_labeled_neuron.get(neuron_idx, None)
         if neuron_name is not None:
             plt.plot(
-                time_in_seconds[:max_tsteps],
-                calcium_data[:max_tsteps, neuron_idx],
+                time_in_seconds[:max_timesteps],
+                calcium_data[:max_timesteps, neuron_idx],
                 alpha=0.7,
                 label=neuron_name,
             )

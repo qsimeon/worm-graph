@@ -8,7 +8,7 @@ from utils import *
 from datetime import datetime
 from model._main import get_model
 from data._main import get_datasets
-from train._main import train_model
+from train._main import train_model2
 from analysis._main import analyse_run
 from preprocess._main import process_data
 from predict._main import make_predictions
