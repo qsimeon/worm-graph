@@ -3278,7 +3278,11 @@ class Nejatbakhsh2020Preprocessor(NeuralBasePreprocessor):
                 .roi_response_series["SignalCalciumImResponseSeries"]
                 .data
             )
-            # TODO: Impute missing NaN values.
+            # Impute missing NaN values # TODO: test this fix works
+            # NOTE: This is very slow with the default settings!
+            imputer = IterativeImputer(random_state=0, n_nearest_features=10, skip_complete=False)
+            if np.isnan(traces).any():
+                traces = imputer.fit_transform(traces)
             neuron_ids = np.array(
                 read_nwbfile.processing["CalciumActivity"].data_interfaces["NeuronIDs"].labels,
                 dtype=np.dtype(str),
