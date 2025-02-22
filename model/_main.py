@@ -19,7 +19,6 @@ def get_model(model_config: DictConfig, verbose=True) -> torch.nn.Module:
 
     Calls
     -----
-    PureAttention : class in model/_utils.py
     NeuralTransformer : class in model/_utils.py
     NetworkLSTM : class in model/_utils.py
     HippoSSM : class in model/_utils.py
@@ -65,9 +64,7 @@ def get_model(model_config: DictConfig, verbose=True) -> torch.nn.Module:
             l1_norm_reg_param=model_config.l1_norm_reg_param,
             connectome_reg_param=model_config.connectome_reg_param,
         )
-        if model_config.type == "PureAttention":
-            model = PureAttention(**args)
-        elif model_config.type == "NeuralTransformer":
+        if model_config.type == "NeuralTransformer":
             model = NeuralTransformer(**args)
         elif model_config.type == "NetworkLSTM":
             model = NetworkLSTM(**args)
@@ -75,16 +72,10 @@ def get_model(model_config: DictConfig, verbose=True) -> torch.nn.Module:
             model = HippoSSM(**args)
         elif model_config.type == "NetworkCTRNN":
             model = NetworkCTRNN(**args)
-        elif model_config.type == "LiquidCfC":
-            model = LiquidCfC(**args)
         elif model_config.type == "FeatureFFNN":
             model = FeatureFFNN(**args)
         elif model_config.type == "NaivePredictor":
             model = NaivePredictor(**args)
-        elif model_config.type == "LinearRegression":
-            model = LinearRegression(**args)
-        elif model_config.type == "NetworkLatentLSTM":
-            model = NetworkLatentLSTM(**args)
         else:  # default to "LinearRegression" model
             model = LinearRegression(**args)
 

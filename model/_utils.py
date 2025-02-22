@@ -514,57 +514,39 @@ class SSM(torch.nn.Module):
         )
         return Kernels.real  # (hidden_size, L, input_size)
 
-    # ### DEBUG ###
-    # # NOTE: This is from Sasha Rush's blog post to simplify computing the matrix power.
-    # # I don't fully understand it yet. "To address the problem of computing powers of 𝐴,
-    # # we introduce another technique. Instead of computing the SSM convolution filter 𝐾
-    # # directly, we introduce a generating function on its coefficients and compute evaluations of it."
+    def conv_from_gen(self, gen, L):
+        """Recovers the convolution kernel from its generating function using FFT.
 
-    # def K_gen_simple(self, Ab, Bb, L):
-    #     '''Not to be used! Naive implementation of the generating function.'''
-    #     K = self.K_conv(Ab, Bb, L) # (hidden_size, L, input_size)
-    #     def gen(z):
-    #         # Sum across the length dimenison
-    #         return torch.sum(K * (z ** torch.arange(L)), dim=1) # (hidden_size, input_size)
-    #     return gen
+        Args:
+            gen: The generating function that maps complex numbers to tensors.
+            L: The sequence length.
+        """
+        # Evaluate at roots of unity
+        # Generating function is (-)z-transform, so we evaluate at (-)root
+        Omega_L = torch.exp(-2j * torch.pi * torch.arange(L) / L).to(self.A.weight.device)
+        atRoots = torch.stack([gen(omega) for omega in Omega_L])  # (L, hidden_size, input_size)
+        # Inverse FFT to recover the kernel
+        out = torch.fft.ifft(atRoots, n=L, dim=0).permute(
+            (1, 0, -1)
+        )  # (hidden_size, L, input_size)
+        return out.real
 
-    # # The generating function essentially converts the SSM convolution filter from the time domain to frequency domain.
-    # # This transformation is also called z-transform (up to a minus sign) in control engineering literature.
-    # # Importantly, it preserves the same information, and the desired SSM convolution filter can be recovered.
-    # # Once the z-transform of a discrete sequence known, we can obtain the filter’s discrete fourier transform from evaluations of its z-transform at the roots of unity.
-    # # Then, we can apply inverse fourier transformation, stably by applying an FFT, to recover the filter.
+    def K_gen_inverse(self, Ab, Bb, L):
+        """Computes the generating function for the SSM kernel using matrix inverse.
 
-    # def conv_from_gen(self, gen, L):
-    #     # Evaluate at roots of unity
-    #     # Generating function is (-)z-transform, so we evaluate at (-)root
-    #     Omega_L = torch.exp(-2j * torch.pi * torch.arange(L) / L)
-    #     atRoots = torch.stack([gen(omega) for omega in Omega_L]) # (L, hidden_size, input_size)
-    #     # Inverse FFT
-    #     # TODO: Is there one particular dimension we should apply the inverse FFT to?
-    #     out = torch.fft.ifft(atRoots, n=L, dim=0).permute((1, 0, -1)) # (hidden_size, L, input_size)
-    #     return out.real
+        This is more stable than computing matrix powers directly.
+        """
+        I = torch.eye(Ab.shape[0], device=Ab.device)
+        Ab_L = torch.matrix_power(Ab, L)  # (hidden_size, hidden_size)
+        Ct = I - Ab_L  # (hidden_size, hidden_size)
+        return lambda z: (
+            Ct.to(z.dtype) @ torch.linalg.solve(I - Ab * z, Bb)
+        )  # (hidden_size, input_size)
 
-    # # More importantly, in the generating function we can replace the matrix power with an inverse!
-    # # And for all 𝑧 at the L-roots of unity we have 𝑧^𝐿=1 so that term is removed.
-    # # We then pull this constant term into a new 𝐶. Critically, this function does not call K_conv.
-
-    # def K_gen_inverse(self, Ab, Bb, L):
-    #     '''Clever implementation of the generating function.
-
-    #     We will want to replace any calls like this `K_conv(*ssm, L=L)`
-    #     with this `conv_from_gen(K_gen_inverse(*ssm, L=L), L)` instead.
-    #     '''
-    #     I = torch.eye(Ab.shape[0]).to(Ab.device)
-    #     Ab_L = torch.matrix_power(Ab, L) # (hidden_size, hidden_size)
-    #     Ct = (I - Ab_L) # (hidden_size, hidden_size)
-    #     # NOTE: Bb has shape (hidden_size, input_size)
-    #     return lambda z: (Ct.to(z.dtype).conj() @ torch.linalg.inv(I - Ab * z.to(Ab.device)) @ Bb.to(z.dtype)) # (hidden_size, input_size)
-
-    # def K_conv_fast(self, Ab, Bb, L):
-    #     '''TODO: Replace `K_conv` with `K_conv_fast` in the forward pass.'''
-    #     Kernels =  self.conv_from_gen(self.K_gen_inverse(Ab, Bb, L), L)
-    #     return Kernels.real # (hidden_size, L, input_size)
-    # ### DEBUG ###
+    def K_conv_fast(self, Ab, Bb, L):
+        """Stable implementation of the SSM kernel computation using generating functions."""
+        Kernels = self.conv_from_gen(self.K_gen_inverse(Ab, Bb, L), L)
+        return Kernels.real  # (hidden_size, L, input_size)
 
     def causal_convolution(self, u, Kernels):
         """Computes the result of applying the filters `Kernels` to inputs `u` using the convolution theorem with Fast Fourier Transform (FFT).
@@ -623,12 +605,8 @@ class SSM(torch.nn.Module):
         Ab, Bb = self.discretize()
         # Run the SSM
         if not self.decode:  # CNN mode
-            # Most of the work is to build this filter (aka kernel)
-            Kernels = self.K_conv(Ab, Bb, input.size(1))
-            # # ### DEBUG ###
-            # # # TODO: Replace with the faster generating function approach
-            # Kernels = self.K_conv_fast(Ab, Bb, input.size(1))
-            # # ### DEBUG  ###
+            # Use the faster kernel computation method
+            Kernels = self.K_conv_fast(Ab, Bb, input.size(1))
             # The actual call to the network is just this (huge) convolution
             output = self.batch_causal_convolution(input, Kernels)
         else:  # RNN mode
@@ -2596,94 +2574,6 @@ class FeatureFFNN(Model):
         return None
 
 
-class PureAttention(Model):
-    """
-    A model that uses just the multi-head attention mechanism of the Transformer encoder
-    as its internal "core". This is in contrast to NeuralTransformer which uses a complete
-    TransformerEncoderLayer as its "core" or inner hidden model.
-
-    Attributes:
-        num_heads: The number of attention heads.
-        dropout: The dropout rate.
-        input_hidden: Transformation from input to hidden.
-        hidden_hidden: Multihead Attention layer for hidden to hidden transformation.
-        inner_hidden_model: The internal hidden model (core).
-    """
-
-    def __init__(
-        self,
-        input_size: int,
-        hidden_size: Union[int, None] = None,
-        loss: Union[Callable, None] = None,
-        l1_norm_reg_param: float = 0.0,
-        connectome_reg_param: float = 0.0,
-        **kwargs,
-    ):
-        """
-        Initializes the PureAttention model with the given parameters.
-
-        Args:
-            input_size: The number of input neurons.
-            hidden_size: The number of hidden neurons.
-            loss: The loss function to be used by the model. Default is None.
-            l1_norm_reg_param: The L1 norm regularization parameter. Default is 0.0.
-            connectome_reg_param: The connectome regularization parameter. Default is 0.0.
-            **kwargs: Additional keyword arguments.
-        """
-        # NOTE: Attention only works with even `embed_dim`
-        if hidden_size % 2 != 0:
-            logger.info(f"Changing hidden_size from {hidden_size} to {hidden_size+1}.")
-            hidden_size = hidden_size + 1
-        else:
-            logger.info(f"Using hidden_size: {hidden_size}.")
-        # Specify positional encoding and normalization
-        kwargs["positional_encoding"] = True
-        kwargs["normalization"] = None
-        # Initialize super class
-        super(PureAttention, self).__init__(
-            input_size,
-            hidden_size,
-            loss,
-            l1_norm_reg_param,
-            connectome_reg_param,
-            **kwargs,
-        )
-        # Special parameters for this model
-        # NOTE: Number of attention heads must be divisor of `hidden_size`
-        self.num_heads = max([i for i in range(1, 9) if hidden_size % i == 0])
-        logger.info(f"Number of attention heads: {self.num_heads}.")
-        self.dropout = 0.1  # dropout rate
-        # Input to hidden transformation
-        self.input_hidden = torch.nn.Sequential(
-            self.latent_embedding,
-            self.positional_encoding,
-            self.normalization,
-        )
-        # Hidden to hidden transformation: Multihead Attention layer
-        self.hidden_hidden = SelfAttention(
-            embed_dim=self.hidden_size,
-            num_heads=self.num_heads,
-            dropout=self.dropout,
-        )
-        # Instantiate internal hidden model (i.e. the "core")
-        self.inner_hidden_model = InnerHiddenModel(
-            hidden_hidden_model=self.hidden_hidden,
-            hidden_state=self.hidden,
-        )
-
-    def init_hidden(self, shape=None, device=None):
-        """Initializes the hidden state.
-
-        Args:
-            shape: The shape of the input tensor.
-            device: The device to initialize the hidden state on.
-
-        Returns:
-            None
-        """
-        return None
-
-
 class NeuralTransformer(Model):
     """
     Transformer model for neural activity data.
@@ -2931,96 +2821,6 @@ class NetworkCTRNN(Model):
         return hidden
 
 
-class LiquidCfC(Model):
-    """
-    Neural Circuit Policy (NCP) Closed-form continuous time (CfC) model.
-    Hasani, R., Lechner, M., Amini, A. et al. Closed-form continuous-time neural networks.
-    Nat Mach Intell 4, 992–1003 (2022). https://doi.org/10.1038/s42256-022-00556-7.
-
-    Attributes:
-        input_hidden: Transformation from input to hidden.
-        hidden_hidden: Closed-form continuous-time (CfC) layer for hidden to hidden transformation.
-        inner_hidden_model: The internal hidden model (core).
-    """
-
-    def __init__(
-        self,
-        input_size: int,
-        hidden_size: Union[int, None] = None,
-        loss: Union[Callable, None] = None,
-        l1_norm_reg_param: float = 0.0,
-        connectome_reg_param: float = 0.0,
-        **kwargs,
-    ):
-        """
-        Initializes the LiquidCfC model with the given parameters.
-
-        Args:
-            input_size: The number of input neurons.
-            hidden_size: The number of hidden neurons.
-            loss: The loss function to be used by the model. Default is None.
-            l1_norm_reg_param: The L1 norm regularization parameter. Default is 0.0.
-            connectome_reg_param: The connectome regularization parameter. Default is 0.0.
-            **kwargs: Additional keyword arguments.
-        """
-        # Specify positional encoding and normalization
-        kwargs["positional_encoding"] = False
-        kwargs["normalization"] = "layer_norm"
-        # Initialize super class
-        super(LiquidCfC, self).__init__(
-            input_size,
-            hidden_size,
-            loss,
-            l1_norm_reg_param,
-            connectome_reg_param,
-            **kwargs,
-        )
-        # Input to hidden transformation
-        self.input_hidden = torch.nn.Sequential(
-            self.latent_embedding,
-            self.positional_encoding,
-            self.normalization,
-        )
-        # Hidden to hidden transformation: Closed-form continuous-time (CfC) layer
-        self.hidden_hidden = CfC(
-            input_size=self.hidden_size,
-            units=self.hidden_size,
-            # activation="relu", # DEBUG: default is "lecun_tanh"
-        )
-        # Instantiate internal hidden model (i.e. the "core")
-        self.inner_hidden_model = InnerHiddenModel(
-            hidden_hidden_model=self.hidden_hidden,
-            hidden_state=self.hidden,
-        )
-        # Initialize RNN weights
-        self.init_weights()
-
-    def init_hidden(self, shape, device):
-        """
-        Initializes the hidden state of the RNN.
-
-        Args:
-            shape: The shape of the input tensor.
-            device: The device to initialize the hidden state on.
-
-        Returns:
-            The initialized hidden state tensor.
-        """
-        batch_size = shape[0]  # because batch_first=True
-        hidden = torch.zeros(batch_size, self.hidden_size).to(device)
-        return hidden
-
-    def init_weights(self):
-        """
-        Initializes the weights of the RNN.
-        """
-        for name, param in self.hidden_hidden.named_parameters():
-            if "weight" in name:  # weights
-                torch.nn.init.xavier_uniform_(param.data, gain=1.5)
-            elif "bias" in name:  # biases
-                torch.nn.init.zeros_(param.data)
-
-
 class NetworkLSTM(Model):
     """
     A model of the _C. elegans_ neural network using an LSTM.
@@ -3115,263 +2915,6 @@ class NetworkLSTM(Model):
             elif "bias" in name:  # Bias weights
                 # param.data.fill_(0)
                 torch.nn.init.zeros_(param.data)
-
-
-class NetworkLatentLSTM(torch.nn.Module):
-    """ """
-
-    def __init__(
-        self,
-        input_size: int,
-        hidden_size: Union[int, None] = None,
-        loss: Union[Callable, None] = None,
-        l1_norm_reg_param: float = 0.0,
-        connectome_reg_param: float = 0.0,
-        **kwargs,
-    ):
-        # Specify positional encoding and normalization
-        kwargs["positional_encoding"] = False
-        kwargs["normalization"] = "layer_norm"
-        # Initialize super class
-        super(NetworkLatentLSTM, self).__init__()
-
-        self.loss = torch.nn.MSELoss
-        self.latent_loss = torch.nn.MSELoss
-
-        self.l1_norm_reg_param = 0
-        self.connectome_reg_param = 0
-
-        self.identity = torch.nn.Identity()
-
-        self.input_hidden = torch.nn.LSTM(
-            input_size=input_size,
-            hidden_size=hidden_size,
-            bias=True,
-            batch_first=True,
-        )
-
-        self.hidden_output = torch.nn.LSTM(
-            input_size=hidden_size,
-            hidden_size=input_size,
-            bias=True,
-            batch_first=True,
-        )
-        # Initialize LSTM weights
-        self.init_weights()
-
-    @torch.autocast(
-        device_type=DEVICE.type, dtype=torch.half if "cuda" in DEVICE.type else torch.bfloat16
-    )
-    def forward(self, input: torch.Tensor, mask: torch.Tensor):
-        """
-        Common forward method for all model.
-
-        Parameters
-        ----------
-        input : torch.Tensor
-            Input data with shape (batch, seq_len, neurons)
-        mask : torch.Tensor
-            Mask on the neurons with shape (batch, neurons)
-        """
-        # Route to the appropriate forward method
-        # if self.version_2:
-        #     return self.forward_v2(input, mask)
-        # Multiply input by the mask (expanded to match input shape)
-        # input_activity = self.identity(
-        #     input * mask.unsqueeze(1).expand_as(input)
-        # )  # (batch_size, seq_len, input_size)
-        # Transform the input into a latent
-        # latent_out = self.input_hidden(input_activity)  # (batch_size, seq_len, hidden_size)
-        # Transform the latent
-        hidden_out, (latent_h, latent_c) = self.input_hidden(
-            input
-        )  # (batch_size, seq_len, hidden_size)
-        # Perform a linear readout to get the output
-        output, (out_h, out_c) = self.hidden_output(hidden_out)
-        # output = self.linear_readout(hidden_out)  # (batch_size, seq_len, input_size)
-        ### DEBUG ###
-        # Compute best linear approxmation of model weights using OLS estimate
-        # self.compute_ols_weights(model_in=input_activity, model_out=output)
-        ### DEBUG ###
-        # Return the output neural data
-        return hidden_out[:, :-1, :], output
-
-    def init_hidden(self, shape, device):
-        """
-        Inititializes the hidden and cell states of the LSTM.
-        """
-        batch_size = shape[0]  # because batch_first=True
-        h0 = torch.zeros(1, batch_size, self.hidden_size).to(device)
-        c0 = torch.zeros(1, batch_size, self.hidden_size).to(device)
-        return (h0, c0)
-
-    def init_weights(self):
-        """
-        Initializes the weights of the LSTM.
-        """
-        for name, param in self.input_hidden.named_parameters():
-            if "weight_ih" in name:  # Input-hidden weights
-                torch.nn.init.xavier_uniform_(param.data, gain=1.5)
-            elif "weight_hh" in name:  # Hidden-hidden weights
-                torch.nn.init.orthogonal_(param.data)
-            elif "bias" in name:  # Bias weights
-                # param.data.fill_(0)
-                torch.nn.init.zeros_(param.data)
-
-        for name, param in self.hidden_output.named_parameters():
-            if "weight_ih" in name:  # Input-hidden weights
-                torch.nn.init.xavier_uniform_(param.data, gain=1.5)
-            elif "weight_hh" in name:  # Hidden-hidden weights
-                torch.nn.init.orthogonal_(param.data)
-            elif "bias" in name:  # Bias weights
-                # param.data.fill_(0)
-                torch.nn.init.zeros_(param.data)
-
-    @torch.autocast(
-        device_type=DEVICE.type, dtype=torch.half if "cuda" in DEVICE.type else torch.bfloat16
-    )
-    def loss_fn(self):
-        """
-        The loss function to be used by all the model (default versions).
-        This custom loss function combines a primary loss function with an additional
-        L1 regularization on all model weights. This regularization term encourages the
-        model to use fewer non-zero parameters, effectively making the model more sparse.
-        This can help to prevent overfitting, make the model more interpretable, and improve
-        generalization by encouraging the model to use only the most important features. The
-        L1 penalty is the sum of the absolute values of the weights.
-        """
-
-        def loss(output, target, mask=None, **kwargs):
-            """
-            Calculate loss with added L1 regularization
-            on the trainable model parameters.
-
-            Arguments:
-                output: (batch_size, seq_len, input_size)
-                target: (batch_size, seq_len, input_size)
-                mask: (batch_size, input_size)
-            """
-            mask = None
-            # Default mask to all True if not provided
-            if mask is None:
-                mask = torch.ones(target.size(0), target.size(-1), dtype=torch.bool).to(
-                    target.device
-                )
-            # No need to expand mask; use broadcasting to apply the mask
-            masked_output = output * mask.unsqueeze(
-                1
-            )  # mask.unsqueeze(1) has shape [batch_size, 1, input_size]
-            masked_target = target * mask.unsqueeze(1)
-            # Compute the reconstruction loss without reduction
-            masked_recon_loss = self.loss(reduction="none", **kwargs)(
-                masked_output, masked_target
-            ).float()
-            # Consider only the masked dimensions for summing the loss
-            valid_data_mask = (
-                mask.unsqueeze(1).expand_as(output).bool()
-            )  # for use in indexing without storing expanded tensor
-            # Normalize the loss by the total number of valid data points
-            norm_factor = valid_data_mask.sum()
-            mrlv = masked_recon_loss[valid_data_mask]
-            numerator = mrlv.sum()
-            recon_loss = numerator / torch.clamp(norm_factor, min=1)
-            # L1 regularization term
-            l1_loss = 0.0
-            l1_reg_loss = 0.0
-            if self.l1_norm_reg_param > 0.0:
-                # Calculate L1 regularization term for all weights
-                for param in self.parameters():
-                    l1_loss += torch.abs(param).mean()
-                l1_reg_loss = self.l1_norm_reg_param * l1_loss
-            # Connectome regularization term
-            connectome_loss = 0.0
-            connectome_reg_loss = 0.0
-            if self.connectome_reg_param > 0.0:
-                # Calculate the connectome regularization term
-                # NOTE: Squared OLS weights because the connectome weights are non-negative
-                param = torch.square(self.ols_weights) - (self.chem_weights + self.elec_weights)
-                connectome_loss = torch.norm(param, p="fro")
-                connectome_reg_loss = self.connectome_reg_param * connectome_loss
-            # Add the L1 and connectome penalties to the original loss
-            total_loss = recon_loss + l1_reg_loss + connectome_reg_loss
-            # Return loss
-            return total_loss
-
-        # Return the inner custom loss function
-        return loss
-
-    @torch.autocast(
-        device_type=DEVICE.type, dtype=torch.half if "cuda" in DEVICE.type else torch.bfloat16
-    )
-    def latent_loss_fn(self):
-        """
-        The loss function to be used by all the model (default versions).
-        This custom loss function combines a primary loss function with an additional
-        L1 regularization on all model weights. This regularization term encourages the
-        model to use fewer non-zero parameters, effectively making the model more sparse.
-        This can help to prevent overfitting, make the model more interpretable, and improve
-        generalization by encouraging the model to use only the most important features. The
-        L1 penalty is the sum of the absolute values of the weights.
-        """
-
-        def loss(output, target, mask=None, **kwargs):
-            """
-            Calculate loss with added L1 regularization
-            on the trainable model parameters.
-
-            Arguments:
-                output: (batch_size, seq_len, input_size)
-                target: (batch_size, seq_len, input_size)
-                mask: (batch_size, input_size)
-            """
-            mask = None
-            # Default mask to all True if not provided
-            if mask is None:
-                mask = torch.ones(target.size(0), target.size(-1), dtype=torch.bool).to(
-                    target.device
-                )
-            # No need to expand mask; use broadcasting to apply the mask
-            masked_output = output * mask.unsqueeze(
-                1
-            )  # mask.unsqueeze(1) has shape [batch_size, 1, input_size]
-            masked_target = target * mask.unsqueeze(1)
-            # Compute the reconstruction loss without reduction
-            masked_recon_loss = self.latent_loss(reduction="none", **kwargs)(
-                masked_output, masked_target
-            ).float()
-            # Consider only the masked dimensions for summing the loss
-            valid_data_mask = (
-                mask.unsqueeze(1).expand_as(output).bool()
-            )  # for use in indexing without storing expanded tensor
-            # Normalize the loss by the total number of valid data points
-            norm_factor = valid_data_mask.sum()
-            mrlv = masked_recon_loss[valid_data_mask]
-            numerator = mrlv.sum()
-            recon_loss = numerator / torch.clamp(norm_factor, min=1)
-            # L1 regularization term
-            l1_loss = 0.0
-            l1_reg_loss = 0.0
-            if self.l1_norm_reg_param > 0.0:
-                # Calculate L1 regularization term for all weights
-                for param in self.parameters():
-                    l1_loss += torch.abs(param).mean()
-                l1_reg_loss = self.l1_norm_reg_param * l1_loss
-            # Connectome regularization term
-            connectome_loss = 0.0
-            connectome_reg_loss = 0.0
-            if self.connectome_reg_param > 0.0:
-                # Calculate the connectome regularization term
-                # NOTE: Squared OLS weights because the connectome weights are non-negative
-                param = torch.square(self.ols_weights) - (self.chem_weights + self.elec_weights)
-                connectome_loss = torch.norm(param, p="fro")
-                connectome_reg_loss = self.connectome_reg_param * connectome_loss
-            # Add the L1 and connectome penalties to the original loss
-            total_loss = recon_loss + l1_reg_loss + connectome_reg_loss
-            # Return loss
-            return total_loss
-
-        # Return the inner custom loss function
-        return loss
 
 
 # # # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
