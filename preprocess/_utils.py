@@ -6,132 +6,6 @@ logger = logging.getLogger(__name__)
 
 ### Function definitions # # #
 # # # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
-# def pickle_neural_data(
-#     url,
-#     zipfile,
-#     source_dataset="all",
-#     # TODO: Try different transforms from sklearn such as QuantileTransformer, etc. as well as custom CausalNormalizer.
-#     transform=StandardScaler(),  # StandardScaler() #PowerTransformer() #CausalNormalizer() #None
-#     smooth_method="none",
-#     interpolate_method="linear",
-#     resample_dt=None,
-#     cleanup=False,
-#     **kwargs,
-# ):
-#     """Preprocess and save C. elegans neural data to .pickle format.
-
-#     This function downloads and extracts the open-source datasets if not found in the
-#     root directory, preprocesses the neural data using the corresponding DatasetPreprocessor class,
-#     and then saves it to .pickle format. The processed data is saved in the
-#     data/processed/neural folder for further use.
-
-#     Args:
-#         url (str): Download link to a zip file containing the open-source data in raw form.
-#         zipfile (str): The name of the zipfile that is being downloaded.
-#         source_dataset (str, optional): The name of the source dataset to be pickled.
-#             If None or 'all', all datasets are pickled. Default is 'all'.
-#         transform (object, optional): The sklearn transformation to be applied to the data.
-#             Default is StandardScaler().
-#         smooth_method (str, optional): The smoothing method to apply to the data;
-#             options are 'gaussian', 'exponential', or 'moving'. Default is 'moving'.
-#         interpolate_method (str, optional): The scipy interpolation method to use when resampling the data.
-#             Default is 'linear'.
-#         resample_dt (float, optional): The resampling time interval in seconds.
-#             If None, no resampling is performed. Default is None.
-#         cleanup (bool, optional): If True, deletes the unzipped folder after processing. Default is False.
-#         **kwargs: Additional keyword arguments to be passed to the DatasetPreprocessor class.
-
-#     Returns:
-#         None
-
-#     Raises:
-#         AssertionError: If an invalid source dataset is requested.
-#         NameError: If the specified preprocessor class is not found.
-
-
-#     Steps:
-#         1. Construct paths for the zip file and source data.
-#         2. Create the neural data directory if it doesn't exist.
-#         3. Download and extract the zip file if the source data is not found.
-#         4. Instantiate and use the appropriate DatasetPreprocessor class to preprocess the data.
-#         5. Save the preprocessed data to .pickle format.
-#         6. Optionally, delete the unzipped folder if cleanup is True.
-#     """
-#     zip_path = os.path.join(ROOT_DIR, zipfile)
-#     source_path = os.path.join(ROOT_DIR, zipfile.strip(".zip"))
-#     # Make the neural data directory if it doesn't exist
-#     processed_path = os.path.join(ROOT_DIR, "data/processed/neural")
-#     if not os.path.exists(processed_path):
-#         os.makedirs(processed_path, exist_ok=True)
-#     # If .zip not found in the root directory, download the curated open-source worm datasets
-#     if not os.path.exists(source_path):
-#         download_url(url=url, folder=ROOT_DIR, filename=zipfile)
-#         # Extract all the datasets ... OR
-#         if source_dataset.lower() == "all":
-#             # Extract zip file then delete it
-#             extract_zip(zip_path, folder=source_path, delete_zip=True)
-#         # Extract just the requested source dataset
-#         else:
-#             bash_command = [
-#                 "unzip",
-#                 zip_path,
-#                 "{}/*".format(source_dataset),
-#                 "-d",
-#                 source_path,
-#                 "-x",
-#                 "__MACOSX/*",
-#             ]
-#             # Run the bash command
-#             std_out = subprocess.run(bash_command, text=True)
-#             # Output to log or terminal
-#             logger.info(f"Unzip status {std_out} ...")
-#             # Delete the zip file
-#             os.unlink(zip_path)
-#     # (re)-Pickle all the datasets ... OR
-#     if source_dataset is None or source_dataset.lower() == "all":
-#         for source in EXPERIMENT_DATASETS:
-#             logger.info(f"Start processing {source}.")
-#             try:
-#                 # Instantiate the relevant preprocessor class
-#                 preprocessor = eval(source + "Preprocessor")(
-#                     transform,
-#                     smooth_method,
-#                     interpolate_method,
-#                     resample_dt,
-#                     **kwargs,
-#                 )
-#                 # Call its method
-#                 preprocessor.preprocess()
-#             except NameError as e:
-#                 logger.info(f"NameError calling proprocessor: {e}")
-#                 continue
-#         # Create a file to indicate that the preprocessing was successful
-#         open(os.path.join(processed_path, ".processed"), "a").close()
-#     # ... (re)-Pickle a single dataset
-#     else:
-#         assert (
-#             source_dataset in EXPERIMENT_DATASETS
-#         ), "Invalid source dataset requested! Please pick one from:\n{}".format(
-#             list(EXPERIMENT_DATASETS)
-#         )
-#         logger.info(f"Start processing {source_dataset}.")
-#         try:
-#             # Instantiate the relevant preprocessor class
-#             preprocessor = eval(source_dataset + "Preprocessor")(
-#                 transform,
-#                 smooth_method,
-#                 interpolate_method,
-#                 resample_dt,
-#                 **kwargs,
-#             )
-#             # Call its method
-#             preprocessor.preprocess()
-#         except NameError:
-#             pass
-#     # Delete the unzipped folder
-#     if cleanup:
-#         shutil.rmtree(source_path)
-#     return None
 def process_single_dataset(args):
     """Helper function to process a single dataset
 
@@ -3404,7 +3278,11 @@ class Nejatbakhsh2020Preprocessor(NeuralBasePreprocessor):
                 .roi_response_series["SignalCalciumImResponseSeries"]
                 .data
             )
-            # TODO: Impute missing NaN values.
+            # Impute missing NaN values # TODO: test this fix works
+            # NOTE: This is very slow with the default settings!
+            imputer = IterativeImputer(random_state=0, n_nearest_features=10, skip_complete=False)
+            if np.isnan(traces).any():
+                traces = imputer.fit_transform(traces)
             neuron_ids = np.array(
                 read_nwbfile.processing["CalciumActivity"].data_interfaces["NeuronIDs"].labels,
                 dtype=np.dtype(str),
