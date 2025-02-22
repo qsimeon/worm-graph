@@ -3272,22 +3272,30 @@ class Nejatbakhsh2020Preprocessor(NeuralBasePreprocessor):
         """
         with NWBHDF5IO(file, "r") as io:
             read_nwbfile = io.read()
+            # Get the neural traces
             traces = np.array(
                 read_nwbfile.processing["CalciumActivity"]
                 .data_interfaces["SignalRawFluor"]
                 .roi_response_series["SignalCalciumImResponseSeries"]
                 .data
             )
-            # Impute missing NaN values # TODO: test this fix works
-            # NOTE: This is very slow with the default settings!
-            imputer = IterativeImputer(random_state=0, n_nearest_features=10, skip_complete=False)
-            if np.isnan(traces).any():
-                traces = imputer.fit_transform(traces)
+            # Get the neuron labels
             neuron_ids = np.array(
                 read_nwbfile.processing["CalciumActivity"].data_interfaces["NeuronIDs"].labels,
                 dtype=np.dtype(str),
             )
-            # sampling frequency is 4 Hz
+            # Impute any NaN values
+            # NOTE: This is very slow with the default settings!
+            imputer = IterativeImputer(random_state=0, n_nearest_features=10, skip_complete=False)
+            nan_columns = []
+            if np.isnan(traces).any():
+                nan_columns = np.where(np.isnan(traces).all(axis=0))[0]
+                # Imputer auto-removes neuron traces that are all NaN values
+                traces = imputer.fit_transform(traces)
+            # Remove labels corresponding to NaN data
+            if len(nan_columns) > 0:
+                neuron_ids = np.delete(neuron_ids, nan_columns)
+            # Sampling frequency is 4 Hz for this dataset
             time_vector = np.arange(0, traces.shape[0]).astype(np.dtype(float)) / 4
         # Return the extracted data
         return neuron_ids, traces, time_vector
@@ -3495,11 +3503,17 @@ class Yemini2021Preprocessor(NeuralBasePreprocessor):
             # Observed empirically that the first three values of activity equal 0.0s
             activity = activity[4:]
             tvec = tvec[4:]
-            # Impute any remaining NaN values
+            # Impute any NaN values
             # NOTE: This is very slow with the default settings!
             imputer = IterativeImputer(random_state=0, n_nearest_features=10, skip_complete=False)
+            nan_columns = []
             if np.isnan(activity).any():
+                nan_columns = np.where(np.isnan(activity).all(axis=0))[0]
+                # Imputer auto-removes neuron traces that are all NaN values
                 activity = imputer.fit_transform(activity)
+            # Remove labels corresponding to NaN data
+            if len(nan_columns) > 0:
+                neuron_IDs = np.delete(neuron_IDs, nan_columns)
             # Add activity to list of traces
             traces.append(activity)
             # Add time vector to list of time vectors
@@ -4229,8 +4243,14 @@ class Leifer2023Preprocessor(NeuralBasePreprocessor):
         # Impute any remaining NaN values
         # NOTE: This is very slow with the default settings!
         imputer = IterativeImputer(random_state=0, n_nearest_features=10, skip_complete=False)
+        nan_columns = []
         if np.isnan(real_data).any():
+            nan_columns = np.where(np.isnan(real_data).all(axis=0))[0]
+            # Imputer auto-removes neuron traces that are all NaN values
             real_data = imputer.fit_transform(real_data)
+        # Remove labels corresponding to NaN data
+        if len(nan_columns) > 0:
+            label_list = np.delete(label_list, nan_columns)
         # Remove badly imputed neurons from the data
         filt_real_data, filt_mask = self.filter_bad_traces_by_linear_segments(real_data)
         filt_label_list = np.array(label_list, dtype=str)[filt_mask].tolist()
@@ -4385,11 +4405,17 @@ class Lin2023Preprocessor(NeuralBasePreprocessor):
         # Replace first nan with F0 value
         _f0 = dataset_raw["F_0"][_filter][:, 0]
         raw_activitiy[0, :] = _f0
-        # Impute any remaining NaN values
+        # Impute any NaN values
         # NOTE: This is very slow with the default settings!
         imputer = IterativeImputer(random_state=0, n_nearest_features=10, skip_complete=False)
-        if np.isnan(raw_activitiy).any():
+        nan_columns = []
+        if np.isnan(raw_activity).any():
+            nan_columns = np.where(np.isnan(raw_activitiy).all(axis=0))[0]
+            # Imputer auto-removes neuron traces that are all NaN values
             raw_activitiy = imputer.fit_transform(raw_activitiy)
+        # Remove labels corresponding to NaN data
+        if len(nan_columns) > 0:
+            neurons = np.delete(neurons, nan_columns)
         # Make the extracted data into a list of arrays
         neuron_IDs, raw_traces, time_vector_seconds = [neurons], [raw_activitiy], [raw_time_vec]
         # Return the extracted data
